@@ -1,0 +1,21 @@
+For the purpose of tracking copyright, this is the list of individuals and
+organizations who have contributed source code to SwiftNIO.
+
+For employees of an organization/company where the copyright of work done
+by employees of that company is held by the company itself, only the company
+needs to be listed here.
+
+## COPYRIGHT HOLDERS
+
+- Apple Inc. (all contributors with '@apple.com')
+
+### Contributors
+
+- Cory Benfield <cbenfield@apple.com>
+- Daniel Dunbar <daniel_dunbar@apple.com>
+- Johannes Weiß <johannesweiss@apple.com>
+- Kevin Clark <kevin.clark@apple.com>
+- Max Moiseev <moiseev@apple.com>
+- Norman Maurer <norman_maurer@apple.com>
+- Tim Kientzle <tkientzle@apple.com>
+- Tom Doron <tomerd@apple.com>
