@@ -17,34 +17,43 @@ import Foundation
 public class Buffer {
     var data: [UInt8]
     var offset: UInt32
-    var len: UInt32
+    var limit: UInt32
     
     init(capacity: Int32) {
         self.data = Array(repeating: 0, count: 8 * 1024)
         self.offset = 0
-        self.len = UInt32(data.count)
+        self.limit = 0;
     }
     
     public func clear() {
         offset = 0
-        len =  UInt32(data.count)
+        limit = 0
     }
 }
 
+func deregisterAndClose(selector: Selector, s: Selectable) {
+    do { try selector.deregister(selectable: s) } catch {}
+    do { try s.close() } catch {}
+}
 
 
-let socket = try ServerSocket.bootstrap(host: "0.0.0.0", port: 4009)
-try socket.setNonBlocking()
-
+// Bootstrap the server and create the Selector on which we register our sockets.
 let selector = try Selector()
 
-try selector.register(selectable: socket, interested: InterestedEvent.Read, attachment: nil)
+defer {
+    do { try selector.close() } catch { }
+}
+
+let server = try ServerSocket.bootstrap(host: "0.0.0.0", port: 4010)
+try server.setNonBlocking()
+
+
+try selector.register(selectable: server, interested: InterestedEvent.Read, attachment: nil)
 
 // cleanup
 defer {
-    do { try selector.deregister(selectable: socket) } catch { }
-    do { try socket.close() } catch { }
-    do { try selector.close() } catch { }
+    do { try selector.deregister(selectable: server) } catch { }
+    do { try server.close() } catch { }
 }
 
 do {
@@ -53,48 +62,47 @@ do {
             for ev in events {
                 if ev.isReadable {
                     
+                    // We can handle either read(...) or accept()
                     if ev.selectable is Socket {
+                        // We stored the Buffer before as attachment so get it and clear the limit / offset.
                         let buffer = ev.attachment as! Buffer
                         buffer.clear()
 
                         let s = ev.selectable as! Socket
                         do {
-                            buffer.len = try s.read(data: &buffer.data, offset: buffer.offset, len: buffer.len)
-                        } catch let err as IOError {
-                            if err.errno != Glibc.EWOULDBLOCK {
-                                do { try selector.deregister(selectable: s) } catch {}
-                                do { try s.close() } catch {}
+                            let read = try s.read(data: &buffer.data, offset: 0, len: UInt32(buffer.data.count))
+                            if (read == -1) {
+                                continue
                             }
-                            continue
-                        }
-                        
-                        do {
-                            let written = try s.write(data: buffer.data, offset: buffer.offset, len: buffer.len)
-                            buffer.offset += written;
-                            buffer.len -= written;
-                        } catch let err as IOError {
-                            if err.errno != Glibc.EWOULDBLOCK {
-                                do { try selector.deregister(selectable: s) } catch {}
-                                do { try s.close() } catch {}
-                                continue;
+                            buffer.limit = UInt32(read)
+                            
+                            let written = try s.write(data: buffer.data, offset: buffer.offset, len: buffer.limit - buffer.offset)
+                            if written != -1 {
+                                buffer.offset += UInt32(written)
+                                
+                                // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
+                                // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
+                                if buffer.offset < buffer.limit {
+                                    try selector.reregister(selectable: s, interested: InterestedEvent.Write)
+                                }
+                            } else {
+                                // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
+                                // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
+                                try selector.reregister(selectable: s, interested: InterestedEvent.Write)
                             }
-                        }
-                        if buffer.len > 0 {
-                            try selector.reregister(selectable: s, interested: InterestedEvent.Write)
+                        } catch let err as IOError {
+                            deregisterAndClose(selector: selector, s: s)
                         }
                     } else if ev.selectable is ServerSocket {
                         let socket = ev.selectable as! ServerSocket
-                        do {
-                            let accepted  = try socket.accept()
+                        
+                        // Accept new connections until there are no more in the backlog
+                        while let accepted = try socket.accept() {
                             try accepted.setNonBlocking()
                             
+                            // Allocate an 8kb buffer for reading and writing and register the socket with the selector
                             let buffer = Buffer(capacity: 8 * 1024)
-                            
                             try selector.register(selectable: accepted, interested: InterestedEvent.Read, attachment: buffer)
-                        } catch let err as IOError {
-                            if err.errno != Glibc.EWOULDBLOCK {
-                                throw err;
-                            }
                         }
                     }
                     
@@ -104,17 +112,17 @@ do {
                         
                         let s = ev.selectable as! Socket
                         do {
-                            let written = try s.write(data: buffer.data, offset: buffer.offset, len: buffer.len)
-                            buffer.offset += written;
-                            buffer.len -= written;
-                        } catch let err as IOError {
-                            if err.errno != Glibc.EWOULDBLOCK {
-                                do { try selector.deregister(selectable: s) } catch {}
-                                do { try s.close() } catch {}
+                            let written = try s.write(data: buffer.data, offset: buffer.offset, len: buffer.limit - buffer.offset)
+                            if (written != -1) {
+                                buffer.offset += UInt32(written)
+                                
+                                if buffer.offset == buffer.limit {
+                                    // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socket to read.
+                                    try selector.reregister(selectable: s, interested: InterestedEvent.Read)
+                                }
                             }
-                        }
-                        if buffer.len == 0 {
-                            try selector.reregister(selectable: s, interested: InterestedEvent.Read)
+                        } catch let err as IOError {
+                            deregisterAndClose(selector: selector, s: s)
                         }
                     }
                 }
@@ -124,4 +132,5 @@ do {
 } catch let err as IOError {
     print("{}: {}", err.reason!, err.errno)
 }
+
 

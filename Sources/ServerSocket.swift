@@ -107,7 +107,7 @@ public class ServerSocket: Selectable {
         }
     }
     
-    public func accept() throws -> Socket {
+    public func accept() throws -> Socket? {
         var acceptAddr = sockaddr_in()
         var addrSize = socklen_t(MemoryLayout<sockaddr_in>.size)
         
@@ -122,7 +122,11 @@ public class ServerSocket: Selectable {
 #endif
         
         guard fd >= 0 else {
-            throw IOError(errno: errno, reason: "accept(...) failed")
+            let err = errno
+            guard err == EWOULDBLOCK else {
+                throw IOError(errno: errno, reason: "accept(...) failed")
+            }
+            return nil
         }
         return Socket(fd: fd)
     }

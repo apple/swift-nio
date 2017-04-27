@@ -75,27 +75,35 @@ public class Socket : Selectable {
         }
     }
     
-    public func write(data: [UInt8], offset: UInt32, len: UInt32) throws -> UInt32 {
+    public func write(data: [UInt8], offset: UInt32, len: UInt32) throws -> Int {
 #if os(Linux)
         let res = Glibc.write(self.fd, UnsafeMutablePointer(mutating: data).advanced(by: Int(offset)), Int(len))
 #else
         let res = Darwin.write(self.fd, UnsafeMutablePointer(mutating: data).advanced(by: Int(offset)), Int(len))
 #endif
         guard res >= 0 else {
-            throw IOError(errno: errno, reason: "write(...) failed")
+            let err = errno
+            guard err == EWOULDBLOCK else {
+                throw IOError(errno: errno, reason: "write(...) failed")
+            }
+            return -1
         }
-        return UInt32(res)
+        return res
     }
     
-    public func read(data: inout [UInt8], offset: UInt32, len: UInt32) throws -> UInt32 {
+    public func read(data: inout [UInt8], offset: UInt32, len: UInt32) throws -> Int {
 #if os(Linux)
         let res = Glibc.read(self.fd, UnsafeMutablePointer(mutating: data).advanced(by: Int(offset)), Int(len))
 #else
         let res = Darwin.read(self.fd, UnsafeMutablePointer(mutating: data).advanced(by: Int(offset)), Int(len))
 #endif
         guard res >= 0 else {
-            throw IOError(errno: errno, reason: "read(...) failed")
+            let err = errno
+            guard err == EWOULDBLOCK else {
+                throw IOError(errno: errno, reason: "read(...) failed")
+            }
+            return -1
         }
-        return UInt32(res)
+        return res
     }
 }
