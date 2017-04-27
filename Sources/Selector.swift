@@ -55,12 +55,12 @@ public class Selector {
         case InterestedEvent.All:
             ev.events = EPOLLIN.rawValue | EPOLLOUT.rawValue
         }
-        ev.data.fd = selectable.descriptor()
-        let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_ADD, selectable.descriptor(), &ev)
+        ev.data.fd = selectable.descriptor
+        let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_ADD, selectable.descriptor, &ev)
         guard res == 0 else {
             throw IOError(errno: errno, reason: "epoll_ctl(...) failed")
         }
-        registrations[Int(selectable.descriptor())] = Registration(selectable: selectable, attachment: attachment)
+        registrations[Int(selectable.descriptor)] = Registration(selectable: selectable, attachment: attachment)
 #endif
     }
     
@@ -77,8 +77,8 @@ public class Selector {
             ev.events = EPOLLIN.rawValue | EPOLLOUT.rawValue
         }
 
-        ev.data.fd = selectable.descriptor()
-        let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_MOD, selectable.descriptor(), &ev)
+        ev.data.fd = selectable.descriptor
+        let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_MOD, selectable.descriptor, &ev)
         guard res == 0 else {
             throw IOError(errno: errno, reason: "epoll_ctl(...) failed")
         }
@@ -88,11 +88,11 @@ public class Selector {
     public func deregister(selectable: Selectable) throws {
 #if os(Linux)
         var ev = epoll_event()
-        let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_DEL, selectable.descriptor(), &ev)
+        let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_DEL, selectable.descriptor, &ev)
         guard res == 0 else {
             throw IOError(errno: errno, reason: "epoll_ctl(...) failed")
         }
-        registrations.removeValue(forKey: Int(selectable.descriptor()))
+        registrations.removeValue(forKey: Int(selectable.descriptor))
 #endif
     }
     

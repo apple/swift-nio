@@ -15,8 +15,9 @@
 import Foundation
 
 public protocol Selectable {
-    
-    func descriptor() -> Int32;
-    
+    var descriptor: Int32 { get }
+
+    var open: Bool { get }
+
     func close() throws;
 }

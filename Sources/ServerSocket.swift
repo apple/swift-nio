@@ -23,8 +23,19 @@ import Foundation
 
 
 public class ServerSocket: Selectable {
-    private let fd: Int32;
-    public internal(set) var open: Bool;
+    public let descriptor: Int32;
+    public private(set) var open: Bool;
+   
+    public var localAddress: SocketAddress? {
+        get {
+            return nil
+        }
+    }
+    public var remoteAddress: SocketAddress? {
+        get {
+            return nil
+        }
+    }
     
     public class func bootstrap(host: String, port: Int32) throws -> ServerSocket {
         let socket = try ServerSocket();
@@ -35,26 +46,18 @@ public class ServerSocket: Selectable {
     
     init() throws {
 #if os(Linux)
-        self.fd = Glibc.socket(AF_INET, Int32(SOCK_STREAM.rawValue), 0)
+        self.descriptor = Glibc.socket(AF_INET, Int32(SOCK_STREAM.rawValue), 0)
 #else
-        self.fd = Darwin.socket(AF_INET, Int32(SOCK_STREAM), 0)
+        self.descriptor = Darwin.socket(AF_INET, Int32(SOCK_STREAM), 0)
 #endif
-        guard self.fd >= 0 else {
+        guard self.descriptor >= 0 else {
             throw IOError(errno: errno, reason: "socket(...) failed")
         }
         self.open = true
     }
     
-    public func localAddress() -> SocketAddress? {
-        return nil
-    }
-    
-    public func remoteAddress() -> SocketAddress? {
-        return nil;
-    }
-    
     public func setNonBlocking() throws {
-        let res = fcntl(self.fd, F_SETFL, O_NONBLOCK)
+        let res = fcntl(self.descriptor, F_SETFL, O_NONBLOCK)
         
         guard res >= 0 else {
             throw IOError(errno: errno, reason: "fcntl(...) failed")
@@ -62,20 +65,17 @@ public class ServerSocket: Selectable {
         
     }
     
-    public func descriptor() -> Int32 {
-        return fd
-    }
-
     public func close() throws {
 #if os(Linux)
-        let res = Glibc.close(self.fd)
+        let res = Glibc.close(self.descriptor)
 #else
-        let res = Darwin.close(self.fd)
+        let res = Darwin.close(self.descriptor)
 #endif
         
         guard res >= 0 else {
             throw IOError(errno: errno, reason: "close(...) failed")
         }
+        self.open = false
     }
     
     public func bind(address: SocketAddress) throws {
@@ -83,11 +83,11 @@ public class ServerSocket: Selectable {
         
 #if os(Linux)
         let res = withUnsafePointer(to: &addr) {
-            Glibc.bind(self.fd, UnsafePointer<sockaddr>($0), socklen_t(address.size));
+            Glibc.bind(self.descriptor, UnsafePointer<sockaddr>($0), socklen_t(address.size));
         }
 #else
         let res = withUnsafePointer(to: &addr) {
-            Darwin.bind(self.fd, UnsafePointer<sockaddr>($0), socklen_t(address.size));
+            Darwin.bind(self.descriptor, UnsafePointer<sockaddr>($0), socklen_t(address.size));
         }
 #endif
         
@@ -98,9 +98,9 @@ public class ServerSocket: Selectable {
     
     public func listen(backlog: Int32) throws {
 #if os(Linux)
-        let res = Glibc.listen(self.fd, backlog)
+        let res = Glibc.listen(self.descriptor, backlog)
 #else
-        let res = Darwin.listen(self.fd, backlog)
+        let res = Darwin.listen(self.descriptor, backlog)
 #endif
         guard res >= 0 else {
             throw IOError(errno: errno, reason: "listen(...) failed")
@@ -113,7 +113,7 @@ public class ServerSocket: Selectable {
         
 #if os(Linux)
         let fd = withUnsafeMutablePointer(to: &acceptAddr) {
-            Glibc.accept(self.fd, UnsafeMutableRawPointer($0).assumingMemoryBound(to: sockaddr.self), &addrSize)
+            Glibc.accept(self.descriptor, UnsafeMutableRawPointer($0).assumingMemoryBound(to: sockaddr.self), &addrSize)
         }
 #else
         let fd = withUnsafeMutablePointer(to: &acceptAddr) {
@@ -128,6 +128,6 @@ public class ServerSocket: Selectable {
             }
             return nil
         }
-        return Socket(fd: fd)
+        return Socket(descriptor: fd)
     }
 }
