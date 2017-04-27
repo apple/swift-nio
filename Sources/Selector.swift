@@ -50,13 +50,10 @@ public class Selector {
         switch interested {
         case InterestedEvent.Read:
             ev.events = EPOLLIN.rawValue
-            break
         case InterestedEvent.Write:
             ev.events = EPOLLOUT.rawValue
-            break
         case InterestedEvent.All:
             ev.events = EPOLLIN.rawValue | EPOLLOUT.rawValue
-            break
         }
         ev.data.fd = selectable.descriptor()
         let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_ADD, selectable.descriptor(), &ev)
@@ -74,13 +71,10 @@ public class Selector {
         switch interested {
         case InterestedEvent.Read:
             ev.events = EPOLLIN.rawValue
-            break
         case InterestedEvent.Write:
             ev.events = EPOLLOUT.rawValue
-            break
         case InterestedEvent.All:
             ev.events = EPOLLIN.rawValue | EPOLLOUT.rawValue
-            break
         }
 
         ev.data.fd = selectable.descriptor()
@@ -138,7 +132,6 @@ struct Registration {
         self.selectable = selectable
         self.attachment = attachment
     }
-
 }
 
 public struct SelectorEvent {
@@ -154,7 +147,6 @@ public struct SelectorEvent {
         self.selectable = selectable
         self.attachment = attachment
     }
-   
 }
 
 public enum InterestedEvent {

@@ -75,12 +75,15 @@ public class Socket : Selectable {
         }
     }
     
-    public func write(data: [UInt8], offset: UInt32, len: UInt32) throws -> Int {
-#if os(Linux)
-        let res = Glibc.write(self.fd, UnsafeMutablePointer(mutating: data).advanced(by: Int(offset)), Int(len))
-#else
-        let res = Darwin.write(self.fd, UnsafeMutablePointer(mutating: data).advanced(by: Int(offset)), Int(len))
-#endif
+    public func write(data: Data, offset: Int, len: Int) throws -> Int {
+        let res = data.withUnsafeBytes() { [unowned self] (buffer: UnsafePointer<UInt8>) -> Int in
+        #if os(Linux)
+            return Glibc.write(self.fd, buffer.advanced(by: offset), len)
+        #else
+            return Darwin.Glibc.write(self.fd, buffer.advanced(by: offset), len)
+        #endif
+        }
+
         guard res >= 0 else {
             let err = errno
             guard err == EWOULDBLOCK else {
@@ -91,12 +94,15 @@ public class Socket : Selectable {
         return res
     }
     
-    public func read(data: inout [UInt8], offset: UInt32, len: UInt32) throws -> Int {
-#if os(Linux)
-        let res = Glibc.read(self.fd, UnsafeMutablePointer(mutating: data).advanced(by: Int(offset)), Int(len))
-#else
-        let res = Darwin.read(self.fd, UnsafeMutablePointer(mutating: data).advanced(by: Int(offset)), Int(len))
-#endif
+    public func read(data: inout Data, offset: Int, len: Int) throws -> Int {
+        let res = data.withUnsafeMutableBytes() { [unowned self] (buffer: UnsafeMutablePointer<UInt8>) -> Int in
+            #if os(Linux)
+                return Glibc.read(self.fd, buffer.advanced(by: offset), len)
+            #else
+                return Darwin.read(self.fd, buffer.advanced(by: offset), len)
+            #endif
+        }
+
         guard res >= 0 else {
             let err = errno
             guard err == EWOULDBLOCK else {

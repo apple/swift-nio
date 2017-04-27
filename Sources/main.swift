@@ -15,19 +15,19 @@ import Foundation
 
 
 public class Buffer {
-    var data: [UInt8]
-    var offset: UInt32
-    var limit: UInt32
+    var data: Data
+    var offset: Int
+    var limit: Int
     
     init(capacity: Int32) {
-        self.data = Array(repeating: 0, count: 8 * 1024)
+        self.data = Data(repeating: 0, count: 8 * 1024)
         self.offset = 0
         self.limit = 0;
     }
     
     public func clear() {
-        offset = 0
-        limit = 0
+        self.offset = 0
+        self.limit = 0
     }
 }
 
@@ -58,6 +58,7 @@ defer {
 
 do {
     while true {
+        // Block until there are events to handle
         if let events = try selector.awaitReady() {
             for ev in events {
                 if ev.isReadable {
@@ -70,15 +71,15 @@ do {
 
                         let s = ev.selectable as! Socket
                         do {
-                            let read = try s.read(data: &buffer.data, offset: 0, len: UInt32(buffer.data.count))
-                            if (read == -1) {
+                            let read = try s.read(data: &buffer.data, offset: 0, len: buffer.data.count)
+                            if (read < 0) {
                                 continue
                             }
-                            buffer.limit = UInt32(read)
+                            buffer.limit = read
                             
                             let written = try s.write(data: buffer.data, offset: buffer.offset, len: buffer.limit - buffer.offset)
-                            if written != -1 {
-                                buffer.offset += UInt32(written)
+                            if written >= 0 {
+                                buffer.offset += written
                                 
                                 // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
                                 // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
@@ -113,8 +114,8 @@ do {
                         let s = ev.selectable as! Socket
                         do {
                             let written = try s.write(data: buffer.data, offset: buffer.offset, len: buffer.limit - buffer.offset)
-                            if (written != -1) {
-                                buffer.offset += UInt32(written)
+                            if (written > 0) {
+                                buffer.offset += written
                                 
                                 if buffer.offset == buffer.limit {
                                     // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socket to read.
