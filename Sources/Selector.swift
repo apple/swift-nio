@@ -35,18 +35,22 @@ public class Selector {
     init() throws {
 #if os(Linux)
         fd = CEpoll.epoll_create(128)
+        guard fd >= 0 else {
+            throw IOError(errno: errno, reason: "Creation of epoll failed")
+        }
         events = UnsafeMutablePointer<epoll_event>.allocate(capacity: 2048) // max 2048 events per epoll_wait
 #else
         fd = Darwin.kqueue()
         guard fd >= 0 else {
             throw IOError(errno: errno, reason: "Creation of kqueue failed")
         }
-        events = UnsafeMutablePointer<kevent>.allocate(capacity: 2048) // max 2048 events per kqueue call
+        events = UnsafeMutablePointer<kevent>.allocate(capacity: 2048) // max 2048 events per kevent(...) call
 #endif
     }
     
     deinit {
-        let _ = UnsafeMutablePointer.deallocate(events)
+        events.deinitialize()
+        events.deallocate(capacity: 1)
     }
     
 
