@@ -38,14 +38,14 @@ public class Selector {
         guard fd >= 0 else {
             throw IOError(errno: errno, reason: "Creation of epoll failed")
         }
-        events = UnsafeMutablePointer<epoll_event>.allocate(capacity: 2048) // max 2048 events per epoll_wait
 #else
         fd = Darwin.kqueue()
         guard fd >= 0 else {
             throw IOError(errno: errno, reason: "Creation of kqueue failed")
         }
-        events = UnsafeMutablePointer<kevent>.allocate(capacity: 2048) // max 2048 events per kevent(...) call
 #endif
+        events = UnsafeMutablePointer.allocate(capacity: 2048) // max 2048 events per epoll/kqueue call
+        events.initialize(to: kevent())
     }
     
     deinit {
