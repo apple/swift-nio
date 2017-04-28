@@ -17,8 +17,10 @@ import Foundation
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
     import Darwin
+    let sysAccept = Darwin.accept
 #elseif os(Linux)
     import Glibc
+    let sysAccept = Glibc.accept
 #endif
 
 
@@ -58,15 +60,11 @@ public class ServerSocket: BaseSocket {
         var acceptAddr = sockaddr_in()
         var addrSize = socklen_t(MemoryLayout<sockaddr_in>.size)
         
-#if os(Linux)
-        let fd = withUnsafeMutablePointer(to: &acceptAddr) {
-            Glibc.accept(self.descriptor, UnsafeMutableRawPointer($0).assumingMemoryBound(to: sockaddr.self), &addrSize)
+        let fd = withUnsafeMutablePointer(to: &acceptAddr) { ptr in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
+                sysAccept(self.descriptor, ptr, &addrSize)
+            }
         }
-#else
-        let fd = withUnsafeMutablePointer(to: &acceptAddr) {
-            Darwin.accept(self.descriptor, UnsafeMutableRawPointer($0).assumingMemoryBound(to: sockaddr.self), &addrSize)
-        }
-#endif
         
         guard fd >= 0 else {
             let err = errno
