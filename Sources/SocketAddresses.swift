@@ -24,6 +24,7 @@ public class SocketAddresses {
     public class func newAddress(for host: String, on port: Int32) -> SocketAddress? {
         var info: UnsafeMutablePointer<addrinfo>?
         
+        /* FIXME: this is blocking! */
         if getaddrinfo(host, String(port), nil, &info) != 0 {
             return nil
         }
@@ -34,19 +35,23 @@ public class SocketAddresses {
             }
         }
         
-        if info!.pointee.ai_family == Int32(AF_INET) {
-            var addr = sockaddr_in()
-            memcpy(&addr, info!.pointee.ai_addr, Int(MemoryLayout<sockaddr_in>.size))
-            return .v4(address: addr)
-            
+        if let info = info {
+            switch info.pointee.ai_family {
+            case AF_INET:
+                return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { ptr in
+                    return .v4(address: ptr.pointee)
+                }
+            case AF_INET6:
+                return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { ptr in
+                    return .v6(address: ptr.pointee)
+                }
+            default:
+                return nil
+            }
+        } else {
+            /* this is odd, getaddrinfo returned NULL */
+            return nil
         }
-        
-        if info!.pointee.ai_family == Int32(AF_INET6) {
-            var addr = sockaddr_in6()
-            memcpy(&addr, info!.pointee.ai_addr, Int(MemoryLayout<sockaddr_in6>.size))
-            return .v6(address: addr)
-        }
-        return nil
     }
     
 }
