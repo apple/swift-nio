@@ -102,7 +102,7 @@ public class BaseSocket : Selectable {
             let res = Darwin.close(self.descriptor)
         #endif
         guard res >= 0 else {
-            throw IOError(errno: errno, reason: "shutdown(...) failed")
+            throw IOError(errno: errno, reason: "close(...) failed")
         }
         self.open = false
     }

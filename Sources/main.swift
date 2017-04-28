@@ -103,6 +103,8 @@ do {
                         // Accept new connections until there are no more in the backlog
                         while let accepted = try socket.accept() {
                             try accepted.setNonBlocking()
+                            try accepted.setOption(level: SOL_SOCKET, name: SO_REUSEADDR, value: 1)
+
                             
                             // Allocate an 8kb buffer for reading and writing and register the socket with the selector
                             let buffer = Buffer(capacity: 8 * 1024)
