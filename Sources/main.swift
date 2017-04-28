@@ -20,7 +20,7 @@ public class Buffer {
     var limit: Int
     
     init(capacity: Int32) {
-        self.data = Data(repeating: 0, count: 8 * 1024)
+        self.data = Data(repeating: 0, count: Int(capacity))
         self.offset = 0
         self.limit = 0;
     }
