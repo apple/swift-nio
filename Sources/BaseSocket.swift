@@ -59,14 +59,14 @@ public class BaseSocket : Selectable {
             level,
             name,
             &val,
-            socklen_t(MemoryLayout<T>.stride)
+            socklen_t(MemoryLayout.size(ofValue: val))
             ) != -1 else {
                 throw IOError(errno: errno, reason: "setsockopt failed")
         }
     }
     
     public func getOption<T>(level: Int32, name: Int32) throws -> T {
-        var length = socklen_t(MemoryLayout<T>.stride)
+        var length = socklen_t(MemoryLayout<T>.size)
         var val = UnsafeMutablePointer<T>.allocate(capacity: 1)
         defer {
             val.deinitialize()
