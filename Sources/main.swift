@@ -73,25 +73,24 @@ while true {
                     
                     let s = ev.selectable as! Socket
                     do {
-                        let read = try s.read(data: &buffer.data)
-                        if (read < 0) {
-                            continue
-                        }
-                        buffer.limit = read
-                        
-                        let written = try s.write(data: buffer.data, offset: buffer.offset, len: buffer.limit - buffer.offset)
-                        if written >= 0 {
-                            buffer.offset += written
+                        if let read = try s.read(data: &buffer.data) {
+                            buffer.limit = Int(read)
                             
-                            // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
-                            // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
-                            if buffer.offset < buffer.limit {
+                            if let written = try s.write(data: buffer.data, offset: buffer.offset, len: buffer.limit - buffer.offset) {
+                                buffer.offset += Int(written)
+                                
+                                // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
+                                // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
+                                if buffer.offset < buffer.limit {
+                                    try selector.reregister(selectable: s, interested: InterestedEvent.Write)
+                                }
+
+                            } else {
+                                // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
+                                // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
                                 try selector.reregister(selectable: s, interested: InterestedEvent.Write)
                             }
-                        } else {
-                            // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
-                            // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
-                            try selector.reregister(selectable: s, interested: InterestedEvent.Write)
+
                         }
                     } catch let err as IOError {
                         deregisterAndClose(selector: selector, s: s)
@@ -117,9 +116,8 @@ while true {
                     
                     let s = ev.selectable as! Socket
                     do {
-                        let written = try s.write(data: buffer.data, offset: buffer.offset, len: buffer.limit - buffer.offset)
-                        if (written > 0) {
-                            buffer.offset += written
+                        if let written = try s.write(data: buffer.data, offset: buffer.offset, len: buffer.limit - buffer.offset) {
+                            buffer.offset += Int(written)
                             
                             if buffer.offset == buffer.limit {
                                 // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socket to read.
