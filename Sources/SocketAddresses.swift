@@ -55,34 +55,7 @@ public class SocketAddresses {
 public enum SocketAddress {
     case v4(address: sockaddr_in)
     case v6(address: sockaddr_in6)
-    
-    
-    /// Size of address. (Readonly)
-    ///
-    public var size: Int {
         
-        switch self {
-            
-        case .v4( _):
-            return MemoryLayout<(sockaddr_in)>.size
-        case .v6( _):
-            return MemoryLayout<(sockaddr_in6)>.size
-        }
-    }
-    
-    ///
-    /// Cast as sockaddr. (Readonly)
-    ///
-    public var addr: sockaddr {
-        switch self {
-        case .v4(let addr):
-            return addr.asAddr()
-            
-        case .v6(let addr):
-            return addr.asAddr()
-        }
-    }
-    
     public var host: String {
         return self.host
     }

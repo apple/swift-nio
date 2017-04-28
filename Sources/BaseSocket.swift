@@ -16,8 +16,10 @@ import Foundation
 
 #if os(Linux)
     import Glibc
+    let sysBind = Glibc.bind
 #else
     import Darwin
+    let sysBind = Darwin.bind
 #endif
 
 
@@ -78,17 +80,21 @@ public class BaseSocket : Selectable {
     }
     
     public func bind(address: SocketAddress) throws {
-        var addr = address.addr
-        
-        #if os(Linux)
-            let res = withUnsafePointer(to: &addr) {
-                Glibc.bind(self.descriptor, UnsafePointer<sockaddr>($0), socklen_t(address.size));
+        let res: Int32
+        switch address {
+        case .v4(address: var addr):
+            res = withUnsafePointer(to: &addr) { (ptr: UnsafePointer<sockaddr_in>) -> Int32 in
+                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
+                    sysBind(self.descriptor, ptr, socklen_t(MemoryLayout.size(ofValue: addr)))
+                }
             }
-        #else
-            let res = withUnsafePointer(to: &addr) {
-                Darwin.bind(self.descriptor, UnsafePointer<sockaddr>($0), socklen_t(address.size));
+        case .v6(address: var addr):
+            res = withUnsafePointer(to: &addr) { (ptr: UnsafePointer<sockaddr_in6>) -> Int32 in
+                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
+                    sysBind(self.descriptor, ptr, socklen_t(MemoryLayout.size(ofValue: addr)))
+                }
             }
-        #endif
+        }
         
         guard res >= 0 else {
             throw IOError(errno: errno, reason: "bind(...) failed")
