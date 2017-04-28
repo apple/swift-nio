@@ -60,19 +60,24 @@ public class ServerSocket: BaseSocket {
         var acceptAddr = sockaddr_in()
         var addrSize = socklen_t(MemoryLayout<sockaddr_in>.size)
         
-        let fd = withUnsafeMutablePointer(to: &acceptAddr) { ptr in
-            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                sysAccept(self.descriptor, ptr, &addrSize)
+        while true {
+            let fd = withUnsafeMutablePointer(to: &acceptAddr) { ptr in
+                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
+                    sysAccept(self.descriptor, ptr, &addrSize)
+                }
             }
-        }
         
-        guard fd >= 0 else {
-            let err = errno
-            guard err == EWOULDBLOCK else {
-                throw IOError(errno: errno, reason: "accept(...) failed")
+            guard fd >= 0 else {
+                let err = errno
+                if (err == EINTR) {
+                    continue
+                }
+                guard err == EWOULDBLOCK else {
+                    throw IOError(errno: errno, reason: "accept(...) failed")
+                }
+                return nil
             }
-            return nil
+            return Socket(descriptor: fd)
         }
-        return Socket(descriptor: fd)
     }
 }

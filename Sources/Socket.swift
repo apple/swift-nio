@@ -29,22 +29,27 @@ public class Socket : BaseSocket {
     }
 
     public func write(data: Data, offset: Int, len: Int) throws -> UInt? {
-        let res = data.withUnsafeBytes() { [unowned self] (buffer: UnsafePointer<UInt8>) -> Int in
-        #if os(Linux)
-            return Glibc.write(self.descriptor, buffer.advanced(by: offset), len)
-        #else
-            return Darwin.write(self.descriptor, buffer.advanced(by: offset), len)
-        #endif
-        }
-
-        guard res >= 0 else {
-            let err = errno
-            guard err == EWOULDBLOCK else {
-                throw IOError(errno: errno, reason: "write(...) failed")
+        while true {
+            let res = data.withUnsafeBytes() { [unowned self] (buffer: UnsafePointer<UInt8>) -> Int in
+                #if os(Linux)
+                    return Glibc.write(self.descriptor, buffer.advanced(by: offset), len)
+                #else
+                    return Darwin.write(self.descriptor, buffer.advanced(by: offset), len)
+                #endif
             }
-            return nil
+
+            guard res >= 0 else {
+                let err = errno
+                if err == EINTR {
+                    continue
+                }
+                guard err == EWOULDBLOCK else {
+                    throw IOError(errno: errno, reason: "write(...) failed")
+                }
+                return nil
+            }
+            return UInt(res)
         }
-        return UInt(res)
     }
     
     public func read(data: inout Data) throws -> UInt? {
@@ -52,21 +57,26 @@ public class Socket : BaseSocket {
     }
 
     public func read(data: inout Data, offset: Int, len: Int) throws -> UInt? {
-        let res = data.withUnsafeMutableBytes() { [unowned self] (buffer: UnsafeMutablePointer<UInt8>) -> Int in
-            #if os(Linux)
-                return Glibc.read(self.descriptor, buffer.advanced(by: offset), len)
-            #else
-                return Darwin.read(self.descriptor, buffer.advanced(by: offset), len)
-            #endif
-        }
-
-        guard res >= 0 else {
-            let err = errno
-            guard err == EWOULDBLOCK else {
-                throw IOError(errno: errno, reason: "read(...) failed")
+        while true {
+            let res = data.withUnsafeMutableBytes() { [unowned self] (buffer: UnsafeMutablePointer<UInt8>) -> Int in
+                #if os(Linux)
+                    return Glibc.read(self.descriptor, buffer.advanced(by: offset), len)
+                #else
+                    return Darwin.read(self.descriptor, buffer.advanced(by: offset), len)
+                #endif
             }
-            return nil
+            
+            guard res >= 0 else {
+                let err = errno
+                if err == EINTR {
+                    continue
+                }
+                guard err == EWOULDBLOCK else {
+                    throw IOError(errno: errno, reason: "read(...) failed")
+                }
+                return nil
+            }
+            return UInt(res)
         }
-        return UInt(res)
     }
 }
