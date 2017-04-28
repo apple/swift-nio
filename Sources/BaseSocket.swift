@@ -80,20 +80,20 @@ public class BaseSocket : Selectable {
     }
     
     public func bind(address: SocketAddress) throws {
+        func bindSocket<T>(addr: T) -> Int32 {
+            var addr = addr
+            return withUnsafePointer(to: &addr) { (ptr: UnsafePointer<T>) -> Int32 in
+                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
+                    sysBind(self.descriptor, ptr, socklen_t(MemoryLayout.size(ofValue: addr)))
+                }
+            }
+        }
         let res: Int32
         switch address {
-        case .v4(address: var addr):
-            res = withUnsafePointer(to: &addr) { (ptr: UnsafePointer<sockaddr_in>) -> Int32 in
-                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                    sysBind(self.descriptor, ptr, socklen_t(MemoryLayout.size(ofValue: addr)))
-                }
-            }
-        case .v6(address: var addr):
-            res = withUnsafePointer(to: &addr) { (ptr: UnsafePointer<sockaddr_in6>) -> Int32 in
-                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                    sysBind(self.descriptor, ptr, socklen_t(MemoryLayout.size(ofValue: addr)))
-                }
-            }
+        case .v4(address: let addr):
+            res = bindSocket(addr: addr)
+        case .v6(address: let addr):
+            res = bindSocket(addr: addr)
         }
         
         guard res >= 0 else {
