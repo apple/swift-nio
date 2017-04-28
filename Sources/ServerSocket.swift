@@ -22,20 +22,7 @@ import Foundation
 #endif
 
 
-public class ServerSocket: Selectable {
-    public let descriptor: Int32;
-    public private(set) var open: Bool;
-   
-    public var localAddress: SocketAddress? {
-        get {
-            return nil
-        }
-    }
-    public var remoteAddress: SocketAddress? {
-        get {
-            return nil
-        }
-    }
+public class ServerSocket: BaseSocket {
     
     public class func bootstrap(host: String, port: Int32) throws -> ServerSocket {
         let socket = try ServerSocket();
@@ -46,81 +33,14 @@ public class ServerSocket: Selectable {
     
     init() throws {
 #if os(Linux)
-        self.descriptor = Glibc.socket(AF_INET, Int32(SOCK_STREAM.rawValue), 0)
+        let fd = Glibc.socket(AF_INET, Int32(SOCK_STREAM.rawValue), 0)
 #else
-        self.descriptor = Darwin.socket(AF_INET, Int32(SOCK_STREAM), 0)
+        let fd = Darwin.socket(AF_INET, Int32(SOCK_STREAM), 0)
 #endif
-        guard self.descriptor >= 0 else {
+        if fd < 0 {
             throw IOError(errno: errno, reason: "socket(...) failed")
         }
-        self.open = true
-    }
-    
-    public func setOption<T>(level: Int32, name: Int32, value: T) throws {
-        var val = value
-        guard setsockopt(
-            self.descriptor,
-            level,
-            name,
-            &val,
-            socklen_t(MemoryLayout<T>.stride)
-            ) != -1 else {
-                throw IOError(errno: errno, reason: "setsockopt failed")
-        }
-    }
-    
-    public func getOption<T>(level: Int32, name: Int32) throws -> T {
-        var length = socklen_t(MemoryLayout<T>.stride)
-        var val = UnsafeMutablePointer<T>.allocate(capacity: 1)
-        defer {
-            val.deinitialize()
-            val.deallocate(capacity: 1)
-        }
-        
-        guard getsockopt(self.descriptor, level, name, val, &length) != -1 else {
-            throw IOError(errno: errno, reason: "getsockopt failed")
-        }
-        return val.pointee
-    }
-    
-    public func setNonBlocking() throws {
-        let res = fcntl(self.descriptor, F_SETFL, O_NONBLOCK)
-        
-        guard res >= 0 else {
-            throw IOError(errno: errno, reason: "fcntl(...) failed")
-        }
-        
-    }
-    
-    public func close() throws {
-#if os(Linux)
-        let res = Glibc.close(self.descriptor)
-#else
-        let res = Darwin.close(self.descriptor)
-#endif
-        
-        guard res >= 0 else {
-            throw IOError(errno: errno, reason: "close(...) failed")
-        }
-        self.open = false
-    }
-    
-    public func bind(address: SocketAddress) throws {
-        var addr = address.addr
-        
-#if os(Linux)
-        let res = withUnsafePointer(to: &addr) {
-            Glibc.bind(self.descriptor, UnsafePointer<sockaddr>($0), socklen_t(address.size));
-        }
-#else
-        let res = withUnsafePointer(to: &addr) {
-            Darwin.bind(self.descriptor, UnsafePointer<sockaddr>($0), socklen_t(address.size));
-        }
-#endif
-        
-        guard res >= 0 else {
-            throw IOError(errno: errno, reason: "bind(...) failed")
-        }
+        super.init(descriptor: fd)
     }
     
     public func listen(backlog: Int32) throws {
