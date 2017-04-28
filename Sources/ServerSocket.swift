@@ -64,7 +64,7 @@ public class ServerSocket: BaseSocket {
         }
 #else
         let fd = withUnsafeMutablePointer(to: &acceptAddr) {
-            Darwin.accept(self.fd, UnsafeMutableRawPointer($0).assumingMemoryBound(to: sockaddr.self), &addrSize)
+            Darwin.accept(self.descriptor, UnsafeMutableRawPointer($0).assumingMemoryBound(to: sockaddr.self), &addrSize)
         }
 #endif
         

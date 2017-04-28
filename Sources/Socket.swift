@@ -29,7 +29,7 @@ public class Socket : BaseSocket {
         #if os(Linux)
             return Glibc.write(self.descriptor, buffer.advanced(by: offset), len)
         #else
-            return Darwin.Glibc.write(self.descriptor, buffer.advanced(by: offset), len)
+            return Darwin.write(self.descriptor, buffer.advanced(by: offset), len)
         #endif
         }
 

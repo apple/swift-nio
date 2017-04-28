@@ -18,12 +18,16 @@ import Foundation
 #if os(Linux)
     import CEpoll
     import Glibc
+#else
+    import Darwin
 #endif
 
 public class Selector {
     let fd: Int32;
 #if os(Linux)
     let events: UnsafeMutablePointer<epoll_event>
+#else
+    let events: UnsafeMutablePointer<kevent>
 #endif
 
     var registrations = [Int: Registration]()
@@ -31,17 +35,57 @@ public class Selector {
     init() throws {
 #if os(Linux)
         fd = CEpoll.epoll_create(128)
-        events = UnsafeMutablePointer<epoll_event>.allocate(capacity: MemoryLayout<epoll_event>.size * 2048) // max 2048 events per epoll_wait
+        events = UnsafeMutablePointer<epoll_event>.allocate(capacity: 2048) // max 2048 events per epoll_wait
 #else
-        fd = 0
+        fd = Darwin.kqueue()
+        guard fd >= 0 else {
+            throw IOError(errno: errno, reason: "Creation of kqueue failed")
+        }
+        events = UnsafeMutablePointer<kevent>.allocate(capacity: 2048) // max 2048 events per kqueue call
 #endif
     }
     
     deinit {
-#if os(Linux)
         let _ = UnsafeMutablePointer.deallocate(events)
-#endif
     }
+    
+
+#if !os(Linux)
+    private func register_kqueue(selectable: Selectable, interested: InterestedEvent) -> Int32 {
+        // Allocated on the stack
+        var events = (kevent(), kevent())
+        
+        events.0.ident = UInt(selectable.descriptor)
+        events.0.filter = Int16(EVFILT_READ)
+        events.0.fflags = 0
+        events.0.data = 0
+        events.0.udata = nil
+        
+        events.1.ident = UInt(selectable.descriptor)
+        events.1.filter = Int16(EVFILT_WRITE)
+        events.1.fflags = 0
+        events.1.data = 0
+        events.1.udata = nil
+        
+        switch interested {
+        case InterestedEvent.Read:
+            events.0.flags = UInt16(Int16(EV_ADD))
+            events.1.flags = UInt16(Int16(EV_DELETE))
+        case InterestedEvent.Write:
+            events.0.flags = UInt16(Int16(EV_DELETE))
+            events.1.flags = UInt16(Int16(EV_ADD))
+        case InterestedEvent.All:
+            events.0.flags = UInt16(Int16(EV_ADD))
+            events.1.flags = UInt16(Int16(EV_ADD))
+        }
+        
+        return withUnsafeMutableBytes(of: &events) { event_ptr -> Int32 in
+            precondition(MemoryLayout<kevent>.size * 2 == event_ptr.count)
+            let ptr = event_ptr.baseAddress?.bindMemory(to: kevent.self, capacity: 2)
+            return kevent(self.fd, ptr, 2, ptr, 2, nil)
+        }
+    }
+#endif
     
     public func register(selectable: Selectable, interested: InterestedEvent, attachment: AnyObject?) throws {
 #if os(Linux)
@@ -59,6 +103,13 @@ public class Selector {
         let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_ADD, selectable.descriptor, &ev)
         guard res == 0 else {
             throw IOError(errno: errno, reason: "epoll_ctl(...) failed")
+        }
+        registrations[Int(selectable.descriptor)] = Registration(selectable: selectable, attachment: attachment)
+#else
+        let res = register_kqueue(selectable: selectable, interested: interested)
+    
+        guard res != -1 else {
+            throw IOError(errno: errno, reason: "kevent(...) failed")
         }
         registrations[Int(selectable.descriptor)] = Registration(selectable: selectable, attachment: attachment)
 #endif
@@ -82,6 +133,12 @@ public class Selector {
         guard res == 0 else {
             throw IOError(errno: errno, reason: "epoll_ctl(...) failed")
         }
+#else
+        let res = register_kqueue(selectable: selectable, interested: interested)
+    
+        guard res != -1 else {
+            throw IOError(errno: errno, reason: "kevent(...) failed")
+        }
 #endif
     }
     
@@ -93,6 +150,33 @@ public class Selector {
             throw IOError(errno: errno, reason: "epoll_ctl(...) failed")
         }
         registrations.removeValue(forKey: Int(selectable.descriptor))
+#else
+        // Allocated on the stack
+        var evs = (kevent(), kevent())
+    
+        evs.0.ident = UInt(selectable.descriptor)
+        evs.0.filter = Int16(EVFILT_READ)
+        evs.0.fflags = 0
+        evs.0.data = 0
+        evs.0.udata = nil
+        evs.0.flags = UInt16(Int16(EV_DELETE))
+
+        evs.1.ident = UInt(selectable.descriptor)
+        evs.1.filter = Int16(EVFILT_WRITE)
+        evs.1.fflags = 0
+        evs.1.data = 0
+        evs.1.udata = nil
+        evs.1.flags = UInt16(Int16(EV_DELETE))
+
+        let res = withUnsafeMutableBytes(of: &evs) { event_ptr -> Int32 in
+            precondition(MemoryLayout<kevent>.size * 2 == event_ptr.count)
+            let ptr = event_ptr.baseAddress?.bindMemory(to: kevent.self, capacity: 2)
+            return kevent(self.fd, ptr, 2, ptr, 2, nil)
+        }
+    
+        guard res != -1 else {
+            throw IOError(errno: errno, reason: "kevent(...) failed")
+        }
 #endif
     }
     
@@ -110,18 +194,35 @@ public class Selector {
             }
             return sEvents
         }
+#else
+        let ready = kevent(self.fd, nil, 0, events, 2048, nil);
+        if (ready > 0) {
+            var sEvents = [SelectorEvent]()
+            var i = 0;
+            while (i < Int(ready)) {
+                let ev = events[Int(i)]
+                
+                let registration = registrations[Int(ev.ident)]!
+                sEvents.append(SelectorEvent(isReadable: Int32(ev.filter) == EVFILT_READ, isWritable: Int32(ev.filter) == EVFILT_WRITE, selectable: registration.selectable, attachment: registration.attachment))
+                i += 1
+            }
+            return sEvents
+        }
 #endif
         return nil
     }
-
+    
     public func close() throws {
 #if os(Linux)
         let res = Glibc.close(self.fd)
-        guard res == 0 else {
+#else
+        let res = Darwin.close(self.fd)
+#endif
+        guard res >= 0 else {
             throw IOError(errno: errno, reason: "close(...) failed")
         }
-#endif
     }
+
 }
 
 struct Registration {
