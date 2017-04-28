@@ -44,7 +44,7 @@ defer {
     do { try selector.close() } catch { }
 }
 
-let server = try ServerSocket.bootstrap(host: "0.0.0.0", port: 4010)
+let server = try ServerSocket.bootstrap(host: "0.0.0.0", port: 4009)
 try server.setNonBlocking()
 
 
@@ -57,6 +57,8 @@ defer {
 }
 
 do {
+    try server.setOption(level: SOL_SOCKET, name: SO_REUSEADDR, value: 1)
+    
     while true {
         // Block until there are events to handle
         if let events = try selector.awaitReady() {

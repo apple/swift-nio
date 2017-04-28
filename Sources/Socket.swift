@@ -63,6 +63,34 @@ public class Socket : Selectable {
         
     }
     
+    public func setOption<T>(level: Int32, name: Int32, value: T) throws {
+        var val = value
+        guard setsockopt(
+            self.descriptor,
+            level,
+            name,
+            &val,
+            socklen_t(MemoryLayout<T>.stride)
+            ) != -1 else {
+                throw IOError(errno: errno, reason: "setsockopt failed")
+        }
+    }
+    
+    public func getOption<T>(level: Int32, name: Int32) throws -> T {
+        var length = socklen_t(MemoryLayout<T>.stride)
+        var val = UnsafeMutablePointer<T>.allocate(capacity: 1)
+        defer {
+            val.deinitialize()
+            val.deallocate(capacity: 1)
+        }
+        
+        guard getsockopt(self.descriptor, level, name, val, &length) != -1 else {
+            throw IOError(errno: errno, reason: "getsockopt failed")
+        }
+        return val.pointee
+    }
+    
+    
     public func close() throws {
 #if os(Linux)
         let res = Glibc.close(self.descriptor)
