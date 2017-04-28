@@ -24,6 +24,10 @@ import Darwin
 
 public class Socket : BaseSocket {
     
+    public func write(data: Data) throws -> Int {
+        return try write(data: data, offset: 0, len: data.count)
+    }
+
     public func write(data: Data, offset: Int, len: Int) throws -> Int {
         let res = data.withUnsafeBytes() { [unowned self] (buffer: UnsafePointer<UInt8>) -> Int in
         #if os(Linux)
@@ -43,6 +47,10 @@ public class Socket : BaseSocket {
         return res
     }
     
+    public func read(data: inout Data) throws -> Int {
+        return try read(data: &data, offset: 0, len: data.count)
+    }
+
     public func read(data: inout Data, offset: Int, len: Int) throws -> Int {
         let res = data.withUnsafeMutableBytes() { [unowned self] (buffer: UnsafeMutablePointer<UInt8>) -> Int in
             #if os(Linux)

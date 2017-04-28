@@ -27,7 +27,7 @@ public class ServerSocket: BaseSocket {
     public class func bootstrap(host: String, port: Int32) throws -> ServerSocket {
         let socket = try ServerSocket();
         try socket.bind(address: SocketAddresses.newAddress(for: host, on: port)!)
-        try socket.listen(backlog: 128)
+        try socket.listen()
         return socket
     }
     
@@ -43,7 +43,7 @@ public class ServerSocket: BaseSocket {
         super.init(descriptor: fd)
     }
     
-    public func listen(backlog: Int32) throws {
+    public func listen(backlog: Int32 = 128) throws {
 #if os(Linux)
         let res = Glibc.listen(self.descriptor, backlog)
 #else

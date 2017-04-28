@@ -87,7 +87,7 @@ public class Selector {
     }
 #endif
     
-    public func register(selectable: Selectable, interested: InterestedEvent, attachment: AnyObject?) throws {
+    public func register(selectable: Selectable, interested: InterestedEvent = InterestedEvent.Read, attachment: AnyObject? = nil) throws {
 #if os(Linux)
         var ev = epoll_event()
     

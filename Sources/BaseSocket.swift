@@ -94,7 +94,6 @@ public class BaseSocket : Selectable {
             throw IOError(errno: errno, reason: "bind(...) failed")
         }
     }
-
     
     public func close() throws {
         #if os(Linux)

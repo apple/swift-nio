@@ -48,7 +48,8 @@ let server = try ServerSocket.bootstrap(host: "0.0.0.0", port: 9999)
 try server.setNonBlocking()
 
 
-try selector.register(selectable: server, interested: InterestedEvent.Read, attachment: nil)
+// this will register with InterestedEvent.READ and no attachment
+try selector.register(selectable: server)
 
 // cleanup
 defer {
@@ -73,7 +74,7 @@ do {
 
                         let s = ev.selectable as! Socket
                         do {
-                            let read = try s.read(data: &buffer.data, offset: 0, len: buffer.data.count)
+                            let read = try s.read(data: &buffer.data)
                             if (read < 0) {
                                 continue
                             }
@@ -105,7 +106,7 @@ do {
                             
                             // Allocate an 8kb buffer for reading and writing and register the socket with the selector
                             let buffer = Buffer(capacity: 8 * 1024)
-                            try selector.register(selectable: accepted, interested: InterestedEvent.Read, attachment: buffer)
+                            try selector.register(selectable: accepted, attachment: buffer)
                         }
                     }
                     
