@@ -24,6 +24,7 @@ import Foundation
 #endif
 
 
+// TODO: Handle AF_INET6 as well
 public class ServerSocket: BaseSocket {
     
     public class func bootstrap(host: String, port: Int32) throws -> ServerSocket {

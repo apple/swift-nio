@@ -76,6 +76,14 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         handler.errorCaught(ctx: self, error: error)
     }
     
+    public func fireUserEventTriggered(event: AnyClass) {
+        next!.invokeUserEventTriggered(event: event)
+    }
+    
+    func invokeUserEventTriggered(event: AnyClass) {
+        handler.userEventTriggered(ctx: self, event: event)
+    }
+    
     public func write(data: Buffer, promise: Promise<Void>) -> Future<Void> {
         prev!.invokeWrite(data: data, promise: promise)
         return promise.futureResult

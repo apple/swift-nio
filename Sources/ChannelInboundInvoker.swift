@@ -27,4 +27,6 @@ public protocol ChannelInboundInvoker {
     func fireChannelWritabilityChanged(writable: Bool)
     
     func fireErrorCaught(error: Error)
+    
+    func fireUserEventTriggered(event: AnyClass)
 }
