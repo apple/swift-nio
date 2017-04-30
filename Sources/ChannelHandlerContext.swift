@@ -29,7 +29,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     public func fireChannelActive() {
-        next?.invokeChannelActive()
+        next!.invokeChannelActive()
     }
     
     func invokeChannelActive() {
@@ -37,7 +37,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     public func fireChannelInactive() {
-        next?.invokeChannelInactive()
+        next!.invokeChannelInactive()
     }
     
     func invokeChannelInactive() {
@@ -45,7 +45,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     public func fireChannelRead(data: Buffer) {
-        next?.invokeChannelRead(data: data)
+        next!.invokeChannelRead(data: data)
     }
     
     func invokeChannelRead(data: Buffer) {
@@ -53,7 +53,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     public func fireChannelReadComplete() {
-        next?.invokeChannelReadComplete()
+        next!.invokeChannelReadComplete()
     }
     
     func invokeChannelReadComplete() {
@@ -61,7 +61,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     public func fireChannelWritabilityChanged(writable: Bool) {
-        next?.invokeChannelWritabilityChanged(writable: writable)
+        next!.invokeChannelWritabilityChanged(writable: writable)
     }
     
     public func invokeChannelWritabilityChanged(writable: Bool) {
@@ -69,7 +69,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
 
     public func fireErrorCaught(error: Error) {
-        next?.invokeErrorCaught(error: error)
+        next!.invokeErrorCaught(error: error)
     }
     
     func invokeErrorCaught(error: Error) {
@@ -77,7 +77,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     public func write(data: Buffer, promise: Promise<Void>) -> Future<Void> {
-        prev?.invokeWrite(data: data, promise: promise)
+        prev!.invokeWrite(data: data, promise: promise)
         return promise.futureResult
     }
 
@@ -86,15 +86,14 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     public func writeAndFlush(data: Buffer, promise: Promise<Void>) -> Future<Void> {
-        if let p = prev {
-            p.invokeWrite(data: data, promise: promise)
-            p.invokeFlush()
-        }
+        prev!.invokeWrite(data: data, promise: promise)
+        prev!.invokeFlush()
+        
         return promise.futureResult
     }
     
     public func flush() {
-        prev?.invokeFlush()
+        prev!.invokeFlush()
     }
     
     func invokeFlush() {
@@ -102,7 +101,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     public func close(promise: Promise<Void>) -> Future<Void> {
-        prev?.invokeClose(promise: promise)
+        prev!.invokeClose(promise: promise)
         return promise.futureResult
     }
     

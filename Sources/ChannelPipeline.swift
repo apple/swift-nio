@@ -34,8 +34,8 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         ctx.prev = tail!.prev
         ctx.next = tail
         
-        prev?.next = ctx
-        tail?.prev = ctx
+        prev!.next = ctx
+        tail!.prev = ctx
         
         ctx.invokeHandlerAdded()
     }
@@ -47,7 +47,7 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         ctx.prev = head
         ctx.next = next
         
-        next?.prev = ctx
+        next!.prev = ctx
         
         ctx.invokeHandlerAdded()
     }
@@ -108,6 +108,34 @@ class HeadChannelHandler : ChannelHandler {
     func flush(ctx: ChannelHandlerContext) {
         channel.flush0()
     }
+    
+    func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
+        channel.close0(promise: promise)
+    }
 }
 
-class TailChannelHandler : ChannelHandler { }
+class TailChannelHandler : ChannelHandler {
+    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+        // TODO: Log this and tell the user that its most likely a fault not handling it.
+    }
+    
+    public func channelRead(ctx: ChannelHandlerContext, data: Buffer) {
+        // TODO: Log this and tell the user that its most likely a fault not handling it.
+    }
+    
+    public func channelActive(ctx: ChannelHandlerContext) {
+        // Discard
+    }
+    
+    public func channelInactive(ctx: ChannelHandlerContext) {
+        // Discard
+    }
+    
+    public func channelReadComplete(ctx: ChannelHandlerContext) {
+        // Discard
+    }
+    
+    public func channelWritabilityChanged(ctx: ChannelHandlerContext, writable: Bool) {
+        // Discard
+    }
+}

@@ -27,6 +27,7 @@ public class Channel : ChannelOutboundInvoker {
         self.socket = socket
         self.selector = selector
         pipeline = ChannelPipeline()
+        // TODO: This is most likely not the best datastructure for us. Doubly-Linked-List would be better.
         pendingWrites = Array()
         outstanding = 0
         flushPending = false
@@ -63,6 +64,7 @@ public class Channel : ChannelOutboundInvoker {
         pendingWrites.append((data, promise))
         outstanding += UInt64((data.limit - data.offset))
         
+        // TODO: Configurable or remove completely ?
         if outstanding >= 64 * 1024 {
             // Too many outstanding bytes, try flush these now.
             flush0()
@@ -79,7 +81,7 @@ public class Channel : ChannelOutboundInvoker {
                 pipeline.fireChannelWritabilityChanged(writable: false)
             } catch {
                 // TODO: Log ?
-                close0(promise: Promise<Void>())
+                close0()
             }
         }
     }
@@ -94,7 +96,7 @@ public class Channel : ChannelOutboundInvoker {
                 try selector.reregister(selectable: socket, interested: InterestedEvent.Read)
             } catch {
                 // TODO: Log ?
-                close0(promise: Promise<Void>())
+                close0()
             }
         }
     }
@@ -120,7 +122,9 @@ public class Channel : ChannelOutboundInvoker {
                 pendingWrites.removeFirst()
             }
             
-            close0(promise: Promise<Void>())
+            if err is IOError {
+                close0()
+            }
         }
         return true
     }
@@ -143,23 +147,21 @@ public class Channel : ChannelOutboundInvoker {
         } catch let err {
             pipeline.fireErrorCaught(error: err)
             if err is IOError {
-                close0(promise: Promise<Void>())
+                close0()
             }
         }
     }
     
-    func close0(promise: Promise<Void>) {
-        if socket.open {
-            defer {
-                // Ensure this is always called
-                pipeline.fireChannelInactive()
-            }
-            do {
-                try socket.close()
-                promise.succeed(result: ())
-            } catch let err {
-                promise.fail(error: err)
-            }
+    func close0(promise: Promise<Void> = Promise<Void>()) {
+        defer {
+            // Ensure this is always called
+            pipeline.fireChannelInactive()
+        }
+        do {
+            try socket.close()
+            promise.succeed(result: ())
+        } catch let err {
+            promise.fail(error: err)
         }
     }
     
