@@ -11,23 +11,19 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
 import Foundation
 
-
-public class EchoHandler: ChannelHandler {
-    // Write back to the transport
-    public func channelRead(ctx: ChannelHandlerContext, data: Buffer) {
-        ctx.write(data: data)
-    }
+public protocol ChannelInboundInvoker {
     
-    // Flush it out. This will use gathering writes for max performance once implemented
-    public func channelReadComplete(ctx: ChannelHandlerContext) {
-        ctx.flush()
-    }
+    func fireChannelActive()
+
+    func fireChannelInactive()
+
+    func fireChannelRead(data: Buffer)
+    
+    func fireChannelReadComplete()
+    
+    func fireChannelWritabilityChanged(writable: Bool)
+
 }
-
-
-try Server.run(host: "0.0.0.0", port: 9999, initPipeline: { pipeline in
-    pipeline.addLast(handler: EchoHandler())
-})
-

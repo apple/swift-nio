@@ -22,6 +22,7 @@ import Darwin
 #endif
 
 
+// TODO: Add gathering / scattering support
 public class Socket : BaseSocket {
     
     public func write(data: Data) throws -> UInt? {
