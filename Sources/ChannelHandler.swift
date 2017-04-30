@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+import Future
 
 public protocol ChannelHandler {
     func channelActive(ctx: ChannelHandlerContext)
@@ -20,9 +21,10 @@ public protocol ChannelHandler {
     func channelRead(ctx: ChannelHandlerContext, data: Buffer)
     func channelReadComplete(ctx: ChannelHandlerContext)
     func channelWritabilityChanged(ctx: ChannelHandlerContext, writable: Bool)
-    func write(ctx: ChannelHandlerContext, data: Buffer)
+    func errorCaught(ctx: ChannelHandlerContext, error: Error)
+    func write(ctx: ChannelHandlerContext, data: Buffer, promise: Promise<Void>)
     func flush(ctx: ChannelHandlerContext)
-    func close(ctx: ChannelHandlerContext)
+    func close(ctx: ChannelHandlerContext, promise: Promise<Void>)
     func handlerAdded(ctx: ChannelHandlerContext)
     func handlerRemoved(ctx: ChannelHandlerContext)
 }
@@ -50,16 +52,20 @@ extension ChannelHandler {
         ctx.fireChannelWritabilityChanged(writable: writable)
     }
     
-    public func write(ctx: ChannelHandlerContext, data: Buffer) {
-        ctx.write(data: data)
+    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+        ctx.fireErrorCaught(error: error)
+    }
+
+    public func write(ctx: ChannelHandlerContext, data: Buffer, promise: Promise<Void>) {
+        let _ = ctx.write(data: data, promise: promise)
     }
     
-   public func flush(ctx: ChannelHandlerContext) {
-        ctx.flush()
+    public func flush(ctx: ChannelHandlerContext) {
+        let _ = ctx.flush()
     }
     
-   public func close(ctx: ChannelHandlerContext) {
-        ctx.close()
+    public func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
+        let _ = ctx.close(promise: promise)
     }
     
     public func handlerAdded(ctx: ChannelHandlerContext) {

@@ -15,14 +15,22 @@ import Foundation
 
 
 public class EchoHandler: ChannelHandler {
-    // Write back to the transport
     public func channelRead(ctx: ChannelHandlerContext, data: Buffer) {
-        ctx.write(data: data)
+        let f = ctx.write(data: data)
+        
+        // If the write fails close the channel
+        f.whenFailure(callback: { error in
+            let _ = ctx.close()
+        })
     }
     
     // Flush it out. This will use gathering writes for max performance once implemented
     public func channelReadComplete(ctx: ChannelHandlerContext) {
         ctx.flush()
+    }
+    
+    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+        print("error: {}", error)
     }
 }
 

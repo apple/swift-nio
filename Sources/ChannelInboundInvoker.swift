@@ -25,5 +25,6 @@ public protocol ChannelInboundInvoker {
     func fireChannelReadComplete()
     
     func fireChannelWritabilityChanged(writable: Bool)
-
+    
+    func fireErrorCaught(error: Error)
 }

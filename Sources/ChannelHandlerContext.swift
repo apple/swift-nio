@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+import Future
 
 public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvoker {
     
@@ -67,19 +68,29 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         handler.channelWritabilityChanged(ctx: self, writable: writable)
     }
 
-    public func write(data: Buffer) {
-        prev?.invokeWrite(data: data)
-    }
-
-    func invokeWrite(data: Buffer) {
-        handler.write(ctx: self, data: data)
+    public func fireErrorCaught(error: Error) {
+        next?.invokeErrorCaught(error: error)
     }
     
-    public func writeAndFlush(data: Buffer) {
+    func invokeErrorCaught(error: Error) {
+        handler.errorCaught(ctx: self, error: error)
+    }
+    
+    public func write(data: Buffer, promise: Promise<Void>) -> Future<Void> {
+        prev?.invokeWrite(data: data, promise: promise)
+        return promise.futureResult
+    }
+
+    func invokeWrite(data: Buffer, promise: Promise<Void>) {
+        handler.write(ctx: self, data: data, promise: promise)
+    }
+    
+    public func writeAndFlush(data: Buffer, promise: Promise<Void>) -> Future<Void> {
         if let p = prev {
-            p.write(data: data)
-            p.flush()
+            p.invokeWrite(data: data, promise: promise)
+            p.invokeFlush()
         }
+        return promise.futureResult
     }
     
     public func flush() {
@@ -90,12 +101,13 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         handler.flush(ctx: self)
     }
     
-    public func close() {
-        prev?.invokeClose()
+    public func close(promise: Promise<Void>) -> Future<Void> {
+        prev?.invokeClose(promise: promise)
+        return promise.futureResult
     }
     
-    func invokeClose() {
-        handler.close(ctx: self)
+    func invokeClose(promise: Promise<Void>) {
+        handler.close(ctx: self, promise: promise)
     }
     
     func invokeHandlerAdded() {

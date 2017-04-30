@@ -13,15 +13,33 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+import Future
 
-// TODO: Return futures from everything.
 protocol ChannelOutboundInvoker {
     
-    func write(data: Buffer)
-    
+    func write(data: Buffer) -> Future<Void>
+    func write(data: Buffer, promise: Promise<Void>) -> Future<Void>
+
     func flush()
     
-    func writeAndFlush(data: Buffer)
+    func writeAndFlush(data: Buffer) -> Future<Void>
+    func writeAndFlush(data: Buffer, promise: Promise<Void>) -> Future<Void>
+
+    func close() -> Future<Void>
+    func close(promise: Promise<Void>) -> Future<Void>
+}
+
+// Default implementations for methods that not take a promise.
+extension ChannelOutboundInvoker {
+    func write(data: Buffer) -> Future<Void> {
+        return write(data: data, promise: Promise<Void>())
+    }
+
+    func writeAndFlush(data: Buffer) -> Future<Void> {
+        return writeAndFlush(data: data, promise: Promise<Void>())
+    }
     
-    func close()
+    func close() -> Future<Void> {
+        return close(promise: Promise<Void>())
+    }
 }

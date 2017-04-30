@@ -60,12 +60,9 @@ public class Server {
                         if ev.selectable is Socket {
                             // We stored the Buffer before as attachment so get it and clear the limit / offset.
                             let channel = ev.attachment as! Channel
-                            
-                            do {
-                                try channel.read0()
-                            } catch {
-                                try channel.close0()
-                            }
+
+                            channel.read0()
+
                         } else if ev.selectable is ServerSocket {
                             let socket = ev.selectable as! ServerSocket
                             
@@ -82,11 +79,7 @@ public class Server {
                     } else if ev.isWritable  && ev.selectable is Socket{
                         let channel = ev.attachment as! Channel
                         
-                        do {
-                            try channel.flushNowAndReadAgain()
-                        } catch {
-                            try channel.close0()
-                        }
+                        channel.flushNowAndReadAgain()
                     }
                 }
             }

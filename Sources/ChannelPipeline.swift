@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+import Future
 
 // TODO: Add teardown which also removes the handlers.
 public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
@@ -71,20 +72,24 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         head!.fireChannelWritabilityChanged(writable: writable)
     }
     
-    public func close() {
-        tail!.close()
+    public func fireErrorCaught(error: Error) {
+        head!.fireErrorCaught(error: error)
+    }
+
+    public func close(promise: Promise<Void>) -> Future<Void> {
+        return tail!.close(promise: promise)
     }
     
     public func flush() {
         tail!.flush()
     }
     
-    public func write(data: Buffer) {
-        tail!.write(data: data)
+    public func write(data: Buffer, promise: Promise<Void>) -> Future<Void> {
+        return tail!.write(data: data, promise: promise)
     }
     
-    public func writeAndFlush(data: Buffer) {
-        tail!.writeAndFlush(data: data)
+    public func writeAndFlush(data: Buffer, promise: Promise<Void>) -> Future<Void> {
+        return tail!.writeAndFlush(data: data, promise: promise)
     }
 }
 
@@ -96,28 +101,12 @@ class HeadChannelHandler : ChannelHandler {
         self.channel = channel
     }
     
-    func write(ctx: ChannelHandlerContext, data: Buffer) {
-        do {
-            try channel.write0(data: data)
-        } catch {
-            do {
-                try channel.close0()
-            } catch {
-                // TODO: Fix me
-            }
-        }
+    func write(ctx: ChannelHandlerContext, data: Buffer, promise: Promise<Void>) {
+        channel.write0(data: data, promise: promise)
     }
     
     func flush(ctx: ChannelHandlerContext) {
-        do {
-            try channel.flush0()
-        } catch {
-            do {
-                try channel.close0()
-            } catch {
-                // TODO: Fix me
-            }
-        }
+        channel.flush0()
     }
 }
 
