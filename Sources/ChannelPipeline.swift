@@ -36,8 +36,14 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         
         prev!.next = ctx
         tail!.prev = ctx
-        
-        ctx.invokeHandlerAdded()
+        do {
+            try ctx.invokeHandlerAdded()
+        } catch {
+            ctx.prev!.next = ctx.next
+            ctx.next!.prev = ctx.prev
+            
+            // TODO: Log ?
+        }
     }
     
     public func addFirst(handler: ChannelHandler) {
@@ -49,8 +55,16 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         
         next!.prev = ctx
         
-        ctx.invokeHandlerAdded()
+        do {
+            try ctx.invokeHandlerAdded()
+        } catch {
+            ctx.prev!.next = ctx.next
+            ctx.next!.prev = ctx.prev
+            
+            // TODO: Log ?
+        }
     }
+
 
     public func fireChannelInactive() {
         head!.fireChannelInactive()

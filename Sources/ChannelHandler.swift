@@ -16,18 +16,18 @@ import Foundation
 import Future
 
 public protocol ChannelHandler {
-    func channelActive(ctx: ChannelHandlerContext)
-    func channelInactive(ctx: ChannelHandlerContext)
-    func channelRead(ctx: ChannelHandlerContext, data: Buffer)
-    func channelReadComplete(ctx: ChannelHandlerContext)
-    func channelWritabilityChanged(ctx: ChannelHandlerContext, writable: Bool)
-    func userEventTriggered(ctx: ChannelHandlerContext, event: AnyClass)
-    func errorCaught(ctx: ChannelHandlerContext, error: Error)
+    func channelActive(ctx: ChannelHandlerContext) throws
+    func channelInactive(ctx: ChannelHandlerContext) throws
+    func channelRead(ctx: ChannelHandlerContext, data: Buffer) throws
+    func channelReadComplete(ctx: ChannelHandlerContext) throws
+    func channelWritabilityChanged(ctx: ChannelHandlerContext, writable: Bool) throws
+    func userEventTriggered(ctx: ChannelHandlerContext, event: AnyClass) throws
+    func errorCaught(ctx: ChannelHandlerContext, error: Error) throws
     func write(ctx: ChannelHandlerContext, data: Buffer, promise: Promise<Void>)
     func flush(ctx: ChannelHandlerContext)
     func close(ctx: ChannelHandlerContext, promise: Promise<Void>)
-    func handlerAdded(ctx: ChannelHandlerContext)
-    func handlerRemoved(ctx: ChannelHandlerContext)
+    func handlerAdded(ctx: ChannelHandlerContext) throws
+    func handlerRemoved(ctx: ChannelHandlerContext) throws
 }
 
 //  Default implementation for the ChannelHandler protocol

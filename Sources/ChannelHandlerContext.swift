@@ -33,7 +33,11 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeChannelActive() {
-        handler.channelActive(ctx: self)
+        do {
+            try handler.channelActive(ctx: self)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
     }
     
     public func fireChannelInactive() {
@@ -41,7 +45,11 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeChannelInactive() {
-        handler.channelInactive(ctx: self)
+        do {
+            try handler.channelInactive(ctx: self)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
     }
     
     public func fireChannelRead(data: Buffer) {
@@ -49,7 +57,11 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeChannelRead(data: Buffer) {
-        handler.channelRead(ctx: self, data: data)
+        do {
+            try handler.channelRead(ctx: self, data: data)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
     }
     
     public func fireChannelReadComplete() {
@@ -57,7 +69,11 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeChannelReadComplete() {
-        handler.channelReadComplete(ctx: self)
+        do {
+            try handler.channelReadComplete(ctx: self)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
     }
     
     public func fireChannelWritabilityChanged(writable: Bool) {
@@ -65,7 +81,11 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     public func invokeChannelWritabilityChanged(writable: Bool) {
-        handler.channelWritabilityChanged(ctx: self, writable: writable)
+        do {
+            try handler.channelWritabilityChanged(ctx: self, writable: writable)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
     }
 
     public func fireErrorCaught(error: Error) {
@@ -73,7 +93,11 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeErrorCaught(error: Error) {
-        handler.errorCaught(ctx: self, error: error)
+        do {
+            try handler.errorCaught(ctx: self, error: error)
+        } catch {
+            // TODO: What to do ?
+        }
     }
     
     public func fireUserEventTriggered(event: AnyClass) {
@@ -81,7 +105,11 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeUserEventTriggered(event: AnyClass) {
-        handler.userEventTriggered(ctx: self, event: event)
+        do {
+            try handler.userEventTriggered(ctx: self, event: event)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
     }
     
     public func write(data: Buffer, promise: Promise<Void>) -> Future<Void> {
@@ -117,11 +145,19 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         handler.close(ctx: self, promise: promise)
     }
     
-    func invokeHandlerAdded() {
-        handler.handlerAdded(ctx: self)
+    func invokeHandlerAdded() throws {
+        try handler.handlerAdded(ctx: self)
     }
     
-    func invokeHandlerRemoved() {
-        handler.handlerRemoved(ctx: self)
+    func invokeHandlerRemoved() throws {
+        try handler.handlerRemoved(ctx: self)
+    }
+    
+    private func safeErrorCaught(ctx: ChannelHandlerContext, error: Error) {
+        do {
+            try handler.errorCaught(ctx: ctx, error: error)
+        } catch {
+            // TOOO: What to do here ?
+        }
     }
 }

@@ -16,11 +16,11 @@ import Foundation
 import Future
 
 public class Channel : ChannelOutboundInvoker {
-    let pipeline: ChannelPipeline
-    let selector: Selector
-    let socket: Socket
-    var pendingWrites: [(Buffer, Promise<Void>)]
-    var outstanding: UInt64
+    public let pipeline: ChannelPipeline
+    private let selector: Selector
+    private let socket: Socket
+    private var pendingWrites: [(Buffer, Promise<Void>)]
+    private var outstanding: UInt64
     private var flushPending: Bool
     
     init(socket: Socket, selector: Selector) {
