@@ -15,12 +15,13 @@
 import Foundation
 
 
-public class Channel {
+public class Channel : ChannelOutboundInvoker {
     let pipeline: ChannelPipeline
     let selector: Selector
     let socket: Socket
     var buffers: [Buffer]
     var outstanding: UInt64
+    private var flushPending: Bool
     
     init(socket: Socket, selector: Selector) {
         self.socket = socket
@@ -28,6 +29,23 @@ public class Channel {
         pipeline = ChannelPipeline()
         buffers = Array()
         outstanding = 0
+        flushPending = false
+    }
+    
+    public func write(data: Buffer) {
+        pipeline.write(data: data)
+    }
+    
+    public func flush() {
+        pipeline.flush()
+    }
+    
+    public func writeAndFlush(data: Buffer) {
+        pipeline.writeAndFlush(data: data)
+    }
+    
+    public func close() {
+        pipeline.close()
     }
     
     func attach(initPipeline: (ChannelPipeline) ->()) throws {
@@ -52,9 +70,11 @@ public class Channel {
     }
     
     func flush0() throws {
-        if try !flushNow() {
+        if try !flushPending && !flushNow() {
             // Could not flush all of the queued bytes, stop reading until we were able to do so
             try selector.reregister(selectable: socket, interested: InterestedEvent.Write)
+            
+            flushPending = true
             pipeline.fireChannelWritabilityChanged(writable: false)
         }
     }
@@ -63,11 +83,13 @@ public class Channel {
         if try flushNow() {
             // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socketto read.
             pipeline.fireChannelWritabilityChanged(writable: true)
+            flushPending = false
+
             try selector.reregister(selectable: socket, interested: InterestedEvent.Read)
         }
     }
     
-    func flushNow() throws -> Bool {
+    private func flushNow() throws -> Bool {
         while let buffer = buffers.first {
             if let written = try socket.write(data: buffer.data, offset: buffer.offset, len: buffer.limit - buffer.offset) {
                 buffer.offset += Int(written)
@@ -96,11 +118,13 @@ public class Channel {
     }
     
     func close0() throws {
-        defer {
-            // Ensure this is always called
-            pipeline.fireChannelInactive()
+        if socket.open {
+            defer {
+                // Ensure this is always called
+                pipeline.fireChannelInactive()
+            }
+            try socket.close()
         }
-        try socket.close()
     }
     
     func deregister0() throws {

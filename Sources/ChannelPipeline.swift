@@ -38,6 +38,18 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         
         ctx.invokeHandlerAdded()
     }
+    
+    public func addFirst(handler: ChannelHandler) {
+        let ctx = ChannelHandlerContext(handler: handler, pipeline: self)
+        let next = head!.next
+        
+        ctx.prev = head
+        ctx.next = next
+        
+        next?.prev = ctx
+        
+        ctx.invokeHandlerAdded()
+    }
 
     public func fireChannelInactive() {
         head!.fireChannelInactive()

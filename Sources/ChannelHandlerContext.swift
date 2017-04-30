@@ -66,6 +66,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     public func invokeChannelWritabilityChanged(writable: Bool) {
         handler.channelWritabilityChanged(ctx: self, writable: writable)
     }
+
     public func write(data: Buffer) {
         prev?.invokeWrite(data: data)
     }
