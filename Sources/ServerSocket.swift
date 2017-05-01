@@ -18,9 +18,15 @@ import Foundation
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
     import Darwin
     let sysAccept = Darwin.accept
+    let sysListen = Darwin.listen
+    let sysSocket = Darwin.socket
+    let sysSOCK_STREAM = SOCK_STREAM
 #elseif os(Linux)
     import Glibc
     let sysAccept = Glibc.accept
+    let sysListen = Glibc.listen
+    let sysSocket = Glibc.socket
+    let sysSOCK_STREAM = SOCK_STREAM.rawValue
 #endif
 
 
@@ -35,11 +41,7 @@ public class ServerSocket: BaseSocket {
     }
     
     init() throws {
-#if os(Linux)
-        let fd = Glibc.socket(AF_INET, Int32(SOCK_STREAM.rawValue), 0)
-#else
-        let fd = Darwin.socket(AF_INET, Int32(SOCK_STREAM), 0)
-#endif
+        let fd = sysSocket(AF_INET, Int32(sysSOCK_STREAM), 0)
         if fd < 0 {
             throw IOError(errno: errno, reason: "socket(...) failed")
         }
@@ -47,11 +49,7 @@ public class ServerSocket: BaseSocket {
     }
     
     public func listen(backlog: Int32 = 128) throws {
-#if os(Linux)
-        let res = Glibc.listen(self.descriptor, backlog)
-#else
-        let res = Darwin.listen(self.descriptor, backlog)
-#endif
+        let res = sysListen(self.descriptor, backlog)
         guard res >= 0 else {
             throw IOError(errno: errno, reason: "listen(...) failed")
         }

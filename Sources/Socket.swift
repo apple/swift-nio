@@ -17,8 +17,12 @@ import Foundation
 
 #if os(Linux)
 import Glibc
+let sysWrite = Glibc.write
+let sysRead = Glibc.read
 #else
 import Darwin
+let sysWrite = Darwin.write
+let sysRead = Darwin.read
 #endif
 
 
@@ -32,11 +36,7 @@ public class Socket : BaseSocket {
     public func write(data: Data, offset: Int, len: Int) throws -> UInt? {
         while true {
             let res = data.withUnsafeBytes() { [unowned self] (buffer: UnsafePointer<UInt8>) -> Int in
-                #if os(Linux)
-                    return Glibc.write(self.descriptor, buffer.advanced(by: offset), len)
-                #else
-                    return Darwin.write(self.descriptor, buffer.advanced(by: offset), len)
-                #endif
+                return sysWrite(self.descriptor, buffer.advanced(by: offset), len)
             }
 
             guard res >= 0 else {
@@ -60,11 +60,7 @@ public class Socket : BaseSocket {
     public func read(data: inout Data, offset: Int, len: Int) throws -> UInt? {
         while true {
             let res = data.withUnsafeMutableBytes() { [unowned self] (buffer: UnsafeMutablePointer<UInt8>) -> Int in
-                #if os(Linux)
-                    return Glibc.read(self.descriptor, buffer.advanced(by: offset), len)
-                #else
-                    return Darwin.read(self.descriptor, buffer.advanced(by: offset), len)
-                #endif
+                return sysRead(self.descriptor, buffer.advanced(by: offset), len)
             }
             
             guard res >= 0 else {

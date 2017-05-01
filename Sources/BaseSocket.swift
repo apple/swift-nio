@@ -17,9 +17,11 @@ import Foundation
 #if os(Linux)
     import Glibc
     let sysBind = Glibc.bind
+    let sysClose = Glibc.close
 #else
     import Darwin
     let sysBind = Darwin.bind
+    let sysClose = Darwin.close
 #endif
 
 
@@ -80,14 +82,7 @@ public class BaseSocket : Selectable {
     }
     
     public func bind(address: SocketAddress) throws {
-        func bindSocket<T>(addr: T) -> Int32 {
-            var addr = addr
-            return withUnsafePointer(to: &addr) { (ptr: UnsafePointer<T>) -> Int32 in
-                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                    sysBind(self.descriptor, ptr, socklen_t(MemoryLayout.size(ofValue: addr)))
-                }
-            }
-        }
+       
         let res: Int32
         switch address {
         case .v4(address: let addr):
@@ -101,12 +96,17 @@ public class BaseSocket : Selectable {
         }
     }
     
+    private func bindSocket<T>(addr: T) -> Int32 {
+        var addr = addr
+        return withUnsafePointer(to: &addr) { (ptr: UnsafePointer<T>) -> Int32 in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
+                sysBind(self.descriptor, ptr, socklen_t(MemoryLayout.size(ofValue: addr)))
+            }
+        }
+    }
+    
     public func close() throws {
-        #if os(Linux)
-            let res = Glibc.close(self.descriptor)
-        #else
-            let res = Darwin.close(self.descriptor)
-        #endif
+        let res = sysClose(self.descriptor)
         guard res >= 0 else {
             throw IOError(errno: errno, reason: "close(...) failed")
         }
