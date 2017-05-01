@@ -60,50 +60,5 @@ public class SocketAddresses {
 public enum SocketAddress {
     case v4(address: sockaddr_in)
     case v6(address: sockaddr_in6)
-        
-    public var host: String {
-        return self.host
-    }
-    
-    public var port: Int32 {
-        return self.port
-    }
-}
-
-
-// MARK: sockaddr_in Extension
-public extension sockaddr_in {
-    
-    ///
-    /// Cast to sockaddr
-    ///
-    /// - Returns: sockaddr
-    ///
-    public func asAddr() -> sockaddr {
-        
-        var temp = self
-        let addr = withUnsafePointer(to: &temp) {
-            return UnsafeRawPointer($0)
-        }
-        return addr.assumingMemoryBound(to: sockaddr.self).pointee
-    }
-}
-
-// MARK: sockaddr_in6 Extension
-public extension sockaddr_in6 {
-    
-    ///
-    /// Cast to sockaddr
-    ///
-    /// - Returns: sockaddr
-    ///
-    public func asAddr() -> sockaddr {
-        
-        var temp = self
-        let addr = withUnsafePointer(to: &temp) {
-            return UnsafeRawPointer($0)
-        }
-        return addr.assumingMemoryBound(to: sockaddr.self).pointee
-    }
 }
 
