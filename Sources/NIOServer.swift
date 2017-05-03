@@ -40,50 +40,15 @@ public class Server {
         try server.listen()
         
         try server.setNonBlocking()
+        try server.setOption(level: SOL_SOCKET, name: SO_REUSEADDR, value: 1)
+
+        let eventLoop: EventLoop = try EventLoop()
         
-        
-        // this will register with InterestedEvent.READ and no attachment
-        try selector.register(selectable: server)
+        try eventLoop.register(server: server)
         
         defer {
-            do { try selector.deregister(selectable: server) } catch { }
+            do { try eventLoop.close() } catch { }
         }
-
-        try server.setOption(level: SOL_SOCKET, name: SO_REUSEADDR, value: 1)
-        
-        while true {
-            // Block until there are events to handle
-            if let events = try selector.awaitReady() {
-                for ev in events {
-                    if ev.isReadable {
-                        
-                        if ev.selectable is Socket {
-                            // We stored the Buffer before as attachment so get it and clear the limit / offset.
-                            let channel = ev.attachment as! Channel
-
-                            channel.read0()
-
-                        } else if ev.selectable is ServerSocket {
-                            let socket = ev.selectable as! ServerSocket
-                            
-                            // Accept new connections until there are no more in the backlog
-                            while let accepted = try socket.accept() {
-                                try accepted.setNonBlocking()
-                                try accepted.setOption(level: SOL_SOCKET, name: SO_REUSEADDR, value: 1)
-                                
-                                
-                                let channel = Channel(socket: accepted, selector: selector)
-                                try channel.attach(initPipeline: initPipeline)
-                            }
-                        }
-                    } else if ev.isWritable  && ev.selectable is Socket{
-                        let channel = ev.attachment as! Channel
-                        
-                        channel.flushNowAndReadAgain()
-                    }
-                }
-            }
-        }
-
+        try eventLoop.run(initPipeline: initPipeline)
     }
 }
