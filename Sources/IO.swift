@@ -16,8 +16,8 @@ import Foundation
 
 public struct IOError: Swift.Error {
     
-    public internal(set) var errno: Int32
-    public internal(set) var reason: String?
+    public let errno: Int32
+    public let reason: String?
     
     init(errno: Int32, reason: String) {
         self.errno = errno
