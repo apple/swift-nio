@@ -15,31 +15,31 @@
 import Foundation
 import Future
 
+#if os(Linux)
+import Glibc
+#else
+import Darwin
+#endif
+
 public class Channel : ChannelOutboundInvoker {
-    public let pipeline: ChannelPipeline
-    public let allocator: BufferAllocator
-    private let recvAllocator: RecvBufferAllocator;
+    public let pipeline: ChannelPipeline = ChannelPipeline()
+    
+    // TODO: Make configurable
+    public let allocator: BufferAllocator = DefaultBufferAllocator()
+    private let recvAllocator: RecvBufferAllocator = FixedSizeBufferAllocator(capacity: 8192)
     
     private let selector: Selector
     private let socket: Socket
-    private var pendingWrites: [(Buffer, Promise<Void>)]
-    private var outstanding: UInt64
-    private var flushPending: Bool
+    // TODO: This is most likely not the best datastructure for us. Linked-List would be better.
+    private var pendingWrites: [(Buffer, Promise<Void>)] = Array()
+    private var outstanding: UInt64 = 0
+    private var flushPending: Bool = false
+    private var closed: Bool = false
     
     init(socket: Socket, selector: Selector) {
         self.socket = socket
         self.selector = selector
-        pipeline = ChannelPipeline()
-        // TODO: This is most likely not the best datastructure for us. Doubly-Linked-List would be better.
-        pendingWrites = Array()
-        outstanding = 0
-        flushPending = false
-        allocator = DefaultBufferAllocator()
-        
-        // TODO: Make configurable
-        recvAllocator = FixedSizeBufferAllocator(capacity: 8192)
-    }
-    
+    }    
 
     public func write(data: Buffer, promise: Promise<Void>) -> Future<Void> {
         return pipeline.write(data: data, promise: promise)
@@ -69,6 +69,11 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     func write0(data: Buffer, promise: Promise<Void>) {
+        if closed {
+            // Channel was already closed to fail the promise and not even queue it.
+            promise.fail(error: IOError(errno: EBADF, reason: "Channel closed"))
+            return
+        }
         pendingWrites.append((data, promise))
         outstanding += UInt64((data.limit - data.offset))
         
@@ -111,7 +116,7 @@ public class Channel : ChannelOutboundInvoker {
     
     private func flushNow() -> Bool {
         do {
-            while let pending = pendingWrites.first {
+            while !closed, let pending = pendingWrites.first {
                 if let written = try socket.write(data: pending.0.data, offset: pending.0.offset, len: pending.0.limit - pending.0.offset) {
                     pending.0.offset += Int(written)
                     
@@ -125,16 +130,24 @@ public class Channel : ChannelOutboundInvoker {
                 }
             }
         } catch let err {
-            while let pending = pendingWrites.first {
-                pending.1.fail(error: err)
-                pendingWrites.removeFirst()
-            }
-            
-            if err is IOError {
-                close0()
-            }
+            // Fail all pending writes so all promises are notified.
+            failPendingWritesAndClose(err: err)
         }
         return true
+    }
+    
+    private func failPendingWritesAndClose(err: Error) {
+        // Fail all pending writes so all promises are notified.
+        failPendingWrites(err: err)
+        close0()
+    }
+
+    private func failPendingWrites(err: Error) {
+        for pending in pendingWrites {
+            pending.1.fail(error: err)
+        }
+        pendingWrites.removeAll()
+        outstanding = 0
     }
     
     func read0() {
@@ -153,9 +166,8 @@ public class Channel : ChannelOutboundInvoker {
             }
         } catch let err {
             pipeline.fireErrorCaught(error: err)
-            if err is IOError {
-                close0()
-            }
+            
+            failPendingWritesAndClose(err: err)
         }
     }
     
@@ -163,8 +175,12 @@ public class Channel : ChannelOutboundInvoker {
         defer {
             // Ensure this is always called
             pipeline.fireChannelInactive()
+            
+            // Fail all pending writes and so ensure all pending promises are notified
+            failPendingWrites(err: IOError(errno: EBADF, reason: "Channel closed"))
         }
         do {
+            closed = true
             try socket.close()
             promise.succeed(result: ())
         } catch let err {
