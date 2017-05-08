@@ -18,6 +18,8 @@ import Future
 public class Channel : ChannelOutboundInvoker {
     public let pipeline: ChannelPipeline
     public let allocator: BufferAllocator
+    private let recvAllocator: RecvBufferAllocator;
+    
     private let selector: Selector
     private let socket: Socket
     private var pendingWrites: [(Buffer, Promise<Void>)]
@@ -33,6 +35,9 @@ public class Channel : ChannelOutboundInvoker {
         outstanding = 0
         flushPending = false
         allocator = DefaultBufferAllocator()
+        
+        // TODO: Make configurable
+        recvAllocator = FixedSizeBufferAllocator(capacity: 8192)
     }
     
 
@@ -133,8 +138,7 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     func read0() {
-        // TODO: Make this smarter
-        let buffer = allocator.buffer(capacity: 8 * 1024)
+        let buffer = recvAllocator.buffer(allocator: allocator)
         
         defer {
             // Always call the method as last
@@ -170,5 +174,21 @@ public class Channel : ChannelOutboundInvoker {
     
     func deregister0() throws {
         try selector.deregister(selectable: socket)
+    }
+}
+
+protocol RecvBufferAllocator {
+    func buffer(allocator: BufferAllocator) -> Buffer
+}
+
+public class FixedSizeBufferAllocator : RecvBufferAllocator {
+    private let capacity: Int32
+    
+    init(capacity: Int32) {
+        self.capacity = capacity
+    }
+    
+    public func buffer(allocator: BufferAllocator) -> Buffer {
+        return allocator.buffer(capacity: capacity)
     }
 }
