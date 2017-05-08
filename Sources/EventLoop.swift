@@ -13,16 +13,33 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+import Future
 
+// TODO: Implement scheduling tasks in the future (a.k.a ScheduledExecutoreService
 public class EventLoop {
     let selector: Selector
-    
+    var tasks: [() -> ()]
+
     init() throws{
         self.selector = try Selector()
+        self.tasks = Array()
     }
     
     func register(server: ServerSocket) throws {
         try self.selector.register(selectable: server)
+    }
+    
+    public func execute(task: @escaping () -> ()) {
+        tasks.append(task)
+    }
+    
+    public func schedule<T>(task: @escaping () -> (T)) -> Future<T> {
+        let promise = Promise<T>()
+        tasks.append({() -> () in
+            promise.succeed(result: task())
+        })
+            
+        return promise.futureResult
     }
     
     public func run(initPipeline: (ChannelPipeline) -> ()) throws {
@@ -54,6 +71,12 @@ public class EventLoop {
                         
                         channel.flushNowAndReadAgain()
                     }
+                }
+                // Execute all the tasks that were summited
+                while let task = tasks.first {
+                    task()
+
+                    let _ = tasks.removeFirst()
                 }
             }
         }
