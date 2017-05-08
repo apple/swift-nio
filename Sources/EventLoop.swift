@@ -19,6 +19,7 @@ import Future
 public class EventLoop {
     let selector: Selector
     var tasks: [() -> ()]
+    var thread: Thread?
 
     init() throws{
         self.selector = try Selector()
@@ -28,11 +29,15 @@ public class EventLoop {
     func register(server: ServerSocket) throws {
         try self.selector.register(selectable: server)
     }
+
+    public func inEventLoop() -> Bool {
+        return Thread.current.isEqual(thread)
+    }
     
     public func execute(task: @escaping () -> ()) {
         tasks.append(task)
     }
-    
+
     public func schedule<T>(task: @escaping () -> (T)) -> Future<T> {
         let promise = Promise<T>()
         tasks.append({() -> () in
@@ -43,6 +48,13 @@ public class EventLoop {
     }
     
     public func run(initPipeline: (ChannelPipeline) -> ()) throws {
+        thread = Thread.current
+        
+        defer {
+            // Reset the thread once we exit this method.
+            thread = nil
+        }
+        
         while true {
             // Block until there are events to handle
             if let events = try selector.awaitReady() {
