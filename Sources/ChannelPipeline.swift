@@ -22,14 +22,14 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     var tail: ChannelHandlerContext?
     
     func attach(channel: Channel) {
-        head = ChannelHandlerContext(handler: HeadChannelHandler(channel: channel), pipeline: self)
-        tail = ChannelHandlerContext(handler: TailChannelHandler(), pipeline: self)
+        head = ChannelHandlerContext(handler: HeadChannelHandler(channel: channel), pipeline: self, allocator: channel.allocator)
+        tail = ChannelHandlerContext(handler: TailChannelHandler(), pipeline: self, allocator: channel.allocator)
         head!.next = tail
         tail!.prev = head
     }
     
     public func addLast(handler: ChannelHandler) {
-        let ctx = ChannelHandlerContext(handler: handler, pipeline: self)
+        let ctx = ChannelHandlerContext(handler: handler, pipeline: self, allocator: head!.allocator)
         let prev = tail!.prev
         ctx.prev = tail!.prev
         ctx.next = tail
@@ -47,7 +47,7 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     }
     
     public func addFirst(handler: ChannelHandler) {
-        let ctx = ChannelHandlerContext(handler: handler, pipeline: self)
+        let ctx = ChannelHandlerContext(handler: handler, pipeline: self, allocator: head!.allocator)
         let next = head!.next
         
         ctx.prev = head

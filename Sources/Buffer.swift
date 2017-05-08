@@ -30,3 +30,22 @@ public class Buffer {
         self.limit = 0
     }
 }
+
+public protocol BufferAllocator {
+    
+    func buffer(capacity: Int32) -> Buffer
+    
+    func buffer() -> Buffer
+}
+
+extension BufferAllocator {
+    public func buffer() -> Buffer {
+        return buffer(capacity: 256)
+    }
+}
+
+public class DefaultBufferAllocator : BufferAllocator {
+    public func buffer(capacity: Int32) -> Buffer {
+        return Buffer(capacity: capacity)
+    }
+}

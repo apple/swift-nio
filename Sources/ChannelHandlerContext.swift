@@ -19,13 +19,15 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     
     public let handler: ChannelHandler
     public let pipeline: ChannelPipeline
+    public let allocator: BufferAllocator
     
     var prev: ChannelHandlerContext?
     var next: ChannelHandlerContext?
     
-    init(handler: ChannelHandler, pipeline: ChannelPipeline) {
+    init(handler: ChannelHandler, pipeline: ChannelPipeline, allocator: BufferAllocator) {
         self.handler = handler
         self.pipeline = pipeline
+        self.allocator = allocator;
     }
     
     public func fireChannelActive() {

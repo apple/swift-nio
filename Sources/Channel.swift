@@ -17,6 +17,7 @@ import Future
 
 public class Channel : ChannelOutboundInvoker {
     public let pipeline: ChannelPipeline
+    public let allocator: BufferAllocator
     private let selector: Selector
     private let socket: Socket
     private var pendingWrites: [(Buffer, Promise<Void>)]
@@ -31,8 +32,10 @@ public class Channel : ChannelOutboundInvoker {
         pendingWrites = Array()
         outstanding = 0
         flushPending = false
+        allocator = DefaultBufferAllocator()
     }
     
+
     public func write(data: Buffer, promise: Promise<Void>) -> Future<Void> {
         return pipeline.write(data: data, promise: promise)
     }
@@ -131,7 +134,7 @@ public class Channel : ChannelOutboundInvoker {
     
     func read0() {
         // TODO: Make this smarter
-        let buffer = Buffer(capacity: 8 * 1024)
+        let buffer = allocator.buffer(capacity: 8 * 1024)
         
         defer {
             // Always call the method as last

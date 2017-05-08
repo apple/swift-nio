@@ -15,6 +15,7 @@ import Foundation
 
 
 public class EchoHandler: ChannelHandler {
+    
     public func channelRead(ctx: ChannelHandlerContext, data: Buffer) {
         let f = ctx.write(data: data)
         
@@ -31,6 +32,7 @@ public class EchoHandler: ChannelHandler {
     
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         print("error: {}", error)
+        let _ = ctx.close()
     }
 }
 
