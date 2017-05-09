@@ -41,6 +41,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         }
     }
     
+    // Only created from within Channel
     init(handler: ChannelHandler, pipeline: ChannelPipeline) {
         self.handler = handler
         self.pipeline = pipeline
@@ -50,137 +51,41 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         next!.invokeChannelRegistered()
     }
     
-    func invokeChannelRegistered() {
-        assert(channel.eventLoop.inEventLoop())
-
-        do {
-            try handler.channelRegistered(ctx: self)
-        } catch let err {
-            safeErrorCaught(ctx: self, error: err)
-        }
-    }
-    
     public func fireChannelUnregistered() {
         next!.invokeChannelUnregistered()
-    }
-    
-    func invokeChannelUnregistered() {
-        assert(channel.eventLoop.inEventLoop())
-
-        do {
-            try handler.channelUnregistered(ctx: self)
-        } catch let err {
-            safeErrorCaught(ctx: self, error: err)
-        }
     }
     
     public func fireChannelActive() {
         next!.invokeChannelActive()
     }
     
-    func invokeChannelActive() {
-        assert(channel.eventLoop.inEventLoop())
-
-        do {
-            try handler.channelActive(ctx: self)
-        } catch let err {
-            safeErrorCaught(ctx: self, error: err)
-        }
-    }
-    
     public func fireChannelInactive() {
         next!.invokeChannelInactive()
     }
-    
-    func invokeChannelInactive() {
-        assert(channel.eventLoop.inEventLoop())
 
-        do {
-            try handler.channelInactive(ctx: self)
-        } catch let err {
-            safeErrorCaught(ctx: self, error: err)
-        }
-    }
-    
     public func fireChannelRead(data: Buffer) {
         next!.invokeChannelRead(data: data)
-    }
-    
-    func invokeChannelRead(data: Buffer) {
-        assert(channel.eventLoop.inEventLoop())
-
-        do {
-            try handler.channelRead(ctx: self, data: data)
-        } catch let err {
-            safeErrorCaught(ctx: self, error: err)
-        }
     }
     
     public func fireChannelReadComplete() {
         next!.invokeChannelReadComplete()
     }
-    
-    func invokeChannelReadComplete() {
-        assert(channel.eventLoop.inEventLoop())
 
-        do {
-            try handler.channelReadComplete(ctx: self)
-        } catch let err {
-            safeErrorCaught(ctx: self, error: err)
-        }
-    }
-    
     public func fireChannelWritabilityChanged(writable: Bool) {
         next!.invokeChannelWritabilityChanged(writable: writable)
-    }
-    
-    public func invokeChannelWritabilityChanged(writable: Bool) {
-        assert(channel.eventLoop.inEventLoop())
-
-        do {
-            try handler.channelWritabilityChanged(ctx: self, writable: writable)
-        } catch let err {
-            safeErrorCaught(ctx: self, error: err)
-        }
     }
 
     public func fireErrorCaught(error: Error) {
         next!.invokeErrorCaught(error: error)
     }
     
-    func invokeErrorCaught(error: Error) {
-        assert(channel.eventLoop.inEventLoop())
-
-        do {
-            try handler.errorCaught(ctx: self, error: error)
-        } catch {
-            // TODO: What to do ?
-        }
-    }
-    
     public func fireUserEventTriggered(event: AnyClass) {
         next!.invokeUserEventTriggered(event: event)
-    }
-    
-    func invokeUserEventTriggered(event: AnyClass) {
-        assert(channel.eventLoop.inEventLoop())
-
-        do {
-            try handler.userEventTriggered(ctx: self, event: event)
-        } catch let err {
-            safeErrorCaught(ctx: self, error: err)
-        }
     }
     
     public func write(data: Buffer, promise: Promise<Void>) -> Future<Void> {
         prev!.invokeWrite(data: data, promise: promise)
         return promise.futureResult
-    }
-
-    func invokeWrite(data: Buffer, promise: Promise<Void>) {
-        assert(channel.eventLoop.inEventLoop())
-
-        handler.write(ctx: self, data: data, promise: promise)
     }
     
     public func writeAndFlush(data: Buffer, promise: Promise<Void>) -> Future<Void> {
@@ -192,9 +97,117 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         prev!.invokeFlush()
     }
     
+    public func read() {
+        prev!.invokeRead()
+    }
+
+    
+    public func close(promise: Promise<Void>) -> Future<Void> {
+        prev!.invokeClose(promise: promise)
+        return promise.futureResult
+    }
+    
+    
+    // Methods that are invoked itself by this class itself or ChannelPipeline
+    func invokeChannelRegistered() {
+        assert(channel.eventLoop.inEventLoop())
+        
+        do {
+            try handler.channelRegistered(ctx: self)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
+    }
+    
+    func invokeChannelUnregistered() {
+        assert(channel.eventLoop.inEventLoop())
+        
+        do {
+            try handler.channelUnregistered(ctx: self)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
+    }
+    
+    func invokeChannelActive() {
+        assert(channel.eventLoop.inEventLoop())
+        
+        do {
+            try handler.channelActive(ctx: self)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
+    }
+    
+    func invokeChannelInactive() {
+        assert(channel.eventLoop.inEventLoop())
+        
+        do {
+            try handler.channelInactive(ctx: self)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
+    }
+    
+    func invokeChannelRead(data: Buffer) {
+        assert(channel.eventLoop.inEventLoop())
+        
+        do {
+            try handler.channelRead(ctx: self, data: data)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
+    }
+    
+    func invokeChannelReadComplete() {
+        assert(channel.eventLoop.inEventLoop())
+        
+        do {
+            try handler.channelReadComplete(ctx: self)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
+    }
+    
+    func invokeChannelWritabilityChanged(writable: Bool) {
+        assert(channel.eventLoop.inEventLoop())
+        
+        do {
+            try handler.channelWritabilityChanged(ctx: self, writable: writable)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
+    }
+    
+    func invokeErrorCaught(error: Error) {
+        assert(channel.eventLoop.inEventLoop())
+        
+        do {
+            try handler.errorCaught(ctx: self, error: error)
+        } catch {
+            // TODO: What to do ?
+        }
+    }
+
+    func invokeUserEventTriggered(event: AnyClass) {
+        assert(channel.eventLoop.inEventLoop())
+        
+        do {
+            try handler.userEventTriggered(ctx: self, event: event)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
+    }
+
+    func invokeWrite(data: Buffer, promise: Promise<Void>) {
+        assert(channel.eventLoop.inEventLoop())
+        
+        handler.write(ctx: self, data: data, promise: promise)
+    }
+    
     func invokeFlush() {
         assert(channel.eventLoop.inEventLoop())
-
+        
         handler.flush(ctx: self)
     }
     
@@ -204,24 +217,15 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         handler.flush(ctx: self)
     }
     
-    public func read() {
-        prev!.invokeRead()
-    }
-    
     func invokeRead() {
         assert(channel.eventLoop.inEventLoop())
-
+        
         handler.read(ctx: self)
-    }
-    
-    public func close(promise: Promise<Void>) -> Future<Void> {
-        prev!.invokeClose(promise: promise)
-        return promise.futureResult
     }
     
     func invokeClose(promise: Promise<Void>) {
         assert(channel.eventLoop.inEventLoop())
-
+        
         handler.close(ctx: self, promise: promise)
     }
     

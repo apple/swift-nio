@@ -30,6 +30,7 @@ public class Channel : ChannelOutboundInvoker {
     public let allocator: BufferAllocator = DefaultBufferAllocator()
     private let recvAllocator: RecvBufferAllocator = FixedSizeBufferAllocator(capacity: 8192)
     
+    // Visible to access from EventLoop directly
     let socket: Socket
     var interestedEvent: InterestedEvent? = nil
 
@@ -38,12 +39,6 @@ public class Channel : ChannelOutboundInvoker {
     private var outstanding: UInt64 = 0
     private var closed: Bool = false
     private var readPending: Bool = false;
-    
-    public class func newChannel(socket: Socket, eventLoop: EventLoop, initPipeline: (ChannelPipeline) ->()) -> Channel {
-        let channel = Channel(socket: socket, eventLoop: eventLoop)
-        channel.attach(initPipeline: initPipeline)
-        return channel
-    }
     
     public func write(data: Buffer, promise: Promise<Void>) -> Future<Void> {
         return pipeline.write(data: data, promise: promise)
@@ -182,6 +177,13 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
     
+    // This is only called from within the EventLoop so should not be visible to the user
+    class func newChannel(socket: Socket, eventLoop: EventLoop, initPipeline: (ChannelPipeline) ->()) -> Channel {
+        let channel = Channel(socket: socket, eventLoop: eventLoop)
+        channel.attach(initPipeline: initPipeline)
+        return channel
+    }
+
     // Methods only used from within this class
     private func safeDeregister() {
         interestedEvent = nil

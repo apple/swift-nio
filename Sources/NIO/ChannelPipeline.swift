@@ -34,14 +34,6 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         }
     }
     
-    func attach(channel: Channel) {
-        // Chain up the double-linked-list
-        head = ChannelHandlerContext(handler: HeadChannelHandler(channel: channel), pipeline: self)
-        tail = ChannelHandlerContext(handler: TailChannelHandler(), pipeline: self)
-        head!.next = tail
-        tail!.prev = head
-    }
-    
     public func addLast(handler: ChannelHandler) {
         let ctx = ChannelHandlerContext(handler: handler, pipeline: self)
         let prev = tail!.prev
@@ -152,6 +144,18 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     public func close() -> Future<Void> {
         return close(promise: eventLoop.newPromise(type: Void.self))
     }
+    
+    // Only executed from Channel
+    init () {
+    }
+    
+    func attach(channel: Channel) {
+        // Chain up the double-linked-list
+        head = ChannelHandlerContext(handler: HeadChannelHandler(channel: channel), pipeline: self)
+        tail = ChannelHandlerContext(handler: TailChannelHandler(), pipeline: self)
+        head!.next = tail
+        tail!.prev = head
+    }
 }
 
 class HeadChannelHandler : ChannelHandler {
@@ -198,39 +202,39 @@ class HeadChannelHandler : ChannelHandler {
 
 class TailChannelHandler : ChannelHandler {
     
-    public func channelRegistered(ctx: ChannelHandlerContext) {
+    func channelRegistered(ctx: ChannelHandlerContext) {
         // Discard
     }
     
-    public func channelUnregistered(ctx: ChannelHandlerContext) throws {
+    func channelUnregistered(ctx: ChannelHandlerContext) throws {
         // Discard
     }
     
-    public func channelActive(ctx: ChannelHandlerContext) {
+    func channelActive(ctx: ChannelHandlerContext) {
         // Discard
     }
     
-    public func channelInactive(ctx: ChannelHandlerContext) {
+    func channelInactive(ctx: ChannelHandlerContext) {
         // Discard
     }
     
-    public func channelReadComplete(ctx: ChannelHandlerContext) {
+    func channelReadComplete(ctx: ChannelHandlerContext) {
         // Discard
     }
     
-    public func channelWritabilityChanged(ctx: ChannelHandlerContext, writable: Bool) {
+    func channelWritabilityChanged(ctx: ChannelHandlerContext, writable: Bool) {
         // Discard
     }
     
-    public func userEventTriggered(ctx: ChannelHandlerContext, event: AnyClass) {
+    func userEventTriggered(ctx: ChannelHandlerContext, event: AnyClass) {
         // Discard
     }
     
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+    func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         // TODO: Log this and tell the user that its most likely a fault not handling it.
     }
     
-    public func channelRead(ctx: ChannelHandlerContext, data: Buffer) {
+    func channelRead(ctx: ChannelHandlerContext, data: Buffer) {
         // TODO: Log this and tell the user that its most likely a fault not handling it.
     }
 }
