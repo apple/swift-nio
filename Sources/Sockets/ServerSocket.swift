@@ -76,6 +76,18 @@ public class ServerSocket: BaseSocket {
                 }
                 return nil
             }
+    
+#if os(Linux)
+            /* no SO_NOSIGPIPE on Linux :( */
+            let old_sighandler = signal(SIGPIPE, SIG_IGN);
+            if old_sighandler == SIG_ERR {
+                return nil
+            }
+#else
+            // TODO: Handle return code ?
+            let _ = Darwin.fcntl(fd, F_SETNOSIGPIPE, 1);
+#endif
+
             return Socket(descriptor: fd)
         }
     }
