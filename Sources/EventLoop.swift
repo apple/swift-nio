@@ -64,11 +64,11 @@ public class EventLoop {
                         let channel = ev.attachment as! Channel
                         
                         if ev.isWritable {
-                            channel.invokeFlush()
+                            channel.flushFromEventLoop()
                         }
                         
                         if ev.isReadable {
-                            channel.invokeRead()
+                            channel.readFromEventLoop()
                         }
                     } else if ev.selectable is ServerSocket {
                         let socket = ev.selectable as! ServerSocket
@@ -80,8 +80,8 @@ public class EventLoop {
                         while let accepted = try socket.accept() {
                             try accepted.setNonBlocking()
                             
-                            let channel = Channel(socket: accepted, selector: selector)
-                            try channel.attach(initPipeline: initPipeline)
+                            let channel = Channel.newChannel(socket: accepted, selector: selector, initPipeline: initPipeline)
+                            channel.registerOnEventLoop()
                         }
                     }
                 }

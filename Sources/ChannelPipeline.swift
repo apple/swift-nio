@@ -22,6 +22,7 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     private var tail: ChannelHandlerContext?
     
     func attach(channel: Channel) {
+        // Chain up the double-linked-list
         head = ChannelHandlerContext(handler: HeadChannelHandler(channel: channel), pipeline: self, allocator: channel.allocator)
         tail = ChannelHandlerContext(handler: TailChannelHandler(), pipeline: self, allocator: channel.allocator)
         head!.next = tail
