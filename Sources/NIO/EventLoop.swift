@@ -14,15 +14,16 @@
 
 import Foundation
 import Future
+import Sockets
 
 // TODO: Implement scheduling tasks in the future (a.k.a ScheduledExecutoreService
 public class EventLoop {
-    let selector: Selector
+    let selector: Sockets.Selector
     var tasks: [() -> ()]
     var thread: Thread?
 
     init() throws{
-        self.selector = try Selector()
+        self.selector = try Sockets.Selector()
         self.tasks = Array()
     }
     

@@ -13,18 +13,19 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+import Sockets
 
 
 func echoPlainServer() throws {
     
-    func deregisterAndClose(selector: Selector, s: Selectable) {
+    func deregisterAndClose(selector: Sockets.Selector, s: Selectable) {
         do { try selector.deregister(selectable: s) } catch {}
         do { try s.close() } catch {}
     }
     
     
     // Bootstrap the server and create the Selector on which we register our sockets.
-    let selector = try Selector()
+    let selector = try Sockets.Selector()
     
     defer {
         do { try selector.close() } catch { }

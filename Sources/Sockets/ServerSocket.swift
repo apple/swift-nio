@@ -40,7 +40,7 @@ public class ServerSocket: BaseSocket {
         return socket
     }
     
-    init() throws {
+    public init() throws {
         let fd = sysSocket(AF_INET, Int32(sysSOCK_STREAM), 0)
         if fd < 0 {
             throw IOError(errno: errno, reason: "socket(...) failed")

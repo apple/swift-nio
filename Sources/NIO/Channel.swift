@@ -14,6 +14,7 @@
 
 import Foundation
 import Future
+import Sockets
 
 #if os(Linux)
 import Glibc
@@ -28,7 +29,7 @@ public class Channel : ChannelOutboundInvoker {
     public let allocator: BufferAllocator = DefaultBufferAllocator()
     private let recvAllocator: RecvBufferAllocator = FixedSizeBufferAllocator(capacity: 8192)
     
-    private let selector: Selector
+    private let selector: Sockets.Selector
     private let socket: Socket
     // TODO: This is most likely not the best datastructure for us. Linked-List would be better.
     private var pendingWrites: [(Buffer, Promise<Void>)] = Array()
@@ -37,7 +38,7 @@ public class Channel : ChannelOutboundInvoker {
     private var readPending: Bool = false;
     private var interestedEvent: InterestedEvent? = nil
     
-    public class func newChannel(socket: Socket, selector: Selector, initPipeline: (ChannelPipeline) ->()) -> Channel {
+    public class func newChannel(socket: Socket, selector: Sockets.Selector, initPipeline: (ChannelPipeline) ->()) -> Channel {
         let channel = Channel(socket: socket, selector: selector)
         channel.attach(initPipeline: initPipeline)
         return channel
@@ -255,7 +256,7 @@ public class Channel : ChannelOutboundInvoker {
         pipeline.fireChannelActive()
     }
     
-    private init(socket: Socket, selector: Selector) {
+    private init(socket: Socket, selector: Sockets.Selector) {
         self.socket = socket
         self.selector = selector
     }

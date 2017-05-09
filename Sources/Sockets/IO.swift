@@ -19,7 +19,7 @@ public struct IOError: Swift.Error {
     public let errno: Int32
     public let reason: String?
     
-    init(errno: Int32, reason: String) {
+    public init(errno: Int32, reason: String) {
         self.errno = errno
         self.reason = reason
     }

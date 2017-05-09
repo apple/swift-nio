@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+import Sockets
 
 
 public class Server {
@@ -24,7 +25,7 @@ public class Server {
     public class func run(address: SocketAddress, initPipeline: (ChannelPipeline) -> ()) throws {
         
         // Bootstrap the server and create the Selector on which we register our sockets.
-        let selector = try Selector()
+        let selector = try Sockets.Selector()
         
         defer {
             do { try selector.close() } catch { }

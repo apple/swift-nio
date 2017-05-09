@@ -32,7 +32,7 @@ public class Selector {
 
     var registrations = [Int: Registration]()
     
-    init() throws {
+    public init() throws {
 #if os(Linux)
         fd = CEpoll.epoll_create(128)
         guard fd >= 0 else {
