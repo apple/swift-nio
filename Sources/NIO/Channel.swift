@@ -121,6 +121,7 @@ public class Channel : ChannelOutboundInvoker {
         }
         
         if !wasClosed {
+            pipeline.fireChannelUnregistered()
             pipeline.fireChannelInactive()
         }
         
@@ -130,10 +131,9 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     func registerOnEventLoop() {
-        if interestedEvent == nil {
-            // Was not registered yet so do it now.
-            safeRegister(interested: InterestedEvent.Read)
-        }
+        // Was not registered yet so do it now.
+        safeRegister(interested: InterestedEvent.Read)
+        pipeline.fireChannelRegistered()
     }
 
     // Methods invoked from the EventLoop itself
@@ -252,8 +252,6 @@ public class Channel : ChannelOutboundInvoker {
         // Attach Channel to previous created pipeline and init it.
         pipeline.attach(channel: self)
         initPipeline(pipeline)
-        
-        pipeline.fireChannelActive()
     }
     
     private init(socket: Socket, selector: Sockets.Selector) {

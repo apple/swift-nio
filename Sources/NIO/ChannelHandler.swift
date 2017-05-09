@@ -16,6 +16,8 @@ import Foundation
 import Future
 
 public protocol ChannelHandler {
+    func channelRegistered(ctx: ChannelHandlerContext) throws
+    func channelUnregistered(ctx: ChannelHandlerContext) throws
     func channelActive(ctx: ChannelHandlerContext) throws
     func channelInactive(ctx: ChannelHandlerContext) throws
     func channelRead(ctx: ChannelHandlerContext, data: Buffer) throws
@@ -34,6 +36,14 @@ public protocol ChannelHandler {
 
 //  Default implementation for the ChannelHandler protocol
 extension ChannelHandler {
+    
+    public func channelRegistered(ctx: ChannelHandlerContext) {
+        ctx.fireChannelRegistered()
+    }
+    
+    public func channelUnregistered(ctx: ChannelHandlerContext) {
+        ctx.fireChannelUnregistered()
+    }
     
     public func channelActive(ctx: ChannelHandlerContext) {
         ctx.fireChannelActive()

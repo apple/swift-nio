@@ -16,6 +16,10 @@ import Foundation
 
 public protocol ChannelInboundInvoker {
     
+    func fireChannelRegistered()
+
+    func fireChannelUnregistered()
+    
     func fireChannelActive()
 
     func fireChannelInactive()

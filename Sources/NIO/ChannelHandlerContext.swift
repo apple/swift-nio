@@ -40,6 +40,30 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         self.pipeline = pipeline
     }
     
+    public func fireChannelRegistered() {
+        next!.invokeChannelRegistered()
+    }
+    
+    func invokeChannelRegistered() {
+        do {
+            try handler.channelRegistered(ctx: self)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
+    }
+    
+    public func fireChannelUnregistered() {
+        next!.invokeChannelUnregistered()
+    }
+    
+    func invokeChannelUnregistered() {
+        do {
+            try handler.channelUnregistered(ctx: self)
+        } catch let err {
+            safeErrorCaught(ctx: self, error: err)
+        }
+    }
+    
     public func fireChannelActive() {
         next!.invokeChannelActive()
     }

@@ -75,6 +75,14 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
 
     // Just delegate to the head and tail context
 
+    public func fireChannelRegistered() {
+        head!.invokeChannelRegistered()
+    }
+    
+    public func fireChannelUnregistered() {
+        head!.invokeChannelUnregistered()
+    }
+    
     public func fireChannelInactive() {
         head!.invokeChannelInactive()
     }
@@ -170,12 +178,13 @@ class HeadChannelHandler : ChannelHandler {
 }
 
 class TailChannelHandler : ChannelHandler {
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
-        // TODO: Log this and tell the user that its most likely a fault not handling it.
+    
+    public func channelRegistered(ctx: ChannelHandlerContext) {
+        // Discard
     }
     
-    public func channelRead(ctx: ChannelHandlerContext, data: Buffer) {
-        // TODO: Log this and tell the user that its most likely a fault not handling it.
+    public func channelUnregistered(ctx: ChannelHandlerContext) throws {
+        // Discard
     }
     
     public func channelActive(ctx: ChannelHandlerContext) {
@@ -196,5 +205,13 @@ class TailChannelHandler : ChannelHandler {
     
     public func userEventTriggered(ctx: ChannelHandlerContext, event: AnyClass) {
         // Discard
+    }
+    
+    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+        // TODO: Log this and tell the user that its most likely a fault not handling it.
+    }
+    
+    public func channelRead(ctx: ChannelHandlerContext, data: Buffer) {
+        // TODO: Log this and tell the user that its most likely a fault not handling it.
     }
 }

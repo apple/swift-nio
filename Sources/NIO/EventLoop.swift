@@ -77,12 +77,13 @@ public class EventLoop {
                         // This should be never true
                         assert(!ev.isWritable)
                         
-                        // Accept new connections until there are no more in the backlog
+                        // Accept new connections until 2there are no more in the backlog
                         while let accepted = try socket.accept() {
                             try accepted.setNonBlocking()
                             
                             let channel = Channel.newChannel(socket: accepted, selector: selector, initPipeline: initPipeline)
                             channel.registerOnEventLoop()
+                            channel.pipeline.fireChannelRegistered()
                         }
                     }
                 }
