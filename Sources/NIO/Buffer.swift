@@ -45,6 +45,8 @@ extension BufferAllocator {
 }
 
 public class DefaultBufferAllocator : BufferAllocator {
+    public init() {}
+    
     public func buffer(capacity: Int32) -> Buffer {
         return Buffer(capacity: capacity)
     }
