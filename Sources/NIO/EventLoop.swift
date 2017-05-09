@@ -30,7 +30,19 @@ public class EventLoop {
     func register(server: ServerSocket) throws {
         try self.selector.register(selectable: server)
     }
-
+    
+    func register(channel: Channel) throws {
+        try selector.register(selectable: channel.socket, interested: channel.interestedEvent!, attachment: channel)
+    }
+    
+    func deregister(channel: Channel) throws {
+        try selector.deregister(selectable: channel.socket)
+    }
+    
+    func reregister(channel: Channel) throws {
+        try selector.reregister(selectable: channel.socket, interested: channel.interestedEvent!)
+    }
+    
     public func inEventLoop() -> Bool {
         return Thread.current.isEqual(thread)
     }
@@ -81,7 +93,7 @@ public class EventLoop {
                         while let accepted = try socket.accept() {
                             try accepted.setNonBlocking()
                             
-                            let channel = Channel.newChannel(socket: accepted, selector: selector, initPipeline: initPipeline)
+                            let channel = Channel.newChannel(socket: accepted, eventLoop: self, initPipeline: initPipeline)
                             channel.registerOnEventLoop()
                             channel.pipeline.fireChannelRegistered()
                         }

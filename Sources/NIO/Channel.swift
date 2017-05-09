@@ -24,22 +24,23 @@ import Darwin
 
 public class Channel : ChannelOutboundInvoker {
     public let pipeline: ChannelPipeline = ChannelPipeline()
-    
+    public let eventLoop: EventLoop
+
     // TODO: Make configurable
     public let allocator: BufferAllocator = DefaultBufferAllocator()
     private let recvAllocator: RecvBufferAllocator = FixedSizeBufferAllocator(capacity: 8192)
     
-    private let selector: Sockets.Selector
-    private let socket: Socket
+    let socket: Socket
+    var interestedEvent: InterestedEvent? = nil
+
     // TODO: This is most likely not the best datastructure for us. Linked-List would be better.
     private var pendingWrites: [(Buffer, Promise<Void>)] = Array()
     private var outstanding: UInt64 = 0
     private var closed: Bool = false
     private var readPending: Bool = false;
-    private var interestedEvent: InterestedEvent? = nil
     
-    public class func newChannel(socket: Socket, selector: Sockets.Selector, initPipeline: (ChannelPipeline) ->()) -> Channel {
-        let channel = Channel(socket: socket, selector: selector)
+    public class func newChannel(socket: Socket, eventLoop: EventLoop, initPipeline: (ChannelPipeline) ->()) -> Channel {
+        let channel = Channel(socket: socket, eventLoop: eventLoop)
         channel.attach(initPipeline: initPipeline)
         return channel
     }
@@ -185,7 +186,7 @@ public class Channel : ChannelOutboundInvoker {
     private func safeDeregister() {
         interestedEvent = nil
         do {
-            try selector.deregister(selectable: socket)
+            try eventLoop.deregister(channel: self)
         } catch {
             // TODO: Log ?
             close0()
@@ -195,7 +196,7 @@ public class Channel : ChannelOutboundInvoker {
     private func safeReregister(interested: InterestedEvent) {
         interestedEvent = interested
         do {
-            try selector.reregister(selectable: socket, interested: interested)
+            try eventLoop.reregister(channel: self)
         } catch {
             // TODO: Log ?
             close0()
@@ -205,7 +206,7 @@ public class Channel : ChannelOutboundInvoker {
     private func safeRegister(interested: InterestedEvent) {
         interestedEvent = interested
         do {
-            try selector.register(selectable: socket, interested: interested, attachment: self)
+            try eventLoop.register(channel: self)
         } catch {
             // TODO: Log ?
             close0()
@@ -254,9 +255,9 @@ public class Channel : ChannelOutboundInvoker {
         initPipeline(pipeline)
     }
     
-    private init(socket: Socket, selector: Sockets.Selector) {
+    private init(socket: Socket, eventLoop: EventLoop) {
         self.socket = socket
-        self.selector = selector
+        self.eventLoop = eventLoop
     }
 }
 
