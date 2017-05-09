@@ -45,6 +45,8 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeChannelRegistered() {
+        assert(channel.eventLoop.inEventLoop())
+
         do {
             try handler.channelRegistered(ctx: self)
         } catch let err {
@@ -57,6 +59,8 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeChannelUnregistered() {
+        assert(channel.eventLoop.inEventLoop())
+
         do {
             try handler.channelUnregistered(ctx: self)
         } catch let err {
@@ -69,6 +73,8 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeChannelActive() {
+        assert(channel.eventLoop.inEventLoop())
+
         do {
             try handler.channelActive(ctx: self)
         } catch let err {
@@ -81,6 +87,8 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeChannelInactive() {
+        assert(channel.eventLoop.inEventLoop())
+
         do {
             try handler.channelInactive(ctx: self)
         } catch let err {
@@ -93,6 +101,8 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeChannelRead(data: Buffer) {
+        assert(channel.eventLoop.inEventLoop())
+
         do {
             try handler.channelRead(ctx: self, data: data)
         } catch let err {
@@ -105,6 +115,8 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeChannelReadComplete() {
+        assert(channel.eventLoop.inEventLoop())
+
         do {
             try handler.channelReadComplete(ctx: self)
         } catch let err {
@@ -117,6 +129,8 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     public func invokeChannelWritabilityChanged(writable: Bool) {
+        assert(channel.eventLoop.inEventLoop())
+
         do {
             try handler.channelWritabilityChanged(ctx: self, writable: writable)
         } catch let err {
@@ -129,6 +143,8 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeErrorCaught(error: Error) {
+        assert(channel.eventLoop.inEventLoop())
+
         do {
             try handler.errorCaught(ctx: self, error: error)
         } catch {
@@ -141,6 +157,8 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeUserEventTriggered(event: AnyClass) {
+        assert(channel.eventLoop.inEventLoop())
+
         do {
             try handler.userEventTriggered(ctx: self, event: event)
         } catch let err {
@@ -154,11 +172,13 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
 
     func invokeWrite(data: Buffer, promise: Promise<Void>) {
+        assert(channel.eventLoop.inEventLoop())
+
         handler.write(ctx: self, data: data, promise: promise)
     }
     
     public func writeAndFlush(data: Buffer, promise: Promise<Void>) -> Future<Void> {
-        prev!.invokeWriteAndFlush(data: data, promise: promise)        
+        prev!.invokeWriteAndFlush(data: data, promise: promise)
         return promise.futureResult
     }
     
@@ -167,10 +187,13 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeFlush() {
+        assert(channel.eventLoop.inEventLoop())
+
         handler.flush(ctx: self)
     }
     
     func invokeWriteAndFlush(data: Buffer, promise: Promise<Void>) {
+        assert(channel.eventLoop.inEventLoop())
         handler.write(ctx: self, data: data, promise: promise)
         handler.flush(ctx: self)
     }
@@ -180,6 +203,8 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeRead() {
+        assert(channel.eventLoop.inEventLoop())
+
         handler.read(ctx: self)
     }
     
@@ -189,14 +214,20 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     func invokeClose(promise: Promise<Void>) {
+        assert(channel.eventLoop.inEventLoop())
+
         handler.close(ctx: self, promise: promise)
     }
     
     func invokeHandlerAdded() throws {
+        assert(channel.eventLoop.inEventLoop())
+
         try handler.handlerAdded(ctx: self)
     }
     
     func invokeHandlerRemoved() throws {
+        assert(channel.eventLoop.inEventLoop())
+
         try handler.handlerRemoved(ctx: self)
     }
     
