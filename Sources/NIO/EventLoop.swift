@@ -113,4 +113,20 @@ public class EventLoop {
     public func close() throws {
         try self.selector.close()
     }
+    
+    public func newPromise<T>(type: T.Type) -> Promise<T> {
+        return Promise<T>()
+    }
+    
+    public func newFailedFuture<T>(type: T.Type, error: Error) -> Future<T> {
+        let promise = newPromise(type: type)
+        promise.fail(error: error)
+        return promise.futureResult
+    }
+    
+    public func newSucceedFuture<T>(result: T) -> Future<T> {
+        let promise = newPromise(type: type(of: result))
+        promise.succeed(result: result)
+        return promise.futureResult
+    }
 }

@@ -16,7 +16,10 @@ import Foundation
 import Future
 
 public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvoker {
-    
+
+    var prev: ChannelHandlerContext?
+    var next: ChannelHandlerContext?
+
     public let handler: ChannelHandler
     public let pipeline: ChannelPipeline
    
@@ -32,8 +35,11 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         }
     }
     
-    var prev: ChannelHandlerContext?
-    var next: ChannelHandlerContext?
+    public var eventLoop: EventLoop {
+        get {
+            return channel.eventLoop
+        }
+    }
     
     init(handler: ChannelHandler, pipeline: ChannelPipeline) {
         self.handler = handler

@@ -28,6 +28,12 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         }
     }
     
+    public var eventLoop: EventLoop {
+        get {
+            return channel.eventLoop
+        }
+    }
+    
     func attach(channel: Channel) {
         // Chain up the double-linked-list
         head = ChannelHandlerContext(handler: HeadChannelHandler(channel: channel), pipeline: self)
@@ -132,6 +138,19 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     public func writeAndFlush(data: Buffer, promise: Promise<Void>) -> Future<Void> {
         tail!.invokeWriteAndFlush(data: data, promise: promise)
         return promise.futureResult
+    }
+    
+    
+    public func write(data: Buffer) -> Future<Void> {
+        return write(data: data, promise: eventLoop.newPromise(type: Void.self))
+    }
+    
+    public func writeAndFlush(data: Buffer) -> Future<Void> {
+        return writeAndFlush(data: data, promise: eventLoop.newPromise(type: Void.self))
+    }
+    
+    public func close() -> Future<Void> {
+        return close(promise: eventLoop.newPromise(type: Void.self))
     }
 }
 

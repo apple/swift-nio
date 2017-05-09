@@ -15,7 +15,7 @@
 import Foundation
 import Future
 
-protocol ChannelOutboundInvoker {
+public protocol ChannelOutboundInvoker {
     
     func write(data: Buffer) -> Future<Void>
     func write(data: Buffer, promise: Promise<Void>) -> Future<Void>
@@ -28,19 +28,21 @@ protocol ChannelOutboundInvoker {
 
     func close() -> Future<Void>
     func close(promise: Promise<Void>) -> Future<Void>
+    
+    var eventLoop: EventLoop { get }
 }
 
-// Default implementations for methods that not take a promise.
-extension ChannelOutboundInvoker {
-    public func write(data: Buffer) -> Future<Void> {
-        return write(data: data, promise: Promise<Void>())
-    }
 
+extension ChannelOutboundInvoker{
+    public func write(data: Buffer) -> Future<Void> {
+        return write(data: data, promise: eventLoop.newPromise(type: Void.self))
+    }
+    
     public func writeAndFlush(data: Buffer) -> Future<Void> {
-        return writeAndFlush(data: data, promise: Promise<Void>())
+        return writeAndFlush(data: data, promise: eventLoop.newPromise(type: Void.self))
     }
     
     public func close() -> Future<Void> {
-        return close(promise: Promise<Void>())
+        return close(promise: eventLoop.newPromise(type: Void.self))
     }
 }
