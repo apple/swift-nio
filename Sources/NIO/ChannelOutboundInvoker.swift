@@ -32,15 +32,15 @@ protocol ChannelOutboundInvoker {
 
 // Default implementations for methods that not take a promise.
 extension ChannelOutboundInvoker {
-    func write(data: Buffer) -> Future<Void> {
+    public func write(data: Buffer) -> Future<Void> {
         return write(data: data, promise: Promise<Void>())
     }
 
-    func writeAndFlush(data: Buffer) -> Future<Void> {
+    public func writeAndFlush(data: Buffer) -> Future<Void> {
         return writeAndFlush(data: data, promise: Promise<Void>())
     }
     
-    func close() -> Future<Void> {
+    public func close() -> Future<Void> {
         return close(promise: Promise<Void>())
     }
 }
