@@ -16,6 +16,7 @@ import Foundation
 import Sockets
 
 
+// TODO: Remove this in favor of ServerBootstrap once ported.
 public class Server {
     
     public class func run(host: String, port: Int32, initPipeline: (ChannelPipeline) -> ()) throws {

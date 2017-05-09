@@ -89,8 +89,8 @@ public class EventLoop {
                         // This should be never true
                         assert(!ev.isWritable)
                         
-                        // Accept new connections until 2there are no more in the backlog
-                        while let accepted = try socket.accept() {
+                        // Only accept one time as we only try to read one time as well
+                        if let accepted = try socket.accept() {
                             try accepted.setNonBlocking()
                             
                             let channel = Channel.newChannel(socket: accepted, eventLoop: self, initPipeline: initPipeline)
