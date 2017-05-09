@@ -21,16 +21,23 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     private var head: ChannelHandlerContext?
     private var tail: ChannelHandlerContext?
     
+    public var channel: Channel {
+        get {
+            // Kind of hacky but should be ok for now.
+            return (head!.handler as! HeadChannelHandler).channel
+        }
+    }
+    
     func attach(channel: Channel) {
         // Chain up the double-linked-list
-        head = ChannelHandlerContext(handler: HeadChannelHandler(channel: channel), pipeline: self, allocator: channel.allocator)
-        tail = ChannelHandlerContext(handler: TailChannelHandler(), pipeline: self, allocator: channel.allocator)
+        head = ChannelHandlerContext(handler: HeadChannelHandler(channel: channel), pipeline: self)
+        tail = ChannelHandlerContext(handler: TailChannelHandler(), pipeline: self)
         head!.next = tail
         tail!.prev = head
     }
     
     public func addLast(handler: ChannelHandler) {
-        let ctx = ChannelHandlerContext(handler: handler, pipeline: self, allocator: head!.allocator)
+        let ctx = ChannelHandlerContext(handler: handler, pipeline: self)
         let prev = tail!.prev
         ctx.prev = tail!.prev
         ctx.next = tail
@@ -48,7 +55,7 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     }
     
     public func addFirst(handler: ChannelHandler) {
-        let ctx = ChannelHandlerContext(handler: handler, pipeline: self, allocator: head!.allocator)
+        let ctx = ChannelHandlerContext(handler: handler, pipeline: self)
         let next = head!.next
         
         ctx.prev = head
@@ -122,7 +129,7 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
 
 class HeadChannelHandler : ChannelHandler {
     
-    private let channel: Channel
+    let channel: Channel
     
     init(channel: Channel) {
         self.channel = channel
