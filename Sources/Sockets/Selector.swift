@@ -93,19 +93,27 @@ public class Selector {
     }
 #endif
     
+#if os(Linux)
+    private func toEpollEvents(interested: InterestedEvent) -> UInt32 {
+        // Also merge EPOLL_ERR in so we can easily detect connection-reset
+        switch interested {
+        case InterestedEvent.Read:
+            return EPOLLIN.rawValue | EPOLLERR.rawValue
+        case InterestedEvent.Write:
+            return EPOLLOUT.rawValue | EPOLLERR.rawValue
+        case InterestedEvent.All:
+            return EPOLLIN.rawValue | EPOLLOUT.rawValue | EPOLLERR.rawValue
+        }
+
+    }
+#endif
+ 
     public func register(selectable: Selectable, interested: InterestedEvent = InterestedEvent.Read, attachment: AnyObject? = nil) throws {
 #if os(Linux)
         var ev = epoll_event()
-    
-        switch interested {
-        case InterestedEvent.Read:
-            ev.events = EPOLLIN.rawValue
-        case InterestedEvent.Write:
-            ev.events = EPOLLOUT.rawValue
-        case InterestedEvent.All:
-            ev.events = EPOLLIN.rawValue | EPOLLOUT.rawValue
-        }
+        ev.events = toEpollEvents(interested: interested)
         ev.data.fd = selectable.descriptor
+
         let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_ADD, selectable.descriptor, &ev)
         guard res == 0 else {
             throw IOError(errno: errno, reason: "epoll_ctl(...) failed")
@@ -124,17 +132,9 @@ public class Selector {
     public func reregister(selectable: Selectable, interested: InterestedEvent) throws {
 #if os(Linux)
         var ev = epoll_event()
-            
-        switch interested {
-        case InterestedEvent.Read:
-            ev.events = EPOLLIN.rawValue
-        case InterestedEvent.Write:
-            ev.events = EPOLLOUT.rawValue
-        case InterestedEvent.All:
-            ev.events = EPOLLIN.rawValue | EPOLLOUT.rawValue
-        }
-
+        ev.events = toEpollEvents(interested: interested)
         ev.data.fd = selectable.descriptor
+ 
         let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_MOD, selectable.descriptor, &ev)
         guard res == 0 else {
             throw IOError(errno: errno, reason: "epoll_ctl(...) failed")
@@ -195,7 +195,10 @@ public class Selector {
             while (i < Int(ready)) {
                 let ev = events[Int(i)]
                 let registration = registrations[Int(ev.data.fd)]!
-                sEvents.append(SelectorEvent(isReadable: (ev.events & EPOLLIN.rawValue) != 0, isWritable: (ev.events & EPOLLOUT.rawValue) != 0, selectable: registration.selectable, attachment: registration.attachment))
+                sEvents.append(
+                    SelectorEvent(isReadable: (ev.events & EPOLLIN.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0,
+                                  isWritable: (ev.events & EPOLLOUT.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0,
+                                  selectable: registration.selectable, attachment: registration.attachment))
                 i += 1
             }
             return sEvents
