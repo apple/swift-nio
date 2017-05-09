@@ -59,31 +59,33 @@ public class EventLoop {
             // Block until there are events to handle
             if let events = try selector.awaitReady() {
                 for ev in events {
-                    if ev.isReadable {
-                        
-                        if ev.selectable is Socket {
-                            // We stored the Buffer before as attachment so get it and clear the limit / offset.
-                            let channel = ev.attachment as! Channel
-                            
-                            channel.read0()
-                            
-                        } else if ev.selectable is ServerSocket {
-                            let socket = ev.selectable as! ServerSocket
-                            
-                            // Accept new connections until there are no more in the backlog
-                            while let accepted = try socket.accept() {
-                                try accepted.setNonBlocking()                                
-                                
-                                let channel = Channel(socket: accepted, selector: selector)
-                                try channel.attach(initPipeline: initPipeline)
-                            }
-                        }
-                    } else if ev.isWritable  && ev.selectable is Socket{
+                    if ev.selectable is Socket {
+                        // We stored the Buffer before as attachment so get it and clear the limit / offset.
                         let channel = ev.attachment as! Channel
                         
-                        channel.flushNowAndReadAgain()
+                        if ev.isWritable {
+                            channel.invokeFlush()
+                        }
+                        
+                        if ev.isReadable {
+                            channel.invokeRead()
+                        }
+                    } else if ev.selectable is ServerSocket {
+                        let socket = ev.selectable as! ServerSocket
+                        
+                        // This should be never true
+                        assert(!ev.isWritable)
+                        
+                        // Accept new connections until there are no more in the backlog
+                        while let accepted = try socket.accept() {
+                            try accepted.setNonBlocking()
+                            
+                            let channel = Channel(socket: accepted, selector: selector)
+                            try channel.attach(initPipeline: initPipeline)
+                        }
                     }
                 }
+                
                 // Execute all the tasks that were summited
                 while let task = tasks.first {
                     task()

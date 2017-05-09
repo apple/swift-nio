@@ -21,6 +21,7 @@ protocol ChannelOutboundInvoker {
     func write(data: Buffer, promise: Promise<Void>) -> Future<Void>
 
     func flush()
+    func read()
     
     func writeAndFlush(data: Buffer) -> Future<Void>
     func writeAndFlush(data: Buffer, promise: Promise<Void>) -> Future<Void>

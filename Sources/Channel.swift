@@ -33,8 +33,9 @@ public class Channel : ChannelOutboundInvoker {
     // TODO: This is most likely not the best datastructure for us. Linked-List would be better.
     private var pendingWrites: [(Buffer, Promise<Void>)] = Array()
     private var outstanding: UInt64 = 0
-    private var flushPending: Bool = false
     private var closed: Bool = false
+    private var readPending: Bool = false;
+    private var interestedEvent: InterestedEvent? = InterestedEvent.Read
     
     init(socket: Socket, selector: Selector) {
         self.socket = socket
@@ -47,6 +48,10 @@ public class Channel : ChannelOutboundInvoker {
     
     public func flush() {
         pipeline.flush()
+    }
+    
+    public func read() {
+        pipeline.read()
     }
     
     public func writeAndFlush(data: Buffer, promise: Promise<Void>) -> Future<Void> {
@@ -63,7 +68,7 @@ public class Channel : ChannelOutboundInvoker {
         initPipeline(pipeline)
         
         // Start to read data
-        try selector.register(selectable: socket, attachment: self)
+        try selector.register(selectable: socket, interested: interestedEvent!, attachment: self)
 
         pipeline.fireChannelActive()
     }
@@ -85,31 +90,47 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     func flush0() {
-        if !flushPending && !flushNow() {
+        if interestedEvent != InterestedEvent.Write && interestedEvent != InterestedEvent.All && !flushNow() {
             // Could not flush all of the queued bytes, stop reading until we were able to do so
-            do {
-                try selector.reregister(selectable: socket, interested: InterestedEvent.Write)
+            if interestedEvent == InterestedEvent.Read {
+                safeReregister(interested: InterestedEvent.Write)
+            } else {
+                safeReregister(interested: InterestedEvent.All)
+            }
+            pipeline.fireChannelWritabilityChanged(writable: false)
+        }
+    }
+    
+    func read0() {
+        readPending = true
+        if interestedEvent == nil {
+            interestedEvent = InterestedEvent.Read
             
-                flushPending = true
-                pipeline.fireChannelWritabilityChanged(writable: false)
+            do {
+                try selector.register(selectable: socket, interested: interestedEvent!)
             } catch {
                 // TODO: Log ?
                 close0()
             }
+        } else if interestedEvent != InterestedEvent.Read {
+            if interestedEvent == InterestedEvent.Write {
+                safeReregister(interested: InterestedEvent.All)
+            } else {
+                safeReregister(interested: InterestedEvent.Read)
+            }
         }
     }
-    
-    func flushNowAndReadAgain() {
+
+    func invokeFlush() {
         if flushNow() {
             // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socketto read.
             pipeline.fireChannelWritabilityChanged(writable: true)
-            flushPending = false
-
-            do {
-                try selector.reregister(selectable: socket, interested: InterestedEvent.Read)
-            } catch {
-                // TODO: Log ?
-                close0()
+            
+            if readPending {
+                // Start reading again
+                safeReregister(interested: InterestedEvent.Read)
+            } else {
+                safeDeregister()
             }
         }
     }
@@ -150,12 +171,20 @@ public class Channel : ChannelOutboundInvoker {
         outstanding = 0
     }
     
-    func read0() {
+    func invokeRead() {
+        readPending = false
+
         let buffer = recvAllocator.buffer(allocator: allocator)
         
         defer {
             // Always call the method as last
             pipeline.fireChannelReadComplete()
+            
+            if !readPending {
+                if interestedEvent == InterestedEvent.Read {
+                    safeDeregister()
+                }
+            }
         }
         
         do {
@@ -189,7 +218,27 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     func deregister0() throws {
+        interestedEvent = nil
         try selector.deregister(selectable: socket)
+    }
+    
+    func safeDeregister() {
+        do {
+            try deregister0()
+        } catch {
+            // TODO: Log ?
+            close0()
+        }
+    }
+    
+    func safeReregister(interested: InterestedEvent) {
+        interestedEvent = interested
+        do {
+            try selector.reregister(selectable: socket, interested: interested)
+        } catch {
+            // TODO: Log ?
+            close0()
+        }
     }
 }
 

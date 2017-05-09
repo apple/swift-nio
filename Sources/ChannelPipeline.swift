@@ -18,8 +18,8 @@ import Future
 // TODO: Add teardown which also removes the handlers.
 public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     
-    var head: ChannelHandlerContext?
-    var tail: ChannelHandlerContext?
+    private var head: ChannelHandlerContext?
+    private var tail: ChannelHandlerContext?
     
     func attach(channel: Channel) {
         head = ChannelHandlerContext(handler: HeadChannelHandler(channel: channel), pipeline: self, allocator: channel.allocator)
@@ -65,55 +65,63 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         }
     }
 
+    // Just delegate to the head and tail context
 
     public func fireChannelInactive() {
-        head!.fireChannelInactive()
+        head!.invokeChannelInactive()
     }
     
     public func fireChannelActive() {
-        head!.fireChannelActive()
+        head!.invokeChannelActive()
     }
     
     public func fireChannelRead(data: Buffer) {
-        head!.fireChannelRead(data: data)
+        head!.invokeChannelRead(data: data)
     }
     
     public func fireChannelReadComplete() {
-        head!.fireChannelReadComplete()
+        head!.invokeChannelReadComplete()
     }
     
     public func fireChannelWritabilityChanged(writable: Bool) {
-        head!.fireChannelWritabilityChanged(writable: writable)
+        head!.invokeChannelWritabilityChanged(writable: writable)
     }
     
     public func fireUserEventTriggered(event: AnyClass) {
-        head!.fireUserEventTriggered(event: event)
+        head!.invokeUserEventTriggered(event: event)
     }
     
     public func fireErrorCaught(error: Error) {
-        head!.fireErrorCaught(error: error)
+        head!.invokeErrorCaught(error: error)
     }
 
     public func close(promise: Promise<Void>) -> Future<Void> {
-        return tail!.close(promise: promise)
+        tail!.invokeClose(promise: promise)
+        return promise.futureResult
     }
     
     public func flush() {
-        tail!.flush()
+        tail!.invokeFlush()
     }
     
+    public func read() {
+        tail!.invokeRead()
+    }
+
     public func write(data: Buffer, promise: Promise<Void>) -> Future<Void> {
-        return tail!.write(data: data, promise: promise)
+        tail!.invokeWrite(data: data, promise: promise)
+        return promise.futureResult
     }
     
     public func writeAndFlush(data: Buffer, promise: Promise<Void>) -> Future<Void> {
-        return tail!.writeAndFlush(data: data, promise: promise)
+        tail!.invokeWriteAndFlush(data: data, promise: promise)
+        return promise.futureResult
     }
 }
 
 class HeadChannelHandler : ChannelHandler {
     
-    let channel: Channel
+    private let channel: Channel
     
     init(channel: Channel) {
         self.channel = channel
@@ -129,6 +137,27 @@ class HeadChannelHandler : ChannelHandler {
     
     func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
         channel.close0(promise: promise)
+    }
+    
+    func read(ctx: ChannelHandlerContext) {
+        channel.read0()
+    }
+    
+    func channelActive(ctx: ChannelHandlerContext) {
+        ctx.fireChannelActive()
+        
+        readIfNeeded()
+    }
+    
+    func channelReadComplete(ctx: ChannelHandlerContext) {
+        ctx.fireChannelReadComplete()
+        
+        readIfNeeded()
+    }
+    
+    private func readIfNeeded() {
+        // TODO: Introduce auto-read and non-autoread mode and call channel.read() based on it.
+        channel.read()
     }
 }
 

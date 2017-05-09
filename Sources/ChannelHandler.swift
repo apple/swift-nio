@@ -25,6 +25,8 @@ public protocol ChannelHandler {
     func errorCaught(ctx: ChannelHandlerContext, error: Error) throws
     func write(ctx: ChannelHandlerContext, data: Buffer, promise: Promise<Void>)
     func flush(ctx: ChannelHandlerContext)
+    // TODO: Think about make this more flexible in terms of influence the allocation that is used to read the next amount of data
+    func read(ctx: ChannelHandlerContext)
     func close(ctx: ChannelHandlerContext, promise: Promise<Void>)
     func handlerAdded(ctx: ChannelHandlerContext) throws
     func handlerRemoved(ctx: ChannelHandlerContext) throws
@@ -66,9 +68,13 @@ extension ChannelHandler {
     }
     
     public func flush(ctx: ChannelHandlerContext) {
-        let _ = ctx.flush()
+        ctx.flush()
     }
     
+    public func read(ctx: ChannelHandlerContext) {
+        ctx.read()
+    }
+
     public func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
         let _ = ctx.close(promise: promise)
     }

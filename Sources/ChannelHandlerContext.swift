@@ -124,9 +124,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     public func writeAndFlush(data: Buffer, promise: Promise<Void>) -> Future<Void> {
-        prev!.invokeWrite(data: data, promise: promise)
-        prev!.invokeFlush()
-        
+        prev!.invokeWriteAndFlush(data: data, promise: promise)        
         return promise.futureResult
     }
     
@@ -136,6 +134,19 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     
     func invokeFlush() {
         handler.flush(ctx: self)
+    }
+    
+    func invokeWriteAndFlush(data: Buffer, promise: Promise<Void>) {
+        handler.write(ctx: self, data: data, promise: promise)
+        handler.flush(ctx: self)
+    }
+    
+    public func read() {
+        prev!.invokeRead()
+    }
+    
+    func invokeRead() {
+        handler.read(ctx: self)
     }
     
     public func close(promise: Promise<Void>) -> Future<Void> {
