@@ -46,24 +46,21 @@ public class BaseSocket : Selectable {
     }
     
     public func setNonBlocking() throws {
-        let res = fcntl(self.descriptor, F_SETFL, O_NONBLOCK)
-        
-        guard res >= 0 else {
-            throw ioError(errno: errno, function: "fcntl")
+        let _ = try wrapSyscall({ $0 >= 0 }, function: "fcntl") {
+            fcntl(self.descriptor, F_SETFL, O_NONBLOCK)
         }
-        
     }
     
     public func setOption<T>(level: Int32, name: Int32, value: T) throws {
         var val = value
-        guard setsockopt(
-            self.descriptor,
-            level,
-            name,
-            &val,
-            socklen_t(MemoryLayout.size(ofValue: val))
-            ) != -1 else {
-                throw ioError(errno: errno, function: "setsockopt")
+        
+        let _ = try wrapSyscall({ $0 != -1 }, function: "setsockopt") {
+            setsockopt(
+                self.descriptor,
+                level,
+                name,
+                &val,
+                socklen_t(MemoryLayout.size(ofValue: val)))
         }
     }
     
@@ -75,40 +72,35 @@ public class BaseSocket : Selectable {
             val.deallocate(capacity: 1)
         }
         
-        guard getsockopt(self.descriptor, level, name, val, &length) != -1 else {
-            throw ioError(errno: errno, function: "getsockopt")
+        let _ = try wrapSyscall({ $0 != -1 }, function: "getsockopt") {
+            getsockopt(self.descriptor, level, name, val, &length)
         }
         return val.pointee
     }
     
     public func bind(address: SocketAddress) throws {
-       
-        let res: Int32
         switch address {
         case .v4(address: let addr):
-            res = bindSocket(addr: addr)
+            try bindSocket(addr: addr)
         case .v6(address: let addr):
-            res = bindSocket(addr: addr)
-        }
-        
-        guard res >= 0 else {
-            throw ioError(errno: errno, function: "bind")
+            try bindSocket(addr: addr)
         }
     }
     
-    private func bindSocket<T>(addr: T) -> Int32 {
+    private func bindSocket<T>(addr: T) throws {
         var addr = addr
-        return withUnsafePointer(to: &addr) { (ptr: UnsafePointer<T>) -> Int32 in
-            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                sysBind(self.descriptor, ptr, socklen_t(MemoryLayout.size(ofValue: addr)))
+        let _ = try withUnsafePointer(to: &addr) { (ptr: UnsafePointer<T>) -> Int32 in
+            try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
+                try wrapSyscall({ $0 != -1 }, function: "bind") {
+                    sysBind(self.descriptor, ptr, socklen_t(MemoryLayout.size(ofValue: addr)))
+                }
             }
         }
     }
     
     public func close() throws {
-        let res = sysClose(self.descriptor)
-        guard res >= 0 else {
-            throw ioError(errno: errno, function: "close")
+        let _ = try wrapSyscall({ $0 >= 0 }, function: "close") {
+             sysClose(self.descriptor)
         }
         self.open = false
     }

@@ -41,17 +41,16 @@ public class ServerSocket: BaseSocket {
     }
     
     public init() throws {
-        let fd = sysSocket(AF_INET, Int32(sysSOCK_STREAM), 0)
-        if fd < 0 {
-            throw ioError(errno: errno, function: "socket")
+        let fd = try wrapSyscall({ $0 >= 0 }, function: "socket") {
+            sysSocket(AF_INET, Int32(sysSOCK_STREAM), 0)
         }
+
         super.init(descriptor: fd)
     }
     
     public func listen(backlog: Int32 = 128) throws {
-        let res = sysListen(self.descriptor, backlog)
-        guard res >= 0 else {
-            throw ioError(errno: errno, function: "listen")
+        let _ = try wrapSyscall({ $0 >= 0 }, function: "listen") {
+            sysListen(self.descriptor, backlog)
         }
     }
     
@@ -60,23 +59,18 @@ public class ServerSocket: BaseSocket {
         var addrSize = socklen_t(MemoryLayout<sockaddr_in>.size)
         
         while true {
-            let fd = withUnsafeMutablePointer(to: &acceptAddr) { ptr in
-                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                    sysAccept(self.descriptor, ptr, &addrSize)
+            let ret = try withUnsafeMutablePointer(to: &acceptAddr) { ptr in
+                try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
+                    try wrapSyscallMayBlock({ $0 >= 0 }, function: "accept") {
+                        sysAccept(self.descriptor, ptr, &addrSize)
+                    }
                 }
             }
         
-            guard fd >= 0 else {
-                let err = errno
-                if (err == EINTR) {
-                    continue
-                }
-                guard err == EWOULDBLOCK else {
-                    throw ioError(errno: errno, function: "accept")
-                }
+            guard let fd = ret else {
                 return nil
             }
-    
+
 #if os(Linux)
             /* no SO_NOSIGPIPE on Linux :( */
             let old_sighandler = signal(SIGPIPE, SIG_IGN);

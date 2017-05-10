@@ -34,23 +34,15 @@ public class Socket : BaseSocket {
     }
 
     public func write(data: Data, offset: Int, len: Int) throws -> UInt? {
-        while true {
-            let res = data.withUnsafeBytes() { [unowned self] (buffer: UnsafePointer<UInt8>) -> Int in
-                return sysWrite(self.descriptor, buffer.advanced(by: offset), len)
+        let res = try data.withUnsafeBytes() { [unowned self] (buffer: UnsafePointer<UInt8>) -> Int? in
+            try wrapSyscallMayBlock({ $0 >= 0 }, function: "write") {
+                sysWrite(self.descriptor, buffer.advanced(by: offset), len)
             }
-
-            guard res >= 0 else {
-                let err = errno
-                if err == EINTR {
-                    continue
-                }
-                guard err == EWOULDBLOCK else {
-                    throw ioError(errno: errno, function: "write")
-                }
-                return nil
-            }
-            return UInt(res)
         }
+        if let written = res {
+            return UInt(written)
+        }
+        return nil
     }
     
     public func read(data: inout Data) throws -> UInt? {
@@ -58,22 +50,15 @@ public class Socket : BaseSocket {
     }
 
     public func read(data: inout Data, offset: Int, len: Int) throws -> UInt? {
-        while true {
-            let res = data.withUnsafeMutableBytes() { [unowned self] (buffer: UnsafeMutablePointer<UInt8>) -> Int in
-                return sysRead(self.descriptor, buffer.advanced(by: offset), len)
+        let res = try data.withUnsafeMutableBytes() { [unowned self] (buffer: UnsafeMutablePointer<UInt8>) -> Int? in
+            try wrapSyscallMayBlock({ $0 >= 0 }, function: "read") {
+                sysRead(self.descriptor, buffer.advanced(by: offset), len)
             }
-            
-            guard res >= 0 else {
-                let err = errno
-                if err == EINTR {
-                    continue
-                }
-                guard err == EWOULDBLOCK else {
-                    throw ioError(errno: errno, function: "read")
-                }
-                return nil
-            }
-            return UInt(res)
         }
+        
+        if let read = res {
+            return UInt(read)
+        }
+        return nil
     }
 }

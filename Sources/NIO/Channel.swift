@@ -113,18 +113,22 @@ public class Channel : ChannelOutboundInvoker {
     func close0(promise: Promise<Void> = Promise<Void>()) {
         let wasClosed = closed
         
-        do {
-            closed = true
-            try socket.close()
-            promise.succeed(result: ())
-        } catch let err {
-            promise.fail(error: err)
-        }
-        
         if !wasClosed {
+            do {
+                closed = true
+                try socket.close()
+                promise.succeed(result: ())
+            } catch let err {
+                promise.fail(error: err)
+            }
             pipeline.fireChannelUnregistered()
             pipeline.fireChannelInactive()
+
+        } else {
+            // Already closed
+            promise.succeed(result: ())
         }
+        
         
         // Fail all pending writes and so ensure all pending promises are notified
         failPendingWrites(err: IOError(errno: EBADF, reason: "Channel closed"))

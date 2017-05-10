@@ -36,3 +36,48 @@ func reasonForError(errno: Int32, function: String) -> String {
         return "\(function) failed"
     }
 }
+
+@inline(never)
+private func callWithErrno<A>(_ fn: () -> A) -> (result: A, errno_value: Int32) {
+    var result: A? = nil
+    var savedErrno: Int32 = 0
+    withExtendedLifetime(fn) {
+        result = fn()
+        savedErrno = errno
+    }
+    return (result!, savedErrno)
+}
+
+func wrapSyscall<A>(function: @autoclosure () -> String,
+                        _ successCondition: (A) -> Bool, _ fn: () -> A) throws -> A {
+    while true {
+        let (result, err) = callWithErrno(fn)
+        if !successCondition(result) {
+            precondition(err != 0, "errno is 0, successCondition wrong")
+            assert(err != EBADF, "backlisted errno EBADF on \(function())")
+            if err == EINTR {
+                continue
+            }
+            throw ioError(errno: err, function: function())
+        } else {
+            return result
+        }
+    }
+}
+
+func wrapSyscall<A>(_ successCondition: (A) -> Bool,
+                        function: @autoclosure () -> String, _ fn: () -> A) throws -> A {
+    return try wrapSyscall(function: function, successCondition, fn)
+}
+
+func wrapSyscallMayBlock<A>(_ successCondition: (A) -> Bool,
+                 function: @autoclosure () -> String, _ fn: () -> A) throws -> A? {
+    do {
+        return try wrapSyscall(function: function, successCondition, fn)
+    } catch let error as IOError {
+        if error.errno == EWOULDBLOCK {
+            return nil;
+        }
+        throw error
+    }
+}
