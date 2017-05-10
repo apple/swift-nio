@@ -45,7 +45,7 @@ public class Socket : BaseSocket {
                     continue
                 }
                 guard err == EWOULDBLOCK else {
-                    throw IOError(errno: errno, reason: "write(...) failed")
+                    throw ioError(errno: errno, function: "write")
                 }
                 return nil
             }
@@ -69,7 +69,7 @@ public class Socket : BaseSocket {
                     continue
                 }
                 guard err == EWOULDBLOCK else {
-                    throw IOError(errno: errno, reason: "read(...) failed")
+                    throw ioError(errno: errno, function: "read")
                 }
                 return nil
             }

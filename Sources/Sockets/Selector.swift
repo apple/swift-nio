@@ -116,14 +116,14 @@ public class Selector {
 
         let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_ADD, selectable.descriptor, &ev)
         guard res == 0 else {
-            throw IOError(errno: errno, reason: "epoll_ctl(...) failed")
+            throw ioError(errno: errno, function: "epoll_ctl")
         }
         registrations[Int(selectable.descriptor)] = Registration(selectable: selectable, attachment: attachment)
 #else
         let res = register_kqueue(selectable: selectable, interested: interested)
     
         guard res != -1 else {
-            throw IOError(errno: errno, reason: "kevent(...) failed")
+            throw ioError(errno: errno, function: "kevent")
         }
         registrations[Int(selectable.descriptor)] = Registration(selectable: selectable, attachment: attachment)
 #endif
@@ -137,13 +137,13 @@ public class Selector {
  
         let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_MOD, selectable.descriptor, &ev)
         guard res == 0 else {
-            throw IOError(errno: errno, reason: "epoll_ctl(...) failed")
+            throw ioError(errno: errno, function: "epoll_ctl")
         }
 #else
         let res = register_kqueue(selectable: selectable, interested: interested)
     
         guard res != -1 else {
-            throw IOError(errno: errno, reason: "kevent(...) failed")
+            throw ioError(errno: errno, function: "kevent")
         }
 #endif
     }
@@ -153,7 +153,7 @@ public class Selector {
         var ev = epoll_event()
         let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_DEL, selectable.descriptor, &ev)
         guard res == 0 else {
-            throw IOError(errno: errno, reason: "epoll_ctl(...) failed")
+            throw ioError(errno: errno, function: "epoll_ctl")
         }
         registrations.removeValue(forKey: Int(selectable.descriptor))
 #else
@@ -181,7 +181,7 @@ public class Selector {
         }
     
         guard res != -1 else {
-            throw IOError(errno: errno, reason: "kevent(...) failed")
+            throw ioError(errno: errno, function: "kevent")
         }
 #endif
     }
@@ -228,7 +228,7 @@ public class Selector {
         let res = Darwin.close(self.fd)
 #endif
         guard res >= 0 else {
-            throw IOError(errno: errno, reason: "close(...) failed")
+            throw ioError(errno: errno, function: "close")
         }
     }
 

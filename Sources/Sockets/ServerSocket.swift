@@ -43,7 +43,7 @@ public class ServerSocket: BaseSocket {
     public init() throws {
         let fd = sysSocket(AF_INET, Int32(sysSOCK_STREAM), 0)
         if fd < 0 {
-            throw IOError(errno: errno, reason: "socket(...) failed")
+            throw ioError(errno: errno, function: "socket")
         }
         super.init(descriptor: fd)
     }
@@ -51,7 +51,7 @@ public class ServerSocket: BaseSocket {
     public func listen(backlog: Int32 = 128) throws {
         let res = sysListen(self.descriptor, backlog)
         guard res >= 0 else {
-            throw IOError(errno: errno, reason: "listen(...) failed")
+            throw ioError(errno: errno, function: "listen")
         }
     }
     
@@ -72,7 +72,7 @@ public class ServerSocket: BaseSocket {
                     continue
                 }
                 guard err == EWOULDBLOCK else {
-                    throw IOError(errno: errno, reason: "accept(...) failed")
+                    throw ioError(errno: errno, function: "accept")
                 }
                 return nil
             }

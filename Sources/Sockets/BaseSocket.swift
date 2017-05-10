@@ -49,7 +49,7 @@ public class BaseSocket : Selectable {
         let res = fcntl(self.descriptor, F_SETFL, O_NONBLOCK)
         
         guard res >= 0 else {
-            throw IOError(errno: errno, reason: reasonForError(function: "fcntl"))
+            throw ioError(errno: errno, function: "fcntl")
         }
         
     }
@@ -63,7 +63,7 @@ public class BaseSocket : Selectable {
             &val,
             socklen_t(MemoryLayout.size(ofValue: val))
             ) != -1 else {
-                throw IOError(errno: errno, reason: reasonForError(function: "setsockopt"))
+                throw ioError(errno: errno, function: "setsockopt")
         }
     }
     
@@ -76,7 +76,7 @@ public class BaseSocket : Selectable {
         }
         
         guard getsockopt(self.descriptor, level, name, val, &length) != -1 else {
-            throw IOError(errno: errno, reason: reasonForError(function: "getsockopt"))
+            throw ioError(errno: errno, function: "getsockopt")
         }
         return val.pointee
     }
@@ -92,7 +92,7 @@ public class BaseSocket : Selectable {
         }
         
         guard res >= 0 else {
-            throw IOError(errno: errno, reason: reasonForError(function: "bind"))
+            throw ioError(errno: errno, function: "bind")
         }
     }
     
@@ -108,16 +108,8 @@ public class BaseSocket : Selectable {
     public func close() throws {
         let res = sysClose(self.descriptor)
         guard res >= 0 else {
-            throw IOError(errno: errno, reason: reasonForError(function: "close"))
+            throw ioError(errno: errno, function: "close")
         }
         self.open = false
-    }
-
-    private func reasonForError(function: String) -> String {
-        if let strError = String(utf8String: strerror(errno)) {
-            return "\(function) failed: \(strError)"
-        } else {
-            return "\(function) failed"
-        }
     }
 }

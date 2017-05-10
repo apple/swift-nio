@@ -24,3 +24,15 @@ public struct IOError: Swift.Error {
         self.reason = reason
     }
 }
+
+func ioError(errno: Int32, function: String) -> IOError {
+    return IOError(errno: errno, reason: reasonForError(errno: errno, function: function))
+}
+
+func reasonForError(errno: Int32, function: String) -> String {
+    if let strError = String(utf8String: strerror(errno)) {
+        return "\(function) failed: \(strError)"
+    } else {
+        return "\(function) failed"
+    }
+}
