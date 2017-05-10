@@ -58,31 +58,29 @@ public class ServerSocket: BaseSocket {
         var acceptAddr = sockaddr_in()
         var addrSize = socklen_t(MemoryLayout<sockaddr_in>.size)
         
-        while true {
-            let ret = try withUnsafeMutablePointer(to: &acceptAddr) { ptr in
-                try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                    try wrapSyscallMayBlock({ $0 >= 0 }, function: "accept") {
-                        sysAccept(self.descriptor, ptr, &addrSize)
-                    }
+        let ret = try withUnsafeMutablePointer(to: &acceptAddr) { ptr in
+            try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
+                try wrapSyscallMayBlock({ $0 >= 0 }, function: "accept") {
+                    sysAccept(self.descriptor, ptr, &addrSize)
                 }
             }
-        
-            guard let fd = ret else {
-                return nil
-            }
-
-#if os(Linux)
-            /* no SO_NOSIGPIPE on Linux :( */
-            let old_sighandler = signal(SIGPIPE, SIG_IGN);
-            if old_sighandler == SIG_ERR {
-                return nil
-            }
-#else
-            // TODO: Handle return code ?
-            let _ = Darwin.fcntl(fd, F_SETNOSIGPIPE, 1);
-#endif
-
-            return Socket(descriptor: fd)
         }
+        
+        guard let fd = ret else {
+            return nil
+        }
+        
+#if os(Linux)
+        /* no SO_NOSIGPIPE on Linux :( */
+        let old_sighandler = signal(SIGPIPE, SIG_IGN);
+        if old_sighandler == SIG_ERR {
+            return nil
+        }
+#else
+        // TODO: Handle return code ?
+        let _ = Darwin.fcntl(fd, F_SETNOSIGPIPE, 1);
+#endif
+        
+        return Socket(descriptor: fd)
     }
 }
