@@ -79,7 +79,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         next!.invokeErrorCaught(error: error)
     }
     
-    public func fireUserEventTriggered(event: AnyClass) {
+    public func fireUserEventTriggered(event: AnyObject) {
         next!.invokeUserEventTriggered(event: event)
     }
     
@@ -189,7 +189,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         }
     }
 
-    func invokeUserEventTriggered(event: AnyClass) {
+    func invokeUserEventTriggered(event: AnyObject) {
         assert(channel.eventLoop.inEventLoop())
         
         do {

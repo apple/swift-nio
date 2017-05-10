@@ -101,7 +101,7 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         head!.invokeChannelWritabilityChanged(writable: writable)
     }
     
-    public func fireUserEventTriggered(event: AnyClass) {
+    public func fireUserEventTriggered(event: AnyObject) {
         head!.invokeUserEventTriggered(event: event)
     }
     
@@ -213,7 +213,7 @@ class TailChannelHandler : ChannelHandler {
         // Discard
     }
     
-    func userEventTriggered(ctx: ChannelHandlerContext, event: AnyClass) {
+    func userEventTriggered(ctx: ChannelHandlerContext, event: AnyObject) {
         // Discard
     }
     

@@ -32,5 +32,5 @@ public protocol ChannelInboundInvoker {
     
     func fireErrorCaught(error: Error)
     
-    func fireUserEventTriggered(event: AnyClass)
+    func fireUserEventTriggered(event: AnyObject)
 }

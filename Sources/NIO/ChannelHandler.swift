@@ -23,7 +23,7 @@ public protocol ChannelHandler {
     func channelRead(ctx: ChannelHandlerContext, data: AnyObject) throws
     func channelReadComplete(ctx: ChannelHandlerContext) throws
     func channelWritabilityChanged(ctx: ChannelHandlerContext, writable: Bool) throws
-    func userEventTriggered(ctx: ChannelHandlerContext, event: AnyClass) throws
+    func userEventTriggered(ctx: ChannelHandlerContext, event: AnyObject) throws
     func errorCaught(ctx: ChannelHandlerContext, error: Error) throws
     func write(ctx: ChannelHandlerContext, data: AnyObject, promise: Promise<Void>)
     func flush(ctx: ChannelHandlerContext)
@@ -65,7 +65,7 @@ extension ChannelHandler {
         ctx.fireChannelWritabilityChanged(writable: writable)
     }
     
-    public func userEventTriggered(ctx: ChannelHandlerContext, event: AnyClass) {
+    public func userEventTriggered(ctx: ChannelHandlerContext, event: AnyObject) {
         ctx.fireUserEventTriggered(event: event)
     }
     
