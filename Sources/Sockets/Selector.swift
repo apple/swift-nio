@@ -34,17 +34,16 @@ public class Selector {
     
     public init() throws {
 #if os(Linux)
-        fd = CEpoll.epoll_create(128)
-        guard fd >= 0 else {
-            throw IOError(errno: errno, reason: "Creation of epoll failed")
+        fd = try wrapSyscall({ $0 >= 0 }, function: "epoll_create") {
+            CEpoll.epoll_create(128)
         }
         events = UnsafeMutablePointer.allocate(capacity: 2048) // max 2048 events per epoll call
         events.initialize(to: epoll_event())
 #else
-        fd = Darwin.kqueue()
-        guard fd >= 0 else {
-            throw IOError(errno: errno, reason: "Creation of kqueue failed")
+        fd = try wrapSyscall({ $0 >= 0 }, function: "kqueue") {
+            Darwin.kqueue()
         }
+
         events = UnsafeMutablePointer.allocate(capacity: 2048) // max 2048 events per kqueue call
         events.initialize(to: kevent())
 #endif
@@ -57,7 +56,7 @@ public class Selector {
     
 
 #if !os(Linux)
-    private func register_kqueue(selectable: Selectable, interested: InterestedEvent) -> Int32 {
+    private func register_kqueue(selectable: Selectable, interested: InterestedEvent) throws {
         // Allocated on the stack
         var events = (kevent(), kevent())
         
@@ -85,10 +84,13 @@ public class Selector {
             events.1.flags = UInt16(Int16(EV_ADD))
         }
         
-        return withUnsafeMutableBytes(of: &events) { event_ptr -> Int32 in
+        let _ = try withUnsafeMutableBytes(of: &events) { event_ptr -> Int32 in
             precondition(MemoryLayout<kevent>.size * 2 == event_ptr.count)
             let ptr = event_ptr.baseAddress?.bindMemory(to: kevent.self, capacity: 2)
-            return kevent(self.fd, ptr, 2, ptr, 2, nil)
+            
+            return try wrapSyscall({ $0 >= 0 }, function: "kevent") {
+                kevent(self.fd, ptr, 2, ptr, 2, nil)
+            }
         }
     }
 #endif
@@ -114,19 +116,13 @@ public class Selector {
         ev.events = toEpollEvents(interested: interested)
         ev.data.fd = selectable.descriptor
 
-        let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_ADD, selectable.descriptor, &ev)
-        guard res == 0 else {
-            throw ioError(errno: errno, function: "epoll_ctl")
+        let _ = try wrapSyscall({ $0 == 0 }, function: "epoll_ctl") {
+            CEpoll.epoll_ctl(self.fd, EPOLL_CTL_ADD, selectable.descriptor, &ev)
         }
-        registrations[Int(selectable.descriptor)] = Registration(selectable: selectable, attachment: attachment)
 #else
-        let res = register_kqueue(selectable: selectable, interested: interested)
-    
-        guard res != -1 else {
-            throw ioError(errno: errno, function: "kevent")
-        }
-        registrations[Int(selectable.descriptor)] = Registration(selectable: selectable, attachment: attachment)
+        try register_kqueue(selectable: selectable, interested: interested)
 #endif
+        registrations[Int(selectable.descriptor)] = Registration(selectable: selectable, attachment: attachment)
     }
     
     public func reregister(selectable: Selectable, interested: InterestedEvent) throws {
@@ -135,27 +131,20 @@ public class Selector {
         ev.events = toEpollEvents(interested: interested)
         ev.data.fd = selectable.descriptor
  
-        let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_MOD, selectable.descriptor, &ev)
-        guard res == 0 else {
-            throw ioError(errno: errno, function: "epoll_ctl")
+        let _ = try wrapSyscall({ $0 == 0 }, function: "epoll_ctl") {
+            CEpoll.epoll_ctl(self.fd, EPOLL_CTL_MOD, selectable.descriptor, &ev)
         }
 #else
-        let res = register_kqueue(selectable: selectable, interested: interested)
-    
-        guard res != -1 else {
-            throw ioError(errno: errno, function: "kevent")
-        }
+        try register_kqueue(selectable: selectable, interested: interested)
 #endif
     }
     
     public func deregister(selectable: Selectable) throws {
 #if os(Linux)
         var ev = epoll_event()
-        let res = CEpoll.epoll_ctl(self.fd, EPOLL_CTL_DEL, selectable.descriptor, &ev)
-        guard res == 0 else {
-            throw ioError(errno: errno, function: "epoll_ctl")
+        let _ = try wrapSyscall({ $0 == 0 }, function: "epoll_ctl") {
+            CEpoll.epoll_ctl(self.fd, EPOLL_CTL_DEL, selectable.descriptor, &ev)
         }
-        registrations.removeValue(forKey: Int(selectable.descriptor))
 #else
         // Allocated on the stack
         var evs = (kevent(), kevent())
@@ -174,21 +163,24 @@ public class Selector {
         evs.1.udata = nil
         evs.1.flags = UInt16(Int16(EV_DELETE))
 
-        let res = withUnsafeMutableBytes(of: &evs) { event_ptr -> Int32 in
+        let _ = try withUnsafeMutableBytes(of: &evs) { event_ptr -> Int32 in
             precondition(MemoryLayout<kevent>.size * 2 == event_ptr.count)
             let ptr = event_ptr.baseAddress?.bindMemory(to: kevent.self, capacity: 2)
-            return kevent(self.fd, ptr, 2, ptr, 2, nil)
-        }
-    
-        guard res != -1 else {
-            throw ioError(errno: errno, function: "kevent")
+            
+            return try wrapSyscall({ $0 >= 0 }, function: "kevent") {
+                kevent(self.fd, ptr, 2, ptr, 2, nil)
+            }
         }
 #endif
+        registrations.removeValue(forKey: Int(selectable.descriptor))
+
     }
     
     public func awaitReady() throws -> Array<SelectorEvent>? {
 #if os(Linux)
-        let ready = CEpoll.epoll_wait(self.fd, events, 2048, 0)
+        let ready = try wrapSyscall({ $0 >= 0 }, function: "epoll_wait") {
+            CEpoll.epoll_wait(self.fd, events, 2048, 0)
+        }
         if (ready > 0) {
             var sEvents = [SelectorEvent]()
             var i = 0;
@@ -204,7 +196,9 @@ public class Selector {
             return sEvents
         }
 #else
-        let ready = kevent(self.fd, nil, 0, events, 2048, nil);
+        let ready = try wrapSyscall({ $0 >= 0 }, function: "kevent") {
+            kevent(self.fd, nil, 0, events, 2048, nil)
+        }
         if (ready > 0) {
             var sEvents = [SelectorEvent]()
             var i = 0;
@@ -222,13 +216,12 @@ public class Selector {
     }
     
     public func close() throws {
+        let _ = try wrapSyscall({ $0 >= 0 }, function: "close") {
 #if os(Linux)
-        let res = Glibc.close(self.fd)
+            return Glibc.close(self.fd)
 #else
-        let res = Darwin.close(self.fd)
+            return Int(Darwin.close(self.fd))
 #endif
-        guard res >= 0 else {
-            throw ioError(errno: errno, function: "close")
         }
     }
 
