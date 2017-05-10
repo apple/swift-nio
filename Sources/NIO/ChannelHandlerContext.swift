@@ -63,7 +63,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         next!.invokeChannelInactive()
     }
 
-    public func fireChannelRead(data: Buffer) {
+    public func fireChannelRead(data: AnyObject) {
         next!.invokeChannelRead(data: data)
     }
     
@@ -83,12 +83,12 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         next!.invokeUserEventTriggered(event: event)
     }
     
-    public func write(data: Buffer, promise: Promise<Void>) -> Future<Void> {
+    public func write(data: AnyObject, promise: Promise<Void>) -> Future<Void> {
         prev!.invokeWrite(data: data, promise: promise)
         return promise.futureResult
     }
     
-    public func writeAndFlush(data: Buffer, promise: Promise<Void>) -> Future<Void> {
+    public func writeAndFlush(data: AnyObject, promise: Promise<Void>) -> Future<Void> {
         prev!.invokeWriteAndFlush(data: data, promise: promise)
         return promise.futureResult
     }
@@ -149,7 +149,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         }
     }
     
-    func invokeChannelRead(data: Buffer) {
+    func invokeChannelRead(data: AnyObject) {
         assert(channel.eventLoop.inEventLoop())
         
         do {
@@ -199,7 +199,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         }
     }
 
-    func invokeWrite(data: Buffer, promise: Promise<Void>) {
+    func invokeWrite(data: AnyObject, promise: Promise<Void>) {
         assert(channel.eventLoop.inEventLoop())
         
         handler.write(ctx: self, data: data, promise: promise)
@@ -211,7 +211,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         handler.flush(ctx: self)
     }
     
-    func invokeWriteAndFlush(data: Buffer, promise: Promise<Void>) {
+    func invokeWriteAndFlush(data: AnyObject, promise: Promise<Void>) {
         assert(channel.eventLoop.inEventLoop())
         handler.write(ctx: self, data: data, promise: promise)
         handler.flush(ctx: self)

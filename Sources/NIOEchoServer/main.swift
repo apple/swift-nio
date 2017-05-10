@@ -18,7 +18,7 @@ import Future
 
 public class EchoHandler: ChannelHandler {
     
-    public func channelRead(ctx: ChannelHandlerContext, data: Buffer) {
+    public func channelRead(ctx: ChannelHandlerContext, data: AnyObject) {
         let f = ctx.write(data: data)
         
         // If the write fails close the channel

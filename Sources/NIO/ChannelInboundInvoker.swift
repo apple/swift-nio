@@ -24,7 +24,7 @@ public protocol ChannelInboundInvoker {
 
     func fireChannelInactive()
 
-    func fireChannelRead(data: Buffer)
+    func fireChannelRead(data: AnyObject)
     
     func fireChannelReadComplete()
     

@@ -89,7 +89,7 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         head!.invokeChannelActive()
     }
     
-    public func fireChannelRead(data: Buffer) {
+    public func fireChannelRead(data: AnyObject) {
         head!.invokeChannelRead(data: data)
     }
     
@@ -122,27 +122,14 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         tail!.invokeRead()
     }
 
-    public func write(data: Buffer, promise: Promise<Void>) -> Future<Void> {
+    public func write(data: AnyObject, promise: Promise<Void>) -> Future<Void> {
         tail!.invokeWrite(data: data, promise: promise)
         return promise.futureResult
     }
     
-    public func writeAndFlush(data: Buffer, promise: Promise<Void>) -> Future<Void> {
+    public func writeAndFlush(data: AnyObject, promise: Promise<Void>) -> Future<Void> {
         tail!.invokeWriteAndFlush(data: data, promise: promise)
         return promise.futureResult
-    }
-    
-    
-    public func write(data: Buffer) -> Future<Void> {
-        return write(data: data, promise: eventLoop.newPromise(type: Void.self))
-    }
-    
-    public func writeAndFlush(data: Buffer) -> Future<Void> {
-        return writeAndFlush(data: data, promise: eventLoop.newPromise(type: Void.self))
-    }
-    
-    public func close() -> Future<Void> {
-        return close(promise: eventLoop.newPromise(type: Void.self))
     }
     
     // Only executed from Channel
@@ -166,7 +153,7 @@ class HeadChannelHandler : ChannelHandler {
         self.channel = channel
     }
     
-    func write(ctx: ChannelHandlerContext, data: Buffer, promise: Promise<Void>) {
+    func write(ctx: ChannelHandlerContext, data: AnyObject, promise: Promise<Void>) {
         channel.write0(data: data, promise: promise)
     }
     
@@ -234,7 +221,7 @@ class TailChannelHandler : ChannelHandler {
         // TODO: Log this and tell the user that its most likely a fault not handling it.
     }
     
-    func channelRead(ctx: ChannelHandlerContext, data: Buffer) {
+    func channelRead(ctx: ChannelHandlerContext, data: AnyObject) {
         // TODO: Log this and tell the user that its most likely a fault not handling it.
     }
 }

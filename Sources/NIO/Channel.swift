@@ -40,7 +40,7 @@ public class Channel : ChannelOutboundInvoker {
     private var closed: Bool = false
     private var readPending: Bool = false;
     
-    public func write(data: Buffer, promise: Promise<Void>) -> Future<Void> {
+    public func write(data: AnyObject, promise: Promise<Void>) -> Future<Void> {
         return pipeline.write(data: data, promise: promise)
     }
     
@@ -52,7 +52,7 @@ public class Channel : ChannelOutboundInvoker {
         pipeline.read()
     }
     
-    public func writeAndFlush(data: Buffer, promise: Promise<Void>) -> Future<Void> {
+    public func writeAndFlush(data: AnyObject, promise: Promise<Void>) -> Future<Void> {
         return pipeline.writeAndFlush(data: data, promise: promise)
     }
     
@@ -61,19 +61,24 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     // Methods invoked from the HeadHandler of the ChannelPipeline
-    func write0(data: Buffer, promise: Promise<Void>) {
+    func write0(data: AnyObject, promise: Promise<Void>) {
         if closed {
             // Channel was already closed to fail the promise and not even queue it.
             promise.fail(error: IOError(errno: EBADF, reason: "Channel closed"))
             return
         }
-        pendingWrites.append((data, promise))
-        outstanding += UInt64((data.limit - data.offset))
-        
-        // TODO: Configurable or remove completely ?
-        if outstanding >= 64 * 1024 {
-            // Too many outstanding bytes, try flush these now.
-            flush0()
+        if let buffer = data as? Buffer {
+            pendingWrites.append((buffer, promise))
+            outstanding += UInt64((buffer.limit - buffer.offset))
+            
+            // TODO: Configurable or remove completely ?
+            if outstanding >= 64 * 1024 {
+                // Too many outstanding bytes, try flush these now.
+                flush0()
+            }
+        } else {
+            // Only support Buffer for now. 
+            promise.fail(error: MessageError.unsupported)
         }
     }
     
@@ -277,4 +282,8 @@ public class FixedSizeBufferAllocator : RecvBufferAllocator {
     public func buffer(allocator: BufferAllocator) -> Buffer {
         return allocator.buffer(capacity: capacity)
     }
+}
+
+enum MessageError: Error {
+    case unsupported
 }
