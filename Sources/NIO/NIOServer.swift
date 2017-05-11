@@ -19,6 +19,8 @@ import Sockets
 // TODO: Remove this in favor of ServerBootstrap once ported.
 public class Server {
     
+    private init() { }
+
     public class func run(host: String, port: Int32, initPipeline: (ChannelPipeline) throws -> ()) throws {
         try Server.run(address: SocketAddresses.newAddress(for: host, on: port)!, initPipeline: initPipeline)
     }

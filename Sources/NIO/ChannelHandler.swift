@@ -35,7 +35,7 @@ public protocol ChannelHandler : class {
 }
 
 //  Default implementation for the ChannelHandler protocol
-extension ChannelHandler {
+public extension ChannelHandler {
     
     public func channelRegistered(ctx: ChannelHandlerContext) {
         ctx.fireChannelRegistered()

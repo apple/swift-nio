@@ -17,6 +17,7 @@ import Future
 
 public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvoker {
 
+    // visible for ChannelPipeline to modify
     var prev: ChannelHandlerContext?
     var next: ChannelHandlerContext?
 
@@ -42,7 +43,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         }
     }
     
-    // Only created from within Channel
+    // Only created from within ChannelPipeline
     init(name: String, handler: ChannelHandler, pipeline: ChannelPipeline) {
         self.name = name
         self.handler = handler
@@ -102,13 +103,11 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     public func read() {
         prev!.invokeRead()
     }
-
     
     public func close(promise: Promise<Void>) -> Future<Void> {
         prev!.invokeClose(promise: promise)
         return promise.futureResult
     }
-    
     
     // Methods that are invoked itself by this class itself or ChannelPipeline
     func invokeChannelRegistered() {

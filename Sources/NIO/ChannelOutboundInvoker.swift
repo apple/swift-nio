@@ -32,8 +32,7 @@ public protocol ChannelOutboundInvoker {
     var eventLoop: EventLoop { get }
 }
 
-
-extension ChannelOutboundInvoker{
+public extension ChannelOutboundInvoker {
     public func write(data: AnyObject) -> Future<Void> {
         return write(data: data, promise: eventLoop.newPromise(type: Void.self))
     }

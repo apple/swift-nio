@@ -29,12 +29,6 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         }
     }
     
-    private func nextName() -> String {
-        let name = "handler\(idx)"
-        idx += 1
-        return name
-    }
-    
     public func add(name: String? = nil, handler: ChannelHandler, first: Bool = false) throws {
         let ctx = ChannelHandlerContext(name: name ?? nextName(), handler: handler, pipeline: self)
         if first {
@@ -105,7 +99,13 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         
         return true
     }
-    
+
+    private func nextName() -> String {
+        let name = "handler\(idx)"
+        idx += 1
+        return name
+    }
+
     // Just traverse the pipeline from the start
     private func getCtx(equalsFunc: (ChannelHandlerContext) -> Bool) -> ChannelHandlerContext? {
         var ctx = head?.next
@@ -143,7 +143,6 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     }
     
     // Just delegate to the head and tail context
-
     public func fireChannelRegistered() {
         head!.invokeChannelRegistered()
     }
@@ -213,7 +212,7 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     }
 }
 
-class HeadChannelHandler : ChannelHandler {
+private class HeadChannelHandler : ChannelHandler {
     
     private let pipeline: ChannelPipeline
     
@@ -253,7 +252,6 @@ class HeadChannelHandler : ChannelHandler {
         ctx.fireChannelUnregistered()
         
         pipeline.removeHandlers()
-      
     }
 
     private func readIfNeeded() {
@@ -263,7 +261,7 @@ class HeadChannelHandler : ChannelHandler {
     }
 }
 
-class TailChannelHandler : ChannelHandler {
+private class TailChannelHandler : ChannelHandler {
     
     func channelRegistered(ctx: ChannelHandlerContext) {
         // Discard
