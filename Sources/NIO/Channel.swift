@@ -41,9 +41,6 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     public let eventLoop: EventLoop
-
-
-    private let recvAllocator: RecvBufferAllocator = FixedSizeBufferAllocator(capacity: 8192)
     
     // Visible to access from EventLoop directly
     let socket: Socket
@@ -199,7 +196,7 @@ public class Channel : ChannelOutboundInvoker {
     func readFromEventLoop() {
         readPending = false
         
-        let buffer = recvAllocator.buffer(allocator: allocator)
+        let buffer = config.recvAllocator.buffer(allocator: allocator)
         
         defer {
             // Always call the method as last
