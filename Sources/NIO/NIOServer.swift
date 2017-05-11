@@ -19,11 +19,11 @@ import Sockets
 // TODO: Remove this in favor of ServerBootstrap once ported.
 public class Server {
     
-    public class func run(host: String, port: Int32, initPipeline: (ChannelPipeline) -> ()) throws {
+    public class func run(host: String, port: Int32, initPipeline: (ChannelPipeline) throws -> ()) throws {
         try Server.run(address: SocketAddresses.newAddress(for: host, on: port)!, initPipeline: initPipeline)
     }
     
-    public class func run(address: SocketAddress, initPipeline: (ChannelPipeline) -> ()) throws {
+    public class func run(address: SocketAddress, initPipeline: (ChannelPipeline) throws -> ()) throws {
         
         // Bootstrap the server and create the Selector on which we register our sockets.
         let selector = try Sockets.Selector()

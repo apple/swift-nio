@@ -166,13 +166,18 @@ public class Channel : ChannelOutboundInvoker {
 
     }
     
-    func registerOnEventLoop(initPipeline: (ChannelPipeline) ->()) {
+    func registerOnEventLoop(initPipeline: (ChannelPipeline) throws ->()) {
         // Was not registered yet so do it now.
         safeRegister(interested: InterestedEvent.Read)
         
-        initPipeline(pipeline)
+        do {
+            try initPipeline(pipeline)
         
-        pipeline.fireChannelRegistered()
+            pipeline.fireChannelRegistered()
+        } catch let err {
+            pipeline.fireErrorCaught(error: err)
+            close0()
+        }
     }
 
     // Methods invoked from the EventLoop itself

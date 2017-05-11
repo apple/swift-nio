@@ -40,6 +40,6 @@ public class EchoHandler: ChannelHandler {
 
 
 try Server.run(host: "0.0.0.0", port: 9999, initPipeline: { pipeline in
-    pipeline.addLast(handler: EchoHandler())
+    try pipeline.add(handler: EchoHandler())
 })
 

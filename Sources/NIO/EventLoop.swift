@@ -60,7 +60,7 @@ public class EventLoop {
         return promise.futureResult
     }
     
-    public func run(initPipeline: (ChannelPipeline) -> ()) throws {
+    public func run(initPipeline: (ChannelPipeline) throws -> ()) throws {
         thread = Thread.current
         
         defer {
@@ -95,7 +95,9 @@ public class EventLoop {
                             
                             let channel = Channel(socket: accepted, eventLoop: self)
                             channel.registerOnEventLoop(initPipeline: initPipeline)
-                            channel.pipeline.fireChannelActive()
+                            if channel.socket.open {
+                                channel.pipeline.fireChannelActive()
+                            }
                         }
                     }
                 }

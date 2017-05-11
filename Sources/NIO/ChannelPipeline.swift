@@ -20,6 +20,7 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     
     private var head: ChannelHandlerContext?
     private var tail: ChannelHandlerContext?
+    private var idx: Int = 0
     
     public var channel: Channel {
         get {
@@ -34,32 +35,31 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         }
     }
     
-    public func addLast(handler: ChannelHandler) {
-        let ctx = ChannelHandlerContext(handler: handler, pipeline: self)
-        let prev = tail!.prev
-        ctx.prev = tail!.prev
-        ctx.next = tail
-        
-        prev!.next = ctx
-        tail!.prev = ctx
-        do {
-            try ctx.invokeHandlerAdded()
-        } catch let err {
-            ctx.prev!.next = ctx.next
-            ctx.next!.prev = ctx.prev
-            
-            fireErrorCaught(error: err)
-        }
+    private func nextName() -> String {
+        let name = "handler\(idx)"
+        idx += 1
+        return name
     }
     
-    public func addFirst(handler: ChannelHandler) {
-        let ctx = ChannelHandlerContext(handler: handler, pipeline: self)
-        let next = head!.next
+    public func add(name: String? = nil, handler: ChannelHandler, first: Bool = false) throws {
+        let ctx = ChannelHandlerContext(name: name ?? nextName(), handler: handler, pipeline: self)
+        if first {
+            let next = head!.next
+            
+            ctx.prev = head
+            ctx.next = next
+            
+            next!.prev = ctx
+         
+        } else {
+            let prev = tail!.prev
+            ctx.prev = tail!.prev
+            ctx.next = tail
+            
+            prev!.next = ctx
+            tail!.prev = ctx
+        }
         
-        ctx.prev = head
-        ctx.next = next
-        
-        next!.prev = ctx
         
         do {
             try ctx.invokeHandlerAdded()
@@ -67,8 +67,66 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
             ctx.prev!.next = ctx.next
             ctx.next!.prev = ctx.prev
             
-            fireErrorCaught(error: err)
+            throw err
         }
+    }
+
+    public func remove(handler: ChannelHandler) -> Bool {
+        guard let ctx = getCtx(equalsFunc: { ctx in
+            return ctx.handler === handler
+        }) else {
+            return false
+        }
+        ctx.prev!.next = ctx.next
+        ctx.next?.prev = ctx.prev
+        return true
+    }
+    
+    public func remove(name: String) -> Bool {
+        guard let ctx = getCtx(equalsFunc: { ctx in
+            return ctx.name == name
+        }) else {
+            return false
+        }
+        ctx.prev!.next = ctx.next
+        ctx.next?.prev = ctx.prev
+        return true
+    }
+    
+    public func contains(handler: ChannelHandler) -> Bool {
+        if getCtx(equalsFunc: { ctx in
+            return ctx.handler === handler
+        }) == nil {
+            return false
+        }
+        
+        return true
+
+    }
+    
+    public func contains(name: String) -> Bool {
+        if getCtx(equalsFunc: { ctx in
+            return ctx.name == name
+        }) == nil {
+            return false
+        }
+        
+        return true
+    }
+    
+    // Just traverse the pipeline from the start
+    private func getCtx(equalsFunc: (ChannelHandlerContext) -> Bool) -> ChannelHandlerContext? {
+        var ctx = head?.next
+        while let c = ctx {
+            if c === tail {
+                break
+            }
+            if equalsFunc(c) {
+                return c
+            }
+            ctx = c.next
+        }
+        return nil
     }
 
     // Just delegate to the head and tail context
@@ -134,8 +192,8 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     
     // Only executed from Channel
     init (channel: Channel) {
-        head = ChannelHandlerContext(handler: HeadChannelHandler(channel: channel), pipeline: self)
-        tail = ChannelHandlerContext(handler: TailChannelHandler(), pipeline: self)
+        head = ChannelHandlerContext(name: "head", handler: HeadChannelHandler(channel: channel), pipeline: self)
+        tail = ChannelHandlerContext(name: "tail", handler: TailChannelHandler(), pipeline: self)
         head!.next = tail
         tail!.prev = head
     }

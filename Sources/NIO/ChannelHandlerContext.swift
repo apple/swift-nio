@@ -22,7 +22,8 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
 
     public let handler: ChannelHandler
     public let pipeline: ChannelPipeline
-   
+    public let name: String
+    
     public var channel: Channel {
         get {
             return pipeline.channel
@@ -42,7 +43,8 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     // Only created from within Channel
-    init(handler: ChannelHandler, pipeline: ChannelPipeline) {
+    init(name: String, handler: ChannelHandler, pipeline: ChannelPipeline) {
+        self.name = name
         self.handler = handler
         self.pipeline = pipeline
     }

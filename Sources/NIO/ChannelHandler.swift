@@ -15,7 +15,7 @@
 import Foundation
 import Future
 
-public protocol ChannelHandler {
+public protocol ChannelHandler : class {
     func channelRegistered(ctx: ChannelHandlerContext) throws
     func channelUnregistered(ctx: ChannelHandlerContext) throws
     func channelActive(ctx: ChannelHandlerContext) throws
