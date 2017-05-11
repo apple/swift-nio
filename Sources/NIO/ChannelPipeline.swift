@@ -15,20 +15,14 @@
 import Foundation
 import Future
 
-// TODO: Add teardown which also removes the handlers.
 public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     
     private var head: ChannelHandlerContext?
     private var tail: ChannelHandlerContext?
     private var idx: Int = 0
     
-    public var channel: Channel {
-        get {
-            // Kind of hacky but should be ok for now.
-            return (head!.handler as! HeadChannelHandler).channel
-        }
-    }
-    
+    public let channel: Channel
+
     public var eventLoop: EventLoop {
         get {
             return channel.eventLoop
@@ -50,7 +44,6 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
             ctx.next = next
             
             next!.prev = ctx
-         
         } else {
             let prev = tail!.prev
             ctx.prev = tail!.prev
@@ -59,7 +52,6 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
             prev!.next = ctx
             tail!.prev = ctx
         }
-        
         
         do {
             try ctx.invokeHandlerAdded()
@@ -129,6 +121,27 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         return nil
     }
 
+    func removeHandlers() {
+        // The channel was unregistered which means it will not handle any more events.
+        // Remove all handlers now.
+        var ctx = head?.next
+        while let c = ctx {
+            if c === tail {
+                break
+            }
+            let next = c.next
+            head?.next = next
+            next?.prev = head
+            
+            do {
+                try c.invokeHandlerRemoved()
+            } catch let err {
+                next?.invokeErrorCaught(error: err)
+            }
+            ctx = c.next
+        }
+    }
+    
     // Just delegate to the head and tail context
 
     public func fireChannelRegistered() {
@@ -192,7 +205,8 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     
     // Only executed from Channel
     init (channel: Channel) {
-        head = ChannelHandlerContext(name: "head", handler: HeadChannelHandler(channel: channel), pipeline: self)
+        self.channel = channel
+        head = ChannelHandlerContext(name: "head", handler: HeadChannelHandler(pipeline: self), pipeline: self)
         tail = ChannelHandlerContext(name: "tail", handler: TailChannelHandler(), pipeline: self)
         head!.next = tail
         tail!.prev = head
@@ -201,27 +215,26 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
 
 class HeadChannelHandler : ChannelHandler {
     
-    // Access from the ChannelPipeline itself
-    let channel: Channel
+    private let pipeline: ChannelPipeline
     
-    init(channel: Channel) {
-        self.channel = channel
+    init(pipeline: ChannelPipeline) {
+        self.pipeline = pipeline
     }
     
     func write(ctx: ChannelHandlerContext, data: AnyObject, promise: Promise<Void>) {
-        channel.write0(data: data, promise: promise)
+        pipeline.channel.write0(data: data, promise: promise)
     }
     
     func flush(ctx: ChannelHandlerContext) {
-        channel.flush0()
+        pipeline.channel.flush0()
     }
     
     func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
-        channel.close0(promise: promise)
+        pipeline.channel.close0(promise: promise)
     }
     
     func read(ctx: ChannelHandlerContext) {
-        channel.startReading0()
+        pipeline.channel.startReading0()
     }
     
     func channelActive(ctx: ChannelHandlerContext) {
@@ -236,9 +249,16 @@ class HeadChannelHandler : ChannelHandler {
         readIfNeeded()
     }
     
+    func channelUnregistered(ctx: ChannelHandlerContext) {
+        ctx.fireChannelUnregistered()
+        
+        pipeline.removeHandlers()
+      
+    }
+
     private func readIfNeeded() {
-        if channel.config.autoRead {
-            channel.read()
+        if pipeline.channel.config.autoRead {
+            pipeline.channel.read()
         }
     }
 }
