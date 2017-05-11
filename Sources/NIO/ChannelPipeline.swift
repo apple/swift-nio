@@ -44,11 +44,11 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         tail!.prev = ctx
         do {
             try ctx.invokeHandlerAdded()
-        } catch {
+        } catch let err {
             ctx.prev!.next = ctx.next
             ctx.next!.prev = ctx.prev
             
-            // TODO: Log ?
+            fireErrorCaught(error: err)
         }
     }
     
@@ -63,11 +63,11 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         
         do {
             try ctx.invokeHandlerAdded()
-        } catch {
+        } catch let err {
             ctx.prev!.next = ctx.next
             ctx.next!.prev = ctx.prev
             
-            // TODO: Log ?
+            fireErrorCaught(error: err)
         }
     }
 
@@ -143,6 +143,7 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
 
 class HeadChannelHandler : ChannelHandler {
     
+    // Access from the ChannelPipeline itself
     let channel: Channel
     
     init(channel: Channel) {
@@ -162,7 +163,7 @@ class HeadChannelHandler : ChannelHandler {
     }
     
     func read(ctx: ChannelHandlerContext) {
-        channel.read0()
+        channel.startReading0()
     }
     
     func channelActive(ctx: ChannelHandlerContext) {
@@ -178,8 +179,9 @@ class HeadChannelHandler : ChannelHandler {
     }
     
     private func readIfNeeded() {
-        // TODO: Introduce auto-read and non-autoread mode and call channel.read() based on it.
-        channel.read()
+        if channel.config.autoRead {
+            channel.read()
+        }
     }
 }
 

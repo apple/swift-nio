@@ -95,7 +95,7 @@ public class EventLoop {
                             
                             let channel = Channel(socket: accepted, eventLoop: self)
                             channel.registerOnEventLoop(initPipeline: initPipeline)
-                            channel.pipeline.fireChannelRegistered()
+                            channel.pipeline.fireChannelActive()
                         }
                     }
                 }

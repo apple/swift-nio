@@ -29,11 +29,20 @@ public class Channel : ChannelOutboundInvoker {
             return _pipeline
         }
     }
+    public var config: ChannelConfig {
+        get {
+            return _config
+        }
+    }
+    public var allocator: BufferAllocator {
+        get {
+            return config.allocator
+        }
+    }
     
     public let eventLoop: EventLoop
 
-    // TODO: Make configurable
-    public let allocator: BufferAllocator = DefaultBufferAllocator()
+
     private let recvAllocator: RecvBufferAllocator = FixedSizeBufferAllocator(capacity: 8192)
     
     // Visible to access from EventLoop directly
@@ -47,6 +56,7 @@ public class Channel : ChannelOutboundInvoker {
     private var readPending: Bool = false;
     // Needed to be able to use ChannelPipeline(self...)
     private var _pipeline: ChannelPipeline!
+    private var _config: ChannelConfig!
     
     public func write(data: AnyObject, promise: Promise<Void>) -> Future<Void> {
         return pipeline.write(data: data, promise: promise)
@@ -102,22 +112,35 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
     
-    func read0() {
+    func startReading0() {
         readPending = true
-        if interestedEvent == nil {
-            // Not registered on the EventLoop so do it now.
-            safeRegister(interested: InterestedEvent.Read)
-        } else if interestedEvent != InterestedEvent.Read {
-            if interestedEvent == InterestedEvent.Write {
+        
+        if let ev = interestedEvent {
+            if ev == InterestedEvent.Write {
                 // writes are pending
                 safeReregister(interested: InterestedEvent.All)
-            } else {
-                // Start reading again
-                safeReregister(interested: InterestedEvent.Read)
             }
+        } else {
+            // Not registered on the EventLoop so do it now.
+            safeRegister(interested: InterestedEvent.Read)
         }
     }
 
+    func stopReading0() {
+        if let ev = interestedEvent {
+            switch ev {
+            case InterestedEvent.Read:
+                safeDeregister()
+            case InterestedEvent.All:
+                safeReregister(interested: InterestedEvent.Write)
+            default:
+                // Nothing to do
+                break
+            }
+        }
+       
+    }
+    
     func close0(promise: Promise<Void> = Promise<Void>()) {
         let wasClosed = closed
         
@@ -177,9 +200,14 @@ public class Channel : ChannelOutboundInvoker {
             // Always call the method as last
             pipeline.fireChannelReadComplete()
             
-            if !readPending {
-                if interestedEvent == InterestedEvent.Read {
+            if let ev = interestedEvent, !readPending {
+                switch ev {
+                case InterestedEvent.Read:
                     safeDeregister()
+                case InterestedEvent.All:
+                    safeReregister(interested: InterestedEvent.Write)
+                default:
+                    break
                 }
             }
         }
@@ -269,10 +297,11 @@ public class Channel : ChannelOutboundInvoker {
         self.socket = socket
         self.eventLoop = eventLoop
         self._pipeline = ChannelPipeline(channel: self)
+        self._config = ChannelConfig(channel: self)
     }
 }
 
-protocol RecvBufferAllocator {
+public protocol RecvBufferAllocator {
     func buffer(allocator: BufferAllocator) -> Buffer
 }
 
@@ -290,4 +319,29 @@ public class FixedSizeBufferAllocator : RecvBufferAllocator {
 
 enum MessageError: Error {
     case unsupported
+}
+
+public class ChannelConfig {
+    private let channel: Channel
+    private var _autoRead: Bool = true
+    public var allocator: BufferAllocator = DefaultBufferAllocator()
+    public var recvAllocator: RecvBufferAllocator = FixedSizeBufferAllocator(capacity: 8192)
+
+    public var autoRead: Bool {
+        get {
+            return _autoRead
+        }
+        set (value) {
+            _autoRead = value
+            if value {
+                channel.startReading0()
+            } else {
+                channel.stopReading0()
+            }
+        }
+    }
+
+    init(channel: Channel) {
+        self.channel = channel
+    }
 }
