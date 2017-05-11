@@ -133,11 +133,7 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     }
     
     // Only executed from Channel
-    init () {
-    }
-    
-    func attach(channel: Channel) {
-        // Chain up the double-linked-list
+    init (channel: Channel) {
         head = ChannelHandlerContext(handler: HeadChannelHandler(channel: channel), pipeline: self)
         tail = ChannelHandlerContext(handler: TailChannelHandler(), pipeline: self)
         head!.next = tail

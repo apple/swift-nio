@@ -93,8 +93,8 @@ public class EventLoop {
                         if let accepted = try socket.accept() {
                             try accepted.setNonBlocking()
                             
-                            let channel = Channel.newChannel(socket: accepted, eventLoop: self, initPipeline: initPipeline)
-                            channel.registerOnEventLoop()
+                            let channel = Channel(socket: accepted, eventLoop: self)
+                            channel.registerOnEventLoop(initPipeline: initPipeline)
                             channel.pipeline.fireChannelRegistered()
                         }
                     }

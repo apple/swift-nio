@@ -23,7 +23,13 @@ import Darwin
 #endif
 
 public class Channel : ChannelOutboundInvoker {
-    public let pipeline: ChannelPipeline = ChannelPipeline()
+
+    public var pipeline: ChannelPipeline {
+        get {
+            return _pipeline
+        }
+    }
+    
     public let eventLoop: EventLoop
 
     // TODO: Make configurable
@@ -39,6 +45,8 @@ public class Channel : ChannelOutboundInvoker {
     private var outstanding: UInt64 = 0
     private var closed: Bool = false
     private var readPending: Bool = false;
+    // Needed to be able to use ChannelPipeline(self...)
+    private var _pipeline: ChannelPipeline!
     
     public func write(data: AnyObject, promise: Promise<Void>) -> Future<Void> {
         return pipeline.write(data: data, promise: promise)
@@ -135,9 +143,12 @@ public class Channel : ChannelOutboundInvoker {
 
     }
     
-    func registerOnEventLoop() {
+    func registerOnEventLoop(initPipeline: (ChannelPipeline) ->()) {
         // Was not registered yet so do it now.
         safeRegister(interested: InterestedEvent.Read)
+        
+        initPipeline(pipeline)
+        
         pipeline.fireChannelRegistered()
     }
 
@@ -186,13 +197,6 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
     
-    // This is only called from within the EventLoop so should not be visible to the user
-    class func newChannel(socket: Socket, eventLoop: EventLoop, initPipeline: (ChannelPipeline) ->()) -> Channel {
-        let channel = Channel(socket: socket, eventLoop: eventLoop)
-        channel.attach(initPipeline: initPipeline)
-        return channel
-    }
-
     // Methods only used from within this class
     private func safeDeregister() {
         interestedEvent = nil
@@ -259,16 +263,12 @@ public class Channel : ChannelOutboundInvoker {
         pendingWrites.removeAll()
         outstanding = 0
     }
+
     
-    private func attach(initPipeline: (ChannelPipeline) ->()) {
-        // Attach Channel to previous created pipeline and init it.
-        pipeline.attach(channel: self)
-        initPipeline(pipeline)
-    }
-    
-    private init(socket: Socket, eventLoop: EventLoop) {
+    init(socket: Socket, eventLoop: EventLoop) {
         self.socket = socket
         self.eventLoop = eventLoop
+        self._pipeline = ChannelPipeline(channel: self)
     }
 }
 
