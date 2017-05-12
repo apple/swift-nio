@@ -159,7 +159,7 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         head!.invokeChannelActive()
     }
     
-    public func fireChannelRead(data: AnyObject) {
+    public func fireChannelRead(data: Any) {
         head!.invokeChannelRead(data: data)
     }
     
@@ -171,7 +171,7 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         head!.invokeChannelWritabilityChanged(writable: writable)
     }
     
-    public func fireUserEventTriggered(event: AnyObject) {
+    public func fireUserEventTriggered(event: Any) {
         head!.invokeUserEventTriggered(event: event)
     }
     
@@ -192,12 +192,12 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
         tail!.invokeRead()
     }
 
-    public func write(data: AnyObject, promise: Promise<Void>) -> Future<Void> {
+    public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
         tail!.invokeWrite(data: data, promise: promise)
         return promise.futureResult
     }
     
-    public func writeAndFlush(data: AnyObject, promise: Promise<Void>) -> Future<Void> {
+    public func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
         tail!.invokeWriteAndFlush(data: data, promise: promise)
         return promise.futureResult
     }
@@ -220,7 +220,7 @@ private class HeadChannelHandler : ChannelHandler {
         self.pipeline = pipeline
     }
     
-    func write(ctx: ChannelHandlerContext, data: AnyObject, promise: Promise<Void>) {
+    func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>) {
         pipeline.channel.write0(data: data, promise: promise)
     }
     
@@ -287,7 +287,7 @@ private class TailChannelHandler : ChannelHandler {
         // Discard
     }
     
-    func userEventTriggered(ctx: ChannelHandlerContext, event: AnyObject) {
+    func userEventTriggered(ctx: ChannelHandlerContext, event: Any) {
         // Discard
     }
     
@@ -295,7 +295,7 @@ private class TailChannelHandler : ChannelHandler {
         // TODO: Log this and tell the user that its most likely a fault not handling it.
     }
     
-    func channelRead(ctx: ChannelHandlerContext, data: AnyObject) {
+    func channelRead(ctx: ChannelHandlerContext, data: Any) {
         // TODO: Log this and tell the user that its most likely a fault not handling it.
     }
 }

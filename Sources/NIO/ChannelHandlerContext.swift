@@ -66,7 +66,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         next!.invokeChannelInactive()
     }
 
-    public func fireChannelRead(data: AnyObject) {
+    public func fireChannelRead(data: Any) {
         next!.invokeChannelRead(data: data)
     }
     
@@ -82,16 +82,16 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         next!.invokeErrorCaught(error: error)
     }
     
-    public func fireUserEventTriggered(event: AnyObject) {
+    public func fireUserEventTriggered(event: Any) {
         next!.invokeUserEventTriggered(event: event)
     }
     
-    public func write(data: AnyObject, promise: Promise<Void>) -> Future<Void> {
+    public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
         prev!.invokeWrite(data: data, promise: promise)
         return promise.futureResult
     }
     
-    public func writeAndFlush(data: AnyObject, promise: Promise<Void>) -> Future<Void> {
+    public func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
         prev!.invokeWriteAndFlush(data: data, promise: promise)
         return promise.futureResult
     }
@@ -150,7 +150,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         }
     }
     
-    func invokeChannelRead(data: AnyObject) {
+    func invokeChannelRead(data: Any) {
         assert(channel.eventLoop.inEventLoop())
         
         do {
@@ -190,7 +190,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         }
     }
 
-    func invokeUserEventTriggered(event: AnyObject) {
+    func invokeUserEventTriggered(event: Any) {
         assert(channel.eventLoop.inEventLoop())
         
         do {
@@ -200,7 +200,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         }
     }
 
-    func invokeWrite(data: AnyObject, promise: Promise<Void>) {
+    func invokeWrite(data: Any, promise: Promise<Void>) {
         assert(channel.eventLoop.inEventLoop())
         
         handler.write(ctx: self, data: data, promise: promise)
@@ -212,7 +212,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         handler.flush(ctx: self)
     }
     
-    func invokeWriteAndFlush(data: AnyObject, promise: Promise<Void>) {
+    func invokeWriteAndFlush(data: Any, promise: Promise<Void>) {
         assert(channel.eventLoop.inEventLoop())
         handler.write(ctx: self, data: data, promise: promise)
         handler.flush(ctx: self)

@@ -20,12 +20,12 @@ public protocol ChannelHandler : class {
     func channelUnregistered(ctx: ChannelHandlerContext) throws
     func channelActive(ctx: ChannelHandlerContext) throws
     func channelInactive(ctx: ChannelHandlerContext) throws
-    func channelRead(ctx: ChannelHandlerContext, data: AnyObject) throws
+    func channelRead(ctx: ChannelHandlerContext, data: Any) throws
     func channelReadComplete(ctx: ChannelHandlerContext) throws
     func channelWritabilityChanged(ctx: ChannelHandlerContext, writable: Bool) throws
-    func userEventTriggered(ctx: ChannelHandlerContext, event: AnyObject) throws
+    func userEventTriggered(ctx: ChannelHandlerContext, event: Any) throws
     func errorCaught(ctx: ChannelHandlerContext, error: Error) throws
-    func write(ctx: ChannelHandlerContext, data: AnyObject, promise: Promise<Void>)
+    func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>)
     func flush(ctx: ChannelHandlerContext)
     // TODO: Think about make this more flexible in terms of influence the allocation that is used to read the next amount of data
     func read(ctx: ChannelHandlerContext)
@@ -53,7 +53,7 @@ public extension ChannelHandler {
         ctx.fireChannelInactive()
     }
     
-    public func channelRead(ctx: ChannelHandlerContext, data: AnyObject) {
+    public func channelRead(ctx: ChannelHandlerContext, data: Any) {
         ctx.fireChannelRead(data: data)
     }
     
@@ -65,7 +65,7 @@ public extension ChannelHandler {
         ctx.fireChannelWritabilityChanged(writable: writable)
     }
     
-    public func userEventTriggered(ctx: ChannelHandlerContext, event: AnyObject) {
+    public func userEventTriggered(ctx: ChannelHandlerContext, event: Any) {
         ctx.fireUserEventTriggered(event: event)
     }
     
@@ -73,7 +73,7 @@ public extension ChannelHandler {
         ctx.fireErrorCaught(error: error)
     }
 
-    public func write(ctx: ChannelHandlerContext, data: AnyObject, promise: Promise<Void>) {
+    public func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>) {
         let _ = ctx.write(data: data, promise: promise)
     }
     

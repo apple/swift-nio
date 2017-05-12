@@ -24,7 +24,7 @@ public protocol ChannelInboundInvoker {
 
     func fireChannelInactive()
 
-    func fireChannelRead(data: AnyObject)
+    func fireChannelRead(data: Any)
     
     func fireChannelReadComplete()
     
@@ -32,5 +32,5 @@ public protocol ChannelInboundInvoker {
     
     func fireErrorCaught(error: Error)
     
-    func fireUserEventTriggered(event: AnyObject)
+    func fireUserEventTriggered(event: Any)
 }

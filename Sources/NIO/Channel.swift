@@ -55,7 +55,7 @@ public class Channel : ChannelOutboundInvoker {
     private var _pipeline: ChannelPipeline!
     private var _config: ChannelConfig!
     
-    public func write(data: AnyObject, promise: Promise<Void>) -> Future<Void> {
+    public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
         return pipeline.write(data: data, promise: promise)
     }
     
@@ -67,7 +67,7 @@ public class Channel : ChannelOutboundInvoker {
         pipeline.read()
     }
     
-    public func writeAndFlush(data: AnyObject, promise: Promise<Void>) -> Future<Void> {
+    public func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
         return pipeline.writeAndFlush(data: data, promise: promise)
     }
     
@@ -76,7 +76,7 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     // Methods invoked from the HeadHandler of the ChannelPipeline
-    func write0(data: AnyObject, promise: Promise<Void>) {
+    func write0(data: Any, promise: Promise<Void>) {
         if closed {
             // Channel was already closed to fail the promise and not even queue it.
             promise.fail(error: IOError(errno: EBADF, reason: "Channel closed"))

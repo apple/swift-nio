@@ -17,14 +17,14 @@ import Future
 
 public protocol ChannelOutboundInvoker {
     
-    func write(data: AnyObject) -> Future<Void>
-    func write(data: AnyObject, promise: Promise<Void>) -> Future<Void>
+    func write(data: Any) -> Future<Void>
+    func write(data: Any, promise: Promise<Void>) -> Future<Void>
 
     func flush()
     func read()
     
-    func writeAndFlush(data: AnyObject) -> Future<Void>
-    func writeAndFlush(data: AnyObject, promise: Promise<Void>) -> Future<Void>
+    func writeAndFlush(data: Any) -> Future<Void>
+    func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void>
 
     func close() -> Future<Void>
     func close(promise: Promise<Void>) -> Future<Void>
@@ -33,11 +33,11 @@ public protocol ChannelOutboundInvoker {
 }
 
 public extension ChannelOutboundInvoker {
-    public func write(data: AnyObject) -> Future<Void> {
+    public func write(data: Any) -> Future<Void> {
         return write(data: data, promise: eventLoop.newPromise(type: Void.self))
     }
     
-    public func writeAndFlush(data: AnyObject) -> Future<Void> {
+    public func writeAndFlush(data: Any) -> Future<Void> {
         return writeAndFlush(data: data, promise: eventLoop.newPromise(type: Void.self))
     }
     
