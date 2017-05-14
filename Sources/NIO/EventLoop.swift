@@ -73,7 +73,6 @@ public class EventLoop {
             if let events = try selector.awaitReady() {
                 for ev in events {
                     if ev.selectable is Socket {
-                        // We stored the Buffer before as attachment so get it and clear the limit / offset.
                         let channel = ev.attachment as! Channel
                         
                         if ev.isWritable {

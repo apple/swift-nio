@@ -14,6 +14,7 @@
 
 import Foundation
 import Future
+import Sockets
 
 public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     
@@ -21,13 +22,9 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     private var tail: ChannelHandlerContext?
     private var idx: Int = 0
     
-    public let channel: Channel
-
-    public var eventLoop: EventLoop {
-        get {
-            return channel.eventLoop
-        }
-    }
+    fileprivate weak var channel: Channel?
+    public let config: ChannelConfig
+    public let eventLoop: EventLoop
     
     public func add(name: String? = nil, handler: ChannelHandler, first: Bool = false) throws {
         let ctx = ChannelHandlerContext(name: name ?? nextName(), handler: handler, pipeline: self)
@@ -205,6 +202,9 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     // Only executed from Channel
     init (channel: Channel) {
         self.channel = channel
+        self.eventLoop = channel.eventLoop
+        self.config = channel.config
+        
         head = ChannelHandlerContext(name: "head", handler: HeadChannelHandler(pipeline: self), pipeline: self)
         tail = ChannelHandlerContext(name: "tail", handler: TailChannelHandler(), pipeline: self)
         head!.next = tail
@@ -214,26 +214,34 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
 
 private class HeadChannelHandler : ChannelHandler {
     
-    private let pipeline: ChannelPipeline
+    private unowned let pipeline: ChannelPipeline
     
     init(pipeline: ChannelPipeline) {
         self.pipeline = pipeline
     }
     
     func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>) {
-        pipeline.channel.write0(data: data, promise: promise)
+        guard let ch = pipeline.channel else {
+            promise.fail(error: IOError(errno: EBADF, reason: "Channel closed"))
+            return
+        }
+        ch.write0(data: data, promise: promise)
     }
     
     func flush(ctx: ChannelHandlerContext) {
-        pipeline.channel.flush0()
+        pipeline.channel?.flush0()
     }
     
     func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
-        pipeline.channel.close0(promise: promise)
+        guard let ch = pipeline.channel else {
+            promise.fail(error: IOError(errno: EBADF, reason: "Channel closed"))
+            return
+        }
+        ch.close0(promise: promise)
     }
     
     func read(ctx: ChannelHandlerContext) {
-        pipeline.channel.startReading0()
+        pipeline.channel?.startReading0()
     }
     
     func channelActive(ctx: ChannelHandlerContext) {
@@ -255,8 +263,10 @@ private class HeadChannelHandler : ChannelHandler {
     }
 
     private func readIfNeeded() {
-        if pipeline.channel.config.autoRead {
-            pipeline.channel.read()
+        if pipeline.config.autoRead {
+            if let ch = pipeline.channel {
+                ch.read()
+            }
         }
     }
 }

@@ -324,7 +324,8 @@ enum MessageError: Error {
 }
 
 public class ChannelConfig {
-    private let channel: Channel
+    // Declare as weak to remove reference-cycle.
+    private weak var channel: Channel?
     private var _autoRead: Bool = true
     public var allocator: BufferAllocator = DefaultBufferAllocator()
     public var recvAllocator: RecvBufferAllocator = FixedSizeBufferAllocator(capacity: 8192)
@@ -336,9 +337,9 @@ public class ChannelConfig {
         set (value) {
             _autoRead = value
             if value {
-                channel.startReading0()
+                channel?.startReading0()
             } else {
-                channel.stopReading0()
+                channel?.stopReading0()
             }
         }
     }
