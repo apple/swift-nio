@@ -298,8 +298,8 @@ public class Channel : ChannelOutboundInvoker {
     init(socket: Socket, eventLoop: EventLoop) {
         self.socket = socket
         self.eventLoop = eventLoop
-        self._pipeline = ChannelPipeline(channel: self)
         self._config = ChannelConfig(channel: self)
+        self._pipeline = ChannelPipeline(channel: self)
     }
 }
 
