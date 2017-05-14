@@ -43,7 +43,7 @@ public class EventLoop {
         try selector.reregister(selectable: channel.socket, interested: channel.interestedEvent!)
     }
     
-    public func inEventLoop() -> Bool {
+    public var inEventLoop: Bool {
         return Thread.current.isEqual(thread)
     }
     
