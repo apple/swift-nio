@@ -82,7 +82,7 @@ public class EventLoop {
                         if ev.isReadable {
                             channel.readFromEventLoop()
                         }
-                    } else if ev.selectable is ServerSocket {
+                                            } else if ev.selectable is ServerSocket {
                         let socket = ev.selectable as! ServerSocket
                         
                         // This should be never true

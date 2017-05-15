@@ -140,6 +140,9 @@ public class Selector {
     }
     
     public func deregister(selectable: Selectable) throws {
+        guard registrations.removeValue(forKey: Int(selectable.descriptor)) != nil else {
+            return
+        }
 #if os(Linux)
         var ev = epoll_event()
         let _ = try wrapSyscall({ $0 == 0 }, function: "epoll_ctl") {
@@ -172,7 +175,6 @@ public class Selector {
             }
         }
 #endif
-        registrations.removeValue(forKey: Int(selectable.descriptor))
 
     }
     

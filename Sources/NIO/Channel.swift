@@ -93,6 +93,10 @@ public class Channel : ChannelOutboundInvoker {
     
     func flush0() {
         if interestedEvent != InterestedEvent.Write && interestedEvent != InterestedEvent.All && !flushNow() {
+            if closed {
+                safeDeregister()
+            }
+            
             // Could not flush all of the queued bytes, stop reading until we were able to do so
             if interestedEvent == InterestedEvent.Read {
                 safeReregister(interested: InterestedEvent.Write)
@@ -143,6 +147,7 @@ public class Channel : ChannelOutboundInvoker {
             } catch let err {
                 promise.fail(error: err)
             }
+            safeDeregister()
             pipeline.fireChannelUnregistered()
             pipeline.fireChannelInactive()
 
@@ -177,12 +182,14 @@ public class Channel : ChannelOutboundInvoker {
             // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socketto read.
             pipeline.fireChannelWritabilityChanged(writable: true)
             
-            if readPending {
-                // Start reading again
-                safeReregister(interested: InterestedEvent.Read)
-            } else {
-                // No read pending so just deregister from the EventLoop for now.
-                safeDeregister()
+            if !closed {
+                if readPending {
+                    // Start reading again
+                    safeReregister(interested: InterestedEvent.Read)
+                } else {
+                    // No read pending so just deregister from the EventLoop for now.
+                    safeDeregister()
+                }
             }
         }
     }
@@ -196,7 +203,7 @@ public class Channel : ChannelOutboundInvoker {
             // Always call the method as last
             pipeline.fireChannelReadComplete()
             
-            if let ev = interestedEvent, !readPending {
+            if let ev = interestedEvent, !readPending, !closed {
                 switch ev {
                 case InterestedEvent.Read:
                     safeDeregister()
