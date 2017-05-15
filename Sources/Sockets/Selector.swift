@@ -103,13 +103,13 @@ public class Selector {
         // Also merge EPOLL_ERR in so we can easily detect connection-reset
         switch interested {
         case .Read:
-            return EPOLLIN.rawValue | EPOLLERR.rawValue
+            return EPOLLIN.rawValue | EPOLLERR.rawValue | EPOLLRDHUP.rawValue
         case .Write:
-            return EPOLLOUT.rawValue | EPOLLERR.rawValue
+            return EPOLLOUT.rawValue | EPOLLERR.rawValue | EPOLLRDHUP.rawValue
         case .All:
-            return EPOLLIN.rawValue | EPOLLOUT.rawValue | EPOLLERR.rawValue
+            return EPOLLIN.rawValue | EPOLLOUT.rawValue | EPOLLERR.rawValue | EPOLLRDHUP.rawValue
         case .None:
-            return EPOLLERR.rawValue
+            return EPOLLERR.rawValue | EPOLLRDHUP.rawValue
         }
     }
 #endif
@@ -169,9 +169,10 @@ public class Selector {
                 let ev = events[Int(i)]
                 let registration = registrations[Int(ev.data.fd)]!
                 sEvents.append(
-                    SelectorEvent(isReadable: (ev.events & EPOLLIN.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0,
-                                  isWritable: (ev.events & EPOLLOUT.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0,
-                                  selectable: registration.selectable, attachment: registration.attachment))
+                    SelectorEvent(
+                        isReadable: (ev.events & EPOLLIN.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
+                        isWritable: (ev.events & EPOLLOUT.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
+                        selectable: registration.selectable, attachment: registration.attachment))
                 i += 1
             }
             return sEvents
