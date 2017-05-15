@@ -59,16 +59,7 @@ public class EventLoop {
             
         return promise.futureResult
     }
-    
-    
-    private func safeDeregister(channel: Channel) {
-        do {
-            try deregister(channel: channel)
-        } catch {
-            // ignore
-        }
-    }
-    
+
     public func run(initPipeline: (ChannelPipeline) throws -> ()) throws {
         thread = Thread.current
         
@@ -83,16 +74,15 @@ public class EventLoop {
                 for ev in events {
                     if ev.selectable is Socket {
                         let channel = ev.attachment as! Channel
-                        guard channel.open else {
-                            safeDeregister(channel: channel)
+
+                        guard handleEvents(channel) else {
                             continue
                         }
-                        
+
                         if ev.isWritable {
                             channel.flushFromEventLoop()
                             
-                            guard channel.open else {
-                                safeDeregister(channel: channel)
+                            guard handleEvents(channel) else {
                                 continue
                             }
                         }
@@ -100,15 +90,13 @@ public class EventLoop {
                         if ev.isReadable {
                             channel.readFromEventLoop()
                             
-                            guard channel.open else {
-                                safeDeregister(channel: channel)
+                            guard handleEvents(channel) else {
                                 continue
                             }
                         }
                         
+                        // Ensure we never reach here if the channel is not open anymore.
                         assert(channel.open)
-                        assert(ev.isReadable || ev.isWritable)
-                    
                     } else if ev.selectable is ServerSocket {
                         let socket = ev.selectable as! ServerSocket
                         
@@ -121,7 +109,7 @@ public class EventLoop {
                             
                             let channel = Channel(socket: accepted, eventLoop: self)
                             channel.registerOnEventLoop(initPipeline: initPipeline)
-                            if channel.socket.open {
+                            if channel.open {
                                 channel.pipeline.fireChannelActive()
                             }
                         }
@@ -136,6 +124,19 @@ public class EventLoop {
                 }
             }
         }
+    }
+
+    private func handleEvents(_ channel: Channel) -> Bool {
+        if channel.open {
+            return true
+        }
+        do {
+            try deregister(channel: channel)
+        } catch {
+            // ignore for now... We should most likely at least log this.
+        }
+
+        return false
     }
     
     public func close() throws {
