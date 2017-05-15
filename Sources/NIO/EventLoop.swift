@@ -60,6 +60,15 @@ public class EventLoop {
         return promise.futureResult
     }
     
+    
+    private func safeDeregister(channel: Channel) {
+        do {
+            try deregister(channel: channel)
+        } catch {
+            // ignore
+        }
+    }
+    
     public func run(initPipeline: (ChannelPipeline) throws -> ()) throws {
         thread = Thread.current
         
@@ -74,15 +83,33 @@ public class EventLoop {
                 for ev in events {
                     if ev.selectable is Socket {
                         let channel = ev.attachment as! Channel
+                        guard channel.open else {
+                            safeDeregister(channel: channel)
+                            continue
+                        }
                         
                         if ev.isWritable {
                             channel.flushFromEventLoop()
+                            
+                            guard channel.open else {
+                                safeDeregister(channel: channel)
+                                continue
+                            }
                         }
                         
                         if ev.isReadable {
                             channel.readFromEventLoop()
+                            
+                            guard channel.open else {
+                                safeDeregister(channel: channel)
+                                continue
+                            }
                         }
-                                            } else if ev.selectable is ServerSocket {
+                        
+                        assert(channel.open)
+                        assert(ev.isReadable || ev.isWritable)
+                    
+                    } else if ev.selectable is ServerSocket {
                         let socket = ev.selectable as! ServerSocket
                         
                         // This should be never true

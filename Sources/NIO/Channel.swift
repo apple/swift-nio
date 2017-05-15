@@ -43,7 +43,7 @@ public class Channel : ChannelOutboundInvoker {
     // TODO: This is most likely not the best datastructure for us. Linked-List would be better.
     private var pendingWrites: [(Buffer, Promise<Void>)] = Array()
     private var outstanding: UInt64 = 0
-    private var closed: Bool = false
+    public private(set) var open: Bool = true
     private var readPending: Bool = false;
     // Needed to be able to use ChannelPipeline(self...)
     private var _pipeline: ChannelPipeline!
@@ -71,7 +71,7 @@ public class Channel : ChannelOutboundInvoker {
     
     // Methods invoked from the HeadHandler of the ChannelPipeline
     func write0(data: Any, promise: Promise<Void>) {
-        if closed {
+        guard open else {
             // Channel was already closed to fail the promise and not even queue it.
             promise.fail(error: IOError(errno: EBADF, reason: "Channel closed"))
             return
@@ -80,11 +80,6 @@ public class Channel : ChannelOutboundInvoker {
             pendingWrites.append((buffer, promise))
             outstanding += UInt64((buffer.limit - buffer.offset))
             
-            // TODO: Configurable or remove completely ?
-            if outstanding >= 64 * 1024 {
-                // Too many outstanding bytes, try flush these now.
-                flush0()
-            }
         } else {
             // Only support Buffer for now. 
             promise.fail(error: MessageError.unsupported)
@@ -93,10 +88,9 @@ public class Channel : ChannelOutboundInvoker {
     
     func flush0() {
         if interestedEvent != InterestedEvent.Write && interestedEvent != InterestedEvent.All && !flushNow() {
-            if closed {
-                safeDeregister()
+            guard open else {
+                return
             }
-            
             // Could not flush all of the queued bytes, stop reading until we were able to do so
             if interestedEvent == InterestedEvent.Read {
                 safeReregister(interested: InterestedEvent.Write)
@@ -108,6 +102,9 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     func startReading0() {
+        guard open else {
+            return
+        }
         readPending = true
         
         if let ev = interestedEvent {
@@ -122,6 +119,9 @@ public class Channel : ChannelOutboundInvoker {
     }
 
     func stopReading0() {
+        guard open else {
+            return
+        }
         if let ev = interestedEvent {
             switch ev {
             case InterestedEvent.Read:
@@ -137,24 +137,22 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     func close0(promise: Promise<Void> = Promise<Void>()) {
-        let wasClosed = closed
-        
-        if !wasClosed {
-            do {
-                closed = true
-                try socket.close()
-                promise.succeed(result: ())
-            } catch let err {
-                promise.fail(error: err)
-            }
-            safeDeregister()
-            pipeline.fireChannelUnregistered()
-            pipeline.fireChannelInactive()
-
-        } else {
+        guard open else {
             // Already closed
             promise.succeed(result: ())
+            return
         }
+        
+        do {
+            open = false
+            try socket.close()
+            promise.succeed(result: ())
+        } catch let err {
+            promise.fail(error: err)
+        }
+        safeDeregister()
+        pipeline.fireChannelUnregistered()
+        pipeline.fireChannelInactive()
         
         
         // Fail all pending writes and so ensure all pending promises are notified
@@ -178,23 +176,28 @@ public class Channel : ChannelOutboundInvoker {
 
     // Methods invoked from the EventLoop itself
     func flushFromEventLoop() {
+        assert(open)
+
         if flushNow() {
             // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socketto read.
             pipeline.fireChannelWritabilityChanged(writable: true)
             
-            if !closed {
-                if readPending {
-                    // Start reading again
-                    safeReregister(interested: InterestedEvent.Read)
-                } else {
-                    // No read pending so just deregister from the EventLoop for now.
-                    safeDeregister()
-                }
+            guard open else {
+                return
+            }
+            if readPending {
+                // Start reading again
+                safeReregister(interested: InterestedEvent.Read)
+            } else {
+                // No read pending so just deregister from the EventLoop for now.
+                safeDeregister()
             }
         }
     }
     
     func readFromEventLoop() {
+        assert(open)
+        
         readPending = false
         
         let buffer = config.recvAllocator.buffer(allocator: allocator)
@@ -203,7 +206,7 @@ public class Channel : ChannelOutboundInvoker {
             // Always call the method as last
             pipeline.fireChannelReadComplete()
             
-            if let ev = interestedEvent, !readPending, !closed {
+            if open, !readPending, let ev = interestedEvent {
                 switch ev {
                 case InterestedEvent.Read:
                     safeDeregister()
@@ -218,8 +221,15 @@ public class Channel : ChannelOutboundInvoker {
         do {
             // TODO: Read spin ?
             if let read = try socket.read(data: &buffer.data) {
+                guard read > 0 else {
+                    // end-of-file
+                    close0()
+                    return
+                }
                 buffer.limit = Int(read)
                 pipeline.fireChannelRead(data: buffer)
+            } else {
+                print("NOT READABLE");
             }
         } catch let err {
             pipeline.fireErrorCaught(error: err)
@@ -240,6 +250,10 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     private func safeReregister(interested: InterestedEvent) {
+        guard open else {
+            safeDeregister()
+            return
+        }
         interestedEvent = interested
         do {
             try eventLoop.reregister(channel: self)
@@ -247,9 +261,14 @@ public class Channel : ChannelOutboundInvoker {
             // TODO: Log ?
             close0()
         }
+
     }
     
     private func safeRegister(interested: InterestedEvent) {
+        guard open else {
+            safeDeregister()
+            return
+        }
         interestedEvent = interested
         do {
             try eventLoop.register(channel: self)
@@ -261,7 +280,7 @@ public class Channel : ChannelOutboundInvoker {
 
     private func flushNow() -> Bool {
         do {
-            while !closed, let pending = pendingWrites.first {
+            while open, let pending = pendingWrites.first {
                 if let written = try socket.write(data: pending.0.data, offset: pending.0.offset, len: pending.0.limit - pending.0.offset) {
                     pending.0.offset += Int(written)
                     
@@ -278,7 +297,7 @@ public class Channel : ChannelOutboundInvoker {
             // Fail all pending writes so all promises are notified.
             failPendingWritesAndClose(err: err)
         }
-        return true
+        return pendingWrites.isEmpty
     }
     
     private func failPendingWritesAndClose(err: Error) {
