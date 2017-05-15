@@ -73,15 +73,18 @@ public class Selector {
         events.1.udata = nil
         
         switch interested {
-        case InterestedEvent.Read:
+        case .Read:
             events.0.flags = UInt16(Int16(EV_ADD))
             events.1.flags = UInt16(Int16(EV_DELETE))
-        case InterestedEvent.Write:
+        case .Write:
             events.0.flags = UInt16(Int16(EV_DELETE))
             events.1.flags = UInt16(Int16(EV_ADD))
-        case InterestedEvent.All:
+        case .All:
             events.0.flags = UInt16(Int16(EV_ADD))
             events.1.flags = UInt16(Int16(EV_ADD))
+        case .None:
+            events.0.flags = UInt16(Int16(EV_DELETE))
+            events.1.flags = UInt16(Int16(EV_DELETE))
         }
         
         let _ = try withUnsafeMutableBytes(of: &events) { event_ptr -> Int32 in
@@ -99,14 +102,15 @@ public class Selector {
     private func toEpollEvents(interested: InterestedEvent) -> UInt32 {
         // Also merge EPOLL_ERR in so we can easily detect connection-reset
         switch interested {
-        case InterestedEvent.Read:
+        case .Read:
             return EPOLLIN.rawValue | EPOLLERR.rawValue
-        case InterestedEvent.Write:
+        case .Write:
             return EPOLLOUT.rawValue | EPOLLERR.rawValue
-        case InterestedEvent.All:
+        case .All:
             return EPOLLIN.rawValue | EPOLLOUT.rawValue | EPOLLERR.rawValue
+        case .None:
+            return EPOLLERR.rawValue
         }
-
     }
 #endif
  
@@ -149,33 +153,8 @@ public class Selector {
             CEpoll.epoll_ctl(self.fd, EPOLL_CTL_DEL, selectable.descriptor, &ev)
         }
 #else
-        // Allocated on the stack
-        var evs = (kevent(), kevent())
-    
-        evs.0.ident = UInt(selectable.descriptor)
-        evs.0.filter = Int16(EVFILT_READ)
-        evs.0.fflags = 0
-        evs.0.data = 0
-        evs.0.udata = nil
-        evs.0.flags = UInt16(Int16(EV_DELETE))
-
-        evs.1.ident = UInt(selectable.descriptor)
-        evs.1.filter = Int16(EVFILT_WRITE)
-        evs.1.fflags = 0
-        evs.1.data = 0
-        evs.1.udata = nil
-        evs.1.flags = UInt16(Int16(EV_DELETE))
-
-        let _ = try withUnsafeMutableBytes(of: &evs) { event_ptr -> Int32 in
-            precondition(MemoryLayout<kevent>.size * 2 == event_ptr.count)
-            let ptr = event_ptr.baseAddress?.bindMemory(to: kevent.self, capacity: 2)
-            
-            return try wrapSyscall({ $0 >= 0 }, function: "kevent") {
-                kevent(self.fd, ptr, 2, ptr, 2, nil)
-            }
-        }
+        try register_kqueue(selectable: selectable, interested: InterestedEvent.None)
 #endif
-
     }
     
     public func awaitReady() throws -> Array<SelectorEvent>? {
@@ -258,4 +237,5 @@ public enum InterestedEvent {
     case Read
     case Write
     case All
+    case None
 }

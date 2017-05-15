@@ -38,7 +38,7 @@ public class Channel : ChannelOutboundInvoker {
     
     // Visible to access from EventLoop directly
     internal let socket: Socket
-    internal var interestedEvent: InterestedEvent? = nil
+    internal var interestedEvent: InterestedEvent = InterestedEvent.None
 
     // TODO: This is most likely not the best datastructure for us. Linked-List would be better.
     private var pendingWrites: [(Buffer, Promise<Void>)] = Array()
@@ -107,14 +107,14 @@ public class Channel : ChannelOutboundInvoker {
         }
         readPending = true
         
-        if let ev = interestedEvent {
-            if ev == InterestedEvent.Write {
-                // writes are pending
-                safeReregister(interested: InterestedEvent.All)
-            }
-        } else {
-            // Not registered on the EventLoop so do it now.
+        switch interestedEvent {
+        case .Write:
+            // writes are pending
+            safeReregister(interested: InterestedEvent.All)
+        case .None:
             safeRegister(interested: InterestedEvent.Read)
+        default:
+            break
         }
     }
 
@@ -122,18 +122,14 @@ public class Channel : ChannelOutboundInvoker {
         guard open else {
             return
         }
-        if let ev = interestedEvent {
-            switch ev {
-            case InterestedEvent.Read:
-                safeDeregister()
-            case InterestedEvent.All:
-                safeReregister(interested: InterestedEvent.Write)
-            default:
-                // Nothing to do
-                break
-            }
+        switch interestedEvent {
+        case InterestedEvent.Read:
+            safeReregister(interested: InterestedEvent.None)
+        case InterestedEvent.All:
+            safeReregister(interested: InterestedEvent.Write)
+        default:
+            break
         }
-       
     }
     
     func close0(promise: Promise<Void> = Promise<Void>()) {
@@ -206,11 +202,11 @@ public class Channel : ChannelOutboundInvoker {
             // Always call the method as last
             pipeline.fireChannelReadComplete()
             
-            if open, !readPending, let ev = interestedEvent {
-                switch ev {
-                case InterestedEvent.Read:
-                    safeDeregister()
-                case InterestedEvent.All:
+            if open, !readPending {
+                switch interestedEvent {
+                case .Read:
+                    safeReregister(interested: InterestedEvent.None)
+                case .All:
                     safeReregister(interested: InterestedEvent.Write)
                 default:
                     break
@@ -228,8 +224,6 @@ public class Channel : ChannelOutboundInvoker {
                 }
                 buffer.limit = Int(read)
                 pipeline.fireChannelRead(data: buffer)
-            } else {
-                print("NOT READABLE");
             }
         } catch let err {
             pipeline.fireErrorCaught(error: err)
@@ -240,7 +234,7 @@ public class Channel : ChannelOutboundInvoker {
     
     // Methods only used from within this class
     private func safeDeregister() {
-        interestedEvent = nil
+        interestedEvent = InterestedEvent.None
         do {
             try eventLoop.deregister(channel: self)
         } catch {

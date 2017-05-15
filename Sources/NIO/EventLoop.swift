@@ -32,7 +32,7 @@ public class EventLoop {
     }
     
     func register(channel: Channel) throws {
-        try selector.register(selectable: channel.socket, interested: channel.interestedEvent!, attachment: channel)
+        try selector.register(selectable: channel.socket, interested: channel.interestedEvent, attachment: channel)
     }
     
     func deregister(channel: Channel) throws {
@@ -40,7 +40,7 @@ public class EventLoop {
     }
     
     func reregister(channel: Channel) throws {
-        try selector.reregister(selectable: channel.socket, interested: channel.interestedEvent!)
+        try selector.reregister(selectable: channel.socket, interested: channel.interestedEvent)
     }
     
     public var inEventLoop: Bool {
