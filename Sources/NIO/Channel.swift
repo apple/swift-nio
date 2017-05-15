@@ -37,8 +37,8 @@ public class Channel : ChannelOutboundInvoker {
     public let eventLoop: EventLoop
     
     // Visible to access from EventLoop directly
-    let socket: Socket
-    var interestedEvent: InterestedEvent? = nil
+    internal let socket: Socket
+    internal var interestedEvent: InterestedEvent? = nil
 
     // TODO: This is most likely not the best datastructure for us. Linked-List would be better.
     private var pendingWrites: [(Buffer, Promise<Void>)] = Array()
@@ -287,7 +287,6 @@ public class Channel : ChannelOutboundInvoker {
         pendingWrites.removeAll()
         outstanding = 0
     }
-
     
     init(socket: Socket, eventLoop: EventLoop) {
         self.socket = socket
