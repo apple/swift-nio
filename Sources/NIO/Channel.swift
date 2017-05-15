@@ -38,7 +38,7 @@ public class Channel : ChannelOutboundInvoker {
     
     // Visible to access from EventLoop directly
     internal let socket: Socket
-    internal var interestedEvent: InterestedEvent = InterestedEvent.None
+    internal var interestedEvent: InterestedEvent = .None
 
     // TODO: This is most likely not the best datastructure for us. Linked-List would be better.
     private var pendingWrites: [(Buffer, Promise<Void>)] = Array()
@@ -87,15 +87,15 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     func flush0() {
-        if interestedEvent != InterestedEvent.Write && interestedEvent != InterestedEvent.All && !flushNow() {
+        if interestedEvent != .Write && interestedEvent != .All && !flushNow() {
             guard open else {
                 return
             }
             // Could not flush all of the queued bytes, stop reading until we were able to do so
-            if interestedEvent == InterestedEvent.Read {
-                safeReregister(interested: InterestedEvent.Write)
+            if interestedEvent == .Read {
+                safeReregister(interested: .Write)
             } else {
-                safeReregister(interested: InterestedEvent.All)
+                safeReregister(interested: .All)
             }
             pipeline.fireChannelWritabilityChanged(writable: false)
         }
@@ -110,9 +110,9 @@ public class Channel : ChannelOutboundInvoker {
         switch interestedEvent {
         case .Write:
             // writes are pending
-            safeReregister(interested: InterestedEvent.All)
+            safeReregister(interested: .All)
         case .None:
-            safeRegister(interested: InterestedEvent.Read)
+            safeRegister(interested: .Read)
         default:
             break
         }
@@ -123,10 +123,10 @@ public class Channel : ChannelOutboundInvoker {
             return
         }
         switch interestedEvent {
-        case InterestedEvent.Read:
-            safeReregister(interested: InterestedEvent.None)
-        case InterestedEvent.All:
-            safeReregister(interested: InterestedEvent.Write)
+        case .Read:
+            safeReregister(interested: .None)
+        case .All:
+            safeReregister(interested: .Write)
         default:
             break
         }
@@ -158,7 +158,7 @@ public class Channel : ChannelOutboundInvoker {
     
     func registerOnEventLoop(initPipeline: (ChannelPipeline) throws ->()) {
         // Was not registered yet so do it now.
-        safeRegister(interested: InterestedEvent.Read)
+        safeRegister(interested: .Read)
         
         do {
             try initPipeline(pipeline)
@@ -183,7 +183,7 @@ public class Channel : ChannelOutboundInvoker {
             }
             if readPending {
                 // Start reading again
-                safeReregister(interested: InterestedEvent.Read)
+                safeReregister(interested: .Read)
             } else {
                 // No read pending so just deregister from the EventLoop for now.
                 safeDeregister()
@@ -205,9 +205,9 @@ public class Channel : ChannelOutboundInvoker {
             if open, !readPending {
                 switch interestedEvent {
                 case .Read:
-                    safeReregister(interested: InterestedEvent.None)
+                    safeReregister(interested: .None)
                 case .All:
-                    safeReregister(interested: InterestedEvent.Write)
+                    safeReregister(interested: .Write)
                 default:
                     break
                 }
@@ -234,7 +234,7 @@ public class Channel : ChannelOutboundInvoker {
     
     // Methods only used from within this class
     private func safeDeregister() {
-        interestedEvent = InterestedEvent.None
+        interestedEvent = .None
         do {
             try eventLoop.deregister(channel: self)
         } catch {
@@ -245,7 +245,7 @@ public class Channel : ChannelOutboundInvoker {
     
     private func safeReregister(interested: InterestedEvent) {
         guard open else {
-            safeDeregister()
+            interestedEvent = .None
             return
         }
         interestedEvent = interested
@@ -260,7 +260,7 @@ public class Channel : ChannelOutboundInvoker {
     
     private func safeRegister(interested: InterestedEvent) {
         guard open else {
-            safeDeregister()
+            interestedEvent = .None
             return
         }
         interestedEvent = interested
