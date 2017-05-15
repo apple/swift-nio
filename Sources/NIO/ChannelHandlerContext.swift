@@ -17,99 +17,135 @@ import Future
 
 public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvoker {
 
-    // visible for ChannelPipeline to modify
-    var prev: ChannelHandlerContext?
+    // visible for ChannelPipeline to modify and also marked as weak to ensure we not create a 
+    // reference-cycle for the doubly-linked-list
+    weak var prev: ChannelHandlerContext?
+
     var next: ChannelHandlerContext?
+    
+    // marked as weak to not create a reference cycle between this instance and the pipeline
+    public private(set) weak var pipeline: ChannelPipeline?
 
     public let handler: ChannelHandler
-    public let pipeline: ChannelPipeline
     public let name: String
-    
-    public var config: ChannelConfig {
-        get {
-            return pipeline.config
-        }
-    }
-    
-    public var allocator: BufferAllocator {
-        get {
-            return config.allocator
-        }
-    }
-    
-    public var eventLoop: EventLoop {
-        get {
-            return pipeline.eventLoop
-        }
-    }
+    public let eventLoop: EventLoop
     
     // Only created from within ChannelPipeline
     init(name: String, handler: ChannelHandler, pipeline: ChannelPipeline) {
         self.name = name
         self.handler = handler
         self.pipeline = pipeline
+        self.eventLoop = pipeline.eventLoop
     }
     
     public func fireChannelRegistered() {
-        next!.invokeChannelRegistered()
+        if let ctx = next {
+            ctx.invokeChannelRegistered()
+        } else {
+            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
+        }
     }
     
     public func fireChannelUnregistered() {
-        next!.invokeChannelUnregistered()
+        if let ctx = next {
+            ctx.invokeChannelUnregistered()
+        } else {
+            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
+        }
     }
     
     public func fireChannelActive() {
-        next!.invokeChannelActive()
+        if let ctx = next {
+            ctx.invokeChannelActive()
+        } else {
+            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
+        }
     }
     
     public func fireChannelInactive() {
-        next!.invokeChannelInactive()
+        if let ctx = next {
+            ctx.invokeChannelInactive()
+        } else {
+            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
+        }
     }
 
     public func fireChannelRead(data: Any) {
-        next!.invokeChannelRead(data: data)
+        if let ctx = next {
+            ctx.invokeChannelRead(data: data)
+        } else {
+            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
+        }
     }
     
     public func fireChannelReadComplete() {
-        next!.invokeChannelReadComplete()
+        if let ctx = next {
+            ctx.invokeChannelReadComplete()
+        } else {
+            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
+        }
     }
 
     public func fireChannelWritabilityChanged(writable: Bool) {
-        next!.invokeChannelWritabilityChanged(writable: writable)
+        if let ctx = next {
+            ctx.invokeChannelWritabilityChanged(writable: writable)
+        } else {
+            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
+        }
     }
 
     public func fireErrorCaught(error: Error) {
-        next!.invokeErrorCaught(error: error)
+        if let ctx = next {
+            ctx.invokeErrorCaught(error: error)
+        } else {
+            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
+        }
     }
     
     public func fireUserEventTriggered(event: Any) {
-        next!.invokeUserEventTriggered(event: event)
+        if let ctx = next {
+            ctx.invokeUserEventTriggered(event: event)
+        } else {
+            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
+        }
     }
     
     public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
-        prev!.invokeWrite(data: data, promise: promise)
+        if let ctx = prev {
+            ctx.invokeWrite(data: data, promise: promise)
+        } else {
+            promise.fail(error: ChannelPipelineException.alreadyRemoved)
+        }
         return promise.futureResult
     }
     
     public func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
-        prev!.invokeWriteAndFlush(data: data, promise: promise)
+        if let ctx = prev {
+            ctx.invokeWriteAndFlush(data: data, promise: promise)
+        } else {
+            promise.fail(error: ChannelPipelineException.alreadyRemoved)
+        }
         return promise.futureResult
     }
     
     public func flush() {
-        prev!.invokeFlush()
+        prev?.invokeFlush()
     }
     
     public func read() {
-        prev!.invokeRead()
+        prev?.invokeRead()
     }
     
     public func close(promise: Promise<Void>) -> Future<Void> {
-        prev!.invokeClose(promise: promise)
+        if let ctx = prev {
+            ctx.invokeClose(promise: promise)
+        } else {
+            promise.fail(error: ChannelPipelineException.alreadyRemoved)
+        }
+
         return promise.futureResult
     }
     
-    // Methods that are invoked itself by this class itself or ChannelPipeline
     func invokeChannelRegistered() {
         assert(inEventLoop)
         
@@ -240,13 +276,16 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     func invokeHandlerRemoved() throws {
         assert(inEventLoop)
 
+        defer {
+            pipeline = nil
+            prev = nil
+            next = nil
+        }
         try handler.handlerRemoved(ctx: self)
     }
     
     private var inEventLoop : Bool {
-    get {
-        return pipeline.eventLoop.inEventLoop
-    }
+        return eventLoop.inEventLoop
     }
     
     private func safeErrorCaught(ctx: ChannelHandlerContext, error: Error) {

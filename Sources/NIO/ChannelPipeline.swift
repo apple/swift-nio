@@ -309,3 +309,7 @@ private class TailChannelHandler : ChannelHandler {
         // TODO: Log this and tell the user that its most likely a fault not handling it.
     }
 }
+
+public enum ChannelPipelineException : Error {
+    case alreadyRemoved
+}

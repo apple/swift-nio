@@ -25,19 +25,13 @@ import Darwin
 public class Channel : ChannelOutboundInvoker {
 
     public var pipeline: ChannelPipeline {
-        get {
-            return _pipeline
-        }
+        return _pipeline
     }
     public var config: ChannelConfig {
-        get {
-            return _config
-        }
+        return _config
     }
     public var allocator: BufferAllocator {
-        get {
-            return config.allocator
-        }
+        return config.allocator
     }
     
     public let eventLoop: EventLoop
