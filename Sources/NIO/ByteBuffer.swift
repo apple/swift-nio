@@ -134,34 +134,34 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
     // Mutable versions for writing to the buffer. body function returns the number of bytes written and writerIndex
     // will be automatically moved.
 
-    public mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) -> Int) -> Int {
+    public mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) -> Int?) -> Int? {
         let bytesWritten = data.withUnsafeMutableBytes({ return body($0 + writerIndex, writableBytes) })
 
-        advanceWriterIndex(bytesWritten)
+        advanceWriterIndex(bytesWritten ?? 0)
 
         return bytesWritten
     }
 
-    public mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int) throws -> Int {
+    public mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int?) throws -> Int? {
         let bytesWritten = try data.withUnsafeMutableBytes({ return try body($0 + writerIndex, writableBytes) })
 
-        advanceWriterIndex(bytesWritten)
+        advanceWriterIndex(bytesWritten ?? 0)
 
         return bytesWritten
     }
 
-    public mutating func withMutableReadPointer(body: (UnsafeMutablePointer<UInt8>, Int) -> Int) -> Int {
+    public mutating func withMutableReadPointer(body: (UnsafeMutablePointer<UInt8>, Int) -> Int?) -> Int? {
         let bytesWritten = data.withUnsafeMutableBytes({ return body($0 + readerIndex, readableBytes) })
 
-        advanceReaderIndex(bytesWritten)
+        advanceReaderIndex(bytesWritten ?? 0)
 
         return bytesWritten
     }
 
-    public mutating func withMutableReadPointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int) throws -> Int {
+    public mutating func withMutableReadPointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int?) throws -> Int? {
         let bytesWritten = try data.withUnsafeMutableBytes({ return try body($0 + readerIndex, readableBytes) })
 
-        advanceReaderIndex(bytesWritten)
+        advanceReaderIndex(bytesWritten ?? 0)
 
         return bytesWritten
     }

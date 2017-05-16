@@ -213,14 +213,16 @@ public class Channel : ChannelOutboundInvoker {
 
             var buffer = try config.recvAllocator.buffer(allocator: allocator)
 
-            let bytesRead = try buffer.withMutableWritePointer { try self.socket.read(pointer: $0, size: $1) ?? 0 }
-
-            if bytesRead > 0 {
-                pipeline.fireChannelRead(data: buffer)
-            } else {
-                // end-of-file
-                close0()
-                return
+            let res = try buffer.withMutableWritePointer { try self.socket.read(pointer: $0, size: $1) }
+            
+            if let bytesRead = res {
+                if bytesRead > 0 {
+                    pipeline.fireChannelRead(data: buffer)
+                } else {
+                    // end-of-file
+                    close0()
+                    return
+                }
             }
         } catch let err {
             pipeline.fireErrorCaught(error: err)
@@ -276,9 +278,9 @@ public class Channel : ChannelOutboundInvoker {
                 // If the buffer is still applicable we'll need to add it back into the queue.
                 var (buffer, promise) = pendingWrites.removeFirst()
 
-                let written = try buffer.withMutableReadPointer { try self.socket.write(pointer: $0, size: $1) ?? 0 }
+                let res = try buffer.withMutableReadPointer { try self.socket.write(pointer: $0, size: $1) }
 
-                if written > 0 {
+                if let written = res {
                     outstanding -= UInt64(written)
                     if buffer.readerIndex == buffer.writerIndex {
                         promise.succeed(result: ())
