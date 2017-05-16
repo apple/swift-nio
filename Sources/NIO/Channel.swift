@@ -318,11 +318,11 @@ public class Channel : ChannelOutboundInvoker {
     }
 }
 
-public protocol RecvBufferAllocator {
+public protocol RecvByteBufferAllocator {
     func buffer(allocator: ByteBufferAllocator) throws -> ByteBuffer
 }
 
-public class FixedSizeByteBufferAllocator : RecvBufferAllocator {
+public class FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
     let capacity: Int
 
     init(capacity: Int) {
@@ -343,7 +343,7 @@ public class ChannelConfig {
     private weak var channel: Channel?
     private var _autoRead: Bool = true
     public var allocator: ByteBufferAllocator = ByteBufferAllocator()
-    public var recvAllocator: RecvBufferAllocator = FixedSizeByteBufferAllocator(capacity: 8192)
+    public var recvAllocator: RecvByteBufferAllocator = FixedSizeRecvByteBufferAllocator(capacity: 8192)
 
     public var autoRead: Bool {
         get {
