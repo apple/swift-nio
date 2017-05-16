@@ -262,8 +262,8 @@ private class HeadChannelHandler : ChannelHandler {
     }
 
     private func readIfNeeded() {
-        if pipeline.config.autoRead, let ch = pipeline.channel {
-            ch.read()
+        if pipeline.config.autoRead {
+            pipeline.channel?.read()
         }
     }
 }

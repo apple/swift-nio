@@ -32,7 +32,8 @@ public class Channel : ChannelOutboundInvoker {
     public var allocator: ByteBufferAllocator {
         return config.allocator
     }
-    
+    public private(set) var open: Bool = true
+
     public let eventLoop: EventLoop
 
     // Visible to access from EventLoop directly
@@ -42,7 +43,6 @@ public class Channel : ChannelOutboundInvoker {
     // TODO: This is most likely not the best datastructure for us. Linked-List would be better.
     private var pendingWrites: [(ByteBuffer, Promise<Void>)] = Array()
     private var outstanding: UInt64 = 0
-    public private(set) var open: Bool = true
     private var readPending: Bool = false;
     // Needed to be able to use ChannelPipeline(self...)
     private var _pipeline: ChannelPipeline!
@@ -152,7 +152,6 @@ public class Channel : ChannelOutboundInvoker {
         
         // Fail all pending writes and so ensure all pending promises are notified
         failPendingWrites(err: IOError(errno: EBADF, reason: "Channel closed"))
-
     }
     
     func registerOnEventLoop(initPipeline: (ChannelPipeline) throws ->()) {
@@ -214,7 +213,6 @@ public class Channel : ChannelOutboundInvoker {
 
             var buffer = try config.recvAllocator.buffer(allocator: allocator)
 
-            // TODO: Read spin ?
             let bytesRead = try buffer.withMutableWritePointer { try self.socket.read(pointer: $0, size: $1) ?? 0 }
 
             if bytesRead > 0 {
