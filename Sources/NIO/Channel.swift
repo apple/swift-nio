@@ -210,7 +210,6 @@ public class Channel : ChannelOutboundInvoker {
         }
         
         do {
-
             var buffer = try config.recvAllocator.buffer(allocator: allocator)
 
             let res = try buffer.withMutableWritePointer { try self.socket.read(pointer: $0, size: $1) }
@@ -272,14 +271,14 @@ public class Channel : ChannelOutboundInvoker {
     }
 
     private func flushNow() -> Bool {
-        do {
-            while open, let _ = pendingWrites.first {
-                // We do this because the buffer is a value type and can't be modified in place.
-                // If the buffer is still applicable we'll need to add it back into the queue.
-                var (buffer, promise) = pendingWrites.removeFirst()
-
+        while open, let _ = pendingWrites.first {
+            // We do this because the buffer is a value type and can't be modified in place.
+            // If the buffer is still applicable we'll need to add it back into the queue.
+            var (buffer, promise) = pendingWrites.removeFirst()
+            
+            do {
                 let res = try buffer.withMutableReadPointer { try self.socket.write(pointer: $0, size: $1) }
-
+                
                 if let written = res {
                     outstanding -= UInt64(written)
                     if buffer.readerIndex == buffer.writerIndex {
@@ -290,10 +289,16 @@ public class Channel : ChannelOutboundInvoker {
                 } else {
                     return false
                 }
+            } catch let err {
+                // fail the promise that we removed first to ensure we not leak the attached callbacks.
+                promise.fail(error: err)
+                
+                // fail all pending writes so all promises are notified.
+                failPendingWritesAndClose(err: err)
+                
+                // we handled all writes
+                return true
             }
-        } catch let err {
-            // Fail all pending writes so all promises are notified.
-            failPendingWritesAndClose(err: err)
         }
         return pendingWrites.isEmpty
     }
@@ -317,6 +322,11 @@ public class Channel : ChannelOutboundInvoker {
         self.eventLoop = eventLoop
         self._config = ChannelConfig(channel: self)
         self._pipeline = ChannelPipeline(channel: self)
+    }
+    
+    deinit {
+        // We should never have any pending writes left as otherwise we may leak callbacks
+        assert(pendingWrites.isEmpty)
     }
 }
 
