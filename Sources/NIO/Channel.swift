@@ -23,25 +23,24 @@ import Darwin
 #endif
 
 public class Channel : ChannelOutboundInvoker {
-
     public var pipeline: ChannelPipeline {
         return _pipeline
     }
     public var config: ChannelConfig {
         return _config
     }
-    public var allocator: BufferAllocator {
+    public var allocator: ByteBufferAllocator {
         return config.allocator
     }
     
     public let eventLoop: EventLoop
-    
+
     // Visible to access from EventLoop directly
     internal let socket: Socket
     internal var interestedEvent: InterestedEvent = .None
 
     // TODO: This is most likely not the best datastructure for us. Linked-List would be better.
-    private var pendingWrites: [(Buffer, Promise<Void>)] = Array()
+    private var pendingWrites: [(ByteBuffer, Promise<Void>)] = Array()
     private var outstanding: UInt64 = 0
     public private(set) var open: Bool = true
     private var readPending: Bool = false;
@@ -76,12 +75,12 @@ public class Channel : ChannelOutboundInvoker {
             promise.fail(error: IOError(errno: EBADF, reason: "Channel closed"))
             return
         }
-        if let buffer = data as? Buffer {
+        if let buffer = data as? ByteBuffer {
             pendingWrites.append((buffer, promise))
-            outstanding += UInt64((buffer.limit - buffer.offset))
+            outstanding += UInt64(buffer.readableBytes)
             
         } else {
-            // Only support Buffer for now. 
+            // Only support ByteBuffer for now. 
             promise.fail(error: MessageError.unsupported)
         }
     }
@@ -195,9 +194,6 @@ public class Channel : ChannelOutboundInvoker {
         assert(open)
         
         readPending = false
-        
-        let buffer = config.recvAllocator.buffer(allocator: allocator)
-        
         defer {
             // Always call the method as last
             pipeline.fireChannelReadComplete()
@@ -215,15 +211,18 @@ public class Channel : ChannelOutboundInvoker {
         }
         
         do {
+
+            var buffer = try config.recvAllocator.buffer(allocator: allocator)
+
             // TODO: Read spin ?
-            if let read = try socket.read(data: &buffer.data) {
-                guard read > 0 else {
-                    // end-of-file
-                    close0()
-                    return
-                }
-                buffer.limit = Int(read)
+            let bytesRead = try buffer.withMutableWritePointer { try self.socket.read(pointer: $0, size: $1) ?? 0 }
+
+            if bytesRead > 0 {
                 pipeline.fireChannelRead(data: buffer)
+            } else {
+                // end-of-file
+                close0()
+                return
             }
         } catch let err {
             pipeline.fireErrorCaught(error: err)
@@ -274,14 +273,19 @@ public class Channel : ChannelOutboundInvoker {
 
     private func flushNow() -> Bool {
         do {
-            while open, let pending = pendingWrites.first {
-                if let written = try socket.write(data: pending.0.data, offset: pending.0.offset, len: pending.0.limit - pending.0.offset) {
-                    pending.0.offset += Int(written)
-                    
+            while open, let _ = pendingWrites.first {
+                // We do this because the buffer is a value type and can't be modified in place.
+                // If the buffer is still applicable we'll need to add it back into the queue.
+                var (buffer, promise) = pendingWrites.removeFirst()
+
+                let written = try buffer.withMutableReadPointer { try self.socket.write(pointer: $0, size: $1) ?? 0 }
+
+                if written > 0 {
                     outstanding -= UInt64(written)
-                    if pending.0.offset == pending.0.limit {
-                        pendingWrites.removeFirst()
-                        pending.1.succeed(result: ())
+                    if buffer.readerIndex == buffer.writerIndex {
+                        promise.succeed(result: ())
+                    } else {
+                        pendingWrites.insert((buffer, promise), at: 0)
                     }
                 } else {
                     return false
@@ -317,18 +321,18 @@ public class Channel : ChannelOutboundInvoker {
 }
 
 public protocol RecvBufferAllocator {
-    func buffer(allocator: BufferAllocator) -> Buffer
+    func buffer(allocator: ByteBufferAllocator) throws -> ByteBuffer
 }
 
-public class FixedSizeBufferAllocator : RecvBufferAllocator {
-    private let capacity: Int32
-    
-    init(capacity: Int32) {
+public class FixedSizeByteBufferAllocator : RecvBufferAllocator {
+    let capacity: Int
+
+    init(capacity: Int) {
         self.capacity = capacity
     }
-    
-    public func buffer(allocator: BufferAllocator) -> Buffer {
-        return allocator.buffer(capacity: capacity)
+
+    public func buffer(allocator: ByteBufferAllocator) throws -> ByteBuffer {
+        return try allocator.buffer(capacity: capacity)
     }
 }
 
@@ -340,8 +344,8 @@ public class ChannelConfig {
     // Declare as weak to remove reference-cycle.
     private weak var channel: Channel?
     private var _autoRead: Bool = true
-    public var allocator: BufferAllocator = DefaultBufferAllocator()
-    public var recvAllocator: RecvBufferAllocator = FixedSizeBufferAllocator(capacity: 8192)
+    public var allocator: ByteBufferAllocator = ByteBufferAllocator()
+    public var recvAllocator: RecvBufferAllocator = FixedSizeByteBufferAllocator(capacity: 8192)
 
     public var autoRead: Bool {
         get {

@@ -29,36 +29,31 @@ let sysRead = Darwin.read
 // TODO: Add gathering / scattering support
 public class Socket : BaseSocket {
     
-    public func write(data: Data) throws -> UInt? {
+    public func write(data: Data) throws -> Int? {
         return try write(data: data, offset: 0, len: data.count)
     }
 
-    public func write(data: Data, offset: Int, len: Int) throws -> UInt? {
-        let res = try data.withUnsafeBytes() { [unowned self] (buffer: UnsafePointer<UInt8>) -> Int? in
-            try wrapSyscallMayBlock({ $0 >= 0 }, function: "write") {
-                sysWrite(self.descriptor, buffer.advanced(by: offset), len)
-            }
-        }
-        if let written = res {
-            return UInt(written)
-        }
-        return nil
+    public func write( data: Data, offset: Int, len: Int) throws -> Int? {
+        return try data.withUnsafeBytes({ try write(pointer: $0 + offset, size: len) })
     }
-    
-    public func read(data: inout Data) throws -> UInt? {
+
+    public func write(pointer: UnsafePointer<UInt8>, size: Int) throws -> Int? {
+        return try wrapSyscallMayBlock({ $0 >= 0 }, function: "write") {
+            sysWrite(self.descriptor, pointer, size)
+        }
+    }
+
+    public func read(data: inout Data) throws -> Int? {
         return try read(data: &data, offset: 0, len: data.count)
     }
 
-    public func read(data: inout Data, offset: Int, len: Int) throws -> UInt? {
-        let res = try data.withUnsafeMutableBytes() { [unowned self] (buffer: UnsafeMutablePointer<UInt8>) -> Int? in
-            try wrapSyscallMayBlock({ $0 >= 0 }, function: "read") {
-                sysRead(self.descriptor, buffer.advanced(by: offset), len)
-            }
+    public func read(data: inout Data, offset: Int, len: Int) throws -> Int? {
+        return try data.withUnsafeMutableBytes({ try read(pointer: $0 + offset, size: len) })
+    }
+
+    public func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> Int? {
+        return try wrapSyscallMayBlock({ $0 >= 0 }, function: "read") {
+            sysRead(self.descriptor, pointer, size)
         }
-        
-        if let read = res {
-            return UInt(read)
-        }
-        return nil
     }
 }
