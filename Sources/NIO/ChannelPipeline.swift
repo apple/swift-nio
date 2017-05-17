@@ -16,15 +16,14 @@ import Foundation
 import Future
 import Sockets
 
-public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
+public class ChannelPipeline : ChannelInboundInvoker {
     
     private var head: ChannelHandlerContext?
     private var tail: ChannelHandlerContext?
     private var idx: Int = 0
-    fileprivate unowned let channel: Channel
+    fileprivate let eventLoop: EventLoop
 
-    public let config: ChannelConfig
-    public let eventLoop: EventLoop
+    public unowned let channel: Channel
 
     public func add(name: String? = nil, handler: ChannelHandler, first: Bool = false) throws {
         let ctx = ChannelHandlerContext(name: name ?? nextName(), handler: handler, pipeline: self)
@@ -174,26 +173,26 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     public func fireErrorCaught(error: Error) {
         head!.invokeErrorCaught(error: error)
     }
-
-    public func close(promise: Promise<Void>) -> Future<Void> {
+    
+    internal func close(promise: Promise<Void>) -> Future<Void> {
         tail!.invokeClose(promise: promise)
         return promise.futureResult
     }
     
-    public func flush() {
+    internal func flush() {
         tail!.invokeFlush()
     }
     
-    public func read() {
+    internal func read() {
         tail!.invokeRead()
     }
 
-    public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
+    internal func write(data: Any, promise: Promise<Void>) -> Future<Void> {
         tail!.invokeWrite(data: data, promise: promise)
         return promise.futureResult
     }
     
-    public func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
+    internal func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
         tail!.invokeWriteAndFlush(data: data, promise: promise)
         return promise.futureResult
     }
@@ -202,66 +201,68 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     init (channel: Channel) {
         self.channel = channel
         self.eventLoop = channel.eventLoop
-        self.config = channel.config
         
-        head = ChannelHandlerContext(name: "head", handler: HeadChannelHandler(pipeline: self), pipeline: self)
-        tail = ChannelHandlerContext(name: "tail", handler: TailChannelHandler(), pipeline: self)
+        head = ChannelHandlerContext(name: "head", handler: HeadChannelHandler.sharedInstance, pipeline: self)
+        tail = ChannelHandlerContext(name: "tail", handler: TailChannelHandler.sharedInstance, pipeline: self)
         head!.next = tail
         tail!.prev = head
     }
 }
 
 private class HeadChannelHandler : ChannelHandler {
-    
-    private unowned let pipeline: ChannelPipeline
-    
-    init(pipeline: ChannelPipeline) {
-        self.pipeline = pipeline
-    }
-    
+
+    static let sharedInstance = HeadChannelHandler()
+
+    private init() { }
+
     func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>) {
-        pipeline.channel.write0(data: data, promise: promise)
+        ctx.channel!.write0(data: data, promise: promise)
     }
     
     func flush(ctx: ChannelHandlerContext) {
-        pipeline.channel.flush0()
+        ctx.channel!.flush0()
     }
     
     func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
-        pipeline.channel.close0(promise: promise)
+        ctx.channel!.close0(promise: promise)
     }
     
     func read(ctx: ChannelHandlerContext) {
-        pipeline.channel.startReading0()
+        ctx.channel!.startReading0()
     }
     
     func channelActive(ctx: ChannelHandlerContext) {
         ctx.fireChannelActive()
         
-        readIfNeeded()
+        readIfNeeded(ctx: ctx)
     }
     
     func channelReadComplete(ctx: ChannelHandlerContext) {
         ctx.fireChannelReadComplete()
         
-        readIfNeeded()
+        readIfNeeded(ctx: ctx)
     }
     
     func channelUnregistered(ctx: ChannelHandlerContext) {
         ctx.fireChannelUnregistered()
         
-        pipeline.removeHandlers()
+        ctx.pipeline!.removeHandlers()
     }
 
-    private func readIfNeeded() {
-        if pipeline.config.autoRead {
-            pipeline.channel.read()
+    private func readIfNeeded(ctx: ChannelHandlerContext) {
+        let channel = ctx.channel!
+        if channel.config.autoRead {
+            channel.read()
         }
     }
 }
 
 private class TailChannelHandler : ChannelHandler {
     
+    static let sharedInstance = TailChannelHandler()
+    
+    private init() { }
+
     func channelRegistered(ctx: ChannelHandlerContext) {
         // Discard
     }
@@ -314,6 +315,10 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     
     // marked as weak to not create a reference cycle between this instance and the pipeline
     public private(set) weak var pipeline: ChannelPipeline?
+    
+    public var channel: Channel? {
+        return pipeline?.channel
+    }
     
     public let handler: ChannelHandler
     public let name: String
