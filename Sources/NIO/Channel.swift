@@ -358,8 +358,8 @@ enum MessageError: Error {
 }
 
 public class ChannelConfig {
-    // Declare as weak to remove reference-cycle.
-    private weak var channel: Channel?
+    // Declare as unowned to remove reference-cycle.
+    private unowned let channel: Channel
     private var _autoRead: Bool = true
     public var allocator: ByteBufferAllocator = ByteBufferAllocator()
     public var recvAllocator: RecvByteBufferAllocator = FixedSizeRecvByteBufferAllocator(capacity: 8192)
@@ -371,9 +371,9 @@ public class ChannelConfig {
         set (value) {
             _autoRead = value
             if value {
-                channel?.startReading0()
+                channel.startReading0()
             } else {
-                channel?.stopReading0()
+                channel.stopReading0()
             }
         }
     }

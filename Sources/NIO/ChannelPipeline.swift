@@ -21,7 +21,7 @@ public class ChannelPipeline : ChannelInboundInvoker, ChannelOutboundInvoker {
     private var head: ChannelHandlerContext?
     private var tail: ChannelHandlerContext?
     private var idx: Int = 0
-    fileprivate weak var channel: Channel?
+    fileprivate unowned let channel: Channel
 
     public let config: ChannelConfig
     public let eventLoop: EventLoop
@@ -220,27 +220,19 @@ private class HeadChannelHandler : ChannelHandler {
     }
     
     func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>) {
-        guard let ch = pipeline.channel else {
-            promise.fail(error: IOError(errno: EBADF, reason: "Channel closed"))
-            return
-        }
-        ch.write0(data: data, promise: promise)
+        pipeline.channel.write0(data: data, promise: promise)
     }
     
     func flush(ctx: ChannelHandlerContext) {
-        pipeline.channel?.flush0()
+        pipeline.channel.flush0()
     }
     
     func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
-        guard let ch = pipeline.channel else {
-            promise.fail(error: IOError(errno: EBADF, reason: "Channel closed"))
-            return
-        }
-        ch.close0(promise: promise)
+        pipeline.channel.close0(promise: promise)
     }
     
     func read(ctx: ChannelHandlerContext) {
-        pipeline.channel?.startReading0()
+        pipeline.channel.startReading0()
     }
     
     func channelActive(ctx: ChannelHandlerContext) {
@@ -263,7 +255,7 @@ private class HeadChannelHandler : ChannelHandler {
 
     private func readIfNeeded() {
         if pipeline.config.autoRead {
-            pipeline.channel?.read()
+            pipeline.channel.read()
         }
     }
 }
