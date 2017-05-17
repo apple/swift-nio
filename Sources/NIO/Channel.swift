@@ -84,18 +84,26 @@ public class Channel : ChannelOutboundInvoker {
             promise.fail(error: MessageError.unsupported)
         }
     }
-    
+
     func flush0() {
-        if interestedEvent != .Write && interestedEvent != .All && !flushNow() {
+        guard !isWritePending() else {
+            return
+        }
+        
+        if !flushNow() {
             guard open else {
                 return
             }
-            // Could not flush all of the queued bytes, stop reading until we were able to do so
-            if interestedEvent == .Read {
-                safeReregister(interested: .Write)
-            } else {
+
+            switch interestedEvent {
+            case .Read:
                 safeReregister(interested: .All)
+            case .None:
+                safeReregister(interested: .Write)
+            default:
+                break
             }
+ 
             pipeline.fireChannelWritabilityChanged(writable: false)
         }
     }
@@ -108,7 +116,6 @@ public class Channel : ChannelOutboundInvoker {
         
         switch interestedEvent {
         case .Write:
-            // writes are pending
             safeReregister(interested: .All)
         case .None:
             safeRegister(interested: .Read)
@@ -226,6 +233,10 @@ public class Channel : ChannelOutboundInvoker {
             
             failPendingWritesAndClose(err: err)
         }
+    }
+
+    private func isWritePending() -> Bool {
+        return interestedEvent == .Write || interestedEvent == .All
     }
     
     // Methods only used from within this class

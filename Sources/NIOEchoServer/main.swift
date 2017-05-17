@@ -20,7 +20,7 @@ public class EchoHandler: ChannelHandler {
     
     public func channelRead(ctx: ChannelHandlerContext, data: Any) {
         let f = ctx.write(data: data)
-        
+
         // If the write fails close the channel
         f.whenFailure(callback: { error in
             let _ = ctx.close()
@@ -40,6 +40,8 @@ public class EchoHandler: ChannelHandler {
 
 
 try Server.run(host: "0.0.0.0", port: 9999, initPipeline: { pipeline in
+    // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
+    try pipeline.add(handler: BackPressureHandler())
     try pipeline.add(handler: EchoHandler())
 })
 
