@@ -23,12 +23,15 @@ import Foundation
 #endif
 
 public class Selector {
-    let fd: Int32;
+    private let fd: Int32
 #if os(Linux)
-    let events: UnsafeMutablePointer<epoll_event>
+    private typealias EventType = epoll_event
 #else
-    let events: UnsafeMutablePointer<kevent>
+    private typealias EventType = kevent
 #endif
+    private let eventsCapacity = 2048
+    private let events: UnsafeMutablePointer<EventType>
+
 
     var registrations = [Int: Registration]()
     
@@ -37,21 +40,18 @@ public class Selector {
         fd = try wrapSyscall({ $0 >= 0 }, function: "epoll_create") {
             CEpoll.epoll_create(128)
         }
-        events = UnsafeMutablePointer.allocate(capacity: 2048) // max 2048 events per epoll call
-        events.initialize(to: epoll_event())
 #else
         fd = try wrapSyscall({ $0 >= 0 }, function: "kqueue") {
             Darwin.kqueue()
         }
-
-        events = UnsafeMutablePointer.allocate(capacity: 2048) // max 2048 events per kqueue call
-        events.initialize(to: kevent())
 #endif
+        events = UnsafeMutablePointer.allocate(capacity: eventsCapacity)
+        events.initialize(to: EventType())
     }
     
     deinit {
         events.deinitialize()
-        events.deallocate(capacity: 1)
+        events.deallocate(capacity: eventsCapacity)
     }
     
 
