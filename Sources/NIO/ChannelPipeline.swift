@@ -330,110 +330,61 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     }
     
     public func fireChannelRegistered() {
-        if let ctx = next {
-            ctx.invokeChannelRegistered()
-        } else {
-            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
-        }
+        next!.invokeChannelRegistered()
     }
     
     public func fireChannelUnregistered() {
-        if let ctx = next {
-            ctx.invokeChannelUnregistered()
-        } else {
-            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
-        }
+        next!.invokeChannelUnregistered()
     }
     
     public func fireChannelActive() {
-        if let ctx = next {
-            ctx.invokeChannelActive()
-        } else {
-            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
-        }
+        next!.invokeChannelActive()
     }
     
     public func fireChannelInactive() {
-        if let ctx = next {
-            ctx.invokeChannelInactive()
-        } else {
-            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
-        }
+        next!.invokeChannelInactive()
     }
     
     public func fireChannelRead(data: Any) {
-        if let ctx = next {
-            ctx.invokeChannelRead(data: data)
-        } else {
-            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
-        }
+        next!.invokeChannelRead(data: data)
     }
     
     public func fireChannelReadComplete() {
-        if let ctx = next {
-            ctx.invokeChannelReadComplete()
-        } else {
-            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
-        }
+        next!.invokeChannelReadComplete()
     }
     
     public func fireChannelWritabilityChanged(writable: Bool) {
-        if let ctx = next {
-            ctx.invokeChannelWritabilityChanged(writable: writable)
-        } else {
-            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
-        }
+        next!.invokeChannelWritabilityChanged(writable: writable)
     }
     
     public func fireErrorCaught(error: Error) {
-        if let ctx = next {
-            ctx.invokeErrorCaught(error: error)
-        } else {
-            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
-        }
+        next!.invokeErrorCaught(error: error)
     }
     
     public func fireUserEventTriggered(event: Any) {
-        if let ctx = next {
-            ctx.invokeUserEventTriggered(event: event)
-        } else {
-            safeErrorCaught(ctx: self, error: ChannelPipelineException.alreadyRemoved)
-        }
+        next!.invokeUserEventTriggered(event: event)
     }
     
     public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
-        if let ctx = prev {
-            ctx.invokeWrite(data: data, promise: promise)
-        } else {
-            promise.fail(error: ChannelPipelineException.alreadyRemoved)
-        }
+        prev!.invokeWrite(data: data, promise: promise)
         return promise.futureResult
     }
     
     public func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
-        if let ctx = prev {
-            ctx.invokeWriteAndFlush(data: data, promise: promise)
-        } else {
-            promise.fail(error: ChannelPipelineException.alreadyRemoved)
-        }
+        prev!.invokeWriteAndFlush(data: data, promise: promise)
         return promise.futureResult
     }
     
     public func flush() {
-        prev?.invokeFlush()
+        prev!.invokeFlush()
     }
     
     public func read() {
-        prev?.invokeRead()
+        prev!.invokeRead()
     }
     
     public func close(promise: Promise<Void>) -> Future<Void> {
-        if let ctx = prev {
-            ctx.invokeClose(promise: promise)
-        } else {
-            promise.fail(error: ChannelPipelineException.alreadyRemoved)
-        }
-        
+        prev!.invokeClose(promise: promise)
         return promise.futureResult
     }
     
@@ -443,7 +394,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         do {
             try handler.channelRegistered(ctx: self)
         } catch let err {
-            safeErrorCaught(ctx: self, error: err)
+            invokeErrorCaught(error: err)
         }
     }
     
@@ -453,7 +404,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         do {
             try handler.channelUnregistered(ctx: self)
         } catch let err {
-            safeErrorCaught(ctx: self, error: err)
+            invokeErrorCaught(error: err)
         }
     }
     
@@ -463,7 +414,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         do {
             try handler.channelActive(ctx: self)
         } catch let err {
-            safeErrorCaught(ctx: self, error: err)
+            invokeErrorCaught(error: err)
         }
     }
     
@@ -473,7 +424,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         do {
             try handler.channelInactive(ctx: self)
         } catch let err {
-            safeErrorCaught(ctx: self, error: err)
+            invokeErrorCaught(error: err)
         }
     }
     
@@ -483,7 +434,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         do {
             try handler.channelRead(ctx: self, data: data)
         } catch let err {
-            safeErrorCaught(ctx: self, error: err)
+            invokeErrorCaught(error: err)
         }
     }
     
@@ -493,7 +444,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         do {
             try handler.channelReadComplete(ctx: self)
         } catch let err {
-            safeErrorCaught(ctx: self, error: err)
+            invokeErrorCaught(error: err)
         }
     }
     
@@ -503,7 +454,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         do {
             try handler.channelWritabilityChanged(ctx: self, writable: writable)
         } catch let err {
-            safeErrorCaught(ctx: self, error: err)
+            invokeErrorCaught(error: err)
         }
     }
     
@@ -512,8 +463,9 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         
         do {
             try handler.errorCaught(ctx: self, error: error)
-        } catch {
-            // TODO: What to do ?
+        } catch let err {
+            // Forward the error thrown by errorCaught through the pipeline
+            fireErrorCaught(error: err)
         }
     }
     
@@ -523,7 +475,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         do {
             try handler.userEventTriggered(ctx: self, event: event)
         } catch let err {
-            safeErrorCaught(ctx: self, error: err)
+            invokeErrorCaught(error: err)
         }
     }
     
@@ -577,14 +529,6 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     
     private var inEventLoop : Bool {
         return eventLoop.inEventLoop
-    }
-    
-    private func safeErrorCaught(ctx: ChannelHandlerContext, error: Error) {
-        do {
-            try handler.errorCaught(ctx: ctx, error: error)
-        } catch {
-            // TOOO: What to do here ?
-        }
     }
 }
 

@@ -38,7 +38,7 @@ public class Channel : ChannelOutboundInvoker {
     // TODO: This is most likely not the best datastructure for us. Linked-List would be better.
     private var pendingWrites: [(ByteBuffer, Promise<Void>)] = Array()
     private var outstanding: UInt64 = 0
-    private var readPending: Bool = false;
+    private var readPending: Bool = false
     // Needed to be able to use ChannelPipeline(self...)
     private var _pipeline: ChannelPipeline!
 
@@ -297,8 +297,8 @@ public class Channel : ChannelOutboundInvoker {
         interestedEvent = .None
         do {
             try eventLoop.deregister(channel: self)
-        } catch {
-            // TODO: Log ?
+        } catch let err {
+            pipeline.fireErrorCaught(error: err)
             close0()
         }
     }
@@ -311,8 +311,8 @@ public class Channel : ChannelOutboundInvoker {
         interestedEvent = interested
         do {
             try eventLoop.reregister(channel: self)
-        } catch {
-            // TODO: Log ?
+        } catch let err {
+            pipeline.fireErrorCaught(error: err)
             close0()
         }
 
@@ -326,8 +326,8 @@ public class Channel : ChannelOutboundInvoker {
         interestedEvent = interested
         do {
             try eventLoop.register(channel: self)
-        } catch {
-            // TODO: Log ?
+        } catch let err {
+            pipeline.fireErrorCaught(error: err)
             close0()
         }
     }
