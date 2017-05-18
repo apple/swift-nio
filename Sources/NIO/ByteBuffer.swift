@@ -15,8 +15,13 @@ import Foundation
 
 
 public struct ByteBufferAllocator {
+    public let alignment: UInt
+
+    public init(alignTo alignment: UInt = 1) {
+        precondition(alignment > 0, "alignTo must be greater or equal to 1 (is \(alignment))")
+        self.alignment = alignment
+    }
     
-    public init() {}
     public func buffer(capacity: Int) throws -> ByteBuffer {
         return try buffer(capacity: capacity, maxCapacity: Int.max)
     }
@@ -26,7 +31,41 @@ public struct ByteBufferAllocator {
     }
 }
 
+extension UInt64 {
+    public func nextPowerOf2() -> UInt64 {
+        guard self > 0 else {
+            return 1
+        }
+
+        var n = self
+
+        n -= 1
+        n |= n >> 1
+        n |= n >> 2
+        n |= n >> 4
+        n |= n >> 8
+        n |= n >> 16
+        n |= n >> 32
+        n += 1
+
+        return n
+    }
+}
+
 public struct ByteBuffer { // TODO: Equatable, Comparable
+
+    private static func reallocatedData(minimumCapacity: Int, source: Data?, allocator: ByteBufferAllocator) -> Data {
+        let newCapacity = Int(UInt64(minimumCapacity).nextPowerOf2())
+        var newData = Data(bytesNoCopy: UnsafeMutableRawPointer.allocate(bytes: newCapacity,
+                                                                         alignedTo: Int(allocator.alignment)),
+                           count: newCapacity,
+                           deallocator: Data.Deallocator.custom({ $0.deallocate(bytes: $1,
+                                                                                alignedTo: Int(allocator.alignment)) }))
+        if let source = source {
+            newData.replaceSubrange(0..<source.count, with: source)
+        }
+        return newData
+    }
 
     enum ByteBufferError : Error {
         case maxCapacityExceeded
@@ -34,7 +73,9 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
 
     private var data: Data
 
-    public private(set) var capacity = 0
+    public var capacity: Int {
+        return self.data.count
+    }
 
     /**
          Adjusts the capacity of the buffer. If the new capacity is less than the current
@@ -58,7 +99,7 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
     public private(set) var maxCapacity = Int.max
     
     // The allocator that created this buffer, if any
-    public private(set) var allocator: ByteBufferAllocator?
+    public private(set) var allocator: ByteBufferAllocator
 
 
     public private(set) var readerIndex = 0, markedReaderIndex = 0
@@ -73,8 +114,7 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
 
         self.allocator = allocator
         self.maxCapacity = maxCapacity
-        self.data = Data(capacity: startingCapacity)
-        self.capacity = startingCapacity
+        self.data = ByteBuffer.reallocatedData(minimumCapacity: startingCapacity, source: nil, allocator: allocator)
     }
 
     
@@ -105,9 +145,9 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
                 return (enoughSpace: false, capacityIncreased: false)
             }
 
-            self.data = Data(capacity: capacity + deficit) + self.data // TODO: alloc at nearest power of two
-            capacity += deficit
-
+            self.data = ByteBuffer.reallocatedData(minimumCapacity: capacity + deficit,
+                                                   source: self.data,
+                                                   allocator: self.allocator)
             return (enoughSpace: true, capacityIncreased: true)
     }
 

@@ -54,7 +54,7 @@ func wrapSyscall<A>(function: @autoclosure () -> String,
         let (result, err) = callWithErrno(fn)
         if !successCondition(result) {
             precondition(err != 0, "errno is 0, successCondition wrong")
-            assert(err != EBADF, "backlisted errno EBADF on \(function())")
+            precondition(![EBADF, EFAULT].contains(err), "backlisted errno \(err) on \(function())")
             if err == EINTR {
                 continue
             }
