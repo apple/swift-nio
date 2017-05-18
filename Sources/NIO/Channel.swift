@@ -23,10 +23,6 @@ import Darwin
 #endif
 
 public class Channel : ChannelOutboundInvoker {
-    public var pipeline: ChannelPipeline {
-        return _pipeline
-    }
-
     public private(set) var open: Bool = true
 
     public let eventLoop: EventLoop
@@ -39,14 +35,14 @@ public class Channel : ChannelOutboundInvoker {
     private var pendingWrites: [(ByteBuffer, Promise<Void>)] = Array()
     private var outstanding: UInt64 = 0
     private var readPending: Bool = false
-    // Needed to be able to use ChannelPipeline(self...)
-    private var _pipeline: ChannelPipeline!
 
     public private(set) var allocator: ByteBufferAllocator = ByteBufferAllocator()
     private var recvAllocator: RecvByteBufferAllocator = FixedSizeRecvByteBufferAllocator(capacity: 8192)
     private var autoRead: Bool = true
     private var maxMessagesPerRead: UInt = 1
-    
+
+    public lazy var pipeline: ChannelPipeline = ChannelPipeline(channel: self)
+
     public func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws {
         if option is SocketOption {
             let (level, name) = option.value as! (Int32, Int32)
@@ -380,7 +376,6 @@ public class Channel : ChannelOutboundInvoker {
     init(socket: Socket, eventLoop: EventLoop) {
         self.socket = socket
         self.eventLoop = eventLoop
-        self._pipeline = ChannelPipeline(channel: self)
     }
     
     deinit {
