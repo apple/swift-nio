@@ -15,6 +15,8 @@ import Foundation
 
 
 public struct ByteBufferAllocator {
+    
+    public init() {}
     public func buffer(capacity: Int) throws -> ByteBuffer {
         return try buffer(capacity: capacity, maxCapacity: Int.max)
     }

@@ -250,10 +250,7 @@ private class HeadChannelHandler : ChannelHandler {
     }
 
     private func readIfNeeded(ctx: ChannelHandlerContext) {
-        let channel = ctx.channel!
-        if channel.config.autoRead {
-            channel.read()
-        }
+        ctx.channel!.readIfNeeded()
     }
 }
 

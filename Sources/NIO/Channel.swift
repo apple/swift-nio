@@ -26,12 +26,7 @@ public class Channel : ChannelOutboundInvoker {
     public var pipeline: ChannelPipeline {
         return _pipeline
     }
-    public var config: ChannelConfig {
-        return _config
-    }
-    public var allocator: ByteBufferAllocator {
-        return config.allocator
-    }
+
     public private(set) var open: Bool = true
 
     public let eventLoop: EventLoop
@@ -46,7 +41,60 @@ public class Channel : ChannelOutboundInvoker {
     private var readPending: Bool = false;
     // Needed to be able to use ChannelPipeline(self...)
     private var _pipeline: ChannelPipeline!
-    private var _config: ChannelConfig!
+
+    public private(set) var allocator: ByteBufferAllocator = ByteBufferAllocator()
+    private var recvAllocator: RecvByteBufferAllocator = FixedSizeRecvByteBufferAllocator(capacity: 8192)
+    private var autoRead: Bool = true
+    private var maxMessagesPerRead: UInt = 1
+    
+    public func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws {
+        if option is SocketOption {
+            let (level, name) = option.value as! (Int32, Int32)
+            try socket.setOption(level: level, name: name, value: value)
+        } else if option is AllocatorOption {
+            allocator = value as! ByteBufferAllocator
+        } else if option is RecvAllocatorOption {
+            recvAllocator = value as! RecvByteBufferAllocator
+        } else if option is AutoReadOption {
+            let auto = value as! Bool
+            autoRead = auto
+            if auto {
+                startReading0()
+            } else {
+                stopReading0()
+            }
+        } else if option is MaxMessagesPerReadOption {
+            maxMessagesPerRead = value as! UInt
+        } else {
+            fatalError("option \(option) not supported")
+        }
+    }
+    
+    public func getOption<T: ChannelOption>(option: T) throws -> T.OptionType {
+        if option is SocketOption {
+            let (level, name) = option.value as! (Int32, Int32)
+            return try socket.getOption(level: level, name: name)
+        }
+        if option is AllocatorOption {
+            return allocator as! T.OptionType
+        }
+        if option is RecvAllocatorOption {
+            return recvAllocator as! T.OptionType
+        }
+        if option is AutoReadOption {
+            return autoRead as! T.OptionType
+        }
+        if option is MaxMessagesPerReadOption {
+            return maxMessagesPerRead as! T.OptionType
+        }
+        fatalError("option \(option) not supported")
+    }
+
+    internal func readIfNeeded() {
+        if autoRead {
+            read()
+        }
+    }
     
     public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
         return pipeline.write(data: data, promise: promise)
@@ -216,23 +264,28 @@ public class Channel : ChannelOutboundInvoker {
             }
         }
         
-        do {
-            var buffer = try config.recvAllocator.buffer(allocator: allocator)
-
-            if let bytesRead = try buffer.withMutableWritePointer { try self.socket.read(pointer: $0, size: $1) } {
-                if bytesRead > 0 {
-                    pipeline.fireChannelRead(data: buffer)
-                } else {
-                    // end-of-file
-                    close0()
-                    return
+        for _ in 1...maxMessagesPerRead {
+            do {
+                var buffer = try recvAllocator.buffer(allocator: allocator)
+                
+                if let bytesRead = try buffer.withMutableWritePointer { try self.socket.read(pointer: $0, size: $1) } {
+                    if bytesRead > 0 {
+                        pipeline.fireChannelRead(data: buffer)
+                    } else {
+                        // end-of-file
+                        close0()
+                        return
+                    }
                 }
-            }
-        } catch let err {
-            pipeline.fireErrorCaught(error: err)
+            } catch let err {
+                pipeline.fireErrorCaught(error: err)
             
-            failPendingWritesAndClose(err: err)
+                failPendingWritesAndClose(err: err)
+
+                break
+            }
         }
+
     }
 
     private func isWritePending() -> Bool {
@@ -327,7 +380,6 @@ public class Channel : ChannelOutboundInvoker {
     init(socket: Socket, eventLoop: EventLoop) {
         self.socket = socket
         self.eventLoop = eventLoop
-        self._config = ChannelConfig(channel: self)
         self._pipeline = ChannelPipeline(channel: self)
     }
     
@@ -344,7 +396,7 @@ public protocol RecvByteBufferAllocator {
 public class FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
     let capacity: Int
 
-    init(capacity: Int) {
+    public init(capacity: Int) {
         self.capacity = capacity
     }
 
@@ -355,30 +407,4 @@ public class FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
 
 enum MessageError: Error {
     case unsupported
-}
-
-public class ChannelConfig {
-    // Declare as unowned to remove reference-cycle.
-    private unowned let channel: Channel
-    private var _autoRead: Bool = true
-    public var allocator: ByteBufferAllocator = ByteBufferAllocator()
-    public var recvAllocator: RecvByteBufferAllocator = FixedSizeRecvByteBufferAllocator(capacity: 8192)
-
-    public var autoRead: Bool {
-        get {
-            return _autoRead
-        }
-        set (value) {
-            _autoRead = value
-            if value {
-                channel.startReading0()
-            } else {
-                channel.stopReading0()
-            }
-        }
-    }
-
-    init(channel: Channel) {
-        self.channel = channel
-    }
 }

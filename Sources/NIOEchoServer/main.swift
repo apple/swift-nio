@@ -18,6 +18,10 @@ import Future
 
 public class EchoHandler: ChannelHandler {
     
+    public func channelActive(ctx: ChannelHandlerContext) throws {
+        try ctx.channel?.setOption(option: ChannelOptions.Socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+    }
+    
     public func channelRead(ctx: ChannelHandlerContext, data: Any) {
         let f = ctx.write(data: data)
 
@@ -37,7 +41,6 @@ public class EchoHandler: ChannelHandler {
         let _ = ctx.close()
     }
 }
-
 
 try Server.run(host: "0.0.0.0", port: 9999, initPipeline: { pipeline in
     // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
