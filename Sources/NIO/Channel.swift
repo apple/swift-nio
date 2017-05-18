@@ -333,7 +333,7 @@ public class Channel : ChannelOutboundInvoker {
     }
 
     private func flushNow() -> Bool {
-        while open, let _ = pendingWrites.first {
+        while open, !pendingWrites.isEmpty {
             // We do this because the buffer is a value type and can't be modified in place.
             // If the buffer is still applicable we'll need to add it back into the queue.
             var (buffer, promise) = pendingWrites.removeFirst()
