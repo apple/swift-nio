@@ -105,63 +105,35 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
                 return (enoughSpace: false, capacityIncreased: false)
             }
 
-            let oldData = self.data
-
-            data = Data(capacity: capacity + deficit) // TODO: alloc at nearest power of two
+            self.data = Data(capacity: capacity + deficit) + self.data // TODO: alloc at nearest power of two
             capacity += deficit
-
-            data.append(oldData)
 
             return (enoughSpace: true, capacityIncreased: true)
     }
 
     
     
-    public func withReadPointer<T>(body: (UnsafePointer<UInt8>, Int) -> T) -> T {
-        return data.withUnsafeBytes({ body($0 + readerIndex, readableBytes) })
-    }
-    
-    public func withReadPointer<T>(body: (UnsafePointer<UInt8>, Int) throws -> T) throws -> T {
-        return try data.withUnsafeBytes({ try body($0 + readerIndex, readableBytes) })
+    public func withReadPointer<T>(body: (UnsafePointer<UInt8>, Int) throws -> T) rethrows -> T {
+        return try data.withUnsafeBytes({ try body($0.advanced(by: readerIndex), readableBytes) })
     }
 
-    public func withWritePointer<T>(body: (UnsafePointer<UInt8>, Int) -> T) -> T {
-        return data.withUnsafeBytes({ body($0 + writerIndex, writableBytes) })
-    }
-
-    public func withWritePointer<T>(body: (UnsafePointer<UInt8>, Int) throws -> T) throws -> T {
-        return try data.withUnsafeBytes({ try body($0 + writerIndex, writableBytes) })
+    public func withWritePointer<T>(body: (UnsafePointer<UInt8>, Int) throws -> T) rethrows -> T {
+        return try data.withUnsafeBytes({ try body($0.advanced(by: writerIndex), writableBytes) })
     }
 
     // Mutable versions for writing to the buffer. body function returns the number of bytes written and writerIndex
     // will be automatically moved.
 
-    public mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) -> Int?) -> Int? {
-        let bytesWritten = data.withUnsafeMutableBytes({ return body($0 + writerIndex, writableBytes) })
+    public mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int?) rethrows -> Int? {
+        let bytesWritten = try data.withUnsafeMutableBytes({ return try body($0.advanced(by: writerIndex), writableBytes) })
 
         advanceWriterIndex(bytesWritten ?? 0)
 
         return bytesWritten
     }
 
-    public mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int?) throws -> Int? {
-        let bytesWritten = try data.withUnsafeMutableBytes({ return try body($0 + writerIndex, writableBytes) })
-
-        advanceWriterIndex(bytesWritten ?? 0)
-
-        return bytesWritten
-    }
-
-    public mutating func withMutableReadPointer(body: (UnsafeMutablePointer<UInt8>, Int) -> Int?) -> Int? {
-        let bytesWritten = data.withUnsafeMutableBytes({ return body($0 + readerIndex, readableBytes) })
-
-        advanceReaderIndex(bytesWritten ?? 0)
-
-        return bytesWritten
-    }
-
-    public mutating func withMutableReadPointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int?) throws -> Int? {
-        let bytesWritten = try data.withUnsafeMutableBytes({ return try body($0 + readerIndex, readableBytes) })
+    public mutating func withMutableReadPointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int?) rethrows -> Int? {
+        let bytesWritten = try data.withUnsafeMutableBytes { try body($0.advanced(by: readerIndex), readableBytes) }
 
         advanceReaderIndex(bytesWritten ?? 0)
 
