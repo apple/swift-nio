@@ -22,6 +22,79 @@ import Glibc
 import Darwin
 #endif
 
+fileprivate class PendingWrites {
+    
+    private var head: PendingWrite?
+    private var tail: PendingWrite?
+    
+    private(set) var outstanding: UInt64 = 0
+    
+    var isEmpty: Bool {
+        return tail == nil
+    }
+    
+    func add(buffer: ByteBuffer, promise: Promise<Void>) {
+        let pending: PendingWrite = PendingWrite(buffer: buffer, promise: promise)
+        if let last = tail {
+            assert(head != nil)
+            last.next = pending
+        } else {
+            assert(tail == nil)
+            head = pending
+            tail = pending
+        }
+        outstanding += UInt64(buffer.readableBytes)
+    }
+    
+    func consumeNext(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int?) rethrows -> Bool? {
+        if let pending = head {
+            if let written = try pending.buffer.withMutableReadPointer(body: body) {
+                outstanding -= UInt64(written)
+                if (pending.buffer.readableBytes == 0) {
+                    // buffer was completely written
+                    pending.promise.succeed(result: ())
+                    head = pending.next
+                    if (head == nil) {
+                        // everything was written also reset the tail
+                        tail = nil
+                        
+                        // return nil to signal to the caller that there are no more buffers to consume
+                        return nil
+                    }
+                    return true
+                }
+            }
+            // could not write the complete buffer
+            return false
+        }
+        
+        // empty
+        return nil
+    }
+    
+    func failAll(error: Error) {
+        var next = head
+        while let pending = next {
+            pending.promise.fail(error: error)
+            next = pending.next
+        }
+        head = nil
+        tail = nil
+        outstanding = 0
+    }
+
+    private class PendingWrite {
+        var next: PendingWrite?
+        var buffer: ByteBuffer
+        let promise: Promise<Void>
+        
+        init(buffer: ByteBuffer, promise: Promise<Void>) {
+            self.buffer = buffer
+            self.promise = promise
+        }
+    }
+}
+
 public class Channel : ChannelOutboundInvoker {
     public private(set) var open: Bool = true
 
@@ -31,9 +104,7 @@ public class Channel : ChannelOutboundInvoker {
     internal let socket: Socket
     internal var interestedEvent: InterestedEvent = .None
 
-    // TODO: This is most likely not the best datastructure for us. Linked-List would be better.
-    private var pendingWrites: [(ByteBuffer, Promise<Void>)] = Array()
-    private var outstanding: UInt64 = 0
+    private var pendingWrites: PendingWrites = PendingWrites()
     private var readPending: Bool = false
 
     public private(set) var allocator: ByteBufferAllocator = ByteBufferAllocator()
@@ -120,9 +191,7 @@ public class Channel : ChannelOutboundInvoker {
             return
         }
         if let buffer = data as? ByteBuffer {
-            pendingWrites.append((buffer, promise))
-            outstanding += UInt64(buffer.readableBytes)
-            
+            pendingWrites.add(buffer: buffer, promise: promise)
         } else {
             // Only support ByteBuffer for now. 
             promise.fail(error: MessageError.unsupported)
@@ -202,7 +271,7 @@ public class Channel : ChannelOutboundInvoker {
         
         
         // Fail all pending writes and so ensure all pending promises are notified
-        failPendingWrites(err: IOError(errno: EBADF, reason: "Channel closed"))
+        pendingWrites.failAll(error: IOError(errno: EBADF, reason: "Channel closed"))
     }
     
     func registerOnEventLoop(initPipeline: (ChannelPipeline) throws ->()) {
@@ -329,27 +398,21 @@ public class Channel : ChannelOutboundInvoker {
     }
 
     private func flushNow() -> Bool {
-        while open, !pendingWrites.isEmpty {
-            // We do this because the buffer is a value type and can't be modified in place.
-            // If the buffer is still applicable we'll need to add it back into the queue.
-            var (buffer, promise) = pendingWrites.removeFirst()
-            
+        while open {
             do {
-                if let written = try buffer.withMutableReadPointer { try self.socket.write(pointer: $0, size: $1) } {
-                    outstanding -= UInt64(written)
-                    if buffer.readerIndex == buffer.writerIndex {
-                        promise.succeed(result: ())
-                    } else {
-                        pendingWrites.insert((buffer, promise), at: 0)
+                if let written = try pendingWrites.consumeNext(body: {
+                    return try self.socket.write(pointer: $0, size: $1)
+                }) {
+                    if !written {
+                        // Could not write the next buffer completely
+                        return false
                     }
                 } else {
-                    pendingWrites.insert((buffer, promise), at: 0)
-                    return false
+                    // we handled all writes
+                    return true
                 }
-            } catch let err {
-                // fail the promise that we removed first to ensure we not leak the attached callbacks.
-                promise.fail(error: err)
                 
+            } catch let err {
                 // fail all pending writes so all promises are notified.
                 failPendingWritesAndClose(err: err)
                 
@@ -357,21 +420,13 @@ public class Channel : ChannelOutboundInvoker {
                 return true
             }
         }
-        return pendingWrites.isEmpty
+        return true
     }
     
     private func failPendingWritesAndClose(err: Error) {
         // Fail all pending writes so all promises are notified.
-        failPendingWrites(err: err)
+        pendingWrites.failAll(error: err)
         close0()
-    }
-    
-    private func failPendingWrites(err: Error) {
-        for pending in pendingWrites {
-            pending.1.fail(error: err)
-        }
-        pendingWrites.removeAll()
-        outstanding = 0
     }
     
     init(socket: Socket, eventLoop: EventLoop) {
