@@ -343,6 +343,7 @@ public class Channel : ChannelOutboundInvoker {
                         pendingWrites.insert((buffer, promise), at: 0)
                     }
                 } else {
+                    pendingWrites.insert((buffer, promise), at: 0)
                     return false
                 }
             } catch let err {
