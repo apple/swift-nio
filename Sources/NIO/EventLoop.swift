@@ -18,28 +18,33 @@ import Sockets
 
 // TODO: Implement scheduling tasks in the future (a.k.a ScheduledExecutoreService
 public class EventLoop {
-    let selector: Sockets.Selector
-    var tasks: [() -> ()]
-    var thread: Thread?
+    private let selector: Sockets.Selector
+    private let thread: Thread
+    private var tasks: [() -> ()]
 
     init() throws{
         self.selector = try Sockets.Selector()
         self.tasks = Array()
+        thread = Thread.current
     }
     
     func register(server: ServerSocket) throws {
+        assert(inEventLoop)
         try self.selector.register(selectable: server)
     }
     
     func register(channel: Channel) throws {
+        assert(inEventLoop)
         try selector.register(selectable: channel.socket, interested: channel.interestedEvent, attachment: channel)
     }
     
     func deregister(channel: Channel) throws {
+        assert(inEventLoop)
         try selector.deregister(selectable: channel.socket)
     }
     
     func reregister(channel: Channel) throws {
+        assert(inEventLoop)
         try selector.reregister(selectable: channel.socket, interested: channel.interestedEvent)
     }
     
@@ -48,6 +53,7 @@ public class EventLoop {
     }
     
     public func execute(task: @escaping () -> ()) {
+        assert(inEventLoop)
         tasks.append(task)
     }
 
@@ -60,14 +66,8 @@ public class EventLoop {
         return promise.futureResult
     }
 
-    public func run(initPipeline: (ChannelPipeline) throws -> ()) throws {
-        thread = Thread.current
-        
-        defer {
-            // Reset the thread once we exit this method.
-            thread = nil
-        }
-        
+    func run(initPipeline: (ChannelPipeline) throws -> ()) throws {
+        assert(inEventLoop)
         while true {
             // Block until there are events to handle
             if let events = try selector.awaitReady() {
