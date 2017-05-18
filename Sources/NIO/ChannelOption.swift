@@ -82,8 +82,8 @@ public enum MaxMessagesPerReadOption: ChannelOption {
 
 public struct ChannelOptions {
     public static let Socket = { (level: Int32, name: Int32) -> SocketOption in .const((level, name)) }
-    public static let Allocator = AllocatorOption.const()
-    public static let RecvAllocator = RecvAllocatorOption.const()
-    public static let AutoRead = AutoReadOption.const()
-    public static let MaxMessagesPerRead = MaxMessagesPerReadOption.const()
+    public static let Allocator = AllocatorOption.const(())
+    public static let RecvAllocator = RecvAllocatorOption.const(())
+    public static let AutoRead = AutoReadOption.const(())
+    public static let MaxMessagesPerRead = MaxMessagesPerReadOption.const(())
 }
