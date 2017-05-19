@@ -14,6 +14,7 @@
 
 import Foundation
 import Future
+import Sockets
 
 public protocol ChannelHandler : class {
     func channelRegistered(ctx: ChannelHandlerContext) throws
@@ -25,6 +26,7 @@ public protocol ChannelHandler : class {
     func channelWritabilityChanged(ctx: ChannelHandlerContext, writable: Bool) throws
     func userEventTriggered(ctx: ChannelHandlerContext, event: Any) throws
     func errorCaught(ctx: ChannelHandlerContext, error: Error) throws
+    func bind(ctx: ChannelHandlerContext, address: SocketAddress, promise: Promise<Void>)
     func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>)
     func flush(ctx: ChannelHandlerContext)
     // TODO: Think about make this more flexible in terms of influence the allocation that is used to read the next amount of data
@@ -73,6 +75,10 @@ public extension ChannelHandler {
         ctx.fireErrorCaught(error: error)
     }
 
+    public func bind(ctx: ChannelHandlerContext, address: SocketAddress, promise: Promise<Void>) {
+        let _ = ctx.bind(address: address)
+    }
+    
     public func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>) {
         let _ = ctx.write(data: data, promise: promise)
     }

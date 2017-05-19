@@ -162,6 +162,10 @@ public class Channel : ChannelOutboundInvoker {
             read()
         }
     }
+
+    public func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+        return pipeline.bind(address: address, promise: promise)
+    }
     
     public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
         return pipeline.write(data: data, promise: promise)
@@ -184,6 +188,15 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     // Methods invoked from the HeadHandler of the ChannelPipeline
+    func bind0(address: SocketAddress, promise: Promise<Void> ) {
+        do {
+            try socket.bind(address: address)
+            promise.succeed(result: ())
+        } catch let err {
+            promise.fail(error: err)
+        }
+    }
+
     func write0(data: Any, promise: Promise<Void>) {
         guard open else {
             // Channel was already closed to fail the promise and not even queue it.

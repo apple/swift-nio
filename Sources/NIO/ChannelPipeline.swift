@@ -197,6 +197,11 @@ public class ChannelPipeline : ChannelInboundInvoker {
         return promise.futureResult
     }
     
+    internal func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+        tail!.invokeBind(address: address, promise: promise)
+        return promise.futureResult
+    }
+    
     // Only executed from Channel
     init (channel: Channel) {
         self.channel = channel
@@ -215,6 +220,10 @@ private class HeadChannelHandler : ChannelHandler {
 
     private init() { }
 
+    func bind(ctx: ChannelHandlerContext, address: SocketAddress, promise: Promise<Void>) {
+        ctx.channel!.bind0(address: address, promise: promise)
+    }
+    
     func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>) {
         ctx.channel!.write0(data: data, promise: promise)
     }
@@ -365,6 +374,11 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         next!.invokeUserEventTriggered(event: event)
     }
     
+    public func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+        prev!.invokeBind(address: address, promise: promise)
+        return promise.futureResult
+    }
+
     public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
         prev!.invokeWrite(data: data, promise: promise)
         return promise.futureResult
@@ -477,6 +491,12 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         } catch let err {
             invokeErrorCaught(error: err)
         }
+    }
+    
+    func invokeBind(address: SocketAddress, promise: Promise<Void>) {
+        assert(inEventLoop)
+        
+        handler.bind(ctx: self, address: address, promise: promise)
     }
     
     func invokeWrite(data: Any, promise: Promise<Void>) {

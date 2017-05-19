@@ -14,9 +14,13 @@
 
 import Foundation
 import Future
+import Sockets
 
 public protocol ChannelOutboundInvoker {
     
+    func bind(address: SocketAddress) -> Future<Void>
+    func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void>
+
     func write(data: Any) -> Future<Void>
     func write(data: Any, promise: Promise<Void>) -> Future<Void>
 
@@ -33,6 +37,10 @@ public protocol ChannelOutboundInvoker {
 }
 
 public extension ChannelOutboundInvoker {
+    public func bind(address: SocketAddress) -> Future<Void> {
+        return bind(address: address, promise: eventLoop.newPromise(type: Void.self))
+    }
+    
     public func write(data: Any) -> Future<Void> {
         return write(data: data, promise: eventLoop.newPromise(type: Void.self))
     }
