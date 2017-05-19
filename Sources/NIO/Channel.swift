@@ -156,6 +156,18 @@ public class Channel : ChannelOutboundInvoker {
         }
         fatalError("option \(option) not supported")
     }
+    
+    public var localAddress: SocketAddress? {
+        get {
+            return socket.localAddress
+        }
+    }
+
+    public var remoteAddress: SocketAddress? {
+        get {
+            return socket.remoteAddress
+        }
+    }
 
     internal func readIfNeeded() {
         if autoRead {
