@@ -72,8 +72,12 @@ public class ServerSocket: BaseSocket {
         
 #if os(Linux)
         /* no SO_NOSIGPIPE on Linux :( */
-        let old_sighandler = signal(SIGPIPE, SIG_IGN);
-        if old_sighandler == SIG_ERR {
+        let old_sighandler: sighandler_t = Glibc.signal(SIGPIPE, SIG_IGN)
+    
+        let old_sighandler_ptr = unsafeBitCast(old_sighandler, to: UnsafeRawPointer.self)
+        let sig_err_ptr = unsafeBitCast(SIG_ERR, to: UnsafeRawPointer.self)
+
+        if old_sighandler_ptr == sig_err_ptr {
             return nil
         }
 #else

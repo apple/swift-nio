@@ -35,16 +35,17 @@ extension ChannelOption where AssociatedValueType == () {
 }
 
 public enum SocketOption: ChannelOption {
-    public typealias AssociatedValueType = (Int32, Int32)
+    public typealias AssociatedValueType = (Int, Int32)
+
     public typealias OptionType = (Int)
     
     case const(AssociatedValueType)
     
-    public init(level: Int32, name: Int32) {
+    public init(level: Int, name: Int32) {
         self = .const((level, name))
     }
-    
-    public var value: (Int32, Int32) {
+
+    public var value: (Int, Int32) {
         switch self {
         case .const(let level, let name):
             return (level, name)
@@ -81,7 +82,11 @@ public enum MaxMessagesPerReadOption: ChannelOption {
 }
 
 public struct ChannelOptions {
-    public static let Socket = { (level: Int32, name: Int32) -> SocketOption in .const((level, name)) }
+#if os(Linux)
+    public static let Socket = { (level: Int, name: Int32) -> SocketOption in .const((level, name)) }
+#else
+    public static let Socket = { (level: Int32, name: Int32) -> SocketOption in .const((Int(level), name)) }
+#endif
     public static let Allocator = AllocatorOption.const(())
     public static let RecvAllocator = RecvAllocatorOption.const(())
     public static let AutoRead = AutoReadOption.const(())

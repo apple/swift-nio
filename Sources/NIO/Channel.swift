@@ -116,8 +116,8 @@ public class Channel : ChannelOutboundInvoker {
 
     public func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws {
         if option is SocketOption {
-            let (level, name) = option.value as! (Int32, Int32)
-            try socket.setOption(level: level, name: name, value: value)
+            let (level, name) = option.value as! (Int, Int32)
+            try socket.setOption(level: Int32(level), name: name, value: value)
         } else if option is AllocatorOption {
             allocator = value as! ByteBufferAllocator
         } else if option is RecvAllocatorOption {

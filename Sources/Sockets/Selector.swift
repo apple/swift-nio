@@ -200,7 +200,7 @@ public class Selector {
     public func close() throws {
         let _ = try wrapSyscall({ $0 >= 0 }, function: "close") {
 #if os(Linux)
-            return Glibc.close(self.fd)
+            return Int(Glibc.close(self.fd))
 #else
             return Int(Darwin.close(self.fd))
 #endif
