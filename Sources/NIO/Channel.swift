@@ -271,14 +271,15 @@ public class Channel : ChannelOutboundInvoker {
             return
         }
         
+        open = false
+        safeDeregister()
+
         do {
-            open = false
             try socket.close()
             promise.succeed(result: ())
         } catch let err {
             promise.fail(error: err)
         }
-        safeDeregister()
         pipeline.fireChannelUnregistered()
         pipeline.fireChannelInactive()
         
