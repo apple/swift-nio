@@ -46,22 +46,46 @@ fileprivate class PendingWrites {
         outstanding += UInt64(buffer.readableBytes)
     }
     
-    func consumeNext(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int?) rethrows -> Bool? {
+    private var hasMultiple: Bool {
+        return head?.next != nil
+    }
+    
+    /*
+     Function that takes two closures and based on if there are more then one ByteBuffer pending calls either one or the other.
+    */
+    func consume(oneBody: (UnsafePointer<UInt8>, Int) throws -> Int?, multipleBody: ([(UnsafePointer<UInt8>, Int)]) throws -> Int?) rethrows -> Bool? {
+        if hasMultiple {
+            // Holds multiple pending writes, use consumeMultiple which will allow us to us writev (a.k.a gathering writes)
+            return try consumeMultiple(body: multipleBody)
+        }
+        return try consumeOne(body: oneBody)
+    }
+    
+    private func updateNodes(pending: PendingWrite) {
+        head = pending.next
+        if head == nil {
+            tail = nil
+        }
+    }
+    
+    private func consumeOne(body: (UnsafePointer<UInt8>, Int) throws -> Int?) rethrows -> Bool? {
         if let pending = head {
-            if let written = try pending.buffer.withMutableReadPointer(body: body) {
+            if let written = try pending.buffer.withReadPointer(body: body) {
                 outstanding -= UInt64(written)
-                if (pending.buffer.readableBytes == 0) {
+                
+                if (pending.buffer.readableBytes == written) {
+                    // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
+                    updateNodes(pending: pending)
+                    
                     // buffer was completely written
                     pending.promise.succeed(result: ())
-                    head = pending.next
-                    if (head == nil) {
-                        // everything was written also reset the tail
-                        tail = nil
-                        
+                    if (isEmpty) {
                         // return nil to signal to the caller that there are no more buffers to consume
                         return nil
                     }
                     return true
+                } else {
+                    pending.buffer.skipBytes(num: written)
                 }
             }
             // could not write the complete buffer
@@ -72,15 +96,86 @@ fileprivate class PendingWrites {
         return nil
     }
     
-    func failAll(error: Error) {
-        var next = head
-        while let pending = next {
-            pending.promise.fail(error: error)
-            next = pending.next
+    private func consumeMultiple(body: ([(UnsafePointer<UInt8>, Int)]) throws -> Int?) rethrows -> Bool? {
+        if let pending = head {
+            var pointers: [(UnsafePointer<UInt8>, Int)] = []
+            
+            func consumeNext0(pendingWrite: PendingWrite?, count: Int, body: ([(UnsafePointer<UInt8>, Int)]) throws -> Int?) rethrows -> Int? {
+                // TODO: 1024 should be replaced by UIO_MAXIOV once its exported by Swift.
+                //       Working on a patch for Swift to do so...
+                if let pending = pendingWrite, count <= 1024 {
+                    
+                    // Using withReadPointer as we not want to adjust the readerIndex yet. We will do this at a higher level
+                    let written = try pending.buffer.withReadPointer(body: { (pointer: UnsafePointer<UInt8>, size: Int) -> Int? in
+                        pointers.append((pointer, size))
+                        return try consumeNext0(pendingWrite: pending.next, count: count + 1, body: body)
+                    })
+                    return written
+                }
+                return try body(pointers)
+            }
+
+            if let written = try consumeNext0(pendingWrite: pending, count: 0, body: body) {
+                
+                // Calculate the amount of data we expect to write with one syscall.
+                var expected = 0
+                for p in pointers {
+                    expected += p.1
+                }
+                
+                outstanding -= UInt64(written)
+                
+                if written >= pending.buffer.readableBytes {
+                    var w = written - pending.buffer.readableBytes
+                    
+                    // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
+                    updateNodes(pending: pending)
+                    
+                    // buffer was completely written
+                    pending.promise.succeed(result: ())
+
+                    while let p = head {
+                        if w >= p.buffer.readableBytes {
+                            w -= p.buffer.readableBytes
+                            
+                            // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
+                            updateNodes(pending: p)
+
+                            // buffer was completely written
+                            p.promise.succeed(result: ())
+                        } else {
+                            // Only partly written, so update the readerIndex.
+                            p.buffer.skipBytes(num: w)
+                            break
+                        }
+                    }
+                }
+                
+                if (isEmpty) {
+                    // return nil to signal to the caller that there are no more buffers to consume
+                    return nil
+                }
+                
+                // check if we were able to write everything or not
+                return expected == written
+            }
+            // could not write the complete buffer
+            return false
         }
-        head = nil
-        tail = nil
-        outstanding = 0
+        
+        // empty
+        return nil
+    }
+    
+    func failAll(error: Error) {
+        while let pending = head {
+            outstanding -= UInt64(pending.buffer.readableBytes)
+            updateNodes(pending: pending)
+            pending.promise.fail(error: error)
+        }
+        assert(head == nil)
+        assert(tail == nil)
+        assert(outstanding == 0)
     }
 
     private class PendingWrite {
@@ -104,7 +199,7 @@ public class Channel : ChannelOutboundInvoker {
     internal let socket: Socket
     internal var interestedEvent: InterestedEvent = .None
 
-    private var pendingWrites: PendingWrites = PendingWrites()
+    private let pendingWrites: PendingWrites = PendingWrites()
     private var readPending: Bool = false
 
     public private(set) var allocator: ByteBufferAllocator = ByteBufferAllocator()
@@ -427,15 +522,20 @@ public class Channel : ChannelOutboundInvoker {
     private func flushNow() -> Bool {
         while open {
             do {
-                if let written = try pendingWrites.consumeNext(body: {
+                if let written = try pendingWrites.consume(oneBody: {
+                    // normal write
                     return try self.socket.write(pointer: $0, size: $1)
+                }, multipleBody: {
+                    // gathering write
+                    return try self.socket.writev(pointers: $0)
                 }) {
                     if !written {
-                        // Could not write the next buffer completely
+                        // Could not write the next buffer(s) completely
                         return false
                     }
+                    // Consume the next buffer(s).
                 } else {
-                    // we handled all writes
+                    // we handled all pending writes
                     return true
                 }
                 

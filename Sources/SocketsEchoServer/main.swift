@@ -77,7 +77,7 @@ while true {
                         if let read = try s.read(data: &buffer.data) {
                             buffer.limit = Int(read)
                             
-                            if let written = try s.write(data: buffer.data, offset: buffer.offset, len: buffer.limit - buffer.offset) {
+                            if let written = try s.write(data: buffer.data.subdata(in: buffer.offset..<buffer.limit)) {
                                 buffer.offset += Int(written)
                                 
                                 // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
@@ -116,7 +116,7 @@ while true {
                     
                     let s = ev.selectable as! Socket
                     do {
-                        if let written = try s.write(data: buffer.data, offset: buffer.offset, len: buffer.limit - buffer.offset) {
+                        if let written = try s.write(data: buffer.data.subdata(in: buffer.offset..<buffer.limit)) {
                             buffer.offset += Int(written)
                             
                             if buffer.offset == buffer.limit {

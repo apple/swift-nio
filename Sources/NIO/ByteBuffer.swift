@@ -234,6 +234,10 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         moveWriterIndex(to: markedWriterIndex)
     }
     
+    public mutating func skipBytes(num: Int) {
+       moveReaderIndex(to: readerIndex + num)
+    }
+    
     private mutating func moveReaderIndex(to newIndex: Int) {
         precondition(newIndex >= 0 && newIndex <= writerIndex)
         

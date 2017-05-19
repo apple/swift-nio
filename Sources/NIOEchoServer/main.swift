@@ -31,7 +31,7 @@ public class EchoHandler: ChannelHandler {
         })
     }
     
-    // Flush it out. This will use gathering writes for max performance once implemented
+    // Flush it out. This can make use of gathering writes if multiple buffers are pending
     public func channelReadComplete(ctx: ChannelHandlerContext) {
         ctx.flush()
     }
