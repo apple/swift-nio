@@ -276,8 +276,9 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
     
-    func close0(promise: Promise<Void> = Promise<Void>()) {
-        guard open else {
+    func close0(promise: Promise<Void> = Promise<Void>(), error: Error = IOError(errno: EBADF, reason: "Channel closed")) {
+        guard open else {            
+
             // Already closed
             promise.succeed(result: ())
             return
@@ -297,7 +298,7 @@ public class Channel : ChannelOutboundInvoker {
         
         
         // Fail all pending writes and so ensure all pending promises are notified
-        pendingWrites.failAll(error: IOError(errno: EBADF, reason: "Channel closed"))
+        pendingWrites.failAll(error: error)
     }
     
     func registerOnEventLoop(initPipeline: (ChannelPipeline) throws ->()) {
@@ -340,9 +341,6 @@ public class Channel : ChannelOutboundInvoker {
         
         readPending = false
         defer {
-            // Always call the method as last
-            pipeline.fireChannelReadComplete()
-            
             if open, !readPending {
                 switch interestedEvent {
                 case .Read:
@@ -371,12 +369,15 @@ public class Channel : ChannelOutboundInvoker {
             } catch let err {
                 pipeline.fireErrorCaught(error: err)
             
-                failPendingWritesAndClose(err: err)
+                // Call before trigger the close of the Channel.
+                pipeline.fireChannelReadComplete()
 
-                break
+                close0(error: err)
+
+                return
             }
         }
-
+        pipeline.fireChannelReadComplete()
     }
 
     private func isWritePending() -> Bool {
@@ -390,7 +391,7 @@ public class Channel : ChannelOutboundInvoker {
             try eventLoop.deregister(channel: self)
         } catch let err {
             pipeline.fireErrorCaught(error: err)
-            close0()
+            close0(error: err)
         }
     }
     
@@ -439,20 +440,13 @@ public class Channel : ChannelOutboundInvoker {
                 }
                 
             } catch let err {
-                // fail all pending writes so all promises are notified.
-                failPendingWritesAndClose(err: err)
+                close0(error: err)
                 
                 // we handled all writes
                 return true
             }
         }
         return true
-    }
-    
-    private func failPendingWritesAndClose(err: Error) {
-        // Fail all pending writes so all promises are notified.
-        pendingWrites.failAll(error: err)
-        close0()
     }
     
     init(socket: Socket, eventLoop: EventLoop) {
