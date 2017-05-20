@@ -103,7 +103,7 @@ fileprivate class PendingWrites {
             func consumeNext0(pendingWrite: PendingWrite?, count: Int, body: ([(UnsafePointer<UInt8>, Int)]) throws -> Int?) rethrows -> Int? {
                 // TODO: 1024 should be replaced by UIO_MAXIOV once its exported by Swift.
                 //       Working on a patch for Swift to do so...
-                if let pending = pendingWrite, count <= 1024 {
+                if let pending = pendingWrite, count <= Socket.writevLimit {
                     
                     // Using withReadPointer as we not want to adjust the readerIndex yet. We will do this at a higher level
                     let written = try pending.buffer.withReadPointer(body: { (pointer: UnsafePointer<UInt8>, size: Int) -> Int? in

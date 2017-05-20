@@ -31,6 +31,15 @@ let sysRead = Darwin.read
 // TODO: scattering support
 public class Socket : BaseSocket {
     
+    public static var writevLimit: Int {
+// UIO_MAXIOV is only exported on linux atm
+#if os(Linux)
+            return Int(UIO_MAXIOV)
+#else
+            return 1024
+#endif
+    }
+    
     public func write(data: Data) throws -> Int? {
         return try data.withUnsafeBytes({ try write(pointer: $0, size: data.count) })
     }
@@ -47,9 +56,7 @@ public class Socket : BaseSocket {
         // This is a bit messy as there is not other way at the moment to ensure the pointers are not "freed" before we were able to do the syscall.
         // To ensure we not get into trouble because of stackoverflow we use a limit of 1024 recursive calls for now.
         func writev0(index: Int) throws -> Int? {
-            // TODO: 1024 should be replaced by UIO_MAXIOV once its exported by Swift.
-            //       Working on a patch for Swift to do so....
-            if datas.count == iovecs.count || iovecs.count == 1024 {
+            if datas.count == iovecs.count || iovecs.count == Socket.writevLimit {
                 return try wrapSyscallMayBlock({ $0 >= 0 }, function: "writev") {
                     sysWritev(self.descriptor, iovecs, Int32(iovecs.count))
                 }
