@@ -101,8 +101,6 @@ fileprivate class PendingWrites {
             var pointers: [(UnsafePointer<UInt8>, Int)] = []
             
             func consumeNext0(pendingWrite: PendingWrite?, count: Int, body: ([(UnsafePointer<UInt8>, Int)]) throws -> Int?) rethrows -> Int? {
-                // TODO: 1024 should be replaced by UIO_MAXIOV once its exported by Swift.
-                //       Working on a patch for Swift to do so...
                 if let pending = pendingWrite, count <= Socket.writevLimit {
                     
                     // Using withReadPointer as we not want to adjust the readerIndex yet. We will do this at a higher level
@@ -124,30 +122,22 @@ fileprivate class PendingWrites {
                 }
                 
                 outstanding -= UInt64(written)
+                assert(head != nil)
                 
-                if written >= pending.buffer.readableBytes {
-                    var w = written - pending.buffer.readableBytes
-                    
-                    // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
-                    updateNodes(pending: pending)
-                    
-                    // buffer was completely written
-                    pending.promise.succeed(result: ())
-
-                    while let p = head {
-                        if w >= p.buffer.readableBytes {
-                            w -= p.buffer.readableBytes
-                            
-                            // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
-                            updateNodes(pending: p)
-
-                            // buffer was completely written
-                            p.promise.succeed(result: ())
-                        } else {
-                            // Only partly written, so update the readerIndex.
-                            p.buffer.skipBytes(num: w)
-                            break
-                        }
+                var w = written
+                while let p = head {
+                    if w >= p.buffer.readableBytes {
+                        w -= p.buffer.readableBytes
+                        
+                        // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
+                        updateNodes(pending: p)
+                        
+                        // buffer was completely written
+                        p.promise.succeed(result: ())
+                    } else {
+                        // Only partly written, so update the readerIndex.
+                        p.buffer.skipBytes(num: w)
+                        return false
                     }
                 }
                 
@@ -157,7 +147,8 @@ fileprivate class PendingWrites {
                 }
                 
                 // check if we were able to write everything or not
-                return expected == written
+                assert(expected == written)
+                return true
             }
             // could not write the complete buffer
             return false
