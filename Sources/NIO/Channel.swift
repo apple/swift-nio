@@ -192,6 +192,7 @@ public class Channel : ChannelOutboundInvoker {
 
     private let pendingWrites: PendingWrites = PendingWrites()
     private var readPending: Bool = false
+    private var neverRegistered = true
 
     public private(set) var allocator: ByteBufferAllocator = ByteBufferAllocator()
     private var recvAllocator: RecvByteBufferAllocator = FixedSizeRecvByteBufferAllocator(capacity: 8192)
@@ -342,7 +343,7 @@ public class Channel : ChannelOutboundInvoker {
         case .Write:
             safeReregister(interested: .All)
         case .None:
-            safeRegister(interested: .Read)
+            safeReregister(interested: .Read)
         default:
             break
         }
@@ -379,7 +380,9 @@ public class Channel : ChannelOutboundInvoker {
         } catch let err {
             promise.fail(error: err)
         }
-        pipeline.fireChannelUnregistered()
+        if !neverRegistered {
+            pipeline.fireChannelUnregistered()
+        }
         pipeline.fireChannelInactive()
         
         
@@ -389,15 +392,17 @@ public class Channel : ChannelOutboundInvoker {
     
     func registerOnEventLoop(initPipeline: (ChannelPipeline) throws ->()) {
         // Was not registered yet so do it now.
-        safeRegister(interested: .Read)
-        
-        do {
-            try initPipeline(pipeline)
-        
-            pipeline.fireChannelRegistered()
-        } catch let err {
-            pipeline.fireErrorCaught(error: err)
-            close0()
+        if safeRegister(interested: .Read) {
+            neverRegistered = false
+            do {
+                try initPipeline(pipeline)
+                
+                pipeline.fireChannelRegistered()
+            } catch let err {
+                pipeline.fireErrorCaught(error: err)
+                close0()
+            }
+
         }
     }
 
@@ -496,17 +501,19 @@ public class Channel : ChannelOutboundInvoker {
 
     }
     
-    private func safeRegister(interested: InterestedEvent) {
+    private func safeRegister(interested: InterestedEvent) -> Bool {
         guard open else {
             interestedEvent = .None
-            return
+            return false
         }
         interestedEvent = interested
         do {
             try eventLoop.register(channel: self)
+            return true
         } catch let err {
             pipeline.fireErrorCaught(error: err)
             close0(error: err)
+            return false
         }
     }
 
