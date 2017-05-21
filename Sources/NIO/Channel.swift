@@ -500,7 +500,7 @@ public class Channel : ChannelOutboundInvoker {
             try eventLoop.reregister(channel: self)
         } catch let err {
             pipeline.fireErrorCaught(error: err)
-            close0()
+            close0(error: err)
         }
 
     }
@@ -515,7 +515,7 @@ public class Channel : ChannelOutboundInvoker {
             try eventLoop.register(channel: self)
         } catch let err {
             pipeline.fireErrorCaught(error: err)
-            close0()
+            close0(error: err)
         }
     }
 
@@ -568,6 +568,7 @@ public class FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
     let capacity: Int
 
     public init(capacity: Int) {
+        precondition(capacity > 0)
         self.capacity = capacity
     }
 

@@ -31,13 +31,13 @@ public class Server {
         let selector = try Sockets.Selector()
         
         defer {
-            do { try selector.close() } catch { }
+            _ = try? selector.close()
         }
         
         let server = try ServerSocket()
         
         defer {
-            do { try server.close() } catch { }
+           _ = try? server.close()
         }
         
         try server.bind(address: address)
@@ -51,7 +51,7 @@ public class Server {
         try eventLoop.register(server: server)
         
         defer {
-            do { try eventLoop.close() } catch { }
+            _  = try? eventLoop.close()
         }
         try eventLoop.run(initPipeline: initPipeline)
     }
