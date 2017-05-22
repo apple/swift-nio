@@ -52,8 +52,25 @@ extension UInt64 {
     }
 }
 
-public struct ByteBuffer { // TODO: Equatable, Comparable
+public enum Endianess {
+    public static let host: Endianess = hostEndianess0()
+    
+    private static func hostEndianess0() -> Endianess {
+        let number: UInt32 = 0x12345678
+        let converted = number.bigEndian
+        if number == converted {
+            return .Big
+        } else {
+            return .Little
+        }
+    }
 
+    case Big
+    case Little
+}
+
+public struct ByteBuffer { // TODO: Equatable, Comparable
+   
     private static func reallocatedData(minimumCapacity: Int, source: Data?, allocator: ByteBufferAllocator) -> Data {
         let newCapacity = Int(UInt64(minimumCapacity).nextPowerOf2())
         var newData = Data(bytesNoCopy: UnsafeMutableRawPointer.allocate(bytes: newCapacity,
@@ -105,8 +122,8 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
     public private(set) var readerIndex = 0, markedReaderIndex = 0
     public private(set) var writerIndex = 0, markedWriterIndex = 0
 
-    var writableBytes: Int { return self.capacity - self.writerIndex }
-    var readableBytes: Int { return self.writerIndex - self.readerIndex }
+    public var writableBytes: Int { return self.capacity - self.writerIndex }
+    public var readableBytes: Int { return self.writerIndex - self.readerIndex }
     
     public init(allocator: ByteBufferAllocator, startingCapacity: Int, maxCapacity: Int) throws {
         precondition(startingCapacity >= 0)
@@ -116,7 +133,6 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         self.maxCapacity = maxCapacity
         self.data = ByteBuffer.reallocatedData(minimumCapacity: startingCapacity, source: nil, allocator: allocator)
     }
-
     
     /**
      Discards the bytes between the 0th index and readerIndex. It moves the bytes between readerIndex and
@@ -150,8 +166,6 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
                                                    allocator: self.allocator)
             return (enoughSpace: true, capacityIncreased: true)
     }
-
-    
     
     public func withReadPointer<T>(body: (UnsafePointer<UInt8>, Int) throws -> T) rethrows -> T {
         return try data.withUnsafeBytes({ try body($0.advanced(by: readerIndex), readableBytes) })
@@ -186,7 +200,69 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         return body(data)
     }
     
-    // TODO: get/skip/set for all the type conversions
+
+    private mutating func expandIfNeeded(index: Int, size: Int) -> Bool {
+        let v = capacity - (index + size)
+        
+        guard v >= 0 && ensureWritable(bytesNeeded: -v, expandIfRequired: true).enoughSpace else {
+            return false
+        }
+        return true
+    }
+
+    private func toEndianess<T: EndianessInteger> (value: T, endianess: Endianess) -> T {
+        switch endianess {
+        case .Little:
+            return value.littleEndian
+        case .Big:
+            return value.bigEndian
+        }
+    }
+
+    public mutating func readInteger<T: EndianessInteger>(endianess: Endianess = .Big) -> T? {
+        if let int: T = getInteger(index: readerIndex, endianess: endianess) {
+            readerIndex += MemoryLayout<T>.size
+            return int
+        }
+        return nil
+    }
+    
+    public func getInteger<T: EndianessInteger>(index: Int, endianess: Endianess = .Big) -> T? {
+        guard index + MemoryLayout<T>.size < capacity else {
+            return nil
+        }
+        let intBits = data.withUnsafeBytes({(bytePointer: UnsafePointer<UInt8>) -> T in
+            bytePointer.advanced(by: index).withMemoryRebound(to: T.self, capacity: 1) { pointer in
+                return pointer.pointee
+            }
+        })
+        return toEndianess(value: intBits, endianess: endianess)
+    }
+    
+    public mutating func setInteger<T: EndianessInteger>(index: Int, value: T, endianess: Endianess = .Big) -> Int? {
+        let size = MemoryLayout<T>.size
+        if expandIfNeeded(index: index, size: size) {
+            var v = toEndianess(value: value, endianess: endianess)
+            
+            withUnsafePointer(to: &v) { valPointer in
+                valPointer.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<T>.size) { p in
+                    data.withUnsafeMutableBytes({ (dataPointer: UnsafeMutablePointer<UInt8>) -> Void in
+                        dataPointer.advanced(by: index).assign(from: p, count: MemoryLayout<T>.size)
+                    })
+                }
+            }
+            return size
+        }
+        return nil
+    }
+    
+    public mutating func writeInteger<T: EndianessInteger>(value: T, endianess: Endianess = .Big) -> Int? {
+        if let bytes = setInteger(index: writerIndex, value: value, endianess: endianess) {
+            writerIndex += bytes
+            return bytes
+        }
+        return nil
+    }
     
     // TODO: indexOf, bytesBefore, forEachByte, copy, reatinedSlice/slice, duplicate, direct buffer access?, backing byte array access?
     
@@ -268,4 +344,51 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         readerIndex = reader
         writerIndex = writer
     }
+}
+
+// Extensions to allow convert to different Endianess.
+
+extension UInt8 : EndianessInteger {
+    public var littleEndian: UInt8 {
+        return self
+    }
+
+    public var bigEndian: UInt8 {
+        return self
+    }
+}
+extension UInt16 : EndianessInteger { }
+extension UInt32 : EndianessInteger { }
+extension UInt64 : EndianessInteger { }
+extension Int8 : EndianessInteger {
+    public var littleEndian: Int8 {
+        return self
+    }
+    
+    public var bigEndian: Int8 {
+        return self
+    }
+}
+extension Int16 : EndianessInteger { }
+extension Int32 : EndianessInteger { }
+extension Int64 : EndianessInteger { }
+
+extension Bool {
+    public var byte: UInt8 {
+        if self {
+            return 1
+        }
+        return 0
+    }
+}
+
+public protocol EndianessInteger: Integer {
+
+    /// Returns the big-endian representation of the integer, changing the
+    /// byte order if necessary.
+    var bigEndian: Self { get }
+    
+    /// Returns the little-endian representation of the integer, changing the
+    /// byte order if necessary.
+    var littleEndian: Self { get }
 }
