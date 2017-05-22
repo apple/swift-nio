@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+import Errno
 
 public struct IOError: Swift.Error {
     
@@ -37,31 +38,12 @@ func reasonForError(errno: Int32, function: String) -> String {
     }
 }
 
-@inline(never)
-private func callWithErrno<A>(_ fn: () -> A) -> (result: A, errno_value: Int32) {
-    var result: A? = nil
-    var savedErrno: Int32 = 0
-    withExtendedLifetime(fn) {
-        result = fn()
-        savedErrno = errno
-    }
-    return (result!, savedErrno)
-}
-
 func wrapSyscall<A>(function: @autoclosure () -> String,
-                        _ successCondition: (A) -> Bool, _ fn: () -> A) throws -> A {
-    while true {
-        let (result, err) = callWithErrno(fn)
-        if !successCondition(result) {
-            precondition(err != 0, "errno is 0, successCondition wrong")
-            precondition(![EBADF, EFAULT].contains(err), "backlisted errno \(err) (\(String(utf8String: strerror(errno))!)) on \(function())")
-            if err == EINTR {
-                continue
-            }
-            throw ioError(errno: err, function: function())
-        } else {
-            return result
-        }
+                    _ successCondition: (A) -> Bool, _ fn: () -> A) throws -> A {
+    do {
+        return try withErrno(hint: "", successCondition: successCondition, fn)
+    } catch let e as POSIXReasonedError {
+        throw ioError(errno: e.code, function: function())
     }
 }
 
