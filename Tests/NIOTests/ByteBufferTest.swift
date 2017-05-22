@@ -52,7 +52,7 @@ class ByteBufferTest: XCTestCase {
     }
     
     private func setGetInt<T: EndianessInteger>(index: Int, v: T) throws {
-        var buffer = try! allocator.buffer(capacity: 32)
+        var buffer = try allocator.buffer(capacity: 32)
         
         XCTAssertEqual(MemoryLayout<T>.size, buffer.setInteger(index: index, value: v))
         XCTAssertEqual(v, buffer.getInteger(index: index))
@@ -91,7 +91,7 @@ class ByteBufferTest: XCTestCase {
     }
     
     private func writeReadInt<T: EndianessInteger>(v: T) throws {
-        var buffer = try! allocator.buffer(capacity: 32)
+        var buffer = try allocator.buffer(capacity: 32)
         XCTAssertEqual(0, buffer.writerIndex)
         XCTAssertEqual(MemoryLayout<T>.size, buffer.writeInteger(value: v))
         XCTAssertEqual(MemoryLayout<T>.size, buffer.writerIndex)
@@ -101,7 +101,7 @@ class ByteBufferTest: XCTestCase {
     }
     
     func testSlice() throws {
-        var buffer = try! allocator.buffer(capacity: 32)
+        var buffer = try allocator.buffer(capacity: 32)
         XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.writeInteger(value: UInt64.max))
         var slice = buffer.slice()
         XCTAssertEqual(MemoryLayout<UInt64>.size, slice.readableBytes)
@@ -111,7 +111,7 @@ class ByteBufferTest: XCTestCase {
     }
     
     func testSliceWithParams() throws {
-        var buffer = try! allocator.buffer(capacity: 32)
+        var buffer = try allocator.buffer(capacity: 32)
         XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.writeInteger(value: UInt64.max))
         var slice = buffer.slice(from: 0, length: MemoryLayout<UInt64>.size)!
         XCTAssertEqual(MemoryLayout<UInt64>.size, slice.readableBytes)
@@ -121,7 +121,7 @@ class ByteBufferTest: XCTestCase {
     }
     
     func testReadSlice() throws {
-        var buffer = try! allocator.buffer(capacity: 32)
+        var buffer = try allocator.buffer(capacity: 32)
         XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.writeInteger(value: UInt64.max))
         var slice = buffer.readSlice(length: buffer.readableBytes)!
         XCTAssertEqual(MemoryLayout<UInt64>.size, slice.readableBytes)
@@ -132,7 +132,7 @@ class ByteBufferTest: XCTestCase {
     }
     
     func testSliceNoCopy() throws {
-        var buffer = try! allocator.buffer(capacity: 32)
+        var buffer = try allocator.buffer(capacity: 32)
         XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.writeInteger(value: UInt64.max))
         let slice = buffer.readSlice(length: buffer.readableBytes)!
     
@@ -141,5 +141,24 @@ class ByteBufferTest: XCTestCase {
                 XCTAssertEqual(ptr1, ptr2)
             })
         }
+    }
+    
+    func testSetGetData() throws {
+        var buffer = try allocator.buffer(capacity: 32)
+        let data = Data(bytes: [1, 2, 3])
+        
+        XCTAssertEqual(3, buffer.setData(index: 0, value: data))
+        XCTAssertEqual(0, buffer.readableBytes)
+        XCTAssertEqual(data, buffer.getData(index: 0, length: 3))
+    }
+    
+    
+    func testWriteReadData() throws {
+        var buffer = try allocator.buffer(capacity: 32)
+        let data = Data(bytes: [1, 2, 3])
+        
+        XCTAssertEqual(3, buffer.writeData(value: data))
+        XCTAssertEqual(3, buffer.readableBytes)
+        XCTAssertEqual(data, buffer.readData(length: 3))
     }
 }

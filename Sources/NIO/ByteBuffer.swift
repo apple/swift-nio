@@ -286,6 +286,39 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         return nil
     }
     
+    public mutating func setData(index: Int, value: Data) -> Int? {
+        if expandIfNeeded(index: index, size: value.count) {
+            let idx = applyOffset(index)
+            data.replaceSubrange(idx..<idx + value.count, with: value)
+            return value.count
+        }
+        return nil
+    }
+    
+    public mutating func writeData(value: Data) -> Int? {
+        if let bytes = setData(index: writerIndex, value: value) {
+            writerIndex += bytes
+            return bytes
+        }
+        return nil
+    }
+    
+    public mutating func getData(index: Int, length: Int) -> Data? {
+        guard length <= capacity - index else {
+            return nil
+        }
+        let idx = applyOffset(index)
+        return data.subdata(in: idx..<idx + length)
+    }
+    
+    public mutating func readData(length: Int) -> Data? {
+        if let data = getData(index: readerIndex, length: length) {
+            readerIndex += data.count
+            return data
+        }
+        return nil
+    }
+    
     // TODO: indexOf, bytesBefore, forEachByte, backing byte array access?
     
     // TODO: Generics to avoid this?
