@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import NIO
 import XCTest
+@testable import NIO
 
 class ByteBufferTest: XCTestCase {
     let allocator = ByteBufferAllocator()
@@ -98,5 +98,48 @@ class ByteBufferTest: XCTestCase {
         
         XCTAssertEqual(v, buffer.readInteger())
         XCTAssertEqual(0, buffer.readableBytes)
+    }
+    
+    func testSlice() throws {
+        var buffer = try! allocator.buffer(capacity: 32)
+        XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.writeInteger(value: UInt64.max))
+        var slice = buffer.slice()
+        XCTAssertEqual(MemoryLayout<UInt64>.size, slice.readableBytes)
+        XCTAssertEqual(UInt64.max, slice.readInteger())
+        XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.readableBytes)
+        XCTAssertEqual(UInt64.max, buffer.readInteger())
+    }
+    
+    func testSliceWithParams() throws {
+        var buffer = try! allocator.buffer(capacity: 32)
+        XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.writeInteger(value: UInt64.max))
+        var slice = buffer.slice(from: 0, length: MemoryLayout<UInt64>.size)!
+        XCTAssertEqual(MemoryLayout<UInt64>.size, slice.readableBytes)
+        XCTAssertEqual(UInt64.max, slice.readInteger())
+        XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.readableBytes)
+        XCTAssertEqual(UInt64.max, buffer.readInteger())
+    }
+    
+    func testReadSlice() throws {
+        var buffer = try! allocator.buffer(capacity: 32)
+        XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.writeInteger(value: UInt64.max))
+        var slice = buffer.readSlice(length: buffer.readableBytes)!
+        XCTAssertEqual(MemoryLayout<UInt64>.size, slice.readableBytes)
+        XCTAssertEqual(UInt64.max, slice.readInteger())
+        XCTAssertEqual(0, buffer.readableBytes)
+        let value: UInt64? = buffer.readInteger()
+        XCTAssertTrue(value == nil)
+    }
+    
+    func testSliceNoCopy() throws {
+        var buffer = try! allocator.buffer(capacity: 32)
+        XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.writeInteger(value: UInt64.max))
+        let slice = buffer.readSlice(length: buffer.readableBytes)!
+    
+        buffer.data.withUnsafeBytes { (ptr1: UnsafePointer<UInt8>) -> Void in
+            slice.data.withUnsafeBytes({ (ptr2: UnsafePointer<UInt8>) -> Void in
+                XCTAssertEqual(ptr1, ptr2)
+            })
+        }
     }
 }
