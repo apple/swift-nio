@@ -160,7 +160,7 @@ public class Selector {
     public func awaitReady() throws -> Array<SelectorEvent>? {
 #if os(Linux)
         let ready = try wrapSyscall({ $0 >= 0 }, function: "epoll_wait") {
-            CEpoll.epoll_wait(self.fd, events, 2048, 0)
+            CEpoll.epoll_wait(self.fd, events, 2048, -1)
         }
         if (ready > 0) {
             var sEvents = [SelectorEvent]()
