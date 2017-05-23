@@ -17,7 +17,8 @@ import Future
 import Sockets
 
 public protocol ChannelOutboundInvoker {
-    
+    func register() -> Future<Void>
+    func register(promise: Promise<Void>) -> Future<Void>
     func bind(address: SocketAddress) -> Future<Void>
     func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void>
 
@@ -37,6 +38,10 @@ public protocol ChannelOutboundInvoker {
 }
 
 public extension ChannelOutboundInvoker {
+    public func register() -> Future<Void> {
+        return register(promise: eventLoop.newPromise(type: Void.self))
+    }
+    
     public func bind(address: SocketAddress) -> Future<Void> {
         return bind(address: address, promise: eventLoop.newPromise(type: Void.self))
     }

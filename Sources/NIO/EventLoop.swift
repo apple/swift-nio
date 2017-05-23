@@ -22,15 +22,10 @@ public class EventLoop {
     private let thread: Thread
     private var tasks: [() -> ()]
 
-    init() throws{
+    init() throws {
         self.selector = try Sockets.Selector()
         self.tasks = Array()
         thread = Thread.current
-    }
-    
-    func register(server: ServerSocket) throws {
-        assert(inEventLoop)
-        try self.selector.register(selectable: server)
     }
     
     func register(channel: Channel) throws {
@@ -66,54 +61,39 @@ public class EventLoop {
         return promise.futureResult
     }
 
-    func run(initPipeline: (ChannelPipeline) throws -> ()) throws {
+    func run() throws {
         assert(inEventLoop)
         while true {
             // Block until there are events to handle
             if let events = try selector.awaitReady() {
                 for ev in events {
-                    if ev.selectable is Socket {
-                        let channel = ev.attachment as! Channel
-
+                    
+                    guard let channel = ev.attachment as? Channel else {
+                        fatalError("ev.attachment has type \(type(of: ev.attachment)), expected Channel")
+                    }
+                        
+                    guard handleEvents(channel) else {
+                        continue
+                    }
+                    
+                    if ev.isWritable {
+                        channel.flushFromEventLoop()
+                        
                         guard handleEvents(channel) else {
                             continue
                         }
-
-                        if ev.isWritable {
-                            channel.flushFromEventLoop()
-                            
-                            guard handleEvents(channel) else {
-                                continue
-                            }
-                        }
+                    }
+                    
+                    if ev.isReadable {
+                        channel.readFromEventLoop()
                         
-                        if ev.isReadable {
-                            channel.readFromEventLoop()
-                            
-                            guard handleEvents(channel) else {
-                                continue
-                            }
-                        }
-                        
-                        // Ensure we never reach here if the channel is not open anymore.
-                        assert(channel.open)
-                    } else if ev.selectable is ServerSocket {
-                        let socket = ev.selectable as! ServerSocket
-                        
-                        // This should be never true
-                        assert(!ev.isWritable)
-                        
-                        // Only accept one time as we only try to read one time as well
-                        if let accepted = try socket.accept() {
-                            try accepted.setNonBlocking()
-                            
-                            let channel = Channel(socket: accepted, eventLoop: self)
-                            channel.registerOnEventLoop(initPipeline: initPipeline)
-                            if channel.open {
-                                channel.pipeline.fireChannelActive()
-                            }
+                        guard handleEvents(channel) else {
+                            continue
                         }
                     }
+                    
+                    // Ensure we never reach here if the channel is not open anymore.
+                    assert(channel.open)
                 }
                 
                 // Execute all the tasks that were summited

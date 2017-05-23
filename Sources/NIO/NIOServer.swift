@@ -21,38 +21,50 @@ public class Server {
     
     private init() { }
 
-    public class func run(host: String, port: Int32, initPipeline: (ChannelPipeline) throws -> ()) throws {
-        try Server.run(address: SocketAddresses.newAddress(for: host, on: port)!, initPipeline: initPipeline)
+    public class func run(host: String, port: Int32, initChannel: @escaping (Channel) throws -> ()) throws {
+        try Server.run(address: SocketAddresses.newAddress(for: host, on: port)!, initChannel: initChannel)
     }
     
-    public class func run(address: SocketAddress, initPipeline: (ChannelPipeline) throws -> ()) throws {
+    public class func run(address: SocketAddress, initChannel: @escaping (Channel) throws -> ()) throws {
         
-        // Bootstrap the server and create the Selector on which we register our sockets.
-        let selector = try Sockets.Selector()
-        
-        defer {
-            _ = try? selector.close()
-        }
-        
-        let server = try ServerSocket()
-        
-        defer {
-           _ = try? server.close()
-        }
-        
-        try server.bind(address: address)
-        try server.listen()
-        
-        try server.setNonBlocking()
-        try server.setOption(level: SOL_SOCKET, name: SO_REUSEADDR, value: 1)
-
         let eventLoop: EventLoop = try EventLoop()
+
+        defer {
+            _ = try? eventLoop.close()
+        }
         
-        try eventLoop.register(server: server)
+        let serverChannel = try ServerSocketChannel(eventLoop: eventLoop)
         
         defer {
-            _  = try? eventLoop.close()
+           _ = serverChannel.close()
         }
-        try eventLoop.run(initPipeline: initPipeline)
+
+        
+        try serverChannel.pipeline.add(handler: AcceptHandler(childHandler: ChannelInitializer(initChannel: initChannel)))
+        try serverChannel.register().then{
+            return serverChannel.bind(address: address)
+        }.wait()
+        
+        try eventLoop.run()
+    }
+    
+    private class AcceptHandler : ChannelHandler {
+        
+        private let childHandler: ChannelHandler
+        
+        init(childHandler: ChannelHandler) {
+            self.childHandler = childHandler
+        }
+        
+        func channelRead(ctx: ChannelHandlerContext, data: Any) {
+            if let accepted = data as? SocketChannel {
+                do {
+                    try accepted.pipeline.add(handler: childHandler)
+                } catch {
+                    _ = accepted.close()
+                }
+            }
+            ctx.fireChannelRead(data: data)
+        }
     }
 }

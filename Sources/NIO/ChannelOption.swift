@@ -81,6 +81,13 @@ public enum MaxMessagesPerReadOption: ChannelOption {
     case const(())
 }
 
+public enum BacklogOption: ChannelOption {
+    public typealias AssociatedValueType = ()
+    public typealias OptionType = Int32
+    
+    case const(())
+}
+
 public struct ChannelOptions {
 #if os(Linux)
     public static let Socket = { (level: Int, name: Int32) -> SocketOption in .const((level, name)) }
@@ -91,4 +98,5 @@ public struct ChannelOptions {
     public static let RecvAllocator = RecvAllocatorOption.const(())
     public static let AutoRead = AutoReadOption.const(())
     public static let MaxMessagesPerRead = MaxMessagesPerReadOption.const(())
+    public static let Backlog = BacklogOption.const(())
 }

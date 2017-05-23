@@ -181,13 +181,115 @@ fileprivate class PendingWrites {
     }
 }
 
+public class SocketChannel : Channel {
+    fileprivate init(socket: Socket, eventLoop: EventLoop) throws {
+        try socket.setNonBlocking()
+        super.init(socket: socket, eventLoop: eventLoop)
+    }
+    
+    override fileprivate func readFromSocket() throws -> Any? {
+        var buffer = try recvAllocator.buffer(allocator: allocator)
+        if let bytesRead = try buffer.withMutableWritePointer { try (self.socket as! Socket).read(pointer: $0, size: $1) } {
+            if bytesRead > 0 {
+                return buffer
+            } else {
+                // end-of-file
+                close0()
+                return nil
+            }
+        }
+        return nil
+    }
+    
+    override fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> Bool? {
+        return try pendingWrites.consume(oneBody: {
+            // normal write
+            return try (self.socket as! Socket).write(pointer: $0, size: $1)
+        }, multipleBody: {
+            // gathering write
+            return try (self.socket as! Socket).writev(pointers: $0)
+        })
+    }
+}
+
+public class ServerSocketChannel : Channel {
+    
+    private var backlog: Int32 = 128
+    
+    public init(eventLoop: EventLoop) throws {
+        let serverSocket = try ServerSocket()
+        do {
+            try serverSocket.setNonBlocking()
+        } catch let err {
+            let _ = try? serverSocket.close()
+            throw err
+        }
+        super.init(socket: serverSocket, eventLoop: eventLoop)
+    }
+
+    override public func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws {
+        if option is BacklogOption {
+            backlog = value as! Int32
+        } else {
+            try super.setOption(option: option, value: value)
+        }
+    }
+    
+    override public func getOption<T: ChannelOption>(option: T) throws -> T.OptionType {
+        if option is BacklogOption {
+            return backlog as! T.OptionType
+        }
+        return try super.getOption(option: option)
+    }
+
+    override func bind0(address: SocketAddress, promise: Promise<Void>) {
+        do {
+            try socket.bind(address: address)
+            try (self.socket as! ServerSocket).listen(backlog: backlog)
+            promise.succeed(result: ())
+            pipeline.fireChannelActive()
+        } catch let err {
+            promise.fail(error: err)
+        }
+    }
+
+    override fileprivate func readFromSocket() throws -> Any? {
+        if let accepted =  try (self.socket as! ServerSocket).accept() {
+            do {
+                return try SocketChannel(socket: accepted, eventLoop: eventLoop)
+            } catch let err {
+                let _ = try? accepted.close()
+                pipeline.fireErrorCaught(error: err)
+            }
+        }
+        return nil
+    }
+    
+    override fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> Bool? {
+        pendingWrites.failAll(error: MessageError.unsupported)
+        return true
+    }
+    
+    override internal func channelRead(data: Any) {
+        if let ch = data as? Channel {
+            let f = ch.register()
+            f.whenFailure(callback: { err in
+                _ = ch.close()
+            })
+            f.whenSuccess {
+                ch.pipeline.fireChannelActive()
+            }
+        }
+    }
+}
+
 public class Channel : ChannelOutboundInvoker {
     public private(set) var open: Bool = true
 
     public let eventLoop: EventLoop
 
     // Visible to access from EventLoop directly
-    internal let socket: Socket
+    internal let socket: BaseSocket
     internal var interestedEvent: InterestedEvent = .None
 
     private let pendingWrites: PendingWrites = PendingWrites()
@@ -195,9 +297,9 @@ public class Channel : ChannelOutboundInvoker {
     private var neverRegistered = true
 
     public private(set) var allocator: ByteBufferAllocator = ByteBufferAllocator()
-    private var recvAllocator: RecvByteBufferAllocator = FixedSizeRecvByteBufferAllocator(capacity: 8192)
-    private var autoRead: Bool = true
-    private var maxMessagesPerRead: UInt = 1
+    fileprivate var recvAllocator: RecvByteBufferAllocator = FixedSizeRecvByteBufferAllocator(capacity: 8192)
+    fileprivate var autoRead: Bool = true
+    fileprivate var maxMessagesPerRead: UInt = 1
 
     public lazy var pipeline: ChannelPipeline = ChannelPipeline(channel: self)
 
@@ -389,23 +491,21 @@ public class Channel : ChannelOutboundInvoker {
         // Fail all pending writes and so ensure all pending promises are notified
         pendingWrites.failAll(error: error)
     }
-    
-    func registerOnEventLoop(initPipeline: (ChannelPipeline) throws ->()) {
+
+    func register0(promise: Promise<Void>) {
         // Was not registered yet so do it now.
         if safeRegister(interested: .Read) {
             neverRegistered = false
-            do {
-                try initPipeline(pipeline)
-                
-                pipeline.fireChannelRegistered()
-            } catch let err {
-                pipeline.fireErrorCaught(error: err)
-                close0()
-            }
-
+            promise.succeed(result: ())
+            pipeline.fireChannelRegistered()
+        } else {
+            promise.succeed(result: ())
         }
     }
-
+    public func register(promise: Promise<Void>) -> Future<Void> {
+        return pipeline.register(promise: promise)
+    }
+    
     // Methods invoked from the EventLoop itself
     func flushFromEventLoop() {
         assert(open)
@@ -446,16 +546,10 @@ public class Channel : ChannelOutboundInvoker {
         
         for _ in 1...maxMessagesPerRead {
             do {
-                var buffer = try recvAllocator.buffer(allocator: allocator)
-                
-                if let bytesRead = try buffer.withMutableWritePointer { try self.socket.read(pointer: $0, size: $1) } {
-                    if bytesRead > 0 {
-                        pipeline.fireChannelRead(data: buffer)
-                    } else {
-                        // end-of-file
-                        close0()
-                        return
-                    }
+                if let read = try readFromSocket() {
+                    pipeline.fireChannelRead(data: read)
+                } else {
+                    break
                 }
             } catch let err {
                 pipeline.fireErrorCaught(error: err)
@@ -469,6 +563,19 @@ public class Channel : ChannelOutboundInvoker {
             }
         }
         pipeline.fireChannelReadComplete()
+    }
+    
+    fileprivate func readFromSocket() throws -> Any? {
+        fatalError("this must be overridden by sub class")
+    }
+
+    
+    fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> Bool? {
+        fatalError("this must be overridden by sub class")
+    }
+    
+    internal func channelRead(data: Any) {
+        // Do nothing by default
     }
 
     private func isWritePending() -> Bool {
@@ -520,13 +627,7 @@ public class Channel : ChannelOutboundInvoker {
     private func flushNow() -> Bool {
         while open {
             do {
-                if let written = try pendingWrites.consume(oneBody: {
-                    // normal write
-                    return try self.socket.write(pointer: $0, size: $1)
-                }, multipleBody: {
-                    // gathering write
-                    return try self.socket.writev(pointers: $0)
-                }) {
+                if let written = try writeToSocket(pendingWrites: pendingWrites) {
                     if !written {
                         // Could not write the next buffer(s) completely
                         return false
@@ -547,7 +648,7 @@ public class Channel : ChannelOutboundInvoker {
         return true
     }
     
-    init(socket: Socket, eventLoop: EventLoop) {
+    fileprivate init(socket: BaseSocket, eventLoop: EventLoop) {
         self.socket = socket
         self.eventLoop = eventLoop
     }

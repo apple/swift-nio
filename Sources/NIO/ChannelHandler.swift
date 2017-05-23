@@ -26,6 +26,7 @@ public protocol ChannelHandler : class {
     func channelWritabilityChanged(ctx: ChannelHandlerContext, writable: Bool) throws
     func userEventTriggered(ctx: ChannelHandlerContext, event: Any) throws
     func errorCaught(ctx: ChannelHandlerContext, error: Error) throws
+    func register(ctx: ChannelHandlerContext, promise: Promise<Void>)
     func bind(ctx: ChannelHandlerContext, address: SocketAddress, promise: Promise<Void>)
     func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>)
     func flush(ctx: ChannelHandlerContext)
@@ -75,8 +76,12 @@ public extension ChannelHandler {
         ctx.fireErrorCaught(error: error)
     }
 
+    public func register(ctx: ChannelHandlerContext, promise: Promise<Void>) {
+        let _ = ctx.register(promise: promise)
+    }
+    
     public func bind(ctx: ChannelHandlerContext, address: SocketAddress, promise: Promise<Void>) {
-        let _ = ctx.bind(address: address)
+        let _ = ctx.bind(address: address, promise: promise)
     }
     
     public func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>) {

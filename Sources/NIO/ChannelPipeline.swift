@@ -202,6 +202,11 @@ public class ChannelPipeline : ChannelInboundInvoker {
         return promise.futureResult
     }
     
+    internal func register(promise: Promise<Void>) -> Future<Void> {
+        tail!.invokeRegister(promise: promise)
+        return promise.futureResult
+    }
+    
     // Only executed from Channel
     init (channel: Channel) {
         self.channel = channel
@@ -220,6 +225,10 @@ private class HeadChannelHandler : ChannelHandler {
 
     private init() { }
 
+    func register(ctx: ChannelHandlerContext, promise: Promise<Void>) {
+        ctx.channel!.register0(promise: promise)
+    }
+    
     func bind(ctx: ChannelHandlerContext, address: SocketAddress, promise: Promise<Void>) {
         ctx.channel!.bind0(address: address, promise: promise)
     }
@@ -302,7 +311,7 @@ private class TailChannelHandler : ChannelHandler {
     }
     
     func channelRead(ctx: ChannelHandlerContext, data: Any) {
-        // TODO: Log this and tell the user that its most likely a fault not handling it.
+        ctx.channel!.channelRead(data: data)
     }
 }
 
@@ -372,6 +381,11 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     
     public func fireUserEventTriggered(event: Any) {
         next!.invokeUserEventTriggered(event: event)
+    }
+    
+    public func register(promise: Promise<Void>) -> Future<Void> {
+        prev!.invokeRegister(promise: promise)
+        return promise.futureResult
     }
     
     public func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void> {
@@ -491,6 +505,12 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         } catch let err {
             invokeErrorCaught(error: err)
         }
+    }
+    
+    func invokeRegister(promise: Promise<Void>) {
+        assert(inEventLoop)
+        
+        handler.register(ctx: self, promise: promise)
     }
     
     func invokeBind(address: SocketAddress, promise: Promise<Void>) {

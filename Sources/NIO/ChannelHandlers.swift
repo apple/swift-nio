@@ -56,3 +56,20 @@ public class BackPressureHandler: ChannelHandler {
         }
     }
 }
+
+public class ChannelInitializer: ChannelHandler {
+    private let initChannel: (Channel) throws ->()
+    public init(initChannel: @escaping (Channel) throws ->()) {
+        self.initChannel = initChannel
+    }
+
+    public func channelRegistered(ctx: ChannelHandlerContext) throws {
+        defer {
+            let _ = ctx.pipeline?.remove(handler: self)
+        }
+        if let ch = ctx.channel {
+            try initChannel(ch)
+        }
+        ctx.fireChannelRegistered()
+    }
+}

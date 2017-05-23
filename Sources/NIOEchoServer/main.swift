@@ -42,9 +42,9 @@ public class EchoHandler: ChannelHandler {
     }
 }
 
-try Server.run(host: "0.0.0.0", port: 9999, initPipeline: { pipeline in
+try Server.run(host: "0.0.0.0", port: 9999, initChannel: { channel in
     // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
-    try pipeline.add(handler: BackPressureHandler())
-    try pipeline.add(handler: EchoHandler())
+    try channel.pipeline.add(handler: BackPressureHandler())
+    try channel.pipeline.add(handler: EchoHandler())
 })
 
