@@ -18,10 +18,6 @@ import Future
 
 public class EchoHandler: ChannelHandler {
     
-    public func channelActive(ctx: ChannelHandlerContext) throws {
-        try ctx.channel?.setOption(option: ChannelOptions.Socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
-    }
-    
     public func channelRead(ctx: ChannelHandlerContext, data: Any) {
         let f = ctx.write(data: data)
 
@@ -42,9 +38,25 @@ public class EchoHandler: ChannelHandler {
     }
 }
 
-try Server.run(host: "0.0.0.0", port: 9999, initChannel: { channel in
-    // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
-    try channel.pipeline.add(handler: BackPressureHandler())
-    try channel.pipeline.add(handler: EchoHandler())
-})
+let bootstrap = try ServerBootstrap()
+    // Specify backlog and enable SO_REUSEADDR for the server itself
+    .option(option: ChannelOptions.Backlog, value: 256)
+    .option(option: ChannelOptions.Socket(SOL_SOCKET, SO_REUSEADDR), value: 1)
+
+    // Set the handlers that are appled to the accepted Channels
+    .handler(childHandler: ChannelInitializer(initChannel: { channel in
+        // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
+        try channel.pipeline.add(handler: BackPressureHandler())
+        try channel.pipeline.add(handler: EchoHandler())
+    }))
+    
+    // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels
+    .option(childOption: ChannelOptions.Socket(IPPROTO_TCP, TCP_NODELAY), childValue: 1)
+    .option(childOption: ChannelOptions.Socket(SOL_SOCKET, SO_REUSEADDR), childValue: 1)
+
+defer {
+    _ = try? bootstrap.close()
+}
+
+try bootstrap.bind(host: "0.0.0.0", port: 9999).wait()
 
