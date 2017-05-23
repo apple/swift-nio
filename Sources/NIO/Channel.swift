@@ -266,7 +266,7 @@ public class ServerSocketChannel : Channel {
     }
     
     override fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> Bool? {
-        pendingWrites.failAll(error: MessageError.unsupported)
+        pendingWrites.failAll(error: ChannelError.messageUnsupported)
         return true
     }
     
@@ -400,15 +400,15 @@ public class Channel : ChannelOutboundInvoker {
 
     func write0(data: Any, promise: Promise<Void>) {
         guard open else {
-            // Channel was already closed to fail the promise and not even queue it.
-            promise.fail(error: IOError(errno: EBADF, reason: "Channel closed"))
+            // Channel was already closed, fail the promise and not even queue it.
+            promise.fail(error: ChannelError.closed)
             return
         }
         if let buffer = data as? ByteBuffer {
             pendingWrites.add(buffer: buffer, promise: promise)
         } else {
             // Only support ByteBuffer for now. 
-            promise.fail(error: MessageError.unsupported)
+            promise.fail(error: ChannelError.messageUnsupported)
         }
     }
 
@@ -465,7 +465,7 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
     
-    func close0(promise: Promise<Void> = Promise<Void>(), error: Error = IOError(errno: EBADF, reason: "Channel closed")) {
+    func close0(promise: Promise<Void> = Promise<Void>(), error: Error = ChannelError.closed) {
         guard open else {            
 
             // Already closed
@@ -676,6 +676,7 @@ public class FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
     }
 }
 
-enum MessageError: Error {
-    case unsupported
+public enum ChannelError: Error {
+    case messageUnsupported
+    case closed
 }
