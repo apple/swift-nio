@@ -323,7 +323,7 @@ public class Channel : ChannelOutboundInvoker {
 
     // Visible to access from EventLoop directly
     internal let socket: BaseSocket
-    internal var interestedEvent: InterestedEvent = .None
+    internal var interestedEvent: InterestedEvent = .none
 
     private let pendingWrites: PendingWrites = PendingWrites()
     private var readPending: Bool = false
@@ -457,10 +457,10 @@ public class Channel : ChannelOutboundInvoker {
             }
 
             switch interestedEvent {
-            case .Read:
-                safeReregister(interested: .All)
-            case .None:
-                safeReregister(interested: .Write)
+            case .read:
+                safeReregister(interested: .all)
+            case .none:
+                safeReregister(interested: .write)
             default:
                 break
             }
@@ -476,10 +476,10 @@ public class Channel : ChannelOutboundInvoker {
         readPending = true
         
         switch interestedEvent {
-        case .Write:
-            safeReregister(interested: .All)
-        case .None:
-            safeReregister(interested: .Read)
+        case .write:
+            safeReregister(interested: .all)
+        case .none:
+            safeReregister(interested: .read)
         default:
             break
         }
@@ -490,10 +490,10 @@ public class Channel : ChannelOutboundInvoker {
             return
         }
         switch interestedEvent {
-        case .Read:
-            safeReregister(interested: .None)
-        case .All:
-            safeReregister(interested: .Write)
+        case .read:
+            safeReregister(interested: .none)
+        case .all:
+            safeReregister(interested: .write)
         default:
             break
         }
@@ -528,7 +528,7 @@ public class Channel : ChannelOutboundInvoker {
 
     func register0(promise: Promise<Void>) {
         // Was not registered yet so do it now.
-        if safeRegister(interested: .Read) {
+        if safeRegister(interested: .read) {
             neverRegistered = false
             promise.succeed(result: ())
             pipeline.fireChannelRegistered()
@@ -554,7 +554,7 @@ public class Channel : ChannelOutboundInvoker {
             }
             if readPending {
                 // Start reading again
-                safeReregister(interested: .Read)
+                safeReregister(interested: .read)
             } else {
                 // No read pending so just deregister from the EventLoop for now.
                 safeDeregister()
@@ -569,10 +569,10 @@ public class Channel : ChannelOutboundInvoker {
         defer {
             if open, !readPending {
                 switch interestedEvent {
-                case .Read:
-                    safeReregister(interested: .None)
-                case .All:
-                    safeReregister(interested: .Write)
+                case .read:
+                    safeReregister(interested: .none)
+                case .all:
+                    safeReregister(interested: .write)
                 default:
                     break
                 }
@@ -614,12 +614,12 @@ public class Channel : ChannelOutboundInvoker {
     }
 
     private func isWritePending() -> Bool {
-        return interestedEvent == .Write || interestedEvent == .All
+        return interestedEvent == .write || interestedEvent == .all
     }
     
     // Methods only used from within this class
     private func safeDeregister() {
-        interestedEvent = .None
+        interestedEvent = .none
         do {
             try eventLoop.deregister(channel: self)
         } catch let err {
@@ -630,7 +630,7 @@ public class Channel : ChannelOutboundInvoker {
     
     private func safeReregister(interested: InterestedEvent) {
         guard open else {
-            interestedEvent = .None
+            interestedEvent = .none
             return
         }
         interestedEvent = interested
@@ -645,7 +645,7 @@ public class Channel : ChannelOutboundInvoker {
     
     private func safeRegister(interested: InterestedEvent) -> Bool {
         guard open else {
-            interestedEvent = .None
+            interestedEvent = .none
             return false
         }
         interestedEvent = interested

@@ -83,13 +83,13 @@ while true {
                                 // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
                                 // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
                                 if buffer.offset < buffer.limit {
-                                    try selector.reregister(selectable: s, interested: InterestedEvent.Write)
+                                    try selector.reregister(selectable: s, interested: InterestedEvent.write)
                                 }
                                 
                             } else {
                                 // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
                                 // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
-                                try selector.reregister(selectable: s, interested: InterestedEvent.Write)
+                                try selector.reregister(selectable: s, interested: InterestedEvent.write)
                             }
                             
                         }
@@ -121,7 +121,7 @@ while true {
                             
                             if buffer.offset == buffer.limit {
                                 // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socket to read.
-                                try selector.reregister(selectable: s, interested: InterestedEvent.Read)
+                                try selector.reregister(selectable: s, interested: InterestedEvent.read)
                             }
                         }
                     } catch {

@@ -74,16 +74,16 @@ public class Selector {
         events.1.udata = nil
         
         switch interested {
-        case .Read:
+        case .read:
             events.0.flags = UInt16(Int16(EV_ADD))
             events.1.flags = UInt16(Int16(EV_DELETE))
-        case .Write:
+        case .write:
             events.0.flags = UInt16(Int16(EV_DELETE))
             events.1.flags = UInt16(Int16(EV_ADD))
-        case .All:
+        case .all:
             events.0.flags = UInt16(Int16(EV_ADD))
             events.1.flags = UInt16(Int16(EV_ADD))
-        case .None:
+        case .none:
             events.0.flags = UInt16(Int16(EV_DELETE))
             events.1.flags = UInt16(Int16(EV_DELETE))
         }
@@ -115,7 +115,7 @@ public class Selector {
     }
 #endif
  
-    public func register(selectable: Selectable, interested: InterestedEvent = InterestedEvent.Read, attachment: AnyObject? = nil) throws {
+    public func register(selectable: Selectable, interested: InterestedEvent = .read, attachment: AnyObject? = nil) throws {
 #if os(Linux)
         var ev = epoll_event()
         ev.events = toEpollEvents(interested: interested)
@@ -154,7 +154,7 @@ public class Selector {
             CEpoll.epoll_ctl(self.fd, EPOLL_CTL_DEL, selectable.descriptor, &ev)
         }
 #else
-        try register_kqueue(selectable: selectable, interested: InterestedEvent.None)
+        try register_kqueue(selectable: selectable, interested: .none)
 #endif
     }
     
@@ -274,8 +274,8 @@ public enum SelectorStrategy {
 }
 
 public enum InterestedEvent {
-    case Read
-    case Write
-    case All
-    case None
+    case read
+    case write
+    case all
+    case none
 }
