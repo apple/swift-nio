@@ -39,22 +39,26 @@ public protocol ChannelOutboundInvoker {
 
 public extension ChannelOutboundInvoker {
     public func register() -> Future<Void> {
-        return register(promise: eventLoop.newPromise(type: Void.self))
+        return register(promise: newVoidPromise())
     }
     
     public func bind(address: SocketAddress) -> Future<Void> {
-        return bind(address: address, promise: eventLoop.newPromise(type: Void.self))
+        return bind(address: address, promise: newVoidPromise())
     }
     
     public func write(data: Any) -> Future<Void> {
-        return write(data: data, promise: eventLoop.newPromise(type: Void.self))
+        return write(data: data, promise: newVoidPromise())
     }
     
     public func writeAndFlush(data: Any) -> Future<Void> {
-        return writeAndFlush(data: data, promise: eventLoop.newPromise(type: Void.self))
+        return writeAndFlush(data: data, promise: newVoidPromise())
     }
     
     public func close() -> Future<Void> {
-        return close(promise: eventLoop.newPromise(type: Void.self))
+        return close(promise: newVoidPromise())
+    }
+    
+    private func newVoidPromise() -> Promise<Void> {
+        return eventLoop.newPromise(type: Void.self)
     }
 }

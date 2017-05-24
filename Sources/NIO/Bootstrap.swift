@@ -117,9 +117,10 @@ public class ServerBootstrap {
     }
 }
 
-public struct ChannelOptionStorage {
+fileprivate struct ChannelOptionStorage {
     private var storage: [(Any, (Any, (Channel) -> (Any, Any) throws -> Void))] = []
-    public mutating func put<K: ChannelOption>(key: K,
+    
+    mutating func put<K: ChannelOption>(key: K,
                              value newValue: K.OptionType) {
         func applier(_ t: Channel) -> (Any, Any) throws -> Void {
             return { (x, y) in
@@ -141,7 +142,7 @@ public struct ChannelOptionStorage {
         
     }
   
-    public func applyAll(channel: Channel) throws {
+    func applyAll(channel: Channel) throws {
         for (type, value) in self.storage {
             try value.1(channel)(type, value.0)
         }
