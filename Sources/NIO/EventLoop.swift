@@ -65,7 +65,7 @@ public class EventLoop {
         assert(inEventLoop)
         while true {
             // Block until there are events to handle
-            if let events = try selector.awaitReady() {
+            if let events = try selector.ready(strategy: .block) {
                 for ev in events {
                     
                     guard let channel = ev.attachment as? Channel else {

@@ -26,10 +26,11 @@ public class Selector {
     private let fd: Int32
 #if os(Linux)
     private typealias EventType = epoll_event
+    private let eventsCapacity = 2048
 #else
     private typealias EventType = kevent
-#endif
     private let eventsCapacity = 2048
+#endif
     private let events: UnsafeMutablePointer<EventType>
 
 
@@ -157,10 +158,36 @@ public class Selector {
 #endif
     }
     
-    public func awaitReady() throws -> Array<SelectorEvent>? {
 #if os(Linux)
+    private func toEpollWaitTimeout(strategy: SelectStrategy) -> Int {
+        switch strategy {
+        case .block:
+            return -1
+        case .now:
+            return 0
+        case .blockUntilTimeout(let ms):
+            return ms
+        }
+    }
+#else
+    private func toKQueueTimeSpec(strategy: SelectorStrategy) -> timespec? {
+        switch strategy {
+        case .block:
+            return nil
+        case .now:
+            return timespec(tv_sec: 0, tv_nsec: 0)
+        case .blockUntilTimeout(let ms):
+            // Convert to nanoseconds
+            return timespec(tv_sec: 0, tv_nsec: ms * 1000 * 1000)
+        }
+    }
+
+#endif
+    public func ready(strategy: SelectorStrategy) throws -> Array<SelectorEvent>? {
+#if os(Linux)
+        let timeout = toEpollWaitTimeout(strategy: strategy)
         let ready = try wrapSyscall({ $0 >= 0 }, function: "epoll_wait") {
-            CEpoll.epoll_wait(self.fd, events, 2048, -1)
+            CEpoll.epoll_wait(self.fd, events, eventsCapacity, timeout)
         }
         if (ready > 0) {
             var sEvents = [SelectorEvent]()
@@ -178,8 +205,14 @@ public class Selector {
             return sEvents
         }
 #else
+        let timespec = toKQueueTimeSpec(strategy: strategy)
+    
         let ready = try wrapSyscall({ $0 >= 0 }, function: "kevent") {
-            kevent(self.fd, nil, 0, events, 2048, nil)
+            if var ts = timespec {
+                return Int(kevent(self.fd, nil, 0, events, Int32(eventsCapacity), &ts))
+            } else {
+                return Int(kevent(self.fd, nil, 0, events, Int32(eventsCapacity), nil))
+            }
         }
         if (ready > 0) {
             var sEvents = [SelectorEvent]()
@@ -232,6 +265,12 @@ public struct SelectorEvent {
         self.selectable = selectable
         self.attachment = attachment
     }
+}
+
+public enum SelectorStrategy {
+    case block
+    case blockUntilTimeout(ms: Int)
+    case now
 }
 
 public enum InterestedEvent {

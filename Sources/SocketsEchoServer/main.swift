@@ -62,7 +62,7 @@ try server.setOption(level: SOL_SOCKET, name: SO_REUSEADDR, value: 1)
 
 while true {
     // Block until there are events to handle
-    if let events = try selector.awaitReady() {
+    if let events = try selector.ready(strategy: .block) {
         for ev in events {
             if ev.isReadable {
                 
