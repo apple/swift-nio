@@ -35,7 +35,7 @@ public class ServerSocket: BaseSocket {
     
     public class func bootstrap(host: String, port: Int32) throws -> ServerSocket {
         let socket = try ServerSocket();
-        try socket.bind(address: SocketAddresses.newAddress(for: host, on: port)!)
+        try socket.bind(local: SocketAddresses.newAddress(for: host, on: port)!)
         try socket.listen()
         return socket
     }

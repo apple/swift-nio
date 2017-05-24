@@ -53,11 +53,11 @@ public class ServerBootstrap {
     }
     
     public func bind(host: String, port: Int32) -> Future<Void> {
-        return bind(address: SocketAddresses.newAddress(for: host, on: port)!)
+        return bind(local: SocketAddresses.newAddress(for: host, on: port)!)
     }
     
     // TODO: At the moment this never returns but once we make the whole thing multi-threaded it will.
-    public func bind(address: SocketAddress) -> Future<Void> {
+    public func bind(local: SocketAddress) -> Future<Void> {
         do {
             let serverChannel = try ServerSocketChannel(eventLoop: eventLoop)
             
@@ -73,7 +73,7 @@ public class ServerBootstrap {
             try options.applyAll(channel: serverChannel)
 
             try serverChannel.register().then(callback: { (void: Void) -> Future<Void> in
-                return serverChannel.bind(address: address)
+                return serverChannel.bind(local: local)
             }).wait()
 
             

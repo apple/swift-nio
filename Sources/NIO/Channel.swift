@@ -243,6 +243,14 @@ public class SocketChannel : Channel {
             return try (self.socket as! Socket).writev(pointers: $0)
         })
     }
+    
+    override fileprivate func connectSocket(remote: SocketAddress) throws -> Bool {
+        return try (self.socket as! Socket).connect(remote: remote)
+    }
+    
+    override fileprivate func finishConnectSocket() throws {
+        try (self.socket as! Socket).finishConnect()
+    }
 }
 
 public class ServerSocketChannel : Channel {
@@ -275,9 +283,9 @@ public class ServerSocketChannel : Channel {
         return try super.getOption(option: option)
     }
 
-    override func bind0(address: SocketAddress, promise: Promise<Void>) {
+    override func bind0(local: SocketAddress, promise: Promise<Void>) {
         do {
-            try socket.bind(address: address)
+            try socket.bind(local: local)
             try (self.socket as! ServerSocket).listen(backlog: backlog)
             promise.succeed(result: ())
             pipeline.fireChannelActive()
@@ -285,7 +293,15 @@ public class ServerSocketChannel : Channel {
             promise.fail(error: err)
         }
     }
-
+    
+    override fileprivate func connectSocket(remote: SocketAddress) throws -> Bool {
+        throw ChannelError.operationUnsupported
+    }
+    
+    override fileprivate func finishConnectSocket() throws {
+        throw ChannelError.operationUnsupported
+    }
+    
     override fileprivate func readFromSocket() throws -> Any? {
         if let accepted =  try (self.socket as! ServerSocket).accept() {
             do {
@@ -299,7 +315,7 @@ public class ServerSocketChannel : Channel {
     }
     
     override fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> Bool? {
-        pendingWrites.failAll(error: ChannelError.messageUnsupported)
+        pendingWrites.failAll(error: ChannelError.operationUnsupported)
         return true
     }
     
@@ -317,6 +333,7 @@ public class ServerSocketChannel : Channel {
 }
 
 public class Channel : ChannelOutboundInvoker {
+
     public private(set) var open: Bool = true
 
     public let eventLoop: EventLoop
@@ -328,6 +345,7 @@ public class Channel : ChannelOutboundInvoker {
     private let pendingWrites: PendingWrites = PendingWrites()
     private var readPending: Bool = false
     private var neverRegistered = true
+    private var pendingConnect: Promise<Void>?
 
     public private(set) var allocator: ByteBufferAllocator = ByteBufferAllocator()
     fileprivate var recvAllocator: RecvByteBufferAllocator = FixedSizeRecvByteBufferAllocator(capacity: 8192)
@@ -397,8 +415,12 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
 
-    @discardableResult public func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void> {
-        return pipeline.bind(address: address, promise: promise)
+    @discardableResult public func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+        return pipeline.bind(local: local, promise: promise)
+    }
+    
+    @discardableResult public func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+        return pipeline.connect(remote: remote, promise: promise)
     }
     
     @discardableResult public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
@@ -422,9 +444,9 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     // Methods invoked from the HeadHandler of the ChannelPipeline
-    func bind0(address: SocketAddress, promise: Promise<Void> ) {
+    func bind0(local: SocketAddress, promise: Promise<Void> ) {
         do {
-            try socket.bind(address: address)
+            try socket.bind(local: local)
             promise.succeed(result: ())
         } catch let err {
             promise.fail(error: err)
@@ -445,6 +467,17 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
 
+    private func registerForWritable() {
+        switch interestedEvent {
+        case .read:
+            safeReregister(interested: .all)
+        case .none:
+            safeReregister(interested: .write)
+        default:
+            break
+        }
+    }
+
     func flush0() {
         guard !isWritePending() else {
             return
@@ -456,15 +489,7 @@ public class Channel : ChannelOutboundInvoker {
                 return
             }
 
-            switch interestedEvent {
-            case .read:
-                safeReregister(interested: .all)
-            case .none:
-                safeReregister(interested: .write)
-            default:
-                break
-            }
- 
+            registerForWritable()
             pipeline.fireChannelWritabilityChanged(writable: false)
         }
     }
@@ -524,6 +549,11 @@ public class Channel : ChannelOutboundInvoker {
         
         // Fail all pending writes and so ensure all pending promises are notified
         pendingWrites.failAll(error: error)
+        
+        if let connectPromise = pendingConnect {
+            pendingConnect = nil
+            connectPromise.fail(error: error)
+        }
     }
 
     func register0(promise: Promise<Void>) {
@@ -540,29 +570,54 @@ public class Channel : ChannelOutboundInvoker {
         return pipeline.register(promise: promise)
     }
     
+
     // Methods invoked from the EventLoop itself
-    func flushFromEventLoop() {
+    internal func writable() {
         assert(open)
 
+        if finishConnect() {
+            finishWritable()
+            return
+        }
+        
         // This flush is triggered by the EventLoop which means it should only try to write the messages that were marked as flushed before
         if flushNow(markFlushCheckpoint: false) {
             // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socketto read.
             pipeline.fireChannelWritabilityChanged(writable: true)
             
-            guard open else {
-                return
-            }
-            if readPending {
-                // Start reading again
-                safeReregister(interested: .read)
-            } else {
-                // No read pending so just deregister from the EventLoop for now.
-                safeDeregister()
-            }
+            finishWritable()
         }
     }
     
-    func readFromEventLoop() {
+    private func finishConnect() -> Bool {
+        if let connectPromise = pendingConnect {
+            pendingConnect = nil
+            do {
+                try finishConnectSocket()
+                connectPromise.succeed(result: ())
+            } catch let error {
+                connectPromise.fail(error: error)
+            }
+            return true
+        }
+        return false
+    }
+    
+    private func finishWritable() {
+        guard open else {
+            return
+        }
+        
+        if readPending {
+            // Start reading again
+            safeReregister(interested: .read)
+        } else {
+            // No read pending so just deregister from the EventLoop for now.
+            safeDeregister()
+        }
+    }
+    
+    internal func readable() {
         assert(open)
         
         readPending = false
@@ -598,6 +653,28 @@ public class Channel : ChannelOutboundInvoker {
             }
         }
         pipeline.fireChannelReadComplete()
+    }
+    
+    fileprivate func connectSocket(remote: SocketAddress) throws -> Bool {
+        fatalError("this must be overridden by sub class")
+    }
+    
+    fileprivate func finishConnectSocket() throws {
+        fatalError("this must be overridden by sub class")
+    }
+    
+    func connect0(remote: SocketAddress, promise: Promise<Void>) {
+        guard pendingConnect == nil else {
+            promise.fail(error: ChannelError.connectPending)
+            return
+        }
+        do {
+            if try !connectSocket(remote: remote) {
+                registerForWritable()
+            }
+        } catch let error {
+            promise.fail(error: error)
+        }
     }
     
     fileprivate func readFromSocket() throws -> Any? {
@@ -715,6 +792,8 @@ public class FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
 }
 
 public enum ChannelError: Error {
+    case connectPending
     case messageUnsupported
+    case operationUnsupported
     case closed
 }

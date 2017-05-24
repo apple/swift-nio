@@ -20,11 +20,14 @@ import Glibc
 let sysWrite = Glibc.write
 let sysWritev = Glibc.writev
 let sysRead = Glibc.read
+let sysConnect = Glibc.connect
+
 #else
 import Darwin
 let sysWrite = Darwin.write
 let sysWritev = Darwin.writev
 let sysRead = Darwin.read
+let sysConnect = Darwin.connect
 #endif
 
 
@@ -38,6 +41,41 @@ public class Socket : BaseSocket {
 #else
             return 1024
 #endif
+    }
+
+    public func connect(remote: SocketAddress) throws  -> Bool {
+        switch remote {
+        case .v4(address: let addr):
+            return try connectSocket(addr: addr)
+        case .v6(address: let addr):
+            return try connectSocket(addr: addr)
+        }
+    }
+    
+    private func connectSocket<T>(addr: T) throws -> Bool {
+        var addr = addr
+        return try withUnsafePointer(to: &addr) { (ptr: UnsafePointer<T>) -> Bool in
+            try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
+                do {
+                    let _ = try wrapSyscall({ $0 != -1 }, function: "connect") {
+                        sysConnect(self.descriptor, ptr, socklen_t(MemoryLayout.size(ofValue: addr)))
+                    }
+                    return true
+                } catch let err as IOError {
+                    if err.errno == EINPROGRESS {
+                        return false
+                    }
+                    throw err
+                }
+            }
+        }
+    }
+    
+    public func finishConnect() throws {
+        let result: Int32 = try getOption(level: SOL_SOCKET, name: SO_ERROR)
+        if result != 0 {
+            throw ioError(errno: result, function: "getsockopt")
+        }
     }
     
     public func write(data: Data) throws -> Int? {

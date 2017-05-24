@@ -27,7 +27,8 @@ public protocol ChannelHandler : class {
     func userEventTriggered(ctx: ChannelHandlerContext, event: Any) throws
     func errorCaught(ctx: ChannelHandlerContext, error: Error) throws
     func register(ctx: ChannelHandlerContext, promise: Promise<Void>)
-    func bind(ctx: ChannelHandlerContext, address: SocketAddress, promise: Promise<Void>)
+    func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>)
+    func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>)
     func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>)
     func flush(ctx: ChannelHandlerContext)
     // TODO: Think about make this more flexible in terms of influence the allocation that is used to read the next amount of data
@@ -80,8 +81,12 @@ public extension ChannelHandler {
         ctx.register(promise: promise)
     }
     
-    public func bind(ctx: ChannelHandlerContext, address: SocketAddress, promise: Promise<Void>) {
-        ctx.bind(address: address, promise: promise)
+    public func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>) {
+        ctx.bind(local: local, promise: promise)
+    }
+    
+    public func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>) {
+        ctx.connect(remote: remote, promise: promise)
     }
     
     public func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>) {

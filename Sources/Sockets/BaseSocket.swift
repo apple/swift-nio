@@ -80,8 +80,8 @@ public class BaseSocket : Selectable {
         return val.pointee
     }
     
-    public func bind(address: SocketAddress) throws {
-        switch address {
+    public func bind(local: SocketAddress) throws {
+        switch local {
         case .v4(address: let addr):
             try bindSocket(addr: addr)
         case .v6(address: let addr):

@@ -77,7 +77,7 @@ public class EventLoop {
                     }
                     
                     if ev.isWritable {
-                        channel.flushFromEventLoop()
+                        channel.writable()
                         
                         guard handleEvents(channel) else {
                             continue
@@ -85,7 +85,7 @@ public class EventLoop {
                     }
                     
                     if ev.isReadable {
-                        channel.readFromEventLoop()
+                        channel.readable()
                         
                         guard handleEvents(channel) else {
                             continue

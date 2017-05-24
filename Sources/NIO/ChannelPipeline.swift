@@ -197,8 +197,13 @@ public class ChannelPipeline : ChannelInboundInvoker {
         return promise.futureResult
     }
     
-    internal func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void> {
-        tail!.invokeBind(address: address, promise: promise)
+    internal func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+        tail!.invokeBind(local: local, promise: promise)
+        return promise.futureResult
+    }
+    
+    internal func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+        tail!.invokeConnect(remote: remote, promise: promise)
         return promise.futureResult
     }
     
@@ -229,8 +234,12 @@ private class HeadChannelHandler : ChannelHandler {
         ctx.channel!.register0(promise: promise)
     }
     
-    func bind(ctx: ChannelHandlerContext, address: SocketAddress, promise: Promise<Void>) {
-        ctx.channel!.bind0(address: address, promise: promise)
+    func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>) {
+        ctx.channel!.bind0(local: local, promise: promise)
+    }
+    
+    func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>) {
+        ctx.channel!.connect0(remote: remote, promise: promise)
     }
     
     func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>) {
@@ -388,8 +397,13 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         return promise.futureResult
     }
     
-    @discardableResult public func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void> {
-        prev!.invokeBind(address: address, promise: promise)
+    @discardableResult public func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+        prev!.invokeBind(local: local, promise: promise)
+        return promise.futureResult
+    }
+    
+    @discardableResult public func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+        prev!.invokeBind(local: remote, promise: promise)
         return promise.futureResult
     }
 
@@ -513,12 +527,18 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         handler.register(ctx: self, promise: promise)
     }
     
-    func invokeBind(address: SocketAddress, promise: Promise<Void>) {
+    func invokeBind(local: SocketAddress, promise: Promise<Void>) {
         assert(inEventLoop)
         
-        handler.bind(ctx: self, address: address, promise: promise)
+        handler.bind(ctx: self, local: local, promise: promise)
     }
     
+    func invokeConnect(remote: SocketAddress, promise: Promise<Void>) {
+        assert(inEventLoop)
+        
+        handler.connect(ctx: self, remote: remote, promise: promise)
+    }
+
     func invokeWrite(data: Any, promise: Promise<Void>) {
         assert(inEventLoop)
         
