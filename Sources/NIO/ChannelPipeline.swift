@@ -53,7 +53,7 @@ public class ChannelPipeline : ChannelInboundInvoker {
         }
     }
 
-    public func remove(handler: ChannelHandler) -> Bool {
+    @discardableResult public func remove(handler: ChannelHandler) -> Bool {
         guard let ctx = getCtx(equalsFunc: { ctx in
             return ctx.handler === handler
         }) else {
@@ -64,7 +64,7 @@ public class ChannelPipeline : ChannelInboundInvoker {
         return true
     }
     
-    public func remove(name: String) -> Bool {
+    @discardableResult public func remove(name: String) -> Bool {
         guard let ctx = getCtx(equalsFunc: { ctx in
             return ctx.name == name
         }) else {
@@ -383,22 +383,22 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         next!.invokeUserEventTriggered(event: event)
     }
     
-    public func register(promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func register(promise: Promise<Void>) -> Future<Void> {
         prev!.invokeRegister(promise: promise)
         return promise.futureResult
     }
     
-    public func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void> {
         prev!.invokeBind(address: address, promise: promise)
         return promise.futureResult
     }
 
-    public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
         prev!.invokeWrite(data: data, promise: promise)
         return promise.futureResult
     }
     
-    public func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
         prev!.invokeWriteAndFlush(data: data, promise: promise)
         return promise.futureResult
     }
@@ -411,7 +411,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
         prev!.invokeRead()
     }
     
-    public func close(promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func close(promise: Promise<Void>) -> Future<Void> {
         prev!.invokeClose(promise: promise)
         return promise.futureResult
     }

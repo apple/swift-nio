@@ -397,11 +397,11 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
 
-    public func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void> {
         return pipeline.bind(address: address, promise: promise)
     }
     
-    public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
         return pipeline.write(data: data, promise: promise)
     }
     
@@ -413,11 +413,11 @@ public class Channel : ChannelOutboundInvoker {
         pipeline.read()
     }
     
-    public func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
         return pipeline.writeAndFlush(data: data, promise: promise)
     }
     
-    public func close(promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func close(promise: Promise<Void>) -> Future<Void> {
         return pipeline.close(promise: promise)
     }
     

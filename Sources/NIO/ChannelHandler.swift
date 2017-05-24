@@ -77,15 +77,15 @@ public extension ChannelHandler {
     }
 
     public func register(ctx: ChannelHandlerContext, promise: Promise<Void>) {
-        let _ = ctx.register(promise: promise)
+        ctx.register(promise: promise)
     }
     
     public func bind(ctx: ChannelHandlerContext, address: SocketAddress, promise: Promise<Void>) {
-        let _ = ctx.bind(address: address, promise: promise)
+        ctx.bind(address: address, promise: promise)
     }
     
     public func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>) {
-        let _ = ctx.write(data: data, promise: promise)
+        ctx.write(data: data, promise: promise)
     }
     
     public func flush(ctx: ChannelHandlerContext) {
@@ -97,7 +97,7 @@ public extension ChannelHandler {
     }
 
     public func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
-        let _ = ctx.close(promise: promise)
+        ctx.close(promise: promise)
     }
     
     public func handlerAdded(ctx: ChannelHandlerContext) {

@@ -18,21 +18,21 @@ import Sockets
 
 public protocol ChannelOutboundInvoker {
     func register() -> Future<Void>
-    func register(promise: Promise<Void>) -> Future<Void>
+    @discardableResult func register(promise: Promise<Void>) -> Future<Void>
     func bind(address: SocketAddress) -> Future<Void>
-    func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void>
+    @discardableResult func bind(address: SocketAddress, promise: Promise<Void>) -> Future<Void>
 
     func write(data: Any) -> Future<Void>
-    func write(data: Any, promise: Promise<Void>) -> Future<Void>
+    @discardableResult func write(data: Any, promise: Promise<Void>) -> Future<Void>
 
     func flush()
     func read()
     
     func writeAndFlush(data: Any) -> Future<Void>
-    func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void>
+    @discardableResult func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void>
 
     func close() -> Future<Void>
-    func close(promise: Promise<Void>) -> Future<Void>
+    @discardableResult func close(promise: Promise<Void>) -> Future<Void>
     
     var eventLoop: EventLoop { get }
 }
