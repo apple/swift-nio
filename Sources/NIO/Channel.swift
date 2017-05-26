@@ -500,6 +500,17 @@ public class Channel : ChannelOutboundInvoker {
         }
         readPending = true
         
+        registerForReadable()
+    }
+
+    func stopReading0() {
+        guard open else {
+            return
+        }
+        unregisterForReadable()
+    }
+    
+    private func registerForReadable() {
         switch interestedEvent {
         case .write:
             safeReregister(interested: .all)
@@ -509,11 +520,8 @@ public class Channel : ChannelOutboundInvoker {
             break
         }
     }
-
-    func stopReading0() {
-        guard open else {
-            return
-        }
+    
+    private func unregisterForReadable() {
         switch interestedEvent {
         case .read:
             safeReregister(interested: .none)
@@ -623,14 +631,7 @@ public class Channel : ChannelOutboundInvoker {
         readPending = false
         defer {
             if open, !readPending {
-                switch interestedEvent {
-                case .read:
-                    safeReregister(interested: .none)
-                case .all:
-                    safeReregister(interested: .write)
-                default:
-                    break
-                }
+                unregisterForReadable()
             }
         }
         
