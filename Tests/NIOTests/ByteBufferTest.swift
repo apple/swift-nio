@@ -19,6 +19,18 @@ import XCTest
 class ByteBufferTest: XCTestCase {
     let allocator = ByteBufferAllocator()
 
+    func testWriteStringMovesWriterIndex() {
+        var buf = try! allocator.buffer(capacity: 1024)
+        buf.write(string: "hello")
+        XCTAssertEqual(5, buf.writerIndex)
+        buf.withMutableReadPointer { ptr, size in
+            let s = String(bytesNoCopy: ptr, length: size, encoding: .utf8, freeWhenDone: false)
+            XCTAssertEqual("hello", s)
+            return 0
+        }
+    }
+
+
     func testSetGetInt8() throws {
         try setGetInt(index: 0, v: Int8.max)
     }

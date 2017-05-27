@@ -326,7 +326,7 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         let _ = withMutableWritePointer { (writePtr: UnsafeMutablePointer<UInt8>, size: Int) -> Int in
             // TODO: Can we avoid the double copy? getBytes seems almost, but not quite right.
             if let data = string.data(using: .utf8) {
-                let _ = data.withUnsafeBytes { writePtr.assign(from: $0, count: 1) }
+                let _ = data.withUnsafeBytes { writePtr.assign(from: $0, count: data.count) }
                 return data.count
             } else {
                 return 0
