@@ -173,4 +173,53 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(3, buffer.readableBytes)
         XCTAssertEqual(data, buffer.readData(length: 3))
     }
+    
+    func testDiscardReadBytes() throws {
+        var buffer = try allocator.buffer(capacity: 32)
+        buffer.writeInteger(value: UInt8(1))
+        buffer.writeInteger(value: UInt8(2))
+        buffer.writeInteger(value: UInt8(3))
+        buffer.writeInteger(value: UInt8(4))
+        XCTAssertEqual(4, buffer.readableBytes)
+        buffer.skipBytes(num: 2)
+        XCTAssertEqual(2, buffer.readableBytes)
+        XCTAssertEqual(2, buffer.readerIndex)
+        XCTAssertEqual(4, buffer.writerIndex)
+        XCTAssertTrue(buffer.discardReadBytes())
+        XCTAssertEqual(2, buffer.readableBytes)
+        XCTAssertEqual(0, buffer.readerIndex)
+        XCTAssertEqual(2, buffer.writerIndex)
+        XCTAssertEqual(UInt8(3), buffer.readInteger())
+        XCTAssertEqual(UInt8(4), buffer.readInteger())
+        XCTAssertEqual(0, buffer.readableBytes)
+        XCTAssertTrue(buffer.discardReadBytes())
+        XCTAssertFalse(buffer.discardReadBytes())
+    }
+    
+    
+    func testDiscardReadBytesSlice() throws {
+        var buffer = try allocator.buffer(capacity: 32)
+        buffer.writeInteger(value: UInt8(1))
+        buffer.writeInteger(value: UInt8(2))
+        buffer.writeInteger(value: UInt8(3))
+        buffer.writeInteger(value: UInt8(4))
+        XCTAssertEqual(4, buffer.readableBytes)
+        var slice = buffer.slice(from: 1, length: 3)!
+        XCTAssertEqual(3, slice.readableBytes)
+        XCTAssertEqual(0, slice.readerIndex)
+
+        slice.skipBytes(num: 1)
+        XCTAssertEqual(2, slice.readableBytes)
+        XCTAssertEqual(1, slice.readerIndex)
+        XCTAssertEqual(3, slice.writerIndex)
+        XCTAssertTrue(slice.discardReadBytes())
+        XCTAssertEqual(2, slice.readableBytes)
+        XCTAssertEqual(0, slice.readerIndex)
+        XCTAssertEqual(2, slice.writerIndex)
+        XCTAssertEqual(UInt8(3), slice.readInteger())
+        XCTAssertEqual(UInt8(4), slice.readInteger())
+        XCTAssertEqual(0,slice.readableBytes)
+        XCTAssertTrue(slice.discardReadBytes())
+        XCTAssertFalse(slice.discardReadBytes())
+    }
 }

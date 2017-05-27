@@ -149,8 +149,16 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
      Discards the bytes between the 0th index and readerIndex. It moves the bytes between readerIndex and
      writerIndex to the 0th index, and sets readerIndex to 0 and writerIndex to oldWriterIndex - oldReaderIndex
      */
-    public mutating func discardReadBytes() {
-        // TODO
+    @discardableResult public mutating func discardReadBytes() -> Bool {
+        guard readerIndex > 0 else {
+            return false
+        }
+        data.withUnsafeMutableBytes { (p: UnsafeMutablePointer<UInt8>) -> Void in
+            p.advanced(by: offset).assign(from: p.advanced(by: applyOffset(readerIndex)), count: readableBytes)
+        }
+        writerIndex = writerIndex - readerIndex
+        readerIndex = 0
+        return true
     }
 
     // Tries to make sure that the number of writable bytes is equal to or greater than the specified value.
