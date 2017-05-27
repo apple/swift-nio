@@ -89,7 +89,7 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
     }
 
     // Mark as internal so we can access it in tests.
-    internal var data: Data
+    var data: Data
     
     /**
          Adjusts the capacity of the buffer. If the new capacity is less than the current

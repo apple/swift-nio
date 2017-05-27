@@ -174,40 +174,40 @@ public class ChannelPipeline : ChannelInboundInvoker {
         head!.invokeErrorCaught(error: error)
     }
     
-    internal func close(promise: Promise<Void>) -> Future<Void> {
+    func close(promise: Promise<Void>) -> Future<Void> {
         tail!.invokeClose(promise: promise)
         return promise.futureResult
     }
     
-    internal func flush() {
+    func flush() {
         tail!.invokeFlush()
     }
     
-    internal func read() {
+    func read() {
         tail!.invokeRead()
     }
 
-    internal func write(data: Any, promise: Promise<Void>) -> Future<Void> {
+    func write(data: Any, promise: Promise<Void>) -> Future<Void> {
         tail!.invokeWrite(data: data, promise: promise)
         return promise.futureResult
     }
     
-    internal func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
+    func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
         tail!.invokeWriteAndFlush(data: data, promise: promise)
         return promise.futureResult
     }
     
-    internal func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+    func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
         tail!.invokeBind(local: local, promise: promise)
         return promise.futureResult
     }
     
-    internal func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+    func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void> {
         tail!.invokeConnect(remote: remote, promise: promise)
         return promise.futureResult
     }
     
-    internal func register(promise: Promise<Void>) -> Future<Void> {
+    func register(promise: Promise<Void>) -> Future<Void> {
         tail!.invokeRegister(promise: promise)
         return promise.futureResult
     }

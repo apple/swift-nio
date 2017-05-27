@@ -319,7 +319,7 @@ public class ServerSocketChannel : Channel {
         return true
     }
     
-    override internal func channelRead(data: Any) {
+    override func channelRead(data: Any) {
         if let ch = data as? Channel {
             let f = ch.register()
             f.whenFailure(callback: { err in
@@ -339,8 +339,8 @@ public class Channel : ChannelOutboundInvoker {
     public let eventLoop: EventLoop
 
     // Visible to access from EventLoop directly
-    internal let socket: BaseSocket
-    internal var interestedEvent: InterestedEvent = .none
+    let socket: BaseSocket
+    var interestedEvent: InterestedEvent = .none
 
     private let pendingWrites: PendingWrites = PendingWrites()
     private var readPending: Bool = false
@@ -409,7 +409,7 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
 
-    internal func readIfNeeded() {
+    func readIfNeeded() {
         if autoRead {
             read()
         }
@@ -580,7 +580,7 @@ public class Channel : ChannelOutboundInvoker {
     
 
     // Methods invoked from the EventLoop itself
-    internal func writable() {
+    func writable() {
         assert(open)
 
         if finishConnect() {
@@ -625,7 +625,7 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
     
-    internal func readable() {
+    func readable() {
         assert(open)
         
         readPending = false
@@ -687,7 +687,7 @@ public class Channel : ChannelOutboundInvoker {
         fatalError("this must be overridden by sub class")
     }
     
-    internal func channelRead(data: Any) {
+    func channelRead(data: Any) {
         // Do nothing by default
     }
 
