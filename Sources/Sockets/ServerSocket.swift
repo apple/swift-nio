@@ -19,14 +19,10 @@ import Foundation
     import Darwin
     let sysAccept = Darwin.accept
     let sysListen = Darwin.listen
-    let sysSocket = Darwin.socket
-    let sysSOCK_STREAM = SOCK_STREAM
 #elseif os(Linux)
     import Glibc
     let sysAccept = Glibc.accept
     let sysListen = Glibc.listen
-    let sysSocket = Glibc.socket
-    let sysSOCK_STREAM = SOCK_STREAM.rawValue
 #endif
 
 
@@ -35,17 +31,13 @@ public class ServerSocket: BaseSocket {
     
     public class func bootstrap(host: String, port: Int32) throws -> ServerSocket {
         let socket = try ServerSocket();
-        try socket.bind(local: SocketAddresses.newAddress(for: host, on: port)!)
+        try socket.bind(local: try SocketAddresses.newAddress(for: host, on: port))
         try socket.listen()
         return socket
     }
     
     public init() throws {
-        let fd = try wrapSyscall({ $0 >= 0 }, function: "socket") {
-            sysSocket(AF_INET, Int32(sysSOCK_STREAM), 0)
-        }
-
-        super.init(descriptor: fd)
+        try super.init(descriptor: BaseSocket.newSocket())
     }
     
     public func listen(backlog: Int32 = 128) throws {

@@ -55,11 +55,20 @@ public class ServerBootstrap {
     }
     
     public func bind(host: String, port: Int32) -> Future<Channel> {
-        return bind(local: SocketAddresses.newAddress(for: host, on: port)!)
+        let evGroup = group
+        do {
+            let address = try SocketAddresses.newAddress(for: host, on: port)
+            return bind0(evGroup: evGroup, local: address)
+        } catch let err {
+            return evGroup.next().newFailedFuture(type: Channel.self, error: err)
+        }
     }
 
     public func bind(local: SocketAddress) -> Future<Channel> {
-        let evGroup = group
+        return bind0(evGroup: group, local: local)
+    }
+    
+    public func bind0(evGroup: EventLoopGroup, local: SocketAddress) -> Future<Channel> {
         let chEvGroup = childGroup
         let opts = options
         let eventLoop = evGroup.next()
@@ -141,6 +150,101 @@ public class ServerBootstrap {
     }
 }
 
+public class ClientBootstrap {
+    
+    private let group: EventLoopGroup
+    private var handler: ChannelHandler?
+    private var options = ChannelOptionStorage()
+
+    public init(group: EventLoopGroup) {
+        self.group = group
+    }
+    
+    public func handler(handler: ChannelHandler) -> Self {
+        self.handler = handler
+        return self
+    }
+    
+    public func option<T: ChannelOption>(option: T, value: T.OptionType) -> Self {
+        options.put(key: option, value: value)
+        return self
+    }
+    
+    public func bind(host: String, port: Int32) -> Future<Channel> {
+        let evGroup = group
+
+        do {
+            let address = try SocketAddresses.newAddress(for: host, on: port)
+            return execute(evGroup: evGroup, fn: { channel in
+                return channel.bind(local: address)
+            })
+        } catch let err {
+            return evGroup.next().newFailedFuture(type: Channel.self, error: err)
+        }
+    }
+    
+    public func bind(local: SocketAddress) -> Future<Channel> {
+        return execute(evGroup: group, fn: { channel in
+            return channel.bind(local: local)
+        })
+    }
+    
+    public func connect(host: String, port: Int32) -> Future<Channel> {
+        let evGroup = group
+        
+        do {
+            let address = try SocketAddresses.newAddress(for: host, on: port)
+            return execute(evGroup: group, fn: { channel in
+                return channel.connect(remote: address)
+            })
+        } catch let err {
+            return evGroup.next().newFailedFuture(type: Channel.self, error: err)
+        }
+    }
+    
+    public func connect(remote: SocketAddress) -> Future<Channel> {
+        return execute(evGroup: group, fn: { channel in
+            return channel.connect(remote: remote)
+        })
+    }
+
+    private func execute(evGroup: EventLoopGroup, fn: @escaping (Channel) -> Future<Void>) -> Future<Channel> {
+        let eventLoop = evGroup.next()
+        let h = handler
+        let opts = options
+        
+        let promise = eventLoop.newPromise(type: Channel.self)
+        do {
+            let channel = try SocketChannel(eventLoop: eventLoop)
+            
+            func finishClientSetup() {
+                do {
+                    try opts.applyAll(channel: channel)
+                    let f = channel.register().then(callback: { fn(channel) })
+                    f.whenSuccess {
+                        promise.succeed(result: channel)
+                    }
+                    f.cascadeFailure(promise: promise)
+                } catch let err {
+                    promise.fail(error: err)
+                }
+            }
+            
+            if let clientHandler = h {
+                let future = channel.pipeline.add(handler: clientHandler)
+                future.whenSuccess { finishClientSetup() }
+                future.cascadeFailure(promise: promise)
+            } else {
+                finishClientSetup()
+            }
+        } catch let err {
+            promise.fail(error: err)
+        }
+        
+        return promise.futureResult
+    }
+}
+
 fileprivate struct ChannelOptionStorage {
     private var storage: [(Any, (Any, (Channel) -> (Any, Any) throws -> Void))] = []
     
@@ -171,5 +275,3 @@ fileprivate struct ChannelOptionStorage {
         }
     }
 }
-
-// TODO: Add ClientBootstrap once we support client as well.

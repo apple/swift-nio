@@ -218,6 +218,19 @@ fileprivate class PendingWrites {
  All operations on SocketChannel are thread-safe
  */
 public class SocketChannel : Channel {
+    
+    public init(eventLoop: EventLoop) throws {
+        let socket = try Socket()
+        do {
+            try socket.setNonBlocking()
+        } catch let err {
+            let _ = try? socket.close()
+            throw err
+        }
+        
+        super.init(socket: socket, eventLoop: eventLoop)
+    }
+    
     fileprivate init(socket: Socket, eventLoop: EventLoop) throws {
         try socket.setNonBlocking()
         super.init(socket: socket, eventLoop: eventLoop)

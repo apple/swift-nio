@@ -18,10 +18,14 @@ import Foundation
     import Glibc
     let sysBind = Glibc.bind
     let sysClose = Glibc.close
+    let sysSocket = Glibc.socket
+    let sysSOCK_STREAM = SOCK_STREAM.rawValue
 #else
     import Darwin
     let sysBind = Darwin.bind
     let sysClose = Darwin.close
+    let sysSocket = Darwin.socket
+    let sysSOCK_STREAM = SOCK_STREAM
 #endif
 
 
@@ -40,6 +44,12 @@ public class BaseSocket : Selectable {
         }
     }
 
+    static func newSocket() throws -> Int32 {
+        return try wrapSyscall({ $0 >= 0 }, function: "socket") {
+            sysSocket(AF_INET, Int32(sysSOCK_STREAM), 0)
+        }
+    }
+    
     // TODO: This needs a way to encourage proper open/close behavior.
     //       A closure a la Ruby's File.open may make sense.
     init(descriptor : Int32) {

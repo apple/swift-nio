@@ -42,7 +42,15 @@ public class Socket : BaseSocket {
             return 1024
 #endif
     }
-
+    
+    public init() throws {
+        try super.init(descriptor: BaseSocket.newSocket())
+    }
+    
+    override init(descriptor : Int32) {
+        super.init(descriptor: descriptor)
+    }
+    
     public func connect(remote: SocketAddress) throws  -> Bool {
         switch remote {
         case .v4(address: let addr):

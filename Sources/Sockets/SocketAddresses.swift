@@ -21,12 +21,13 @@ import Foundation
 #endif
 
 public class SocketAddresses {
-    public class func newAddress(for host: String, on port: Int32) -> SocketAddress? {
+    public class func newAddress(for host: String, on port: Int32) throws -> SocketAddress {
         var info: UnsafeMutablePointer<addrinfo>?
         
         /* FIXME: this is blocking! */
         if getaddrinfo(host, String(port), nil, &info) != 0 {
-            return nil
+            // TODO: May may be able to return a bit more info to the caller. Let us just keep it simple for now
+            throw SocketAddressError.unknown
         }
         
         defer {
@@ -46,14 +47,18 @@ public class SocketAddresses {
                     return .v6(address: ptr.pointee)
                 }
             default:
-                return nil
+                throw SocketAddressError.unsupported
             }
         } else {
             /* this is odd, getaddrinfo returned NULL */
-            return nil
+            throw SocketAddressError.unsupported
         }
     }
-    
+}
+
+public enum SocketAddressError: Error {
+    case unknown
+    case unsupported
 }
 
 
