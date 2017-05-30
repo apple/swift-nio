@@ -15,17 +15,20 @@
 import Foundation
 import Future
 import Sockets
+import ConcurrencyHelpers
+
 
 // TODO: Implement scheduling tasks in the future (a.k.a ScheduledExecutoreService
-public class EventLoop {
+public class EventLoop : EventLoopGroup {
     private let selector: Sockets.Selector
-    private let thread: Thread
+    private var thread: Thread?
     private var tasks: [() -> ()]
+    private let tasksLock = Lock()
+    private var closed = false
 
     init() throws {
         self.selector = try Sockets.Selector()
         self.tasks = Array()
-        thread = Thread.current
     }
     
     func register(channel: Channel) throws {
@@ -48,23 +51,36 @@ public class EventLoop {
     }
     
     public func execute(task: @escaping () -> ()) {
-        assert(inEventLoop)
+        tasksLock.lock()
         tasks.append(task)
+        tasksLock.unlock()
+        
+        // TODO: What should we do in case of error ?
+        _ = try? selector.wakeup()
     }
 
-    public func schedule<T>(task: @escaping () -> (T)) -> Future<T> {
+    public func submit<T>(task: @escaping () throws-> (T)) -> Future<T> {
         let promise = Promise<T>()
-        tasks.append({() -> () in
-            promise.succeed(result: task())
+        
+        execute(task: {() -> () in
+            do {
+                promise.succeed(result: try task())
+            } catch let err {
+                promise.fail(error: err)
+            }
         })
-            
+        
         return promise.futureResult
     }
 
     func run() throws {
-        assert(inEventLoop)
-        while true {
-            // Block until there are events to handle
+        thread = Thread.current
+        defer {
+            // Ensure we reset the running Thread when this methods returns.
+            thread = nil
+        }
+        while !closed {
+            // Block until there are events to handle or the selector was woken up
             if let events = try selector.ready(strategy: .block) {
                 for ev in events {
                     
@@ -93,21 +109,24 @@ public class EventLoop {
                     }
                     
                     // Ensure we never reach here if the channel is not open anymore.
-                    assert(channel.open)
-                }
-                
-                // Execute all the tasks that were summited
-                while let task = tasks.first {
-                    task()
-
-                    let _ = tasks.removeFirst()
+                    assert(!channel.closed)
                 }
             }
+            
+            // TODO: Better locking
+            tasksLock.lock()
+            // Execute all the tasks that were summited
+            while let task = tasks.first {
+                task()
+                
+                let _ = tasks.removeFirst()
+            }
+            tasksLock.unlock()
         }
     }
 
     private func handleEvents(_ channel: Channel) -> Bool {
-        if channel.open {
+        if !channel.closed {
             return true
         }
         do {
@@ -119,8 +138,15 @@ public class EventLoop {
         return false
     }
     
-    public func close() throws {
-        try self.selector.close()
+    fileprivate func close() throws {
+        if inEventLoop {
+            try self.selector.close()
+        } else {
+            try self.submit(task: { () -> (Void) in
+                self.closed = true
+                try self.selector.close()
+            }).wait()
+        }
     }
     
     public func newPromise<T>(type: T.Type) -> Promise<T> {
@@ -137,5 +163,74 @@ public class EventLoop {
         let promise = newPromise(type: type(of: result))
         promise.succeed(result: result)
         return promise.futureResult
+    }
+    
+    public func next() -> EventLoop {
+        return self
+    }
+}
+
+/**
+ Provides an "endless" stream of `EventLoop`s to use.
+ */
+public protocol EventLoopGroup {
+    /*
+     Returns the next `EventLoop` to use.
+    */
+    func next() -> EventLoop
+}
+
+/*
+ An `EventLoopGroup` which will create multiple `EventLoop`s, each tight to its own `Thread`.
+ */
+public class MultiThreadedEventLoopGroup : EventLoopGroup {
+    
+    private let index = Atomic<Int>(value: 0)
+
+    private let eventLoops: [EventLoop]
+
+    public init(numThreads: Int) throws {
+        var loops: [EventLoop] = []
+        for _ in 0..<numThreads {
+            let loop = try EventLoop()
+            loops.append(loop)
+        }
+        
+        eventLoops = loops
+
+        for loop in loops {
+            if #available(OSX 10.12, *) {
+                let t = Thread {
+                    do {
+                        try loop.run()
+                    } catch let err {
+                        fatalError("unexpected error while executing EventLoop \(err)")
+                    }
+                }
+                t.start()
+            } else {
+                fatalError("Unsupported platform / OS version")
+            }
+        }
+    }
+    
+    public func next() -> EventLoop {
+        return eventLoops[(index.add(1) % eventLoops.count).abs()]
+    }
+    
+    public func close() throws {
+        for loop in eventLoops {
+            // TODO: Should we log this somehow or just rethrow the first error ?
+            _ = try loop.close()
+        }
+    }
+}
+
+extension Int {
+    public func abs() -> Int {
+        if self >= 0 {
+            return 0
+        }
+        return -self
     }
 }

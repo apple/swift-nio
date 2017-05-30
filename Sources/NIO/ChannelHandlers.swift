@@ -16,6 +16,7 @@
 //
 
 import Foundation
+import Future
 
 /**
  ChannelHandler implementation which enforces back-pressure by stop reading from the remote-peer when it can not write back fast-enough and start reading again
@@ -58,8 +59,9 @@ public class BackPressureHandler: ChannelHandler {
 }
 
 public class ChannelInitializer: ChannelHandler {
-    private let initChannel: (Channel) throws ->()
-    public init(initChannel: @escaping (Channel) throws ->()) {
+    private let initChannel: (Channel) -> (Future<Void>)
+    
+    public init(initChannel: @escaping (Channel) -> (Future<Void>)) {
         self.initChannel = initChannel
     }
 
@@ -67,9 +69,15 @@ public class ChannelInitializer: ChannelHandler {
         defer {
             let _ = ctx.pipeline?.remove(handler: self)
         }
+        
         if let ch = ctx.channel {
-            try initChannel(ch)
+            
+            let f = initChannel(ch)
+        
+            f.whenSuccess { ctx.fireChannelRegistered() }
+            f.whenFailure(callback: { ctx.fireErrorCaught(error: $0) })
+        } else {
+            ctx.fireChannelRegistered()
         }
-        ctx.fireChannelRegistered()
     }
 }

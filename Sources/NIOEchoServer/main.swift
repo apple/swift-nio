@@ -22,9 +22,9 @@ public class EchoHandler: ChannelHandler {
         let f = ctx.write(data: data)
 
         // If the write fails close the channel
-        f.whenFailure(callback: { error in
+        /*f.whenFailure(callback: { error in
             let _ = ctx.close()
-        })
+        })*/
     }
     
     // Flush it out. This can make use of gathering writes if multiple buffers are pending
@@ -33,12 +33,12 @@ public class EchoHandler: ChannelHandler {
     }
     
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
-        print("error: {}", error)
+        print("error: ", error)
         let _ = ctx.close()
     }
 }
-
-let bootstrap = try ServerBootstrap()
+let group = try MultiThreadedEventLoopGroup(numThreads: 2)
+let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .option(option: ChannelOptions.Backlog, value: 256)
     .option(option: ChannelOptions.Socket(SOL_SOCKET, SO_REUSEADDR), value: 1)
@@ -46,8 +46,9 @@ let bootstrap = try ServerBootstrap()
     // Set the handlers that are appled to the accepted Channels
     .handler(childHandler: ChannelInitializer(initChannel: { channel in
         // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
-        try channel.pipeline.add(handler: BackPressureHandler())
-        try channel.pipeline.add(handler: EchoHandler())
+        return channel.pipeline.add(handler: BackPressureHandler()).then(callback: { v in
+            return channel.pipeline.add(handler: EchoHandler())
+        })
     }))
     
     // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels
@@ -55,8 +56,15 @@ let bootstrap = try ServerBootstrap()
     .option(childOption: ChannelOptions.Socket(SOL_SOCKET, SO_REUSEADDR), childValue: 1)
 
 defer {
-    _ = try? bootstrap.close()
+    _ = try? group.close()
 }
 
-try bootstrap.bind(host: "0.0.0.0", port: 9999).wait()
+let channel = try bootstrap.bind(host: "0.0.0.0", port: 9999).wait()
+
+print("Server started")
+
+// This will never unblock as we not close the ServerChannel
+try channel.closeFuture.wait()
+
+print("Server closed")
 

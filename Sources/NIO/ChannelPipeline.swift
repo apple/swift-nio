@@ -16,6 +16,10 @@ import Foundation
 import Future
 import Sockets
 
+
+/*
+ All operations on ChannelPipeline are thread-safe
+ */
 public class ChannelPipeline : ChannelInboundInvoker {
     
     private var head: ChannelHandlerContext?
@@ -25,7 +29,21 @@ public class ChannelPipeline : ChannelInboundInvoker {
 
     public unowned let channel: Channel
 
-    public func add(name: String? = nil, handler: ChannelHandler, first: Bool = false) throws {
+    public func add(name: String? = nil, handler: ChannelHandler, first: Bool = false) -> Future<Void> {
+        let promise = eventLoop.newPromise(type: Void.self)
+        if eventLoop.inEventLoop {
+            add0(name: name, handler: handler, first: first, promise: promise)
+        } else {
+            eventLoop.execute {
+                self.add0(name: name, handler: handler, first: first, promise: promise)
+            }
+        }
+        return promise.futureResult
+    }
+
+    public func add0(name: String?, handler: ChannelHandler, first: Bool, promise: Promise<Void>) {
+        assert(eventLoop.inEventLoop)
+
         let ctx = ChannelHandlerContext(name: name ?? nextName(), handler: handler, pipeline: self)
         if first {
             let next = head!.next
@@ -45,57 +63,91 @@ public class ChannelPipeline : ChannelInboundInvoker {
         
         do {
             try ctx.invokeHandlerAdded()
+            promise.succeed(result: ())
         } catch let err {
             ctx.prev!.next = ctx.next
             ctx.next!.prev = ctx.prev
+
+            promise.fail(error: err)
+        }
+    }
+    
+    public func remove(handler: ChannelHandler) -> Future<Bool> {
+        let promise = Promise<Bool>()
+        if eventLoop.inEventLoop {
+            remove0(handler: handler, promise: promise)
+        } else {
+            eventLoop.execute {
+                self.remove0(handler: handler, promise: promise)
+            }
+        }
+        return promise.futureResult
+    }
+    
+    private func remove0(handler: ChannelHandler, promise: Promise<Bool>) {
+        assert(eventLoop.inEventLoop)
+
+        guard let ctx = getCtx(equalsFunc: { ctx in
+            return ctx.handler === handler
+        }) else {
+            promise.succeed(result: false)
+            return
+        }
+        
+        defer {
+            ctx.prev!.next = ctx.next
+            ctx.next?.prev = ctx.prev
             
-            throw err
+            // Was removed so set pipeline and prev / next to nil
+            ctx.pipeline = nil
+            ctx.prev = nil
+            ctx.next = nil
         }
-    }
-
-    @discardableResult public func remove(handler: ChannelHandler) -> Bool {
-        guard let ctx = getCtx(equalsFunc: { ctx in
-            return ctx.handler === handler
-        }) else {
-            return false
+        do {
+            try ctx.invokeHandlerRemoved()
+            promise.succeed(result: true)
+        } catch let err {
+            promise.fail(error: err)
         }
-        ctx.prev!.next = ctx.next
-        ctx.next?.prev = ctx.prev
-        return true
     }
     
-    @discardableResult public func remove(name: String) -> Bool {
+    public func remove(name: String) -> Future<Bool> {
+        let promise = Promise<Bool>()
+        if eventLoop.inEventLoop {
+            remove0(name: name, promise: promise)
+        } else {
+            eventLoop.execute {
+                self.remove0(name: name, promise: promise)
+            }
+        }
+        return promise.futureResult
+    }
+    
+    private func remove0(name: String, promise: Promise<Bool>) {
+        assert(eventLoop.inEventLoop)
+
         guard let ctx = getCtx(equalsFunc: { ctx in
             return ctx.name == name
         }) else {
-            return false
+            promise.succeed(result: false)
+            return
         }
-        ctx.prev!.next = ctx.next
-        ctx.next?.prev = ctx.prev
-        return true
-    }
-    
-    public func contains(handler: ChannelHandler) -> Bool {
-        if getCtx(equalsFunc: { ctx in
-            return ctx.handler === handler
-        }) == nil {
-            return false
+        defer {
+            ctx.prev!.next = ctx.next
+            ctx.next?.prev = ctx.prev
         }
-        
-        return true
-    }
-    
-    public func contains(name: String) -> Bool {
-        if getCtx(equalsFunc: { ctx in
-            return ctx.name == name
-        }) == nil {
-            return false
-        }
-        
-        return true
-    }
 
+        do {
+            try ctx.invokeHandlerRemoved()
+            promise.succeed(result: true)
+        } catch let err {
+            promise.fail(error: err)
+        }
+    }
+  
     private func nextName() -> String {
+        assert(eventLoop.inEventLoop)
+
         let name = "handler\(idx)"
         idx += 1
         return name
@@ -103,6 +155,8 @@ public class ChannelPipeline : ChannelInboundInvoker {
 
     // Just traverse the pipeline from the start
     private func getCtx(equalsFunc: (ChannelHandlerContext) -> Bool) -> ChannelHandlerContext? {
+        assert(eventLoop.inEventLoop)
+
         var ctx = head?.next
         while let c = ctx {
             if c === tail {
@@ -117,6 +171,8 @@ public class ChannelPipeline : ChannelInboundInvoker {
     }
 
     func removeHandlers() {
+        assert(eventLoop.inEventLoop)
+        
         // The channel was unregistered which means it will not handle any more events.
         // Remove all handlers now.
         var ctx = head?.next
@@ -139,76 +195,178 @@ public class ChannelPipeline : ChannelInboundInvoker {
     
     // Just delegate to the head and tail context
     public func fireChannelRegistered() {
-        head!.invokeChannelRegistered()
+        if eventLoop.inEventLoop {
+            head!.invokeChannelRegistered()
+        } else {
+            eventLoop.execute {
+                self.head!.invokeChannelRegistered()
+            }
+        }
     }
     
     public func fireChannelUnregistered() {
-        head!.invokeChannelUnregistered()
+        if eventLoop.inEventLoop {
+            head!.invokeChannelUnregistered()
+        } else {
+            eventLoop.execute {
+                self.head!.invokeChannelUnregistered()
+            }
+        }
     }
     
     public func fireChannelInactive() {
-        head!.invokeChannelInactive()
+        if eventLoop.inEventLoop {
+            head!.invokeChannelInactive()
+        } else {
+            eventLoop.execute {
+                self.head!.invokeChannelInactive()
+            }
+        }
     }
     
     public func fireChannelActive() {
-        head!.invokeChannelActive()
+        if eventLoop.inEventLoop {
+            head!.invokeChannelActive()
+        } else {
+            eventLoop.execute {
+                self.head!.invokeChannelActive()
+            }
+        }
     }
     
     public func fireChannelRead(data: Any) {
-        head!.invokeChannelRead(data: data)
+        if eventLoop.inEventLoop {
+            head!.invokeChannelRead(data: data)
+        } else {
+            eventLoop.execute {
+                self.head!.invokeChannelRead(data: data)
+            }
+        }
     }
     
     public func fireChannelReadComplete() {
-        head!.invokeChannelReadComplete()
+        if eventLoop.inEventLoop {
+            head!.invokeChannelReadComplete()
+        } else {
+            eventLoop.execute {
+                self.head!.invokeChannelReadComplete()
+            }
+        }
     }
     
     public func fireChannelWritabilityChanged(writable: Bool) {
-        head!.invokeChannelWritabilityChanged(writable: writable)
+        if eventLoop.inEventLoop {
+            head!.invokeChannelWritabilityChanged(writable: writable)
+        } else {
+            eventLoop.execute {
+                self.head!.invokeChannelWritabilityChanged(writable: writable)
+            }
+        }
     }
     
     public func fireUserEventTriggered(event: Any) {
-        head!.invokeUserEventTriggered(event: event)
+        if eventLoop.inEventLoop {
+            head!.invokeUserEventTriggered(event: event)
+        } else {
+            eventLoop.execute {
+                self.head!.invokeUserEventTriggered(event: event)
+            }
+        }
     }
     
     public func fireErrorCaught(error: Error) {
-        head!.invokeErrorCaught(error: error)
+        if eventLoop.inEventLoop {
+            head!.invokeErrorCaught(error: error)
+        } else {
+            eventLoop.execute {
+                self.head!.invokeErrorCaught(error: error)
+            }
+        }
     }
     
     func close(promise: Promise<Void>) -> Future<Void> {
-        tail!.invokeClose(promise: promise)
+        if eventLoop.inEventLoop {
+            tail!.invokeClose(promise: promise)
+        } else {
+            eventLoop.execute {
+                self.tail!.invokeClose(promise: promise)
+            }
+        }
         return promise.futureResult
     }
     
     func flush() {
-        tail!.invokeFlush()
+        if eventLoop.inEventLoop {
+            tail!.invokeFlush()
+        } else {
+            eventLoop.execute {
+                self.tail!.invokeFlush()
+            }
+        }
     }
     
     func read() {
-        tail!.invokeRead()
+        if eventLoop.inEventLoop {
+            tail!.invokeRead()
+        } else {
+            eventLoop.execute {
+                self.tail!.invokeRead()
+            }
+        }
     }
 
     func write(data: Any, promise: Promise<Void>) -> Future<Void> {
-        tail!.invokeWrite(data: data, promise: promise)
+        if eventLoop.inEventLoop {
+            tail!.invokeWrite(data: data, promise: promise)
+        } else {
+            eventLoop.execute {
+                self.tail!.invokeWrite(data: data, promise: promise)
+            }
+        }
         return promise.futureResult
     }
     
     func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
-        tail!.invokeWriteAndFlush(data: data, promise: promise)
+        if eventLoop.inEventLoop {
+            tail!.invokeWriteAndFlush(data: data, promise: promise)
+        } else {
+            eventLoop.execute {
+                self.tail!.invokeWriteAndFlush(data: data, promise: promise)
+            }
+        }
         return promise.futureResult
     }
     
     func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
-        tail!.invokeBind(local: local, promise: promise)
+        if eventLoop.inEventLoop {
+            tail!.invokeBind(local: local, promise: promise)
+        } else {
+            eventLoop.execute {
+                self.tail!.invokeBind(local: local, promise: promise)
+            }
+        }
         return promise.futureResult
     }
     
     func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void> {
-        tail!.invokeConnect(remote: remote, promise: promise)
+        if eventLoop.inEventLoop {
+            tail!.invokeConnect(remote: remote, promise: promise)
+        } else {
+            eventLoop.execute {
+                self.tail!.invokeConnect(remote: remote, promise: promise)
+            }
+        }
         return promise.futureResult
     }
     
     func register(promise: Promise<Void>) -> Future<Void> {
-        tail!.invokeRegister(promise: promise)
+        if eventLoop.inEventLoop {
+            tail!.invokeRegister(promise: promise)
+        } else {
+            eventLoop.execute {
+                self.tail!.invokeRegister(promise: promise)
+            }
+        }
         return promise.futureResult
     }
     
@@ -338,7 +496,7 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     fileprivate var next: ChannelHandlerContext?
     
     // marked as weak to not create a reference cycle between this instance and the pipeline
-    public private(set) weak var pipeline: ChannelPipeline?
+    public fileprivate(set) weak var pipeline: ChannelPipeline?
     
     public var channel: Channel? {
         return pipeline?.channel
@@ -578,12 +736,6 @@ public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvok
     
     func invokeHandlerRemoved() throws {
         assert(inEventLoop)
-        
-        defer {
-            pipeline = nil
-            prev = nil
-            next = nil
-        }
         try handler.handlerRemoved(ctx: self)
     }
     

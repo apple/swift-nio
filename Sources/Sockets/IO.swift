@@ -32,7 +32,7 @@ func ioError(errno: Int32, function: String) -> IOError {
 
 func reasonForError(errno: Int32, function: String) -> String {
     if let strError = String(utf8String: strerror(errno)) {
-        return "\(function) failed: \(strError)"
+        return "\(function) failed: errno(\(errno)) \(strError)"
     } else {
         return "\(function) failed"
     }

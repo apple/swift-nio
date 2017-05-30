@@ -18,18 +18,20 @@ import Future
 
 public class ServerBootstrap {
     
-    private let eventLoop: EventLoop
+    private let group: EventLoopGroup
+    private let childGroup: EventLoopGroup
     private var handler: ChannelHandler?
     private var childHandler: ChannelHandler?
     private var options = ChannelOptionStorage()
     private var childOptions = ChannelOptionStorage()
 
-    public init(eventLoop: EventLoop) {
-        self.eventLoop = eventLoop
+    public convenience init(group: EventLoopGroup) {
+        self.init(group: group, childGroup: group)
     }
     
-    public init() throws {
-        self.eventLoop = try EventLoop()
+    public init(group: EventLoopGroup, childGroup: EventLoopGroup) {
+        self.group = group
+        self.childGroup = childGroup
     }
     
     public func handler(handler: ChannelHandler) -> Self {
@@ -52,36 +54,54 @@ public class ServerBootstrap {
         return self
     }
     
-    public func bind(host: String, port: Int32) -> Future<Void> {
+    public func bind(host: String, port: Int32) -> Future<Channel> {
         return bind(local: SocketAddresses.newAddress(for: host, on: port)!)
     }
-    
-    // TODO: At the moment this never returns but once we make the whole thing multi-threaded it will.
-    public func bind(local: SocketAddress) -> Future<Void> {
+
+    public func bind(local: SocketAddress) -> Future<Channel> {
+        let evGroup = group
+        let chEvGroup = childGroup
+        let opts = options
+        let eventLoop = evGroup.next()
+        let h = handler
+        let chHandler = childHandler
+        let chOptions = childOptions
+        
+        let promise = eventLoop.newPromise(type: Channel.self)
         do {
-            let serverChannel = try ServerSocketChannel(eventLoop: eventLoop)
+            let serverChannel = try ServerSocketChannel(eventLoop: eventLoop, group: chEvGroup)
             
-            defer {
-                _ = serverChannel.close()
+            func finishServerSetup() {
+                do {
+                    try opts.applyAll(channel: serverChannel)
+                    let f = serverChannel.register().then(callback: { serverChannel.bind(local: local) })
+                    f.whenSuccess {
+                        promise.succeed(result: serverChannel)
+                    }
+                    f.cascadeFailure(promise: promise)
+                } catch let err {
+                    promise.fail(error: err)
+                }
             }
             
-            if let serverHandler = handler {
-                try serverChannel.pipeline.add(handler: serverHandler)
+            if let serverHandler = h {
+                let future = serverChannel.pipeline.add(handler: serverHandler)
+                future.whenSuccess {
+                    let f = serverChannel.pipeline.add(handler: AcceptHandler(childHandler: chHandler, childOptions: chOptions))
+                    f.whenSuccess { finishServerSetup() }
+                    f.cascadeFailure(promise: promise)
+                }
+                future.cascadeFailure(promise: promise)
+            } else {
+                let f = serverChannel.pipeline.add(handler: AcceptHandler(childHandler: chHandler, childOptions: chOptions))
+                f.whenSuccess { finishServerSetup() }
+                f.cascadeFailure(promise: promise)
             }
-
-            try serverChannel.pipeline.add(handler: AcceptHandler(childHandler: childHandler, childOptions: childOptions))
-            try options.applyAll(channel: serverChannel)
-
-            try serverChannel.register().then(callback: { (void: Void) -> Future<Void> in
-                return serverChannel.bind(local: local)
-            }).wait()
-
-            
-            try eventLoop.run()
-            return eventLoop.newSucceedFuture(result: ())
         } catch let err {
-            return eventLoop.newFailedFuture(type: Void.self, error: err)
+            promise.fail(error: err)
         }
+
+        return promise.futureResult
     }
     
     private class AcceptHandler : ChannelHandler {
@@ -100,20 +120,24 @@ public class ServerBootstrap {
                     try self.childOptions.applyAll(channel: accepted)
 
                     if let handler = childHandler {
-                        try accepted.pipeline.add(handler: handler)
+                        let f = accepted.pipeline.add(handler: handler)
+                        f.whenSuccess { ctx.fireChannelRead(data: data) }
+                        f.whenFailure( callback: { err in
+                            self.closeAndFire(ctx: ctx, accepted: accepted, err: err)
+                        })
                     }
-                } catch {
-                    // TODO: Log something ?
-                    _ = accepted.close()
+                } catch let err {
+                    closeAndFire(ctx: ctx, accepted: accepted, err: err)
                 }
+            } else {
+                ctx.fireChannelRead(data: data)
             }
-            ctx.fireChannelRead(data: data)
         }
-    }
-
-    
-    public func close() throws {
-        try eventLoop.close()
+        
+        private func closeAndFire(ctx: ChannelHandlerContext, accepted: SocketChannel, err: Error) {
+            _ = accepted.close()
+            ctx.fireErrorCaught(error: err)
+        }
     }
 }
 
@@ -139,7 +163,6 @@ fileprivate struct ChannelOptionStorage {
         if !hasSet {
             self.storage.append((key, (newValue, applier)))
         }
-        
     }
   
     func applyAll(channel: Channel) throws {

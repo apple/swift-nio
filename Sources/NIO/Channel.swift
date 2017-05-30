@@ -214,6 +214,9 @@ fileprivate class PendingWrites {
     }
 }
 
+/*
+ All operations on SocketChannel are thread-safe
+ */
 public class SocketChannel : Channel {
     fileprivate init(socket: Socket, eventLoop: EventLoop) throws {
         try socket.setNonBlocking()
@@ -253,11 +256,15 @@ public class SocketChannel : Channel {
     }
 }
 
+/*
+ All operations on ServerSocketChannel are thread-safe
+ */
 public class ServerSocketChannel : Channel {
     
     private var backlog: Int32 = 128
+    private let group: EventLoopGroup
     
-    public init(eventLoop: EventLoop) throws {
+    public init(eventLoop: EventLoop, group: EventLoopGroup) throws {
         let serverSocket = try ServerSocket()
         do {
             try serverSocket.setNonBlocking()
@@ -265,25 +272,29 @@ public class ServerSocketChannel : Channel {
             let _ = try? serverSocket.close()
             throw err
         }
+        self.group = group
         super.init(socket: serverSocket, eventLoop: eventLoop)
     }
 
-    override public func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws {
+    override fileprivate func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
+        assert(eventLoop.inEventLoop)
         if option is BacklogOption {
             backlog = value as! Int32
         } else {
-            try super.setOption(option: option, value: value)
+            try super.setOption0(option: option, value: value)
         }
     }
     
-    override public func getOption<T: ChannelOption>(option: T) throws -> T.OptionType {
+    override fileprivate func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
+        assert(eventLoop.inEventLoop)
         if option is BacklogOption {
             return backlog as! T.OptionType
         }
-        return try super.getOption(option: option)
+        return try super.getOption0(option: option)
     }
 
     override func bind0(local: SocketAddress, promise: Promise<Void>) {
+        assert(eventLoop.inEventLoop)
         do {
             try socket.bind(local: local)
             try (self.socket as! ServerSocket).listen(backlog: backlog)
@@ -305,7 +316,7 @@ public class ServerSocketChannel : Channel {
     override fileprivate func readFromSocket() throws -> Any? {
         if let accepted =  try (self.socket as! ServerSocket).accept() {
             do {
-                return try SocketChannel(socket: accepted, eventLoop: eventLoop)
+                return try SocketChannel(socket: accepted, eventLoop: group.next())
             } catch let err {
                 let _ = try? accepted.close()
                 pipeline.fireErrorCaught(error: err)
@@ -320,6 +331,8 @@ public class ServerSocketChannel : Channel {
     }
     
     override func channelRead(data: Any) {
+        assert(eventLoop.inEventLoop)
+
         if let ch = data as? Channel {
             let f = ch.register()
             f.whenFailure(callback: { err in
@@ -332,22 +345,41 @@ public class ServerSocketChannel : Channel {
     }
 }
 
+/*
+ All operations on Channel are thread-safe
+*/
 public class Channel : ChannelOutboundInvoker {
-
-    public private(set) var open: Bool = true
 
     public let eventLoop: EventLoop
 
     // Visible to access from EventLoop directly
     let socket: BaseSocket
     var interestedEvent: InterestedEvent = .none
+    var closed = false
 
     private let pendingWrites: PendingWrites = PendingWrites()
-    private var readPending: Bool = false
+    private var readPending = false
     private var neverRegistered = true
     private var pendingConnect: Promise<Void>?
+    private let closePromise: Promise<Void>
+    
+    public var closeFuture: Future<Void> {
+        return closePromise.futureResult
+    }
+    
+    public var open: Bool {
+        return !closeFuture.fulfilled
+    }
+    
+    public var allocator: ByteBufferAllocator {
+        if eventLoop.inEventLoop {
+            return bufferAllocator
+        } else {
+            return try! eventLoop.submit{ self.bufferAllocator }.wait()
+        }
+    }
 
-    public private(set) var allocator: ByteBufferAllocator = ByteBufferAllocator()
+    private var bufferAllocator: ByteBufferAllocator = ByteBufferAllocator()
     fileprivate var recvAllocator: RecvByteBufferAllocator = FixedSizeRecvByteBufferAllocator(capacity: 8192)
     fileprivate var autoRead: Bool = true
     fileprivate var maxMessagesPerRead: UInt = 1
@@ -355,11 +387,23 @@ public class Channel : ChannelOutboundInvoker {
     public lazy var pipeline: ChannelPipeline = ChannelPipeline(channel: self)
 
     public func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws {
+        if eventLoop.inEventLoop {
+            try setOption0(option: option, value: value)
+        } else {
+            let _ = try eventLoop.submit{
+                try self.setOption0(option: option, value: value)
+            }.wait()
+        }
+    }
+    
+    fileprivate func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
+        assert(eventLoop.inEventLoop)
+
         if option is SocketOption {
             let (level, name) = option.value as! (Int, Int32)
             try socket.setOption(level: Int32(level), name: name, value: value)
         } else if option is AllocatorOption {
-            allocator = value as! ByteBufferAllocator
+            bufferAllocator = value as! ByteBufferAllocator
         } else if option is RecvAllocatorOption {
             recvAllocator = value as! RecvByteBufferAllocator
         } else if option is AutoReadOption {
@@ -376,14 +420,24 @@ public class Channel : ChannelOutboundInvoker {
             fatalError("option \(option) not supported")
         }
     }
-    
+
     public func getOption<T: ChannelOption>(option: T) throws -> T.OptionType {
+        if eventLoop.inEventLoop {
+            return try getOption0(option: option)
+        } else {
+            return try eventLoop.submit{ try self.getOption0(option: option) }.wait()
+        }
+    }
+    
+    fileprivate func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
+        assert(eventLoop.inEventLoop)
+        
         if option is SocketOption {
             let (level, name) = option.value as! (Int32, Int32)
             return try socket.getOption(level: level, name: name)
         }
         if option is AllocatorOption {
-            return allocator as! T.OptionType
+            return bufferAllocator as! T.OptionType
         }
         if option is RecvAllocatorOption {
             return recvAllocator as! T.OptionType
@@ -410,6 +464,8 @@ public class Channel : ChannelOutboundInvoker {
     }
 
     func readIfNeeded() {
+        assert(eventLoop.inEventLoop)
+
         if autoRead {
             read()
         }
@@ -445,6 +501,8 @@ public class Channel : ChannelOutboundInvoker {
     
     // Methods invoked from the HeadHandler of the ChannelPipeline
     func bind0(local: SocketAddress, promise: Promise<Void> ) {
+        assert(eventLoop.inEventLoop)
+
         do {
             try socket.bind(local: local)
             promise.succeed(result: ())
@@ -454,7 +512,9 @@ public class Channel : ChannelOutboundInvoker {
     }
 
     func write0(data: Any, promise: Promise<Void>) {
-        guard open else {
+        assert(eventLoop.inEventLoop)
+
+        guard !closed else {
             // Channel was already closed, fail the promise and not even queue it.
             promise.fail(error: ChannelError.closed)
             return
@@ -479,13 +539,15 @@ public class Channel : ChannelOutboundInvoker {
     }
 
     func flush0() {
+        assert(eventLoop.inEventLoop)
+
         guard !isWritePending() else {
             return
         }
         
         // This flush is triggered by the user and so we should mark all pending messages as flushed
         if !flushNow(markFlushCheckpoint: true) {
-            guard open else {
+            guard !closed else {
                 return
             }
 
@@ -495,7 +557,9 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     func startReading0() {
-        guard open else {
+        assert(eventLoop.inEventLoop)
+
+        guard !closed else {
             return
         }
         readPending = true
@@ -504,7 +568,9 @@ public class Channel : ChannelOutboundInvoker {
     }
 
     func stopReading0() {
-        guard open else {
+        assert(eventLoop.inEventLoop)
+
+        guard !closed else {
             return
         }
         unregisterForReadable()
@@ -533,14 +599,15 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     func close0(promise: Promise<Void> = Promise<Void>(), error: Error = ChannelError.closed) {
-        guard open else {            
+        assert(eventLoop.inEventLoop)
 
+        guard !closed else {
             // Already closed
             promise.succeed(result: ())
             return
         }
+        closed = true
         
-        open = false
         safeDeregister()
 
         do {
@@ -562,9 +629,13 @@ public class Channel : ChannelOutboundInvoker {
             pendingConnect = nil
             connectPromise.fail(error: error)
         }
+        closePromise.succeed(result: ())
     }
+    
 
     func register0(promise: Promise<Void>) {
+        assert(eventLoop.inEventLoop)
+
         // Was not registered yet so do it now.
         if safeRegister(interested: .read) {
             neverRegistered = false
@@ -574,6 +645,7 @@ public class Channel : ChannelOutboundInvoker {
             promise.succeed(result: ())
         }
     }
+    
     public func register(promise: Promise<Void>) -> Future<Void> {
         return pipeline.register(promise: promise)
     }
@@ -581,7 +653,8 @@ public class Channel : ChannelOutboundInvoker {
 
     // Methods invoked from the EventLoop itself
     func writable() {
-        assert(open)
+        assert(eventLoop.inEventLoop)
+        assert(!closed)
 
         if finishConnect() {
             finishWritable()
@@ -612,7 +685,9 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     private func finishWritable() {
-        guard open else {
+        assert(eventLoop.inEventLoop)
+
+        guard !closed else {
             return
         }
         
@@ -626,11 +701,12 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     func readable() {
-        assert(open)
+        assert(eventLoop.inEventLoop)
+        assert(!closed)
         
         readPending = false
         defer {
-            if open, !readPending {
+            if !closed, !readPending {
                 unregisterForReadable()
             }
         }
@@ -665,6 +741,8 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     func connect0(remote: SocketAddress, promise: Promise<Void>) {
+        assert(eventLoop.inEventLoop)
+
         guard pendingConnect == nil else {
             promise.fail(error: ChannelError.connectPending)
             return
@@ -707,7 +785,7 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     private func safeReregister(interested: InterestedEvent) {
-        guard open else {
+        guard !closed else {
             interestedEvent = .none
             return
         }
@@ -722,7 +800,7 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     private func safeRegister(interested: InterestedEvent) -> Bool {
-        guard open else {
+        guard !closed else {
             interestedEvent = .none
             return false
         }
@@ -738,7 +816,7 @@ public class Channel : ChannelOutboundInvoker {
     }
 
     private func flushNow(markFlushCheckpoint: Bool) -> Bool {
-        while open {
+        while !closed {
             if markFlushCheckpoint {
                 pendingWrites.markFlushCheckpoint()
             }
@@ -767,6 +845,7 @@ public class Channel : ChannelOutboundInvoker {
     fileprivate init(socket: BaseSocket, eventLoop: EventLoop) {
         self.socket = socket
         self.eventLoop = eventLoop
+        self.closePromise = eventLoop.newPromise(type: Void.self)
     }
     
     deinit {
