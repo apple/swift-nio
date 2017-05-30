@@ -196,94 +196,94 @@ public class ChannelPipeline : ChannelInboundInvoker {
     // Just delegate to the head and tail context
     public func fireChannelRegistered() {
         if eventLoop.inEventLoop {
-            head!.invokeChannelRegistered()
+            fireChannelRegistered0()
         } else {
             eventLoop.execute {
-                self.head!.invokeChannelRegistered()
+                self.fireChannelRegistered0()
             }
         }
     }
-    
+   
     public func fireChannelUnregistered() {
         if eventLoop.inEventLoop {
-            head!.invokeChannelUnregistered()
+            fireChannelUnregistered0()
         } else {
             eventLoop.execute {
-                self.head!.invokeChannelUnregistered()
+                self.fireChannelUnregistered0()
             }
         }
     }
     
     public func fireChannelInactive() {
         if eventLoop.inEventLoop {
-            head!.invokeChannelInactive()
+            fireChannelInactive0()
         } else {
             eventLoop.execute {
-                self.head!.invokeChannelInactive()
+                self.fireChannelInactive0()
             }
         }
     }
     
     public func fireChannelActive() {
         if eventLoop.inEventLoop {
-            head!.invokeChannelActive()
+            fireChannelActive0()
         } else {
             eventLoop.execute {
-                self.head!.invokeChannelActive()
+                self.fireChannelActive0()
             }
         }
     }
     
     public func fireChannelRead(data: Any) {
         if eventLoop.inEventLoop {
-            head!.invokeChannelRead(data: data)
+            fireChannelRead0(data: data)
         } else {
             eventLoop.execute {
-                self.head!.invokeChannelRead(data: data)
+                self.fireChannelRead0(data: data)
             }
         }
     }
     
     public func fireChannelReadComplete() {
         if eventLoop.inEventLoop {
-            head!.invokeChannelReadComplete()
+            fireChannelReadComplete0()
         } else {
             eventLoop.execute {
-                self.head!.invokeChannelReadComplete()
+                self.fireChannelReadComplete0()
             }
         }
     }
-    
+
     public func fireChannelWritabilityChanged(writable: Bool) {
         if eventLoop.inEventLoop {
-            head!.invokeChannelWritabilityChanged(writable: writable)
+            fireChannelWritabilityChanged0(writable: writable)
         } else {
             eventLoop.execute {
-                self.head!.invokeChannelWritabilityChanged(writable: writable)
+                self.fireChannelWritabilityChanged0(writable: writable)
             }
         }
     }
     
     public func fireUserEventTriggered(event: Any) {
         if eventLoop.inEventLoop {
-            head!.invokeUserEventTriggered(event: event)
+            fireUserEventTriggered0(event: event)
         } else {
             eventLoop.execute {
-                self.head!.invokeUserEventTriggered(event: event)
+                self.fireUserEventTriggered0(event: event)
             }
         }
     }
     
     public func fireErrorCaught(error: Error) {
         if eventLoop.inEventLoop {
-            head!.invokeErrorCaught(error: error)
+            fireErrorCaught0(error: error)
         } else {
             eventLoop.execute {
-                self.head!.invokeErrorCaught(error: error)
+                self.fireErrorCaught0(error: error)
             }
         }
     }
-    
+
     func close(promise: Promise<Void>) -> Future<Void> {
         if eventLoop.inEventLoop {
             tail!.invokeClose(promise: promise)
@@ -368,6 +368,43 @@ public class ChannelPipeline : ChannelInboundInvoker {
             }
         }
         return promise.futureResult
+    }
+    
+    // These methods are expected to only be called from withint the EventLoop
+    func fireChannelRegistered0() {
+        head!.invokeChannelRegistered()
+    }
+    
+    func fireChannelUnregistered0() {
+        head!.invokeChannelUnregistered()
+    }
+    
+    func fireChannelInactive0() {
+        head!.invokeChannelInactive()
+    }
+    
+    func fireChannelActive0() {
+        head!.invokeChannelActive()
+    }
+    
+    func fireChannelRead0(data: Any) {
+        head!.invokeChannelRead(data: data)
+    }
+    
+    func fireChannelReadComplete0() {
+        head!.invokeChannelReadComplete()
+    }
+    
+    func fireChannelWritabilityChanged0(writable: Bool) {
+        head!.invokeChannelWritabilityChanged(writable: writable)
+    }
+    
+    func fireUserEventTriggered0(event: Any) {
+        head!.invokeUserEventTriggered(event: event)
+    }
+    
+    func fireErrorCaught0(error: Error) {
+        head!.invokeErrorCaught(error: error)
     }
     
     // Only executed from Channel

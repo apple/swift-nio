@@ -299,7 +299,7 @@ public class ServerSocketChannel : Channel {
             try socket.bind(local: local)
             try (self.socket as! ServerSocket).listen(backlog: backlog)
             promise.succeed(result: ())
-            pipeline.fireChannelActive()
+            pipeline.fireChannelActive0()
         } catch let err {
             promise.fail(error: err)
         }
@@ -319,7 +319,7 @@ public class ServerSocketChannel : Channel {
                 return try SocketChannel(socket: accepted, eventLoop: group.next())
             } catch let err {
                 let _ = try? accepted.close()
-                pipeline.fireErrorCaught(error: err)
+                pipeline.fireErrorCaught0(error: err)
             }
         }
         return nil
@@ -339,7 +339,7 @@ public class ServerSocketChannel : Channel {
                 _ = ch.close()
             })
             f.whenSuccess {
-                ch.pipeline.fireChannelActive()
+                ch.pipeline.fireChannelActive0()
             }
         }
     }
@@ -552,7 +552,7 @@ public class Channel : ChannelOutboundInvoker {
             }
 
             registerForWritable()
-            pipeline.fireChannelWritabilityChanged(writable: false)
+            pipeline.fireChannelWritabilityChanged0(writable: false)
         }
     }
     
@@ -617,9 +617,9 @@ public class Channel : ChannelOutboundInvoker {
             promise.fail(error: err)
         }
         if !neverRegistered {
-            pipeline.fireChannelUnregistered()
+            pipeline.fireChannelUnregistered0()
         }
-        pipeline.fireChannelInactive()
+        pipeline.fireChannelInactive0()
         
         
         // Fail all pending writes and so ensure all pending promises are notified
@@ -640,7 +640,7 @@ public class Channel : ChannelOutboundInvoker {
         if safeRegister(interested: .read) {
             neverRegistered = false
             promise.succeed(result: ())
-            pipeline.fireChannelRegistered()
+            pipeline.fireChannelRegistered0()
         } else {
             promise.succeed(result: ())
         }
@@ -664,7 +664,7 @@ public class Channel : ChannelOutboundInvoker {
         // This flush is triggered by the EventLoop which means it should only try to write the messages that were marked as flushed before
         if flushNow(markFlushCheckpoint: false) {
             // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socketto read.
-            pipeline.fireChannelWritabilityChanged(writable: true)
+            pipeline.fireChannelWritabilityChanged0(writable: true)
             
             finishWritable()
         }
@@ -714,22 +714,22 @@ public class Channel : ChannelOutboundInvoker {
         for _ in 1...maxMessagesPerRead {
             do {
                 if let read = try readFromSocket() {
-                    pipeline.fireChannelRead(data: read)
+                    pipeline.fireChannelRead0(data: read)
                 } else {
                     break
                 }
             } catch let err {
-                pipeline.fireErrorCaught(error: err)
+                pipeline.fireErrorCaught0(error: err)
             
                 // Call before trigger the close of the Channel.
-                pipeline.fireChannelReadComplete()
+                pipeline.fireChannelReadComplete0()
 
                 close0(error: err)
 
                 return
             }
         }
-        pipeline.fireChannelReadComplete()
+        pipeline.fireChannelReadComplete0()
     }
     
     fileprivate func connectSocket(remote: SocketAddress) throws -> Bool {
@@ -779,7 +779,7 @@ public class Channel : ChannelOutboundInvoker {
         do {
             try eventLoop.deregister(channel: self)
         } catch let err {
-            pipeline.fireErrorCaught(error: err)
+            pipeline.fireErrorCaught0(error: err)
             close0(error: err)
         }
     }
@@ -793,7 +793,7 @@ public class Channel : ChannelOutboundInvoker {
         do {
             try eventLoop.reregister(channel: self)
         } catch let err {
-            pipeline.fireErrorCaught(error: err)
+            pipeline.fireErrorCaught0(error: err)
             close0(error: err)
         }
 
@@ -809,7 +809,7 @@ public class Channel : ChannelOutboundInvoker {
             try eventLoop.register(channel: self)
             return true
         } catch let err {
-            pipeline.fireErrorCaught(error: err)
+            pipeline.fireErrorCaught0(error: err)
             close0(error: err)
             return false
         }
