@@ -18,19 +18,122 @@ import XCTest
 
 class ByteBufferTest: XCTestCase {
     let allocator = ByteBufferAllocator()
+    var buf: ByteBuffer!
+    
+    override func setUp() {
+        super.setUp()
+        buf = try! allocator.buffer(capacity: 1024)
+    }
+    
+    func testSimpleReadTest() throws {
+        buf.withReadPointer(body: { ptr, size in
+            XCTAssertEqual(size, 0)
+        })
+        
+        buf.write(string: "Hello world!")
+        buf.withReadPointer(body: { ptr, size in XCTAssertEqual(12, size) })
+    }
 
     func testWriteStringMovesWriterIndex() {
         var buf = try! allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
         XCTAssertEqual(5, buf.writerIndex)
-        buf.withMutableReadPointer { ptr, size in
+        let _ = buf.withMutableReadPointer { ptr, size in
             let s = String(bytesNoCopy: ptr, length: size, encoding: .utf8, freeWhenDone: false)
             XCTAssertEqual("hello", s)
             return 0
         }
     }
 
+    func testMarkedReaderAndWriterIndicies0ByDefault() {
+        XCTAssertEqual(0, buf.markedReaderIndex)
+        XCTAssertEqual(0, buf.markedWriterIndex)
+    }
+    
+    func testResetWriterIndex() {
+        buf.write(string: "hello")
+        XCTAssertEqual(5, buf.writerIndex)
+        buf.markWriterIndex()
+        buf.write(string: " world!")
+        XCTAssertEqual(12, buf.writerIndex)
+        buf.resetWriterIndex()
+        XCTAssertEqual(5, buf.writerIndex)
+    }
+    
+    func testResetReaderIndex() {
+        buf.write(string: "hello")
+        let bytesConsumed = buf.withMutableReadPointer { _,_ in return 5 }
+        
+        XCTAssertEqual(5, bytesConsumed)
+        XCTAssertEqual(bytesConsumed, buf.readerIndex)
+        buf.resetReaderIndex()
+        XCTAssertEqual(0, buf.readerIndex)
+    }
+    
+    func testWithMutableReadPointerMovesReaderIndexAndReturnsNumBytesConsumed() {
+        XCTAssertEqual(0, buf.readerIndex)
+        // We use mutable read pointers when we're consuming the data
+        // so first we need some data there!
+        buf.write(string: "hello again")
+        
+        let bytesConsumed = buf.withMutableReadPointer(body: { dst, size in
+            // Pretend we did some operation which made use of entire 11 byte string
+            return 11
+        })
+        XCTAssertEqual(11, bytesConsumed)
+        XCTAssertEqual(11, buf.readerIndex)
+    }
 
+    func testWithMutableWritePointerMovesWriterIndexAndReturnsNumBytesWritten() {
+        XCTAssertEqual(0, buf.writerIndex)
+        
+        let bytesWritten = buf.withMutableWritePointer { _, _ in return 5 }
+        XCTAssertEqual(5, bytesWritten)
+        XCTAssertEqual(5, buf.writerIndex)
+    }
+    
+    func testEnsureWritableWithEnoughBytesDoesntExpand() {
+        let result = buf.ensureWritable(bytesNeeded: buf.capacity - 1, expandIfRequired: true)
+        XCTAssert(result.enoughSpace)
+        XCTAssertFalse(result.capacityIncreased)
+    }
+    
+    func testEnsureWritableWithNotEnoughBytesButNotAllowedToExpand() {
+        let result = buf.ensureWritable(bytesNeeded: buf.capacity + 1, expandIfRequired: false)
+        XCTAssertFalse(result.enoughSpace)
+        XCTAssertFalse(result.capacityIncreased)
+    }
+    
+    func testEnsureWritableWithNotEnoughBytesButAllowedToExpand() {
+        let result = buf.ensureWritable(bytesNeeded: buf.capacity + 1, expandIfRequired: true)
+        XCTAssertTrue(result.enoughSpace)
+        XCTAssertTrue(result.capacityIncreased)
+    }
+    
+    func testEnsureWritableWithNotEnoughBytesAndNotEnoughMaxCapacity() throws {
+        buf = try! allocator.buffer(capacity: 10, maxCapacity: 10)
+        let result = buf.ensureWritable(bytesNeeded: buf.capacity + 1, expandIfRequired: true)
+        XCTAssertFalse(result.enoughSpace)
+        XCTAssertFalse(result.capacityIncreased)
+    }
+    
+    func testEnsureWritableThrowsWhenExpansionNotExplicitlyAllowed() {
+        XCTAssertThrowsError(try buf.ensureWritable(bytesNeeded: buf.capacity + 1))
+    }
+    
+    func testEnsureWritableDoesntThrowWhenEnoughSpaceEvenIfNotExplicitlyAllowingExpansion() {
+        XCTAssertNoThrow(try buf.ensureWritable(bytesNeeded: buf.capacity - 1))
+    }
+    
+    func testChangeCapacityWhenEnoughAvailable() throws {
+        XCTAssertNoThrow(try buf.changeCapacity(to: buf.capacity - 1))
+    }
+    
+    func testChangeCapacityWhenNotEnoughMaxCapacity() throws {
+        buf = try! allocator.buffer(capacity: 10, maxCapacity: 10)
+        XCTAssertThrowsError(try buf.changeCapacity(to: buf.capacity + 1))
+    }
+    
     func testSetGetInt8() throws {
         try setGetInt(index: 0, v: Int8.max)
     }

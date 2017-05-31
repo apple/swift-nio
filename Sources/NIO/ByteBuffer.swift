@@ -173,6 +173,10 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
             if bytesNeeded <= writableBytes {
                 return (enoughSpace: true, capacityIncreased: false)
             }
+            
+            guard expandIfRequired else {
+                return (enoughSpace: false, capacityIncreased: false)
+            }
 
             let deficit = bytesNeeded - writableBytes
 
@@ -203,6 +207,7 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
     // Mutable versions for writing to the buffer. body function returns the number of bytes written and writerIndex
     // will be automatically moved.
 
+    //
     public mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int?) rethrows -> Int? {
         let bytesWritten = try data.withUnsafeMutableBytes({ return try body($0.advanced(by: applyOffset(writerIndex)), writableBytes) })
 
@@ -211,6 +216,7 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         return bytesWritten
     }
 
+    // body function should return the number of bytes consumed, if any. 0 indicates EOF. Result from calling body is returned.
     public mutating func withMutableReadPointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int?) rethrows -> Int? {
         let bytesWritten = try data.withUnsafeMutableBytes { try body($0.advanced(by: applyOffset(readerIndex)), readableBytes) }
 
