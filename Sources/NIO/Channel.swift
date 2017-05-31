@@ -477,10 +477,8 @@ public class Channel : ChannelOutboundInvoker {
     }
 
     func readIfNeeded() {
-        assert(eventLoop.inEventLoop)
-
         if autoRead {
-            read()
+            pipeline.read0()
         }
     }
 

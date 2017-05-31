@@ -307,10 +307,10 @@ public class ChannelPipeline : ChannelInboundInvoker {
     
     func read() {
         if eventLoop.inEventLoop {
-            tail!.invokeRead()
+            read0()
         } else {
             eventLoop.execute {
-                self.tail!.invokeRead()
+                self.read0()
             }
         }
     }
@@ -371,6 +371,11 @@ public class ChannelPipeline : ChannelInboundInvoker {
     }
     
     // These methods are expected to only be called from withint the EventLoop
+    func read0() {
+        assert(inEventLoop)
+        tail!.invokeRead()
+    }
+    
     func fireChannelRegistered0() {
         assert(inEventLoop)
         head!.invokeChannelRegistered()
