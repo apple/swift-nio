@@ -55,12 +55,12 @@ func wrapSyscall(_ successCondition: (Int) -> Bool,
 func wrapSyscallMayBlock(_ successCondition: (Int) -> Bool,
                  function: @autoclosure () -> String, _ fn: () -> Int) throws -> Int? {
     do {
-        return try wrapSyscall(function: function, successCondition, fn)
-    } catch let error as IOError {
-        if error.errno == EWOULDBLOCK {
+        return try withErrno(hint: "", successCondition: successCondition, fn)
+    } catch let e as POSIXReasonedError {
+        if e.code == EWOULDBLOCK {
             return nil;
         }
-        throw error
+        throw ioError(errno: e.code, function: function())
     }
 }
 
