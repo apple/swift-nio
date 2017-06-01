@@ -229,7 +229,7 @@ public class MultiThreadedEventLoopGroup : EventLoopGroup {
 extension Int {
     public func abs() -> Int {
         if self >= 0 {
-            return 0
+            return self
         }
         return -self
     }

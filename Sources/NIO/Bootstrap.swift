@@ -130,7 +130,15 @@ public class ServerBootstrap {
 
                     if let handler = childHandler {
                         let f = accepted.pipeline.add(handler: handler)
-                        f.whenSuccess { ctx.fireChannelRead(data: data) }
+                        f.whenSuccess {
+                            if ctx.eventLoop.inEventLoop {
+                                ctx.fireChannelRead(data: data)
+                            } else {
+                                ctx.eventLoop.execute {
+                                    ctx.fireChannelRead(data: data)
+                                }
+                            }
+                        }
                         f.whenFailure( callback: { err in
                             self.closeAndFire(ctx: ctx, accepted: accepted, err: err)
                         })
@@ -145,7 +153,12 @@ public class ServerBootstrap {
         
         private func closeAndFire(ctx: ChannelHandlerContext, accepted: SocketChannel, err: Error) {
             _ = accepted.close()
-            ctx.fireErrorCaught(error: err)
+            if ctx.eventLoop.inEventLoop {
+            } else {
+                ctx.eventLoop.execute {
+                    ctx.fireErrorCaught(error: err)
+                }
+            }
         }
     }
 }
