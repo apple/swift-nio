@@ -25,6 +25,13 @@ class ByteBufferTest: XCTestCase {
         buf = try! allocator.buffer(capacity: 1024)
     }
     
+    func testWrappedData() {
+        let data = "Test".data(using: .utf8)!
+        let buffer = allocator.buffer(wrapped: data)
+        XCTAssertEqual(0, buffer.readerIndex)
+        XCTAssertEqual(data.count, buffer.writerIndex)
+    }
+    
     func testSimpleReadTest() throws {
         buf.withReadPointer(body: { ptr, size in
             XCTAssertEqual(size, 0)

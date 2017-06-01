@@ -29,6 +29,18 @@ public struct ByteBufferAllocator {
     public func buffer(capacity: Int, maxCapacity: Int) throws -> ByteBuffer {
         return try ByteBuffer(allocator: self, startingCapacity: capacity, maxCapacity: maxCapacity)
     }
+    
+    public func buffer(wrapped: Data) -> ByteBuffer {
+        return buffer(wrapped: wrapped, offset: 0, length: wrapped.count)
+    }
+    
+    public func buffer(wrapped: Data, offset: Int, length: Int) -> ByteBuffer {
+        return buffer(wrapped: wrapped, offset: offset, length: length, maxCapacity: Int.max)
+    }
+    
+    public func buffer(wrapped: Data, offset: Int, length: Int, maxCapacity: Int) -> ByteBuffer {
+        return ByteBuffer(allocator: self, data: wrapped, offset: offset, length: length, maxCapacity: Int.max)
+    }
 }
 
 extension UInt64 {
@@ -136,7 +148,11 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         self.capacity = data.count
     }
     
-    private init(allocator: ByteBufferAllocator, data: Data, offset: Int, length: Int, maxCapacity: Int) {
+    fileprivate init(allocator: ByteBufferAllocator, data: Data, offset: Int, length: Int, maxCapacity: Int) {
+        precondition(offset >= 0)
+        precondition(length <= maxCapacity)
+        precondition(data.count >= length - offset)
+
         self.allocator = allocator
         self.maxCapacity = maxCapacity
         self.writerIndex = length
