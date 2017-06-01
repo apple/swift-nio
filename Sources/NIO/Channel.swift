@@ -40,6 +40,7 @@ fileprivate class PendingWrites {
         if let last = tail {
             assert(head != nil)
             last.next = pending
+            tail = pending
         } else {
             assert(tail == nil)
             head = pending
@@ -98,11 +99,12 @@ fileprivate class PendingWrites {
                 outstanding -= UInt64(written)
                 
                 if (pending.buffer.readableBytes == written) {
+                    
                     // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
                     updateNodes(pending: pending)
                     
                     let allFlushed = checkFlushCheckpoint(pending: pending)
-                    
+
                     // buffer was completely written
                     pending.promise.succeed(result: ())
 
@@ -827,10 +829,10 @@ public class Channel : ChannelOutboundInvoker {
     }
 
     private func flushNow(markFlushCheckpoint: Bool) -> Bool {
+        if markFlushCheckpoint {
+            pendingWrites.markFlushCheckpoint()
+        }
         while !closed {
-            if markFlushCheckpoint {
-                pendingWrites.markFlushCheckpoint()
-            }
             do {
                 if let written = try writeToSocket(pendingWrites: pendingWrites) {
                     if !written {
@@ -839,6 +841,7 @@ public class Channel : ChannelOutboundInvoker {
                     }
                     // Consume the next buffer(s).
                 } else {
+                    
                     // we handled all pending writes
                     return true
                 }
