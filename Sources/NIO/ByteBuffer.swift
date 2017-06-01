@@ -336,16 +336,23 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
     // TODO: indexOf, bytesBefore, forEachByte, backing byte array access?
     
     // TODO: Generics to avoid this?
-    public mutating func write(string: String) {
-        let _ = withMutableWritePointer { (writePtr: UnsafeMutablePointer<UInt8>, size: Int) -> Int in
-            // TODO: Can we avoid the double copy? getBytes seems almost, but not quite right.
-            if let data = string.data(using: .utf8) {
-                let _ = data.withUnsafeBytes { writePtr.assign(from: $0, count: data.count) }
-                return data.count
-            } else {
-                return 0
-            }
+    public mutating func writeString(value: String) -> Int?{
+        if let bytes = setString(index: writerIndex, value: value) {
+            writerIndex += bytes
+            return bytes
         }
+        return nil
+    }
+    
+    public mutating func setString(index: Int, value: String) -> Int? {
+        let string = value.utf8
+        let count = string.count
+        if expandIfNeeded(index: index, size: count) {
+            let idx = applyOffset(index)
+            data.replaceSubrange(idx..<idx + count, with: string)
+            return count
+        }
+        return nil
     }
     
     /**

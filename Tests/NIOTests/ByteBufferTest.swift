@@ -30,13 +30,13 @@ class ByteBufferTest: XCTestCase {
             XCTAssertEqual(size, 0)
         })
         
-        buf.write(string: "Hello world!")
+        buf.writeString(value: "Hello world!")
         buf.withReadPointer(body: { ptr, size in XCTAssertEqual(12, size) })
     }
 
     func testWriteStringMovesWriterIndex() {
         var buf = try! allocator.buffer(capacity: 1024)
-        buf.write(string: "hello")
+        buf.writeString(value: "hello")
         XCTAssertEqual(5, buf.writerIndex)
         let _ = buf.withMutableReadPointer { ptr, size in
             let s = String(bytesNoCopy: ptr, length: size, encoding: .utf8, freeWhenDone: false)
@@ -51,17 +51,17 @@ class ByteBufferTest: XCTestCase {
     }
     
     func testResetWriterIndex() {
-        buf.write(string: "hello")
+        buf.writeString(value: "hello")
         XCTAssertEqual(5, buf.writerIndex)
         buf.markWriterIndex()
-        buf.write(string: " world!")
+        buf.writeString(value: " world!")
         XCTAssertEqual(12, buf.writerIndex)
         buf.resetWriterIndex()
         XCTAssertEqual(5, buf.writerIndex)
     }
     
     func testResetReaderIndex() {
-        buf.write(string: "hello")
+        buf.writeString(value: "hello")
         let bytesConsumed = buf.withMutableReadPointer { _,_ in return 5 }
         
         XCTAssertEqual(5, bytesConsumed)
@@ -74,7 +74,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(0, buf.readerIndex)
         // We use mutable read pointers when we're consuming the data
         // so first we need some data there!
-        buf.write(string: "hello again")
+        buf.writeString(value: "hello again")
         
         let bytesConsumed = buf.withMutableReadPointer(body: { dst, size in
             // Pretend we did some operation which made use of entire 11 byte string
