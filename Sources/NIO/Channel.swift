@@ -254,6 +254,10 @@ public class SocketChannel : Channel {
     
     override fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> Bool? {
         return try pendingWrites.consume(oneBody: {
+            guard $1 > 0 else {
+                // No need to call write if the buffer is empty.
+                return 0
+            }
             // normal write
             return try (self.socket as! Socket).write(pointer: $0, size: $1)
         }, multipleBody: {
