@@ -216,6 +216,12 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         return try data.withUnsafeBytes({ try body($0.advanced(by: applyOffset(readerIndex)), readableBytes) })
     }
 
+    // Provides the read portion of the buffer as Data slice.
+    public func withReadDataSlice<T>(body: (MutableSlice<Data>) throws -> T) rethrows -> T {
+        let data = self.data
+        return try body(data[Range(readerIndex..<readerIndex+readableBytes)])
+    }
+
     public func withWritePointer<T>(body: (UnsafePointer<UInt8>, Int) throws -> T) rethrows -> T {
         return try data.withUnsafeBytes({ try body($0.advanced(by: applyOffset(writerIndex)), writableBytes) })
     }
@@ -301,6 +307,7 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         return nil
     }
     
+    @discardableResult
     public mutating func writeInteger<T: EndianessInteger>(value: T, endianess: Endianess = .Big) -> Int? {
         if let bytes = setInteger(index: writerIndex, value: value, endianess: endianess) {
             writerIndex += bytes
@@ -317,7 +324,8 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         }
         return nil
     }
-    
+
+    @discardableResult
     public mutating func writeData(value: Data) -> Int? {
         if let bytes = setData(index: writerIndex, value: value) {
             writerIndex += bytes
@@ -345,6 +353,7 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
     // TODO: indexOf, bytesBefore, forEachByte, backing byte array access?
     
     // TODO: Generics to avoid this?
+    @discardableResult
     public mutating func writeString(value: String) -> Int?{
         if let bytes = setString(index: writerIndex, value: value) {
             writerIndex += bytes

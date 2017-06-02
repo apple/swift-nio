@@ -332,4 +332,45 @@ class ByteBufferTest: XCTestCase {
         XCTAssertTrue(slice.discardReadBytes())
         XCTAssertFalse(slice.discardReadBytes())
     }
+
+    func testWithDataSlices() throws {
+        let testStringPrefix = "0123456789"
+        let testStringSuffix = "abcdef"
+        let testString = "\(testStringPrefix)\(testStringSuffix)"
+
+        var buffer = try allocator.buffer(capacity: testString.utf8.count)
+        buffer.writeString(value: testStringPrefix)
+        buffer.writeString(value: testStringSuffix)
+        XCTAssertEqual(testString.utf8.count, buffer.capacity)
+
+        func runTestForRemaining(string: String, buffer: ByteBuffer) {
+            buffer.withReadPointer { (ptr, len) -> Void in
+                XCTAssertEqual(string.utf8.count, len)
+
+                for (idx, expected) in zip(0..<string.utf8.count, string.utf8) {
+                    let actual = ptr.advanced(by: idx).pointee
+                    XCTAssertEqual(expected, actual, "character at index \(idx) is \(actual) but should be \(expected)")
+                }
+            }
+
+            buffer.withReadDataSlice { data -> Void in
+                XCTAssertEqual(string.utf8.count, data.count)
+                for (idx, expected) in zip(data.startIndex..<data.startIndex+string.utf8.count, string.utf8) {
+                    XCTAssertEqual(expected, data[idx])
+                }
+            }
+
+            buffer.withReadDataSlice { slice in
+                XCTAssertEqual(string, String(bytes: slice, encoding: .utf8))
+            }
+        }
+
+        runTestForRemaining(string: testString, buffer: buffer)
+        let prefixBuffer = buffer.readSlice(length: testStringPrefix.utf8.count)
+        XCTAssertNotNil(prefixBuffer)
+        if let prefixBuffer = prefixBuffer {
+            runTestForRemaining(string: testStringPrefix, buffer: prefixBuffer)
+        }
+        runTestForRemaining(string: testStringSuffix, buffer: buffer)
+    }
 }
