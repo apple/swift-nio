@@ -271,11 +271,11 @@ public class Selector {
                     let _ = eventfd_read(eventfd, &ev)
                 } else {
                     let registration = registrations[Int(ev.data.fd)]!
-                    sEvents.append(
+                    try fn((
                         SelectorEvent(
                             isReadable: (ev.events & EPOLLIN.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
                             isWritable: (ev.events & EPOLLOUT.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
-                            selectable: registration.selectable, attachment: registration.attachment))
+                            selectable: registration.selectable, attachment: registration.attachment)))
                 }
                 i += 1
             }
