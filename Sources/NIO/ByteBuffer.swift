@@ -241,13 +241,6 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         return bytesWritten
     }
 
-
-    // Provides the read portion of the buffer as Data.
-    public func withReadData<T>(body: (Data) -> T) -> T {
-        return body(data)
-    }
-    
-
     private mutating func expandIfNeeded(index: Int, size: Int) -> Bool {
         let v = capacity - (index + size)
         
