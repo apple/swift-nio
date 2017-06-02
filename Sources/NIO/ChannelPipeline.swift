@@ -372,52 +372,42 @@ public class ChannelPipeline : ChannelInboundInvoker {
     
     // These methods are expected to only be called from withint the EventLoop
     func read0() {
-        assert(inEventLoop)
         tail!.invokeRead()
     }
     
     func fireChannelRegistered0() {
-        assert(inEventLoop)
         head!.invokeChannelRegistered()
     }
     
     func fireChannelUnregistered0() {
-        assert(inEventLoop)
         head!.invokeChannelUnregistered()
     }
     
     func fireChannelInactive0() {
-        assert(inEventLoop)
         head!.invokeChannelInactive()
     }
     
     func fireChannelActive0() {
-        assert(inEventLoop)
         head!.invokeChannelActive()
     }
     
     func fireChannelRead0(data: Any) {
-        assert(inEventLoop)
         head!.invokeChannelRead(data: data)
     }
     
     func fireChannelReadComplete0() {
-        assert(inEventLoop)
         head!.invokeChannelReadComplete()
     }
     
     func fireChannelWritabilityChanged0(writable: Bool) {
-        assert(inEventLoop)
         head!.invokeChannelWritabilityChanged(writable: writable)
     }
     
     func fireUserEventTriggered0(event: Any) {
-        assert(inEventLoop)
         head!.invokeUserEventTriggered(event: event)
     }
     
     func fireErrorCaught0(error: Error) {
-        assert(inEventLoop)
         head!.invokeErrorCaught(error: error)
     }
     
