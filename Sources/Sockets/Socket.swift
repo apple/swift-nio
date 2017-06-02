@@ -44,7 +44,8 @@ public class Socket : BaseSocket {
     }
     
     public init() throws {
-        try super.init(descriptor: BaseSocket.newSocket())
+        let sock = try BaseSocket.newSocket()
+        super.init(descriptor: sock)
     }
     
     override init(descriptor : Int32) {
@@ -119,7 +120,7 @@ public class Socket : BaseSocket {
     
     
     public func writev(pointers: [(UnsafePointer<UInt8>, Int)]) throws -> Int? {
-        let iovecs = pointers.map { iovec(iov_base: UnsafeMutableRawPointer(mutating: $0), iov_len: $1) }
+        let iovecs = pointers.map { ptr in iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.0), iov_len: ptr.1) }
 
         return try wrapSyscallMayBlock({ $0 >= 0 }, function: "writev") {
             sysWritev(self.descriptor, iovecs, Int32(iovecs.count))

@@ -74,7 +74,7 @@ public class ChannelInitializer: ChannelHandler {
             
             let f = initChannel(ch)
         
-            f.whenSuccess { ctx.fireChannelRegistered() }
+            f.whenSuccess { () -> Void in ctx.fireChannelRegistered() }
             f.whenFailure(callback: { ctx.fireErrorCaught(error: $0) })
         } else {
             ctx.fireChannelRegistered()

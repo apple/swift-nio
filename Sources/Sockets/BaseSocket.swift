@@ -45,7 +45,7 @@ public class BaseSocket : Selectable {
     }
 
     static func newSocket() throws -> Int32 {
-        return try wrapSyscall({ $0 >= 0 }, function: "socket") {
+        return try wrapSyscall({ $0 >= 0 }, function: "socket") { () -> Int32 in
             sysSocket(AF_INET, Int32(sysSOCK_STREAM), 0)
         }
     }
@@ -101,9 +101,9 @@ public class BaseSocket : Selectable {
     
     private func bindSocket<T>(addr: T) throws {
         var addr = addr
-        let _ = try withUnsafePointer(to: &addr) { (ptr: UnsafePointer<T>) -> Int32 in
+        try withUnsafePointer(to: &addr) { (ptr: UnsafePointer<T>) -> Void in
             try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                try wrapSyscall({ $0 != -1 }, function: "bind") {
+                _ = try wrapSyscall({ $0 != -1 }, function: "bind") {
                     sysBind(self.descriptor, ptr, socklen_t(MemoryLayout.size(ofValue: addr)))
                 }
             }

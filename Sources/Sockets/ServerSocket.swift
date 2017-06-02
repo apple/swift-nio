@@ -28,20 +28,20 @@ import Foundation
 
 // TODO: Handle AF_INET6 as well
 public class ServerSocket: BaseSocket {
-    
     public class func bootstrap(host: String, port: Int32) throws -> ServerSocket {
-        let socket = try ServerSocket();
+        let socket = try ServerSocket()
         try socket.bind(local: try SocketAddresses.newAddress(for: host, on: port))
         try socket.listen()
         return socket
     }
     
     public init() throws {
-        try super.init(descriptor: BaseSocket.newSocket())
+        let sock = try BaseSocket.newSocket()
+        super.init(descriptor: sock)
     }
     
     public func listen(backlog: Int32 = 128) throws {
-        let _ = try wrapSyscall({ $0 >= 0 }, function: "listen") {
+        _ = try wrapSyscall({ $0 >= 0 }, function: "listen") { () -> Int32 in
             sysListen(self.descriptor, backlog)
         }
     }
@@ -74,7 +74,7 @@ public class ServerSocket: BaseSocket {
         }
 #else
         // TODO: Handle return code ?
-        let _ = Darwin.fcntl(fd, F_SETNOSIGPIPE, 1);
+        _ = Darwin.fcntl(fd, F_SETNOSIGPIPE, 1);
 #endif
         
         return Socket(descriptor: fd)

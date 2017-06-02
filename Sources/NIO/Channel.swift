@@ -357,7 +357,7 @@ public class ServerSocketChannel : Channel {
             f.whenFailure(callback: { err in
                 _ = ch.close()
             })
-            f.whenSuccess {
+            f.whenSuccess { () -> Void in
                 ch.pipeline.fireChannelActive0()
             }
         }

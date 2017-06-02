@@ -495,7 +495,12 @@ extension Bool {
     }
 }
 
-public protocol EndianessInteger: Integer {
+#if swift(>=4.0)
+public typealias NumericProtocol = Numeric
+#else
+public typealias NumericProtocol = Integer
+#endif
+public protocol EndianessInteger: NumericProtocol {
 
     /// Returns the big-endian representation of the integer, changing the
     /// byte order if necessary.

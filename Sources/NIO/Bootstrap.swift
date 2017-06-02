@@ -83,8 +83,8 @@ public class ServerBootstrap {
             func finishServerSetup() {
                 do {
                     try opts.applyAll(channel: serverChannel)
-                    let f = serverChannel.register().then(callback: { serverChannel.bind(local: local) })
-                    f.whenSuccess {
+                    let f = serverChannel.register().then(callback: { (_) -> Future<()> in serverChannel.bind(local: local) })
+                    f.whenSuccess { () -> Void in
                         promise.succeed(result: serverChannel)
                     }
                     f.cascadeFailure(promise: promise)
@@ -95,15 +95,15 @@ public class ServerBootstrap {
             
             if let serverHandler = h {
                 let future = serverChannel.pipeline.add(handler: serverHandler)
-                future.whenSuccess {
+                future.whenSuccess { () -> Void in
                     let f = serverChannel.pipeline.add(handler: AcceptHandler(childHandler: chHandler, childOptions: chOptions))
-                    f.whenSuccess { finishServerSetup() }
+                    f.whenSuccess { () -> Void in finishServerSetup() }
                     f.cascadeFailure(promise: promise)
                 }
                 future.cascadeFailure(promise: promise)
             } else {
                 let f = serverChannel.pipeline.add(handler: AcceptHandler(childHandler: chHandler, childOptions: chOptions))
-                f.whenSuccess { finishServerSetup() }
+                f.whenSuccess { () -> Void in finishServerSetup() }
                 f.cascadeFailure(promise: promise)
             }
         } catch let err {
@@ -130,7 +130,7 @@ public class ServerBootstrap {
 
                     if let handler = childHandler {
                         let f = accepted.pipeline.add(handler: handler)
-                        f.whenSuccess {
+                        f.whenSuccess { () -> Void in
                             if ctx.eventLoop.inEventLoop {
                                 ctx.fireChannelRead(data: data)
                             } else {
@@ -233,8 +233,10 @@ public class ClientBootstrap {
             func finishClientSetup() {
                 do {
                     try opts.applyAll(channel: channel)
-                    let f = channel.register().then(callback: { fn(channel) })
-                    f.whenSuccess {
+                    let f = channel.register().then  { (_) -> Future<Void> in
+                        fn(channel)
+                    }
+                    f.whenSuccess { () -> Void in
                         promise.succeed(result: channel)
                     }
                     f.cascadeFailure(promise: promise)
@@ -245,7 +247,7 @@ public class ClientBootstrap {
             
             if let clientHandler = h {
                 let future = channel.pipeline.add(handler: clientHandler)
-                future.whenSuccess { finishClientSetup() }
+                future.whenSuccess { () -> Void in finishClientSetup() }
                 future.cascadeFailure(promise: promise)
             } else {
                 finishClientSetup()
@@ -269,7 +271,8 @@ fileprivate struct ChannelOptionStorage {
             }
         }
         var hasSet = false
-        self.storage = self.storage.map { (type, value) in
+        self.storage = self.storage.map { typeAndValue in
+            let (type, value) = typeAndValue
             if type is K {
                 hasSet = true
                 return (key, (newValue, applier))
