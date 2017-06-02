@@ -38,11 +38,23 @@ func reasonForError(errno: Int32, function: String) -> String {
     }
 }
 
+private func testForBlacklistedErrno(_ code: Int32) {
+    switch code {
+        case EFAULT:
+            fallthrough
+        case EBADF:
+            fatalError("blacklisted errno \(code) \(strerror(code)!)")
+        default:
+            ()
+    }
+}
+
 func wrapSyscall(function: @autoclosure () -> String,
                     _ successCondition: (Int) -> Bool, _ fn: () -> Int) throws -> Int {
     do {
-        return try withErrno(hint: "", successCondition: successCondition, fn)
-    } catch let e as POSIXReasonedError {
+        return try withErrno(successCondition: successCondition, fn)
+    } catch let e as Errno.POSIXError {
+        testForBlacklistedErrno(e.code)
         throw ioError(errno: e.code, function: function())
     }
 }
@@ -55,11 +67,12 @@ func wrapSyscall(_ successCondition: (Int) -> Bool,
 func wrapSyscallMayBlock(_ successCondition: (Int) -> Bool,
                  function: @autoclosure () -> String, _ fn: () -> Int) throws -> Int? {
     do {
-        return try withErrno(hint: "", successCondition: successCondition, fn)
-    } catch let e as POSIXReasonedError {
+        return try withErrno(successCondition: successCondition, fn)
+    } catch let e as Errno.POSIXError {
         if e.code == EWOULDBLOCK {
             return nil;
         }
+        testForBlacklistedErrno(e.code)
         throw ioError(errno: e.code, function: function())
     }
 }
@@ -67,8 +80,9 @@ func wrapSyscallMayBlock(_ successCondition: (Int) -> Bool,
 func wrapSyscall(function: @autoclosure () -> String,
                  _ successCondition: (Int32) -> Bool, _ fn: () -> Int32) throws -> Int32 {
     do {
-        return try withErrno(hint: "", successCondition: successCondition, fn)
-    } catch let e as POSIXReasonedError {
+        return try withErrno(successCondition: successCondition, fn)
+    } catch let e as Errno.POSIXError {
+        testForBlacklistedErrno(e.code)
         throw ioError(errno: e.code, function: function())
     }
 }
@@ -81,11 +95,12 @@ func wrapSyscall(_ successCondition: (Int32) -> Bool,
 func wrapSyscallMayBlock(_ successCondition: (Int32) -> Bool,
                          function: @autoclosure () -> String, _ fn: () -> Int32) throws -> Int32? {
     do {
-        return try withErrno(hint: "", successCondition: successCondition, fn)
-    } catch let e as POSIXReasonedError {
+        return try withErrno(successCondition: successCondition, fn)
+    } catch let e as Errno.POSIXError {
         if e.code == EWOULDBLOCK {
             return nil;
         }
+        testForBlacklistedErrno(e.code)
         throw ioError(errno: e.code, function: function())
     }
 }
