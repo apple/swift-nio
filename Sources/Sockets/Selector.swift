@@ -340,9 +340,9 @@ public class Selector {
 }
 
 private struct Registration {
-    internal(set) var interested: InterestedEvent
-    internal(set) var selectable: Selectable
-    internal(set) var attachment: AnyObject?
+    fileprivate(set) var interested: InterestedEvent
+    fileprivate(set) var selectable: Selectable
+    fileprivate(set) var attachment: AnyObject?
 
     init(selectable: Selectable, interested: InterestedEvent, attachment: AnyObject?) {
         self.selectable = selectable
@@ -353,10 +353,10 @@ private struct Registration {
 
 public struct SelectorEvent {
     
-    public internal(set) var isReadable: Bool
-    public internal(set) var isWritable: Bool
-    public internal(set) var selectable: Selectable
-    public internal(set) var attachment: AnyObject?
+    public fileprivate(set) var isReadable: Bool
+    public fileprivate(set) var isWritable: Bool
+    public fileprivate(set) var selectable: Selectable
+    public fileprivate(set) var attachment: AnyObject?
   
     init(isReadable: Bool, isWritable: Bool, selectable: Selectable, attachment: AnyObject?) {
         self.isReadable = isReadable

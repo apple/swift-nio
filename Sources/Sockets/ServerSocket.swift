@@ -27,7 +27,7 @@ import Foundation
 
 
 // TODO: Handle AF_INET6 as well
-public class ServerSocket: BaseSocket {
+public final class ServerSocket: BaseSocket {
     public class func bootstrap(host: String, port: Int32) throws -> ServerSocket {
         let socket = try ServerSocket()
         try socket.bind(local: try SocketAddresses.newAddress(for: host, on: port))
