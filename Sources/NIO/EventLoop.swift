@@ -81,36 +81,34 @@ public class EventLoop : EventLoopGroup {
         }
         while !closed {
             // Block until there are events to handle or the selector was woken up
-            if let events = try selector.ready(strategy: .block) {
-                for ev in events {
-                    
-                    guard let channel = ev.attachment as? Channel else {
-                        fatalError("ev.attachment has type \(type(of: ev.attachment)), expected Channel")
-                    }
-                        
-                    guard handleEvents(channel) else {
-                        continue
-                    }
-                    
-                    if ev.isWritable {
-                        channel.writable()
-                        
-                        guard handleEvents(channel) else {
-                            continue
-                        }
-                    }
-                    
-                    if ev.isReadable {
-                        channel.readable()
-                        
-                        guard handleEvents(channel) else {
-                            continue
-                        }
-                    }
-                    
-                    // Ensure we never reach here if the channel is not open anymore.
-                    assert(!channel.closed)
+            try selector.whenReady(strategy: .block) { ev in
+
+                guard let channel = ev.attachment as? Channel else {
+                    fatalError("ev.attachment has type \(type(of: ev.attachment)), expected Channel")
                 }
+
+                guard handleEvents(channel) else {
+                    return
+                }
+
+                if ev.isWritable {
+                    channel.writable()
+                    
+                    guard handleEvents(channel) else {
+                        return
+                    }
+                }
+
+                if ev.isReadable {
+                    channel.readable()
+                    
+                    guard handleEvents(channel) else {
+                        return
+                    }
+                }
+
+                // Ensure we never reach here if the channel is not open anymore.
+                assert(!channel.closed)
             }
             
             // TODO: Better locking

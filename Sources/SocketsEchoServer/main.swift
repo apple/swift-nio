@@ -62,71 +62,69 @@ try server.setOption(level: SOL_SOCKET, name: SO_REUSEADDR, value: 1)
 
 while true {
     // Block until there are events to handle
-    if let events = try selector.ready(strategy: .block) {
-        for ev in events {
-            if ev.isReadable {
+    try! selector.whenReady(strategy: .block) { ev in
+        if ev.isReadable {
+
+            // We can handle either read(...) or accept()
+            if ev.selectable is Socket {
+                // We stored the Buffer before as attachment so get it and clear the limit / offset.
+                let buffer = ev.attachment as! Buffer
+                buffer.clear()
                 
-                // We can handle either read(...) or accept()
-                if ev.selectable is Socket {
-                    // We stored the Buffer before as attachment so get it and clear the limit / offset.
-                    let buffer = ev.attachment as! Buffer
-                    buffer.clear()
-                    
-                    let s = ev.selectable as! Socket
-                    do {
-                        if let read = try s.read(data: &buffer.data) {
-                            buffer.limit = Int(read)
-                            
-                            if let written = try s.write(data: buffer.data.subdata(in: buffer.offset..<buffer.limit)) {
-                                buffer.offset += Int(written)
-                                
-                                // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
-                                // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
-                                if buffer.offset < buffer.limit {
-                                    try selector.reregister(selectable: s, interested: InterestedEvent.write)
-                                }
-                                
-                            } else {
-                                // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
-                                // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
-                                try selector.reregister(selectable: s, interested: InterestedEvent.write)
-                            }
-                            
-                        }
-                    } catch {
-                        deregisterAndClose(selector: selector, s: s)
-                    }
-                } else if ev.selectable is ServerSocket {
-                    let socket = ev.selectable as! ServerSocket
-                    
-                    // Accept new connections until there are no more in the backlog
-                    while let accepted = try socket.accept() {
-                        try accepted.setNonBlocking()
-                        try accepted.setOption(level: SOL_SOCKET, name: SO_REUSEADDR, value: 1)
-                        
-                        
-                        // Allocate an 8kb buffer for reading and writing and register the socket with the selector
-                        let buffer = Buffer(capacity: 8 * 1024)
-                        try selector.register(selectable: accepted, attachment: buffer)
-                    }
-                }
-            } else if ev.isWritable {
-                if ev.selectable is Socket {
-                    let buffer = ev.attachment as! Buffer
-                    
-                    let s = ev.selectable as! Socket
-                    do {
+                let s = ev.selectable as! Socket
+                do {
+                    if let read = try s.read(data: &buffer.data) {
+                        buffer.limit = Int(read)
+
                         if let written = try s.write(data: buffer.data.subdata(in: buffer.offset..<buffer.limit)) {
                             buffer.offset += Int(written)
                             
-                            if buffer.offset == buffer.limit {
-                                // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socket to read.
-                                try selector.reregister(selectable: s, interested: InterestedEvent.read)
+                            // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
+                            // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
+                            if buffer.offset < buffer.limit {
+                                try selector.reregister(selectable: s, interested: InterestedEvent.write)
                             }
+                            
+                        } else {
+                            // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
+                            // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
+                            try selector.reregister(selectable: s, interested: InterestedEvent.write)
                         }
-                    } catch {
-                        deregisterAndClose(selector: selector, s: s)
+                        
                     }
+                } catch {
+                    deregisterAndClose(selector: selector, s: s)
+                }
+            } else if ev.selectable is ServerSocket {
+                let socket = ev.selectable as! ServerSocket
+
+                // Accept new connections until there are no more in the backlog
+                while let accepted = try socket.accept() {
+                    try accepted.setNonBlocking()
+                    try accepted.setOption(level: SOL_SOCKET, name: SO_REUSEADDR, value: 1)
+                    
+
+                    // Allocate an 8kb buffer for reading and writing and register the socket with the selector
+                    let buffer = Buffer(capacity: 8 * 1024)
+                    try selector.register(selectable: accepted, attachment: buffer)
+                }
+            }
+        } else if ev.isWritable {
+            if ev.selectable is Socket {
+                let buffer = ev.attachment as! Buffer
+
+                let s = ev.selectable as! Socket
+                do {
+                    if let written = try s.write(data: buffer.data.subdata(in: buffer.offset..<buffer.limit)) {
+                        buffer.offset += Int(written)
+
+                        if buffer.offset == buffer.limit {
+                            // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socket to read.
+                            try selector.reregister(selectable: s, interested: InterestedEvent.read)
+                        }
+                    }
+                } catch {
+                    deregisterAndClose(selector: selector, s: s)
                 }
             }
         }

@@ -254,7 +254,7 @@ public class Selector {
     }
     
 
-    public func ready(strategy: SelectorStrategy) throws -> Array<SelectorEvent>? {
+    public func whenReady(strategy: SelectorStrategy, _ fn: (SelectorEvent) throws -> Void) throws -> Void {
 #if os(Linux)
         let timeout = Selector.toEpollWaitTimeout(strategy: strategy)
         let ready = try wrapSyscall({ $0 >= 0 }, function: "epoll_wait") {
@@ -295,25 +295,19 @@ public class Selector {
             }
         }
         if (ready > 0) {
-            var sEvents = [SelectorEvent]()
             var i = 0;
             while (i < Int(ready)) {
                 let ev = events[Int(i)]
                 
                 if ev.ident != Selector.EvUserIdent {
                     let registration = registrations[Int(ev.ident)]!
-                    sEvents.append(SelectorEvent(isReadable: Int32(ev.filter) == EVFILT_READ, isWritable: Int32(ev.filter) == EVFILT_WRITE, selectable: registration.selectable, attachment: registration.attachment))
+                    try fn((SelectorEvent(isReadable: Int32(ev.filter) == EVFILT_READ, isWritable: Int32(ev.filter) == EVFILT_WRITE, selectable: registration.selectable, attachment: registration.attachment)))
                 }
 
                 i += 1
             }
-            if sEvents.isEmpty {
-                return nil
-            }
-            return sEvents
         }
 #endif
-        return nil
     }
     
     public func close() throws {
