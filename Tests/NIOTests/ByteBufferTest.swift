@@ -24,7 +24,17 @@ class ByteBufferTest: XCTestCase {
         super.setUp()
         buf = try! allocator.buffer(capacity: 1024)
     }
-    
+
+    func testEqualsComparesReadBuffersOnly() throws {
+        // Only cares about the read buffer
+        buf.writeInteger(value: Int8.max)
+        buf.writeString(value: "oh hi")
+        let _: Int8 = buf.readInteger()! // Just getting rid of it from the read buffer
+
+        var otherBuffer = try! allocator.buffer(capacity: 32)
+        otherBuffer.writeString(value: "oh hi")
+        XCTAssertEqual(otherBuffer, buf)
+    }
     func testWrappedData() {
         let data = "Test".data(using: .utf8)!
         let buffer = allocator.buffer(wrapped: data)

@@ -81,8 +81,23 @@ public enum Endianess {
     case Little
 }
 
-public struct ByteBuffer { // TODO: Equatable, Comparable
-   
+public struct ByteBuffer : Equatable { // TODO: Comparable
+    
+    public static func ==(lhs: ByteBuffer, rhs: ByteBuffer) -> Bool {
+        guard lhs.readableBytes == rhs.readableBytes else {
+            return false
+        }
+
+        return lhs.readableBytes == rhs.readableBytes &&
+            lhs.withReadPointer { lhsPtr, lhsSize in
+                rhs.withReadPointer { rhsPtr, rhsSize in
+                    // Shouldn't get here otherwise because of readableBytes check
+                    assert(rhsSize == lhsSize)
+                    return memcmp(lhsPtr, rhsPtr, lhsSize) == 0
+                }
+            }
+    }
+
     private static func reallocatedData(minimumCapacity: Int, source: Data?, allocator: ByteBufferAllocator) -> Data {
         let newCapacity = Int(UInt64(minimumCapacity).nextPowerOf2())
         var newData = Data(bytesNoCopy: UnsafeMutableRawPointer.allocate(bytes: newCapacity,

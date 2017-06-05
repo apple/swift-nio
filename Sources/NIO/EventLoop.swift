@@ -17,9 +17,54 @@ import Future
 import Sockets
 import ConcurrencyHelpers
 
+public protocol EventLoop {
+    var inEventLoop: Bool { get }
+
+    func register(channel: Channel) throws
+    func deregister(channel: Channel) throws
+    func reregister(channel: Channel) throws
+    func execute(task: @escaping () -> ())
+    func submit<T>(task: @escaping () throws-> (T)) -> Future<T>
+    func run() throws
+    func close() throws
+    
+}
+
+extension EventLoop {
+    public func submit<T>(task: @escaping () throws-> (T)) -> Future<T> {
+        let promise = Promise<T>()
+
+        execute(task: {() -> () in
+            do {
+                promise.succeed(result: try task())
+            } catch let err {
+                promise.fail(error: err)
+            }
+        })
+
+        return promise.futureResult
+    }
+
+    public func newPromise<T>(type: T.Type) -> Promise<T> {
+        return Promise<T>()
+    }
+
+    public func newFailedFuture<T>(type: T.Type, error: Error) -> Future<T> {
+        let promise = newPromise(type: type)
+        promise.fail(error: error)
+        return promise.futureResult
+    }
+
+    public func newSucceedFuture<T>(result: T) -> Future<T> {
+        let promise = newPromise(type: type(of: result))
+        promise.succeed(result: result)
+        return promise.futureResult
+    }
+}
+
 
 // TODO: Implement scheduling tasks in the future (a.k.a ScheduledExecutoreService
-public class EventLoop : EventLoopGroup {
+final class SelectableEventLoop : EventLoop, EventLoopGroup {
     private let selector: Sockets.Selector
     private var thread: Thread?
     private var tasks: [() -> ()]
@@ -31,46 +76,44 @@ public class EventLoop : EventLoopGroup {
         self.tasks = Array()
     }
     
+    func register(channel: SelectableChannel) throws {
+        assert(inEventLoop)
+        try selector.register(selectable: channel.selectable, interested: channel.interestedEvent, attachment: channel)
+    }
+
     func register(channel: Channel) throws {
-        assert(inEventLoop)
-        try selector.register(selectable: channel.socket, interested: channel.interestedEvent, attachment: channel)
+        try register(channel: channel as! SelectableChannel)
     }
     
+    func deregister(channel: SelectableChannel) throws {
+        assert(inEventLoop)
+        try selector.deregister(selectable: channel.selectable)
+    }
+
     func deregister(channel: Channel) throws {
-        assert(inEventLoop)
-        try selector.deregister(selectable: channel.socket)
+        try deregister(channel: channel as! SelectableChannel)
     }
     
+    func reregister(channel: SelectableChannel) throws {
+        assert(inEventLoop)
+        try selector.reregister(selectable: channel.selectable, interested: channel.interestedEvent)
+    }
+
     func reregister(channel: Channel) throws {
-        assert(inEventLoop)
-        try selector.reregister(selectable: channel.socket, interested: channel.interestedEvent)
+        try reregister(channel: channel as! SelectableChannel)
     }
     
-    public var inEventLoop: Bool {
+    var inEventLoop: Bool {
         return Thread.current.isEqual(thread)
     }
     
-    public func execute(task: @escaping () -> ()) {
+    func execute(task: @escaping () -> ()) {
         tasksLock.lock()
         tasks.append(task)
         tasksLock.unlock()
         
         // TODO: What should we do in case of error ?
         _ = try? selector.wakeup()
-    }
-
-    public func submit<T>(task: @escaping () throws-> (T)) -> Future<T> {
-        let promise = Promise<T>()
-        
-        execute(task: {() -> () in
-            do {
-                promise.succeed(result: try task())
-            } catch let err {
-                promise.fail(error: err)
-            }
-        })
-        
-        return promise.futureResult
     }
 
     func run() throws {
@@ -83,7 +126,7 @@ public class EventLoop : EventLoopGroup {
             // Block until there are events to handle or the selector was woken up
             try selector.whenReady(strategy: .block) { ev in
 
-                guard let channel = ev.attachment as? Channel else {
+                guard let channel = ev.attachment as? SelectableChannel else {
                     fatalError("ev.attachment has type \(type(of: ev.attachment)), expected Channel")
                 }
 
@@ -136,7 +179,7 @@ public class EventLoop : EventLoopGroup {
         return false
     }
     
-    fileprivate func close() throws {
+    func close() throws {
         if inEventLoop {
             try self.selector.close()
         } else {
@@ -147,23 +190,7 @@ public class EventLoop : EventLoopGroup {
         }
     }
     
-    public func newPromise<T>(type: T.Type) -> Promise<T> {
-        return Promise<T>()
-    }
-    
-    public func newFailedFuture<T>(type: T.Type, error: Error) -> Future<T> {
-        let promise = newPromise(type: type)
-        promise.fail(error: error)
-        return promise.futureResult
-    }
-    
-    public func newSucceedFuture<T>(result: T) -> Future<T> {
-        let promise = newPromise(type: type(of: result))
-        promise.succeed(result: result)
-        return promise.futureResult
-    }
-    
-    public func next() -> EventLoop {
+    func next() -> EventLoop {
         return self
     }
 }
@@ -181,7 +208,7 @@ public protocol EventLoopGroup {
 /*
  An `EventLoopGroup` which will create multiple `EventLoop`s, each tight to its own `Thread`.
  */
-public class MultiThreadedEventLoopGroup : EventLoopGroup {
+final public class MultiThreadedEventLoopGroup : EventLoopGroup {
     
     private let index = Atomic<Int>(value: 0)
 
@@ -190,7 +217,7 @@ public class MultiThreadedEventLoopGroup : EventLoopGroup {
     public init(numThreads: Int) throws {
         var loops: [EventLoop] = []
         for _ in 0..<numThreads {
-            let loop = try EventLoop()
+            let loop = try SelectableEventLoop()
             loops.append(loop)
         }
         

@@ -434,31 +434,31 @@ private class HeadChannelHandler : ChannelHandler {
     private init() { }
 
     func register(ctx: ChannelHandlerContext, promise: Promise<Void>) {
-        ctx.channel!.register0(promise: promise)
+        ctx.channel!._unsafe.register0(promise: promise)
     }
     
     func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>) {
-        ctx.channel!.bind0(local: local, promise: promise)
+        ctx.channel!._unsafe.bind0(local: local, promise: promise)
     }
     
     func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>) {
-        ctx.channel!.connect0(remote: remote, promise: promise)
+        ctx.channel!._unsafe.connect0(remote: remote, promise: promise)
     }
     
     func write(ctx: ChannelHandlerContext, data: Any, promise: Promise<Void>) {
-        ctx.channel!.write0(data: data, promise: promise)
+        ctx.channel!._unsafe.write0(data: data, promise: promise)
     }
     
     func flush(ctx: ChannelHandlerContext) {
-        ctx.channel!.flush0()
+        ctx.channel!._unsafe.flush0()
     }
     
     func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
-        ctx.channel!.close0(promise: promise)
+        ctx.channel!._unsafe.close0(promise: promise)
     }
     
     func read(ctx: ChannelHandlerContext) {
-        ctx.channel!.startReading0()
+        ctx.channel!._unsafe.startReading0()
     }
     
     func channelActive(ctx: ChannelHandlerContext) {
@@ -480,7 +480,7 @@ private class HeadChannelHandler : ChannelHandler {
     }
 
     private func readIfNeeded(ctx: ChannelHandlerContext) {
-        ctx.channel!.readIfNeeded()
+        ctx.channel!._unsafe.readIfNeeded0()
     }
 }
 

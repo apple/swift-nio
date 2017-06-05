@@ -338,7 +338,7 @@ fileprivate class PendingWrites {
 /*
  All operations on SocketChannel are thread-safe
  */
-public class SocketChannel : Channel {
+final public class SocketChannel : BaseSocketChannel {
     
     public init(eventLoop: EventLoop) throws {
         let socket = try Socket()
@@ -405,7 +405,7 @@ public class SocketChannel : Channel {
 /*
  All operations on ServerSocketChannel are thread-safe
  */
-public class ServerSocketChannel : Channel {
+final public class ServerSocketChannel : BaseSocketChannel {
     
     private var backlog: Int32 = 128
     private let group: EventLoopGroup
@@ -439,7 +439,7 @@ public class ServerSocketChannel : Channel {
         return try super.getOption0(option: option)
     }
 
-    override func bind0(local: SocketAddress, promise: Promise<Void>) {
+    override public func bind0(local: SocketAddress, promise: Promise<Void>) {
         assert(eventLoop.inEventLoop)
         do {
             try socket.bind(local: local)
@@ -476,7 +476,7 @@ public class ServerSocketChannel : Channel {
         return true
     }
     
-    override func channelRead(data: Any) {
+    override public func channelRead(data: Any) {
         assert(eventLoop.inEventLoop)
 
         if let ch = data as? Channel {
@@ -491,23 +491,121 @@ public class ServerSocketChannel : Channel {
     }
 }
 
+
+public protocol ChannelCore {
+    func register0(promise: Promise<Void>)
+    func bind0(local: SocketAddress, promise: Promise<Void>)
+    func connect0(remote: SocketAddress, promise: Promise<Void>)
+    func write0(data: Any, promise: Promise<Void>)
+    func flush0()
+    func readIfNeeded0()
+    func startReading0()
+    func stopReading0()
+    func close0(promise: Promise<Void>, error: Error)
+    var closePromise: Promise<Void> { get }
+    var closed: Bool { get }
+}
+
+extension ChannelCore {
+    public func close0(promise: Promise<Void> = Promise<Void>()) {
+        close0(promise: promise, error: ChannelError.closed)
+    }
+}
+
+public protocol Channel : class, ChannelOutboundInvoker {
+    var allocator: ByteBufferAllocator { get }
+
+    var closeFuture: Future<Void> { get }
+
+    var pipeline: ChannelPipeline { get }
+    var localAddress: SocketAddress? { get }
+    var remoteAddress: SocketAddress? { get }
+
+
+    func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws
+    func getOption<T: ChannelOption>(option: T) throws -> T.OptionType
+
+    @discardableResult func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void>
+    @discardableResult func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void>
+    func read()
+    func channelRead(data: Any)
+    @discardableResult func write(data: Any, promise: Promise<Void>) -> Future<Void>
+    func flush()
+    @discardableResult func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void>
+    @discardableResult func close(promise: Promise<Void>) -> Future<Void>
+
+    var _unsafe: ChannelCore { get }
+}
+
+protocol SelectableChannel : Channel {
+    var selectable: Selectable { get }
+    var interestedEvent: InterestedEvent { get }
+
+    func writable()
+    func readable()
+}
+
+extension Channel {
+    var closed: Bool { return _unsafe.closed }
+
+    @discardableResult public func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+        return pipeline.bind(local: local, promise: promise)
+    }
+
+    // Methods invoked from the HeadHandler of the ChannelPipeline
+    // By default, just pass through to pipeline
+
+    @discardableResult public func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+        return pipeline.connect(remote: remote, promise: promise)
+    }
+
+    @discardableResult public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
+        return pipeline.write(data: data, promise: promise)
+    }
+
+    public func flush() {
+        pipeline.flush()
+    }
+
+    public func read() {
+        pipeline.read()
+    }
+
+    @discardableResult public func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
+        return pipeline.writeAndFlush(data: data, promise: promise)
+    }
+
+    @discardableResult public func close(promise: Promise<Void>) -> Future<Void> {
+        return pipeline.close(promise: promise)
+    }
+
+
+    @discardableResult public func register(promise: Promise<Void>) -> Future<Void> {
+        return pipeline.register(promise: promise)
+    }
+}
+
 /*
  All operations on Channel are thread-safe
 */
-public class Channel : ChannelOutboundInvoker {
+public class BaseSocketChannel : SelectableChannel, ChannelCore {
+    public var selectable: Selectable { return socket }
+
+    public var _unsafe: ChannelCore { return self }
+
 
     public let eventLoop: EventLoop
 
     // Visible to access from EventLoop directly
     let socket: BaseSocket
-    var interestedEvent: InterestedEvent = .none
-    var closed = false
+    public var interestedEvent: InterestedEvent = .none
+    public private(set) var closed = false
 
     private let pendingWrites: PendingWrites = PendingWrites()
     private var readPending = false
     private var neverRegistered = true
     private var pendingConnect: Promise<Void>?
-    private let closePromise: Promise<Void>
+    public let closePromise: Promise<Void>
     
     public var closeFuture: Future<Void> {
         return closePromise.futureResult
@@ -516,7 +614,7 @@ public class Channel : ChannelOutboundInvoker {
     public var open: Bool {
         return !closeFuture.fulfilled
     }
-    
+
     public var allocator: ByteBufferAllocator {
         if eventLoop.inEventLoop {
             return bufferAllocator
@@ -530,12 +628,7 @@ public class Channel : ChannelOutboundInvoker {
     fileprivate var autoRead: Bool = true
     fileprivate var maxMessagesPerRead: UInt = 1
 
-    // We don't use lazy var here as this is more expensive then doing this :/
-    public var pipeline: ChannelPipeline {
-        return _pipeline
-    }
-    
-    private var _pipeline: ChannelPipeline!
+    public lazy var pipeline: ChannelPipeline! = ChannelPipeline(channel: self)
 
     public func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws {
         if eventLoop.inEventLoop {
@@ -619,7 +712,7 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
 
-    func readIfNeeded() {
+    public func readIfNeeded0() {
         if autoRead {
             pipeline.read0()
         }
@@ -654,7 +747,7 @@ public class Channel : ChannelOutboundInvoker {
     }
     
     // Methods invoked from the HeadHandler of the ChannelPipeline
-    func bind0(local: SocketAddress, promise: Promise<Void> ) {
+    public func bind0(local: SocketAddress, promise: Promise<Void> ) {
         assert(eventLoop.inEventLoop)
 
         do {
@@ -665,7 +758,7 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
 
-    func write0(data: Any, promise: Promise<Void>) {
+    public func write0(data: Any, promise: Promise<Void>) {
         assert(eventLoop.inEventLoop)
 
         guard !closed else {
@@ -692,7 +785,7 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
 
-    func flush0() {
+    public func flush0() {
         assert(eventLoop.inEventLoop)
 
         guard !isWritePending() else {
@@ -710,7 +803,7 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
     
-    func startReading0() {
+    public func startReading0() {
         assert(eventLoop.inEventLoop)
 
         guard !closed else {
@@ -721,7 +814,7 @@ public class Channel : ChannelOutboundInvoker {
         registerForReadable()
     }
 
-    func stopReading0() {
+    public func stopReading0() {
         assert(eventLoop.inEventLoop)
 
         guard !closed else {
@@ -752,7 +845,7 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
     
-    func close0(promise: Promise<Void> = Promise<Void>(), error: Error = ChannelError.closed) {
+    public func close0(promise: Promise<Void> = Promise<Void>(), error: Error = ChannelError.closed) {
         assert(eventLoop.inEventLoop)
 
         guard !closed else {
@@ -787,7 +880,7 @@ public class Channel : ChannelOutboundInvoker {
     }
     
 
-    func register0(promise: Promise<Void>) {
+    public func register0(promise: Promise<Void>) {
         assert(eventLoop.inEventLoop)
 
         // Was not registered yet so do it now.
@@ -806,7 +899,7 @@ public class Channel : ChannelOutboundInvoker {
     
 
     // Methods invoked from the EventLoop itself
-    func writable() {
+    public func writable() {
         assert(eventLoop.inEventLoop)
         assert(!closed)
 
@@ -854,7 +947,7 @@ public class Channel : ChannelOutboundInvoker {
         }
     }
     
-    func readable() {
+    public func readable() {
         assert(eventLoop.inEventLoop)
         assert(!closed)
         
@@ -902,7 +995,7 @@ public class Channel : ChannelOutboundInvoker {
         fatalError("this must be overridden by sub class")
     }
     
-    func connect0(remote: SocketAddress, promise: Promise<Void>) {
+    public func connect0(remote: SocketAddress, promise: Promise<Void>) {
         assert(eventLoop.inEventLoop)
 
         guard pendingConnect == nil else {
@@ -927,7 +1020,7 @@ public class Channel : ChannelOutboundInvoker {
         fatalError("this must be overridden by sub class")
     }
     
-    func channelRead(data: Any) {
+    public func channelRead(data: Any) {
         // Do nothing by default
     }
 
