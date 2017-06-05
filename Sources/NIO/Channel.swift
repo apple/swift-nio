@@ -134,7 +134,10 @@ fileprivate class PendingWrites {
                     
                     // Using withReadPointer as we not want to adjust the readerIndex yet. We will do this at a higher level
                     let written = try pending.buffer.withReadPointer(body: { (pointer: UnsafePointer<UInt8>, size: Int) -> Int? in
-                        pointers.append((pointer, size))
+                        if size > 0 {
+                            // Only include if its not empty
+                            pointers.append((pointer, size))
+                        }
                         return try consumeNext0(pendingWrite: pending.next, count: count + 1, body: body)
                     })
                     return written
@@ -261,6 +264,10 @@ public class SocketChannel : Channel {
             // normal write
             return try (self.socket as! Socket).write(pointer: $0, size: $1)
         }, multipleBody: {
+            guard $0.count > 0 else {
+                // No need to call writev if there is nothing to write.
+                return 0
+            }
             // gathering write
             return try (self.socket as! Socket).writev(pointers: $0)
         })
