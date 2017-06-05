@@ -260,33 +260,24 @@ public class Selector {
         let ready = try wrapSyscall({ $0 >= 0 }, function: "epoll_wait") {
             CEpoll.epoll_wait(self.fd, events, Int32(eventsCapacity), timeout)
         }
-        if (ready > 0) {
-            var sEvents = [SelectorEvent]()
-            var i = 0;
-            while (i < Int(ready)) {
-                let ev = events[Int(i)]
-                if ev.data.fd == eventfd {
-                    var ev = eventfd_t()
-                    // Consume event
-                    let _ = eventfd_read(eventfd, &ev)
-                } else {
-                    let registration = registrations[Int(ev.data.fd)]!
-                    try fn((
-                        SelectorEvent(
-                            isReadable: (ev.events & EPOLLIN.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
-                            isWritable: (ev.events & EPOLLOUT.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
-                            selectable: registration.selectable, attachment: registration.attachment)))
-                }
-                i += 1
+        for i in 0..<ready {
+            let ev = events[i]
+            if ev.data.fd == eventfd {
+                var ev = eventfd_t()
+                // Consume event
+                _ = eventfd_read(eventfd, &ev)
+            } else {
+                let registration = registrations[Int(ev.data.fd)]!
+                try fn(
+                    SelectorEvent(
+                        isReadable: (ev.events & EPOLLIN.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
+                        isWritable: (ev.events & EPOLLOUT.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
+                        selectable: registration.selectable, attachment: registration.attachment))
             }
-            if sEvents.isEmpty {
-                return nil
-            }
-            return sEvents
         }
 #else
         let timespec = Selector.toKQueueTimeSpec(strategy: strategy)
-    
+
         let ready = try wrapSyscall({ $0 >= 0 }, function: "kevent") {
             if var ts = timespec {
                 return Int(kevent(self.fd, nil, 0, events, Int32(eventsCapacity), &ts))
@@ -294,17 +285,11 @@ public class Selector {
                 return Int(kevent(self.fd, nil, 0, events, Int32(eventsCapacity), nil))
             }
         }
-        if (ready > 0) {
-            var i = 0;
-            while (i < Int(ready)) {
-                let ev = events[Int(i)]
-                
-                if ev.ident != Selector.EvUserIdent {
-                    let registration = registrations[Int(ev.ident)]!
+        for i in 0..<ready {
+            let ev = events[i]
+            if ev.ident != Selector.EvUserIdent {
+                let registration = registrations[Int(ev.ident)]!
                     try fn((SelectorEvent(isReadable: Int32(ev.filter) == EVFILT_READ, isWritable: Int32(ev.filter) == EVFILT_WRITE, selectable: registration.selectable, attachment: registration.attachment)))
-                }
-
-                i += 1
             }
         }
 #endif

@@ -745,7 +745,7 @@ public class Channel : ChannelOutboundInvoker {
             } catch let err {
                 pipeline.fireErrorCaught0(error: err)
             
-                // Call before trigger the close of the Channel.
+                // Call before triggering the close of the Channel.
                 pipeline.fireChannelReadComplete0()
 
                 close0(error: err)
