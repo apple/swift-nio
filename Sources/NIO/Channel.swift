@@ -248,8 +248,7 @@ public class SocketChannel : Channel {
                 return buffer
             } else {
                 // end-of-file
-                close0()
-                return nil
+                throw ChannelError.eof
             }
         }
         return nil
@@ -743,14 +742,22 @@ public class Channel : ChannelOutboundInvoker {
                     break
                 }
             } catch let err {
-                pipeline.fireErrorCaught0(error: err)
-            
+                if let channelErr = err as? ChannelError {
+                    // EOF is not really an error that should be forwarded to the user
+                    if channelErr != ChannelError.eof {
+                        pipeline.fireErrorCaught(error: err)
+                    }
+                } else {
+                    pipeline.fireErrorCaught(error: err)
+                }
+               
                 // Call before triggering the close of the Channel.
                 pipeline.fireChannelReadComplete0()
-
+                    
                 close0(error: err)
-
+                    
                 return
+                
             }
         }
         pipeline.fireChannelReadComplete0()
@@ -901,4 +908,5 @@ public enum ChannelError: Error {
     case messageUnsupported
     case operationUnsupported
     case closed
+    case eof
 }
