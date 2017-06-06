@@ -146,7 +146,6 @@ fileprivate class PendingWrites {
             }
 
             if let written = try consumeNext0(pendingWrite: pending, count: 0, body: body) {
-                
                 // Calculate the amount of data we expect to write with one syscall.
                 var expected = 0
                 for p in pointers {
@@ -263,12 +262,17 @@ public class SocketChannel : Channel {
             // normal write
             return try (self.socket as! Socket).write(pointer: $0, size: $1)
         }, multipleBody: {
-            guard $0.count > 0 else {
-                // No need to call writev if there is nothing to write.
+            switch $0.count {
+            case 0:
+                // No need to call write if the buffer is empty.
                 return 0
+            case 1:
+                let p = $0[0]
+                return try (self.socket as! Socket).write(pointer:p.0, size: p.1)
+            default:
+                // Gathering write
+                return try (self.socket as! Socket).writev(pointers: $0)
             }
-            // gathering write
-            return try (self.socket as! Socket).writev(pointers: $0)
         })
     }
     
