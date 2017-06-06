@@ -148,7 +148,7 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         self.capacity = data.count
     }
     
-    fileprivate init(allocator: ByteBufferAllocator, data: Data, offset: Int, length: Int, maxCapacity: Int) {
+    init(allocator: ByteBufferAllocator, data: Data, offset: Int, length: Int, maxCapacity: Int) {
         precondition(offset >= 0)
         precondition(length <= maxCapacity)
         precondition(data.count >= length - offset)

@@ -22,6 +22,130 @@ import Glibc
 import Darwin
 #endif
 
+final class PendingWrite {
+    var next: PendingWrite?
+    var buffer: ByteBuffer
+    let promise: Promise<Void>
+
+    init(buffer: ByteBuffer, promise: Promise<Void>) {
+        self.buffer = buffer
+        self.promise = promise
+    }
+
+    deinit {
+        /* sorry! Workaround for https://bugs.swift.org/browse/SR-5145 which is that this linked list can cause a
+           stack overflow when released as the `deinit`s will get called with recursion
+        */
+        if let next = self.next {
+            DispatchQueue.global().async {
+                _ = next
+            }
+        }
+    }
+}
+
+#if swift(>=4.0)
+/* workaround for https://bugs.swift.org/browse/SR-5106 */
+func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, _ fn: (UnsafeBufferPointer<IOVector>) -> Int) -> Int {
+    var iovecs: UnsafeMutablePointer<IOVector> = UnsafeMutablePointer.allocate(capacity: count)
+    defer {
+        iovecs.deallocate(capacity: count)
+    }
+    return withoutActuallyEscaping(fn) { fn in
+        return withExtendedLifetime(pending) {
+            var next = pending
+            for i in 0..<count {
+                if let p = next {
+                    p.buffer.withReadPointer { (ptr, len) -> Void in
+                        /* this is definitely illegal and breaks the contract of `withReadPointer` as we're escaping
+                           an internal pointer. However we're keeping the `pending` alive so we're just assuming here
+                           that the pointer doesn't change. It's bad but will probably work.
+
+                           Eventually we need a real solution, filed here:
+                            - https://bugs.swift.org/browse/SR-5143 (Can't easily drive writev(2) from a collection of Data)
+                            - https://bugs.swift.org/browse/SR-5106 (Swift 4 is missing a tail-recusion optimisation that Swift 3 is taking :()
+                        */
+                        iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr), iov_len: len)
+                    }
+                    next = p.next
+                } else {
+                    break
+                }
+            }
+            return fn(UnsafeBufferPointer(start: iovecs, count: count))
+        }
+    }
+}
+#else
+/*
+ PLEASE BE EXTREMELY CAREFUL WHEN MODIFYING __ANYTHING__ IN THIS FUNCTION.
+
+ Things known to break the tail-recursiveness
+  - any use of `throws`
+  - any use of any Optionals
+  - any use of a class
+  - many uses of ByteBuffer (such as `withReadPointer1)
+
+ This function needs to be tail-recursive _despite ARC_. Ie. you basically can't use ARC :(.
+
+ If you change anything, please test RUN THE `testWriteVIsTailRecursiveAndLoopifiedInReleaseMode` test case IN RELASE MODE
+ */
+func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, _ fn: (UnsafeBufferPointer<IOVector>) -> Int) -> Int {
+    var recursionLimit: Int = Int.max
+    if _isDebugAssertConfiguration() && recursionLimit - 1 == recursionLimit - 1 {
+        recursionLimit = 32
+    }
+    var iovecs: UnsafeMutablePointer<IOVector> = UnsafeMutablePointer.allocate(capacity: count)
+    defer {
+        iovecs.deallocate(capacity: count)
+    }
+    return withoutActuallyEscaping(fn) { fn in
+        func doPendingWriteVectorOperation_(ref: Unmanaged<PendingWrite>,
+                                            iovecs: UnsafeMutablePointer<IOVector>,
+                                            index: Int,
+                                            recursionLimit: Int) -> Int {
+            let (byteCount, offset) = ref._withUnsafeGuaranteedRef { ($0.buffer.readableBytes, $0.buffer.readerIndex) }
+            ref._withUnsafeGuaranteedRef { $0.buffer.data.withUnsafeMutableBytes({
+                (ptr: UnsafeMutablePointer<UInt8>) -> Void in
+                iovecs[index] = iovec(iov_base: ptr+offset,
+                                      iov_len: byteCount)
+            }) }
+            if let next = ref._withUnsafeGuaranteedRef({ $0.next.map(Unmanaged.passUnretained) }), index < count-1 && index < recursionLimit {
+                return doPendingWriteVectorOperation_(ref: next,
+                                                      iovecs: iovecs,
+                                                      index: index + 1,
+                                                      recursionLimit: recursionLimit)
+            } else {
+                return fn(UnsafeBufferPointer(start: iovecs, count: index+1))
+            }
+        }
+        return withExtendedLifetime(pending) {
+            if let pending = pending {
+                return doPendingWriteVectorOperation_(ref: Unmanaged.passUnretained(pending),
+                                                      iovecs: iovecs,
+                                                      index: 0,
+                                                      recursionLimit: recursionLimit)
+            } else {
+                return 0
+            }
+        }
+    }
+}
+#endif
+
+func makeNonThrowing<I>(errorBuffer: inout Error?, input: I, _ fn: (I) throws -> Int?) -> Int {
+    do {
+        if let bytes = try fn(input) {
+            return bytes
+        } else {
+            return 0
+        }
+    } catch let e {
+        errorBuffer = e
+        return -1
+    }
+}
+
 fileprivate class PendingWrites {
     
     private var head: PendingWrite?
@@ -29,8 +153,8 @@ fileprivate class PendingWrites {
     // Marks the last PendingWrite that should be written by consume(...)
     private var flushCheckpoint: PendingWrite?
 
-    private(set) var outstanding: UInt64 = 0
     fileprivate var writeSpinCount: UInt = 16
+    private(set) var outstanding: (chunks: Int, bytes: Int) = (0, 0)
     
     var isEmpty: Bool {
         return tail == nil
@@ -47,7 +171,8 @@ fileprivate class PendingWrites {
             head = pending
             tail = pending
         }
-        outstanding += UInt64(buffer.readableBytes)
+        outstanding = (chunks: outstanding.chunks + 1,
+                       bytes: outstanding.bytes + buffer.readableBytes)
     }
     
     private var hasMultiple: Bool {
@@ -61,7 +186,7 @@ fileprivate class PendingWrites {
     /*
      Function that takes two closures and based on if there are more then one ByteBuffer pending calls either one or the other.
     */
-    func consume(oneBody: (UnsafePointer<UInt8>, Int) throws -> Int?, multipleBody: ([(UnsafePointer<UInt8>, Int)]) throws -> Int?) rethrows -> Bool? {
+    func consume(oneBody: (UnsafePointer<UInt8>, Int) throws -> Int?, multipleBody: (UnsafeBufferPointer<IOVector>) throws -> Int?) throws -> Bool? {
         
         if hasMultiple {
             // Holds multiple pending writes, use consumeMultiple which will allow us to us writev (a.k.a gathering writes)
@@ -98,12 +223,14 @@ fileprivate class PendingWrites {
         if let pending = head, isFlushPending() {
             for _ in 1..<writeSpinCount {
                 if let written = try pending.buffer.withReadPointer(body: body) {
-                    outstanding -= UInt64(written)
+                    outstanding = (outstanding.chunks, outstanding.bytes - written)
                     
                     if pending.buffer.readableBytes == written {
                         
                         // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
                         updateNodes(pending: pending)
+                        
+                        outstanding = (outstanding.chunks-1, outstanding.bytes)
                         
                         let allFlushed = checkFlushCheckpoint(pending: pending)
                         
@@ -113,10 +240,8 @@ fileprivate class PendingWrites {
                         if isEmpty || allFlushed {
                             // return nil to signal to the caller that there are no more buffers to consume
                             return nil
+                            
                         }
-                        return true
-                    } else {
-                        pending.buffer.skipBytes(num: written)
                     }
                 } else {
                     return false
@@ -130,36 +255,22 @@ fileprivate class PendingWrites {
         return nil
     }
     
-    private func consumeMultiple(body: ([(UnsafePointer<UInt8>, Int)]) throws -> Int?) rethrows -> Bool? {
+    private func consumeMultiple(body: (UnsafeBufferPointer<IOVector>) throws -> Int?) throws -> Bool? {
         if var pending = head, isFlushPending() {
-            var pointers: [(UnsafePointer<UInt8>, Int)] = []
-            
-            func consumeNext0(pendingWrite: PendingWrite?, count: Int, body: ([(UnsafePointer<UInt8>, Int)]) throws -> Int?) rethrows -> Int? {
-                if let pending = pendingWrite, !isFlushCheckpoint(pending), count <= Socket.writevLimit {
-                    
-                    // Using withReadPointer as we not want to adjust the readerIndex yet. We will do this at a higher level
-                    let written = try pending.buffer.withReadPointer(body: { (pointer: UnsafePointer<UInt8>, size: Int) -> Int? in
-                        if size > 0 {
-                            // Only include if its not empty
-                            pointers.append((pointer, size))
-                        }
-                        return try consumeNext0(pendingWrite: pending.next, count: count + 1, body: body)
-                    })
-                    return written
-                }
-                return try body(pointers)
-            }
-
             writeLoop: for _ in 1..<writeSpinCount {
-                if let written = try consumeNext0(pendingWrite: pending, count: 0, body: body) {
-                    // Calculate the amount of data we expect to write with one syscall.
-                    var expected = 0
-                    for p in pointers {
-                        expected += p.1
-                    }
-                    
-                    outstanding -= UInt64(written)
-                    assert(head != nil)
+                var expected = 0
+                var error: Error? = nil
+                let written = doPendingWriteVectorOperation(pending: pending, count: outstanding.chunks, { pointer in
+                    expected += pointer.count
+                    return makeNonThrowing(errorBuffer: &error, input: pointer, body)
+                })
+                
+                if written < 0 {
+                    throw error!
+                } else if written == 0 {
+                    return nil
+                } else if written > 0 {
+                    outstanding = (outstanding.chunks, outstanding.bytes - written)
                     
                     var allFlushed = false
                     var w = written
@@ -169,6 +280,8 @@ fileprivate class PendingWrites {
                         if w >= p.buffer.readableBytes {
                             w -= p.buffer.readableBytes
                             
+                            outstanding = (outstanding.chunks-1, outstanding.bytes)
+
                             // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
                             updateNodes(pending: p)
                             
@@ -192,12 +305,10 @@ fileprivate class PendingWrites {
                         // return nil to signal to the caller that there are no more buffers to consume
                         return nil
                     }
-                    
+
                     // check if we were able to write everything or not
                     assert(expected == written)
                     return true
-                } else {
-                    return false
                 }
             }
             // could not write the complete buffer
@@ -210,25 +321,14 @@ fileprivate class PendingWrites {
     
     func failAll(error: Error) {
         while let pending = head {
-            outstanding -= UInt64(pending.buffer.readableBytes)
+            outstanding = (outstanding.chunks-1, outstanding.bytes - pending.buffer.readableBytes)
             updateNodes(pending: pending)
             pending.promise.fail(error: error)
         }
         assert(flushCheckpoint  == nil)
         assert(head == nil)
         assert(tail == nil)
-        assert(outstanding == 0)
-    }
-
-    private class PendingWrite {
-        var next: PendingWrite?
-        var buffer: ByteBuffer
-        let promise: Promise<Void>
-        
-        init(buffer: ByteBuffer, promise: Promise<Void>) {
-            self.buffer = buffer
-            self.promise = promise
-        }
+        assert(outstanding == (0, 0))
     }
 }
 
@@ -282,10 +382,10 @@ public class SocketChannel : Channel {
                 return 0
             case 1:
                 let p = $0[0]
-                return try (self.socket as! Socket).write(pointer:p.0, size: p.1)
+                return try (self.socket as! Socket).write(pointer: p.iov_base.assumingMemoryBound(to: UInt8.self), size: p.iov_len)
             default:
                 // Gathering write
-                return try (self.socket as! Socket).writev(pointers: $0)
+                return try (self.socket as! Socket).writev(iovecs: $0)
             }
         })
     }

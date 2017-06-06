@@ -30,6 +30,7 @@ let sysRead = Darwin.read
 let sysConnect = Darwin.connect
 #endif
 
+public typealias IOVector = iovec
 
 // TODO: scattering support
 public final class Socket : BaseSocket {
@@ -119,11 +120,9 @@ public final class Socket : BaseSocket {
     }
     
     
-    public func writev(pointers: [(UnsafePointer<UInt8>, Int)]) throws -> Int? {
-        let iovecs = pointers.map { ptr in iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.0), iov_len: ptr.1) }
-
+    public func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> Int? {
         return try wrapSyscallMayBlock({ $0 >= 0 }, function: "writev") {
-            sysWritev(self.descriptor, iovecs, Int32(iovecs.count))
+            sysWritev(self.descriptor, iovecs.baseAddress!, Int32(iovecs.count))
         }
     }
     
