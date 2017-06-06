@@ -344,7 +344,7 @@ public class ServerSocketChannel : Channel {
                 return try SocketChannel(socket: accepted, eventLoop: group.next())
             } catch let err {
                 let _ = try? accepted.close()
-                pipeline.fireErrorCaught0(error: err)
+                throw err
             }
         }
         return nil
@@ -745,10 +745,10 @@ public class Channel : ChannelOutboundInvoker {
                 if let channelErr = err as? ChannelError {
                     // EOF is not really an error that should be forwarded to the user
                     if channelErr != ChannelError.eof {
-                        pipeline.fireErrorCaught(error: err)
+                        pipeline.fireErrorCaught0(error: err)
                     }
                 } else {
-                    pipeline.fireErrorCaught(error: err)
+                    pipeline.fireErrorCaught0(error: err)
                 }
                
                 // Call before triggering the close of the Channel.
