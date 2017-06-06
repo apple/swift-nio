@@ -74,6 +74,13 @@ public enum AutoReadOption: ChannelOption {
     case const(())
 }
 
+public enum WriteSpinOption: ChannelOption {
+    public typealias AssociatedValueType = ()
+    public typealias OptionType = UInt
+    
+    case const(())
+}
+
 public enum MaxMessagesPerReadOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = UInt
@@ -99,4 +106,5 @@ public struct ChannelOptions {
     public static let AutoRead = AutoReadOption.const(())
     public static let MaxMessagesPerRead = MaxMessagesPerReadOption.const(())
     public static let Backlog = BacklogOption.const(())
+    public static let WriteSpin = WriteSpinOption.const(())
 }

@@ -30,6 +30,7 @@ fileprivate class PendingWrites {
     private var flushCheckpoint: PendingWrite?
 
     private(set) var outstanding: UInt64 = 0
+    fileprivate var writeSpinCount: UInt = 16
     
     var isEmpty: Bool {
         return tail == nil
@@ -95,26 +96,30 @@ fileprivate class PendingWrites {
     
     private func consumeOne(body: (UnsafePointer<UInt8>, Int) throws -> Int?) rethrows -> Bool? {
         if let pending = head, isFlushPending() {
-            if let written = try pending.buffer.withReadPointer(body: body) {
-                outstanding -= UInt64(written)
-                
-                if (pending.buffer.readableBytes == written) {
+            for _ in 1..<writeSpinCount {
+                if let written = try pending.buffer.withReadPointer(body: body) {
+                    outstanding -= UInt64(written)
                     
-                    // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
-                    updateNodes(pending: pending)
-                    
-                    let allFlushed = checkFlushCheckpoint(pending: pending)
-
-                    // buffer was completely written
-                    pending.promise.succeed(result: ())
-
-                    if (isEmpty || allFlushed) {
-                        // return nil to signal to the caller that there are no more buffers to consume
-                        return nil
+                    if pending.buffer.readableBytes == written {
+                        
+                        // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
+                        updateNodes(pending: pending)
+                        
+                        let allFlushed = checkFlushCheckpoint(pending: pending)
+                        
+                        // buffer was completely written
+                        pending.promise.succeed(result: ())
+                        
+                        if isEmpty || allFlushed {
+                            // return nil to signal to the caller that there are no more buffers to consume
+                            return nil
+                        }
+                        return true
+                    } else {
+                        pending.buffer.skipBytes(num: written)
                     }
-                    return true
                 } else {
-                    pending.buffer.skipBytes(num: written)
+                    return false
                 }
             }
             // could not write the complete buffer
@@ -126,7 +131,7 @@ fileprivate class PendingWrites {
     }
     
     private func consumeMultiple(body: ([(UnsafePointer<UInt8>, Int)]) throws -> Int?) rethrows -> Bool? {
-        if let pending = head, isFlushPending() {
+        if var pending = head, isFlushPending() {
             var pointers: [(UnsafePointer<UInt8>, Int)] = []
             
             func consumeNext0(pendingWrite: PendingWrite?, count: Int, body: ([(UnsafePointer<UInt8>, Int)]) throws -> Int?) rethrows -> Int? {
@@ -145,46 +150,55 @@ fileprivate class PendingWrites {
                 return try body(pointers)
             }
 
-            if let written = try consumeNext0(pendingWrite: pending, count: 0, body: body) {
-                // Calculate the amount of data we expect to write with one syscall.
-                var expected = 0
-                for p in pointers {
-                    expected += p.1
-                }
-                
-                outstanding -= UInt64(written)
-                assert(head != nil)
-                
-                var allFlushed = false
-                var w = written
-                while let p = head {
-                    assert(!allFlushed)
-                    
-                    if w >= p.buffer.readableBytes {
-                        w -= p.buffer.readableBytes
-                        
-                        // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
-                        updateNodes(pending: p)
-                        
-                        allFlushed = checkFlushCheckpoint(pending: p)
-
-                        // buffer was completely written
-                        p.promise.succeed(result: ())
-                    } else {
-                        // Only partly written, so update the readerIndex.
-                        p.buffer.skipBytes(num: w)
-                        return false
+            writeLoop: for _ in 1..<writeSpinCount {
+                if let written = try consumeNext0(pendingWrite: pending, count: 0, body: body) {
+                    // Calculate the amount of data we expect to write with one syscall.
+                    var expected = 0
+                    for p in pointers {
+                        expected += p.1
                     }
+                    
+                    outstanding -= UInt64(written)
+                    assert(head != nil)
+                    
+                    var allFlushed = false
+                    var w = written
+                    while let p = head {
+                        assert(!allFlushed)
+                        
+                        if w >= p.buffer.readableBytes {
+                            w -= p.buffer.readableBytes
+                            
+                            // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
+                            updateNodes(pending: p)
+                            
+                            allFlushed = checkFlushCheckpoint(pending: p)
+                            
+                            // buffer was completely written
+                            p.promise.succeed(result: ())
+                        } else {
+                            // Only partly written, so update the readerIndex.
+                            p.buffer.skipBytes(num: w)
+                            
+                            // update pending so we not need to process the old PendingWrites that we already processed and completed
+                            pending = p
+
+                            // may try again depending on the writeSpinCount
+                            continue writeLoop
+                        }
+                    }
+                    
+                    if isEmpty || allFlushed {
+                        // return nil to signal to the caller that there are no more buffers to consume
+                        return nil
+                    }
+                    
+                    // check if we were able to write everything or not
+                    assert(expected == written)
+                    return true
+                } else {
+                    return false
                 }
-                
-                if (isEmpty || allFlushed) {
-                    // return nil to signal to the caller that there are no more buffers to consume
-                    return nil
-                }
-                
-                // check if we were able to write everything or not
-                assert(expected == written)
-                return true
             }
             // could not write the complete buffer
             return false
@@ -450,6 +464,8 @@ public class Channel : ChannelOutboundInvoker {
             }
         } else if option is MaxMessagesPerReadOption {
             maxMessagesPerRead = value as! UInt
+        } else if option is WriteSpinOption {
+            pendingWrites.writeSpinCount = value as! UInt
         } else {
             fatalError("option \(option) not supported")
         }
@@ -481,6 +497,9 @@ public class Channel : ChannelOutboundInvoker {
         }
         if option is MaxMessagesPerReadOption {
             return maxMessagesPerRead as! T.OptionType
+        }
+        if option is WriteSpinOption {
+            return pendingWrites.writeSpinCount as! T.OptionType
         }
         fatalError("option \(option) not supported")
     }
