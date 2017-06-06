@@ -265,19 +265,19 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         }
     }
 
-    public mutating func readInteger<T: EndianessInteger>(endianess: Endianess = .Big) -> T? {
-        if let int: T = getInteger0(index: applyOffset(readerIndex), limit: applyOffset(writerIndex), endianess: endianess) {
+    public mutating func read<T: EndianessInteger>(endianess: Endianess = .Big) -> T? {
+        if let int: T = get0(at: applyOffset(readerIndex), limit: applyOffset(writerIndex), endianess: endianess) {
             readerIndex += MemoryLayout<T>.size
             return int
         }
         return nil
     }
     
-    public func getInteger<T: EndianessInteger>(index: Int, endianess: Endianess = .Big) -> T? {
-        return getInteger0(index: applyOffset(index), limit: capacity, endianess: endianess)
+    public func get<T: EndianessInteger>(at index: Int, endianess: Endianess = .Big) -> T? {
+        return get0(at: applyOffset(index), limit: capacity, endianess: endianess)
     }
     
-    private func getInteger0<T: EndianessInteger>(index: Int, limit: Int, endianess: Endianess = .Big) -> T? {
+    private func get0<T: EndianessInteger>(at index: Int, limit: Int, endianess: Endianess = .Big) -> T? {
         guard index + MemoryLayout<T>.size <= limit else {
             return nil
         }
@@ -290,10 +290,10 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
     }
     
     
-    public mutating func setInteger<T: EndianessInteger>(index: Int, value: T, endianess: Endianess = .Big) -> Int? {
+    public mutating func set<T: EndianessInteger>(integer: T, at index: Int, endianess: Endianess = .Big) -> Int? {
         let size = MemoryLayout<T>.size
         if expandIfNeeded(index: index, size: size) {
-            var v = toEndianess(value: value, endianess: endianess)
+            var v = toEndianess(value: integer, endianess: endianess)
             
             withUnsafePointer(to: &v) { valPointer in
                 valPointer.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<T>.size) { p in
@@ -308,33 +308,33 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
     }
     
     @discardableResult
-    public mutating func writeInteger<T: EndianessInteger>(value: T, endianess: Endianess = .Big) -> Int? {
-        if let bytes = setInteger(index: writerIndex, value: value, endianess: endianess) {
+    public mutating func write<T: EndianessInteger>(integer: T, endianess: Endianess = .Big) -> Int? {
+        if let bytes = set(integer: integer, at: writerIndex, endianess: endianess) {
             writerIndex += bytes
             return bytes
         }
         return nil
     }
     
-    public mutating func setData(index: Int, value: Data) -> Int? {
-        if expandIfNeeded(index: index, size: value.count) {
+    public mutating func set(data: Data, at index: Int) -> Int? {
+        if expandIfNeeded(index: index, size: data.count) {
             let idx = applyOffset(index)
-            data.replaceSubrange(idx..<idx + value.count, with: value)
-            return value.count
+            self.data.replaceSubrange(idx..<idx + data.count, with: data)
+            return data.count
         }
         return nil
     }
 
     @discardableResult
-    public mutating func writeData(value: Data) -> Int? {
-        if let bytes = setData(index: writerIndex, value: value) {
+    public mutating func write(data: Data) -> Int? {
+        if let bytes = set(data: data, at: writerIndex) {
             writerIndex += bytes
             return bytes
         }
         return nil
     }
     
-    public mutating func getData(index: Int, length: Int) -> Data? {
+    public mutating func get(at index: Int, length: Int) -> Data? {
         guard length <= capacity - index else {
             return nil
         }
@@ -342,8 +342,8 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
         return data.subdata(in: idx..<idx + length)
     }
     
-    public mutating func readData(length: Int) -> Data? {
-        if let data = getData(index: readerIndex, length: length) {
+    public mutating func read(length: Int) -> Data? {
+        if let data = get(at: readerIndex, length: length) {
             readerIndex += data.count
             return data
         }
@@ -354,20 +354,20 @@ public struct ByteBuffer { // TODO: Equatable, Comparable
     
     // TODO: Generics to avoid this?
     @discardableResult
-    public mutating func writeString(value: String) -> Int?{
-        if let bytes = setString(index: writerIndex, value: value) {
+    public mutating func write(string: String) -> Int?{
+        if let bytes = set(string: string, at: writerIndex) {
             writerIndex += bytes
             return bytes
         }
         return nil
     }
     
-    public mutating func setString(index: Int, value: String) -> Int? {
-        let string = value.utf8
-        let count = string.count
+    public mutating func set(string: String, at index: Int) -> Int? {
+        let utf8 = string.utf8
+        let count = utf8.count
         if expandIfNeeded(index: index, size: count) {
             let idx = applyOffset(index)
-            data.replaceSubrange(idx..<idx + count, with: string)
+            data.replaceSubrange(idx..<idx + count, with: utf8)
             return count
         }
         return nil
