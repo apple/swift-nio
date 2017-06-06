@@ -413,7 +413,12 @@ public class Channel : ChannelOutboundInvoker {
     fileprivate var autoRead: Bool = true
     fileprivate var maxMessagesPerRead: UInt = 1
 
-    public lazy var pipeline: ChannelPipeline = ChannelPipeline(channel: self)
+    // We don't use lazy var here as this is more expensive then doing this :/
+    public var pipeline: ChannelPipeline {
+        return _pipeline
+    }
+    
+    private var _pipeline: ChannelPipeline!
 
     public func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws {
         if eventLoop.inEventLoop {
@@ -882,6 +887,7 @@ public class Channel : ChannelOutboundInvoker {
         self.socket = socket
         self.eventLoop = eventLoop
         self.closePromise = eventLoop.newPromise(type: Void.self)
+        self._pipeline = ChannelPipeline(channel: self)
     }
     
     deinit {
