@@ -37,7 +37,7 @@ public class EchoHandler: ChannelHandler {
         let _ = ctx.close()
     }
 }
-let group = try MultiThreadedEventLoopGroup(numThreads: 2)
+let group = try MultiThreadedEventLoopGroup(numThreads: 1)
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .option(option: ChannelOptions.Backlog, value: 256)
@@ -54,7 +54,7 @@ let bootstrap = ServerBootstrap(group: group)
     // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels
     .option(childOption: ChannelOptions.Socket(IPPROTO_TCP, TCP_NODELAY), childValue: 1)
     .option(childOption: ChannelOptions.Socket(SOL_SOCKET, SO_REUSEADDR), childValue: 1)
-
+    .option(childOption: ChannelOptions.MaxMessagesPerRead, childValue: 16)
 defer {
     _ = try? group.close()
 }
