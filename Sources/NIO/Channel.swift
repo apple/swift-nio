@@ -338,9 +338,9 @@ fileprivate class PendingWrites {
 /*
  All operations on SocketChannel are thread-safe
  */
-final public class SocketChannel : BaseSocketChannel {
+final class SocketChannel : BaseSocketChannel {
     
-    public init(eventLoop: EventLoop) throws {
+    init(eventLoop: SelectableEventLoop) throws {
         let socket = try Socket()
         do {
             try socket.setNonBlocking()
@@ -352,7 +352,7 @@ final public class SocketChannel : BaseSocketChannel {
         super.init(socket: socket, eventLoop: eventLoop)
     }
     
-    fileprivate init(socket: Socket, eventLoop: EventLoop) throws {
+    fileprivate init(socket: Socket, eventLoop: SelectableEventLoop) throws {
         try socket.setNonBlocking()
         super.init(socket: socket, eventLoop: eventLoop)
     }
@@ -405,12 +405,12 @@ final public class SocketChannel : BaseSocketChannel {
 /*
  All operations on ServerSocketChannel are thread-safe
  */
-final public class ServerSocketChannel : BaseSocketChannel {
+final class ServerSocketChannel : BaseSocketChannel {
     
     private var backlog: Int32 = 128
     private let group: EventLoopGroup
     
-    public init(eventLoop: EventLoop, group: EventLoopGroup) throws {
+    init(eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
         let serverSocket = try ServerSocket()
         do {
             try serverSocket.setNonBlocking()
@@ -462,7 +462,7 @@ final public class ServerSocketChannel : BaseSocketChannel {
     override fileprivate func readFromSocket() throws -> Any? {
         if let accepted =  try (self.socket as! ServerSocket).accept() {
             do {
-                return try SocketChannel(socket: accepted, eventLoop: group.next())
+                return try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop)
             } catch let err {
                 let _ = try? accepted.close()
                 throw err
@@ -476,7 +476,7 @@ final public class ServerSocketChannel : BaseSocketChannel {
         return true
     }
     
-    override public func channelRead(data: Any) {
+    override public func channelRead0(data: Any) {
         assert(eventLoop.inEventLoop)
 
         if let ch = data as? Channel {
@@ -492,7 +492,10 @@ final public class ServerSocketChannel : BaseSocketChannel {
 }
 
 
-public protocol ChannelCore {
+/*
+ All methods must be called from the EventLoop thread
+ */
+public protocol ChannelCore : class{
     func register0(promise: Promise<Void>)
     func bind0(local: SocketAddress, promise: Promise<Void>)
     func connect0(remote: SocketAddress, promise: Promise<Void>)
@@ -502,8 +505,9 @@ public protocol ChannelCore {
     func startReading0()
     func stopReading0()
     func close0(promise: Promise<Void>, error: Error)
-    var closePromise: Promise<Void> { get }
+    func channelRead0(data: Any)
     var closed: Bool { get }
+    var eventLoop: EventLoop { get }
 }
 
 extension ChannelCore {
@@ -512,6 +516,9 @@ extension ChannelCore {
     }
 }
 
+/*
+ All methods exposed by Channel are thread-safe
+ */
 public protocol Channel : class, ChannelOutboundInvoker {
     var allocator: ByteBufferAllocator { get }
 
@@ -521,14 +528,12 @@ public protocol Channel : class, ChannelOutboundInvoker {
     var localAddress: SocketAddress? { get }
     var remoteAddress: SocketAddress? { get }
 
-
     func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws
     func getOption<T: ChannelOption>(option: T) throws -> T.OptionType
 
     @discardableResult func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void>
     @discardableResult func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void>
     func read()
-    func channelRead(data: Any)
     @discardableResult func write(data: Any, promise: Promise<Void>) -> Future<Void>
     func flush()
     @discardableResult func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void>
@@ -546,7 +551,13 @@ protocol SelectableChannel : Channel {
 }
 
 extension Channel {
-    var closed: Bool { return _unsafe.closed }
+    public var open: Bool {
+        return !closeFuture.fulfilled
+    }
+    
+    var eventLoop: EventLoop {
+        return _unsafe.eventLoop
+    }
 
     @discardableResult public func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
         return pipeline.bind(local: local, promise: promise)
@@ -585,16 +596,11 @@ extension Channel {
     }
 }
 
-/*
- All operations on Channel are thread-safe
-*/
-public class BaseSocketChannel : SelectableChannel, ChannelCore {
+class BaseSocketChannel : SelectableChannel, ChannelCore {
+
     public var selectable: Selectable { return socket }
 
     public var _unsafe: ChannelCore { return self }
-
-
-    public let eventLoop: EventLoop
 
     // Visible to access from EventLoop directly
     let socket: BaseSocket
@@ -605,16 +611,18 @@ public class BaseSocketChannel : SelectableChannel, ChannelCore {
     private var readPending = false
     private var neverRegistered = true
     private var pendingConnect: Promise<Void>?
-    public let closePromise: Promise<Void>
+    private let closePromise: Promise<Void>
     
     public var closeFuture: Future<Void> {
         return closePromise.futureResult
     }
     
-    public var open: Bool {
-        return !closeFuture.fulfilled
+    private let selectableEventLoop: SelectableEventLoop
+    
+    public var eventLoop: EventLoop {
+        return selectableEventLoop
     }
-
+    
     public var allocator: ByteBufferAllocator {
         if eventLoop.inEventLoop {
             return bufferAllocator
@@ -628,8 +636,13 @@ public class BaseSocketChannel : SelectableChannel, ChannelCore {
     fileprivate var autoRead: Bool = true
     fileprivate var maxMessagesPerRead: UInt = 1
 
-    public lazy var pipeline: ChannelPipeline! = ChannelPipeline(channel: self)
-
+    // We don't use lazy var here as this is more expensive then doing this :/
+    public var pipeline: ChannelPipeline {
+        return _pipeline
+    }
+    
+    private var _pipeline: ChannelPipeline!
+    
     public func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws {
         if eventLoop.inEventLoop {
             try setOption0(option: option, value: value)
@@ -718,6 +731,10 @@ public class BaseSocketChannel : SelectableChannel, ChannelCore {
         }
     }
 
+    @discardableResult public func register(promise: Promise<Void>) -> Future<Void> {
+        return pipeline.register(promise: promise)
+    }
+    
     @discardableResult public func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
         return pipeline.bind(local: local, promise: promise)
     }
@@ -893,10 +910,6 @@ public class BaseSocketChannel : SelectableChannel, ChannelCore {
         }
     }
     
-    public func register(promise: Promise<Void>) -> Future<Void> {
-        return pipeline.register(promise: promise)
-    }
-    
 
     // Methods invoked from the EventLoop itself
     public func writable() {
@@ -1020,7 +1033,7 @@ public class BaseSocketChannel : SelectableChannel, ChannelCore {
         fatalError("this must be overridden by sub class")
     }
     
-    public func channelRead(data: Any) {
+    public func channelRead0(data: Any) {
         // Do nothing by default
     }
 
@@ -1032,7 +1045,7 @@ public class BaseSocketChannel : SelectableChannel, ChannelCore {
     private func safeDeregister() {
         interestedEvent = .none
         do {
-            try eventLoop.deregister(channel: self)
+            try selectableEventLoop.deregister(channel: self)
         } catch let err {
             pipeline.fireErrorCaught0(error: err)
             close0(error: err)
@@ -1046,7 +1059,7 @@ public class BaseSocketChannel : SelectableChannel, ChannelCore {
         }
         interestedEvent = interested
         do {
-            try eventLoop.reregister(channel: self)
+            try selectableEventLoop.reregister(channel: self)
         } catch let err {
             pipeline.fireErrorCaught0(error: err)
             close0(error: err)
@@ -1061,7 +1074,7 @@ public class BaseSocketChannel : SelectableChannel, ChannelCore {
         }
         interestedEvent = interested
         do {
-            try eventLoop.register(channel: self)
+            try selectableEventLoop.register(channel: self)
             return true
         } catch let err {
             pipeline.fireErrorCaught0(error: err)
@@ -1098,9 +1111,9 @@ public class BaseSocketChannel : SelectableChannel, ChannelCore {
         return true
     }
     
-    fileprivate init(socket: BaseSocket, eventLoop: EventLoop) {
+    fileprivate init(socket: BaseSocket, eventLoop: SelectableEventLoop) {
         self.socket = socket
-        self.eventLoop = eventLoop
+        self.selectableEventLoop = eventLoop
         self.closePromise = eventLoop.newPromise(type: Void.self)
         self._pipeline = ChannelPipeline(channel: self)
     }

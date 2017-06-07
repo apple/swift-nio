@@ -523,7 +523,7 @@ private class TailChannelHandler : ChannelHandler {
     }
     
     func channelRead(ctx: ChannelHandlerContext, data: Any) {
-        ctx.channel!.channelRead(data: data)
+        ctx.channel!._unsafe.channelRead0(data: data)
     }
 }
 

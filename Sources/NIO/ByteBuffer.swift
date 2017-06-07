@@ -88,8 +88,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
             return false
         }
 
-        return lhs.readableBytes == rhs.readableBytes &&
-            lhs.withReadPointer { lhsPtr, lhsSize in
+        return lhs.withReadPointer { lhsPtr, lhsSize in
                 rhs.withReadPointer { rhsPtr, rhsSize in
                     // Shouldn't get here otherwise because of readableBytes check
                     assert(rhsSize == lhsSize)

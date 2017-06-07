@@ -26,18 +26,6 @@ class EmbeddedEventLoop : EventLoop {
     // Would be better to have this as a Queue
     var tasks: [() -> ()] = Array()
 
-    func register(channel: Channel) throws {
-        let _ = channel.register()
-    }
-
-    func deregister(channel: Channel) throws {
-        // Doesn't apply
-    }
-
-    func reregister(channel: Channel) throws {
-        // Doesn't apply
-    }
-
     // We're not really running a loop here. Tasks aren't run until run() is called,
     // at which point we run everything that's been submitted. Anything newly submitted
     // either gets on that train if it's still moving or
@@ -72,6 +60,8 @@ class EmbeddedChannelCore : ChannelCore {
     var closed: Bool { return closePromise.futureResult.fulfilled }
 
     var closePromise: Promise<Void> = Promise<Void>()
+    
+    var eventLoop: EventLoop = EmbeddedEventLoop()
 
     deinit { closePromise.succeed(result: ()) }
 
@@ -111,12 +101,20 @@ class EmbeddedChannelCore : ChannelCore {
 
     func readIfNeeded0() {
     }
+    
+    func channelRead0(data: Any) {
+    }
 }
 
 public class EmbeddedChannel : Channel {
-    public var closeFuture: Future<Void> { return _unsafe.closePromise.futureResult }
+    public var closeFuture: Future<Void> { return channelcore.closePromise.futureResult }
 
-    public var _unsafe: ChannelCore = EmbeddedChannelCore()
+    private let channelcore: EmbeddedChannelCore = EmbeddedChannelCore()
+
+    public var _unsafe: ChannelCore {
+        return channelcore
+    }
+    
     public var pipeline: ChannelPipeline {
         return _pipeline
     }
@@ -144,6 +142,4 @@ public class EmbeddedChannel : Channel {
     public func read() {
         pipeline.read()
     }
-    
-    public func channelRead(data: Any) { }
 }

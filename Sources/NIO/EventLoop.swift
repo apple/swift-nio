@@ -17,17 +17,10 @@ import Future
 import Sockets
 import ConcurrencyHelpers
 
-public protocol EventLoop {
+public protocol EventLoop: EventLoopGroup {
     var inEventLoop: Bool { get }
-
-    func register(channel: Channel) throws
-    func deregister(channel: Channel) throws
-    func reregister(channel: Channel) throws
     func execute(task: @escaping () -> ())
     func submit<T>(task: @escaping () throws-> (T)) -> Future<T>
-    func run() throws
-    func close() throws
-    
 }
 
 extension EventLoop {
@@ -60,11 +53,19 @@ extension EventLoop {
         promise.succeed(result: result)
         return promise.futureResult
     }
+    
+    public func next() -> EventLoop {
+        return self
+    }
+    
+    public func close() throws {
+        // Do nothing
+    }
 }
 
 
 // TODO: Implement scheduling tasks in the future (a.k.a ScheduledExecutoreService
-final class SelectableEventLoop : EventLoop, EventLoopGroup {
+final class SelectableEventLoop : EventLoop {
     private let selector: Sockets.Selector
     private var thread: Thread?
     private var tasks: [() -> ()]
@@ -81,26 +82,14 @@ final class SelectableEventLoop : EventLoop, EventLoopGroup {
         try selector.register(selectable: channel.selectable, interested: channel.interestedEvent, attachment: channel)
     }
 
-    func register(channel: Channel) throws {
-        try register(channel: channel as! SelectableChannel)
-    }
-    
     func deregister(channel: SelectableChannel) throws {
         assert(inEventLoop)
         try selector.deregister(selectable: channel.selectable)
-    }
-
-    func deregister(channel: Channel) throws {
-        try deregister(channel: channel as! SelectableChannel)
     }
     
     func reregister(channel: SelectableChannel) throws {
         assert(inEventLoop)
         try selector.reregister(selectable: channel.selectable, interested: channel.interestedEvent)
-    }
-
-    func reregister(channel: Channel) throws {
-        try reregister(channel: channel as! SelectableChannel)
     }
     
     var inEventLoop: Bool {
@@ -151,7 +140,7 @@ final class SelectableEventLoop : EventLoop, EventLoopGroup {
                 }
 
                 // Ensure we never reach here if the channel is not open anymore.
-                assert(!channel.closed)
+                assert(!channel._unsafe.closed)
             }
             
             // TODO: Better locking
@@ -166,8 +155,8 @@ final class SelectableEventLoop : EventLoop, EventLoopGroup {
         }
     }
 
-    private func handleEvents(_ channel: Channel) -> Bool {
-        if !channel.closed {
+    private func handleEvents(_ channel: SelectableChannel) -> Bool {
+        if !channel._unsafe.closed {
             return true
         }
         do {
@@ -179,7 +168,7 @@ final class SelectableEventLoop : EventLoop, EventLoopGroup {
         return false
     }
     
-    func close() throws {
+    func close0() throws {
         if inEventLoop {
             try self.selector.close()
         } else {
@@ -188,10 +177,6 @@ final class SelectableEventLoop : EventLoop, EventLoopGroup {
                 try self.selector.close()
             }).wait()
         }
-    }
-    
-    func next() -> EventLoop {
-        return self
     }
 }
 
@@ -212,10 +197,10 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
     
     private let index = Atomic<Int>(value: 0)
 
-    private let eventLoops: [EventLoop]
+    private let eventLoops: [SelectableEventLoop]
 
     public init(numThreads: Int) throws {
-        var loops: [EventLoop] = []
+        var loops: [SelectableEventLoop] = []
         for _ in 0..<numThreads {
             let loop = try SelectableEventLoop()
             loops.append(loop)
@@ -246,7 +231,7 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
     public func close() throws {
         for loop in eventLoops {
             // TODO: Should we log this somehow or just rethrow the first error ?
-            _ = try loop.close()
+            _ = try loop.close0()
         }
     }
 }

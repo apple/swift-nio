@@ -78,7 +78,7 @@ public class ServerBootstrap {
         
         let promise = eventLoop.newPromise(type: Channel.self)
         do {
-            let serverChannel = try ServerSocketChannel(eventLoop: eventLoop, group: chEvGroup)
+            let serverChannel = try ServerSocketChannel(eventLoop: eventLoop as! SelectableEventLoop, group: chEvGroup)
             
             func finishServerSetup() {
                 do {
@@ -228,7 +228,7 @@ public class ClientBootstrap {
         
         let promise = eventLoop.newPromise(type: Channel.self)
         do {
-            let channel = try SocketChannel(eventLoop: eventLoop)
+            let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop)
             
             func finishClientSetup() {
                 do {
