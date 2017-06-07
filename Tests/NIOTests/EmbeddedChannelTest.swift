@@ -19,7 +19,7 @@ class EmbeddedChannelTest: XCTestCase {
     func testWriteByteBuffer() throws {
         let channel = EmbeddedChannel()
         var buf = try channel.allocator.buffer(capacity: 1024)
-        buf.writeString(value: "hello")
+        buf.write(string: "hello")
 
         let f = channel.write(data: buf, promise:channel.eventLoop.newPromise(type: Void.self))
 
