@@ -242,6 +242,9 @@ fileprivate class PendingWrites {
                             return nil
                             
                         }
+                    } else {
+                        // Update readerIndex of the buffer
+                        pending.buffer.skipBytes(num: written)
                     }
                 } else {
                     return false
