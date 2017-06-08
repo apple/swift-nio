@@ -156,6 +156,8 @@ fileprivate class PendingWrites {
     fileprivate var writeSpinCount: UInt = 16
     private(set) var outstanding: (chunks: Int, bytes: Int) = (0, 0)
     
+     private(set) var closed = false
+    
     var isEmpty: Bool {
         return tail == nil
     }
@@ -221,6 +223,9 @@ fileprivate class PendingWrites {
     private func consumeOne(body: (UnsafePointer<UInt8>, Int) throws -> Int?) rethrows -> Bool? {
         if let pending = head, isFlushPending() {
             for _ in 1..<writeSpinCount {
+                guard !closed else {
+                    return true
+                }
                 if let written = try pending.buffer.withReadPointer(body: body) {
                     outstanding = (outstanding.chunks, outstanding.bytes - written)
                     
@@ -261,6 +266,9 @@ fileprivate class PendingWrites {
     private func consumeMultiple(body: (UnsafeBufferPointer<IOVector>) throws -> Int?) throws -> Bool? {
         if var pending = head, isFlushPending() {
             writeLoop: for _ in 1..<writeSpinCount {
+                guard !closed else {
+                    return true
+                }
                 var expected = 0
                 var error: Error? = nil
                 let written = doPendingWriteVectorOperation(pending: pending, count: outstanding.chunks, { pointer in
@@ -323,6 +331,7 @@ fileprivate class PendingWrites {
     }
     
     func failAll(error: Error) {
+        closed = true
         while let pending = head {
             outstanding = (outstanding.chunks-1, outstanding.bytes - pending.buffer.readableBytes)
             updateNodes(pending: pending)
@@ -605,7 +614,10 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
     // Visible to access from EventLoop directly
     let socket: BaseSocket
     public var interestedEvent: InterestedEvent = .none
-    public private(set) var closed = false
+
+    public var closed: Bool {
+        return pendingWrites.closed
+    }
 
     private let pendingWrites: PendingWrites = PendingWrites()
     private var readPending = false
@@ -870,7 +882,9 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
             promise.succeed(result: ())
             return
         }
-        closed = true
+        
+        // Fail all pending writes and so ensure all pending promises are notified
+        pendingWrites.failAll(error: error)
         
         safeDeregister()
 
@@ -972,6 +986,9 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
         }
         
         for _ in 1...maxMessagesPerRead {
+            guard !closed else {
+                return
+            }
             do {
                 if let read = try readFromSocket() {
                     pipeline.fireChannelRead0(data: read)
