@@ -115,7 +115,7 @@ public class Selector {
             return timespec(tv_sec: 0, tv_nsec: 0)
         case .blockUntilTimeout(let ms):
             // Convert to nanoseconds
-            return timespec(tv_sec: 0, tv_nsec: ms * 1000 * 1000)
+            return timespec(tv_sec: ms / 1000, tv_nsec: (ms % 1000) * 1000000)
         }
     }
     
