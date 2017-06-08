@@ -1074,6 +1074,10 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
             interestedEvent = .none
             return
         }
+        guard interested != interestedEvent else {
+            // we not need to update and so cause a syscall if we already are registered with the correct event
+            return
+        }
         interestedEvent = interested
         do {
             try selectableEventLoop.reregister(channel: self)
