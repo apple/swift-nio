@@ -187,7 +187,6 @@ fileprivate class PendingWrites {
      Function that takes two closures and based on if there are more then one ByteBuffer pending calls either one or the other.
     */
     func consume(oneBody: (UnsafePointer<UInt8>, Int) throws -> Int?, multipleBody: (UnsafeBufferPointer<IOVector>) throws -> Int?) throws -> Bool? {
-        
         if hasMultiple {
             // Holds multiple pending writes, use consumeMultiple which will allow us to us writev (a.k.a gathering writes)
             return try consumeMultiple(body: multipleBody)
@@ -240,8 +239,9 @@ fileprivate class PendingWrites {
                         if isEmpty || allFlushed {
                             // return nil to signal to the caller that there are no more buffers to consume
                             return nil
-                            
                         }
+                        // Wrote the full buffer
+                        return true
                     } else {
                         // Update readerIndex of the buffer
                         pending.buffer.skipBytes(num: written)
