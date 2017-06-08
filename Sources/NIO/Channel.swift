@@ -44,7 +44,7 @@ final class PendingWrite {
     }
 }
 
-#if swift(>=4.0)
+#if swift(>=3.2)
 /* workaround for https://bugs.swift.org/browse/SR-5106 */
 func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, iovecs: UnsafeMutableBufferPointer<IOVector>, _ fn: (UnsafeBufferPointer<IOVector>) -> Int) -> Int {
     return withoutActuallyEscaping(fn) { fn in
