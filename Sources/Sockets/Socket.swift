@@ -104,32 +104,6 @@ public final class Socket : BaseSocket {
         }
     }
 
-    public func writev(datas: Data... ) throws -> Int? {
-        guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't writev to socket as it's not open anymore.")
-        }
-
-        var iovecs: [iovec] = []
-
-        // This is a bit messy as there is not other way at the moment to ensure the pointers are not "freed" before we were able to do the syscall.
-        // To ensure we not get into trouble because of stackoverflow we use a limit of 1024 recursive calls for now.
-        func writev0(index: Int) throws -> Int? {
-            if datas.count == iovecs.count || iovecs.count == Socket.writevLimit {
-                return try wrapSyscallMayBlock({ $0 >= 0 }, function: "writev") {
-                    sysWritev(self.descriptor, iovecs, Int32(iovecs.count))
-                }
-            }
-            let data = datas[index]
-            return try data.withUnsafeBytes { (pointer: UnsafePointer<UInt8>) -> Int? in
-                iovecs.append(iovec(iov_base: UnsafeMutableRawPointer(mutating: pointer), iov_len: data.count))
-                return try writev0(index: index + 1)
-            }
-        }
-
-        return try writev0(index: 0)
-    }
-    
-    
     public func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> Int? {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't writev to socket as it's not open anymore.")
