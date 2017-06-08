@@ -20,6 +20,7 @@
 import Foundation
 import XCTest
 import Future
+import Sockets
 @testable import NIO
 
 class ChannelWriteTests: XCTestCase {
@@ -37,8 +38,14 @@ class ChannelWriteTests: XCTestCase {
                 tail!.next = new
                 tail = new
             }
-            _ = doPendingWriteVectorOperation(pending: head, count: numberOfWritesToSmashTheStackIfNotTurnedIntoALoop+1) { iovecs in
-                XCTAssertEqual(numberOfWritesToSmashTheStackIfNotTurnedIntoALoop+1, iovecs.count)
+            var iovecs_count = numberOfWritesToSmashTheStackIfNotTurnedIntoALoop + 1
+            var iovecs: UnsafeMutablePointer<IOVector> = UnsafeMutablePointer.allocate(capacity: iovecs_count)
+            defer {
+                iovecs.deallocate(capacity: iovecs_count)
+            }
+            
+            _ = doPendingWriteVectorOperation(pending: head, count: numberOfWritesToSmashTheStackIfNotTurnedIntoALoop+1, iovecs: UnsafeMutableBufferPointer(start: iovecs, count: iovecs_count)) { iovecs in
+                XCTAssertEqual(numberOfWritesToSmashTheStackIfNotTurnedIntoALoop + 1, iovecs.count)
                 for i in 0..<iovecs.count {
                     if d.first! != iovecs[i].iov_base.assumingMemoryBound(to: UInt8.self).pointee {
                         break

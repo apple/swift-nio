@@ -46,11 +46,7 @@ final class PendingWrite {
 
 #if swift(>=4.0)
 /* workaround for https://bugs.swift.org/browse/SR-5106 */
-func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, _ fn: (UnsafeBufferPointer<IOVector>) -> Int) -> Int {
-    var iovecs: UnsafeMutablePointer<IOVector> = UnsafeMutablePointer.allocate(capacity: count)
-    defer {
-        iovecs.deallocate(capacity: count)
-    }
+func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, iovecs: UnsafeMutableBufferPointer<IOVector>, _ fn: (UnsafeBufferPointer<IOVector>) -> Int) -> Int {
     return withoutActuallyEscaping(fn) { fn in
         return withExtendedLifetime(pending) {
             var next = pending
@@ -90,18 +86,15 @@ func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, _ fn: (Un
 
  If you change anything, please test RUN THE `testWriteVIsTailRecursiveAndLoopifiedInReleaseMode` test case IN RELASE MODE
  */
-func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, _ fn: (UnsafeBufferPointer<IOVector>) -> Int) -> Int {
-    var recursionLimit: Int = Int.max
+func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, iovecs: UnsafeMutableBufferPointer<IOVector>, _ fn: (UnsafeBufferPointer<IOVector>) -> Int) -> Int {
+    var recursionLimit = iovecs.count - 1
     if _isDebugAssertConfiguration() && recursionLimit - 1 == recursionLimit - 1 {
-        recursionLimit = 32
+        recursionLimit = min(recursionLimit, 32)
     }
-    var iovecs: UnsafeMutablePointer<IOVector> = UnsafeMutablePointer.allocate(capacity: count)
-    defer {
-        iovecs.deallocate(capacity: count)
-    }
+    
     return withoutActuallyEscaping(fn) { fn in
         func doPendingWriteVectorOperation_(ref: Unmanaged<PendingWrite>,
-                                            iovecs: UnsafeMutablePointer<IOVector>,
+                                            iovecs: UnsafeMutableBufferPointer<IOVector>,
                                             index: Int,
                                             recursionLimit: Int) -> Int {
             let (byteCount, offset) = ref._withUnsafeGuaranteedRef { ($0.buffer.readableBytes, $0.buffer.readerIndex) }
@@ -116,7 +109,7 @@ func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, _ fn: (Un
                                                       index: index + 1,
                                                       recursionLimit: recursionLimit)
             } else {
-                return fn(UnsafeBufferPointer(start: iovecs, count: index+1))
+                return fn(UnsafeBufferPointer(start: iovecs.baseAddress, count: index+1))
             }
         }
         return withExtendedLifetime(pending) {
@@ -152,11 +145,12 @@ fileprivate class PendingWrites {
     private var tail: PendingWrite?
     // Marks the last PendingWrite that should be written by consume(...)
     private var flushCheckpoint: PendingWrite?
-
+    private var iovecs: UnsafeMutableBufferPointer<IOVector>
+    
     fileprivate var writeSpinCount: UInt = 16
     private(set) var outstanding: (chunks: Int, bytes: Int) = (0, 0)
     
-     private(set) var closed = false
+    private(set) var closed = false
     
     var isEmpty: Bool {
         return tail == nil
@@ -271,7 +265,7 @@ fileprivate class PendingWrites {
                 }
                 var expected = 0
                 var error: Error? = nil
-                let written = doPendingWriteVectorOperation(pending: pending, count: outstanding.chunks, { pointer in
+                let written = doPendingWriteVectorOperation(pending: pending, count: outstanding.chunks, iovecs: iovecs, { pointer in
                     expected += pointer.count
                     return makeNonThrowing(errorBuffer: &error, input: pointer, body)
                 })
@@ -341,6 +335,10 @@ fileprivate class PendingWrites {
         assert(head == nil)
         assert(tail == nil)
         assert(outstanding == (0, 0))
+    }
+    
+    init(iovecs: UnsafeMutableBufferPointer<IOVector>) {
+        self.iovecs = iovecs
     }
 }
 
@@ -619,7 +617,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
         return pendingWrites.closed
     }
 
-    private let pendingWrites: PendingWrites = PendingWrites()
+    private let pendingWrites: PendingWrites
     private var readPending = false
     private var neverRegistered = true
     private var pendingConnect: Promise<Void>?
@@ -1136,6 +1134,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
         self.socket = socket
         self.selectableEventLoop = eventLoop
         self.closePromise = eventLoop.newPromise(type: Void.self)
+        self.pendingWrites = PendingWrites(iovecs: eventLoop.iovecs)
         self._pipeline = ChannelPipeline(channel: self)
     }
     
