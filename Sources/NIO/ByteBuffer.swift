@@ -330,6 +330,17 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
         return nil
     }
     
+    @discardableResult
+    public mutating func set(bytes: UnsafeBufferPointer<UInt8>, at index: Int) -> Int? {
+        if expandIfNeeded(index: index, size: bytes.count) {
+            let idx = applyOffset(index)
+            self.backingData.replaceSubrange(idx..<idx + bytes.count, with: bytes)
+            return bytes.count
+        }
+        return nil
+    }
+
+    @discardableResult
     public mutating func set(data: Data, at index: Int) -> Int? {
         if expandIfNeeded(index: index, size: data.count) {
             let idx = applyOffset(index)
@@ -367,6 +378,16 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
     // TODO: indexOf, bytesBefore, forEachByte, backing byte array access?
     
     // TODO: Generics to avoid this?
+
+    @discardableResult
+    public mutating func write(staticString string: StaticString) -> Int? {
+        if let bytes = set(staticString: string, at: writerIndex) {
+            writerIndex += bytes
+            return bytes
+        }
+        return nil
+    }
+
     @discardableResult
     public mutating func write(string: String) -> Int? {
         if let bytes = set(string: string, at: writerIndex) {
@@ -376,6 +397,15 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
         return nil
     }
     
+    @discardableResult
+    public mutating func set(staticString string: StaticString, at index: Int) -> Int? {
+        return string.withUTF8Buffer { buffer in
+            print("set buffer at \(index)")
+            return self.set(bytes: buffer, at: index)
+        }
+    }
+
+    @discardableResult
     public mutating func set(string: String, at index: Int) -> Int? {
         let utf8 = string.utf8
         let count = utf8.count

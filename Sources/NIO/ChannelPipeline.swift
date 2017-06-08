@@ -315,6 +315,7 @@ public class ChannelPipeline : ChannelInboundInvoker {
         }
     }
 
+    @discardableResult
     func write(data: Any, promise: Promise<Void>) -> Future<Void> {
         if eventLoop.inEventLoop {
             tail!.invokeWrite(data: data, promise: promise)
@@ -326,6 +327,7 @@ public class ChannelPipeline : ChannelInboundInvoker {
         return promise.futureResult
     }
     
+    @discardableResult
     func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
         if eventLoop.inEventLoop {
             tail!.invokeWriteAndFlush(data: data, promise: promise)

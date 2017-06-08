@@ -52,6 +52,30 @@ class ByteBufferTest: XCTestCase {
         buf.withReadPointer(body: { ptr, size in XCTAssertEqual(12, size) })
     }
 
+    func testStaticStringReadTests() throws {
+        var allBytes = 0
+        for testString in ["", "Hello world!", "👍", "🇬🇧🇺🇸🇪🇺"] as [StaticString] {
+            buf.withReadPointer(body: { ptr, size in
+                XCTAssertEqual(0, size)
+            })
+
+            let bytes = buf.write(staticString: testString)
+            XCTAssertEqual(testString.utf8CodeUnitCount, bytes)
+            allBytes += bytes!
+
+            let expected = testString.withUTF8Buffer { buf in
+                String(bytes: buf, encoding: .utf8)
+            }
+            buf.withReadPointer { ptr, size in
+                let actual = String(bytes: UnsafeBufferPointer<UInt8>(start: ptr, count: size), encoding: .utf8)
+                XCTAssertEqual(expected, actual)
+            }
+            let d = buf.read(length: testString.utf8CodeUnitCount)
+            XCTAssertNotNil(d)
+            XCTAssertEqual(expected, String(bytes: d!, encoding: .utf8))
+        }
+    }
+
     func testWriteStringMovesWriterIndex() {
         var buf = try! allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
