@@ -336,37 +336,13 @@ public struct ByteBuffer : Equatable {
     }
 
     @discardableResult
-    public mutating func set(bytes: UnsafeBufferPointer<UInt8>, at index: Int) -> Int? {
-        if expandIfNeeded(index: index, size: bytes.count) {
-            let idx = applyOffset(index)
-            self.backingData.replaceSubrange(idx..<idx + bytes.count, with: bytes)
-            return bytes.count
-        }
-        return nil
-    }
-
-    @discardableResult
-    public mutating func set(data: Data, at index: Int) -> Int? {
-        if expandIfNeeded(index: index, size: data.count) {
-            let idx = applyOffset(index)
-            self.backingData.replaceSubrange(idx..<idx + data.count, with: data)
-            return data.count
-        }
-        return nil
-    }
-
-    @discardableResult
     public mutating func write(data: Data) -> Int? {
-        return write { set(data: data, at: writerIndex) }
+        return write { set(bytes: data, at: writerIndex) }
     }
 
     @discardableResult
     public mutating func write(staticString string: StaticString) -> Int? {
-        if let bytes = set(staticString: string, at: writerIndex) {
-            writerIndex += bytes
-            return bytes
-        }
-        return nil
+        return write { set(staticString: string, at: writerIndex) }
     }
 
     @discardableResult
@@ -385,25 +361,24 @@ public struct ByteBuffer : Equatable {
     @discardableResult
     public mutating func set(staticString string: StaticString, at index: Int) -> Int? {
         return string.withUTF8Buffer { buffer in
-            print("set buffer at \(index)")
             return self.set(bytes: buffer, at: index)
         }
     }
 
     @discardableResult
     public mutating func set(string: String, at index: Int) -> Int? {
-        return set(data: string.utf8, at: index)
+        return set(bytes: string.utf8, at: index)
     }
 
-    public mutating func set<ByteCollection>(data: ByteCollection, at index: Int) -> Int?
+    public mutating func set<ByteCollection>(bytes: ByteCollection, at index: Int) -> Int?
         where ByteCollection : Collection, ByteCollection.Iterator.Element == Data.Iterator.Element
     {
         precondition(index >= 0)
 
-        if expandIfNeeded(index: index, size: numericCast(data.count)) {
+        if expandIfNeeded(index: index, size: numericCast(bytes.count)) {
             let idx = applyOffset(index)
-            backingData.replaceSubrange(idx..<idx + numericCast(data.count), with: data)
-            return numericCast(data.count)
+            backingData.replaceSubrange(idx..<idx + numericCast(bytes.count), with: bytes)
+            return numericCast(bytes.count)
         }
         return nil
     }

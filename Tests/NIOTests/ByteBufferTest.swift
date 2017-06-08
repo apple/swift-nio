@@ -302,7 +302,7 @@ class ByteBufferTest: XCTestCase {
         var buffer = try allocator.buffer(capacity: 32)
         let data = Data(bytes: [1, 2, 3])
         
-        XCTAssertEqual(3, buffer.set(data: data, at: 0))
+        XCTAssertEqual(3, buffer.set(bytes: data, at: 0))
         XCTAssertEqual(0, buffer.readableBytes)
         XCTAssertEqual(data, buffer.get(at: 0, length: 3))
     }
