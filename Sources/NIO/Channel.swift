@@ -44,35 +44,6 @@ final class PendingWrite {
     }
 }
 
-#if swift(>=3.2)
-/* workaround for https://bugs.swift.org/browse/SR-5106 */
-func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, iovecs: UnsafeMutableBufferPointer<IOVector>, _ fn: (UnsafeBufferPointer<IOVector>) -> Int) -> Int {
-    return withoutActuallyEscaping(fn) { fn in
-        return withExtendedLifetime(pending) {
-            var next = pending
-            for i in 0..<count {
-                if let p = next {
-                    p.buffer.withReadPointer { (ptr, len) -> Void in
-                        /* this is definitely illegal and breaks the contract of `withReadPointer` as we're escaping
-                           an internal pointer. However we're keeping the `pending` alive so we're just assuming here
-                           that the pointer doesn't change. It's bad but will probably work.
-
-                           Eventually we need a real solution, filed here:
-                            - https://bugs.swift.org/browse/SR-5143 (Can't easily drive writev(2) from a collection of Data)
-                            - https://bugs.swift.org/browse/SR-5106 (Swift 4 is missing a tail-recusion optimisation that Swift 3 is taking :()
-                        */
-                        iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr), iov_len: len)
-                    }
-                    next = p.next
-                } else {
-                    break
-                }
-            }
-            return fn(UnsafeBufferPointer(start: iovecs, count: count))
-        }
-    }
-}
-#else
 /*
  PLEASE BE EXTREMELY CAREFUL WHEN MODIFYING __ANYTHING__ IN THIS FUNCTION.
 
@@ -87,6 +58,16 @@ func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, iovecs: U
  If you change anything, please test RUN THE `testWriteVIsTailRecursiveAndLoopifiedInReleaseMode` test case IN RELASE MODE
  */
 func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, iovecs: UnsafeMutableBufferPointer<IOVector>, _ fn: (UnsafeBufferPointer<IOVector>) -> Int) -> Int {
+
+    /* this can't be inlined or else LLVM failes to do tail call optimisation */
+    @inline(never)
+    func outline(ref: Unmanaged<PendingWrite>, iovecs: UnsafeMutableBufferPointer<iovec>, offset: Int, count: Int, index: Int) {
+        ref._withUnsafeGuaranteedRef { $0.buffer.backingData.withUnsafeMutableBytes({ (ptr: UnsafeMutablePointer<UInt8>) -> Void in
+            iovecs[index] = iovec(iov_base: ptr+offset,
+                                  iov_len: count)
+        }) }
+    }
+
     var recursionLimit = iovecs.count - 1
     if _isDebugAssertConfiguration() && recursionLimit - 1 == recursionLimit - 1 {
         recursionLimit = min(recursionLimit, 32)
@@ -98,11 +79,7 @@ func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, iovecs: U
                                             index: Int,
                                             recursionLimit: Int) -> Int {
             let (byteCount, offset) = ref._withUnsafeGuaranteedRef { ($0.buffer.readableBytes, $0.buffer.readerIndex) }
-            ref._withUnsafeGuaranteedRef { $0.buffer.data.withUnsafeMutableBytes({
-                (ptr: UnsafeMutablePointer<UInt8>) -> Void in
-                iovecs[index] = iovec(iov_base: ptr+offset,
-                                      iov_len: byteCount)
-            }) }
+            outline(ref: ref, iovecs: iovecs, offset: offset, count: byteCount, index: index)
             if let next = ref._withUnsafeGuaranteedRef({ $0.next.map(Unmanaged.passUnretained) }), index < count-1 && index < recursionLimit {
                 return doPendingWriteVectorOperation_(ref: next,
                                                       iovecs: iovecs,
@@ -124,7 +101,6 @@ func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, iovecs: U
         }
     }
 }
-#endif
 
 func makeNonThrowing<I>(errorBuffer: inout Error?, input: I, _ fn: (I) throws -> Int?) -> Int {
     do {
