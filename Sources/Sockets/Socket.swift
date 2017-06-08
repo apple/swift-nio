@@ -63,6 +63,9 @@ public final class Socket : BaseSocket {
     }
     
     private func connectSocket<T>(addr: T) throws -> Bool {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't connect socket as it's not open anymore.")
+        }
         var addr = addr
         return try withUnsafePointer(to: &addr) { (ptr: UnsafePointer<T>) -> Bool in
             try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
@@ -93,12 +96,19 @@ public final class Socket : BaseSocket {
     }
 
     public func write(pointer: UnsafePointer<UInt8>, size: Int) throws -> Int? {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't write to socket as it's not open anymore.")
+        }
         return try wrapSyscallMayBlock({ $0 >= 0 }, function: "write") {
             sysWrite(self.descriptor, pointer, size)
         }
     }
 
     public func writev(datas: Data... ) throws -> Int? {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't writev to socket as it's not open anymore.")
+        }
+
         var iovecs: [iovec] = []
 
         // This is a bit messy as there is not other way at the moment to ensure the pointers are not "freed" before we were able to do the syscall.
@@ -121,6 +131,10 @@ public final class Socket : BaseSocket {
     
     
     public func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> Int? {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't writev to socket as it's not open anymore.")
+        }
+
         return try wrapSyscallMayBlock({ $0 >= 0 }, function: "writev") {
             sysWritev(self.descriptor, iovecs.baseAddress!, Int32(iovecs.count))
         }
@@ -131,6 +145,10 @@ public final class Socket : BaseSocket {
     }
 
     public func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> Int? {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't read from socket as it's not open anymore.")
+        }
+
         return try wrapSyscallMayBlock({ $0 >= 0 }, function: "read") {
             sysRead(self.descriptor, pointer, size)
         }

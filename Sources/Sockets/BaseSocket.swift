@@ -31,7 +31,7 @@ import Foundation
 
 public class BaseSocket : Selectable {
     public let descriptor: Int32
-    public private(set) var open: Bool;
+    public private(set) var open: Bool
     
     public var localAddress: SocketAddress? {
         get {
@@ -58,12 +58,20 @@ public class BaseSocket : Selectable {
     }
 
     public func setNonBlocking() throws {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't control file descriptor as it's not open anymore.")
+        }
+
         let _ = try wrapSyscall({ $0 >= 0 }, function: "fcntl") {
             fcntl(self.descriptor, F_SETFL, O_NONBLOCK)
         }
     }
     
     public func setOption<T>(level: Int32, name: Int32, value: T) throws {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't set socket options as it's not open anymore.")
+        }
+
         var val = value
         
         let _ = try wrapSyscall({ $0 != -1 }, function: "setsockopt") {
@@ -75,8 +83,12 @@ public class BaseSocket : Selectable {
                 socklen_t(MemoryLayout.size(ofValue: val)))
         }
     }
-    
+
     public func getOption<T>(level: Int32, name: Int32) throws -> T {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't get socket options as it's not open anymore.")
+        }
+
         var length = socklen_t(MemoryLayout<T>.size)
         var val = UnsafeMutablePointer<T>.allocate(capacity: 1)
         defer {
@@ -100,6 +112,10 @@ public class BaseSocket : Selectable {
     }
     
     private func bindSocket<T>(addr: T) throws {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't bind socket as it's not open anymore.")
+        }
+
         var addr = addr
         try withUnsafePointer(to: &addr) { (ptr: UnsafePointer<T>) -> Void in
             try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
@@ -111,6 +127,10 @@ public class BaseSocket : Selectable {
     }
     
     public func close() throws {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't close socket (as it's not open anymore.")
+        }
+
         let _ = try wrapSyscall({ $0 >= 0 }, function: "close") {
              sysClose(self.descriptor)
         }
