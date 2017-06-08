@@ -269,8 +269,8 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.write(integer: UInt64.max))
         let slice = buffer.readSlice(length: buffer.readableBytes)!
     
-        buffer.data.withUnsafeBytes { (ptr1: UnsafePointer<UInt8>) -> Void in
-            slice.data.withUnsafeBytes({ (ptr2: UnsafePointer<UInt8>) -> Void in
+        buffer.backingData.withUnsafeBytes { (ptr1: UnsafePointer<UInt8>) -> Void in
+            slice.backingData.withUnsafeBytes({ (ptr2: UnsafePointer<UInt8>) -> Void in
                 XCTAssertEqual(ptr1, ptr2)
             })
         }

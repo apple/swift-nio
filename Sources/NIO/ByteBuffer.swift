@@ -115,7 +115,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
     }
 
     // Mark as internal so we can access it in tests.
-    var data: Data
+    var backingData: Data
     
     /**
          Adjusts the capacity of the buffer. If the new capacity is less than the current
@@ -157,9 +157,9 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
 
         self.allocator = allocator
         self.maxCapacity = maxCapacity
-        self.data = ByteBuffer.reallocatedData(minimumCapacity: startingCapacity, source: nil, allocator: allocator)
+        self.backingData = ByteBuffer.reallocatedData(minimumCapacity: startingCapacity, source: nil, allocator: allocator)
         self.offset = 0
-        self.capacity = data.count
+        self.capacity = backingData.count
     }
     
     init(allocator: ByteBufferAllocator, data: Data, offset: Int, length: Int, maxCapacity: Int) {
@@ -171,7 +171,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
         self.maxCapacity = maxCapacity
         self.writerIndex = length
         self.offset = offset
-        self.data = data
+        self.backingData = data
         self.capacity = length
     }
 
@@ -183,7 +183,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
         guard readerIndex > 0 else {
             return false
         }
-        data.withUnsafeMutableBytes { (p: UnsafeMutablePointer<UInt8>) -> Void in
+        backingData.withUnsafeMutableBytes { (p: UnsafeMutablePointer<UInt8>) -> Void in
             p.advanced(by: offset).assign(from: p.advanced(by: applyOffset(readerIndex)), count: readableBytes)
         }
         writerIndex = writerIndex - readerIndex
@@ -214,10 +214,10 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
                 return (enoughSpace: false, capacityIncreased: false)
             }
 
-            self.data = ByteBuffer.reallocatedData(minimumCapacity: capacity + deficit,
-                                                   source: self.data,
+            self.backingData = ByteBuffer.reallocatedData(minimumCapacity: capacity + deficit,
+                                                   source: self.backingData,
                                                    allocator: self.allocator)
-            self.capacity = data.count
+            self.capacity = backingData.count
             return (enoughSpace: true, capacityIncreased: true)
     }
     
@@ -227,17 +227,17 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
     }
     
     public func withReadPointer<T>(body: (UnsafePointer<UInt8>, Int) throws -> T) rethrows -> T {
-        return try data.withUnsafeBytes({ try body($0.advanced(by: applyOffset(readerIndex)), readableBytes) })
+        return try backingData.withUnsafeBytes({ try body($0.advanced(by: applyOffset(readerIndex)), readableBytes) })
     }
 
     // Provides the read portion of the buffer as Data slice.
     public func withReadDataSlice<T>(body: (MutableSlice<Data>) throws -> T) rethrows -> T {
-        let data = self.data
+        let data = self.backingData
         return try body(data[Range(readerIndex..<readerIndex+readableBytes)])
     }
 
     public func withWritePointer<T>(body: (UnsafePointer<UInt8>, Int) throws -> T) rethrows -> T {
-        return try data.withUnsafeBytes({ try body($0.advanced(by: applyOffset(writerIndex)), writableBytes) })
+        return try backingData.withUnsafeBytes({ try body($0.advanced(by: applyOffset(writerIndex)), writableBytes) })
     }
 
     // Mutable versions for writing to the buffer. body function returns the number of bytes written and writerIndex
@@ -245,7 +245,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
 
     //
     public mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int?) rethrows -> Int? {
-        let bytesWritten = try data.withUnsafeMutableBytes({ return try body($0.advanced(by: applyOffset(writerIndex)), writableBytes) })
+        let bytesWritten = try backingData.withUnsafeMutableBytes({ return try body($0.advanced(by: applyOffset(writerIndex)), writableBytes) })
 
         advanceWriterIndex(bytesWritten ?? 0)
 
@@ -254,7 +254,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
 
     // body function should return the number of bytes consumed, if any. 0 indicates EOF. Result from calling body is returned.
     public mutating func withMutableReadPointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int?) rethrows -> Int? {
-        let bytesWritten = try data.withUnsafeMutableBytes { try body($0.advanced(by: applyOffset(readerIndex)), readableBytes) }
+        let bytesWritten = try backingData.withUnsafeMutableBytes { try body($0.advanced(by: applyOffset(readerIndex)), readableBytes) }
 
         advanceReaderIndex(bytesWritten ?? 0)
 
@@ -295,7 +295,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
         guard index + MemoryLayout<T>.size <= limit else {
             return nil
         }
-        let intBits = data.withUnsafeBytes({(bytePointer: UnsafePointer<UInt8>) -> T in
+        let intBits = backingData.withUnsafeBytes({(bytePointer: UnsafePointer<UInt8>) -> T in
             bytePointer.advanced(by: index).withMemoryRebound(to: T.self, capacity: 1) { pointer in
                 return pointer.pointee
             }
@@ -311,7 +311,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
             
             withUnsafePointer(to: &v) { valPointer in
                 valPointer.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<T>.size) { p in
-                    data.withUnsafeMutableBytes({ (dataPointer: UnsafeMutablePointer<UInt8>) -> Void in
+                    backingData.withUnsafeMutableBytes({ (dataPointer: UnsafeMutablePointer<UInt8>) -> Void in
                         dataPointer.advanced(by: applyOffset(index)).assign(from: p, count: MemoryLayout<T>.size)
                     })
                 }
@@ -333,7 +333,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
     public mutating func set(data: Data, at index: Int) -> Int? {
         if expandIfNeeded(index: index, size: data.count) {
             let idx = applyOffset(index)
-            self.data.replaceSubrange(idx..<idx + data.count, with: data)
+            self.backingData.replaceSubrange(idx..<idx + data.count, with: data)
             return data.count
         }
         return nil
@@ -353,7 +353,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
             return nil
         }
         let idx = applyOffset(index)
-        return data.subdata(in: idx..<idx + length)
+        return backingData.subdata(in: idx..<idx + length)
     }
     
     public mutating func read(length: Int) -> Data? {
@@ -368,7 +368,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
     
     // TODO: Generics to avoid this?
     @discardableResult
-    public mutating func write(string: String) -> Int?{
+    public mutating func write(string: String) -> Int? {
         if let bytes = set(string: string, at: writerIndex) {
             writerIndex += bytes
             return bytes
@@ -381,7 +381,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
         let count = utf8.count
         if expandIfNeeded(index: index, size: count) {
             let idx = applyOffset(index)
-            data.replaceSubrange(idx..<idx + count, with: utf8)
+            backingData.replaceSubrange(idx..<idx + count, with: utf8)
             return count
         }
         return nil
@@ -429,7 +429,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
         guard from + length <= capacity else {
             return nil
         }
-        return ByteBuffer(allocator: allocator, data: data, offset: from, length: length, maxCapacity: maxCapacity)
+        return ByteBuffer(allocator: allocator, data: backingData, offset: from, length: length, maxCapacity: maxCapacity)
     }
     
     /**
