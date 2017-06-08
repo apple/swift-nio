@@ -81,7 +81,9 @@ public enum Endianess {
     case Little
 }
 
-public struct ByteBuffer : Equatable { // TODO: Comparable
+
+// read and write methods move the readerIndex and writerIndex. get and set methods do not.
+public struct ByteBuffer : Equatable {
     
     public static func ==(lhs: ByteBuffer, rhs: ByteBuffer) -> Bool {
         guard lhs.readableBytes == rhs.readableBytes else {
@@ -200,15 +202,22 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
 
     @discardableResult public mutating func ensureWritable(bytesNeeded: Int, expandIfRequired: Bool)
         -> (enoughSpace: Bool, capacityIncreased: Bool) {
-            if bytesNeeded <= writableBytes {
+            return ensureWritable(fromIndex: writerIndex, bytesNeeded: bytesNeeded, expandIfRequired: expandIfRequired)
+    }
+
+    @discardableResult mutating func ensureWritable(fromIndex index: Int, bytesNeeded: Int, expandIfRequired: Bool)
+        -> (enoughSpace: Bool, capacityIncreased: Bool) {
+            let bytesToEnd = capacity - index
+
+            if bytesNeeded <= bytesToEnd {
                 return (enoughSpace: true, capacityIncreased: false)
             }
-            
+
             guard expandIfRequired else {
                 return (enoughSpace: false, capacityIncreased: false)
             }
 
-            let deficit = bytesNeeded - writableBytes
+            let deficit = bytesNeeded - bytesToEnd
 
             if capacity + deficit > maxCapacity {
                 return (enoughSpace: false, capacityIncreased: false)
@@ -220,11 +229,12 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
             self.capacity = backingData.count
             return (enoughSpace: true, capacityIncreased: true)
     }
-    
 
     private func applyOffset(_ index: Int) -> Int {
         return index + offset
     }
+
+    // MARK: Pointers
     
     public func withReadPointer<T>(body: (UnsafePointer<UInt8>, Int) throws -> T) rethrows -> T {
         return try backingData.withUnsafeBytes({ try body($0.advanced(by: applyOffset(readerIndex)), readableBytes) })
@@ -264,10 +274,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
     private mutating func expandIfNeeded(index: Int, size: Int) -> Bool {
         let v = capacity - (index + size)
         
-        guard v >= 0 && ensureWritable(bytesNeeded: -v, expandIfRequired: true).enoughSpace else {
-            return false
-        }
-        return true
+        return v >= 0 || ensureWritable(fromIndex: index, bytesNeeded: -v, expandIfRequired: true).enoughSpace
     }
 
     private func toEndianess<T: EndianessInteger> (value: T, endianess: Endianess) -> T {
@@ -279,6 +286,16 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
         }
     }
 
+    // MARK: Read/Get
+
+    public mutating func read(length: Int) -> Data? {
+        if let data = get(at: readerIndex, length: length) {
+            readerIndex += data.count
+            return data
+        }
+        return nil
+    }
+
     public mutating func read<T: EndianessInteger>(endianess: Endianess = .Big) -> T? {
         if let int: T = get0(at: applyOffset(readerIndex), limit: applyOffset(writerIndex), endianess: endianess) {
             readerIndex += MemoryLayout<T>.size
@@ -286,15 +303,23 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
         }
         return nil
     }
-    
+
+    public mutating func get(at index: Int, length: Int) -> Data? {
+        precondition(index >= 0)
+        let idx = applyOffset(index)
+        precondition(length <= capacity - idx)
+        return backingData.subdata(in: idx..<idx + length)
+    }
+
+
     public func get<T: EndianessInteger>(at index: Int, endianess: Endianess = .Big) -> T? {
         return get0(at: applyOffset(index), limit: capacity, endianess: endianess)
     }
     
     private func get0<T: EndianessInteger>(at index: Int, limit: Int, endianess: Endianess = .Big) -> T? {
-        guard index + MemoryLayout<T>.size <= limit else {
-            return nil
-        }
+        precondition(index >= 0)
+        precondition(index + MemoryLayout<T>.size <= limit)
+
         let intBits = backingData.withUnsafeBytes({(bytePointer: UnsafePointer<UInt8>) -> T in
             bytePointer.advanced(by: index).withMemoryRebound(to: T.self, capacity: 1) { pointer in
                 return pointer.pointee
@@ -302,34 +327,14 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
         })
         return toEndianess(value: intBits, endianess: endianess)
     }
-    
-    
-    public mutating func set<T: EndianessInteger>(integer: T, at index: Int, endianess: Endianess = .Big) -> Int? {
-        let size = MemoryLayout<T>.size
-        if expandIfNeeded(index: index, size: size) {
-            var v = toEndianess(value: integer, endianess: endianess)
-            
-            withUnsafePointer(to: &v) { valPointer in
-                valPointer.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<T>.size) { p in
-                    backingData.withUnsafeMutableBytes({ (dataPointer: UnsafeMutablePointer<UInt8>) -> Void in
-                        dataPointer.advanced(by: applyOffset(index)).assign(from: p, count: MemoryLayout<T>.size)
-                    })
-                }
-            }
-            return size
-        }
-        return nil
-    }
-    
+
+    // MARK: Write/Set
+
     @discardableResult
     public mutating func write<T: EndianessInteger>(integer: T, endianess: Endianess = .Big) -> Int? {
-        if let bytes = set(integer: integer, at: writerIndex, endianess: endianess) {
-            writerIndex += bytes
-            return bytes
-        }
-        return nil
+        return write { set(integer: integer, at: writerIndex, endianess: endianess) }
     }
-    
+
     @discardableResult
     public mutating func set(bytes: UnsafeBufferPointer<UInt8>, at index: Int) -> Int? {
         if expandIfNeeded(index: index, size: bytes.count) {
@@ -352,32 +357,8 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
 
     @discardableResult
     public mutating func write(data: Data) -> Int? {
-        if let bytes = set(data: data, at: writerIndex) {
-            writerIndex += bytes
-            return bytes
-        }
-        return nil
+        return write { set(data: data, at: writerIndex) }
     }
-    
-    public mutating func get(at index: Int, length: Int) -> Data? {
-        guard length <= capacity - index else {
-            return nil
-        }
-        let idx = applyOffset(index)
-        return backingData.subdata(in: idx..<idx + length)
-    }
-    
-    public mutating func read(length: Int) -> Data? {
-        if let data = get(at: readerIndex, length: length) {
-            readerIndex += data.count
-            return data
-        }
-        return nil
-    }
-    
-    // TODO: indexOf, bytesBefore, forEachByte, backing byte array access?
-    
-    // TODO: Generics to avoid this?
 
     @discardableResult
     public mutating func write(staticString string: StaticString) -> Int? {
@@ -389,14 +370,18 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
     }
 
     @discardableResult
-    public mutating func write(string: String) -> Int? {
-        if let bytes = set(string: string, at: writerIndex) {
+    public mutating func write(string: String) -> Int?{
+        return write { set(string: string, at: writerIndex) }
+    }
+
+    private mutating func write(setter: () -> Int?) -> Int? {
+        if let bytes = setter() {
             writerIndex += bytes
             return bytes
         }
         return nil
     }
-    
+
     @discardableResult
     public mutating func set(staticString string: StaticString, at index: Int) -> Int? {
         return string.withUTF8Buffer { buffer in
@@ -407,16 +392,46 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
 
     @discardableResult
     public mutating func set(string: String, at index: Int) -> Int? {
-        let utf8 = string.utf8
-        let count = utf8.count
-        if expandIfNeeded(index: index, size: count) {
+        return set(data: string.utf8, at: index)
+    }
+
+    public mutating func set<ByteCollection>(data: ByteCollection, at index: Int) -> Int?
+        where ByteCollection : Collection, ByteCollection.Iterator.Element == Data.Iterator.Element
+    {
+        precondition(index >= 0)
+
+        if expandIfNeeded(index: index, size: numericCast(data.count)) {
             let idx = applyOffset(index)
-            backingData.replaceSubrange(idx..<idx + count, with: utf8)
-            return count
+            backingData.replaceSubrange(idx..<idx + numericCast(data.count), with: data)
+            return numericCast(data.count)
         }
         return nil
     }
-    
+
+    public mutating func set<T: EndianessInteger>(integer: T, at index: Int, endianess: Endianess = .Big) -> Int? {
+        precondition(index >= 0)
+
+        let size = MemoryLayout<T>.size
+        if expandIfNeeded(index: index, size: size) {
+            var v = toEndianess(value: integer, endianess: endianess)
+
+            withUnsafePointer(to: &v) { valPointer in
+                valPointer.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<T>.size) { p in
+                    backingData.withUnsafeMutableBytes({ (dataPointer: UnsafeMutablePointer<UInt8>) -> Void in
+                        dataPointer.advanced(by: applyOffset(index)).assign(from: p, count: MemoryLayout<T>.size)
+                    })
+                }
+            }
+            return size
+        }
+        return nil
+    }
+
+    // TODO: indexOf, bytesBefore, forEachByte, backing byte array access?
+
+
+    // MARK: Index Movement
+
     /**
      Marks the current readerIndex in this buffer. You can reposition the current readerIndex to the marked
      readerIndex by calling resetReaderIndex(). The initial value of the marked readerIndex is 0.
@@ -431,7 +446,7 @@ public struct ByteBuffer : Equatable { // TODO: Comparable
     public mutating func resetReaderIndex() {
         moveReaderIndex(to: markedReaderIndex)
     }
-    
+
     /**
      Marks the current writerIndex in this buffer. You can reposition the current writerIndex to the marked
      writerIndex by calling resetWriterIndex(). The initial value of the marked writerIndex is 0.

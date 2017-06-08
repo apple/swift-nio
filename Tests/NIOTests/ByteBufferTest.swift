@@ -284,8 +284,6 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(MemoryLayout<UInt64>.size, slice.readableBytes)
         XCTAssertEqual(UInt64.max, slice.read())
         XCTAssertEqual(0, buffer.readableBytes)
-        let value: UInt64? = buffer.read()
-        XCTAssertTrue(value == nil)
     }
     
     func testSliceNoCopy() throws {
@@ -407,5 +405,11 @@ class ByteBufferTest: XCTestCase {
             runTestForRemaining(string: testStringPrefix, buffer: prefixBuffer)
         }
         runTestForRemaining(string: testStringSuffix, buffer: buffer)
+    }
+
+    func testSetExpandsBufferOnUpperBoundsCheckFailure() {
+        let initialCapacity = buf.capacity
+        XCTAssertEqual(5, buf.set(string: "oh hi", at: buf.capacity))
+        XCTAssert(initialCapacity < buf.capacity)
     }
 }
