@@ -321,7 +321,7 @@ final fileprivate class PendingWrites {
 /*
  All operations on SocketChannel are thread-safe
  */
-final class SocketChannel : BaseSocketChannel {
+final class SocketChannel : BaseSocketChannel<ByteBuffer> {
     
     init(eventLoop: SelectableEventLoop) throws {
         let socket = try Socket()
@@ -340,7 +340,7 @@ final class SocketChannel : BaseSocketChannel {
         super.init(socket: socket, eventLoop: eventLoop)
     }
     
-    override fileprivate func readFromSocket() throws -> Any? {
+    override fileprivate func readFromSocket() throws -> ByteBuffer? {
         var buffer = try recvAllocator.buffer(allocator: allocator)
         if let bytesRead = try buffer.withMutableWritePointer { try (self.socket as! Socket).read(pointer: $0, size: $1) } {
             if bytesRead > 0 {
@@ -385,10 +385,21 @@ final class SocketChannel : BaseSocketChannel {
     }
 }
 
+
+/*
+ ByteBuffer will be read and written to the Channel so declare it as InboundData and OutboundData
+ */
+extension ByteBuffer : InboundData, OutboundData { }
+
+/*
+ SocketChannel is read when using the ServerSocketChannel so delcare it was InboundData
+ */
+extension SocketChannel : InboundData { }
+
 /*
  All operations on ServerSocketChannel are thread-safe
  */
-final class ServerSocketChannel : BaseSocketChannel {
+final class ServerSocketChannel : BaseSocketChannel<SocketChannel> {
     
     private var backlog: Int32 = 128
     private let group: EventLoopGroup
@@ -442,7 +453,7 @@ final class ServerSocketChannel : BaseSocketChannel {
         throw ChannelError.operationUnsupported
     }
     
-    override fileprivate func readFromSocket() throws -> Any? {
+    override fileprivate func readFromSocket() throws -> SocketChannel? {
         if let accepted =  try (self.socket as! ServerSocket).accept() {
             do {
                 return try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop)
@@ -459,7 +470,7 @@ final class ServerSocketChannel : BaseSocketChannel {
         return true
     }
     
-    override public func channelRead0(data: Any) {
+    override public func channelRead0<T: InboundData>(data: T) {
         assert(eventLoop.inEventLoop)
 
         if let ch = data as? Channel {
@@ -482,13 +493,13 @@ public protocol ChannelCore : class{
     func register0(promise: Promise<Void>)
     func bind0(local: SocketAddress, promise: Promise<Void>)
     func connect0(remote: SocketAddress, promise: Promise<Void>)
-    func write0(data: Any, promise: Promise<Void>)
+    func write0<T: OutboundData>(data: T, promise: Promise<Void>)
     func flush0()
     func readIfNeeded0()
     func startReading0()
     func stopReading0()
     func close0(promise: Promise<Void>, error: Error)
-    func channelRead0(data: Any)
+    func channelRead0<T: InboundData>(data: T)
     var closed: Bool { get }
     var eventLoop: EventLoop { get }
 }
@@ -517,9 +528,9 @@ public protocol Channel : class, ChannelOutboundInvoker {
     @discardableResult func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void>
     @discardableResult func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void>
     func read()
-    @discardableResult func write(data: Any, promise: Promise<Void>) -> Future<Void>
+    @discardableResult func write<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void>
     func flush()
-    @discardableResult func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void>
+    @discardableResult func writeAndFlush<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void>
     @discardableResult func close(promise: Promise<Void>) -> Future<Void>
 
     var _unsafe: ChannelCore { get }
@@ -553,7 +564,7 @@ extension Channel {
         return pipeline.connect(remote: remote, promise: promise)
     }
 
-    @discardableResult public func write(data: Any, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func write<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void> {
         return pipeline.write(data: data, promise: promise)
     }
 
@@ -565,7 +576,7 @@ extension Channel {
         pipeline.read()
     }
 
-    @discardableResult public func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func writeAndFlush<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void> {
         return pipeline.writeAndFlush(data: data, promise: promise)
     }
 
@@ -579,7 +590,7 @@ extension Channel {
     }
 }
 
-class BaseSocketChannel : SelectableChannel, ChannelCore {
+class BaseSocketChannel<I: InboundData> : SelectableChannel, ChannelCore {
 
     public final var selectable: Selectable { return socket }
 
@@ -729,7 +740,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
         return pipeline.connect(remote: remote, promise: promise)
     }
     
-    @discardableResult public final func write(data: Any, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public final func write<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void> {
         return pipeline.write(data: data, promise: promise)
     }
     
@@ -741,7 +752,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
         pipeline.read()
     }
     
-    @discardableResult public final func writeAndFlush(data: Any, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public final func writeAndFlush<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void> {
         return pipeline.writeAndFlush(data: data, promise: promise)
     }
     
@@ -761,7 +772,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
         }
     }
 
-    public func write0(data: Any, promise: Promise<Void>) {
+    public func write0<T: OutboundData>(data: T, promise: Promise<Void>) {
         assert(eventLoop.inEventLoop)
 
         guard !closed else {
@@ -1015,7 +1026,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
         }
     }
     
-    fileprivate func readFromSocket() throws -> Any? {
+    fileprivate func readFromSocket() throws -> I? {
         fatalError("this must be overridden by sub class")
     }
 
@@ -1024,7 +1035,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
         fatalError("this must be overridden by sub class")
     }
     
-    public func channelRead0(data: Any) {
+    public func channelRead0<T: InboundData>(data: T) {
         // Do nothing by default
     }
 

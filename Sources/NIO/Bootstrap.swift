@@ -123,7 +123,7 @@ public final class ServerBootstrap {
             self.childOptions = childOptions
         }
         
-        func channelRead(ctx: ChannelHandlerContext, data: Any) {
+        func channelRead<T: InboundData>(ctx: ChannelHandlerContext, data: T) {
             if let accepted = data as? SocketChannel {
                 do {
                     try self.childOptions.applyAll(channel: accepted)

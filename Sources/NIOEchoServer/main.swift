@@ -18,13 +18,8 @@ import Future
 
 public class EchoHandler: ChannelHandler {
     
-    public func channelRead(ctx: ChannelHandlerContext, data: Any) {
-        let f = ctx.write(data: data)
-
-        // If the write fails close the channel
-        /*f.whenFailure(callback: { error in
-            let _ = ctx.close()
-        })*/
+    public func channelRead<T: InboundData>(ctx: ChannelHandlerContext, data: T) {
+        ctx.write(data: data as! ByteBuffer)
     }
     
     // Flush it out. This can make use of gathering writes if multiple buffers are pending
