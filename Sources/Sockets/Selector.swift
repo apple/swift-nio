@@ -22,7 +22,7 @@ import Foundation
     import Darwin
 #endif
 
-public class Selector {
+public final class Selector {
 #if os(Linux)
     private typealias EventType = epoll_event
     private let eventsCapacity = 2048

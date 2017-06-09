@@ -20,7 +20,7 @@ import Sockets
 /*
  All operations on ChannelPipeline are thread-safe
  */
-public class ChannelPipeline : ChannelInboundInvoker {
+public final class ChannelPipeline : ChannelInboundInvoker {
     
     private var head: ChannelHandlerContext?
     private var tail: ChannelHandlerContext?
@@ -429,7 +429,7 @@ public class ChannelPipeline : ChannelInboundInvoker {
     }
 }
 
-private class HeadChannelHandler : ChannelHandler {
+private final class HeadChannelHandler : ChannelHandler {
 
     static let sharedInstance = HeadChannelHandler()
 
@@ -486,7 +486,7 @@ private class HeadChannelHandler : ChannelHandler {
     }
 }
 
-private class TailChannelHandler : ChannelHandler {
+private final class TailChannelHandler : ChannelHandler {
     
     static let sharedInstance = TailChannelHandler()
     
@@ -534,7 +534,7 @@ public enum ChannelPipelineException : Error {
 }
 
 
-public class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvoker {
+public final class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvoker {
     
     // visible for ChannelPipeline to modify and also marked as weak to ensure we not create a
     // reference-cycle for the doubly-linked-list

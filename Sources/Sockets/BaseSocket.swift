@@ -33,12 +33,12 @@ public class BaseSocket : Selectable {
     public let descriptor: Int32
     public private(set) var open: Bool
     
-    public var localAddress: SocketAddress? {
+    public final var localAddress: SocketAddress? {
         get {
             return nil
         }
     }
-    public var remoteAddress: SocketAddress? {
+    public final var remoteAddress: SocketAddress? {
         get {
             return nil
         }
@@ -57,7 +57,7 @@ public class BaseSocket : Selectable {
         self.open = true
     }
 
-    public func setNonBlocking() throws {
+    public final func setNonBlocking() throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't control file descriptor as it's not open anymore.")
         }
@@ -67,7 +67,7 @@ public class BaseSocket : Selectable {
         }
     }
     
-    public func setOption<T>(level: Int32, name: Int32, value: T) throws {
+    public final func setOption<T>(level: Int32, name: Int32, value: T) throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't set socket options as it's not open anymore.")
         }
@@ -84,7 +84,7 @@ public class BaseSocket : Selectable {
         }
     }
 
-    public func getOption<T>(level: Int32, name: Int32) throws -> T {
+    public final func getOption<T>(level: Int32, name: Int32) throws -> T {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't get socket options as it's not open anymore.")
         }
@@ -102,7 +102,7 @@ public class BaseSocket : Selectable {
         return val.pointee
     }
     
-    public func bind(local: SocketAddress) throws {
+    public final func bind(local: SocketAddress) throws {
         switch local {
         case .v4(address: let addr):
             try bindSocket(addr: addr)
@@ -126,7 +126,7 @@ public class BaseSocket : Selectable {
         }
     }
     
-    public func close() throws {
+    public final func close() throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't close socket (as it's not open anymore.")
         }

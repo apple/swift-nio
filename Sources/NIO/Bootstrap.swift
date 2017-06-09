@@ -16,7 +16,7 @@ import Foundation
 import Sockets
 import Future
 
-public class ServerBootstrap {
+public final class ServerBootstrap {
     
     private let group: EventLoopGroup
     private let childGroup: EventLoopGroup
@@ -163,7 +163,7 @@ public class ServerBootstrap {
     }
 }
 
-public class ClientBootstrap {
+public final class ClientBootstrap {
     
     private let group: EventLoopGroup
     private var handler: ChannelHandler?
