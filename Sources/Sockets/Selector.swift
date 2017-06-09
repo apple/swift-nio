@@ -177,7 +177,14 @@ public final class Selector {
                     numEvents -= 1
                 }
             case .none:
-                numEvents = 0
+                // Only discard the delete events
+                if events.0.flags == UInt16(EV_DELETE) {
+                    offset += 1
+                    numEvents -= 1
+                }
+                if events.1.flags == UInt16(EV_DELETE) {
+                    numEvents -= 1
+                }
             case .all:
                 // No need to adjust anything
                 break
