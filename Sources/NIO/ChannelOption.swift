@@ -95,6 +95,15 @@ public enum BacklogOption: ChannelOption {
     case const(())
 }
 
+public typealias WriteBufferWaterMark = Range<UInt32>
+
+public enum WriteBufferWaterMarkOption: ChannelOption {
+    public typealias AssociatedValueType = ()
+    public typealias OptionType = WriteBufferWaterMark
+    
+    case const(())
+}
+
 public struct ChannelOptions {
 #if os(Linux)
     public static let Socket = { (level: Int, name: Int32) -> SocketOption in .const((level, name)) }
@@ -107,4 +116,5 @@ public struct ChannelOptions {
     public static let MaxMessagesPerRead = MaxMessagesPerReadOption.const(())
     public static let Backlog = BacklogOption.const(())
     public static let WriteSpin = WriteSpinOption.const(())
+    public static let WriteBufferWaterMark = WriteBufferWaterMarkOption.const(())
 }
