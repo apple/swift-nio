@@ -177,6 +177,11 @@ public struct ByteBuffer : Equatable {
         self.capacity = length
     }
 
+    public mutating func clear() {
+        readerIndex = 0
+        writerIndex = 0
+    }
+    
     /**
      Discards the bytes between the 0th index and readerIndex. It moves the bytes between readerIndex and
      writerIndex to the 0th index, and sets readerIndex to 0 and writerIndex to oldWriterIndex - oldReaderIndex

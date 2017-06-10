@@ -347,7 +347,7 @@ final fileprivate class PendingWrites {
 /*
  All operations on SocketChannel are thread-safe
  */
-final class SocketChannel : BaseSocketChannel<ByteBuffer> {
+final class SocketChannel : BaseSocketChannel {
     
     init(eventLoop: SelectableEventLoop) throws {
         let socket = try Socket()
@@ -366,17 +366,27 @@ final class SocketChannel : BaseSocketChannel<ByteBuffer> {
         super.init(socket: socket, eventLoop: eventLoop)
     }
     
-    override fileprivate func readFromSocket() throws -> ByteBuffer? {
+    override fileprivate func readFromSocket() throws {
+        // Just allocate one time for the while read loop. This is fine as ByteBuffer is a struct and uses COW.
         var buffer = try recvAllocator.buffer(allocator: allocator)
-        if let bytesRead = try buffer.withMutableWritePointer { try (self.socket as! Socket).read(pointer: $0, size: $1) } {
-            if bytesRead > 0 {
-                return buffer
+        for _ in 1...maxMessagesPerRead {
+            guard !closed else {
+                return
+            }
+            if let bytesRead = try buffer.withMutableWritePointer { try (self.socket as! Socket).read(pointer: $0, size: $1) } {
+                if bytesRead > 0 {
+                    pipeline.fireChannelRead0(data: buffer)
+                    
+                    // Reset reader and writerIndex and so allow to have the buffer filled again
+                    buffer.clear()
+                } else {
+                    // end-of-file
+                    throw ChannelError.eof
+                }
             } else {
-                // end-of-file
-                throw ChannelError.eof
+                return
             }
         }
-        return nil
     }
     
     override fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> Bool? {
@@ -430,7 +440,7 @@ extension SocketChannel : InboundData { }
 /*
  All operations on ServerSocketChannel are thread-safe
  */
-final class ServerSocketChannel : BaseSocketChannel<SocketChannel> {
+final class ServerSocketChannel : BaseSocketChannel {
     
     private var backlog: Int32 = 128
     private let group: EventLoopGroup
@@ -484,16 +494,22 @@ final class ServerSocketChannel : BaseSocketChannel<SocketChannel> {
         throw ChannelError.operationUnsupported
     }
     
-    override fileprivate func readFromSocket() throws -> SocketChannel? {
-        if let accepted =  try (self.socket as! ServerSocket).accept() {
-            do {
-                return try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop)
-            } catch let err {
-                let _ = try? accepted.close()
-                throw err
+    override fileprivate func readFromSocket() throws {
+        for _ in 1...maxMessagesPerRead {
+            guard !closed else {
+                return
+            }
+            if let accepted =  try (self.socket as! ServerSocket).accept() {
+                do {
+                    pipeline.fireChannelRead0(data: try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop))
+                } catch let err {
+                    let _ = try? accepted.close()
+                    throw err
+                }
+            } else {
+                return
             }
         }
-        return nil
     }
     
     override fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> Bool? {
@@ -621,7 +637,7 @@ extension Channel {
     }
 }
 
-class BaseSocketChannel<I: InboundData> : SelectableChannel, ChannelCore {
+class BaseSocketChannel : SelectableChannel, ChannelCore {
 
     public final var selectable: Selectable { return socket }
 
@@ -1005,34 +1021,25 @@ class BaseSocketChannel<I: InboundData> : SelectableChannel, ChannelCore {
             }
         }
         
-        for _ in 1...maxMessagesPerRead {
-            guard !closed else {
-                return
-            }
-            do {
-                if let read = try readFromSocket() {
-                    pipeline.fireChannelRead0(data: read)
-                } else {
-                    break
-                }
-            } catch let err {
-                if let channelErr = err as? ChannelError {
-                    // EOF is not really an error that should be forwarded to the user
-                    if channelErr != ChannelError.eof {
-                        pipeline.fireErrorCaught0(error: err)
-                    }
-                } else {
+        do {
+            try readFromSocket()
+        } catch let err {
+            if let channelErr = err as? ChannelError {
+                // EOF is not really an error that should be forwarded to the user
+                if channelErr != ChannelError.eof {
                     pipeline.fireErrorCaught0(error: err)
                 }
-               
-                // Call before triggering the close of the Channel.
-                pipeline.fireChannelReadComplete0()
-                    
-                close0(error: err)
-                    
-                return
-                
+            } else {
+                pipeline.fireErrorCaught0(error: err)
             }
+            
+            // Call before triggering the close of the Channel.
+            pipeline.fireChannelReadComplete0()
+            
+            close0(error: err)
+            
+            return
+            
         }
         pipeline.fireChannelReadComplete0()
     }
@@ -1061,7 +1068,7 @@ class BaseSocketChannel<I: InboundData> : SelectableChannel, ChannelCore {
         }
     }
     
-    fileprivate func readFromSocket() throws -> I? {
+    fileprivate func readFromSocket() throws {
         fatalError("this must be overridden by sub class")
     }
 
