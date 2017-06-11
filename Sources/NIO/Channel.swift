@@ -1177,8 +1177,8 @@ public protocol RecvByteBufferAllocator {
     func buffer(allocator: ByteBufferAllocator) throws -> ByteBuffer
 }
 
-public final class FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
-    let capacity: Int
+public struct FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
+    public let capacity: Int
 
     public init(capacity: Int) {
         precondition(capacity > 0)
