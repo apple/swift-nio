@@ -50,6 +50,7 @@ let bootstrap = ServerBootstrap(group: group)
     .option(childOption: ChannelOptions.Socket(IPPROTO_TCP, TCP_NODELAY), childValue: 1)
     .option(childOption: ChannelOptions.Socket(SOL_SOCKET, SO_REUSEADDR), childValue: 1)
     .option(childOption: ChannelOptions.MaxMessagesPerRead, childValue: 16)
+    .option(childOption: ChannelOptions.RecvAllocator, childValue: FixedSizeRecvByteBufferAllocator(capacity: 8192))
 defer {
     _ = try? group.close()
 }

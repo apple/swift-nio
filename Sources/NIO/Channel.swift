@@ -375,6 +375,8 @@ final class SocketChannel : BaseSocketChannel {
             }
             if let bytesRead = try buffer.withMutableWritePointer { try (self.socket as! Socket).read(pointer: $0, size: $1) } {
                 if bytesRead > 0 {
+                    recvAllocator.record(actualReadBytes: bytesRead)
+
                     pipeline.fireChannelRead0(data: buffer)
                     
                     // Reset reader and writerIndex and so allow to have the buffer filled again
@@ -676,7 +678,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
     }
 
     private var bufferAllocator: ByteBufferAllocator = ByteBufferAllocator()
-    fileprivate var recvAllocator: RecvByteBufferAllocator = FixedSizeRecvByteBufferAllocator(capacity: 8192)
+    fileprivate var recvAllocator: RecvByteBufferAllocator = AdaptiveRecvByteBufferAllocator()
     fileprivate var autoRead: Bool = true
     fileprivate var maxMessagesPerRead: UInt = 1
 
@@ -1170,23 +1172,6 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
     deinit {
         // We should never have any pending writes left as otherwise we may leak callbacks
         assert(pendingWrites.isEmpty)
-    }
-}
-
-public protocol RecvByteBufferAllocator {
-    func buffer(allocator: ByteBufferAllocator) throws -> ByteBuffer
-}
-
-public struct FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
-    public let capacity: Int
-
-    public init(capacity: Int) {
-        precondition(capacity > 0)
-        self.capacity = capacity
-    }
-
-    public func buffer(allocator: ByteBufferAllocator) throws -> ByteBuffer {
-        return try allocator.buffer(capacity: capacity)
     }
 }
 
