@@ -1000,8 +1000,8 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
             // Start reading again
             safeReregister(interested: .read)
         } else {
-            // No read pending so just deregister from the EventLoop for now.
-            safeDeregister()
+            // No read pending so just set the interested event to .none
+            safeReregister(interested: .none)
         }
     }
     
@@ -1106,7 +1106,6 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
             pipeline.fireErrorCaught0(error: err)
             close0(promise: eventLoop.newPromise(type: Void.self), error: err)
         }
-
     }
     
     private func safeRegister(interested: InterestedEvent) -> Bool {
