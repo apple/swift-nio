@@ -14,7 +14,6 @@
 
 import Foundation
 import Sockets
-import Future
 
 public final class ServerBootstrap {
     

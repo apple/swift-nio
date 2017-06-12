@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import Future
 import Sockets
 
 #if os(Linux)
@@ -553,12 +552,6 @@ public protocol ChannelCore : class{
     var eventLoop: EventLoop { get }
 }
 
-extension ChannelCore {
-    public func close0(promise: Promise<Void> = Promise<Void>()) {
-        close0(promise: promise, error: ChannelError.closed)
-    }
-}
-
 /*
  All methods exposed by Channel are thread-safe
  */
@@ -914,7 +907,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
         }
     }
     
-    public final func close0(promise: Promise<Void> = Promise<Void>(), error: Error = ChannelError.closed) {
+    public final func close0(promise: Promise<Void>, error: Error) {
         assert(eventLoop.inEventLoop)
 
         guard !closed else {
@@ -1037,8 +1030,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
             
             // Call before triggering the close of the Channel.
             pipeline.fireChannelReadComplete0()
-            
-            close0(error: err)
+            close0(promise: eventLoop.newPromise(type: Void.self), error: err)
             
             return
             
@@ -1094,7 +1086,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
             try selectableEventLoop.deregister(channel: self)
         } catch let err {
             pipeline.fireErrorCaught0(error: err)
-            close0(error: err)
+            close0(promise: eventLoop.newPromise(type: Void.self), error: err)
         }
     }
     
@@ -1112,7 +1104,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
             try selectableEventLoop.reregister(channel: self)
         } catch let err {
             pipeline.fireErrorCaught0(error: err)
-            close0(error: err)
+            close0(promise: eventLoop.newPromise(type: Void.self), error: err)
         }
 
     }
@@ -1128,7 +1120,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
             return true
         } catch let err {
             pipeline.fireErrorCaught0(error: err)
-            close0(error: err)
+            close0(promise: eventLoop.newPromise(type: Void.self), error: err)
             return false
         }
     }
@@ -1152,7 +1144,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
                 }
                 
             } catch let err {
-                close0(error: err)
+                close0(promise: eventLoop.newPromise(type: Void.self), error: err)
                 
                 // we handled all writes
                 return true

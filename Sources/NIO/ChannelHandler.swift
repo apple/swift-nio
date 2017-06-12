@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import Future
 import Sockets
 
 public protocol ChannelHandler : class {

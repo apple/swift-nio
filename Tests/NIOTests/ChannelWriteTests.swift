@@ -19,30 +19,31 @@
 
 import Foundation
 import XCTest
-import Future
 import Sockets
 @testable import NIO
 
 class ChannelWriteTests: XCTestCase {
     func testWriteVIsTailRecursiveAndLoopifiedInReleaseMode() throws {
         if !_isDebugAssertConfiguration() {
+            let eventLoop = EmbeddedEventLoop()
+            
             let numberOfWritesToSmashTheStackIfNotTurnedIntoALoop = 500_000
             let allocator = ByteBufferAllocator()
             let d = "Hello".data(using: .utf8)!
             let head: PendingWrite? = PendingWrite(buffer: ByteBuffer(allocator: allocator, data: d, offset: 0, length: 5, maxCapacity: 5),
-                                                   promise: Promise())
+                                                   promise: eventLoop.newPromise(type: Void.self))
             var tail: PendingWrite? = head
             for i in 0..<(numberOfWritesToSmashTheStackIfNotTurnedIntoALoop) {
                 let len = (i % 5)+1
                 let new = PendingWrite(buffer: ByteBuffer(allocator: allocator, data: d, offset: 0, length: len, maxCapacity: 2*len),
-                                       promise: Promise())
+                                       promise: eventLoop.newPromise(type: Void.self))
                 tail!.next = new
                 tail = new
             }
 
             /* add a bogus one to check that the limit we pass in `count` later is respected. */
             tail!.next = PendingWrite(buffer: ByteBuffer(allocator: allocator, data: "BOGUS".data(using: .utf8)!, offset: 0, length: 5, maxCapacity: 5),
-                                      promise: Promise())
+                                      promise: eventLoop.newPromise(type: Void.self))
             var iovecs_count = numberOfWritesToSmashTheStackIfNotTurnedIntoALoop + 1 /* doesn't include the bogus one */
             var iovecs: UnsafeMutablePointer<IOVector> = UnsafeMutablePointer.allocate(capacity: iovecs_count)
             defer {

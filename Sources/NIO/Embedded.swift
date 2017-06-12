@@ -15,7 +15,6 @@
 import Foundation
 import Dispatch
 import Sockets
-import Future
 
 class EmbeddedEventLoop : EventLoop {
 
@@ -26,6 +25,24 @@ class EmbeddedEventLoop : EventLoop {
     // Would be better to have this as a Queue
     var tasks: [() -> ()] = Array()
 
+    public func submit<T>(task: @escaping () throws-> (T)) -> Future<T> {
+        let promise = Promise<T>(eventLoop: self, checkForPossibleDeadlock: false)
+        
+        execute(task: {() -> () in
+            do {
+                promise.succeed(result: try task())
+            } catch let err {
+                promise.fail(error: err)
+            }
+        })
+        
+        return promise.futureResult
+    }
+    
+    public func newPromise<T>(type: T.Type) -> Promise<T> {
+        return Promise<T>(eventLoop: self, checkForPossibleDeadlock: false)
+    }
+    
     // We're not really running a loop here. Tasks aren't run until run() is called,
     // at which point we run everything that's been submitted. Anything newly submitted
     // either gets on that train if it's still moving or
@@ -59,10 +76,14 @@ class EmbeddedEventLoop : EventLoop {
 class EmbeddedChannelCore : ChannelCore {
     var closed: Bool { return closePromise.futureResult.fulfilled }
 
-    var closePromise: Promise<Void> = Promise<Void>()
     
     var eventLoop: EventLoop = EmbeddedEventLoop()
+    var closePromise: Promise<Void>
 
+    init() {
+        closePromise = eventLoop.newPromise(type: Void.self)
+    }
+    
     deinit { closePromise.succeed(result: ()) }
 
     var outboundBuffer: [Any] = []

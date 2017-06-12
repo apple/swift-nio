@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 import Foundation
 import NIO
-import Future
 
 
 public class EchoHandler: ChannelHandler {

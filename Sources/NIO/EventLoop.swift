@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import Future
 import Sockets
 import ConcurrencyHelpers
 
@@ -21,11 +20,14 @@ public protocol EventLoop: EventLoopGroup {
     var inEventLoop: Bool { get }
     func execute(task: @escaping () -> ())
     func submit<T>(task: @escaping () throws-> (T)) -> Future<T>
+    func newPromise<T>(type: T.Type) -> Promise<T>
+    func newFailedFuture<T>(type: T.Type, error: Error) -> Future<T>
+    func newSucceedFuture<T>(result: T) -> Future<T>
 }
 
 extension EventLoop {
     public func submit<T>(task: @escaping () throws-> (T)) -> Future<T> {
-        let promise = Promise<T>()
+        let promise = Promise<T>(eventLoop: self, checkForPossibleDeadlock: true)
 
         execute(task: {() -> () in
             do {
@@ -39,7 +41,7 @@ extension EventLoop {
     }
 
     public func newPromise<T>(type: T.Type) -> Promise<T> {
-        return Promise<T>()
+        return Promise<T>(eventLoop: self, checkForPossibleDeadlock: true)
     }
 
     public func newFailedFuture<T>(type: T.Type, error: Error) -> Future<T> {

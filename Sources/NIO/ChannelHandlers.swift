@@ -16,7 +16,6 @@
 //
 
 import Foundation
-import Future
 
 /**
  ChannelHandler implementation which enforces back-pressure by stop reading from the remote-peer when it can not write back fast-enough and start reading again

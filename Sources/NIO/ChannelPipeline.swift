@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import Future
 import Sockets
 
 
@@ -73,7 +72,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
     }
     
     public func remove(handler: ChannelHandler) -> Future<Bool> {
-        let promise = Promise<Bool>()
+        let promise = eventLoop.newPromise(type: Bool.self)
         if eventLoop.inEventLoop {
             remove0(handler: handler, promise: promise)
         } else {
@@ -112,7 +111,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
     }
     
     public func remove(name: String) -> Future<Bool> {
-        let promise = Promise<Bool>()
+        let promise = eventLoop.newPromise(type: Bool.self)
         if eventLoop.inEventLoop {
             remove0(name: name, promise: promise)
         } else {
@@ -456,7 +455,7 @@ private final class HeadChannelHandler : ChannelHandler {
     }
     
     func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
-        ctx.channel!._unsafe.close0(promise: promise)
+        ctx.channel!._unsafe.close0(promise: promise, error: ChannelError.closed)
     }
     
     func read(ctx: ChannelHandlerContext) {
