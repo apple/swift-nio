@@ -24,7 +24,7 @@ class EmbeddedChannelTest: XCTestCase {
         let f = channel.write(data: buf, promise:channel.eventLoop.newPromise(type: Void.self))
 
         var ranBlock = false
-        f.whenSuccess {
+        f.whenSuccess { () -> Void in
             XCTAssertEqual(buf, channel.outboundBuffer[0] as! ByteBuffer)
             ranBlock = true
         }

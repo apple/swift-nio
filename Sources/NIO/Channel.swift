@@ -32,62 +32,29 @@ final class PendingWrite {
     }
 }
 
-/*
- PLEASE BE EXTREMELY CAREFUL WHEN MODIFYING __ANYTHING__ IN THIS FUNCTION.
-
- Things known to break the tail-recursiveness
-  - any use of `throws`
-  - any use of any Optionals
-  - any use of a class
-  - many uses of ByteBuffer (such as `withReadPointer1)
-
- This function needs to be tail-recursive _despite ARC_. Ie. you basically can't use ARC :(.
-
- If you change anything, please test RUN THE `testWriteVIsTailRecursiveAndLoopifiedInReleaseMode` test case IN RELASE MODE
- */
-func doPendingWriteVectorOperation(pending: PendingWrite?, count: Int, iovecs: UnsafeMutableBufferPointer<IOVector>, _ fn: (UnsafeBufferPointer<IOVector>) -> Int) -> Int {
-
-    /* this can't be inlined or else LLVM failes to do tail call optimisation */
-    @inline(never)
-    func outline(ref: Unmanaged<PendingWrite>, iovecs: UnsafeMutableBufferPointer<iovec>, offset: Int, count: Int, index: Int) {
-        ref._withUnsafeGuaranteedRef { $0.buffer.backingData.withUnsafeMutableBytes({ (ptr: UnsafeMutablePointer<UInt8>) -> Void in
-            iovecs[index] = iovec(iov_base: ptr+offset,
-                                  iov_len: count)
-        }) }
-    }
-
-    var recursionLimit = iovecs.count - 1
-    if _isDebugAssertConfiguration() && recursionLimit - 1 == recursionLimit - 1 {
-        recursionLimit = min(recursionLimit, 32)
-    }
-    
-    return withoutActuallyEscaping(fn) { fn in
-        func doPendingWriteVectorOperation_(ref: Unmanaged<PendingWrite>,
-                                            iovecs: UnsafeMutableBufferPointer<IOVector>,
-                                            index: Int,
-                                            recursionLimit: Int) -> Int {
-            let (byteCount, offset) = ref._withUnsafeGuaranteedRef { ($0.buffer.readableBytes, $0.buffer.readerIndex) }
-            outline(ref: ref, iovecs: iovecs, offset: offset, count: byteCount, index: index)
-            if let next = ref._withUnsafeGuaranteedRef({ $0.next.map(Unmanaged.passUnretained) }), index < count-1 && index < recursionLimit {
-                return doPendingWriteVectorOperation_(ref: next,
-                                                      iovecs: iovecs,
-                                                      index: index + 1,
-                                                      recursionLimit: recursionLimit)
-            } else {
-                return fn(UnsafeBufferPointer(start: iovecs.baseAddress, count: index+1))
+func doPendingWriteVectorOperation(pending: PendingWrite?,
+                                   count: Int,
+                                   iovecs: UnsafeMutableBufferPointer<IOVector>,
+                                   storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
+                                   _ fn: (UnsafeBufferPointer<IOVector>) -> Int) -> Int {
+    var next = pending
+    for i in 0..<count {
+        if let p = next {
+            p.buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
+                _ = storageRef.retain()
+                storageRefs[i] = storageRef
+                iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: ptr.count)
             }
-        }
-        return withExtendedLifetime(pending) {
-            if let pending = pending {
-                return doPendingWriteVectorOperation_(ref: Unmanaged.passUnretained(pending),
-                                                      iovecs: iovecs,
-                                                      index: 0,
-                                                      recursionLimit: recursionLimit)
-            } else {
-                return 0
-            }
+            next = p.next
+        } else {
+            break
         }
     }
+    let result = fn(UnsafeBufferPointer(start: iovecs.baseAddress!, count: count))
+    for i in 0..<count {
+        storageRefs[i].release()
+    }
+    return result
 }
 
 func makeNonThrowing<I>(errorBuffer: inout Error?, input: I, _ fn: (I) throws -> Int?) -> Int {
@@ -110,6 +77,7 @@ final fileprivate class PendingWrites {
     // Marks the last PendingWrite that should be written by consume(...)
     private var flushCheckpoint: PendingWrite?
     private var iovecs: UnsafeMutableBufferPointer<IOVector>
+    private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
     
     fileprivate var waterMark: WriteBufferWaterMark = WriteBufferWaterMark(32 * 1024..<64 * 1024)
     private var writable = true
@@ -251,10 +219,13 @@ final fileprivate class PendingWrites {
                 }
                 var expected = 0
                 var error: Error? = nil
-                let written = doPendingWriteVectorOperation(pending: pending, count: outstanding.chunks, iovecs: iovecs, { pointer in
+                let written = doPendingWriteVectorOperation(pending: pending,
+                                                            count: outstanding.chunks,
+                                                            iovecs: self.iovecs,
+                                                            storageRefs: self.storageRefs) { pointer in
                     expected += pointer.count
                     return makeNonThrowing(errorBuffer: &error, input: pointer, body)
-                })
+                }
                 
                 if written < 0 {
                     throw error!
@@ -347,8 +318,9 @@ final fileprivate class PendingWrites {
         assert(outstanding == (0, 0))
     }
     
-    init(iovecs: UnsafeMutableBufferPointer<IOVector>) {
+    init(iovecs: UnsafeMutableBufferPointer<IOVector>, storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>) {
         self.iovecs = iovecs
+        self.storageRefs = storageRefs
     }
 }
 
@@ -1160,7 +1132,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         self.socket = socket
         self.selectableEventLoop = eventLoop
         self.closePromise = eventLoop.newPromise(type: Void.self)
-        self.pendingWrites = PendingWrites(iovecs: eventLoop.iovecs)
+        self.pendingWrites = PendingWrites(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
         self._pipeline = ChannelPipeline(channel: self)
     }
     

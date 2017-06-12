@@ -75,18 +75,23 @@ final class SelectableEventLoop : EventLoop {
     private var closed = false
     
     private let _iovecs: UnsafeMutablePointer<IOVector>
+    private let _storageRefs: UnsafeMutablePointer<Unmanaged<AnyObject>>
     
     let iovecs: UnsafeMutableBufferPointer<IOVector>
+    let storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
     
     init() throws {
         self.selector = try Sockets.Selector()
         self.tasks = Array()
         self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimit)
+        self._storageRefs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimit)
         self.iovecs = UnsafeMutableBufferPointer(start: self._iovecs, count: Socket.writevLimit)
+        self.storageRefs = UnsafeMutableBufferPointer(start: self._storageRefs, count: Socket.writevLimit)
     }
     
     deinit {
         _iovecs.deallocate(capacity: Socket.writevLimit)
+        _storageRefs.deallocate(capacity: Socket.writevLimit)
     }
     
     func register(channel: SelectableChannel) throws {
