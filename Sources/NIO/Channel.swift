@@ -851,12 +851,15 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
     public final func flush0() {
         assert(eventLoop.inEventLoop)
 
+        // Even if writable() will be called later by the EVentLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
+        // are actual written once writable() is called.
+        pendingWrites.markFlushCheckpoint()
+
         guard !isWritePending() else {
             return
         }
         
-        // This flush is triggered by the user and so we should mark all pending messages as flushed
-        if !flushNow(markFlushCheckpoint: true) {
+        if !flushNow() {
             guard !closed else {
                 return
             }
@@ -963,15 +966,10 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
         assert(eventLoop.inEventLoop)
         assert(!closed)
 
-        if finishConnect() {
+        if finishConnect() || flushNow() {
+            // Everything was written or connect was complete
             finishWritable()
             return
-        }
-        
-        // This flush is triggered by the EventLoop which means it should only try to write the messages that were marked as flushed before
-        if flushNow(markFlushCheckpoint: false) {
-            // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socketto read.
-            finishWritable()
         }
     }
     
@@ -1124,10 +1122,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
         }
     }
 
-    private func flushNow(markFlushCheckpoint: Bool) -> Bool {
-        if markFlushCheckpoint {
-            pendingWrites.markFlushCheckpoint()
-        }
+    private func flushNow() -> Bool {
         while !closed {
             do {
                 if let written = try writeToSocket(pendingWrites: pendingWrites) {
