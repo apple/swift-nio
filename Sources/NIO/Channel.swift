@@ -209,7 +209,7 @@ final fileprivate class PendingWrites {
     
     private func consumeOne(body: (UnsafePointer<UInt8>, Int) throws -> Int?) rethrows -> Bool? {
         if let pending = head, isFlushPending() {
-            for _ in 1..<writeSpinCount {
+            for _ in 0..<writeSpinCount + 1 {
                 guard !closed else {
                     return true
                 }
@@ -256,7 +256,7 @@ final fileprivate class PendingWrites {
     
     private func consumeMultiple(body: (UnsafeBufferPointer<IOVector>) throws -> Int?) throws -> Bool? {
         if var pending = head, isFlushPending() {
-            writeLoop: for _ in 1..<writeSpinCount {
+            writeLoop: for _ in 0..<writeSpinCount + 1 {
                 guard !closed else {
                     return true
                 }
