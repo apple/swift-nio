@@ -30,17 +30,6 @@ final class PendingWrite {
         self.buffer = buffer
         self.promise = promise
     }
-
-    deinit {
-        /* sorry! Workaround for https://bugs.swift.org/browse/SR-5145 which is that this linked list can cause a
-           stack overflow when released as the `deinit`s will get called with recursion
-        */
-        if let next = self.next {
-            DispatchQueue.global().async {
-                _ = next
-            }
-        }
-    }
 }
 
 /*
@@ -325,16 +314,36 @@ final fileprivate class PendingWrites {
         return nil
     }
     
+    
+    private func killAll(node: PendingWrite?, deconstructor: (PendingWrite) -> ()) {
+        var link = node
+        while link != nil {
+            let curr = link!
+            link = curr.next
+            curr.next = nil
+            deconstructor(curr)
+        }
+    }
+    
     func failAll(error: Error) {
         closed = true
-        while let pending = head {
+        
+        /*
+         Workaround for https://bugs.swift.org/browse/SR-5145 which is that this linked list can cause a
+         stack overflow when released as the `deinit`s will get called with recursion.
+        */
+        
+        killAll(node: head, deconstructor: { pending in
             outstanding = (outstanding.chunks-1, outstanding.bytes - pending.buffer.readableBytes)
-            updateNodes(pending: pending)
+            
             pending.promise.fail(error: error)
-        }
-        assert(flushCheckpoint  == nil)
-        assert(head == nil)
-        assert(tail == nil)
+        })
+        
+        // Remove references.
+        head = nil
+        tail = nil
+        flushCheckpoint = nil
+        
         assert(outstanding == (0, 0))
     }
     
