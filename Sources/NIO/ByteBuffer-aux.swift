@@ -70,6 +70,21 @@ extension ByteBuffer {
         return bytesRead
     }
 
+    @discardableResult
+    public mutating func set(buffer: ByteBuffer, at index: Int) -> Int {
+        return buffer.withUnsafeReadableBytes{ p in
+            self.set(bytes: p, at: index)
+        }
+    }
+    
+    @discardableResult
+    public mutating func write(buffer: inout ByteBuffer) -> Int {
+        let written = set(buffer: buffer, at: writerIndex)
+        self.moveWriterIndex(forwardBy: written)
+        buffer.moveReaderIndex(forwardBy: written)
+        return written
+    }
+    
     public func slice() -> ByteBuffer {
         return slice(at: self.readerIndex, length: self.readableBytes)!
     }

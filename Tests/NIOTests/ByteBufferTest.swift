@@ -643,4 +643,29 @@ class ByteBufferTest: XCTestCase {
         var actualGood = buf.readSlice(length: 4)
         XCTAssertEqual(Data([0, 1, 2, 3]), actualGood?.readData(length: 4))
     }
+    
+    func testSetBuffer() throws {
+        var src = try! allocator.buffer(capacity: 4)
+        src.write(data: Data([0, 1, 2, 3]))
+        
+        buf.set(buffer: src, at: 1)
+        
+        /* Should bit increase the writerIndex of the src buffer */
+        XCTAssertEqual(4, src.readableBytes)
+        XCTAssertEqual(0, buf.readableBytes)
+ 
+        XCTAssertEqual(Data([0, 1, 2, 3]), buf.data(at: 1, length: 4))
+    }
+    
+    func testWriteBuffer() throws {
+        var src = try! allocator.buffer(capacity: 4)
+        src.write(data: Data([0, 1, 2, 3]))
+        
+        buf.write(buffer: &src)
+        
+        /* Should increase the writerIndex of the src buffer */
+        XCTAssertEqual(0, src.readableBytes)
+        XCTAssertEqual(4, buf.readableBytes)
+        XCTAssertEqual(Data([0, 1, 2, 3]), buf.readData(length: 4))
+    }
 }
