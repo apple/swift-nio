@@ -355,7 +355,7 @@ final fileprivate class PendingWrites {
 /*
  All operations on SocketChannel are thread-safe
  */
-final class SocketChannel : BaseSocketChannel {
+final class SocketChannel : BaseSocketChannel<Socket> {
     
     init(eventLoop: SelectableEventLoop) throws {
         let socket = try Socket()
@@ -366,12 +366,12 @@ final class SocketChannel : BaseSocketChannel {
             throw err
         }
         
-        super.init(socket: socket, eventLoop: eventLoop)
+        try super.init(socket: socket, eventLoop: eventLoop)
     }
     
-    fileprivate init(socket: Socket, eventLoop: SelectableEventLoop) throws {
+    fileprivate override init(socket: Socket, eventLoop: SelectableEventLoop) throws {
         try socket.setNonBlocking()
-        super.init(socket: socket, eventLoop: eventLoop)
+        try super.init(socket: socket, eventLoop: eventLoop)
     }
     
     override fileprivate func readFromSocket() throws {
@@ -381,7 +381,7 @@ final class SocketChannel : BaseSocketChannel {
             guard !closed else {
                 return
             }
-            if let bytesRead = try buffer.withMutableWritePointer { try (self.socket as! Socket).read(pointer: $0, size: $1) } {
+            if let bytesRead = try buffer.withMutableWritePointer { try self.socket.read(pointer: $0, size: $1) } {
                 if bytesRead > 0 {
                     recvAllocator.record(actualReadBytes: bytesRead)
 
@@ -406,7 +406,7 @@ final class SocketChannel : BaseSocketChannel {
                 return 0
             }
             // normal write
-            return try (self.socket as! Socket).write(pointer: $0, size: $1)
+            return try self.socket.write(pointer: $0, size: $1)
         }, multipleBody: {
             switch $0.count {
             case 0:
@@ -414,10 +414,10 @@ final class SocketChannel : BaseSocketChannel {
                 return 0
             case 1:
                 let p = $0[0]
-                return try (self.socket as! Socket).write(pointer: p.iov_base.assumingMemoryBound(to: UInt8.self), size: p.iov_len)
+                return try self.socket.write(pointer: p.iov_base.assumingMemoryBound(to: UInt8.self), size: p.iov_len)
             default:
                 // Gathering write
-                return try (self.socket as! Socket).writev(iovecs: $0)
+                return try self.socket.writev(iovecs: $0)
             }
         })
         if result.writable {
@@ -428,11 +428,11 @@ final class SocketChannel : BaseSocketChannel {
     }
     
     override fileprivate func connectSocket(remote: SocketAddress) throws -> Bool {
-        return try (self.socket as! Socket).connect(remote: remote)
+        return try self.socket.connect(remote: remote)
     }
     
     override fileprivate func finishConnectSocket() throws {
-        try (self.socket as! Socket).finishConnect()
+        try self.socket.finishConnect()
     }
 }
 
@@ -450,7 +450,7 @@ extension SocketChannel : InboundData { }
 /*
  All operations on ServerSocketChannel are thread-safe
  */
-final class ServerSocketChannel : BaseSocketChannel {
+final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
     
     private var backlog: Int32 = 128
     private let group: EventLoopGroup
@@ -464,7 +464,7 @@ final class ServerSocketChannel : BaseSocketChannel {
             throw err
         }
         self.group = group
-        super.init(socket: serverSocket, eventLoop: eventLoop)
+        try super.init(socket: serverSocket, eventLoop: eventLoop)
     }
 
     override fileprivate func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
@@ -488,7 +488,7 @@ final class ServerSocketChannel : BaseSocketChannel {
         assert(eventLoop.inEventLoop)
         do {
             try socket.bind(local: local)
-            try (self.socket as! ServerSocket).listen(backlog: backlog)
+            try self.socket.listen(backlog: backlog)
             promise.succeed(result: ())
             pipeline.fireChannelActive0()
         } catch let err {
@@ -509,7 +509,7 @@ final class ServerSocketChannel : BaseSocketChannel {
             guard !closed else {
                 return
             }
-            if let accepted =  try (self.socket as! ServerSocket).accept() {
+            if let accepted =  try self.socket.accept() {
                 do {
                     pipeline.fireChannelRead0(data: try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop))
                 } catch let err {
@@ -641,14 +641,14 @@ extension Channel {
     }
 }
 
-class BaseSocketChannel : SelectableChannel, ChannelCore {
+class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
     public final var selectable: Selectable { return socket }
 
     public final var _unsafe: ChannelCore { return self }
 
     // Visible to access from EventLoop directly
-    let socket: BaseSocket
+    let socket: T
     public var interestedEvent: InterestedEvent = .none
 
     public final var closed: Bool {
@@ -1156,7 +1156,7 @@ class BaseSocketChannel : SelectableChannel, ChannelCore {
         return true
     }
     
-    fileprivate init(socket: BaseSocket, eventLoop: SelectableEventLoop) {
+    fileprivate init(socket: T, eventLoop: SelectableEventLoop) throws {
         self.socket = socket
         self.selectableEventLoop = eventLoop
         self.closePromise = eventLoop.newPromise(type: Void.self)
