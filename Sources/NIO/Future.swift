@@ -166,13 +166,11 @@ public class Promise<T> {
     
     /** Internal only! */
     fileprivate func _resolve(value: FutureValue<T>) {
-        // Set the value and then run all completed callbacks
-        let list = _setValue(value: value)
         if futureResult.eventLoop.inEventLoop {
-            list._run()
+            _setValue(value: value)._run()
         } else {
             futureResult.eventLoop.execute {
-                list._run()
+                self._setValue(value: value)._run()
             }
         }
     }
@@ -267,9 +265,14 @@ public class Promise<T> {
 
 public class Future<T>: Hashable {
     fileprivate var value: FutureValue<T> = .incomplete
+    fileprivate let _fullfilled = Atomic<Bool>(value: false)
     fileprivate let checkForPossibleDeadlock: Bool
     public let eventLoop: EventLoop
     
+    public var fulfilled: Bool {
+        return _fullfilled.load()
+    }
+
     public var result: T? {
         get {
             switch value {
@@ -299,15 +302,7 @@ public class Future<T>: Hashable {
     // Each instance gets a random hash value
     public lazy var hashValue = NSUUID().hashValue
     
-    /// Becomes 1 when we have a value or an error
-    fileprivate let futureLock: ConditionLock<Int>
-    
-    public var fulfilled: Bool {
-        return futureLock.value == 1
-    }
-    
     fileprivate init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool) {
-        self.futureLock = ConditionLock(value: 0)
         self.eventLoop = eventLoop
         self.checkForPossibleDeadlock = checkForPossibleDeadlock
     }
@@ -315,7 +310,6 @@ public class Future<T>: Hashable {
     /// A Future<T> that has already succeeded
     init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool, result: T) {
         self.value = .success(result)
-        self.futureLock = ConditionLock(value: 1)
         self.eventLoop = eventLoop
         self.checkForPossibleDeadlock = checkForPossibleDeadlock
     }
@@ -323,7 +317,6 @@ public class Future<T>: Hashable {
     /// A Future<T> that has already failed
     init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool, error: Error) {
         self.value = .failure(error)
-        self.futureLock = ConditionLock(value: 1)
         self.eventLoop = eventLoop
         self.checkForPossibleDeadlock = checkForPossibleDeadlock
     }
@@ -455,72 +448,27 @@ public extension Future {
     public func thenIfError(callback: @escaping (Error) throws -> T) -> Future<T> {
         return thenIfError { return Future<T>(eventLoop: self.eventLoop, checkForPossibleDeadlock: self.checkForPossibleDeadlock, result: try callback($0)) }
     }
-    
-    /** Block until either result or error is available.
-     
-     If the future already has a value, this will return immediately.  If the future has failed, this will throw the error.
-     
-     In particular, note that this does behave correctly if you have callbacks registered to run on the same queue on which you call `wait()`.  In that case, the `wait()` call will unblock as soon as the `Future<T>` acquires a result, and the callbacks will be dispatched asynchronously to run at some later time.
-     */
-    public func wait() throws -> T {
-        checkDeadlock()
-        
-        futureLock.lock(whenValue: 1) // Wait for fulfillment
-        futureLock.unlock()
-        if let error = error {
-            throw error
-        } else {
-            return result!
-        }
-    }
-    
-    /** Block until result or error becomes set, or until timeout.
-     
-     Returns a result if the future succeeds before the timeout, throws an error if it fails before the timeout.  Otherwise, returns nil.
-     */
-    public func wait(timeoutSeconds: Double) throws -> T? {
-        checkDeadlock()
 
-        let succeeded = futureLock.lock(whenValue: 1, timeoutSeconds: timeoutSeconds)
-        if succeeded {
-            futureLock.unlock()
-            if let error = error {
-                throw error
-            } else {
-                return result
-            }
-        } else {
-            return nil
-        }
-    }
     
-    private func checkDeadlock() {
-        if checkForPossibleDeadlock && eventLoop.inEventLoop {
-            fatalError("Called wait() in the EventLoop")
-        }
-    }
     /// Add a callback.  If there's already a value, invoke it and return the resulting list of new callback functions.
     fileprivate func _addCallback(callback: @escaping () -> CallbackList) -> CallbackList {
-        futureLock.lock()
+        assert(eventLoop.inEventLoop)
         switch value {
         case .incomplete:
             callbacks.append(callback: callback)
-            futureLock.unlock()
             return CallbackList()
         default:
-            futureLock.unlock()
             return callback()
         }
     }
     
     /// Add a callback.  If there's already a value, run as much of the chain as we can.
     fileprivate func _whenComplete(callback: @escaping () -> CallbackList) {
-        let list = _addCallback(callback: callback)
         if eventLoop.inEventLoop {
-            list._run()
+            _addCallback(callback: callback)._run()
         } else {
             eventLoop.execute {
-                list._run()
+                self._addCallback(callback: callback)._run()
             }
         }
     }
@@ -545,16 +493,15 @@ public extension Future {
     
     /// Internal:  Set the value and return a list of callbacks that should be invoked as a result.
     fileprivate func _setValue(value: FutureValue<T>) -> CallbackList {
-        futureLock.lock()
+        assert(eventLoop.inEventLoop)
         switch self.value {
         case .incomplete:
             self.value = value
+            self._fullfilled.store(true)
             let callbacks = self.callbacks
             self.callbacks = CallbackList()
-            futureLock.unlock(withValue: 1)
             return callbacks
         default:
-            futureLock.unlock()
             return CallbackList()
         }
     }
@@ -630,5 +577,33 @@ extension Future {
         self.whenFailure(callback: { err in
             promise.fail(error: err)
         })
+    }
+}
+
+extension Future {
+    public func wait() throws -> T {
+        if self.checkForPossibleDeadlock {
+            precondition(!eventLoop.inEventLoop, "wait() must not be called when on the EventLoop")
+        }
+        
+        var v: FutureValue <T> = .incomplete
+        let lock = ConditionLock(value: 0)
+        _whenComplete { () -> CallbackList in
+            lock.lock()
+            v = self.value
+            lock.unlock(withValue: 1)
+            return CallbackList()
+        }
+        lock.lock(whenValue: 1)
+        lock.unlock()
+        
+        switch(v) {
+        case .success(let result):
+            return result
+        case .failure(let error):
+            throw error
+        case .incomplete:
+            fatalError()
+        }
     }
 }
