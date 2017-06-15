@@ -233,7 +233,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         }
     }
     
-    public func fireChannelRead<T: InboundData>(data: T) {
+    public func fireChannelRead(data: IOData) {
         if eventLoop.inEventLoop {
             fireChannelRead0(data: data)
         } else {
@@ -315,7 +315,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
     }
 
     @discardableResult
-    func write<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void> {
+    func write(data: IOData, promise: Promise<Void>) -> Future<Void> {
         if eventLoop.inEventLoop {
             tail!.invokeWrite(data: data, promise: promise)
         } else {
@@ -327,7 +327,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
     }
     
     @discardableResult
-    func writeAndFlush<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void> {
+    func writeAndFlush(data: IOData, promise: Promise<Void>) -> Future<Void> {
         if eventLoop.inEventLoop {
             tail!.invokeWriteAndFlush(data: data, promise: promise)
         } else {
@@ -392,7 +392,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         head!.invokeChannelActive()
     }
     
-    func fireChannelRead0<T: InboundData>(data: T) {
+    func fireChannelRead0(data: IOData) {
         head!.invokeChannelRead(data: data)
     }
     
@@ -446,7 +446,7 @@ private final class HeadChannelHandler : ChannelHandler {
         ctx.channel!._unsafe.connect0(remote: remote, promise: promise)
     }
     
-    func write<T: OutboundData>(ctx: ChannelHandlerContext, data: T, promise: Promise<Void>) {
+    func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>) {
         ctx.channel!._unsafe.write0(data: data, promise: promise)
     }
     
@@ -523,7 +523,7 @@ private final class TailChannelHandler : ChannelHandler {
         // TODO: Log this and tell the user that its most likely a fault not handling it.
     }
     
-    func channelRead<T: InboundData>(ctx: ChannelHandlerContext, data: T) {
+    func channelRead(ctx: ChannelHandlerContext, data: IOData) {
         ctx.channel!._unsafe.channelRead0(data: data)
     }
 }
@@ -576,7 +576,7 @@ public final class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboun
         next!.invokeChannelInactive()
     }
     
-    public func fireChannelRead<T: InboundData>(data: T) {
+    public func fireChannelRead(data: IOData) {
         next!.invokeChannelRead(data: data)
     }
     
@@ -611,12 +611,12 @@ public final class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboun
         return promise.futureResult
     }
 
-    @discardableResult public func write<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func write(data: IOData, promise: Promise<Void>) -> Future<Void> {
         prev!.invokeWrite(data: data, promise: promise)
         return promise.futureResult
     }
     
-    @discardableResult public func writeAndFlush<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func writeAndFlush(data: IOData, promise: Promise<Void>) -> Future<Void> {
         prev!.invokeWriteAndFlush(data: data, promise: promise)
         return promise.futureResult
     }
@@ -674,7 +674,7 @@ public final class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboun
         }
     }
     
-    func invokeChannelRead<T: InboundData>(data: T) {
+    func invokeChannelRead(data: IOData) {
         assert(inEventLoop)
         
         do {
@@ -743,7 +743,7 @@ public final class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboun
         handler.connect(ctx: self, remote: remote, promise: promise)
     }
 
-    func invokeWrite<T: OutboundData>(data: T, promise: Promise<Void>) {
+    func invokeWrite(data: IOData, promise: Promise<Void>) {
         assert(inEventLoop)
         
         handler.write(ctx: self, data: data, promise: promise)
@@ -755,7 +755,7 @@ public final class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboun
         handler.flush(ctx: self)
     }
     
-    func invokeWriteAndFlush<T: OutboundData>(data: T, promise: Promise<Void>) {
+    func invokeWriteAndFlush(data: IOData, promise: Promise<Void>) {
         assert(inEventLoop)
         
         handler.write(ctx: self, data: data, promise: promise)

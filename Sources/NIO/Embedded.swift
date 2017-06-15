@@ -105,8 +105,8 @@ class EmbeddedChannelCore : ChannelCore {
         promise.succeed(result: ())
     }
 
-    func write0<T: OutboundData>(data: T, promise: Promise<Void>) {
-        outboundBuffer.append(data as! ByteBuffer)
+    func write0(data: IOData, promise: Promise<Void>) {
+        outboundBuffer.append(data.forceAsByteBuffer())
         promise.succeed(result: ())
     }
 
@@ -123,7 +123,7 @@ class EmbeddedChannelCore : ChannelCore {
     func readIfNeeded0() {
     }
     
-    func channelRead0<T: InboundData>(data: T) {
+    func channelRead0(data: IOData) {
     }
 }
 

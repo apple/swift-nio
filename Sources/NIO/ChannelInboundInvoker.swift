@@ -12,10 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-
-public protocol InboundData { }
-
 public protocol ChannelInboundInvoker {
     
     func fireChannelRegistered()
@@ -26,7 +22,7 @@ public protocol ChannelInboundInvoker {
 
     func fireChannelInactive()
 
-    func fireChannelRead<T: InboundData>(data: T)
+    func fireChannelRead(data: IOData)
     
     func fireChannelReadComplete()
     

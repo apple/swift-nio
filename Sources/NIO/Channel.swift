@@ -21,6 +21,35 @@ import Glibc
 import Darwin
 #endif
 
+public enum IOData {
+    case byteBuffer(ByteBuffer)
+    case other(Any)
+
+    func tryAsByteBuffer() -> ByteBuffer? {
+        if case .byteBuffer(let bb) = self {
+            return bb
+        } else {
+            return nil
+        }
+    }
+
+    func forceAsByteBuffer() -> ByteBuffer {
+        return tryAsByteBuffer()!
+    }
+
+    func tryAsOther<T>(class: T.Type = T.self) -> T? {
+        if case .other(let any) = self {
+            return any as? T
+        } else {
+            return nil
+        }
+    }
+
+    func forceAsOther<T>(class: T.Type = T.self) -> T {
+        return tryAsOther(class: `class`)!
+    }
+}
+
 final class PendingWrite {
     var next: PendingWrite?
     var buffer: ByteBuffer
@@ -357,7 +386,7 @@ final class SocketChannel : BaseSocketChannel<Socket> {
                 if bytesRead > 0 {
                     recvAllocator.record(actualReadBytes: bytesRead)
 
-                    pipeline.fireChannelRead0(data: buffer)
+                    pipeline.fireChannelRead0(data: .byteBuffer(buffer))
                     
                     // Reset reader and writerIndex and so allow to have the buffer filled again
                     buffer.clear()
@@ -407,17 +436,6 @@ final class SocketChannel : BaseSocketChannel<Socket> {
         try self.socket.finishConnect()
     }
 }
-
-
-/*
- ByteBuffer will be read and written to the Channel so declare it as InboundData and OutboundData
- */
-extension ByteBuffer : InboundData, OutboundData { }
-
-/*
- SocketChannel is read when using the ServerSocketChannel so delcare it was InboundData
- */
-extension SocketChannel : InboundData { }
 
 /*
  All operations on ServerSocketChannel are thread-safe
@@ -483,7 +501,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
             }
             if let accepted =  try self.socket.accept() {
                 do {
-                    pipeline.fireChannelRead0(data: try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop))
+                    pipeline.fireChannelRead0(data: .other(try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop)))
                 } catch let err {
                     let _ = try? accepted.close()
                     throw err
@@ -499,17 +517,16 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         return true
     }
     
-    override public func channelRead0<T: InboundData>(data: T) {
+    override public func channelRead0(data: IOData) {
         assert(eventLoop.inEventLoop)
 
-        if let ch = data as? Channel {
-            let f = ch.register()
-            f.whenFailure(callback: { err in
-                _ = ch.close()
-            })
-            f.whenSuccess { () -> Void in
-                ch.pipeline.fireChannelActive0()
-            }
+        let ch = data.forceAsOther() as Channel
+        let f = ch.register()
+        f.whenFailure(callback: { err in
+            _ = ch.close()
+        })
+        f.whenSuccess { () -> Void in
+            ch.pipeline.fireChannelActive0()
         }
     }
 }
@@ -522,13 +539,13 @@ public protocol ChannelCore : class{
     func register0(promise: Promise<Void>)
     func bind0(local: SocketAddress, promise: Promise<Void>)
     func connect0(remote: SocketAddress, promise: Promise<Void>)
-    func write0<T: OutboundData>(data: T, promise: Promise<Void>)
+    func write0(data: IOData, promise: Promise<Void>)
     func flush0()
     func readIfNeeded0()
     func startReading0()
     func stopReading0()
     func close0(promise: Promise<Void>, error: Error)
-    func channelRead0<T: InboundData>(data: T)
+    func channelRead0(data: IOData)
     var closed: Bool { get }
     var eventLoop: EventLoop { get }
 }
@@ -551,9 +568,9 @@ public protocol Channel : class, ChannelOutboundInvoker {
     @discardableResult func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void>
     @discardableResult func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void>
     func read()
-    @discardableResult func write<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void>
+    @discardableResult func write(data: IOData, promise: Promise<Void>) -> Future<Void>
     func flush()
-    @discardableResult func writeAndFlush<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void>
+    @discardableResult func writeAndFlush(data: IOData, promise: Promise<Void>) -> Future<Void>
     @discardableResult func close(promise: Promise<Void>) -> Future<Void>
 
     var _unsafe: ChannelCore { get }
@@ -587,7 +604,7 @@ extension Channel {
         return pipeline.connect(remote: remote, promise: promise)
     }
 
-    @discardableResult public func write<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func write(data: IOData, promise: Promise<Void>) -> Future<Void> {
         return pipeline.write(data: data, promise: promise)
     }
 
@@ -599,7 +616,7 @@ extension Channel {
         pipeline.read()
     }
 
-    @discardableResult public func writeAndFlush<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public func writeAndFlush(data: IOData, promise: Promise<Void>) -> Future<Void> {
         return pipeline.writeAndFlush(data: data, promise: promise)
     }
 
@@ -768,7 +785,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         return pipeline.connect(remote: remote, promise: promise)
     }
     
-    @discardableResult public final func write<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public final func write(data: IOData, promise: Promise<Void>) -> Future<Void> {
         return pipeline.write(data: data, promise: promise)
     }
     
@@ -780,7 +797,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         pipeline.read()
     }
     
-    @discardableResult public final func writeAndFlush<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void> {
+    @discardableResult public final func writeAndFlush(data: IOData, promise: Promise<Void>) -> Future<Void> {
         return pipeline.writeAndFlush(data: data, promise: promise)
     }
     
@@ -800,7 +817,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public func write0<T: OutboundData>(data: T, promise: Promise<Void>) {
+    public func write0(data: IOData, promise: Promise<Void>) {
         assert(eventLoop.inEventLoop)
 
         guard !closed else {
@@ -808,7 +825,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             promise.fail(error: ChannelError.closed)
             return
         }
-        if let buffer = data as? ByteBuffer {
+        if let buffer = data.tryAsByteBuffer() {
             if !pendingWrites.add(buffer: buffer, promise: promise) {
                 pipeline.fireChannelWritabilityChanged0(writable: false)
             }
@@ -1050,7 +1067,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         fatalError("this must be overridden by sub class")
     }
     
-    public func channelRead0<T: InboundData>(data: T) {
+    public func channelRead0(data: IOData) {
         // Do nothing by default
     }
 

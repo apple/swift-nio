@@ -20,7 +20,7 @@ public protocol ChannelHandler : class {
     func channelUnregistered(ctx: ChannelHandlerContext) throws
     func channelActive(ctx: ChannelHandlerContext) throws
     func channelInactive(ctx: ChannelHandlerContext) throws
-    func channelRead<T: InboundData>(ctx: ChannelHandlerContext, data: T) throws
+    func channelRead(ctx: ChannelHandlerContext, data: IOData) throws
     func channelReadComplete(ctx: ChannelHandlerContext) throws
     func channelWritabilityChanged(ctx: ChannelHandlerContext, writable: Bool) throws
     func userEventTriggered(ctx: ChannelHandlerContext, event: Any) throws
@@ -28,7 +28,7 @@ public protocol ChannelHandler : class {
     func register(ctx: ChannelHandlerContext, promise: Promise<Void>)
     func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>)
     func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>)
-    func write<T: OutboundData>(ctx: ChannelHandlerContext, data: T, promise: Promise<Void>)
+    func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>)
     func flush(ctx: ChannelHandlerContext)
     // TODO: Think about make this more flexible in terms of influence the allocation that is used to read the next amount of data
     func read(ctx: ChannelHandlerContext)
@@ -56,7 +56,7 @@ public extension ChannelHandler {
         ctx.fireChannelInactive()
     }
     
-    public func channelRead<T: InboundData>(ctx: ChannelHandlerContext, data: T) {
+    public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
         ctx.fireChannelRead(data: data)
     }
     
@@ -88,7 +88,7 @@ public extension ChannelHandler {
         ctx.connect(remote: remote, promise: promise)
     }
     
-    public func write<T: OutboundData>(ctx: ChannelHandlerContext, data: T, promise: Promise<Void>) {
+    public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>) {
         ctx.write(data: data, promise: promise)
     }
     

@@ -122,31 +122,28 @@ public final class ServerBootstrap {
             self.childOptions = childOptions
         }
         
-        func channelRead<T: InboundData>(ctx: ChannelHandlerContext, data: T) {
-            if let accepted = data as? SocketChannel {
-                do {
-                    try self.childOptions.applyAll(channel: accepted)
+        func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+            let accepted = data.forceAsOther() as SocketChannel
+            do {
+                try self.childOptions.applyAll(channel: accepted)
 
-                    if let handler = childHandler {
-                        let f = accepted.pipeline.add(handler: handler)
-                        f.whenSuccess { () -> Void in
-                            if ctx.eventLoop.inEventLoop {
+                if let handler = childHandler {
+                    let f = accepted.pipeline.add(handler: handler)
+                    f.whenSuccess { () -> Void in
+                        if ctx.eventLoop.inEventLoop {
+                            ctx.fireChannelRead(data: data)
+                        } else {
+                            ctx.eventLoop.execute {
                                 ctx.fireChannelRead(data: data)
-                            } else {
-                                ctx.eventLoop.execute {
-                                    ctx.fireChannelRead(data: data)
-                                }
                             }
                         }
-                        f.whenFailure( callback: { err in
-                            self.closeAndFire(ctx: ctx, accepted: accepted, err: err)
-                        })
                     }
-                } catch let err {
-                    closeAndFire(ctx: ctx, accepted: accepted, err: err)
+                    f.whenFailure( callback: { err in
+                        self.closeAndFire(ctx: ctx, accepted: accepted, err: err)
+                    })
                 }
-            } else {
-                ctx.fireChannelRead(data: data)
+            } catch let err {
+                closeAndFire(ctx: ctx, accepted: accepted, err: err)
             }
         }
         

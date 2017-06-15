@@ -15,8 +15,6 @@
 import Foundation
 import Sockets
 
-public protocol OutboundData { }
-
 public protocol ChannelOutboundInvoker {
     func register() -> Future<Void>
     @discardableResult func register(promise: Promise<Void>) -> Future<Void>
@@ -26,14 +24,14 @@ public protocol ChannelOutboundInvoker {
     func connect(remote: SocketAddress) -> Future<Void>
     @discardableResult func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void>
     
-    @discardableResult func write<T: OutboundData>(data: T) -> Future<Void>
-    @discardableResult func write<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void>
+    @discardableResult func write(data: IOData) -> Future<Void>
+    @discardableResult func write(data: IOData, promise: Promise<Void>) -> Future<Void>
 
     func flush()
     func read()
     
-    func writeAndFlush<T: OutboundData>(data: T) -> Future<Void>
-    @discardableResult func writeAndFlush<T: OutboundData>(data: T, promise: Promise<Void>) -> Future<Void>
+    func writeAndFlush(data: IOData) -> Future<Void>
+    @discardableResult func writeAndFlush(data: IOData, promise: Promise<Void>) -> Future<Void>
 
     func close() -> Future<Void>
     @discardableResult func close(promise: Promise<Void>) -> Future<Void>
@@ -55,12 +53,12 @@ public extension ChannelOutboundInvoker {
     }
     
     @discardableResult
-    public func write<T: OutboundData>(data: T) -> Future<Void> {
+    public func write(data: IOData) -> Future<Void> {
         return write(data: data, promise: newVoidPromise())
     }
     
     @discardableResult
-    public func writeAndFlush<T: OutboundData>(data: T) -> Future<Void> {
+    public func writeAndFlush(data: IOData) -> Future<Void> {
         return writeAndFlush(data: data, promise: newVoidPromise())
     }
     

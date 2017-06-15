@@ -17,8 +17,8 @@ import NIO
 
 public class EchoHandler: ChannelHandler {
     
-    public func channelRead<T: InboundData>(ctx: ChannelHandlerContext, data: T) {
-        ctx.write(data: data as! ByteBuffer)
+    public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+        ctx.write(data: data)
     }
     
     // Flush it out. This can make use of gathering writes if multiple buffers are pending
