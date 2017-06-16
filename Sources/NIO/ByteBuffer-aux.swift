@@ -126,25 +126,3 @@ extension ByteBuffer: Equatable {
     }
 }
 
-// MARK: Compatibility
-extension ByteBuffer {
-    public func withReadPointer<T>(body: (UnsafePointer<UInt8>, Int) throws -> T) rethrows -> T {
-        return try self.withUnsafeReadableBytes { ptr in
-            try body(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), ptr.count)
-        }
-    }
-
-    public mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> Int?) rethrows -> Int? {
-        var maybeWritten: Int? = nil
-        _ = try self.writeWithUnsafeMutableBytes { ptr in
-            if let written = try body(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), ptr.count) {
-                maybeWritten = written
-                return written
-            } else {
-                maybeWritten = nil
-                return 0
-            }
-        }
-        return maybeWritten
-    }
-}

@@ -58,25 +58,26 @@ public final class ServerSocket: BaseSocket {
             }
         }
         
-        guard let fd = ret else {
+        switch ret {
+        case .wouldBlock:
             return nil
-        }
-        
-#if os(Linux)
-        /* no SO_NOSIGPIPE on Linux :( */
-        let old_sighandler: sighandler_t = Glibc.signal(SIGPIPE, SIG_IGN)
-    
-        let old_sighandler_ptr = unsafeBitCast(old_sighandler, to: UnsafeRawPointer.self)
-        let sig_err_ptr = unsafeBitCast(SIG_ERR, to: UnsafeRawPointer.self)
+        case .processed(let fd):
+            #if os(Linux)
+                /* no SO_NOSIGPIPE on Linux :( */
+                let old_sighandler: sighandler_t = Glibc.signal(SIGPIPE, SIG_IGN)
 
-        if old_sighandler_ptr == sig_err_ptr {
-            return nil
-        }
-#else
-        // TODO: Handle return code ?
-        _ = Darwin.fcntl(fd, F_SETNOSIGPIPE, 1);
-#endif
+                let old_sighandler_ptr = unsafeBitCast(old_sighandler, to: UnsafeRawPointer.self)
+                let sig_err_ptr = unsafeBitCast(SIG_ERR, to: UnsafeRawPointer.self)
+
+                if old_sighandler_ptr == sig_err_ptr {
+                    return nil
+                }
+            #else
+                // TODO: Handle return code ?
+                _ = Darwin.fcntl(fd, F_SETNOSIGPIPE, 1);
+            #endif
         
-        return Socket(descriptor: fd)
+            return Socket(descriptor: fd)
+        }
     }
 }

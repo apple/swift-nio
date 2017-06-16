@@ -64,13 +64,19 @@ func wrapSyscall(_ successCondition: (Int) -> Bool,
     return try wrapSyscall(function: function, successCondition, fn)
 }
 
+public enum IOResult<T> {
+    case wouldBlock
+    case processed(T)
+}
+
+
 func wrapSyscallMayBlock(_ successCondition: (Int) -> Bool,
-                 function: @autoclosure () -> String, _ fn: () -> Int) throws -> Int? {
+                 function: @autoclosure () -> String, _ fn: () -> Int) throws -> IOResult<Int> {
     do {
-        return try withErrno(successCondition: successCondition, fn)
+        return try .processed(withErrno(successCondition: successCondition, fn))
     } catch let e as Errno.POSIXError {
         if e.code == EWOULDBLOCK {
-            return nil;
+            return .wouldBlock
         }
         testForBlacklistedErrno(e.code)
         throw ioError(errno: e.code, function: function())
@@ -93,12 +99,12 @@ func wrapSyscall(_ successCondition: (Int32) -> Bool,
 }
 
 func wrapSyscallMayBlock(_ successCondition: (Int32) -> Bool,
-                         function: @autoclosure () -> String, _ fn: () -> Int32) throws -> Int32? {
+                         function: @autoclosure () -> String, _ fn: () -> Int32) throws -> IOResult<Int32> {
     do {
-        return try withErrno(successCondition: successCondition, fn)
+        return try .processed(withErrno(successCondition: successCondition, fn))
     } catch let e as Errno.POSIXError {
         if e.code == EWOULDBLOCK {
-            return nil;
+            return .wouldBlock
         }
         testForBlacklistedErrno(e.code)
         throw ioError(errno: e.code, function: function())

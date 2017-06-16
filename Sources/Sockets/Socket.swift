@@ -91,11 +91,11 @@ public final class Socket : BaseSocket {
         }
     }
     
-    public func write(data: Data) throws -> Int? {
+    public func write(data: Data) throws -> IOResult<Int> {
         return try data.withUnsafeBytes({ try write(pointer: $0, size: data.count) })
     }
 
-    public func write(pointer: UnsafePointer<UInt8>, size: Int) throws -> Int? {
+    public func write(pointer: UnsafePointer<UInt8>, size: Int) throws -> IOResult<Int> {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't write to socket as it's not open anymore.")
         }
@@ -104,7 +104,7 @@ public final class Socket : BaseSocket {
         }
     }
 
-    public func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> Int? {
+    public func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't writev to socket as it's not open anymore.")
         }
@@ -114,11 +114,11 @@ public final class Socket : BaseSocket {
         }
     }
     
-    public func read(data: inout Data) throws -> Int? {
+    public func read(data: inout Data) throws -> IOResult<Int> {
         return try data.withUnsafeMutableBytes({ try read(pointer: $0, size: data.count) })
     }
 
-    public func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> Int? {
+    public func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> IOResult<Int> {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't read from socket as it's not open anymore.")
         }

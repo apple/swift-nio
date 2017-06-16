@@ -65,7 +65,7 @@ func doPendingWriteVectorOperation(pending: PendingWrite?,
                                    count: Int,
                                    iovecs: UnsafeMutableBufferPointer<IOVector>,
                                    storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
-                                   _ fn: (UnsafeBufferPointer<IOVector>) -> Int) -> Int {
+                                   _ fn: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> IOResult<Int> {
     var next = pending
     for i in 0..<count {
         if let p = next {
@@ -79,24 +79,19 @@ func doPendingWriteVectorOperation(pending: PendingWrite?,
             break
         }
     }
-    let result = fn(UnsafeBufferPointer(start: iovecs.baseAddress!, count: count))
+    let result = try fn(UnsafeBufferPointer(start: iovecs.baseAddress!, count: count))
     for i in 0..<count {
         storageRefs[i].release()
     }
     return result
 }
 
-func makeNonThrowing<I>(errorBuffer: inout Error?, input: I, _ fn: (I) throws -> Int?) -> Int {
-    do {
-        if let bytes = try fn(input) {
-            return bytes
-        } else {
-            return 0
-        }
-    } catch let e {
-        errorBuffer = e
-        return -1
-    }
+private enum WriteResult {
+    case writtenCompletely
+    case writtenPartially
+    case nothingToBeWritten
+    case wouldBlock
+    case closed
 }
 
 final fileprivate class PendingWrites {
@@ -152,15 +147,9 @@ final fileprivate class PendingWrites {
     /*
      Function that takes two closures and based on if there are more then one ByteBuffer pending calls either one or the other.
     */
-    func consume(oneBody: (UnsafePointer<UInt8>, Int) throws -> Int?, multipleBody: (UnsafeBufferPointer<IOVector>) throws -> Int?) throws -> (consumedAll:Bool?, writable: Bool) {
+    func consume(oneBody: (UnsafePointer<UInt8>, Int) throws -> IOResult<Int>, multipleBody: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> (consumedAll: WriteResult, writable: Bool) {
         let wasWritable = writable
-        let result: Bool?
-        if hasMultiple {
-            // Holds multiple pending writes, use consumeMultiple which will allow us to us writev (a.k.a gathering writes)
-            result = try consumeMultiple(body: multipleBody)
-        } else {
-            result = try consumeOne(body: oneBody)
-        }
+        let result = try hasMultiple ? consumeMultiple(multipleBody) : consumeOne(oneBody)
         
         if !wasWritable {
             // Was not writable before so signal back to the caller the possible state change
@@ -193,13 +182,14 @@ final fileprivate class PendingWrites {
         return flushCheckpoint != nil
     }
     
-    private func consumeOne(body: (UnsafePointer<UInt8>, Int) throws -> Int?) rethrows -> Bool? {
+    private func consumeOne(_ body: (UnsafePointer<UInt8>, Int) throws -> IOResult<Int>) rethrows -> WriteResult {
         if let pending = head, isFlushPending() {
             for _ in 0..<writeSpinCount + 1 {
                 guard !closed else {
-                    return true
+                    return .closed
                 }
-                if let written = try pending.buffer.withReadPointer(body: body) {
+                switch try pending.buffer.withReadPointer(body: body) {
+                case .processed(let written):
                     outstanding = (outstanding.chunks, outstanding.bytes - written)
                     
                     if !writable && outstanding.bytes < Int(waterMark.lowerBound) {
@@ -218,49 +208,43 @@ final fileprivate class PendingWrites {
                         // buffer was completely written
                         pending.promise.succeed(result: ())
                         
-                        if isEmpty || allFlushed {
-                            // return nil to signal to the caller that there are no more buffers to consume
-                            return nil
+                        if self.isEmpty || allFlushed {
+                            return .nothingToBeWritten
                         }
                         // Wrote the full buffer
-                        return true
+                        return .writtenCompletely
                     } else {
                         // Update readerIndex of the buffer
                         pending.buffer.skipBytes(num: written)
                     }
-                } else {
-                    return false
+                case .wouldBlock:
+                    return .wouldBlock
                 }
             }
             // could not write the complete buffer
-            return false
+            return .writtenPartially
         }
         
         // empty or flushed everything that is marked to be flushable
-        return nil
+        return .nothingToBeWritten
     }
     
-    private func consumeMultiple(body: (UnsafeBufferPointer<IOVector>) throws -> Int?) throws -> Bool? {
+    private func consumeMultiple(_ body: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> WriteResult {
         if var pending = head, isFlushPending() {
             writeLoop: for _ in 0..<writeSpinCount + 1 {
                 guard !closed else {
-                    return true
+                    return .closed
                 }
                 var expected = 0
-                var error: Error? = nil
-                let written = doPendingWriteVectorOperation(pending: pending,
-                                                            count: outstanding.chunks,
-                                                            iovecs: self.iovecs,
-                                                            storageRefs: self.storageRefs) { pointer in
-                    expected += pointer.count
-                    return makeNonThrowing(errorBuffer: &error, input: pointer, body)
-                }
-                
-                if written < 0 {
-                    throw error!
-                } else if written == 0 {
-                    return nil
-                } else if written > 0 {
+                switch try doPendingWriteVectorOperation(pending: pending,
+                                                         count: outstanding.chunks,
+                                                         iovecs: self.iovecs,
+                                                         storageRefs: self.storageRefs,
+                                                         { pointer in
+                                                            expected += pointer.count
+                                                            return try body(pointer)
+                }) {
+                case .processed(let written):
                     outstanding = (outstanding.chunks, outstanding.bytes - written)
                     
                     if !writable && outstanding.bytes < Int(waterMark.lowerBound) {
@@ -298,20 +282,22 @@ final fileprivate class PendingWrites {
                     
                     if isEmpty || allFlushed {
                         // return nil to signal to the caller that there are no more buffers to consume
-                        return nil
+                        return .nothingToBeWritten
                     }
 
                     // check if we were able to write everything or not
                     assert(expected == written)
-                    return true
+                    return .writtenPartially
+                case .wouldBlock:
+                    return .wouldBlock
                 }
             }
             // could not write the complete buffer
-            return false
+            return .nothingToBeWritten
         }
         
         // empty or flushed everything that is marked to be flushable
-        return nil
+        return .nothingToBeWritten
     }
     
     
@@ -353,6 +339,30 @@ final fileprivate class PendingWrites {
     }
 }
 
+// MARK: Compatibility
+extension ByteBuffer {
+    public func withReadPointer<T>(body: (UnsafePointer<UInt8>, Int) throws -> T) rethrows -> T {
+        return try self.withUnsafeReadableBytes { ptr in
+            try body(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), ptr.count)
+        }
+    }
+
+    public mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> IOResult<Int>) rethrows -> IOResult<Int> {
+        var writeResult: IOResult<Int>!
+        _ = try self.writeWithUnsafeMutableBytes { ptr in
+            let localWriteResult = try body(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), ptr.count)
+            writeResult = localWriteResult
+            switch localWriteResult {
+            case .processed(let written):
+                return written
+            case .wouldBlock:
+                return 0
+            }
+        }
+        return writeResult
+    }
+}
+
 /*
  All operations on SocketChannel are thread-safe
  */
@@ -382,7 +392,8 @@ final class SocketChannel : BaseSocketChannel<Socket> {
             guard !closed else {
                 return
             }
-            if let bytesRead = try buffer.withMutableWritePointer { try self.socket.read(pointer: $0, size: $1) } {
+            switch try buffer.withMutableWritePointer(body: self.socket.read(pointer:size:)) {
+            case .processed(let bytesRead):
                 if bytesRead > 0 {
                     recvAllocator.record(actualReadBytes: bytesRead)
 
@@ -394,36 +405,36 @@ final class SocketChannel : BaseSocketChannel<Socket> {
                     // end-of-file
                     throw ChannelError.eof
                 }
-            } else {
+            case .wouldBlock:
                 return
             }
         }
     }
     
-    override fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> Bool? {
-        let result = try pendingWrites.consume(oneBody: {
-            guard $1 > 0 else {
+    override fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> WriteResult {
+        let result = try pendingWrites.consume(oneBody: { ptr, length in
+            guard length > 0 else {
                 // No need to call write if the buffer is empty.
-                return 0
+                return .processed(0)
             }
             // normal write
-            return try self.socket.write(pointer: $0, size: $1)
-        }, multipleBody: {
-            switch $0.count {
+            return try self.socket.write(pointer: ptr, size: length)
+        }, multipleBody: { ptrs in
+            switch ptrs.count {
             case 0:
                 // No need to call write if the buffer is empty.
-                return 0
+                return .processed(0)
             case 1:
-                let p = $0[0]
+                let p = ptrs[0]
                 return try self.socket.write(pointer: p.iov_base.assumingMemoryBound(to: UInt8.self), size: p.iov_len)
             default:
                 // Gathering write
-                return try self.socket.writev(iovecs: $0)
+                return try self.socket.writev(iovecs: ptrs)
             }
         })
         if result.writable {
             // writable again
-            pipeline.fireChannelWritabilityChanged0(writable: true)
+            self.pipeline.fireChannelWritabilityChanged0(writable: true)
         }
         return result.consumedAll
     }
@@ -512,9 +523,9 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         }
     }
     
-    override fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> Bool? {
+    override fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> WriteResult {
         pendingWrites.failAll(error: ChannelError.operationUnsupported)
-        return true
+        return .writtenCompletely
     }
     
     override public func channelRead0(data: IOData) {
@@ -834,7 +845,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
                 pipeline.fireChannelWritabilityChanged0(writable: false)
             }
         } else {
-            // Only support ByteBuffer for now. 
+            // Only support ByteBuffer for now.
             promise.fail(error: ChannelError.messageUnsupported)
         }
     }
@@ -1067,7 +1078,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     
-    fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> Bool? {
+    fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> WriteResult {
         fatalError("this must be overridden by sub class")
     }
     
@@ -1127,18 +1138,19 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     private func flushNow() -> Bool {
         while !closed {
             do {
-                if let written = try writeToSocket(pendingWrites: pendingWrites) {
-                    if !written {
-                        // Could not write the next buffer(s) completely
-                        return false
-                    }
-                    // Consume the next buffer(s).
-                } else {
-                    
-                    // we handled all pending writes
+                switch try self.writeToSocket(pendingWrites: pendingWrites) {
+                case .writtenPartially:
+                    // Could not write the next buffer(s) completely
+                    return false
+                case .wouldBlock:
+                    return false
+                case .writtenCompletely:
+                    return true
+                case .closed:
+                    return true
+                case .nothingToBeWritten:
                     return true
                 }
-                
             } catch let err {
                 close0(promise: eventLoop.newPromise(type: Void.self), error: err)
                 

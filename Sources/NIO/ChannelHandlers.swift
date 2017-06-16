@@ -46,7 +46,7 @@ public class BackPressureHandler: ChannelHandler {
             ctx.flush()
         }
         
-        // Propergate the event as the user may still want to do something based on it.
+        // Propagate the event as the user may still want to do something based on it.
         ctx.fireChannelWritabilityChanged(writable: writable)
     }
     
