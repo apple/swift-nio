@@ -21,7 +21,8 @@ class EmbeddedChannelTest: XCTestCase {
         var buf = try channel.allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
 
-        let f = channel.write(data: buf, promise:channel.eventLoop.newPromise(type: Void.self))
+
+        let f = channel.write(data: .byteBuffer(buf))
 
         var ranBlock = false
         f.whenSuccess { () -> Void in
