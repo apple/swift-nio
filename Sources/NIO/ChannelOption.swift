@@ -34,18 +34,27 @@ extension ChannelOption where AssociatedValueType == () {
     }
 }
 
-public enum SocketOption: ChannelOption {
-    public typealias AssociatedValueType = (Int, Int32)
+public typealias SocketOptionName = Int32
+#if os(Linux)
+    public typealias SocketOptionLevel = Int
+    public typealias SocketOptionValue = Int
+#else
+    public typealias SocketOptionLevel = Int32
+    public typealias SocketOptionValue = Int32
+#endif
 
-    public typealias OptionType = (Int)
+public enum SocketOption: ChannelOption {
+    public typealias AssociatedValueType = (SocketOptionLevel, SocketOptionName)
+
+    public typealias OptionType = (SocketOptionValue)
     
     case const(AssociatedValueType)
     
-    public init(level: Int, name: Int32) {
+    public init(level: SocketOptionLevel, name: SocketOptionName) {
         self = .const((level, name))
     }
 
-    public var value: (Int, Int32) {
+    public var value: (SocketOptionLevel, SocketOptionName) {
         switch self {
         case .const(let level, let name):
             return (level, name)
@@ -105,11 +114,7 @@ public enum WriteBufferWaterMarkOption: ChannelOption {
 }
 
 public struct ChannelOptions {
-#if os(Linux)
-    public static let Socket = { (level: Int, name: Int32) -> SocketOption in .const((level, name)) }
-#else
-    public static let Socket = { (level: Int32, name: Int32) -> SocketOption in .const((Int(level), name)) }
-#endif
+    public static let Socket = { (level: SocketOptionLevel, name: SocketOptionName) -> SocketOption in .const((level, name)) }
     public static let Allocator = AllocatorOption.const(())
     public static let RecvAllocator = RecvAllocatorOption.const(())
     public static let AutoRead = AutoReadOption.const(())
