@@ -215,7 +215,7 @@ final fileprivate class PendingWrites {
                         return .writtenCompletely
                     } else {
                         // Update readerIndex of the buffer
-                        pending.buffer.skipBytes(num: written)
+                        pending.buffer.moveReaderIndex(forwardBy: written)
                     }
                 case .wouldBlock:
                     return .wouldBlock
@@ -270,8 +270,8 @@ final fileprivate class PendingWrites {
                             p.promise.succeed(result: ())
                         } else {
                             // Only partly written, so update the readerIndex.
-                            p.buffer.skipBytes(num: w)
-                            
+                            pending.buffer.moveReaderIndex(forwardBy: w)
+
                             // update pending so we not need to process the old PendingWrites that we already processed and completed
                             pending = p
 

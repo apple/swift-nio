@@ -96,13 +96,10 @@ extension ByteBuffer {
         }
 
         let buffer = self.slice(at: readerIndex, length: length)! /* must work, enough readable bytes */
-        self.skipBytes(num: length)
+        self.moveReaderIndex(forwardBy: length)
         return buffer
     }
 
-    public mutating func skipBytes(num: Int) {
-        self.moveReaderIndex(forwardBy: num)
-    }
 
     public mutating func clear() {
         self.moveWriterIndex(to: 0)

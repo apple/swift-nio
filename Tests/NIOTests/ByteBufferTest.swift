@@ -333,7 +333,7 @@ class ByteBufferTest: XCTestCase {
         buffer.write(integer: UInt8(3))
         buffer.write(integer: UInt8(4))
         XCTAssertEqual(4, buffer.readableBytes)
-        buffer.skipBytes(num: 2)
+        buffer.moveReaderIndex(forwardBy: 2)
         XCTAssertEqual(2, buffer.readableBytes)
         XCTAssertEqual(2, buffer.readerIndex)
         XCTAssertEqual(4, buffer.writerIndex)
@@ -400,7 +400,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(3, slice.readableBytes)
         XCTAssertEqual(0, slice.readerIndex)
 
-        slice.skipBytes(num: 1)
+        buffer.moveReaderIndex(forwardBy: 1)
         XCTAssertEqual(2, slice.readableBytes)
         XCTAssertEqual(1, slice.readerIndex)
         XCTAssertEqual(3, slice.writerIndex)
