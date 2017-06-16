@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import ConcurrencyHelpers
 
 
@@ -140,7 +139,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
  * If you just want to get a value back after running something on another thread, use `Future<ResultType>.async()`
  * If you already have a value and need a Future<> object to plug into some other API, create an already-resolved object with `Future<ResultType>(result:)`
  */
-public class Promise<T> {
+public final class Promise<T> {
     public let futureResult: Future<T>
     
     /**
@@ -263,7 +262,7 @@ public class Promise<T> {
  TODO: Provide a tracing facility.  It would be nice to be able to set '.debugTrace = true' on any Future or Promise and have every subsequent chained Future report the success result or failure error.  That would simplify some debugging scenarios.
  */
 
-public class Future<T>: Hashable {
+public final class Future<T> {
     fileprivate var value: FutureValue<T> = .incomplete
     fileprivate let _fullfilled = Atomic<Bool>(value: false)
     fileprivate let checkForPossibleDeadlock: Bool
@@ -298,10 +297,7 @@ public class Future<T>: Hashable {
     /// Callbacks that should be run when this Future<> gets a value.
     /// These callbacks may give values to other Futures; if that happens, they return any callbacks from those Futures so that we can run the entire chain from the top without recursing.
     fileprivate var callbacks: CallbackList = CallbackList()
-    
-    // Each instance gets a random hash value
-    public lazy var hashValue = NSUUID().hashValue
-    
+        
     fileprivate init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool) {
         self.eventLoop = eventLoop
         self.checkForPossibleDeadlock = checkForPossibleDeadlock
@@ -515,7 +511,7 @@ public extension Future {
      * of results.  If either one fails, the combined Future will fail.
      */
     public func and<U>(_ other: Future<U>) -> Future<(T,U)> {
-        let andlock = NSLock()
+        let andlock = Lock()
         let promise = Promise<(T,U)>(eventLoop: eventLoop, checkForPossibleDeadlock: checkForPossibleDeadlock)
         var tvalue: T?
         var uvalue: U?

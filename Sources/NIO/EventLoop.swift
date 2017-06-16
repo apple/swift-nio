@@ -69,7 +69,7 @@ extension EventLoop {
 // TODO: Implement scheduling tasks in the future (a.k.a ScheduledExecutoreService
 final class SelectableEventLoop : EventLoop {
     private let selector: Sockets.Selector
-    private var thread: Thread?
+    private var thread: pthread_t?
     private var tasks: [() -> ()]
     private let tasksLock = Lock()
     private var closed = false
@@ -110,7 +110,7 @@ final class SelectableEventLoop : EventLoop {
     }
     
     var inEventLoop: Bool {
-        return Thread.current.isEqual(thread)
+        return pthread_self() == thread
     }
     
     func execute(task: @escaping () -> ()) {
@@ -123,7 +123,7 @@ final class SelectableEventLoop : EventLoop {
     }
 
     func run() throws {
-        thread = Thread.current
+        thread = pthread_self()
         defer {
             // Ensure we reset the running Thread when this methods returns.
             thread = nil
