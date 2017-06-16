@@ -59,6 +59,7 @@ extension ByteBuffer {
         return self.write(data: string.data(using: .utf8)!)
     }
 
+    @discardableResult
     public mutating func set(string: String, at index: Int) -> Int {
         return self.set(data: string.data(using: .utf8)!, at: index)
     }
