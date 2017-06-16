@@ -24,7 +24,7 @@ public protocol ChannelOutboundInvoker {
     func connect(remote: SocketAddress) -> Future<Void>
     @discardableResult func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void>
     
-    @discardableResult func write(data: IOData) -> Future<Void>
+    func write(data: IOData) -> Future<Void>
     @discardableResult func write(data: IOData, promise: Promise<Void>) -> Future<Void>
 
     func flush()
@@ -52,12 +52,10 @@ public extension ChannelOutboundInvoker {
         return connect(remote: remote, promise: newVoidPromise())
     }
     
-    @discardableResult
     public func write(data: IOData) -> Future<Void> {
         return write(data: data, promise: newVoidPromise())
     }
     
-    @discardableResult
     public func writeAndFlush(data: IOData) -> Future<Void> {
         return writeAndFlush(data: data, promise: newVoidPromise())
     }

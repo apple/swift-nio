@@ -283,7 +283,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         }
     }
 
-    func close(promise: Promise<Void>) -> Future<Void> {
+    func close(promise: Promise<Void>) {
         if eventLoop.inEventLoop {
             tail!.invokeClose(promise: promise)
         } else {
@@ -291,7 +291,6 @@ public final class ChannelPipeline : ChannelInboundInvoker {
                 self.tail!.invokeClose(promise: promise)
             }
         }
-        return promise.futureResult
     }
     
     func flush() {
@@ -314,8 +313,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         }
     }
 
-    @discardableResult
-    func write(data: IOData, promise: Promise<Void>) -> Future<Void> {
+    func write(data: IOData, promise: Promise<Void>) {
         if eventLoop.inEventLoop {
             tail!.invokeWrite(data: data, promise: promise)
         } else {
@@ -323,11 +321,9 @@ public final class ChannelPipeline : ChannelInboundInvoker {
                 self.tail!.invokeWrite(data: data, promise: promise)
             }
         }
-        return promise.futureResult
     }
     
-    @discardableResult
-    func writeAndFlush(data: IOData, promise: Promise<Void>) -> Future<Void> {
+    func writeAndFlush(data: IOData, promise: Promise<Void>) {
         if eventLoop.inEventLoop {
             tail!.invokeWriteAndFlush(data: data, promise: promise)
         } else {
@@ -335,10 +331,9 @@ public final class ChannelPipeline : ChannelInboundInvoker {
                 self.tail!.invokeWriteAndFlush(data: data, promise: promise)
             }
         }
-        return promise.futureResult
     }
     
-    func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+    func bind(local: SocketAddress, promise: Promise<Void>) {
         if eventLoop.inEventLoop {
             tail!.invokeBind(local: local, promise: promise)
         } else {
@@ -346,10 +341,9 @@ public final class ChannelPipeline : ChannelInboundInvoker {
                 self.tail!.invokeBind(local: local, promise: promise)
             }
         }
-        return promise.futureResult
     }
     
-    func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void> {
+    func connect(remote: SocketAddress, promise: Promise<Void>) {
         if eventLoop.inEventLoop {
             tail!.invokeConnect(remote: remote, promise: promise)
         } else {
@@ -357,10 +351,9 @@ public final class ChannelPipeline : ChannelInboundInvoker {
                 self.tail!.invokeConnect(remote: remote, promise: promise)
             }
         }
-        return promise.futureResult
     }
     
-    func register(promise: Promise<Void>) -> Future<Void> {
+    func register(promise: Promise<Void>) {
         if eventLoop.inEventLoop {
             tail!.invokeRegister(promise: promise)
         } else {
@@ -368,7 +361,6 @@ public final class ChannelPipeline : ChannelInboundInvoker {
                 self.tail!.invokeRegister(promise: promise)
             }
         }
-        return promise.futureResult
     }
     
     // These methods are expected to only be called from withint the EventLoop

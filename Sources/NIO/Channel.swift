@@ -565,14 +565,6 @@ public protocol Channel : class, ChannelOutboundInvoker {
     func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws
     func getOption<T: ChannelOption>(option: T) throws -> T.OptionType
 
-    @discardableResult func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void>
-    @discardableResult func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void>
-    func read()
-    @discardableResult func write(data: IOData, promise: Promise<Void>) -> Future<Void>
-    func flush()
-    @discardableResult func writeAndFlush(data: IOData, promise: Promise<Void>) -> Future<Void>
-    @discardableResult func close(promise: Promise<Void>) -> Future<Void>
-
     var _unsafe: ChannelCore { get }
 }
 
@@ -594,18 +586,21 @@ extension Channel {
     }
 
     @discardableResult public func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
-        return pipeline.bind(local: local, promise: promise)
+        pipeline.bind(local: local, promise: promise)
+        return promise.futureResult
     }
 
     // Methods invoked from the HeadHandler of the ChannelPipeline
     // By default, just pass through to pipeline
 
     @discardableResult public func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void> {
-        return pipeline.connect(remote: remote, promise: promise)
+        pipeline.connect(remote: remote, promise: promise)
+        return promise.futureResult
     }
 
     @discardableResult public func write(data: IOData, promise: Promise<Void>) -> Future<Void> {
-        return pipeline.write(data: data, promise: promise)
+        pipeline.write(data: data, promise: promise)
+        return promise.futureResult
     }
 
     public func flush() {
@@ -617,16 +612,19 @@ extension Channel {
     }
 
     @discardableResult public func writeAndFlush(data: IOData, promise: Promise<Void>) -> Future<Void> {
-        return pipeline.writeAndFlush(data: data, promise: promise)
+        pipeline.writeAndFlush(data: data, promise: promise)
+        return promise.futureResult
     }
 
     @discardableResult public func close(promise: Promise<Void>) -> Future<Void> {
-        return pipeline.close(promise: promise)
+        pipeline.close(promise: promise)
+        return promise.futureResult
     }
 
 
     @discardableResult public func register(promise: Promise<Void>) -> Future<Void> {
-        return pipeline.register(promise: promise)
+        pipeline.register(promise: promise)
+        return promise.futureResult
     }
 }
 
@@ -774,19 +772,23 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     @discardableResult public final func register(promise: Promise<Void>) -> Future<Void> {
-        return pipeline.register(promise: promise)
+        pipeline.register(promise: promise)
+        return promise.futureResult
     }
     
     @discardableResult public final func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
-        return pipeline.bind(local: local, promise: promise)
+        pipeline.bind(local: local, promise: promise)
+        return promise.futureResult
     }
     
     @discardableResult public final func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void> {
-        return pipeline.connect(remote: remote, promise: promise)
+        pipeline.connect(remote: remote, promise: promise)
+        return promise.futureResult
     }
     
     @discardableResult public final func write(data: IOData, promise: Promise<Void>) -> Future<Void> {
-        return pipeline.write(data: data, promise: promise)
+        pipeline.write(data: data, promise: promise)
+        return promise.futureResult
     }
     
     public final func flush() {
@@ -798,11 +800,13 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
     
     @discardableResult public final func writeAndFlush(data: IOData, promise: Promise<Void>) -> Future<Void> {
-        return pipeline.writeAndFlush(data: data, promise: promise)
+        pipeline.writeAndFlush(data: data, promise: promise)
+        return promise.futureResult
     }
     
     @discardableResult public final func close(promise: Promise<Void>) -> Future<Void> {
-        return pipeline.close(promise: promise)
+        pipeline.close(promise: promise)
+        return promise.futureResult
     }
     
     // Methods invoked from the HeadHandler of the ChannelPipeline
