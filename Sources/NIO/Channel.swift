@@ -25,7 +25,7 @@ public enum IOData {
     case byteBuffer(ByteBuffer)
     case other(Any)
 
-    func tryAsByteBuffer() -> ByteBuffer? {
+    public func tryAsByteBuffer() -> ByteBuffer? {
         if case .byteBuffer(let bb) = self {
             return bb
         } else {
@@ -33,11 +33,11 @@ public enum IOData {
         }
     }
 
-    func forceAsByteBuffer() -> ByteBuffer {
+    public func forceAsByteBuffer() -> ByteBuffer {
         return tryAsByteBuffer()!
     }
 
-    func tryAsOther<T>(class: T.Type = T.self) -> T? {
+    public func tryAsOther<T>(class: T.Type = T.self) -> T? {
         if case .other(let any) = self {
             return any as? T
         } else {
@@ -45,7 +45,7 @@ public enum IOData {
         }
     }
 
-    func forceAsOther<T>(class: T.Type = T.self) -> T {
+    public func forceAsOther<T>(class: T.Type = T.self) -> T {
         return tryAsOther(class: `class`)!
     }
 }
