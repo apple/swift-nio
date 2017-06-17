@@ -703,8 +703,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         assert(eventLoop.inEventLoop)
 
         if option is SocketOption {
-            let (level, name) = option.value as! (Int, Int32)
-            try socket.setOption(level: Int32(level), name: name, value: value)
+            let (level, name) = option.value as! (SocketOptionLevel, SocketOptionName)
+            try socket.setOption(level: level, name: name, value: value)
         } else if option is AllocatorOption {
             bufferAllocator = value as! ByteBufferAllocator
         } else if option is RecvAllocatorOption {
@@ -740,7 +740,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         assert(eventLoop.inEventLoop)
         
         if option is SocketOption {
-            let (level, name) = option.value as! (Int32, Int32)
+            let (level, name) = option.value as! (SocketOptionLevel, SocketOptionName)
             return try socket.getOption(level: level, name: name)
         }
         if option is AllocatorOption {
