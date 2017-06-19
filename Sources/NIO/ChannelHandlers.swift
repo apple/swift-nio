@@ -35,8 +35,8 @@ public class BackPressureHandler: ChannelHandler {
         }
     }
     
-    public func channelWritabilityChanged(ctx: ChannelHandlerContext, writable: Bool) {
-        self.writable = writable
+    public func channelWritabilityChanged(ctx: ChannelHandlerContext) {
+        self.writable = ctx.channel!.isWritable
         if writable {
             if readPending {
                 readPending = false
@@ -47,7 +47,7 @@ public class BackPressureHandler: ChannelHandler {
         }
         
         // Propagate the event as the user may still want to do something based on it.
-        ctx.fireChannelWritabilityChanged(writable: writable)
+        ctx.fireChannelWritabilityChanged()
     }
     
     public func handlerRemoved(ctx: ChannelHandlerContext) {

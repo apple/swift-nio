@@ -140,6 +140,10 @@ public class EmbeddedChannel : Channel {
         return _pipeline
     }
 
+    public var isWritable: Bool {
+        return true
+    }
+    
     private var _pipeline: ChannelPipeline!
     public let allocator: ByteBufferAllocator = ByteBufferAllocator()
     public var eventLoop: EventLoop = EmbeddedEventLoop()

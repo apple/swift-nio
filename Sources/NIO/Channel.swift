@@ -14,6 +14,7 @@
 
 import Foundation
 import Sockets
+import ConcurrencyHelpers
 
 #if os(Linux)
 import Glibc
@@ -104,12 +105,17 @@ final fileprivate class PendingWrites {
     private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
     
     fileprivate var waterMark: WriteBufferWaterMark = WriteBufferWaterMark(32 * 1024..<64 * 1024)
-    private var writable = true
+    private var writable: Atomic<Bool> = Atomic(value: true)
+    
     
     fileprivate var writeSpinCount: UInt = 16
     private(set) var outstanding: (chunks: Int, bytes: Int) = (0, 0)
     
     private(set) var closed = false
+
+    var isWritable: Bool {
+        return writable.load()
+    }
     
     var isEmpty: Bool {
         return tail == nil
@@ -128,8 +134,7 @@ final fileprivate class PendingWrites {
         }
         outstanding = (chunks: outstanding.chunks + 1,
                        bytes: outstanding.bytes + buffer.readableBytes)
-        if writable && outstanding.bytes > Int(waterMark.upperBound) {
-            writable = false
+        if outstanding.bytes > Int(waterMark.upperBound) && writable.compareAndExchange(expected: true, desired: false) {
             // Returns false to signal the Channel became non-writable and we need to notify the user
             return false
         }
@@ -148,12 +153,12 @@ final fileprivate class PendingWrites {
      Function that takes two closures and based on if there are more then one ByteBuffer pending calls either one or the other.
     */
     func consume(oneBody: (UnsafePointer<UInt8>, Int) throws -> IOResult<Int>, multipleBody: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> (writeResult: WriteResult, writable: Bool) {
-        let wasWritable = writable
+        let wasWritable = writable.load()
         let result = try hasMultiple ? consumeMultiple(multipleBody) : consumeOne(oneBody)
         
         if !wasWritable {
             // Was not writable before so signal back to the caller the possible state change
-            return (result, writable)
+            return (result, writable.load())
         }
         return (result, false)
     }
@@ -183,8 +188,8 @@ final fileprivate class PendingWrites {
                 case .processed(let written):
                     outstanding = (outstanding.chunks, outstanding.bytes - written)
                     
-                    if !writable && outstanding.bytes < Int(waterMark.lowerBound) {
-                        writable = true
+                    if outstanding.bytes < Int(waterMark.lowerBound) {
+                        writable.store(true)
                     }
                     
                     if pending.buffer.readableBytes == written {
@@ -234,8 +239,8 @@ final fileprivate class PendingWrites {
                 case .processed(let written):
                     outstanding = (outstanding.chunks, outstanding.bytes - written)
                     
-                    if !writable && outstanding.bytes < Int(waterMark.lowerBound) {
-                        writable = true
+                    if outstanding.bytes < Int(waterMark.lowerBound) {
+                        writable.store(true)
                     }
                     
                     var w = written
@@ -379,6 +384,8 @@ final class SocketChannel : BaseSocketChannel<Socket> {
                 if bytesRead > 0 {
                     recvAllocator.record(actualReadBytes: bytesRead)
 
+                    readPending = false
+
                     pipeline.fireChannelRead0(data: .byteBuffer(buffer))
                     
                     // Reset reader and writerIndex and so allow to have the buffer filled again
@@ -417,7 +424,7 @@ final class SocketChannel : BaseSocketChannel<Socket> {
             })
             if result.writable {
                 // writable again
-                self.pipeline.fireChannelWritabilityChanged0(writable: true)
+                self.pipeline.fireChannelWritabilityChanged0()
             }
             if result.writeResult == .writtenCompletely && pendingWrites.isFlushPending {
                 // there are more buffers to process, so continue
@@ -499,6 +506,8 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
                 return
             }
             if let accepted =  try self.socket.accept() {
+                readPending = false
+
                 do {
                     pipeline.fireChannelRead0(data: .other(try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop)))
                 } catch let err {
@@ -564,6 +573,8 @@ public protocol Channel : class, ChannelOutboundInvoker {
     func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws
     func getOption<T: ChannelOption>(option: T) throws -> T.OptionType
 
+    var isWritable: Bool { get }
+    
     var _unsafe: ChannelCore { get }
 }
 
@@ -583,6 +594,7 @@ extension Channel {
     var eventLoop: EventLoop {
         return _unsafe.eventLoop
     }
+
 
     @discardableResult public func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
         pipeline.bind(local: local, promise: promise)
@@ -642,7 +654,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     private let pendingWrites: PendingWrites
-    private var readPending = false
+    fileprivate var readPending = false
     private var neverRegistered = true
     private var pendingConnect: Promise<Void>?
     private let closePromise: Promise<Void>
@@ -657,6 +669,10 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         return selectableEventLoop
     }
     
+    public final var isWritable: Bool {
+        return pendingWrites.isWritable
+    }
+
     public final var allocator: ByteBufferAllocator {
         if eventLoop.inEventLoop {
             return bufferAllocator
@@ -830,7 +846,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
         if let buffer = data.tryAsByteBuffer() {
             if !pendingWrites.add(buffer: buffer, promise: promise) {
-                pipeline.fireChannelWritabilityChanged0(writable: false)
+                pipeline.fireChannelWritabilityChanged0()
             }
         } else {
             // Only support ByteBuffer for now.
@@ -1008,7 +1024,6 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         assert(eventLoop.inEventLoop)
         assert(!closed)
         
-        readPending = false
         defer {
             if !closed, !readPending {
                 unregisterForReadable()

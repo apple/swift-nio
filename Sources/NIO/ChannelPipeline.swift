@@ -253,12 +253,12 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         }
     }
 
-    public func fireChannelWritabilityChanged(writable: Bool) {
+    public func fireChannelWritabilityChanged() {
         if eventLoop.inEventLoop {
-            fireChannelWritabilityChanged0(writable: writable)
+            fireChannelWritabilityChanged0()
         } else {
             eventLoop.execute {
-                self.fireChannelWritabilityChanged0(writable: writable)
+                self.fireChannelWritabilityChanged0()
             }
         }
     }
@@ -392,8 +392,8 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         head!.invokeChannelReadComplete()
     }
     
-    func fireChannelWritabilityChanged0(writable: Bool) {
-        head!.invokeChannelWritabilityChanged(writable: writable)
+    func fireChannelWritabilityChanged0() {
+        head!.invokeChannelWritabilityChanged()
     }
     
     func fireUserEventTriggered0(event: Any) {
@@ -503,7 +503,7 @@ private final class TailChannelHandler : ChannelHandler {
         // Discard
     }
     
-    func channelWritabilityChanged(ctx: ChannelHandlerContext, writable: Bool) {
+    func channelWritabilityChanged(ctx: ChannelHandlerContext) {
         // Discard
     }
     
@@ -576,8 +576,8 @@ public final class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboun
         next!.invokeChannelReadComplete()
     }
     
-    public func fireChannelWritabilityChanged(writable: Bool) {
-        next!.invokeChannelWritabilityChanged(writable: writable)
+    public func fireChannelWritabilityChanged() {
+        next!.invokeChannelWritabilityChanged()
     }
     
     public func fireErrorCaught(error: Error) {
@@ -686,11 +686,11 @@ public final class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboun
         }
     }
     
-    func invokeChannelWritabilityChanged(writable: Bool) {
+    func invokeChannelWritabilityChanged() {
         assert(inEventLoop)
         
         do {
-            try handler.channelWritabilityChanged(ctx: self, writable: writable)
+            try handler.channelWritabilityChanged(ctx: self)
         } catch let err {
             invokeErrorCaught(error: err)
         }
