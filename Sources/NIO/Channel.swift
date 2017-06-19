@@ -147,7 +147,7 @@ final fileprivate class PendingWrites {
     /*
      Function that takes two closures and based on if there are more then one ByteBuffer pending calls either one or the other.
     */
-    func consume(oneBody: (UnsafePointer<UInt8>, Int) throws -> IOResult<Int>, multipleBody: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> (consumedAll: WriteResult, writable: Bool) {
+    func consume(oneBody: (UnsafePointer<UInt8>, Int) throws -> IOResult<Int>, multipleBody: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> (writeResult: WriteResult, writable: Bool) {
         let wasWritable = writable
         let result = try hasMultiple ? consumeMultiple(multipleBody) : consumeOne(oneBody)
         
@@ -163,27 +163,18 @@ final fileprivate class PendingWrites {
         if head == nil {
             tail = nil
             flushCheckpoint = nil
-        }
-    }
-    
-    private func isFlushCheckpoint(_ pending: PendingWrite) -> Bool {
-        return pending === flushCheckpoint
-    }
-    
-    private func checkFlushCheckpoint(pending: PendingWrite) -> Bool {
-        if isFlushCheckpoint(pending) {
+        } else if pending === flushCheckpoint {
+            // pending was the flush checkpoint so reset it
             flushCheckpoint = nil
-            return true
         }
-        return false
     }
     
-    private func isFlushPending() -> Bool {
+    var isFlushPending: Bool {
         return flushCheckpoint != nil
     }
     
     private func consumeOne(_ body: (UnsafePointer<UInt8>, Int) throws -> IOResult<Int>) rethrows -> WriteResult {
-        if let pending = head, isFlushPending() {
+        if let pending = head, isFlushPending {
             for _ in 0..<writeSpinCount + 1 {
                 guard !closed else {
                     return .closed
@@ -198,20 +189,18 @@ final fileprivate class PendingWrites {
                     
                     if pending.buffer.readableBytes == written {
                         
+                        outstanding = (outstanding.chunks-1, outstanding.bytes)
+
                         // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
                         updateNodes(pending: pending)
-                        
-                        outstanding = (outstanding.chunks-1, outstanding.bytes)
-                        
-                        let allFlushed = checkFlushCheckpoint(pending: pending)
                         
                         // buffer was completely written
                         pending.promise.succeed(result: ())
                         
-                        if self.isEmpty || allFlushed {
+                        if !isFlushPending {
+                            // signal to the caller that there are no more buffers to consume
                             return .nothingToBeWritten
                         }
-                        // Wrote the full buffer
                         return .writtenCompletely
                     } else {
                         // Update readerIndex of the buffer
@@ -221,16 +210,14 @@ final fileprivate class PendingWrites {
                     return .wouldBlock
                 }
             }
-            // could not write the complete buffer
             return .writtenPartially
         }
         
-        // empty or flushed everything that is marked to be flushable
         return .nothingToBeWritten
     }
     
     private func consumeMultiple(_ body: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> WriteResult {
-        if var pending = head, isFlushPending() {
+        if var pending = head, isFlushPending {
             writeLoop: for _ in 0..<writeSpinCount + 1 {
                 guard !closed else {
                     return .closed
@@ -251,11 +238,8 @@ final fileprivate class PendingWrites {
                         writable = true
                     }
                     
-                    var allFlushed = false
                     var w = written
                     while let p = head {
-                        assert(!allFlushed)
-                        
                         if w >= p.buffer.readableBytes {
                             w -= p.buffer.readableBytes
                             
@@ -264,13 +248,22 @@ final fileprivate class PendingWrites {
                             // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
                             updateNodes(pending: p)
                             
-                            allFlushed = checkFlushCheckpoint(pending: p)
-                            
                             // buffer was completely written
                             p.promise.succeed(result: ())
+                            
+                            if w == 0 {
+                                if !isFlushPending {
+                                    // signal to the caller that there are no more buffers to consume
+                                    return .nothingToBeWritten
+                                } else {
+                                    // may try again depending on the writeSpinCount
+                                    return .writtenCompletely
+                                }
+                            }
+                            
                         } else {
                             // Only partly written, so update the readerIndex.
-                            pending.buffer.moveReaderIndex(forwardBy: w)
+                            p.buffer.moveReaderIndex(forwardBy: w)
 
                             // update pending so we not need to process the old PendingWrites that we already processed and completed
                             pending = p
@@ -279,24 +272,13 @@ final fileprivate class PendingWrites {
                             continue writeLoop
                         }
                     }
-                    
-                    if isEmpty || allFlushed {
-                        // return nil to signal to the caller that there are no more buffers to consume
-                        return .nothingToBeWritten
-                    }
-
-                    // check if we were able to write everything or not
-                    assert(expected == written)
-                    return .writtenPartially
                 case .wouldBlock:
                     return .wouldBlock
                 }
             }
-            // could not write the complete buffer
-            return .nothingToBeWritten
+            return .writtenPartially
         }
         
-        // empty or flushed everything that is marked to be flushable
         return .nothingToBeWritten
     }
     
@@ -412,31 +394,37 @@ final class SocketChannel : BaseSocketChannel<Socket> {
     }
     
     override fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> WriteResult {
-        let result = try pendingWrites.consume(oneBody: { ptr, length in
-            guard length > 0 else {
-                // No need to call write if the buffer is empty.
-                return .processed(0)
+        repeat {
+            let result = try pendingWrites.consume(oneBody: { ptr, length in
+                guard length > 0 else {
+                    // No need to call write if the buffer is empty.
+                    return .processed(0)
+                }
+                // normal write
+                return try self.socket.write(pointer: ptr, size: length)
+            }, multipleBody: { ptrs in
+                switch ptrs.count {
+                case 0:
+                    // No need to call write if the buffer is empty.
+                    return .processed(0)
+                case 1:
+                    let p = ptrs[0]
+                    return try self.socket.write(pointer: p.iov_base.assumingMemoryBound(to: UInt8.self), size: p.iov_len)
+                default:
+                    // Gathering write
+                    return try self.socket.writev(iovecs: ptrs)
+                }
+            })
+            if result.writable {
+                // writable again
+                self.pipeline.fireChannelWritabilityChanged0(writable: true)
             }
-            // normal write
-            return try self.socket.write(pointer: ptr, size: length)
-        }, multipleBody: { ptrs in
-            switch ptrs.count {
-            case 0:
-                // No need to call write if the buffer is empty.
-                return .processed(0)
-            case 1:
-                let p = ptrs[0]
-                return try self.socket.write(pointer: p.iov_base.assumingMemoryBound(to: UInt8.self), size: p.iov_len)
-            default:
-                // Gathering write
-                return try self.socket.writev(iovecs: ptrs)
+            if result.writeResult == .writtenCompletely && pendingWrites.isFlushPending {
+                // there are more buffers to process, so continue
+                continue
             }
-        })
-        if result.writable {
-            // writable again
-            self.pipeline.fireChannelWritabilityChanged0(writable: true)
-        }
-        return result.consumedAll
+            return result.writeResult
+        } while true
     }
     
     override fileprivate func connectSocket(remote: SocketAddress) throws -> Bool {
