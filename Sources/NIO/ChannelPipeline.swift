@@ -285,20 +285,20 @@ public final class ChannelPipeline : ChannelInboundInvoker {
 
     func close(promise: Promise<Void>) {
         if eventLoop.inEventLoop {
-            tail!.invokeClose(promise: promise)
+            close0(promise: promise)
         } else {
             eventLoop.execute {
-                self.tail!.invokeClose(promise: promise)
+                self.close0(promise: promise)
             }
         }
     }
     
     func flush() {
         if eventLoop.inEventLoop {
-            tail!.invokeFlush()
+            flush0()
         } else {
             eventLoop.execute {
-                self.tail!.invokeFlush()
+                self.flush0()
             }
         }
     }
@@ -315,93 +315,132 @@ public final class ChannelPipeline : ChannelInboundInvoker {
 
     func write(data: IOData, promise: Promise<Void>) {
         if eventLoop.inEventLoop {
-            tail!.invokeWrite(data: data, promise: promise)
+            write0(data: data, promise: promise)
         } else {
             eventLoop.execute {
-                self.tail!.invokeWrite(data: data, promise: promise)
+                self.write0(data: data, promise: promise)
             }
         }
     }
     
     func writeAndFlush(data: IOData, promise: Promise<Void>) {
         if eventLoop.inEventLoop {
-            tail!.invokeWriteAndFlush(data: data, promise: promise)
+            writeAndFlush0(data: data, promise: promise)
         } else {
             eventLoop.execute {
-                self.tail!.invokeWriteAndFlush(data: data, promise: promise)
+                self.writeAndFlush0(data: data, promise: promise)
             }
         }
     }
     
     func bind(local: SocketAddress, promise: Promise<Void>) {
         if eventLoop.inEventLoop {
-            tail!.invokeBind(local: local, promise: promise)
+            bind0(local: local, promise: promise)
         } else {
             eventLoop.execute {
-                self.tail!.invokeBind(local: local, promise: promise)
+                self.bind0(local: local, promise: promise)
             }
         }
     }
     
     func connect(remote: SocketAddress, promise: Promise<Void>) {
         if eventLoop.inEventLoop {
-            tail!.invokeConnect(remote: remote, promise: promise)
+            connect0(remote: remote, promise: promise)
         } else {
             eventLoop.execute {
-                self.tail!.invokeConnect(remote: remote, promise: promise)
+                self.connect0(remote: remote, promise: promise)
             }
         }
     }
     
     func register(promise: Promise<Void>) {
         if eventLoop.inEventLoop {
-            tail!.invokeRegister(promise: promise)
+            register0(promise: promise)
         } else {
             eventLoop.execute {
-                self.tail!.invokeRegister(promise: promise)
+                self.register0(promise: promise)
             }
         }
     }
     
     // These methods are expected to only be called from withint the EventLoop
+    
+    private var firstOutboundCtx: ChannelHandlerContext {
+        // Skip the tail as the tails ChannelHandler does not implement any of the outbound operations
+        return tail!.prev!
+    }
+    
+    private var firstInboundCtx: ChannelHandlerContext {
+        // Skip the head as the heads ChannelHandler does not implement any of the inbound operations
+        return head!.next!
+    }
+    
+    func close0(promise: Promise<Void>) {
+        firstOutboundCtx.invokeClose(promise: promise)
+    }
+    
+    func flush0() {
+        firstOutboundCtx.invokeFlush()
+    }
+    
     func read0() {
-        tail!.invokeRead()
+        firstOutboundCtx.invokeRead()
+    }
+    
+    func write0(data: IOData, promise: Promise<Void>) {
+        firstOutboundCtx.invokeWrite(data: data, promise: promise)
+    }
+    
+    func writeAndFlush0(data: IOData, promise: Promise<Void>) {
+        firstOutboundCtx.invokeWriteAndFlush(data: data, promise: promise)
+    }
+    
+    func bind0(local: SocketAddress, promise: Promise<Void>) {
+        firstOutboundCtx.invokeBind(local: local, promise: promise)
+    }
+    
+    func connect0(remote: SocketAddress, promise: Promise<Void>) {
+        firstOutboundCtx.invokeConnect(remote: remote, promise: promise)
+    }
+    
+    func register0(promise: Promise<Void>) {
+        firstOutboundCtx.invokeRegister(promise: promise)
     }
     
     func fireChannelRegistered0() {
-        head!.invokeChannelRegistered()
+        firstInboundCtx.invokeChannelRegistered()
     }
     
     func fireChannelUnregistered0() {
-        head!.invokeChannelUnregistered()
+        firstInboundCtx.invokeChannelUnregistered()
     }
     
     func fireChannelInactive0() {
-        head!.invokeChannelInactive()
+        firstInboundCtx.invokeChannelInactive()
     }
     
     func fireChannelActive0() {
-        head!.invokeChannelActive()
+        firstInboundCtx.invokeChannelActive()
     }
     
     func fireChannelRead0(data: IOData) {
-        head!.invokeChannelRead(data: data)
+        firstInboundCtx.invokeChannelRead(data: data)
     }
     
     func fireChannelReadComplete0() {
-        head!.invokeChannelReadComplete()
+        firstInboundCtx.invokeChannelReadComplete()
     }
     
     func fireChannelWritabilityChanged0() {
-        head!.invokeChannelWritabilityChanged()
+        firstInboundCtx.invokeChannelWritabilityChanged()
     }
     
     func fireUserEventTriggered0(event: Any) {
-        head!.invokeUserEventTriggered(event: event)
+        firstInboundCtx.invokeUserEventTriggered(event: event)
     }
     
     func fireErrorCaught0(error: Error) {
-        head!.invokeErrorCaught(error: error)
+        firstInboundCtx.invokeErrorCaught(error: error)
     }
     
     private var inEventLoop : Bool {
@@ -454,26 +493,40 @@ private final class HeadChannelHandler : ChannelHandler {
         ctx.channel!._unsafe.startReading0()
     }
     
+    func channelRegistered(ctx: ChannelHandlerContext) {
+        fatalError("Should never be called")
+    }
+    
+    func channelUnregistered(ctx: ChannelHandlerContext) throws {
+        fatalError("Should never be called")
+    }
+    
     func channelActive(ctx: ChannelHandlerContext) {
-        ctx.fireChannelActive()
-        
-        readIfNeeded(ctx: ctx)
+        fatalError("Should never be called")
+    }
+    
+    func channelInactive(ctx: ChannelHandlerContext) {
+        fatalError("Should never be called")
     }
     
     func channelReadComplete(ctx: ChannelHandlerContext) {
-        ctx.fireChannelReadComplete()
-        
-        readIfNeeded(ctx: ctx)
+        fatalError("Should never be called")
     }
     
-    func channelUnregistered(ctx: ChannelHandlerContext) {
-        ctx.fireChannelUnregistered()
-        
-        ctx.pipeline!.removeHandlers()
+    func channelWritabilityChanged(ctx: ChannelHandlerContext) {
+        fatalError("Should never be called")
     }
-
-    private func readIfNeeded(ctx: ChannelHandlerContext) {
-        ctx.channel!._unsafe.readIfNeeded0()
+    
+    func userEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+        fatalError("Should never be called")
+    }
+    
+    func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+        fatalError("Should never be called")
+    }
+    
+    func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+        fatalError("Should never be called")
     }
 }
 
@@ -517,6 +570,34 @@ private final class TailChannelHandler : ChannelHandler {
     
     func channelRead(ctx: ChannelHandlerContext, data: IOData) {
         ctx.channel!._unsafe.channelRead0(data: data)
+    }
+    
+    func register(ctx: ChannelHandlerContext, promise: Promise<Void>) {
+        fatalError("Should never be called")
+    }
+    
+    func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>) {
+        fatalError("Should never be called")
+    }
+    
+    func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>) {
+        fatalError("Should never be called")
+    }
+    
+    func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>) {
+        fatalError("Should never be called")
+    }
+    
+    func flush(ctx: ChannelHandlerContext) {
+        fatalError("Should never be called")
+    }
+    
+    func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
+        fatalError("Should never be called")
+    }
+    
+    func read(ctx: ChannelHandlerContext) {
+        fatalError("Should never be called")
     }
 }
 

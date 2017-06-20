@@ -487,6 +487,8 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
             try self.socket.listen(backlog: backlog)
             promise.succeed(result: ())
             pipeline.fireChannelActive0()
+            readIfNeeded0()
+            
         } catch let err {
             promise.fail(error: err)
         }
@@ -528,13 +530,14 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
     override public func channelRead0(data: IOData) {
         assert(eventLoop.inEventLoop)
 
-        let ch = data.forceAsOther() as Channel
+        let ch = data.forceAsOther() as SocketChannel
         let f = ch.register()
         f.whenFailure(callback: { err in
             _ = ch.close()
         })
         f.whenSuccess { () -> Void in
             ch.pipeline.fireChannelActive0()
+            ch.readIfNeeded0()
         }
     }
 }
@@ -549,7 +552,6 @@ public protocol ChannelCore : class{
     func connect0(remote: SocketAddress, promise: Promise<Void>)
     func write0(data: IOData, promise: Promise<Void>)
     func flush0()
-    func readIfNeeded0()
     func startReading0()
     func stopReading0()
     func close0(promise: Promise<Void>, error: Error)
@@ -951,7 +953,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             pipeline.fireChannelUnregistered0()
         }
         pipeline.fireChannelInactive0()
-        
+        pipeline.removeHandlers()
         
         // Fail all pending writes and so ensure all pending promises are notified
         pendingWrites.failAll(error: error)
@@ -1050,6 +1052,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             
         }
         pipeline.fireChannelReadComplete0()
+        readIfNeeded0()
     }
     
     fileprivate func connectSocket(remote: SocketAddress) throws -> Bool {
