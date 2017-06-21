@@ -295,8 +295,11 @@ public final class Selector {
         for i in 0..<ready {
             let ev = events[i]
             if ev.ident != Selector.EvUserIdent {
-                let registration = registrations[Int(ev.ident)]!
-                    try fn((SelectorEvent(isReadable: Int32(ev.filter) == EVFILT_READ, isWritable: Int32(ev.filter) == EVFILT_WRITE, selectable: registration.selectable, attachment: registration.attachment)))
+                guard let registration = registrations[Int(ev.ident)] else {
+                    // Just ignore as this means the user deregistered already in between. This can happen as kevent returns two different events, one for EVFILT_READ and one for EVFILT_WRITE.
+                    continue
+                }
+                try fn((SelectorEvent(isReadable: Int32(ev.filter) == EVFILT_READ, isWritable: Int32(ev.filter) == EVFILT_WRITE, selectable: registration.selectable, attachment: registration.attachment)))
             }
         }
 #endif
