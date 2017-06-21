@@ -71,19 +71,21 @@ func doPendingWriteVectorOperation(pending: PendingWrite?,
     for i in 0..<count {
         if let p = next {
             p.buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
-                _ = storageRef.retain()
-                storageRefs[i] = storageRef
+                storageRefs[i] = storageRef.retain()
                 iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: ptr.count)
             }
             next = p.next
         } else {
+            fatalError("can't find \(count) nodes in \(pending.debugDescription)")
             break
         }
     }
-    let result = try fn(UnsafeBufferPointer(start: iovecs.baseAddress!, count: count))
-    for i in 0..<count {
-        storageRefs[i].release()
+    defer {
+        for i in 0..<count {
+            storageRefs[i].release()
+        }
     }
+    let result = try fn(UnsafeBufferPointer(start: iovecs.baseAddress!, count: count))
     return result
 }
 
