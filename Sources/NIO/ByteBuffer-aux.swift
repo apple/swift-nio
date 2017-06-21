@@ -77,7 +77,7 @@ extension ByteBuffer {
             self.set(bytes: p, at: index)
         }
     }
-    
+
     @discardableResult
     public mutating func write(buffer: inout ByteBuffer) -> Int {
         let written = set(buffer: buffer, at: writerIndex)
@@ -85,7 +85,7 @@ extension ByteBuffer {
         buffer.moveReaderIndex(forwardBy: written)
         return written
     }
-    
+
     public func slice() -> ByteBuffer {
         return slice(at: self.readerIndex, length: self.readableBytes)!
     }
@@ -117,9 +117,8 @@ extension ByteBuffer: Equatable {
             rhs.withUnsafeReadableBytes { rPtr in
                 // Shouldn't get here otherwise because of readableBytes check
                 assert(lPtr.count == rPtr.count)
-                return memcmp(lPtr.baseAddress, rPtr.baseAddress, lPtr.count) == 0
+                return memcmp(lPtr.baseAddress!, rPtr.baseAddress!, lPtr.count) == 0
             }
         }
     }
 }
-

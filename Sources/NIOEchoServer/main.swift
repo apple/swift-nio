@@ -16,16 +16,16 @@ import NIO
 
 
 public class EchoHandler: ChannelInboundHandler {
-    
+
     public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
         _ = ctx.write(data: data)
     }
-    
+
     // Flush it out. This can make use of gathering writes if multiple buffers are pending
     public func channelReadComplete(ctx: ChannelHandlerContext) {
         ctx.flush()
     }
-    
+
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         print("error: ", error)
         let _ = ctx.close()
@@ -35,7 +35,7 @@ let group = try MultiThreadedEventLoopGroup(numThreads: 1)
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .option(option: ChannelOptions.Backlog, value: 256)
-    .option(option: ChannelOptions.Socket(SOL_SOCKET, SO_REUSEADDR), value: 1)
+    .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
     // Set the handlers that are appled to the accepted Channels
     .handler(childHandler: ChannelInitializer(initChannel: { channel in
@@ -44,10 +44,10 @@ let bootstrap = ServerBootstrap(group: group)
             return channel.pipeline.add(handler: EchoHandler())
         })
     }))
-    
+
     // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels
     .option(childOption: ChannelOptions.Socket(IPPROTO_TCP, TCP_NODELAY), childValue: 1)
-    .option(childOption: ChannelOptions.Socket(SOL_SOCKET, SO_REUSEADDR), childValue: 1)
+    .option(childOption: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), childValue: 1)
     .option(childOption: ChannelOptions.MaxMessagesPerRead, childValue: 16)
     .option(childOption: ChannelOptions.RecvAllocator, childValue: FixedSizeRecvByteBufferAllocator(capacity: 8192))
 defer {
@@ -62,4 +62,3 @@ print("Server started")
 try channel.closeFuture.wait()
 
 print("Server closed")
-
