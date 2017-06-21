@@ -400,7 +400,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(3, slice.readableBytes)
         XCTAssertEqual(0, slice.readerIndex)
 
-        buffer.moveReaderIndex(forwardBy: 1)
+        slice.moveReaderIndex(forwardBy: 1)
         XCTAssertEqual(2, slice.readableBytes)
         XCTAssertEqual(1, slice.readerIndex)
         XCTAssertEqual(3, slice.writerIndex)
