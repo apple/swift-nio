@@ -15,7 +15,7 @@ import Foundation
 import NIO
 
 
-public class EchoHandler: ChannelHandler {
+public class EchoHandler: ChannelInboundHandler {
     
     public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
         _ = ctx.write(data: data)

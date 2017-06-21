@@ -112,7 +112,7 @@ public final class ServerBootstrap {
         return promise.futureResult
     }
     
-    private class AcceptHandler : ChannelHandler {
+    private class AcceptHandler : ChannelInboundHandler {
         
         private let childHandler: ChannelHandler?
         private let childOptions: ChannelOptionStorage

@@ -122,6 +122,7 @@ final fileprivate class PendingWrites {
     }
     
     func add(buffer: ByteBuffer, promise: Promise<Void>) -> Bool {
+        assert(!closed)
         let pending: PendingWrite = PendingWrite(buffer: buffer, promise: promise)
         if let last = tail {
             assert(head != nil)
@@ -386,6 +387,7 @@ final class SocketChannel : BaseSocketChannel<Socket> {
 
                     readPending = false
 
+                    assert(!closed)
                     pipeline.fireChannelRead0(data: .byteBuffer(buffer))
                     
                     // Reset reader and writerIndex and so allow to have the buffer filled again

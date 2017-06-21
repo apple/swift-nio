@@ -16,6 +16,22 @@ import Foundation
 import Sockets
 
 public protocol ChannelHandler : class {
+    func handlerAdded(ctx: ChannelHandlerContext) throws
+    func handlerRemoved(ctx: ChannelHandlerContext) throws
+}
+
+public protocol ChannelOutboundHandler : ChannelHandler {
+    func register(ctx: ChannelHandlerContext, promise: Promise<Void>)
+    func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>)
+    func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>)
+    func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>)
+    func flush(ctx: ChannelHandlerContext)
+    // TODO: Think about make this more flexible in terms of influence the allocation that is used to read the next amount of data
+    func read(ctx: ChannelHandlerContext)
+    func close(ctx: ChannelHandlerContext, promise: Promise<Void>)
+}
+
+public protocol ChannelInboundHandler : ChannelHandler {
     func channelRegistered(ctx: ChannelHandlerContext) throws
     func channelUnregistered(ctx: ChannelHandlerContext) throws
     func channelActive(ctx: ChannelHandlerContext) throws
@@ -25,20 +41,53 @@ public protocol ChannelHandler : class {
     func channelWritabilityChanged(ctx: ChannelHandlerContext) throws
     func userEventTriggered(ctx: ChannelHandlerContext, event: Any) throws
     func errorCaught(ctx: ChannelHandlerContext, error: Error) throws
-    func register(ctx: ChannelHandlerContext, promise: Promise<Void>)
-    func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>)
-    func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>)
-    func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>)
-    func flush(ctx: ChannelHandlerContext)
-    // TODO: Think about make this more flexible in terms of influence the allocation that is used to read the next amount of data
-    func read(ctx: ChannelHandlerContext)
-    func close(ctx: ChannelHandlerContext, promise: Promise<Void>)
-    func handlerAdded(ctx: ChannelHandlerContext) throws
-    func handlerRemoved(ctx: ChannelHandlerContext) throws
 }
 
 //  Default implementation for the ChannelHandler protocol
 public extension ChannelHandler {
+    
+    public func handlerAdded(ctx: ChannelHandlerContext) {
+        // Do nothing by default
+    }
+    
+    public func handlerRemoved(ctx: ChannelHandlerContext) {
+        // Do nothing by default
+    }
+}
+
+public extension ChannelOutboundHandler {
+    
+    public func register(ctx: ChannelHandlerContext, promise: Promise<Void>) {
+        ctx.register(promise: promise)
+    }
+    
+    public func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>) {
+        ctx.bind(local: local, promise: promise)
+    }
+    
+    public func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>) {
+        ctx.connect(remote: remote, promise: promise)
+    }
+    
+    public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>) {
+        ctx.write(data: data, promise: promise)
+    }
+    
+    public func flush(ctx: ChannelHandlerContext) {
+        ctx.flush()
+    }
+    
+    public func read(ctx: ChannelHandlerContext) {
+        ctx.read()
+    }
+    
+    public func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
+        ctx.close(promise: promise)
+    }
+}
+
+
+public extension ChannelInboundHandler {
     
     public func channelRegistered(ctx: ChannelHandlerContext) {
         ctx.fireChannelRegistered()
@@ -75,40 +124,5 @@ public extension ChannelHandler {
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         ctx.fireErrorCaught(error: error)
     }
-
-    public func register(ctx: ChannelHandlerContext, promise: Promise<Void>) {
-        ctx.register(promise: promise)
-    }
-    
-    public func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>) {
-        ctx.bind(local: local, promise: promise)
-    }
-    
-    public func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>) {
-        ctx.connect(remote: remote, promise: promise)
-    }
-    
-    public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>) {
-        ctx.write(data: data, promise: promise)
-    }
-    
-    public func flush(ctx: ChannelHandlerContext) {
-        ctx.flush()
-    }
-    
-    public func read(ctx: ChannelHandlerContext) {
-        ctx.read()
-    }
-
-    public func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
-        ctx.close(promise: promise)
-    }
-    
-    public func handlerAdded(ctx: ChannelHandlerContext) {
-        // Do nothing by default
-    }
-    
-    public func handlerRemoved(ctx: ChannelHandlerContext) {
-        // Do nothing by default
-    }
 }
+

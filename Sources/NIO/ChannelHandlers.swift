@@ -21,7 +21,7 @@ import Foundation
  ChannelHandler implementation which enforces back-pressure by stop reading from the remote-peer when it can not write back fast-enough and start reading again
  once pending data was written.
 */
-public class BackPressureHandler: ChannelHandler {
+public class BackPressureHandler: ChannelInboundHandler, ChannelOutboundHandler {
     private var readPending: Bool = false
     private var writable: Bool = true;
     
@@ -57,7 +57,7 @@ public class BackPressureHandler: ChannelHandler {
     }
 }
 
-public class ChannelInitializer: ChannelHandler {
+public class ChannelInitializer: ChannelInboundHandler {
     private let initChannel: (Channel) -> (Future<Void>)
     
     public init(initChannel: @escaping (Channel) -> (Future<Void>)) {
