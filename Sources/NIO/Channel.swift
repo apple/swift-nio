@@ -953,7 +953,11 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             pipeline.fireChannelUnregistered0()
         }
         pipeline.fireChannelInactive0()
-        pipeline.removeHandlers()
+        
+        eventLoop.execute {
+            // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline
+            self.pipeline.removeHandlers()
+        }
         
         // Fail all pending writes and so ensure all pending promises are notified
         pendingWrites.failAll(error: error)
