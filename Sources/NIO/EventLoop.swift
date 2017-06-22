@@ -157,7 +157,7 @@ final class SelectableEventLoop : EventLoop {
                 }
 
                 // Ensure we never reach here if the channel is not open anymore.
-                assert(!channel._unsafe.closed)
+                assert(channel.open)
             }
             
             // TODO: Better locking
@@ -173,7 +173,7 @@ final class SelectableEventLoop : EventLoop {
     }
 
     private func handleEvents(_ channel: SelectableChannel) -> Bool {
-        if !channel._unsafe.closed {
+        if channel.open {
             return true
         }
         do {

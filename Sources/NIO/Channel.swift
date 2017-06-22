@@ -550,7 +550,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
 /*
  All methods must be called from the EventLoop thread
  */
-public protocol ChannelCore : class{
+public protocol ChannelCore : class {
     func register0(promise: Promise<Void>)
     func bind0(local: SocketAddress, promise: Promise<Void>)
     func connect0(remote: SocketAddress, promise: Promise<Void>)
@@ -559,8 +559,6 @@ public protocol ChannelCore : class{
     func read0()
     func close0(promise: Promise<Void>, error: Error)
     func channelRead0(data: IOData)
-    var closed: Bool { get }
-    var eventLoop: EventLoop { get }
 }
 
 /*
@@ -595,11 +593,6 @@ extension Channel {
     public var open: Bool {
         return !closeFuture.fulfilled
     }
-
-    var eventLoop: EventLoop {
-        return _unsafe.eventLoop
-    }
-
 
     @discardableResult public func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
         pipeline.bind(local: local, promise: promise)
