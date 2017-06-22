@@ -37,8 +37,12 @@ extension ByteBuffer {
             if index + MemoryLayout<T>.size > ptr.count {
                 return nil
             }
-            return toEndianess(value: ptr.baseAddress!.advanced(by: index).bindMemory(to: T.self, capacity: 1).pointee,
-                               endianess: endianess)
+            var value: T = 0
+            withUnsafeMutableBytes(of: &value) { valuePtr in
+                valuePtr.copyBytes(from: UnsafeRawBufferPointer(start: ptr.baseAddress!.advanced(by: index),
+                                                                count: MemoryLayout<T>.size))
+            }
+            return toEndianess(value: value, endianess: endianess)
         }
     }
 

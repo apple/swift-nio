@@ -72,12 +72,19 @@ public struct ByteBuffer {
             self.deallocate()
         }
 
+        private static func allocateAndPrepareRawMemory(bytes: Capacity, alignedTo: Int) -> UnsafeMutableRawPointer {
+            let bytes = Int(bytes)
+            let ptr = UnsafeMutableRawPointer.allocate(bytes: bytes, alignedTo: alignedTo)
+            /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
+            ptr.bindMemory(to: UInt8.self, capacity: bytes)
+            return ptr
+        }
+
         public func duplicate(slice: Slice, capacity: Capacity) -> _Storage {
             assert(slice.count <= capacity)
             let newCapacity = capacity == 0 ? 0 : capacity.nextPowerOf2()
             // TODO: Use realloc if possible
-            let new = _Storage(bytesNoCopy: UnsafeMutableRawPointer.allocate(bytes: Int(newCapacity),
-                                                                             alignedTo: self.allocator.alignment),
+            let new = _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity, alignedTo: self.allocator.alignment),
                                capacity: newCapacity,
                                allocator: self.allocator)
             new.bytes.copyBytes(from: self.bytes.advanced(by: Int(slice.lowerBound)), count: slice.count)
@@ -91,8 +98,7 @@ public struct ByteBuffer {
         public static func reallocated(minimumCapacity: Capacity, allocator: Allocator) -> _Storage {
             let newCapacity = minimumCapacity == 0 ? 0 : minimumCapacity.nextPowerOf2()
             // TODO: Use realloc if possible
-            return _Storage(bytesNoCopy: UnsafeMutableRawPointer.allocate(bytes: Int(newCapacity),
-                                                                          alignedTo: allocator.alignment),
+            return _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity, alignedTo: allocator.alignment),
                             capacity: newCapacity,
                             allocator: allocator)
         }

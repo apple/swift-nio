@@ -668,4 +668,22 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(4, buf.readableBytes)
         XCTAssertEqual(Data([0, 1, 2, 3]), buf.readData(length: 4))
     }
+
+    func testMisalignedIntegerRead() throws {
+        let value = UInt64(7)
+
+        buf.write(data: Data([1]))
+        buf.write(integer: value)
+        let actual = buf.readData(length: 1)
+        XCTAssertEqual(Data([1]), actual)
+
+        buf.withUnsafeReadableBytes { ptr in
+            /* make sure pointer is actually misaligned for an integer */
+            let pointerBitPattern = UInt(bitPattern: ptr.baseAddress!)
+            let lastBit = pointerBitPattern & 0x1
+            XCTAssertEqual(1, lastBit) /* having a 1 as the last bit makes that pointer clearly misaligned for UInt64 */
+        }
+
+        XCTAssertEqual(value, buf.readInteger())
+    }
 }
