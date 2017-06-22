@@ -749,25 +749,29 @@ public final class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboun
     
     func invokeRegister(promise: Promise<Void>) {
         assert(inEventLoop)
+        assert(!promise.futureResult.fulfilled, "Promise \(promise) already fulfilled")
         
         (handler as! ChannelOutboundHandler).register(ctx: self, promise: promise)
     }
     
     func invokeBind(local: SocketAddress, promise: Promise<Void>) {
         assert(inEventLoop)
-        
+        assert(!promise.futureResult.fulfilled, "Promise \(promise) already fulfilled")
+
         (handler as! ChannelOutboundHandler).bind(ctx: self, local: local, promise: promise)
     }
     
     func invokeConnect(remote: SocketAddress, promise: Promise<Void>) {
         assert(inEventLoop)
-        
+        assert(!promise.futureResult.fulfilled, "Promise \(promise) already fulfilled")
+
         (handler as! ChannelOutboundHandler).connect(ctx: self, remote: remote, promise: promise)
     }
 
     func invokeWrite(data: IOData, promise: Promise<Void>) {
         assert(inEventLoop)
-        
+        assert(!promise.futureResult.fulfilled, "Promise \(promise) already fulfilled")
+
         (handler as! ChannelOutboundHandler).write(ctx: self, data: data, promise: promise)
     }
     
@@ -779,7 +783,8 @@ public final class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboun
     
     func invokeWriteAndFlush(data: IOData, promise: Promise<Void>) {
         assert(inEventLoop)
-        
+        assert(!promise.futureResult.fulfilled, "Promise \(promise) already fulfilled")
+
         (handler as! ChannelOutboundHandler).write(ctx: self, data: data, promise: promise)
         (handler as! ChannelOutboundHandler).flush(ctx: self)
     }
@@ -792,7 +797,8 @@ public final class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboun
     
     func invokeClose(promise: Promise<Void>) {
         assert(inEventLoop)
-        
+        assert(!promise.futureResult.fulfilled, "Promise \(promise) already fulfilled")
+
         (handler as! ChannelOutboundHandler).close(ctx: self, promise: promise)
     }
     
