@@ -51,10 +51,28 @@ public final class ChannelPipeline : ChannelInboundInvoker {
             if handler is ChannelInboundHandler {
                 inboundChain = ctx
             }
-            ctx.outboundNext = outboundChain
+
             if handler is ChannelOutboundHandler {
-                outboundChain = ctx
+                var c = outboundChain
+
+                if c!.handler === HeadChannelHandler.sharedInstance {
+                    ctx.outboundNext = outboundChain
+                    outboundChain = ctx
+                } else {
+                    repeat {
+                        let c2 = c!.outboundNext
+                        if c2!.handler === HeadChannelHandler.sharedInstance {
+                            ctx.outboundNext = c2
+                            c!.outboundNext = ctx
+                            break
+                        }
+                        c = c2
+                    } while true
+                }
+            } else {
+                ctx.outboundNext = outboundChain
             }
+
             contexts.insert(ctx, at: 0)
         } else {
             if handler is ChannelInboundHandler {
@@ -78,26 +96,11 @@ public final class ChannelPipeline : ChannelInboundInvoker {
                 ctx.inboundNext = inboundChain
             }
             
+            ctx.outboundNext = outboundChain
             if handler is ChannelOutboundHandler {
-                var c = outboundChain
-                
-                if c!.handler === HeadChannelHandler.sharedInstance {
-                    ctx.outboundNext = outboundChain
-                    outboundChain = ctx
-                } else {
-                    repeat {
-                        let c2 = c!.outboundNext
-                        if c2!.handler === HeadChannelHandler.sharedInstance {
-                            ctx.outboundNext = c2
-                            c!.outboundNext = ctx
-                            break
-                        }
-                        c = c2
-                    } while true
-                }
-            } else {
-                ctx.outboundNext = outboundChain
+                outboundChain = ctx
             }
+
             contexts.append(ctx)
         }
         
