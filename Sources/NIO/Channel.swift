@@ -786,48 +786,10 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public final func readIfNeeded0() {
+    final func readIfNeeded0() {
         if autoRead {
             pipeline.read0()
         }
-    }
-
-    @discardableResult public final func register(promise: Promise<Void>) -> Future<Void> {
-        pipeline.register(promise: promise)
-        return promise.futureResult
-    }
-
-    @discardableResult public final func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void> {
-        pipeline.bind(local: local, promise: promise)
-        return promise.futureResult
-    }
-
-    @discardableResult public final func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void> {
-        pipeline.connect(remote: remote, promise: promise)
-        return promise.futureResult
-    }
-
-    @discardableResult public final func write(data: IOData, promise: Promise<Void>) -> Future<Void> {
-        pipeline.write(data: data, promise: promise)
-        return promise.futureResult
-    }
-
-    public final func flush() {
-        pipeline.flush()
-    }
-
-    public final func read() {
-        pipeline.read()
-    }
-
-    @discardableResult public final func writeAndFlush(data: IOData, promise: Promise<Void>) -> Future<Void> {
-        pipeline.writeAndFlush(data: data, promise: promise)
-        return promise.futureResult
-    }
-
-    @discardableResult public final func close(promise: Promise<Void>) -> Future<Void> {
-        pipeline.close(promise: promise)
-        return promise.futureResult
     }
 
     // Methods invoked from the HeadHandler of the ChannelPipeline
