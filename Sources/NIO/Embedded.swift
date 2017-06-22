@@ -114,10 +114,7 @@ class EmbeddedChannelCore : ChannelCore {
         // No need
     }
 
-    func startReading0() {
-    }
-
-    func stopReading0() {
+    func read0() {
     }
 
     func readIfNeeded0() {

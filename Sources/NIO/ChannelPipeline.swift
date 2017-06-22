@@ -503,7 +503,7 @@ private final class HeadChannelHandler : ChannelOutboundHandler {
     }
     
     func read(ctx: ChannelHandlerContext) {
-        ctx.channel!._unsafe.startReading0()
+        ctx.channel!._unsafe.read0()
     }
 }
 

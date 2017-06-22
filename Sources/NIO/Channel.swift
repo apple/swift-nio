@@ -556,8 +556,7 @@ public protocol ChannelCore : class{
     func connect0(remote: SocketAddress, promise: Promise<Void>)
     func write0(data: IOData, promise: Promise<Void>)
     func flush0()
-    func startReading0()
-    func stopReading0()
+    func read0()
     func close0(promise: Promise<Void>, error: Error)
     func channelRead0(data: IOData)
     var closed: Bool { get }
@@ -723,9 +722,9 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             let auto = value as! Bool
             autoRead = auto
             if auto {
-                startReading0()
+                read0()
             } else {
-                stopReading0()
+                pauseRead0()
             }
         } else if option is MaxMessagesPerReadOption {
             maxMessagesPerRead = value as! UInt
@@ -853,7 +852,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public final func startReading0() {
+    public final func read0() {
         assert(eventLoop.inEventLoop)
 
         guard !closed else {
@@ -864,7 +863,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         registerForReadable()
     }
 
-    public final func stopReading0() {
+    private final func pauseRead0() {
         assert(eventLoop.inEventLoop)
 
         guard !closed else {
