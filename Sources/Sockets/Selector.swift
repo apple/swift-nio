@@ -23,6 +23,7 @@ import Foundation
 #endif
 
 public final class Selector {
+    private var open: Bool
 #if os(Linux)
     private typealias EventType = epoll_event
     private let eventsCapacity = 2048
@@ -41,6 +42,7 @@ public final class Selector {
     public init() throws {
         events = UnsafeMutablePointer.allocate(capacity: eventsCapacity)
         events.initialize(to: EventType())
+        self.open = false
 
 #if os(Linux)
         fd = try wrapSyscall({ $0 >= 0 }, function: "epoll_create") {
@@ -50,6 +52,7 @@ public final class Selector {
         eventfd = try wrapSyscall({ $0 >= 0 }, function: "eventfd") {
             CEventfd.eventfd(0, Int32(EFD_CLOEXEC | EFD_NONBLOCK))
         }
+        self.open = true
 
         var ev = epoll_event()
         ev.events = Selector.toEpollEvents(interested: .read)
@@ -62,6 +65,7 @@ public final class Selector {
         fd = try wrapSyscall({ $0 >= 0 }, function: "kqueue") {
             Darwin.kqueue()
         }
+        self.open = true
 
         var event = kevent()
         event.ident = Selector.EvUserIdent
@@ -76,6 +80,7 @@ public final class Selector {
     }
 
     deinit {
+        assert(!self.open, "Selector still open on deinit")
         events.deinitialize()
         events.deallocate(capacity: eventsCapacity)
     }
@@ -120,6 +125,10 @@ public final class Selector {
     }
 
     private func keventChangeSetOnly(event: UnsafePointer<kevent>?, numEvents: Int32) throws {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't kevent selector as it's not open anymore.")
+        }
+
         let _ = try wrapSyscall({ $0 >= 0 }, function: "kevent") {
             let res = kevent(self.fd, event, numEvents, nil, 0, nil)
             if res < 0  && errno == EINTR {
@@ -132,6 +141,10 @@ public final class Selector {
     }
 
     private func register_kqueue(selectable: Selectable, interested: InterestedEvent, oldInterested: InterestedEvent?) throws {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't register kqueue on selector as it's not open anymore.")
+        }
+
         // Allocated on the stack
         var events = (kevent(), kevent())
 
@@ -212,6 +225,10 @@ public final class Selector {
 #endif
 
     public func register(selectable: Selectable, interested: InterestedEvent = .read, attachment: AnyObject? = nil) throws {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't register selector as it's not open anymore.")
+        }
+
         assert(registrations[Int(selectable.descriptor)] == nil)
 #if os(Linux)
         var ev = epoll_event()
@@ -228,6 +245,10 @@ public final class Selector {
     }
 
     public func reregister(selectable: Selectable, interested: InterestedEvent) throws {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't re-register selector as it's not open anymore.")
+        }
+
         var reg = registrations[Int(selectable.descriptor)]!
 
 #if os(Linux)
@@ -262,6 +283,10 @@ public final class Selector {
 
 
     public func whenReady(strategy: SelectorStrategy, _ fn: (SelectorEvent) throws -> Void) throws -> Void {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't call whenReady for selector as it's not open anymore.")
+        }
+
 #if os(Linux)
         let timeout = Selector.toEpollWaitTimeout(strategy: strategy)
         let ready = try wrapSyscall({ $0 >= 0 }, function: "epoll_wait") {
@@ -306,6 +331,10 @@ public final class Selector {
     }
 
     public func close() throws {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't close selector as it's not open anymore.")
+        }
+        self.open = false
         let _ = try wrapSyscall({ $0 >= 0 }, function: "close") {
 #if os(Linux)
             // Ignore closing error for eventfd
@@ -318,6 +347,9 @@ public final class Selector {
     }
 
     public func wakeup() throws {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't wakeup selector as it's not open anymore.")
+        }
 #if os(Linux)
         // TODO: Should we throw an error if it returns != 0 ?
         let _ = CEventfd.eventfd_write(eventfd, 1)
