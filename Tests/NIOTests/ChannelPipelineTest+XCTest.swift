@@ -26,6 +26,7 @@ extension ChannelPipelineTest {
 
    static var allTests : [(String, (ChannelPipelineTest) -> () throws -> Void)] {
       return [
+                ("testAddAfterClose", testAddAfterClose),
                 ("testOutboundOrdering", testOutboundOrdering),
            ]
    }
