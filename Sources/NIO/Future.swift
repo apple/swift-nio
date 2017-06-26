@@ -139,7 +139,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
  * If you just want to get a value back after running something on another thread, use `Future<ResultType>.async()`
  * If you already have a value and need a Future<> object to plug into some other API, create an already-resolved object with `Future<ResultType>(result:)`
  */
-public final class Promise<T> {
+public struct Promise<T> {
     public let futureResult: Future<T>
     
     /**
@@ -177,10 +177,6 @@ public final class Promise<T> {
     /** Internal only! */
     fileprivate func _setValue(value: FutureValue<T>) -> CallbackList {
         return futureResult._setValue(value: value)
-    }
-    
-    deinit {
-        precondition(futureResult.fulfilled, "leaking an unfulfilled Promise")
     }
 }
 
@@ -315,6 +311,10 @@ public final class Future<T> {
         self.value = .failure(error)
         self.eventLoop = eventLoop
         self.checkForPossibleDeadlock = checkForPossibleDeadlock
+    }
+    
+    deinit {
+        precondition(fulfilled, "leaking an unfulfilled Promise")
     }
 }
 
