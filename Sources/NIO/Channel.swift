@@ -896,9 +896,6 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             return
         }
 
-        // Fail all pending writes and so ensure all pending promises are notified
-        pendingWrites.failAll(error: error)
-
         safeDeregister()
 
         do {
@@ -915,16 +912,16 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         eventLoop.execute {
             // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline
             self.pipeline.removeHandlers()
+            
+            // Fail all pending writes and so ensure all pending promises are notified
+            self.pendingWrites.failAll(error: error)
+            self.closePromise.succeed(result: ())
         }
-
-        // Fail all pending writes and so ensure all pending promises are notified
-        pendingWrites.failAll(error: error)
 
         if let connectPromise = pendingConnect {
             pendingConnect = nil
             connectPromise.fail(error: error)
         }
-        closePromise.succeed(result: ())
     }
 
 

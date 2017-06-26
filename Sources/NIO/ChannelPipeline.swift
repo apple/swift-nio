@@ -26,6 +26,8 @@ public final class ChannelPipeline : ChannelInboundInvoker {
     private var contexts: [ChannelHandlerContext] = []
     
     private var idx: Int = 0
+    private var destroyed: Bool = false
+    
     fileprivate let eventLoop: EventLoop
 
     public unowned let channel: Channel
@@ -45,6 +47,11 @@ public final class ChannelPipeline : ChannelInboundInvoker {
     public func add0(name: String?, handler: ChannelHandler, first: Bool, promise: Promise<Void>) {
         assert(eventLoop.inEventLoop)
 
+        guard !destroyed else {
+            promise.fail(error: ChannelPipelineError.alreadyClosed)
+            return
+        }
+        
         let ctx = ChannelHandlerContext(name: name ?? nextName(), handler: handler, pipeline: self)
         if first {
             ctx.inboundNext = inboundChain
@@ -201,6 +208,8 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         // We need to set the next reference to nil to ensure we not leak memory due a cycle-reference.
         destroyReferences(inboundChain!)
         destroyReferences(outboundChain!)
+        
+        destroyed = true
     }
     
     private func destroyReferences(_ ctx: ChannelHandlerContext) {
@@ -553,8 +562,9 @@ private final class TailChannelHandler : ChannelInboundHandler {
     }
 }
 
-public enum ChannelPipelineException : Error {
+public enum ChannelPipelineError : Error {
     case alreadyRemoved
+    case alreadyClosed
 }
 
 

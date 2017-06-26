@@ -13,10 +13,41 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
+import ConcurrencyHelpers
 @testable import NIO
 
 class ChannelPipelineTest: XCTestCase {
     
+    func testAddAfterClose() throws {
+        
+        let channel = EmbeddedChannel()
+        try channel.close().wait()
+        
+        let handler = DummyHandler()
+        defer {
+            XCTAssertFalse(handler.handlerAddedCalled.load())
+            XCTAssertFalse(handler.handlerRemovedCalled.load())
+        }
+        do {
+            try channel.pipeline.add(handler: handler).wait()
+            XCTFail()
+        } catch let err as ChannelPipelineError {
+            XCTAssertEqual(err, .alreadyClosed)
+        }
+    }
+    
+    private final class DummyHandler: ChannelHandler {
+        let handlerAddedCalled = Atomic<Bool>(value: false)
+        let handlerRemovedCalled = Atomic<Bool>(value: false)
+
+        public func handlerAdded(ctx: ChannelHandlerContext) {
+            handlerAddedCalled.store(true)
+        }
+        
+        public func handlerRemoved(ctx: ChannelHandlerContext) {
+            handlerRemovedCalled.store(true)
+        }
+    }
     
     func testOutboundOrdering() throws {
         

@@ -79,9 +79,12 @@ class EmbeddedChannelCore : ChannelCore {
     
     var eventLoop: EventLoop = EmbeddedEventLoop()
     var closePromise: Promise<Void>
+    
+    private unowned let pipeline: ChannelPipeline
 
-    init() {
+    init(pipeline: ChannelPipeline) {
         closePromise = eventLoop.newPromise(type: Void.self)
+        self.pipeline = pipeline
     }
     
     deinit { closePromise.succeed(result: ()) }
@@ -89,8 +92,17 @@ class EmbeddedChannelCore : ChannelCore {
     var outboundBuffer: [Any] = []
 
     func close0(promise: Promise<Void>, error: Error) {
-        closePromise.succeed(result: ())
         promise.succeed(result: ())
+        
+        // As we called register() in the constructor of EmbeddedChannel we also need to ensure we call unregistered here.
+        pipeline.fireChannelUnregistered0()
+        pipeline.fireChannelInactive0()
+        
+        eventLoop.execute {
+            // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline
+            self.pipeline.removeHandlers()
+            self.closePromise.succeed(result: ())
+        }
     }
 
     func bind0(local: SocketAddress, promise: Promise<Void>) {
@@ -127,7 +139,7 @@ class EmbeddedChannelCore : ChannelCore {
 public class EmbeddedChannel : Channel {
     public var closeFuture: Future<Void> { return channelcore.closePromise.futureResult }
 
-    private let channelcore: EmbeddedChannelCore = EmbeddedChannelCore()
+    private lazy var channelcore: EmbeddedChannelCore = EmbeddedChannelCore(pipeline: _pipeline)
 
     public var _unsafe: ChannelCore {
         return channelcore
@@ -151,6 +163,17 @@ public class EmbeddedChannel : Channel {
 
     init() {
         _pipeline = ChannelPipeline(channel: self)
+        
+        // we should just register it directly and this will never throw.
+        _ = try? register().wait()
+    }
+    
+    init(handler: ChannelHandler) throws {
+        _pipeline = ChannelPipeline(channel: self)
+        try _pipeline.add(handler: handler).wait()
+        
+        // we should just register it directly and this will never throw.
+        _ = try? register().wait()
     }
 
     public func setOption<T>(option: T, value: T.OptionType) throws where T : ChannelOption {
