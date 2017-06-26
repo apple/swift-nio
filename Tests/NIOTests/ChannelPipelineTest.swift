@@ -21,7 +21,9 @@ class ChannelPipelineTest: XCTestCase {
     func testAddAfterClose() throws {
         
         let channel = EmbeddedChannel()
-        try channel.close().wait()
+        _ = channel.close()
+        
+        channel.pipeline.removeHandlers()
         
         let handler = DummyHandler()
         defer {
