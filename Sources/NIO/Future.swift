@@ -19,10 +19,9 @@ import ConcurrencyHelpers
  
  If/when a version of this is added to the Standard library, that should be used here.  At that time, it may make sense to expose `resolve(FutureValue<T>)`.
  */
-private enum FutureValue<T> {
+public enum FutureValue<T> {
     case success(T)
     case failure(Error)
-    case incomplete
 }
 
 /** Internal list of callbacks.
@@ -164,7 +163,7 @@ public struct Promise<T> {
     }
     
     /** Internal only! */
-    fileprivate func _resolve(value: FutureValue<T>) {
+    private func _resolve(value: FutureValue<T>) {
         if futureResult.eventLoop.inEventLoop {
             _setValue(value: value)._run()
         } else {
@@ -259,35 +258,13 @@ public struct Promise<T> {
  */
 
 public final class Future<T> {
-    fileprivate var value: FutureValue<T> = .incomplete
+    fileprivate var value: FutureValue<T>? = nil
     fileprivate let _fullfilled = Atomic<Bool>(value: false)
     fileprivate let checkForPossibleDeadlock: Bool
     public let eventLoop: EventLoop
     
-    public var fulfilled: Bool {
+    internal var fulfilled: Bool {
         return _fullfilled.load()
-    }
-
-    public var result: T? {
-        get {
-            switch value {
-            case .incomplete, .failure(_):
-                return nil
-            case .success(let t):
-                return t
-            }
-        }
-    }
-    
-    public var error: Error? {
-        get {
-            switch value {
-            case .incomplete, .success(_):
-                return nil
-            case .failure(let e):
-                return e
-            }
-        }
     }
     
     /// Callbacks that should be run when this Future<> gets a value.
@@ -353,22 +330,19 @@ public extension Future {
     public func then<U>(callback: @escaping (T) throws -> Future<U>) -> Future<U> {
         let next = Promise<U>(eventLoop: eventLoop, checkForPossibleDeadlock: checkForPossibleDeadlock)
         _whenComplete {
-            switch self.value {
+            switch self.value! {
             case .success(let t):
                 do {
                     let futureU = try callback(t)
                     return futureU._addCallback {
-                        return next._setValue(value: futureU.value)
+                        return next._setValue(value: futureU.value!)
                     }
                 } catch let error {
                     return next._setValue(value: .failure(error))
                 }
             case .failure(let error):
                 return next._setValue(value: .failure(error))
-            default:
-                assert(false)
             }
-            return []
         }
         return next.futureResult
     }
@@ -421,22 +395,19 @@ public extension Future {
     public func thenIfError(callback: @escaping (Error) throws -> Future<T>) -> Future<T> {
         let next = Promise<T>(eventLoop: eventLoop, checkForPossibleDeadlock: checkForPossibleDeadlock)
         _whenComplete {
-            switch self.value {
+            switch self.value! {
             case .success(let t):
                 return next._setValue(value: .success(t))
             case .failure(let e):
                 do {
                     let t = try callback(e)
                     return t._addCallback {
-                        return next._setValue(value: t.value)
+                        return next._setValue(value: t.value!)
                     }
                 } catch let error {
                     return next._setValue(value: .failure(error))
                 }
-            default:
-                assert(false)
             }
-            return []
         }
         return next.futureResult
     }
@@ -449,13 +420,11 @@ public extension Future {
     /// Add a callback.  If there's already a value, invoke it and return the resulting list of new callback functions.
     fileprivate func _addCallback(callback: @escaping () -> CallbackList) -> CallbackList {
         assert(eventLoop.inEventLoop)
-        switch value {
-        case .incomplete:
+        if value == nil {
             callbacks.append(callback: callback)
             return CallbackList()
-        default:
-            return callback()
         }
+        return callback()
     }
     
     /// Add a callback.  If there's already a value, run as much of the chain as we can.
@@ -471,7 +440,7 @@ public extension Future {
     
     public func whenSuccess(callback: @escaping (T) -> ()) {
         _whenComplete {
-            if case .success(let t) = self.value {
+            if case .success(let t) = self.value! {
                 callback(t)
             }
             return CallbackList()
@@ -480,26 +449,32 @@ public extension Future {
     
     public func whenFailure(callback: @escaping (Error) -> ()) {
         _whenComplete {
-            if case .failure(let e) = self.value {
+            if case .failure(let e) = self.value! {
                 callback(e)
             }
             return CallbackList()
         }
     }
     
+    public func whenComplete(callback: @escaping (FutureValue<T>) -> ()) {
+        _whenComplete {
+            callback(self.value!)
+            return CallbackList()
+        }
+    }
+
+    
     /// Internal:  Set the value and return a list of callbacks that should be invoked as a result.
     fileprivate func _setValue(value: FutureValue<T>) -> CallbackList {
         assert(eventLoop.inEventLoop)
-        switch self.value {
-        case .incomplete:
+        if self.value == nil {
             self.value = value
             self._fullfilled.store(true)
             let callbacks = self.callbacks
             self.callbacks = CallbackList()
             return callbacks
-        default:
-            return CallbackList()
         }
+        return CallbackList()
     }
 }
 
@@ -517,7 +492,7 @@ public extension Future {
         var uvalue: U?
         
         _whenComplete { () -> CallbackList in
-            switch self.value {
+            switch self.value! {
             case .failure(let error):
                 return promise._setValue(value: .failure(error))
             case .success(let t):
@@ -529,14 +504,12 @@ public extension Future {
                     andlock.unlock()
                     tvalue = t
                 }
-            default:
-                assert(false)
             }
             return CallbackList()
         }
         
         other._whenComplete { () -> CallbackList in
-            switch other.value {
+            switch other.value! {
             case .failure(let error):
                 return promise._setValue(value: .failure(error))
             case .success(let u):
@@ -548,8 +521,6 @@ public extension Future {
                     andlock.unlock()
                     uvalue = u
                 }
-            default:
-                assert(false)
             }
             return CallbackList()
         }
@@ -582,7 +553,7 @@ extension Future {
             precondition(!eventLoop.inEventLoop, "wait() must not be called when on the EventLoop")
         }
         
-        var v: FutureValue <T> = .incomplete
+        var v: FutureValue <T>? = nil
         let lock = ConditionLock(value: 0)
         _whenComplete { () -> CallbackList in
             lock.lock()
@@ -593,13 +564,11 @@ extension Future {
         lock.lock(whenValue: 1)
         lock.unlock()
         
-        switch(v) {
+        switch(v!) {
         case .success(let result):
             return result
         case .failure(let error):
             throw error
-        case .incomplete:
-            fatalError()
         }
     }
 }
