@@ -66,7 +66,7 @@ extension ByteBufferTest {
                 ("testDiscardReadBytesCoW", testDiscardReadBytesCoW),
                 ("testDiscardReadBytesSlice", testDiscardReadBytesSlice),
                 ("testWithDataSlices", testWithDataSlices),
-                ("testEndianess", testEndianess),
+                ("testEndianness", testEndianness),
                 ("testExpansion", testExpansion),
                 ("testNotEnoughBytesToReadForIntegers", testNotEnoughBytesToReadForIntegers),
                 ("testNotEnoughBytesToReadForData", testNotEnoughBytesToReadForData),

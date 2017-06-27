@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 extension ByteBuffer {
-    private func toEndianess<T: EndianessInteger> (value: T, endianess: Endianess) -> T {
-        switch endianess {
+    private func toEndianness<T: EndiannessInteger> (value: T, endianness: Endianness) -> T {
+        switch endianness {
         case .little:
             return value.littleEndian
         case .big:
@@ -22,17 +22,17 @@ extension ByteBuffer {
         }
     }
 
-    public mutating func readInteger<T: EndianessInteger>(endianess: Endianess = .big) -> T? {
+    public mutating func readInteger<T: EndiannessInteger>(endianness: Endianness = .big) -> T? {
         guard self.readableBytes >= MemoryLayout<T>.size else {
             return nil
         }
 
-        let value: T = self.integer(at: self.readerIndex, endianess: endianess)! /* must work as we have enough bytes */
+        let value: T = self.integer(at: self.readerIndex, endianness: endianness)! /* must work as we have enough bytes */
         self.moveReaderIndex(forwardBy: MemoryLayout<T>.size)
         return value
     }
 
-    public func integer<T: EndianessInteger>(at index: Int, endianess: Endianess = Endianess.big) -> T? {
+    public func integer<T: EndiannessInteger>(at index: Int, endianness: Endianness = Endianness.big) -> T? {
         return self.withUnsafeBytes { ptr in
             if index + MemoryLayout<T>.size > ptr.count {
                 return nil
@@ -42,20 +42,20 @@ extension ByteBuffer {
                 valuePtr.copyBytes(from: UnsafeRawBufferPointer(start: ptr.baseAddress!.advanced(by: index),
                                                                 count: MemoryLayout<T>.size))
             }
-            return toEndianess(value: value, endianess: endianess)
+            return toEndianness(value: value, endianness: endianness)
         }
     }
 
     @discardableResult
-    public mutating func write<T: EndianessInteger>(integer: T, endianess: Endianess = .big) -> Int {
-        let bytesWritten = self.set(integer: integer, at: self.writerIndex, endianess: endianess)
+    public mutating func write<T: EndiannessInteger>(integer: T, endianness: Endianness = .big) -> Int {
+        let bytesWritten = self.set(integer: integer, at: self.writerIndex, endianness: endianness)
         self.moveWriterIndex(forwardBy: bytesWritten)
         return Int(bytesWritten)
     }
 
     @discardableResult
-    public mutating func set<T: EndianessInteger>(integer: T, at index: Int, endianess: Endianess = .big) -> Int {
-        var value = toEndianess(value: integer, endianess: endianess)
+    public mutating func set<T: EndiannessInteger>(integer: T, at index: Int, endianness: Endianness = .big) -> Int {
+        var value = toEndianness(value: integer, endianness: endianness)
         return Swift.withUnsafeBytes(of: &value) { ptr in
             self.set(bytes: ptr, at: index)
         }
@@ -103,10 +103,10 @@ extension UInt32 {
     }
 }
 
-public enum Endianess {
-    public static let host: Endianess = hostEndianess0()
+public enum Endianness {
+    public static let host: Endianness = hostEndianness0()
 
-    private static func hostEndianess0() -> Endianess {
+    private static func hostEndianness0() -> Endianness {
         let number: UInt32 = 0x12345678
         let converted = number.bigEndian
         if number == converted {
@@ -121,9 +121,9 @@ public enum Endianess {
 }
 
 
-// Extensions to allow convert to different Endianess.
+// Extensions to allow convert to different Endianness.
 
-extension UInt8 : EndianessInteger {
+extension UInt8 : EndiannessInteger {
     public var littleEndian: UInt8 {
         return self
     }
@@ -132,10 +132,10 @@ extension UInt8 : EndianessInteger {
         return self
     }
 }
-extension UInt16 : EndianessInteger { }
-extension UInt32 : EndianessInteger { }
-extension UInt64 : EndianessInteger { }
-extension Int8 : EndianessInteger {
+extension UInt16 : EndiannessInteger { }
+extension UInt32 : EndiannessInteger { }
+extension UInt64 : EndiannessInteger { }
+extension Int8 : EndiannessInteger {
     public var littleEndian: Int8 {
         return self
     }
@@ -144,11 +144,11 @@ extension Int8 : EndianessInteger {
         return self
     }
 }
-extension Int16 : EndianessInteger { }
-extension Int32 : EndianessInteger { }
-extension Int64 : EndianessInteger { }
+extension Int16 : EndiannessInteger { }
+extension Int32 : EndiannessInteger { }
+extension Int64 : EndiannessInteger { }
 
-public protocol EndianessInteger: Numeric {
+public protocol EndiannessInteger: Numeric {
 
     /// Returns the big-endian representation of the integer, changing the
     /// byte order if necessary.

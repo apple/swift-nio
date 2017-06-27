@@ -20,14 +20,14 @@ class ByteBufferTest: XCTestCase {
     private let allocator = ByteBufferAllocator()
     private var buf: ByteBuffer! = nil
 
-    private func setGetInt<T: Numeric & EndianessInteger>(index: Int, v: T) throws {
+    private func setGetInt<T: Numeric & EndiannessInteger>(index: Int, v: T) throws {
         var buffer = try allocator.buffer(capacity: 32)
 
         XCTAssertEqual(MemoryLayout<T>.size, buffer.set(integer: v, at: index))
         XCTAssertEqual(v, buffer.integer(at: index))
     }
 
-    private func writeReadInt<T: Numeric & EndianessInteger>(v: T) throws {
+    private func writeReadInt<T: Numeric & EndiannessInteger>(v: T) throws {
         var buffer = try allocator.buffer(capacity: 32)
         XCTAssertEqual(0, buffer.writerIndex)
         XCTAssertEqual(MemoryLayout<T>.size, buffer.write(integer: v))
@@ -456,19 +456,19 @@ class ByteBufferTest: XCTestCase {
         runTestForRemaining(string: testStringSuffix, buffer: buffer)
     }
 
-    func testEndianess() throws {
+    func testEndianness() throws {
         let value: UInt32 = 0x12345678
         buf.write(integer: value)
         let actualRead: UInt32 = buf.readInteger()!
         XCTAssertEqual(value, actualRead)
-        buf.write(integer: value, endianess: .big)
-        buf.write(integer: value, endianess: .little)
+        buf.write(integer: value, endianness: .big)
+        buf.write(integer: value, endianness: .little)
         buf.write(integer: value)
         let actual = buf.data(at: 4, length: 12)!
         let expected = Data(bytes: [0x12, 0x34, 0x56, 0x78, 0x78, 0x56, 0x34, 0x12, 0x12, 0x34, 0x56, 0x78])
         XCTAssertEqual(expected, actual)
-        let actualA: UInt32 = buf.readInteger(endianess: .big)!
-        let actualB: UInt32 = buf.readInteger(endianess: .little)!
+        let actualA: UInt32 = buf.readInteger(endianness: .big)!
+        let actualB: UInt32 = buf.readInteger(endianness: .little)!
         let actualC: UInt32 = buf.readInteger()!
         XCTAssertEqual(value, actualA)
         XCTAssertEqual(value, actualB)
@@ -500,7 +500,7 @@ class ByteBufferTest: XCTestCase {
             XCTAssertEqual(byteCount, written)
         }
 
-        func tryWith<T: EndianessInteger>(_ type: T.Type) {
+        func tryWith<T: EndiannessInteger>(_ type: T.Type) {
             initBuffer()
 
             let tooMany = (byteCount + 1)/MemoryLayout<T>.size
