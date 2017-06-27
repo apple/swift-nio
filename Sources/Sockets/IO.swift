@@ -20,8 +20,8 @@ public struct IOError: Swift.Error {
     public let errno: Int32
     public let reason: String?
     
-    public init(errno: Int32, reason: String) {
-        self.errno = errno
+    public init(errno errnoNumber: Int32, reason: String) {
+        self.errno = errnoNumber
         self.reason = reason
     }
 }
@@ -51,13 +51,21 @@ private func testForBlacklistedErrno(_ code: Int32) {
 
 func wrapSyscall(function: @autoclosure () -> String,
                  _ successCondition: (Int) -> Bool, _ fn: () -> Int) throws -> Int {
-    let result = fn()
-    guard successCondition(result) else {
-        let err = errno
-        testForBlacklistedErrno(err)
-        throw ioError(errno: err, function: function())
+    while true {
+        let result = fn()
+        if !successCondition(result) {
+            let err = errno
+            switch err {
+            case EINTR:
+                continue
+            case let err:
+                testForBlacklistedErrno(err)
+                throw ioError(errno: err, function: function())
+            }
+        } else {
+            return result
+        }
     }
-    return result
 }
 
 func wrapSyscall(_ successCondition: (Int) -> Bool,
@@ -93,13 +101,21 @@ func wrapSyscallMayBlock(_ successCondition: (Int) -> Bool,
 
 func wrapSyscall(function: @autoclosure () -> String,
                  _ successCondition: (Int32) -> Bool, _ fn: () -> Int32) throws -> Int32 {
-    let result = fn()
-    guard successCondition(result) else {
-        let err = errno
-        testForBlacklistedErrno(err)
-        throw ioError(errno: err, function: function())
+    while true {
+        let result = fn()
+        if !successCondition(result) {
+            let err = errno
+            switch err {
+            case EINTR:
+                continue
+            case let err:
+                testForBlacklistedErrno(err)
+                throw ioError(errno: err, function: function())
+            }
+        } else {
+            return result
+        }
     }
-    return result
 }
 
 func wrapSyscall(_ successCondition: (Int32) -> Bool,
