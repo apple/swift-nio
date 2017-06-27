@@ -83,27 +83,43 @@ public final class ServerBootstrap {
                 do {
                     try opts.applyAll(channel: serverChannel)
                     let f = serverChannel.register().then(callback: { (_) -> Future<()> in serverChannel.bind(local: local) })
-                    f.whenSuccess { () -> Void in
-                        promise.succeed(result: serverChannel)
-                    }
-                    f.cascadeFailure(promise: promise)
+                    f.whenComplete(callback: { v in
+                        switch v {
+                        case .failure(let err):
+                            promise.fail(error: err)
+                        case .success(_):
+                            promise.succeed(result: serverChannel)
+                        }
+                    })
                 } catch let err {
                     promise.fail(error: err)
                 }
             }
-            
+
+            func addAcceptHandlerAndFinishServerSetup() {
+                let f = serverChannel.pipeline.add(handler: AcceptHandler(childHandler: chHandler, childOptions: chOptions))
+                f.whenComplete(callback: { v in
+                    switch v {
+                    case .failure(let err):
+                        promise.fail(error: err)
+                    case .success(_):
+                        finishServerSetup()
+                    }
+                })
+            }
+
             if let serverHandler = h {
                 let future = serverChannel.pipeline.add(handler: serverHandler)
-                future.whenSuccess { () -> Void in
-                    let f = serverChannel.pipeline.add(handler: AcceptHandler(childHandler: chHandler, childOptions: chOptions))
-                    f.whenSuccess { () -> Void in finishServerSetup() }
-                    f.cascadeFailure(promise: promise)
-                }
-                future.cascadeFailure(promise: promise)
+                future.whenComplete(callback: { v in
+                    switch v {
+                    case .failure(let err):
+                        promise.fail(error: err)
+                    case .success(_):
+                        addAcceptHandlerAndFinishServerSetup()
+                    }
+                })
             } else {
-                let f = serverChannel.pipeline.add(handler: AcceptHandler(childHandler: chHandler, childOptions: chOptions))
-                f.whenSuccess { () -> Void in finishServerSetup() }
-                f.cascadeFailure(promise: promise)
+                addAcceptHandlerAndFinishServerSetup()
             }
         } catch let err {
             promise.fail(error: err)
@@ -129,17 +145,19 @@ public final class ServerBootstrap {
 
                 if let handler = childHandler {
                     let f = accepted.pipeline.add(handler: handler)
-                    f.whenSuccess { () -> Void in
-                        if ctx.eventLoop.inEventLoop {
-                            ctx.fireChannelRead(data: data)
-                        } else {
-                            ctx.eventLoop.execute {
+                    f.whenComplete(callback: { v in
+                        switch v {
+                        case .failure(let err):
+                            self.closeAndFire(ctx: ctx, accepted: accepted, err: err)
+                        case .success(_):
+                            if ctx.eventLoop.inEventLoop {
                                 ctx.fireChannelRead(data: data)
+                            } else {
+                                ctx.eventLoop.execute {
+                                    ctx.fireChannelRead(data: data)
+                                }
                             }
                         }
-                    }
-                    f.whenFailure( callback: { err in
-                        self.closeAndFire(ctx: ctx, accepted: accepted, err: err)
                     })
                 }
             } catch let err {
@@ -232,10 +250,14 @@ public final class ClientBootstrap {
                     let f = channel.register().then  { (_) -> Future<Void> in
                         fn(channel)
                     }
-                    f.whenSuccess { () -> Void in
-                        promise.succeed(result: channel)
-                    }
-                    f.cascadeFailure(promise: promise)
+                    f.whenComplete(callback: { v in
+                        switch v {
+                        case .failure(let err):
+                            promise.fail(error: err)
+                        case .success(_):
+                            promise.succeed(result: channel)
+                        }
+                    })
                 } catch let err {
                     promise.fail(error: err)
                 }
@@ -243,8 +265,14 @@ public final class ClientBootstrap {
             
             if let clientHandler = h {
                 let future = channel.pipeline.add(handler: clientHandler)
-                future.whenSuccess { () -> Void in finishClientSetup() }
-                future.cascadeFailure(promise: promise)
+                future.whenComplete(callback: { v in
+                    switch v {
+                    case .failure(let err):
+                        promise.fail(error: err)
+                    case .success(_):
+                        finishClientSetup()
+                    }
+                })
             } else {
                 finishClientSetup()
             }
