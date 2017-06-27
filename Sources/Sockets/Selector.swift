@@ -22,22 +22,22 @@ import Foundation
     import Darwin
 #endif
 
-public final class Selector {
+public final class Selector<R: Registration> {
     private var open: Bool
-#if os(Linux)
+    #if os(Linux)
     private typealias EventType = epoll_event
     private let eventsCapacity = 2048
     private let eventfd: Int32
-#else
+    #else
     private typealias EventType = kevent
     private let eventsCapacity = 2048
     // TODO: Just reserve 0 is most likely not the best idea, need to think about a better way to handle this.
-    private static let EvUserIdent = UInt(0)
-#endif
+    #endif
+
 
     private let fd: Int32
     private let events: UnsafeMutablePointer<EventType>
-    private var registrations = [Int: Registration]()
+    private var registrations = [Int: R]()
 
     public init() throws {
         events = UnsafeMutablePointer.allocate(capacity: eventsCapacity)
@@ -68,7 +68,7 @@ public final class Selector {
         self.open = true
 
         var event = kevent()
-        event.ident = Selector.EvUserIdent
+        event.ident = 0
         event.filter = Int16(EVFILT_USER)
         event.fflags = UInt32(NOTE_FFNOP)
         event.data = 0
@@ -140,7 +140,7 @@ public final class Selector {
         }
     }
 
-    private func register_kqueue(selectable: Selectable, interested: InterestedEvent, oldInterested: InterestedEvent?) throws {
+    private func register_kqueue<S: Selectable>(selectable: S, interested: InterestedEvent, oldInterested: InterestedEvent?) throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't register kqueue on selector as it's not open anymore.")
         }
@@ -224,7 +224,7 @@ public final class Selector {
     }
 #endif
 
-    public func register(selectable: Selectable, interested: InterestedEvent = .read, attachment: AnyObject? = nil) throws {
+    public func register<S: Selectable>(selectable: S, interested: InterestedEvent = .read, makeRegistration: (InterestedEvent) -> R) throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't register selector as it's not open anymore.")
         }
@@ -241,10 +241,10 @@ public final class Selector {
 #else
         try register_kqueue(selectable: selectable, interested: interested, oldInterested: nil)
 #endif
-        registrations[Int(selectable.descriptor)] = Registration(selectable: selectable, interested: interested,  attachment: attachment)
+        registrations[Int(selectable.descriptor)] = makeRegistration(interested)
     }
 
-    public func reregister(selectable: Selectable, interested: InterestedEvent) throws {
+    public func reregister<S: Selectable>(selectable: S, interested: InterestedEvent) throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't re-register selector as it's not open anymore.")
         }
@@ -266,7 +266,7 @@ public final class Selector {
         registrations[Int(selectable.descriptor)] = reg
     }
 
-    public func deregister(selectable: Selectable) throws {
+    public func deregister<S: Selectable>(selectable: S) throws {
         let reg = registrations.removeValue(forKey: Int(selectable.descriptor))
         guard reg != nil else {
             return
@@ -282,7 +282,7 @@ public final class Selector {
     }
 
 
-    public func whenReady(strategy: SelectorStrategy, _ fn: (SelectorEvent) throws -> Void) throws -> Void {
+    public func whenReady(strategy: SelectorStrategy, _ fn: (SelectorEvent<R>) throws -> Void) throws -> Void {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't call whenReady for selector as it's not open anymore.")
         }
@@ -304,7 +304,7 @@ public final class Selector {
                     SelectorEvent(
                         isReadable: (ev.events & EPOLLIN.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
                         isWritable: (ev.events & EPOLLOUT.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
-                        selectable: registration.selectable, attachment: registration.attachment))
+                        registration: registration))
             }
         }
 #else
@@ -319,12 +319,12 @@ public final class Selector {
         }
         for i in 0..<ready {
             let ev = events[i]
-            if ev.ident != Selector.EvUserIdent {
+            if ev.ident != 0 {
                 guard let registration = registrations[Int(ev.ident)] else {
                     // Just ignore as this means the user deregistered already in between. This can happen as kevent returns two different events, one for EVFILT_READ and one for EVFILT_WRITE.
                     continue
                 }
-                try fn((SelectorEvent(isReadable: Int32(ev.filter) == EVFILT_READ, isWritable: Int32(ev.filter) == EVFILT_WRITE, selectable: registration.selectable, attachment: registration.attachment)))
+                try fn((SelectorEvent(isReadable: Int32(ev.filter) == EVFILT_READ, isWritable: Int32(ev.filter) == EVFILT_WRITE, registration: registration)))
             }
         }
 #endif
@@ -355,7 +355,7 @@ public final class Selector {
         let _ = CEventfd.eventfd_write(eventfd, 1)
 #else
         var event = kevent()
-        event.ident = Selector.EvUserIdent
+        event.ident = 0
         event.filter = Int16(EVFILT_USER)
         event.fflags = UInt32(NOTE_TRIGGER | NOTE_FFNOP)
         event.data = 0
@@ -366,30 +366,16 @@ public final class Selector {
     }
 }
 
-private struct Registration {
-    fileprivate(set) var interested: InterestedEvent
-    fileprivate(set) var selectable: Selectable
-    fileprivate(set) var attachment: AnyObject?
+public struct SelectorEvent<R> {
 
-    init(selectable: Selectable, interested: InterestedEvent, attachment: AnyObject?) {
-        self.selectable = selectable
-        self.interested = interested
-        self.attachment = attachment
-    }
-}
-
-public struct SelectorEvent {
-
+    public let registration: R
     public fileprivate(set) var isReadable: Bool
     public fileprivate(set) var isWritable: Bool
-    public fileprivate(set) var selectable: Selectable
-    public fileprivate(set) var attachment: AnyObject?
 
-    init(isReadable: Bool, isWritable: Bool, selectable: Selectable, attachment: AnyObject?) {
+    init(isReadable: Bool, isWritable: Bool, registration: R) {
         self.isReadable = isReadable
         self.isWritable = isWritable
-        self.selectable = selectable
-        self.attachment = attachment
+        self.registration = registration
     }
 }
 

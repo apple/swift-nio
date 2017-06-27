@@ -19,5 +19,5 @@ public protocol Selectable {
 
     var open: Bool { get }
 
-    func close() throws;
+    func close() throws
 }

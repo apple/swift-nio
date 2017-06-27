@@ -370,6 +370,10 @@ final class SocketChannel : BaseSocketChannel<Socket> {
         try super.init(socket: socket, eventLoop: eventLoop)
     }
 
+    public override func registrationFor(interested: InterestedEvent) -> NIORegistration {
+        return .socketChannel(self, interested)
+    }
+
     fileprivate override init(socket: Socket, eventLoop: SelectableEventLoop) throws {
         try socket.setNonBlocking()
         try super.init(socket: socket, eventLoop: eventLoop)
@@ -465,6 +469,10 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         }
         self.group = group
         try super.init(socket: serverSocket, eventLoop: eventLoop)
+    }
+
+    public override func registrationFor(interested: InterestedEvent) -> NIORegistration {
+        return .serverSocketChannel(self, interested)
     }
 
     override fileprivate func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
@@ -581,11 +589,15 @@ public protocol Channel : class, ChannelOutboundInvoker {
 }
 
 protocol SelectableChannel : Channel {
-    var selectable: Selectable { get }
+    associatedtype SelectableType: Selectable
+
+    var selectable: SelectableType { get }
     var interestedEvent: InterestedEvent { get }
 
     func writable()
     func readable()
+
+    func registrationFor(interested: InterestedEvent) -> NIORegistration
 }
 
 extension Channel {
@@ -631,8 +643,15 @@ extension Channel {
 }
 
 class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
+    typealias SelectableType = T
 
-    public final var selectable: Selectable { return socket }
+    func registrationFor(interested: InterestedEvent) -> NIORegistration {
+        fatalError("must override")
+    }
+
+    var selectable: T {
+        return self.socket
+    }
 
     public final var _unsafe: ChannelCore { return self }
 

@@ -32,14 +32,36 @@ public class Buffer {
     }
 }
 
-func deregisterAndClose(selector: Sockets.Selector, s: Selectable) {
+func deregisterAndClose<S: Selectable, R>(selector: Sockets.Selector<R>, s: S) {
     do { try selector.deregister(selectable: s) } catch {}
     do { try s.close() } catch {}
 }
 
+enum SocketRegistration: Registration {
+    case socket(Socket, Buffer, InterestedEvent)
+    case serverSocket(ServerSocket, Buffer?, InterestedEvent)
+    var interested: InterestedEvent {
+        get {
+            switch self {
+            case .socket(_, _, let i):
+                return i
+            case .serverSocket(_, _, let i):
+                return i
+            }
+        }
+        set {
+            switch self {
+            case .socket(let s, let b, _):
+                self = .socket(s, b, newValue)
+            case .serverSocket(let s, let b, _):
+                self = .serverSocket(s, b, newValue)
+            }
+        }
+    }
+}
 
 // Bootstrap the server and create the Selector on which we register our sockets.
-let selector = try Sockets.Selector()
+let selector = try Sockets.Selector<SocketRegistration>()
 
 defer {
     do { try selector.close() } catch { }
@@ -50,7 +72,7 @@ try server.setNonBlocking()
 
 
 // this will register with InterestedEvent.READ and no attachment
-try selector.register(selectable: server)
+try selector.register(selectable: server) { i in .serverSocket(server, nil, i) }
 
 // cleanup
 defer {
@@ -66,41 +88,38 @@ while true {
         if ev.isReadable {
 
             // We can handle either read(...) or accept()
-            if ev.selectable is Socket {
+            switch ev.registration {
+            case .socket(let socket, let buffer, _):
                 // We stored the Buffer before as attachment so get it and clear the limit / offset.
-                let buffer = ev.attachment as! Buffer
                 buffer.clear()
                 
-                let s = ev.selectable as! Socket
                 do {
-                    switch try s.read(data: &buffer.data) {
+                    switch try socket.read(data: &buffer.data) {
                     case .processed(let read):
                         buffer.limit = Int(read)
 
-                        switch try s.write(data: buffer.data.subdata(in: buffer.offset..<buffer.limit)) {
+                        switch try socket.write(data: buffer.data.subdata(in: buffer.offset..<buffer.limit)) {
                         case .processed(let written):
                             buffer.offset += Int(written)
                             
                             // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
                             // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
                             if buffer.offset < buffer.limit {
-                                try selector.reregister(selectable: s, interested: InterestedEvent.write)
+                                try selector.reregister(selectable: socket, interested: InterestedEvent.write)
                             }
                             
                         case .wouldBlock:
                             // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
                             // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
-                            try selector.reregister(selectable: s, interested: InterestedEvent.write)
+                            try selector.reregister(selectable: socket, interested: InterestedEvent.write)
                         }
                     case .wouldBlock:
                         ()
                     }
                 } catch {
-                    deregisterAndClose(selector: selector, s: s)
+                    deregisterAndClose(selector: selector, s: socket)
                 }
-            } else if ev.selectable is ServerSocket {
-                let socket = ev.selectable as! ServerSocket
-
+            case .serverSocket(let socket, _, _):
                 // Accept new connections until there are no more in the backlog
                 while let accepted = try socket.accept() {
                     try accepted.setNonBlocking()
@@ -109,29 +128,29 @@ while true {
 
                     // Allocate an 8kb buffer for reading and writing and register the socket with the selector
                     let buffer = Buffer(capacity: 8 * 1024)
-                    try selector.register(selectable: accepted, attachment: buffer)
+                    try selector.register(selectable: accepted) { i in .socket(accepted, buffer, i) }
                 }
             }
         } else if ev.isWritable {
-            if ev.selectable is Socket {
-                let buffer = ev.attachment as! Buffer
-
-                let s = ev.selectable as! Socket
+            switch ev.registration {
+            case .socket(let socket, let buffer, _):
                 do {
-                    switch try s.write(data: buffer.data.subdata(in: buffer.offset..<buffer.limit)) {
+                    switch try socket.write(data: buffer.data.subdata(in: buffer.offset..<buffer.limit)) {
                     case .processed(let written):
                         buffer.offset += Int(written)
 
                         if buffer.offset == buffer.limit {
                             // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socket to read.
-                            try selector.reregister(selectable: s, interested: InterestedEvent.read)
+                            try selector.reregister(selectable: socket, interested: InterestedEvent.read)
                         }
                     case .wouldBlock:
                         ()
                     }
                 } catch {
-                    deregisterAndClose(selector: selector, s: s)
+                    deregisterAndClose(selector: selector, s: socket)
                 }
+            default:
+                fatalError("internal error: writable server socket")
             }
         }
     }

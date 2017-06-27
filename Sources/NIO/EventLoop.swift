@@ -65,10 +65,34 @@ extension EventLoop {
     }
 }
 
+enum NIORegistration: Registration {
+    case serverSocketChannel(ServerSocketChannel, InterestedEvent)
+    case socketChannel(SocketChannel, InterestedEvent)
+
+    var interested: InterestedEvent {
+        set {
+            switch self {
+            case .serverSocketChannel(let c, _):
+                self = .serverSocketChannel(c, newValue)
+            case .socketChannel(let c, _):
+                self = .socketChannel(c, newValue)
+            }
+        }
+        get {
+            switch self {
+            case .serverSocketChannel(_, let i):
+                return i
+            case .socketChannel(_, let i):
+                return i
+            }
+        }
+    }
+
+}
 
 // TODO: Implement scheduling tasks in the future (a.k.a ScheduledExecutoreService
 final class SelectableEventLoop : EventLoop {
-    private let selector: Sockets.Selector
+    private let selector: Sockets.Selector<NIORegistration>
     private var thread: pthread_t?
     private var tasks: [() -> ()]
     private let tasksLock = Lock()
@@ -94,17 +118,17 @@ final class SelectableEventLoop : EventLoop {
         _storageRefs.deallocate(capacity: Socket.writevLimit)
     }
     
-    func register(channel: SelectableChannel) throws {
+    func register<C: SelectableChannel>(channel: C) throws {
         assert(inEventLoop)
-        try selector.register(selectable: channel.selectable, interested: channel.interestedEvent, attachment: channel)
+        try selector.register(selectable: channel.selectable, interested: channel.interestedEvent, makeRegistration: channel.registrationFor(interested:))
     }
 
-    func deregister(channel: SelectableChannel) throws {
+    func deregister<C: SelectableChannel>(channel: C) throws {
         assert(inEventLoop)
         try selector.deregister(selectable: channel.selectable)
     }
     
-    func reregister(channel: SelectableChannel) throws {
+    func reregister<C: SelectableChannel>(channel: C) throws {
         assert(inEventLoop)
         try selector.reregister(selectable: channel.selectable, interested: channel.interestedEvent)
     }
@@ -122,6 +146,32 @@ final class SelectableEventLoop : EventLoop {
         _ = try? selector.wakeup()
     }
 
+    private func handleEvent<R: Registration, C: SelectableChannel>(_ ev: SelectorEvent<R>, channel: C) {
+        guard handleEvents(channel) else {
+            return
+        }
+
+        if ev.isWritable {
+            channel.writable()
+
+            guard handleEvents(channel) else {
+                return
+            }
+        }
+
+        if ev.isReadable {
+            channel.readable()
+
+            guard handleEvents(channel) else {
+                return
+            }
+        }
+
+        // Ensure we never reach here if the channel is not open anymore.
+        assert(channel.open)
+
+    }
+
     func run() throws {
         thread = pthread_self()
         defer {
@@ -131,33 +181,12 @@ final class SelectableEventLoop : EventLoop {
         while !closed {
             // Block until there are events to handle or the selector was woken up
             try selector.whenReady(strategy: .block) { ev in
-
-                guard let channel = ev.attachment as? SelectableChannel else {
-                    fatalError("ev.attachment has type \(type(of: ev.attachment)), expected Channel")
+                switch ev.registration {
+                case .serverSocketChannel(let chan, _):
+                    self.handleEvent(ev, channel: chan)
+                case .socketChannel(let chan, _):
+                    self.handleEvent(ev, channel: chan)
                 }
-
-                guard handleEvents(channel) else {
-                    return
-                }
-
-                if ev.isWritable {
-                    channel.writable()
-                    
-                    guard handleEvents(channel) else {
-                        return
-                    }
-                }
-
-                if ev.isReadable {
-                    channel.readable()
-                    
-                    guard handleEvents(channel) else {
-                        return
-                    }
-                }
-
-                // Ensure we never reach here if the channel is not open anymore.
-                assert(channel.open)
             }
             
             // TODO: Better locking
@@ -172,7 +201,7 @@ final class SelectableEventLoop : EventLoop {
         }
     }
 
-    private func handleEvents(_ channel: SelectableChannel) -> Bool {
+    private func handleEvents<C: SelectableChannel>(_ channel: C) -> Bool {
         if channel.open {
             return true
         }

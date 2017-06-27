@@ -125,7 +125,7 @@ class EmbeddedChannelCore : ChannelCore {
 public class EmbeddedChannel : Channel {
     public var closeFuture: Future<Void> { return channelcore.closePromise.futureResult }
 
-    private lazy var channelcore: EmbeddedChannelCore = EmbeddedChannelCore(pipeline: _pipeline)
+    private lazy var channelcore: EmbeddedChannelCore = EmbeddedChannelCore(pipeline: self._pipeline)
 
     public var _unsafe: ChannelCore {
         return channelcore

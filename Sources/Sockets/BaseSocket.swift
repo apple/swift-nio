@@ -28,6 +28,9 @@ import Foundation
     let sysSOCK_STREAM = SOCK_STREAM
 #endif
 
+public protocol Registration {
+    var interested: InterestedEvent { get set }
+}
 
 public class BaseSocket : Selectable {
     public let descriptor: Int32
