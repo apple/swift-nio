@@ -20,8 +20,8 @@ public protocol EventLoop: EventLoopGroup {
     var inEventLoop: Bool { get }
     func execute(task: @escaping () -> ())
     func submit<T>(task: @escaping () throws-> (T)) -> Future<T>
-    func newPromise<T>(type: T.Type) -> Promise<T>
-    func newFailedFuture<T>(type: T.Type, error: Error) -> Future<T>
+    func newPromise<T>() -> Promise<T>
+    func newFailedFuture<T>(error: Error) -> Future<T>
     func newSucceedFuture<T>(result: T) -> Future<T>
 }
 
@@ -40,18 +40,18 @@ extension EventLoop {
         return promise.futureResult
     }
 
-    public func newPromise<T>(type: T.Type) -> Promise<T> {
+    public func newPromise<T>() -> Promise<T> {
         return Promise<T>(eventLoop: self, checkForPossibleDeadlock: true)
     }
 
-    public func newFailedFuture<T>(type: T.Type, error: Error) -> Future<T> {
-        let promise = newPromise(type: type)
+    public func newFailedFuture<T>(error: Error) -> Future<T> {
+        let promise: Promise<T> = newPromise()
         promise.fail(error: error)
         return promise.futureResult
     }
 
     public func newSucceedFuture<T>(result: T) -> Future<T> {
-        let promise = newPromise(type: type(of: result))
+        let promise: Promise<T> = newPromise()
         promise.succeed(result: result)
         return promise.futureResult
     }

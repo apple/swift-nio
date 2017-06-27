@@ -33,7 +33,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
     public unowned let channel: Channel
 
     public func add(name: String? = nil, handler: ChannelHandler, first: Bool = false) -> Future<Void> {
-        let promise = eventLoop.newPromise(type: Void.self)
+        let promise: Promise<Void> = eventLoop.newPromise()
         if eventLoop.inEventLoop {
             add0(name: name, handler: handler, first: first, promise: promise)
         } else {
@@ -122,7 +122,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
     }
     
     public func remove(handler: ChannelHandler) -> Future<Bool> {
-        let promise = eventLoop.newPromise(type: Bool.self)
+        let promise: Promise<Bool> = eventLoop.newPromise()
         if eventLoop.inEventLoop {
             remove0(handler: handler, promise: promise)
         } else {
@@ -202,7 +202,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         assert(eventLoop.inEventLoop)
         
         while let ctx = contexts.first {
-            remove0(handler: ctx.handler, promise:  eventLoop.newPromise(type: Bool.self))
+            remove0(handler: ctx.handler, promise:  eventLoop.newPromise())
         }
         
         // We need to set the next reference to nil to ensure we not leak memory due a cycle-reference.

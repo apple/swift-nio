@@ -59,7 +59,7 @@ public final class ServerBootstrap {
             let address = try SocketAddresses.newAddress(for: host, on: port)
             return bind0(evGroup: evGroup, local: address)
         } catch let err {
-            return evGroup.next().newFailedFuture(type: Channel.self, error: err)
+            return evGroup.next().newFailedFuture(error: err)
         }
     }
 
@@ -75,7 +75,7 @@ public final class ServerBootstrap {
         let chHandler = childHandler
         let chOptions = childOptions
         
-        let promise = eventLoop.newPromise(type: Channel.self)
+        let promise: Promise<Channel> = eventLoop.newPromise()
         do {
             let serverChannel = try ServerSocketChannel(eventLoop: eventLoop as! SelectableEventLoop, group: chEvGroup)
             
@@ -207,7 +207,7 @@ public final class ClientBootstrap {
                 return channel.bind(local: address)
             })
         } catch let err {
-            return evGroup.next().newFailedFuture(type: Channel.self, error: err)
+            return evGroup.next().newFailedFuture(error: err)
         }
     }
     
@@ -226,7 +226,7 @@ public final class ClientBootstrap {
                 return channel.connect(remote: address)
             })
         } catch let err {
-            return evGroup.next().newFailedFuture(type: Channel.self, error: err)
+            return evGroup.next().newFailedFuture(error: err)
         }
     }
     
@@ -241,7 +241,7 @@ public final class ClientBootstrap {
         let h = handler
         let opts = options
         
-        let promise = eventLoop.newPromise(type: Channel.self)
+        let promise: Promise<Channel> = eventLoop.newPromise()
         do {
             let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop)
             

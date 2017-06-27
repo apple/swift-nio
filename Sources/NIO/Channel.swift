@@ -1005,7 +1005,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
             // Call before triggering the close of the Channel.
             pipeline.fireChannelReadComplete0()
-            close0(promise: eventLoop.newPromise(type: Void.self), error: err)
+            close0(promise: eventLoop.newPromise(), error: err)
 
             return
 
@@ -1062,7 +1062,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             try selectableEventLoop.deregister(channel: self)
         } catch let err {
             pipeline.fireErrorCaught0(error: err)
-            close0(promise: eventLoop.newPromise(type: Void.self), error: err)
+            close0(promise: eventLoop.newPromise(), error: err)
         }
     }
 
@@ -1080,7 +1080,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             try selectableEventLoop.reregister(channel: self)
         } catch let err {
             pipeline.fireErrorCaught0(error: err)
-            close0(promise: eventLoop.newPromise(type: Void.self), error: err)
+            close0(promise: eventLoop.newPromise(), error: err)
         }
     }
 
@@ -1095,7 +1095,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             return true
         } catch let err {
             pipeline.fireErrorCaught0(error: err)
-            close0(promise: eventLoop.newPromise(type: Void.self), error: err)
+            close0(promise: eventLoop.newPromise(), error: err)
             return false
         }
     }
@@ -1117,7 +1117,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
                     return true
                 }
             } catch let err {
-                close0(promise: eventLoop.newPromise(type: Void.self), error: err)
+                close0(promise: eventLoop.newPromise(), error: err)
 
                 // we handled all writes
                 return true
@@ -1129,7 +1129,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     fileprivate init(socket: T, eventLoop: SelectableEventLoop) throws {
         self.socket = socket
         self.selectableEventLoop = eventLoop
-        self.closePromise = eventLoop.newPromise(type: Void.self)
+        self.closePromise = eventLoop.newPromise()
         self.pendingWrites = PendingWrites(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
         self._pipeline = ChannelPipeline(channel: self)
     }

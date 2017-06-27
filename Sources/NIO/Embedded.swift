@@ -24,22 +24,8 @@ class EmbeddedEventLoop : EventLoop {
 
     // Would be better to have this as a Queue
     var tasks: [() -> ()] = Array()
-
-    public func submit<T>(task: @escaping () throws-> (T)) -> Future<T> {
-        let promise = Promise<T>(eventLoop: self, checkForPossibleDeadlock: false)
-        
-        execute(task: {() -> () in
-            do {
-                promise.succeed(result: try task())
-            } catch let err {
-                promise.fail(error: err)
-            }
-        })
-        
-        return promise.futureResult
-    }
     
-    public func newPromise<T>(type: T.Type) -> Promise<T> {
+    public func newPromise<T>() -> Promise<T> {
         return Promise<T>(eventLoop: self, checkForPossibleDeadlock: false)
     }
     
@@ -83,7 +69,7 @@ class EmbeddedChannelCore : ChannelCore {
     private unowned let pipeline: ChannelPipeline
 
     init(pipeline: ChannelPipeline) {
-        closePromise = eventLoop.newPromise(type: Void.self)
+        closePromise = eventLoop.newPromise()
         self.pipeline = pipeline
     }
     
