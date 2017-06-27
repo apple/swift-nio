@@ -168,6 +168,7 @@ public final class ServerBootstrap {
         private func closeAndFire(ctx: ChannelHandlerContext, accepted: SocketChannel, err: Error) {
             _ = accepted.close()
             if ctx.eventLoop.inEventLoop {
+                ctx.fireErrorCaught(error: err)
             } else {
                 ctx.eventLoop.execute {
                     ctx.fireErrorCaught(error: err)
