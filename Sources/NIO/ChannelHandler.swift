@@ -21,14 +21,14 @@ public protocol ChannelHandler : class {
 }
 
 public protocol ChannelOutboundHandler : ChannelHandler {
-    func register(ctx: ChannelHandlerContext, promise: Promise<Void>)
-    func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>)
-    func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>)
-    func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>)
+    func register(ctx: ChannelHandlerContext, promise: Promise<Void>?)
+    func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>?)
+    func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>?)
+    func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?)
     func flush(ctx: ChannelHandlerContext)
     // TODO: Think about make this more flexible in terms of influence the allocation that is used to read the next amount of data
     func read(ctx: ChannelHandlerContext)
-    func close(ctx: ChannelHandlerContext, promise: Promise<Void>)
+    func close(ctx: ChannelHandlerContext, promise: Promise<Void>?)
 }
 
 public protocol ChannelInboundHandler : ChannelHandler {
@@ -57,19 +57,19 @@ public extension ChannelHandler {
 
 public extension ChannelOutboundHandler {
     
-    public func register(ctx: ChannelHandlerContext, promise: Promise<Void>) {
+    public func register(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
         ctx.register(promise: promise)
     }
     
-    public func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>) {
+    public func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>?) {
         ctx.bind(local: local, promise: promise)
     }
     
-    public func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>) {
+    public func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>?) {
         ctx.connect(remote: remote, promise: promise)
     }
     
-    public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>) {
+    public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
         ctx.write(data: data, promise: promise)
     }
     
@@ -81,7 +81,7 @@ public extension ChannelOutboundHandler {
         ctx.read()
     }
     
-    public func close(ctx: ChannelHandlerContext, promise: Promise<Void>) {
+    public func close(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
         ctx.close(promise: promise)
     }
 }

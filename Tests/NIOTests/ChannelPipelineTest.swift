@@ -81,12 +81,11 @@ class ChannelPipelineTest: XCTestCase {
             self.fn = fn
         }
         
-        public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>) {
-            
+        public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
             do {
                 ctx.write(data: try fn(data), promise: promise)
             } catch let err {
-                promise.fail(error: err)
+                promise!.fail(error: err)
             }
         }
     }

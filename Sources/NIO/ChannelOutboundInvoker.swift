@@ -17,51 +17,63 @@ import Sockets
 
 public protocol ChannelOutboundInvoker {
     func register() -> Future<Void>
-    @discardableResult func register(promise: Promise<Void>) -> Future<Void>
+    func register(promise: Promise<Void>?)
     func bind(local: SocketAddress) -> Future<Void>
-    @discardableResult func bind(local: SocketAddress, promise: Promise<Void>) -> Future<Void>
+    func bind(local: SocketAddress, promise: Promise<Void>?)
 
     func connect(remote: SocketAddress) -> Future<Void>
-    @discardableResult func connect(remote: SocketAddress, promise: Promise<Void>) -> Future<Void>
+    func connect(remote: SocketAddress, promise: Promise<Void>?)
     
     func write(data: IOData) -> Future<Void>
-    @discardableResult func write(data: IOData, promise: Promise<Void>) -> Future<Void>
+    func write(data: IOData, promise: Promise<Void>?)
 
     func flush()
     func read()
     
     func writeAndFlush(data: IOData) -> Future<Void>
-    @discardableResult func writeAndFlush(data: IOData, promise: Promise<Void>) -> Future<Void>
+    func writeAndFlush(data: IOData, promise: Promise<Void>?)
 
     func close() -> Future<Void>
-    @discardableResult func close(promise: Promise<Void>) -> Future<Void>
+    func close(promise: Promise<Void>?)
     
     var eventLoop: EventLoop { get }
 }
 
 public extension ChannelOutboundInvoker {
     public func register() -> Future<Void> {
-        return register(promise: newPromise())
+        let promise = newPromise()
+        register(promise: promise)
+        return promise.futureResult
     }
     
     public func bind(local: SocketAddress) -> Future<Void> {
-        return bind(local: local, promise: newPromise())
+        let promise = newPromise()
+        bind(local: local, promise: promise)
+        return promise.futureResult
     }
     
     public func connect(remote: SocketAddress) -> Future<Void> {
-        return connect(remote: remote, promise: newPromise())
+        let promise = newPromise()
+        connect(remote: remote, promise: promise)
+        return promise.futureResult
     }
     
     public func write(data: IOData) -> Future<Void> {
-        return write(data: data, promise: newPromise())
+        let promise = newPromise()
+        write(data: data, promise: promise)
+        return promise.futureResult
     }
     
     public func writeAndFlush(data: IOData) -> Future<Void> {
-        return writeAndFlush(data: data, promise: newPromise())
+        let promise = newPromise()
+        writeAndFlush(data: data, promise: promise)
+        return promise.futureResult
     }
     
     public func close() -> Future<Void> {
-        return close(promise: newPromise())
+        let promise = newPromise()
+        close(promise: promise)
+        return promise.futureResult
     }
     
     private func newPromise() -> Promise<Void> {

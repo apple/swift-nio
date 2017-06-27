@@ -77,8 +77,8 @@ class EmbeddedChannelCore : ChannelCore {
 
     var outboundBuffer: [Any] = []
 
-    func close0(promise: Promise<Void>, error: Error) {
-        promise.succeed(result: ())
+    func close0(error: Error, promise: Promise<Void>?) {
+        promise?.succeed(result: ())
         
         // As we called register() in the constructor of EmbeddedChannel we also need to ensure we call unregistered here.
         pipeline.fireChannelUnregistered0()
@@ -91,21 +91,21 @@ class EmbeddedChannelCore : ChannelCore {
         }
     }
 
-    func bind0(local: SocketAddress, promise: Promise<Void>) {
-        promise.succeed(result: ())
+    func bind0(local: SocketAddress, promise: Promise<Void>?) {
+        promise?.succeed(result: ())
     }
 
-    func connect0(remote: SocketAddress, promise: Promise<Void>) {
-        promise.succeed(result: ())
+    func connect0(remote: SocketAddress, promise: Promise<Void>?) {
+        promise?.succeed(result: ())
     }
 
-    func register0(promise: Promise<Void>) {
-        promise.succeed(result: ())
+    func register0(promise: Promise<Void>?) {
+        promise?.succeed(result: ())
     }
 
-    func write0(data: IOData, promise: Promise<Void>) {
+    func write0(data: IOData, promise: Promise<Void>?) {
         outboundBuffer.append(data.forceAsByteBuffer())
-        promise.succeed(result: ())
+        promise?.succeed(result: ())
     }
 
     func flush0() {

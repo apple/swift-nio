@@ -18,7 +18,9 @@ import NIO
 public class EchoHandler: ChannelInboundHandler {
 
     public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
-        _ = ctx.write(data: data)
+        // As we are not really interested getting notified on success or failure we just pass nil as promise to
+        // reduce allocations.
+        ctx.write(data: data, promise: nil)
     }
 
     // Flush it out. This can make use of gathering writes if multiple buffers are pending
@@ -28,7 +30,7 @@ public class EchoHandler: ChannelInboundHandler {
 
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         print("error: ", error)
-        let _ = ctx.close()
+        ctx.close(promise: nil)
     }
 }
 let group = try MultiThreadedEventLoopGroup(numThreads: 1)
