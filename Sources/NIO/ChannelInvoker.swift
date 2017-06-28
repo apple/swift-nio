@@ -11,8 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-
-import Foundation
 import Sockets
 
 public protocol ChannelOutboundInvoker {
@@ -20,19 +18,19 @@ public protocol ChannelOutboundInvoker {
     func register(promise: Promise<Void>?)
     func bind(local: SocketAddress) -> Future<Void>
     func bind(local: SocketAddress, promise: Promise<Void>?)
-
+    
     func connect(remote: SocketAddress) -> Future<Void>
     func connect(remote: SocketAddress, promise: Promise<Void>?)
     
     func write(data: IOData) -> Future<Void>
     func write(data: IOData, promise: Promise<Void>?)
-
+    
     func flush()
     func read()
     
     func writeAndFlush(data: IOData) -> Future<Void>
     func writeAndFlush(data: IOData, promise: Promise<Void>?)
-
+    
     func close() -> Future<Void>
     func close(promise: Promise<Void>?)
     
@@ -80,3 +78,26 @@ public extension ChannelOutboundInvoker {
         return eventLoop.newPromise()
     }
 }
+
+public protocol ChannelInboundInvoker {
+    
+    func fireChannelRegistered()
+    
+    func fireChannelUnregistered()
+    
+    func fireChannelActive()
+    
+    func fireChannelInactive()
+    
+    func fireChannelRead(data: IOData)
+    
+    func fireChannelReadComplete()
+    
+    func fireChannelWritabilityChanged()
+    
+    func fireErrorCaught(error: Error)
+    
+    func fireUserEventTriggered(event: Any)
+}
+
+public protocol ChannelInvoker : ChannelOutboundInvoker, ChannelInboundInvoker { }

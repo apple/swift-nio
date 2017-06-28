@@ -19,7 +19,7 @@ import Sockets
 /*
  All operations on ChannelPipeline are thread-safe
  */
-public final class ChannelPipeline : ChannelInboundInvoker {
+public final class ChannelPipeline : ChannelInvoker {
     
     private var outboundChain: ChannelHandlerContext?
     private var inboundChain: ChannelHandlerContext?
@@ -28,7 +28,9 @@ public final class ChannelPipeline : ChannelInboundInvoker {
     private var idx: Int = 0
     private var destroyed: Bool = false
     
-    fileprivate let eventLoop: EventLoop
+    public var eventLoop: EventLoop {
+        return channel.eventLoop
+    }
 
     public unowned let channel: Channel
 
@@ -310,7 +312,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         }
     }
 
-    func close(promise: Promise<Void>?) {
+    public func close(promise: Promise<Void>?) {
         if eventLoop.inEventLoop {
             close0(promise: promise)
         } else {
@@ -320,7 +322,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         }
     }
     
-    func flush() {
+    public func flush() {
         if eventLoop.inEventLoop {
             flush0()
         } else {
@@ -330,7 +332,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         }
     }
     
-    func read() {
+    public func read() {
         if eventLoop.inEventLoop {
             read0()
         } else {
@@ -340,7 +342,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         }
     }
 
-    func write(data: IOData, promise: Promise<Void>?) {
+    public func write(data: IOData, promise: Promise<Void>?) {
         if eventLoop.inEventLoop {
             write0(data: data, promise: promise)
         } else {
@@ -350,7 +352,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         }
     }
     
-    func writeAndFlush(data: IOData, promise: Promise<Void>?) {
+    public func writeAndFlush(data: IOData, promise: Promise<Void>?) {
         if eventLoop.inEventLoop {
             writeAndFlush0(data: data, promise: promise)
         } else {
@@ -360,7 +362,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         }
     }
     
-    func bind(local: SocketAddress, promise: Promise<Void>?) {
+    public func bind(local: SocketAddress, promise: Promise<Void>?) {
         if eventLoop.inEventLoop {
             bind0(local: local, promise: promise)
         } else {
@@ -370,7 +372,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         }
     }
     
-    func connect(remote: SocketAddress, promise: Promise<Void>?) {
+    public func connect(remote: SocketAddress, promise: Promise<Void>?) {
         if eventLoop.inEventLoop {
             connect0(remote: remote, promise: promise)
         } else {
@@ -380,7 +382,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         }
     }
     
-    func register(promise: Promise<Void>?) {
+    public func register(promise: Promise<Void>?) {
         if eventLoop.inEventLoop {
             register0(promise: promise)
         } else {
@@ -390,7 +392,7 @@ public final class ChannelPipeline : ChannelInboundInvoker {
         }
     }
     
-    // These methods are expected to only be called from withint the EventLoop
+    // These methods are expected to only be called from within the EventLoop
     
     private var firstOutboundCtx: ChannelHandlerContext {
         return outboundChain!
@@ -475,7 +477,6 @@ public final class ChannelPipeline : ChannelInboundInvoker {
     // Only executed from Channel
     init (channel: Channel) {
         self.channel = channel
-        self.eventLoop = channel.eventLoop
         
         outboundChain = ChannelHandlerContext(name: "head", handler: HeadChannelHandler.sharedInstance, pipeline: self)
         inboundChain = ChannelHandlerContext(name: "tail", handler: TailChannelHandler.sharedInstance, pipeline: self)
@@ -568,7 +569,7 @@ public enum ChannelPipelineError : Error {
 }
 
 
-public final class ChannelHandlerContext : ChannelInboundInvoker, ChannelOutboundInvoker {
+public final class ChannelHandlerContext : ChannelInvoker {
     
     // visible for ChannelPipeline to modify and also marked as weak to ensure we not create a
     // reference-cycle for the doubly-linked-list
