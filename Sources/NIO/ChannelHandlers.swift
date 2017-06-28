@@ -70,11 +70,15 @@ public class ChannelInitializer: ChannelInboundHandler {
         }
         
         if let ch = ctx.channel {
-            
             let f = initChannel(ch)
-        
-            f.whenSuccess { () -> Void in ctx.fireChannelRegistered() }
-            f.whenFailure(callback: { ctx.fireErrorCaught(error: $0) })
+            f.whenComplete(callback: { v in
+                switch v {
+                case .failure(let err):
+                    ctx.fireErrorCaught(error: err)
+                case .success(_):
+                    ctx.fireChannelRegistered()
+                }
+            })
         } else {
             ctx.fireChannelRegistered()
         }
