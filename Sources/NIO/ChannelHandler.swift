@@ -25,9 +25,9 @@ public protocol ChannelOutboundHandler : ChannelHandler {
     func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>?)
     func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>?)
     func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?)
-    func flush(ctx: ChannelHandlerContext)
+    func flush(ctx: ChannelHandlerContext, promise: Promise<Void>?)
     // TODO: Think about make this more flexible in terms of influence the allocation that is used to read the next amount of data
-    func read(ctx: ChannelHandlerContext)
+    func read(ctx: ChannelHandlerContext, promise: Promise<Void>?)
     func close(ctx: ChannelHandlerContext, promise: Promise<Void>?)
 }
 
@@ -73,12 +73,12 @@ public extension ChannelOutboundHandler {
         ctx.write(data: data, promise: promise)
     }
     
-    public func flush(ctx: ChannelHandlerContext) {
-        ctx.flush()
+    public func flush(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+        ctx.flush(promise: promise)
     }
     
-    public func read(ctx: ChannelHandlerContext) {
-        ctx.read()
+    public func read(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+        ctx.read(promise: promise)
     }
     
     public func close(ctx: ChannelHandlerContext, promise: Promise<Void>?) {

@@ -22,28 +22,41 @@ import Foundation
  once pending data was written.
 */
 public class BackPressureHandler: ChannelInboundHandler, ChannelOutboundHandler {
-    private var readPending: Bool = false
+    private enum PendingRead {
+        case none
+        case promise(promise: Promise<Void>?)
+    }
+    
+    private var pendingRead: PendingRead = .none
     private var writable: Bool = true;
     
     public init() { }
 
-    public func read(ctx: ChannelHandlerContext) {
+    public func read(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
         if writable {
-            ctx.read()
+            ctx.read(promise: promise)
         } else {
-            readPending = true
+            switch pendingRead {
+            case .none:
+                pendingRead = .promise(promise: promise)
+            case .promise(let pending):
+                if let pending = pending {
+                    if let promise = promise {
+                        pending.futureResult.cascade(promise: promise)
+                    }
+                } else {
+                    pendingRead = .promise(promise: promise)
+                }
+            }
         }
     }
     
     public func channelWritabilityChanged(ctx: ChannelHandlerContext) {
         self.writable = ctx.channel!.isWritable
         if writable {
-            if readPending {
-                readPending = false
-                ctx.read()
-            }
+            mayRead(ctx: ctx)
         } else {
-            ctx.flush()
+            ctx.flush(promise: nil)
         }
         
         // Propagate the event as the user may still want to do something based on it.
@@ -51,8 +64,13 @@ public class BackPressureHandler: ChannelInboundHandler, ChannelOutboundHandler 
     }
     
     public func handlerRemoved(ctx: ChannelHandlerContext) {
-        if readPending {
-            ctx.read()
+        mayRead(ctx: ctx)
+    }
+    
+    private func mayRead(ctx: ChannelHandlerContext) {
+        if case let .promise(promise) = pendingRead {
+            pendingRead = .none
+            ctx.read(promise: promise)
         }
     }
 }

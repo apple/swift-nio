@@ -54,7 +54,7 @@ public enum IOData {
 final class PendingWrite {
     var next: PendingWrite?
     var buffer: ByteBuffer
-    let promise: Promise<Void>?
+    var promise: Promise<Void>?
 
     init(buffer: ByteBuffer, promise: Promise<Void>?) {
         self.buffer = buffer
@@ -148,8 +148,17 @@ final fileprivate class PendingWrites {
         return head?.next != nil
     }
 
-    func markFlushCheckpoint() {
+    func markFlushCheckpoint(promise: Promise<Void>?) {
         flushCheckpoint = tail
+        if let promise = promise {
+            if let checkpoint = flushCheckpoint {
+                if let p = checkpoint.promise {
+                    p.futureResult.cascade(promise: promise)
+                } else {
+                    checkpoint.promise = promise
+                }
+            }
+        }
     }
 
     /*
@@ -562,8 +571,8 @@ public protocol ChannelCore : class {
     func bind0(local: SocketAddress, promise: Promise<Void>?)
     func connect0(remote: SocketAddress, promise: Promise<Void>?)
     func write0(data: IOData, promise: Promise<Void>?)
-    func flush0()
-    func read0()
+    func flush0(promise: Promise<Void>?)
+    func read0(promise: Promise<Void>?)
     func close0(error: Error, promise: Promise<Void>?)
     func channelRead0(data: IOData)
 }
@@ -620,22 +629,17 @@ extension Channel {
         pipeline.write(data: data, promise: promise)
     }
 
-    public func flush() {
-        pipeline.flush()
+    public func flush(promise: Promise<Void>?) {
+        pipeline.flush(promise: promise)
     }
 
-    public func read() {
-        pipeline.read()
-    }
-
-    public func writeAndFlush(data: IOData, promise: Promise<Void>?) {
-        pipeline.writeAndFlush(data: data, promise: promise)
+    public func read(promise: Promise<Void>?) {
+        pipeline.read(promise: promise)
     }
 
     public func close(promise: Promise<Void>?) {
         pipeline.close(promise: promise)
     }
-
 
     public func register(promise: Promise<Void>?) {
         pipeline.register(promise: promise)
@@ -727,7 +731,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             let auto = value as! Bool
             autoRead = auto
             if auto {
-                read0()
+                read0(promise: nil)
             } else {
                 pauseRead0()
             }
@@ -792,7 +796,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
     final func readIfNeeded0() {
         if autoRead {
-            pipeline.read0()
+            pipeline.read0(promise: nil)
         }
     }
 
@@ -837,12 +841,12 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public final func flush0() {
+    public final func flush0(promise: Promise<Void>?) {
         assert(eventLoop.inEventLoop)
 
         // Even if writable() will be called later by the EVentLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actual written once writable() is called.
-        pendingWrites.markFlushCheckpoint()
+        pendingWrites.markFlushCheckpoint(promise: promise)
 
         guard !isWritePending() else {
             return
@@ -857,9 +861,12 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public final func read0() {
+    public final func read0(promise: Promise<Void>?) {
         assert(eventLoop.inEventLoop)
 
+        defer {
+            promise?.succeed(result: ())
+        }
         guard !closed else {
             return
         }

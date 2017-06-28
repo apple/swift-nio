@@ -321,23 +321,23 @@ public final class ChannelPipeline : ChannelInvoker {
             }
         }
     }
-    
-    public func flush() {
+
+    public func flush(promise: Promise<Void>?) {
         if eventLoop.inEventLoop {
-            flush0()
+            flush0(promise: promise)
         } else {
             eventLoop.execute {
-                self.flush0()
+                self.flush0(promise: promise)
             }
         }
     }
     
-    public func read() {
+    public func read(promise: Promise<Void>?) {
         if eventLoop.inEventLoop {
-            read0()
+            read0(promise: promise)
         } else {
             eventLoop.execute {
-                self.read0()
+                self.read0(promise: promise)
             }
         }
     }
@@ -351,17 +351,7 @@ public final class ChannelPipeline : ChannelInvoker {
             }
         }
     }
-    
-    public func writeAndFlush(data: IOData, promise: Promise<Void>?) {
-        if eventLoop.inEventLoop {
-            writeAndFlush0(data: data, promise: promise)
-        } else {
-            eventLoop.execute {
-                self.writeAndFlush0(data: data, promise: promise)
-            }
-        }
-    }
-    
+
     public func bind(local: SocketAddress, promise: Promise<Void>?) {
         if eventLoop.inEventLoop {
             bind0(local: local, promise: promise)
@@ -406,20 +396,16 @@ public final class ChannelPipeline : ChannelInvoker {
         firstOutboundCtx.invokeClose(promise: promise)
     }
     
-    func flush0() {
-        firstOutboundCtx.invokeFlush()
+    func flush0(promise: Promise<Void>?) {
+        firstOutboundCtx.invokeFlush(promise: promise)
     }
     
-    func read0() {
-        firstOutboundCtx.invokeRead()
+    func read0(promise: Promise<Void>?) {
+        firstOutboundCtx.invokeRead(promise: promise)
     }
     
     func write0(data: IOData, promise: Promise<Void>?) {
         firstOutboundCtx.invokeWrite(data: data, promise: promise)
-    }
-    
-    func writeAndFlush0(data: IOData, promise: Promise<Void>?) {
-        firstOutboundCtx.invokeWriteAndFlush(data: data, promise: promise)
     }
     
     func bind0(local: SocketAddress, promise: Promise<Void>?) {
@@ -507,16 +493,16 @@ private final class HeadChannelHandler : ChannelOutboundHandler {
         ctx.channel!._unsafe.write0(data: data, promise: promise)
     }
     
-    func flush(ctx: ChannelHandlerContext) {
-        ctx.channel!._unsafe.flush0()
+    func flush(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+        ctx.channel!._unsafe.flush0(promise: promise)
     }
     
     func close(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
         ctx.channel!._unsafe.close0(error: ChannelError.closed, promise: promise)
     }
     
-    func read(ctx: ChannelHandlerContext) {
-        ctx.channel!._unsafe.read0()
+    func read(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+        ctx.channel!._unsafe.read0(promise: promise)
     }
 }
 
@@ -647,17 +633,13 @@ public final class ChannelHandlerContext : ChannelInvoker {
     public func write(data: IOData, promise: Promise<Void>?) {
         outboundNext!.invokeWrite(data: data, promise: promise)
     }
-    
-    public func writeAndFlush(data: IOData, promise: Promise<Void>?) {
-        outboundNext!.invokeWriteAndFlush(data: data, promise: promise)
+
+    public func flush(promise: Promise<Void>?) {
+        outboundNext!.invokeFlush(promise: promise)
     }
     
-    public func flush() {
-        outboundNext!.invokeFlush()
-    }
-    
-    public func read() {
-        outboundNext!.invokeRead()
+    public func read(promise: Promise<Void>?) {
+        outboundNext!.invokeRead(promise: promise)
     }
     
     public func close(promise: Promise<Void>?) {
@@ -783,24 +765,16 @@ public final class ChannelHandlerContext : ChannelInvoker {
         (handler as! ChannelOutboundHandler).write(ctx: self, data: data, promise: promise)
     }
     
-    func invokeFlush() {
+    func invokeFlush(promise: Promise<Void>?) {
         assert(inEventLoop)
         
-        (handler as! ChannelOutboundHandler).flush(ctx: self)
+        (handler as! ChannelOutboundHandler).flush(ctx: self, promise: promise)
     }
     
-    func invokeWriteAndFlush(data: IOData, promise: Promise<Void>?) {
-        assert(inEventLoop)
-        assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
-
-        (handler as! ChannelOutboundHandler).write(ctx: self, data: data, promise: promise)
-        (handler as! ChannelOutboundHandler).flush(ctx: self)
-    }
-    
-    func invokeRead() {
+    func invokeRead(promise: Promise<Void>?) {
         assert(inEventLoop)
         
-        (handler as! ChannelOutboundHandler).read(ctx: self)
+        (handler as! ChannelOutboundHandler).read(ctx: self, promise: promise)
     }
     
     func invokeClose(promise: Promise<Void>?) {

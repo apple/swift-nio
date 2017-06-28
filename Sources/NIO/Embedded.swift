@@ -108,11 +108,12 @@ class EmbeddedChannelCore : ChannelCore {
         promise?.succeed(result: ())
     }
 
-    func flush0() {
-        // No need
+    func flush0(promise: Promise<Void>?) {
+        promise?.succeed(result: ())
     }
 
-    func read0() {
+    func read0(promise: Promise<Void>?) {
+        promise?.succeed(result: ())
     }
 
     func readIfNeeded0() {
@@ -168,9 +169,5 @@ public class EmbeddedChannel : Channel {
 
     public func getOption<T>(option: T) throws -> T.OptionType where T : ChannelOption {
         fatalError("option \(option) not supported")
-    }
-
-    public func read() {
-        pipeline.read()
     }
 }

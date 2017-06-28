@@ -25,11 +25,17 @@ public class EchoHandler: ChannelInboundHandler {
 
     // Flush it out. This can make use of gathering writes if multiple buffers are pending
     public func channelReadComplete(ctx: ChannelHandlerContext) {
-        ctx.flush()
+        
+        // As we are not really interested getting notified on success or failure we just pass nil as promise to
+        // reduce allocations.
+        ctx.flush(promise: nil)
     }
 
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         print("error: ", error)
+        
+        // As we are not really interested getting notified on success or failure we just pass nil as promise to
+        // reduce allocations.
         ctx.close(promise: nil)
     }
 }

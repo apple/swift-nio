@@ -540,7 +540,18 @@ public extension Future {
 
 extension Future {
     
-    public func cascadeFailure<T>(promise: Promise<T>) {
+    public func cascade(promise: Promise<T>) {
+        whenComplete(callback: { v in
+            switch v {
+            case .failure(let err):
+                promise.fail(error: err)
+            case .success(let value):
+                promise.succeed(result: value)
+            }
+        })
+    }
+    
+    public func cascadeFailure<U>(promise: Promise<U>) {
         self.whenFailure(callback: { err in
             promise.fail(error: err)
         })

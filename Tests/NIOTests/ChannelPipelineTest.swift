@@ -69,7 +69,8 @@ class ChannelPipelineTest: XCTestCase {
         })).wait()
         
         
-        _ = try channel.writeAndFlush(data: .other("msg")).wait()
+        _ = channel.write(data: .other("msg"))
+        _ = try channel.flush().wait()
         XCTAssertEqual(buf, channel.outboundBuffer[0] as! ByteBuffer)
     }
     

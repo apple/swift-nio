@@ -16,24 +16,25 @@ import Sockets
 public protocol ChannelOutboundInvoker {
     func register() -> Future<Void>
     func register(promise: Promise<Void>?)
+
     func bind(local: SocketAddress) -> Future<Void>
     func bind(local: SocketAddress, promise: Promise<Void>?)
-    
+
     func connect(remote: SocketAddress) -> Future<Void>
     func connect(remote: SocketAddress, promise: Promise<Void>?)
     
     func write(data: IOData) -> Future<Void>
     func write(data: IOData, promise: Promise<Void>?)
-    
-    func flush()
-    func read()
-    
-    func writeAndFlush(data: IOData) -> Future<Void>
-    func writeAndFlush(data: IOData, promise: Promise<Void>?)
-    
+
+    func flush() -> Future<Void>
+    func flush(promise: Promise<Void>?)
+
+    func read() -> Future<Void>
+    func read(promise: Promise<Void>?)
+
     func close() -> Future<Void>
     func close(promise: Promise<Void>?)
-    
+
     var eventLoop: EventLoop { get }
 }
 
@@ -62,9 +63,15 @@ public extension ChannelOutboundInvoker {
         return promise.futureResult
     }
     
-    public func writeAndFlush(data: IOData) -> Future<Void> {
+    public func read() -> Future<Void> {
         let promise = newPromise()
-        writeAndFlush(data: data, promise: promise)
+        read(promise: promise)
+        return promise.futureResult
+    }
+    
+    public func flush() -> Future<Void> {
+        let promise = newPromise()
+        flush(promise: promise)
         return promise.futureResult
     }
     
