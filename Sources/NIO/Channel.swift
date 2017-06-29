@@ -451,8 +451,8 @@ final class SocketChannel : BaseSocketChannel<Socket> {
         } while true
     }
 
-    override fileprivate func connectSocket(remote: SocketAddress) throws -> Bool {
-        return try self.socket.connect(remote: remote)
+    override fileprivate func connectSocket(to address: SocketAddress) throws -> Bool {
+        return try self.socket.connect(to: address)
     }
 
     override fileprivate func finishConnectSocket() throws {
@@ -501,10 +501,10 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         return try super.getOption0(option: option)
     }
 
-    override public func bind0(local: SocketAddress, promise: Promise<Void>?) {
+    override public func bind0(to address: SocketAddress, promise: Promise<Void>?) {
         assert(eventLoop.inEventLoop)
         do {
-            try socket.bind(local: local)
+            try socket.bind(to: address)
             try self.socket.listen(backlog: backlog)
             promise?.succeed(result: ())
             pipeline.fireChannelActive0()
@@ -514,7 +514,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         }
     }
 
-    override fileprivate func connectSocket(remote: SocketAddress) throws -> Bool {
+    override fileprivate func connectSocket(to address: SocketAddress) throws -> Bool {
         throw ChannelError.operationUnsupported
     }
 
@@ -568,8 +568,8 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
  */
 public protocol ChannelCore : class {
     func register0(promise: Promise<Void>?)
-    func bind0(local: SocketAddress, promise: Promise<Void>?)
-    func connect0(remote: SocketAddress, promise: Promise<Void>?)
+    func bind0(to: SocketAddress, promise: Promise<Void>?)
+    func connect0(to: SocketAddress, promise: Promise<Void>?)
     func write0(data: IOData, promise: Promise<Void>?)
     func flush0(promise: Promise<Void>?)
     func read0(promise: Promise<Void>?)
@@ -614,15 +614,15 @@ extension Channel {
         return !closeFuture.fulfilled
     }
 
-    public func bind(local: SocketAddress, promise: Promise<Void>?) {
-        pipeline.bind(local: local, promise: promise)
+    public func bind(to address: SocketAddress, promise: Promise<Void>?) {
+        pipeline.bind(to: address, promise: promise)
     }
 
     // Methods invoked from the HeadHandler of the ChannelPipeline
     // By default, just pass through to pipeline
 
-    public func connect(remote: SocketAddress, promise: Promise<Void>?) {
-        pipeline.connect(remote: remote, promise: promise)
+    public func connect(to address: SocketAddress, promise: Promise<Void>?) {
+        pipeline.connect(to: address, promise: promise)
     }
 
     public func write(data: IOData, promise: Promise<Void>?) {
@@ -801,11 +801,11 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     // Methods invoked from the HeadHandler of the ChannelPipeline
-    public func bind0(local: SocketAddress, promise: Promise<Void>?) {
+    public func bind0(to address: SocketAddress, promise: Promise<Void>?) {
         assert(eventLoop.inEventLoop)
 
         do {
-            try socket.bind(local: local)
+            try socket.bind(to: address)
             promise?.succeed(result: ())
         } catch let err {
             promise?.fail(error: err)
@@ -1033,7 +1033,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         readIfNeeded0()
     }
 
-    fileprivate func connectSocket(remote: SocketAddress) throws -> Bool {
+    fileprivate func connectSocket(to address: SocketAddress) throws -> Bool {
         fatalError("this must be overridden by sub class")
     }
 
@@ -1041,7 +1041,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         fatalError("this must be overridden by sub class")
     }
 
-    public final func connect0(remote: SocketAddress, promise: Promise<Void>?) {
+    public final func connect0(to address: SocketAddress, promise: Promise<Void>?) {
         assert(eventLoop.inEventLoop)
 
         guard pendingConnect == nil else {
@@ -1049,7 +1049,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             return
         }
         do {
-            if try !connectSocket(remote: remote) {
+            if try !connectSocket(to: address) {
                 registerForWritable()
             }
         } catch let error {

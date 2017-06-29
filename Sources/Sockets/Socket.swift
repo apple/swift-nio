@@ -52,8 +52,8 @@ public final class Socket : BaseSocket {
         super.init(descriptor: descriptor)
     }
     
-    public func connect(remote: SocketAddress) throws  -> Bool {
-        switch remote {
+    public func connect(to address: SocketAddress) throws  -> Bool {
+        switch address {
         case .v4(address: let addr):
             return try connectSocket(addr: addr)
         case .v6(address: let addr):

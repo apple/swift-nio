@@ -53,21 +53,21 @@ public final class ServerBootstrap {
         return self
     }
     
-    public func bind(host: String, port: Int32) -> Future<Channel> {
+    public func bind(to host: String, on port: Int32) -> Future<Channel> {
         let evGroup = group
         do {
             let address = try SocketAddresses.newAddress(for: host, on: port)
-            return bind0(evGroup: evGroup, local: address)
+            return bind0(evGroup: evGroup, to: address)
         } catch let err {
             return evGroup.next().newFailedFuture(error: err)
         }
     }
 
-    public func bind(local: SocketAddress) -> Future<Channel> {
-        return bind0(evGroup: group, local: local)
+    public func bind(to address: SocketAddress) -> Future<Channel> {
+        return bind0(evGroup: group, to: address)
     }
     
-    public func bind0(evGroup: EventLoopGroup, local: SocketAddress) -> Future<Channel> {
+    private func bind0(evGroup: EventLoopGroup, to address: SocketAddress) -> Future<Channel> {
         let chEvGroup = childGroup
         let opts = options
         let eventLoop = evGroup.next()
@@ -82,7 +82,7 @@ public final class ServerBootstrap {
             func finishServerSetup() {
                 do {
                     try opts.applyAll(channel: serverChannel)
-                    let f = serverChannel.register().then(callback: { (_) -> Future<()> in serverChannel.bind(local: local) })
+                    let f = serverChannel.register().then(callback: { (_) -> Future<()> in serverChannel.bind(to: address) })
                     f.whenComplete(callback: { v in
                         switch v {
                         case .failure(let err):
@@ -198,41 +198,41 @@ public final class ClientBootstrap {
         return self
     }
     
-    public func bind(host: String, port: Int32) -> Future<Channel> {
+    public func bind(to host: String, on port: Int32) -> Future<Channel> {
         let evGroup = group
 
         do {
             let address = try SocketAddresses.newAddress(for: host, on: port)
             return execute(evGroup: evGroup, fn: { channel in
-                return channel.bind(local: address)
+                return channel.bind(to: address)
             })
         } catch let err {
             return evGroup.next().newFailedFuture(error: err)
         }
     }
     
-    public func bind(local: SocketAddress) -> Future<Channel> {
+    public func bind(to address: SocketAddress) -> Future<Channel> {
         return execute(evGroup: group, fn: { channel in
-            return channel.bind(local: local)
+            return channel.bind(to: address)
         })
     }
     
-    public func connect(host: String, port: Int32) -> Future<Channel> {
+    public func connect(to host: String, on port: Int32) -> Future<Channel> {
         let evGroup = group
         
         do {
             let address = try SocketAddresses.newAddress(for: host, on: port)
             return execute(evGroup: group, fn: { channel in
-                return channel.connect(remote: address)
+                return channel.connect(to: address)
             })
         } catch let err {
             return evGroup.next().newFailedFuture(error: err)
         }
     }
     
-    public func connect(remote: SocketAddress) -> Future<Channel> {
+    public func connect(to address: SocketAddress) -> Future<Channel> {
         return execute(evGroup: group, fn: { channel in
-            return channel.connect(remote: remote)
+            return channel.connect(to: address)
         })
     }
 

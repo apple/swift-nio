@@ -62,7 +62,7 @@ defer {
     _ = try? group.close()
 }
 
-let channel = try bootstrap.bind(host: "0.0.0.0", port: 9999).wait()
+let channel = try bootstrap.bind(to: "0.0.0.0", on: 9999).wait()
 
 print("Server started")
 

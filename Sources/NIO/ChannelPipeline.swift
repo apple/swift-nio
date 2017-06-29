@@ -352,22 +352,22 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
 
-    public func bind(local: SocketAddress, promise: Promise<Void>?) {
+    public func bind(to address: SocketAddress, promise: Promise<Void>?) {
         if eventLoop.inEventLoop {
-            bind0(local: local, promise: promise)
+            bind0(to: address, promise: promise)
         } else {
             eventLoop.execute {
-                self.bind0(local: local, promise: promise)
+                self.bind0(to: address, promise: promise)
             }
         }
     }
     
-    public func connect(remote: SocketAddress, promise: Promise<Void>?) {
+    public func connect(to address: SocketAddress, promise: Promise<Void>?) {
         if eventLoop.inEventLoop {
-            connect0(remote: remote, promise: promise)
+            connect0(to: address, promise: promise)
         } else {
             eventLoop.execute {
-                self.connect0(remote: remote, promise: promise)
+                self.connect0(to: address, promise: promise)
             }
         }
     }
@@ -408,12 +408,12 @@ public final class ChannelPipeline : ChannelInvoker {
         firstOutboundCtx.invokeWrite(data: data, promise: promise)
     }
     
-    func bind0(local: SocketAddress, promise: Promise<Void>?) {
-        firstOutboundCtx.invokeBind(local: local, promise: promise)
+    func bind0(to address: SocketAddress, promise: Promise<Void>?) {
+        firstOutboundCtx.invokeBind(to: address, promise: promise)
     }
     
-    func connect0(remote: SocketAddress, promise: Promise<Void>?) {
-        firstOutboundCtx.invokeConnect(remote: remote, promise: promise)
+    func connect0(to address: SocketAddress, promise: Promise<Void>?) {
+        firstOutboundCtx.invokeConnect(to: address, promise: promise)
     }
     
     func register0(promise: Promise<Void>?) {
@@ -481,12 +481,12 @@ private final class HeadChannelHandler : ChannelOutboundHandler {
         ctx.channel!._unsafe.register0(promise: promise)
     }
     
-    func bind(ctx: ChannelHandlerContext, local: SocketAddress, promise: Promise<Void>?) {
-        ctx.channel!._unsafe.bind0(local: local, promise: promise)
+    func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: Promise<Void>?) {
+        ctx.channel!._unsafe.bind0(to: address, promise: promise)
     }
     
-    func connect(ctx: ChannelHandlerContext, remote: SocketAddress, promise: Promise<Void>?) {
-        ctx.channel!._unsafe.connect0(remote: remote, promise: promise)
+    func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: Promise<Void>?) {
+        ctx.channel!._unsafe.connect0(to: address, promise: promise)
     }
     
     func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
@@ -622,12 +622,12 @@ public final class ChannelHandlerContext : ChannelInvoker {
         outboundNext!.invokeRegister(promise: promise)
     }
     
-    public func bind(local: SocketAddress, promise: Promise<Void>?) {
-        outboundNext!.invokeBind(local: local, promise: promise)
+    public func bind(to address: SocketAddress, promise: Promise<Void>?) {
+        outboundNext!.invokeBind(to: address, promise: promise)
     }
     
-    public func connect(remote: SocketAddress, promise: Promise<Void>?) {
-        outboundNext!.invokeBind(local: remote, promise: promise)
+    public func connect(to address: SocketAddress, promise: Promise<Void>?) {
+        outboundNext!.invokeBind(to: address, promise: promise)
     }
 
     public func write(data: IOData, promise: Promise<Void>?) {
@@ -744,18 +744,18 @@ public final class ChannelHandlerContext : ChannelInvoker {
         (handler as! ChannelOutboundHandler).register(ctx: self, promise: promise)
     }
     
-    func invokeBind(local: SocketAddress, promise: Promise<Void>?) {
+    func invokeBind(to address: SocketAddress, promise: Promise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
-        (handler as! ChannelOutboundHandler).bind(ctx: self, local: local, promise: promise)
+        (handler as! ChannelOutboundHandler).bind(ctx: self, to: address, promise: promise)
     }
     
-    func invokeConnect(remote: SocketAddress, promise: Promise<Void>?) {
+    func invokeConnect(to address: SocketAddress, promise: Promise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
-        (handler as! ChannelOutboundHandler).connect(ctx: self, remote: remote, promise: promise)
+        (handler as! ChannelOutboundHandler).connect(ctx: self, to: address, promise: promise)
     }
 
     func invokeWrite(data: IOData, promise: Promise<Void>?) {

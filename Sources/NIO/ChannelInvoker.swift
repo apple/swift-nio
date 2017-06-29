@@ -17,11 +17,11 @@ public protocol ChannelOutboundInvoker {
     func register() -> Future<Void>
     func register(promise: Promise<Void>?)
 
-    func bind(local: SocketAddress) -> Future<Void>
-    func bind(local: SocketAddress, promise: Promise<Void>?)
+    func bind(to: SocketAddress) -> Future<Void>
+    func bind(to: SocketAddress, promise: Promise<Void>?)
 
-    func connect(remote: SocketAddress) -> Future<Void>
-    func connect(remote: SocketAddress, promise: Promise<Void>?)
+    func connect(to: SocketAddress) -> Future<Void>
+    func connect(to: SocketAddress, promise: Promise<Void>?)
     
     func write(data: IOData) -> Future<Void>
     func write(data: IOData, promise: Promise<Void>?)
@@ -45,15 +45,15 @@ public extension ChannelOutboundInvoker {
         return promise.futureResult
     }
     
-    public func bind(local: SocketAddress) -> Future<Void> {
+    public func bind(to address: SocketAddress) -> Future<Void> {
         let promise = newPromise()
-        bind(local: local, promise: promise)
+        bind(to: address, promise: promise)
         return promise.futureResult
     }
     
-    public func connect(remote: SocketAddress) -> Future<Void> {
+    public func connect(to address: SocketAddress) -> Future<Void> {
         let promise = newPromise()
-        connect(remote: remote, promise: promise)
+        connect(to: address, promise: promise)
         return promise.futureResult
     }
     

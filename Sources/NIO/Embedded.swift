@@ -91,11 +91,11 @@ class EmbeddedChannelCore : ChannelCore {
         }
     }
 
-    func bind0(local: SocketAddress, promise: Promise<Void>?) {
+    func bind0(to address: SocketAddress, promise: Promise<Void>?) {
         promise?.succeed(result: ())
     }
 
-    func connect0(remote: SocketAddress, promise: Promise<Void>?) {
+    func connect0(to address: SocketAddress, promise: Promise<Void>?) {
         promise?.succeed(result: ())
     }
 
