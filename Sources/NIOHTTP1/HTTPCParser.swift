@@ -20,11 +20,54 @@ public final class HTTPRequestDecoder : ChannelInboundHandler {
     var parser: UnsafeMutablePointer<http_parser>?
     var settings: UnsafeMutablePointer<http_parser_settings>?
 
+    private enum DataAwaitingState {
+        case messageBegin
+        case url
+        case headerField
+        case headerValue
+        case body
+    }
+
     private var state: HTTPParserState!
 
+    private func writeBytesToBuffer(currentState: DataAwaitingState,
+                                    data: UnsafePointer<Int8>!,
+                                    len: Int,
+                                    previousComplete: (DataAwaitingState) -> Void) -> Void {
+        if currentState != self.state.dataAwaitingState {
+            let oldState = self.state.dataAwaitingState
+            self.state.dataAwaitingState = currentState
+            previousComplete(oldState)
+        }
+        self.state.parserBuffer.write(int8Data: data, len: len)
+    }
+
+
+    private func complete(state: DataAwaitingState) {
+        switch state {
+        case .messageBegin:
+            assert(self.state.parserBuffer.readableBytes == 0, "non-empty buffer on begin (\(self.state.parserBuffer.readableBytes))")
+        case .headerField:
+            assert(self.state.currentUri != nil, "URI not set before header field")
+            self.state.currentHeaderName = self.state.parserBuffer.readString()!
+            self.state.parserBuffer.clear()
+        case .headerValue:
+            assert(self.state.currentUri != nil, "URI not set before header field")
+            self.state.currentHeaders.add(name: self.state.currentHeaderName!, value: self.state.parserBuffer.readString()!)
+            self.state.parserBuffer.clear()
+        case .url:
+            assert(self.state.currentUri == nil)
+            self.state.currentUri = self.state.parserBuffer.readString()!
+            self.state.parserBuffer.clear()
+        case .body:
+            ()
+        }
+    }
+
     private struct HTTPParserState {
+        var dataAwaitingState: DataAwaitingState = .messageBegin
         var cumulationBuffer: ByteBuffer?
-        var currentHeaders: HTTPHeaders?
+        var currentHeaders = HTTPHeaders()
         var currentUri: String?
         var currentHeaderName: String?
         var parserBuffer: ByteBuffer
@@ -36,34 +79,13 @@ public final class HTTPRequestDecoder : ChannelInboundHandler {
             self.parserBuffer.clear()
         }
 
-        mutating func addHeader() -> Bool {
-            guard let name = currentHeaderName else {
-                return true
-            }
-            guard let value = parserBuffer.readString() else {
-                // Header value could not be parsed
-                return false
-            }
-            parserBuffer.clear()
-
-            currentHeaders!.add(name: name, value: value)
-            currentHeaderName = nil
-            return true
-        }
-
-        mutating func finializeHTTPRequest(parser: UnsafeMutablePointer<http_parser>?) -> HTTPRequest? {
-            guard addHeader() else {
-                return nil
-            }
-
+        mutating func finializeHTTPRequest(parser: UnsafeMutablePointer<http_parser>?) -> HTTPRequestHead? {
             guard let method = HTTPMethod.from(httpParserMethod: http_method(rawValue: parser!.pointee.method)) else {
                 return nil
             }
             let version = HTTPVersion(major: parser!.pointee.http_minor, minor: parser!.pointee.http_major)
-
-
-            let request = HTTPRequest(version: version, method: method, uri: currentUri!, headers: currentHeaders!)
-            currentHeaders = nil
+            let request = HTTPRequestHead(version: version, method: method, uri: currentUri!, headers: currentHeaders)
+            currentHeaders = HTTPHeaders()
             return request
         }
 
@@ -91,92 +113,73 @@ public final class HTTPRequestDecoder : ChannelInboundHandler {
 
             return 0
         }
+
         settings!.pointee.on_headers_complete = { parser in
             let ctx = evacuateContext(parser)
-            let handler = (ctx.handler as! HTTPRequestDecoder)
+            let handler = ctx.handler as! HTTPRequestDecoder
+
+            handler.complete(state: handler.state.dataAwaitingState)
 
             guard let request = handler.state.finializeHTTPRequest(parser: parser) else {
                 return -1
             }
-            ctx.fireChannelRead(data: .other(request))
+
+            handler.state.dataAwaitingState = .body
+
+            ctx.fireChannelRead(data: .other(HTTPRequest.head(request)))
             return 0
         }
 
         settings!.pointee.on_body = { parser, data, len in
             let ctx = evacuateContext(parser)
-            do {
-                // TODO: We may be able to just slice out the bytes
-                var buffer = try ctx.channel!.allocator.buffer(capacity: len)
+            let handler = ctx.handler as! HTTPRequestDecoder
+            assert(handler.state.dataAwaitingState == .body)
 
-                // This will never return nil as we allocated the buffer with the correct size
-                buffer.write(int8Data: data!, len: len)
-
-                ctx.fireChannelRead(data: .other(HTTPContent.more(buffer: buffer)))
-            } catch let err {
-                // propagate the error back to the handler
-                (ctx.handler as! HTTPRequestDecoder).errorCaught(ctx: ctx, error: err)
-                return -1
-            }
+            // This will never return nil as we allocated the buffer with the correct size
+            handler.state.parserBuffer.write(int8Data: data!, len: len)
+            ctx.fireChannelRead(data: .other(HTTPRequest.body(HTTPBodyContent.more(buffer: handler.state.parserBuffer.readSlice(length: len)!))))
 
             return 0
         }
 
         settings!.pointee.on_header_field = { parser, data, len in
             let ctx = evacuateContext(parser)
-            let handler = (ctx.handler as! HTTPRequestDecoder)
+            let handler = ctx.handler as! HTTPRequestDecoder
 
-
-            if handler.state.currentUri == nil {
-                handler.state.currentUri = handler.state.parserBuffer.readString()
-                if handler.state.currentUri == nil {
-                    // URI could not be parsed.
-                    return -1
-                }
-                handler.state.parserBuffer.clear()
-            } else {
-                // Add header if we already parsed one
-                guard handler.state.addHeader() else {
-                    parser!.pointee.http_errno = HPE_INVALID_HEADER_TOKEN.rawValue
-                    return -1
-                }
+            handler.writeBytesToBuffer(currentState: .headerField, data: data, len: len) { previousState in
+                handler.complete(state: previousState)
             }
-
-            handler.state.parserBuffer.write(int8Data: data!, len: len)
-
             return 0
         }
 
         settings!.pointee.on_header_value = { parser, data, len in
             let ctx = evacuateContext(parser)
-            let handler = (ctx.handler as! HTTPRequestDecoder)
+            let handler = ctx.handler as! HTTPRequestDecoder
 
-            if handler.state.currentHeaderName == nil {
-                handler.state.currentHeaderName = handler.state.parserBuffer.readString()
-                if handler.state.currentHeaderName == nil {
-                    // Header name could not be parser.
-                    parser!.pointee.http_errno = HPE_INVALID_HEADER_TOKEN.rawValue
-                    return -1
-                }
-                handler.state.parserBuffer.clear()
+            handler.writeBytesToBuffer(currentState: .headerValue, data: data, len: len) { previousState in
+                handler.complete(state: previousState)
             }
-
-            handler.state.parserBuffer.write(int8Data: data!, len: len)
-
             return 0
         }
 
         settings!.pointee.on_url = { parser, data, len in
             let ctx = evacuateContext(parser)
-            let handler = (ctx.handler as! HTTPRequestDecoder)
+            let handler = ctx.handler as! HTTPRequestDecoder
 
-            handler.state.parserBuffer.write(int8Data: data!, len: len)
-
+            handler.writeBytesToBuffer(currentState: .url, data: data, len: len) { previousState in
+                assert(previousState == .messageBegin, "expected: messageBegin, actual: \(previousState)")
+                handler.complete(state: previousState)
+            }
             return 0
         }
 
         settings!.pointee.on_message_complete = { parser in
             let ctx = evacuateContext(parser)
-            ctx.fireChannelRead(data: .other(HTTPContent.last(buffer: nil)))
+            let handler = ctx.handler as! HTTPRequestDecoder
+
+            ctx.fireChannelRead(data: .other(HTTPRequest.body(.last(buffer: nil))))
+            handler.complete(state: handler.state.dataAwaitingState)
+            handler.state.dataAwaitingState = .messageBegin
             return 0
         }
     }
@@ -250,7 +253,7 @@ extension ByteBuffer {
     }
 
     @discardableResult mutating func write(int8Data: UnsafePointer<Int8>, len: Int) -> Int {
-        return self.set(bytes: UnsafeRawBufferPointer(start: int8Data, count: len), at: writerIndex)
+        return self.write(bytes: UnsafeRawBufferPointer(start: UnsafeRawPointer(int8Data), count: len))
     }
 }
 

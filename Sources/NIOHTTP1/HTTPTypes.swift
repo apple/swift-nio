@@ -21,7 +21,11 @@ let headerSeperator = ": ".data(using: .ascii)!
 let http1_1 = "HTTP/1.1 ".data(using: .ascii)!
 let status200 = "200 ok\r\n".data(using: .ascii)!
 
-public struct HTTPRequest {
+public struct HTTPRequestHead: Equatable {
+    public static func ==(lhs: HTTPRequestHead, rhs: HTTPRequestHead) -> Bool {
+        return lhs.method == rhs.method && lhs.uri == rhs.uri && lhs.version == rhs.version && lhs.headers == rhs.headers
+    }
+
     public let method: HTTPMethod
     public let uri: String
     public let version: HTTPVersion
@@ -42,7 +46,12 @@ public struct HTTPRequest {
     }
 }
 
-public extension HTTPRequest {
+public enum HTTPRequest {
+    case head(HTTPRequestHead)
+    case body(HTTPBodyContent)
+}
+
+public extension HTTPRequestHead {
     var isKeepAlive: Bool {
         guard let connection = headers["connection"].first?.lowercased() else {
             // HTTP 1.1 use keep-alive by default if not otherwise told.
@@ -56,7 +65,7 @@ public extension HTTPRequest {
     }
 }
 
-public struct HTTPResponse {
+public struct HTTPResponseHead {
     public let status: HTTPResponseStatus
     public let version: HTTPVersion
     public var headers: HTTPHeaders = HTTPHeaders()
@@ -67,12 +76,26 @@ public struct HTTPResponse {
     }
 }
 
-public enum HTTPContent {
+public enum HTTPBodyContent {
     case last(buffer: ByteBuffer?)
     case more(buffer: ByteBuffer)
 }
 
-public struct HTTPHeaders : CustomStringConvertible {
+public struct HTTPHeaders : Sequence, CustomStringConvertible, Equatable {
+    public static func ==(lhs: HTTPHeaders, rhs: HTTPHeaders) -> Bool {
+        if lhs.storage.count != rhs.storage.count {
+            return false
+        }
+        for (k, v) in lhs.storage {
+            if let rv = rhs.storage[k], rv == v {
+                continue
+            } else {
+                return false
+            }
+        }
+        return true
+    }
+
     private var storage: [String:[String]] = [String:[String]]()
     public var description: String { return storage.description }
 
@@ -81,30 +104,113 @@ public struct HTTPHeaders : CustomStringConvertible {
         storage[keyLower] = (storage[keyLower] ?? [])  + [value]
     }
 
+    public mutating func remove(name: String) {
+        self.storage[name.lowercased()] = nil
+    }
+
     public subscript(name: String) -> [String] {
         return storage[name.lowercased()] ?? []
     }
 
     func write(buffer: inout ByteBuffer) {
         for k in storage {
-            _ = buffer.write(string: k.key)
-            _ = buffer.write(data: headerSeperator)
+            buffer.write(string: k.key)
+            buffer.write(data: headerSeperator)
 
             var writerIndex = buffer.writerIndex
             for value in k.value {
-                _ = buffer.write(string: value)
+                buffer.write(string: value)
                 writerIndex = buffer.writerIndex
-                _ = buffer.write(string: ",")
+                buffer.write(string: ",")
             }
             // Discard last ,
             buffer.moveWriterIndex(to: writerIndex)
-            _ = buffer.write(data: crlf)
+            buffer.write(data: crlf)
         }
-        _ = buffer.write(data: crlf)
+        buffer.write(data: crlf)
+    }
+
+    public func makeIterator() -> DictionaryIterator<String, [String]> {
+        return self.storage.makeIterator()
     }
 }
 
-public enum HTTPMethod {
+public enum HTTPMethod: Equatable {
+    public static func ==(lhs: HTTPMethod, rhs: HTTPMethod) -> Bool {
+        switch (lhs, rhs){
+        case (.GET, .GET):
+            return true
+        case (.PUT, .PUT):
+            return true
+        case (.ACL, .ACL):
+            return true
+        case (.HEAD, .HEAD):
+            return true
+        case (.POST, .POST):
+            return true
+        case (.COPY, .COPY):
+            return true
+        case (.LOCK, .LOCK):
+            return true
+        case (.MOVE, .MOVE):
+            return true
+        case (.BIND, .BIND):
+            return true
+        case (.LINK, .LINK):
+            return true
+        case (.PATCH, .PATCH):
+            return true
+        case (.TRACE, .TRACE):
+            return true
+        case (.MKCOL, .MKCOL):
+            return true
+        case (.MERGE, .MERGE):
+            return true
+        case (.PURGE, .PURGE):
+            return true
+        case (.NOTIFY, .NOTIFY):
+            return true
+        case (.SEARCH, .SEARCH):
+            return true
+        case (.UNLOCK, .UNLOCK):
+            return true
+        case (.REBIND, .REBIND):
+            return true
+        case (.UNBIND, .UNBIND):
+            return true
+        case (.REPORT, .REPORT):
+            return true
+        case (.DELETE, .DELETE):
+            return true
+        case (.UNLINK, .UNLINK):
+            return true
+        case (.CONNECT, .CONNECT):
+            return true
+        case (.MSEARCH, .MSEARCH):
+            return true
+        case (.OPTIONS, .OPTIONS):
+            return true
+        case (.PROPFIND, .PROPFIND):
+            return true
+        case (.CHECKOUT, .CHECKOUT):
+            return true
+        case (.PROPPATCH, .PROPPATCH):
+            return true
+        case (.SUBSCRIBE, .SUBSCRIBE):
+            return true
+        case (.MKCALENDAR, .MKCALENDAR):
+            return true
+        case (.MKACTIVITY, .MKACTIVITY):
+            return true
+        case (.UNSUBSCRIBE, .UNSUBSCRIBE):
+            return true
+        case (.RAW(let l), .RAW(let r)):
+            return l == r
+        default:
+            return false
+        }
+    }
+
     case GET
     case PUT
     case ACL
@@ -141,7 +247,11 @@ public enum HTTPMethod {
     case RAW(value: String)
 }
 
-public struct HTTPVersion {
+public struct HTTPVersion: Equatable {
+    public static func ==(lhs: HTTPVersion, rhs: HTTPVersion) -> Bool {
+        return lhs.major == rhs.major && lhs.minor == rhs.minor
+    }
+
     let major: UInt16
     let minor: UInt16
 }

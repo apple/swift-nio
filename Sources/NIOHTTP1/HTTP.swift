@@ -20,7 +20,7 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
     public init() { }
 
     public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
-        if let response:HTTPResponse = data.tryAsOther() {
+        if let response:HTTPResponseHead = data.tryAsOther() {
             do {
                 // TODO: Is 256 really a good value here ?
                 var buffer = try ctx.channel!.allocator.buffer(capacity: 256)
@@ -32,7 +32,7 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
             } catch let err {
                 promise?.fail(error: err)
             }
-        } else if let content: HTTPContent = data.tryAsOther()  {
+        } else if let content: HTTPBodyContent = data.tryAsOther()  {
             // TODO: Implement chunked encoding
             switch content {
             case .more(let buffer):

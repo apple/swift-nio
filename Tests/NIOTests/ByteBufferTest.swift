@@ -686,4 +686,27 @@ class ByteBufferTest: XCTestCase {
 
         XCTAssertEqual(value, buf.readInteger())
     }
+
+    func testSetAndWriteBytes() throws {
+        let str = "hello world!"
+        let hwData = str.data(using: .utf8)!
+        /* write once, ... */
+        buf.write(string: str)
+        var written1: Int = -1
+        var written2: Int = -1
+        hwData.withUnsafeBytes { (ptr: UnsafePointer<Int8>) -> Void in
+            let ptr = UnsafeRawBufferPointer(start: ptr, count: hwData.count)
+            /* ... write a second time and ...*/
+            written1 = buf.set(bytes: ptr, at: buf.writerIndex)
+            buf.moveWriterIndex(forwardBy: written1)
+            /* ... a lucky third time! */
+            written2 = buf.write(bytes: ptr)
+        }
+        XCTAssertEqual(written1, written2)
+        XCTAssertEqual(str.utf8.count, written1)
+        XCTAssertEqual(3 * str.utf8.count, buf.readableBytes)
+        let actualData = buf.readData(length: 3 * str.utf8.count)!
+        let actualString = String(bytes: actualData, encoding: .utf8)
+        XCTAssertEqual(Array(repeating: str, count: 3).joined(), actualString)
+    }
 }

@@ -41,6 +41,7 @@ extension ByteBuffer {
     }
 
     // MARK: StaticString APIs
+    @discardableResult
     public mutating func write(staticString string: StaticString) -> Int {
         let written = self.set(staticString: string, at: self.writerIndex)
         self.moveWriterIndex(forwardBy: written)
@@ -83,6 +84,13 @@ extension ByteBuffer {
         let written = set(buffer: buffer, at: writerIndex)
         self.moveWriterIndex(forwardBy: written)
         buffer.moveReaderIndex(forwardBy: written)
+        return written
+    }
+
+    @discardableResult
+    public mutating func write(bytes: UnsafeRawBufferPointer) -> Int {
+        let written = set(bytes: bytes, at: self.writerIndex)
+        self.moveWriterIndex(forwardBy: written)
         return written
     }
 

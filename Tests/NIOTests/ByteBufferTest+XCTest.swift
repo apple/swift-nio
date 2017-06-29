@@ -80,6 +80,7 @@ extension ByteBufferTest {
                 ("testSetBuffer", testSetBuffer),
                 ("testWriteBuffer", testWriteBuffer),
                 ("testMisalignedIntegerRead", testMisalignedIntegerRead),
+                ("testSetAndWriteBytes", testSetAndWriteBytes),
            ]
    }
 }

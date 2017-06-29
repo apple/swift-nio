@@ -38,7 +38,7 @@ public enum IOData {
         return tryAsByteBuffer()!
     }
 
-    public func tryAsOther<T>(class: T.Type = T.self) -> T? {
+    public func tryAsOther<T>(type: T.Type = T.self) -> T? {
         if case .other(let any) = self {
             return any as? T
         } else {
@@ -46,8 +46,8 @@ public enum IOData {
         }
     }
 
-    public func forceAsOther<T>(class: T.Type = T.self) -> T {
-        return tryAsOther(class: `class`)!
+    public func forceAsOther<T>(type: T.Type = T.self) -> T {
+        return tryAsOther(type: type)!
     }
 }
 

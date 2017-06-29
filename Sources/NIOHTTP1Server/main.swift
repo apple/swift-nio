@@ -13,8 +13,7 @@
 //===----------------------------------------------------------------------===//
 import Foundation
 import NIO
-import NIOHttp
-
+import NIOHTTP1
 
 private class HTTPHandler : ChannelInboundHandler {
 
@@ -22,24 +21,27 @@ private class HTTPHandler : ChannelInboundHandler {
     private var keepAlive = false
 
     func channelRead(ctx: ChannelHandlerContext, data: IOData) throws {
-        if let request: HTTPRequest = data.tryAsOther() {
-            keepAlive = request.isKeepAlive
+        if let reqPart = data.tryAsOther(type: HTTPRequest.self) {
+            switch reqPart {
+            case .head(let request):
+                keepAlive = request.isKeepAlive
 
-            var response = HTTPResponse(version: request.version, status: HTTPResponseStatus.ok)
-            response.headers.add(name: "content-length", value: "12")
-            ctx.write(data: .other(response), promise: nil)
-        } else if let content:HTTPContent = data.tryAsOther() {
-            switch content {
-            case .more(_):
-                break
-            case .last:
-                let content = HTTPContent.last(buffer: buffer!.slice())
-                if keepAlive {
-                    ctx.write(data: .other(content), promise: nil)
-                } else {
-                    ctx.write(data: .other(content)).whenComplete(callback: { _ in
-                        ctx.close(promise: nil)
-                    })
+                var response = HTTPResponseHead(version: request.version, status: HTTPResponseStatus.ok)
+                response.headers.add(name: "content-length", value: "12")
+                ctx.write(data: .other(response), promise: nil)
+            case .body(let content):
+                switch content {
+                case .more(_):
+                    break
+                case .last:
+                    let content = HTTPBodyContent.last(buffer: buffer!.slice())
+                    if keepAlive {
+                        ctx.write(data: .other(content), promise: nil)
+                    } else {
+                        ctx.write(data: .other(content)).whenComplete(callback: { _ in
+                            ctx.close(promise: nil)
+                        })
+                    }
                 }
             }
         }
@@ -79,7 +81,7 @@ defer {
     _ = try? group.close()
 }
 
-let channel = try bootstrap.bind(host: "0.0.0.0", port: 8888).wait()
+let channel = try bootstrap.bind(to: "0.0.0.0", on: 8888).wait()
 
 print("Server started")
 
