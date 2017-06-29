@@ -44,7 +44,7 @@ public struct FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
     public mutating func record(actualReadBytes: Int) { }
     
     public func buffer(allocator: ByteBufferAllocator) throws -> ByteBuffer {
-        return try allocator.buffer(capacity: capacity)
+        return allocator.buffer(capacity: capacity)
     }
 }
 
@@ -148,7 +148,7 @@ public struct AdaptiveRecvByteBufferAllocator : RecvByteBufferAllocator {
     }
     
     public func buffer(allocator: ByteBufferAllocator) throws -> ByteBuffer {
-        return try allocator.buffer(capacity: nextReceiveBufferSize)
+        return allocator.buffer(capacity: nextReceiveBufferSize)
     }
     
     public mutating func record(actualReadBytes: Int) {

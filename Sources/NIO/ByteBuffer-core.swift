@@ -29,7 +29,7 @@ public struct ByteBufferAllocator {
         self.alignment = alignment
     }
 
-    public func buffer(capacity: Int) throws -> ByteBuffer {
+    public func buffer(capacity: Int) -> ByteBuffer {
         return ByteBuffer(allocator: self, startingCapacity: capacity)
     }
 }

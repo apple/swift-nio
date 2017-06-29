@@ -52,7 +52,7 @@ private class HTTPHandler : ChannelInboundHandler {
     }
 
     func handlerAdded(ctx: ChannelHandlerContext) throws {
-        buffer = try ctx.channel!.allocator.buffer(capacity: 12)
+        buffer = ctx.channel!.allocator.buffer(capacity: 12)
         buffer!.write(string: "Hello World!")
     }
 }

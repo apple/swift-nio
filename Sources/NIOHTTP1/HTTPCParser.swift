@@ -90,7 +90,7 @@ public final class HTTPRequestDecoder : ChannelInboundHandler {
         }
 
         init(allocator: ByteBufferAllocator) throws {
-            self.parserBuffer = try allocator.buffer(capacity: 64)
+            self.parserBuffer = allocator.buffer(capacity: 64)
         }
     }
 
@@ -202,7 +202,7 @@ public final class HTTPRequestDecoder : ChannelInboundHandler {
         if var buffer = data.tryAsByteBuffer() {
             if buffer.readableBytes > 0 {
                 if var cum = state.cumulationBuffer, cum.readableBytes > 0 {
-                    var buf = try ctx.channel!.allocator.buffer(capacity: cum.readableBytes + buffer.readableBytes)
+                    var buf = ctx.channel!.allocator.buffer(capacity: cum.readableBytes + buffer.readableBytes)
                     // This will never return nil as we sized the buffer when allocating it.
                     buf.write(buffer: &cum)
                     buf.write(buffer: &buffer)

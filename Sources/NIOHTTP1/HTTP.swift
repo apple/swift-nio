@@ -21,17 +21,13 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
 
     public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
         if let response:HTTPResponseHead = data.tryAsOther() {
-            do {
-                // TODO: Is 256 really a good value here ?
-                var buffer = try ctx.channel!.allocator.buffer(capacity: 256)
-                response.version.write(buffer: &buffer)
-                response.status.write(buffer: &buffer)
-                response.headers.write(buffer: &buffer)
+            // TODO: Is 256 really a good value here ?
+            var buffer = ctx.channel!.allocator.buffer(capacity: 256)
+            response.version.write(buffer: &buffer)
+            response.status.write(buffer: &buffer)
+            response.headers.write(buffer: &buffer)
 
-                ctx.write(data: .byteBuffer(buffer), promise: promise)
-            } catch let err {
-                promise?.fail(error: err)
-            }
+            ctx.write(data: .byteBuffer(buffer), promise: promise)
         } else if let content: HTTPBodyContent = data.tryAsOther()  {
             // TODO: Implement chunked encoding
             switch content {
@@ -42,12 +38,8 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
                     ctx.write(data: .byteBuffer(buf), promise: promise)
                 } else if promise != nil {
                     // We only need to pass the promise further if the user is even interested in the result.
-                    do {
-                        // Empty content so just write an empty buffer
-                        ctx.write(data: .byteBuffer(try ctx.channel!.allocator.buffer(capacity: 0)), promise: promise)
-                    } catch let err {
-                        promise?.fail(error: err)
-                    }
+                    // Empty content so just write an empty buffer
+                    ctx.write(data: .byteBuffer(ctx.channel!.allocator.buffer(capacity: 0)), promise: promise)
                 }
             }
         } else {

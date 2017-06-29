@@ -55,7 +55,7 @@ class ChannelPipelineTest: XCTestCase {
         
         let channel = EmbeddedChannel()
 
-        var buf = try channel.allocator.buffer(capacity: 1024)
+        var buf = channel.allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
         
         _ = try channel.pipeline.add(handler: TestChannelOutboundHandler({ data in

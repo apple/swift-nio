@@ -18,7 +18,7 @@ import XCTest
 class EmbeddedChannelTest: XCTestCase {
     func testWriteByteBuffer() throws {
         let channel = EmbeddedChannel()
-        var buf = try channel.allocator.buffer(capacity: 1024)
+        var buf = channel.allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
 
 

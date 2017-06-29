@@ -122,7 +122,7 @@ class HTTPTest: XCTestCase {
 
         /* send all bytes in one go */
         let bd1 = try sendAndCheckRequests(expecteds, body: body, sendStrategy: { (reqString, chan) in
-            var buf = try chan.allocator.buffer(capacity: 1024)
+            var buf = chan.allocator.buffer(capacity: 1024)
             buf.write(string: reqString)
             chan.pipeline.fireChannelRead(data: .byteBuffer(buf))
         })
@@ -130,7 +130,7 @@ class HTTPTest: XCTestCase {
         /* send the bytes one by one */
         let bd2 = try sendAndCheckRequests(expecteds, body: body, sendStrategy: { (reqString, chan) in
             for c in reqString {
-                var buf = try chan.allocator.buffer(capacity: 1024)
+                var buf = chan.allocator.buffer(capacity: 1024)
 
                 buf.write(string: "\(c)")
                 chan.pipeline.fireChannelRead(data: .byteBuffer(buf))
