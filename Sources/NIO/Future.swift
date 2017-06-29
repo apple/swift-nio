@@ -266,7 +266,7 @@ public final class Future<T> {
     internal var fulfilled: Bool {
         return _fullfilled.load()
     }
-    
+
     /// Callbacks that should be run when this Future<> gets a value.
     /// These callbacks may give values to other Futures; if that happens, they return any callbacks from those Futures so that we can run the entire chain from the top without recursing.
     fileprivate var callbacks: CallbackList = CallbackList()

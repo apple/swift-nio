@@ -29,6 +29,9 @@ public protocol ChannelOutboundInvoker {
     func flush() -> Future<Void>
     func flush(promise: Promise<Void>?)
 
+    func writeAndFlush(data: IOData) -> Future<Void>
+    func writeAndFlush(data: IOData, promise: Promise<Void>?)
+    
     func read() -> Future<Void>
     func read(promise: Promise<Void>?)
 
@@ -72,6 +75,12 @@ public extension ChannelOutboundInvoker {
     public func flush() -> Future<Void> {
         let promise = newPromise()
         flush(promise: promise)
+        return promise.futureResult
+    }
+    
+    public func writeAndFlush(data: IOData) -> Future<Void> {
+        let promise = newPromise()
+        writeAndFlush(data: data, promise: promise)
         return promise.futureResult
     }
     

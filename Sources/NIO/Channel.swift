@@ -632,6 +632,10 @@ extension Channel {
     public func flush(promise: Promise<Void>?) {
         pipeline.flush(promise: promise)
     }
+    
+    public func writeAndFlush(data: IOData, promise: Promise<Void>?) {
+        pipeline.writeAndFlush(data: data, promise: promise)
+    }
 
     public func read(promise: Promise<Void>?) {
         pipeline.read(promise: promise)

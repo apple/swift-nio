@@ -352,6 +352,16 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
 
+    public func writeAndFlush(data: IOData, promise: Promise<Void>?) {
+        if eventLoop.inEventLoop {
+            writeAndFlush0(data: data, promise: promise)
+        } else {
+            eventLoop.execute {
+                self.writeAndFlush0(data: data, promise: promise)
+            }
+        }
+    }
+    
     public func bind(to address: SocketAddress, promise: Promise<Void>?) {
         if eventLoop.inEventLoop {
             bind0(to: address, promise: promise)
@@ -406,6 +416,10 @@ public final class ChannelPipeline : ChannelInvoker {
     
     func write0(data: IOData, promise: Promise<Void>?) {
         firstOutboundCtx.invokeWrite(data: data, promise: promise)
+    }
+    
+    func writeAndFlush0(data: IOData, promise: Promise<Void>?) {
+        firstOutboundCtx.invokeWriteAndFlush(data: data, promise: promise)
     }
     
     func bind0(to address: SocketAddress, promise: Promise<Void>?) {
@@ -638,6 +652,10 @@ public final class ChannelHandlerContext : ChannelInvoker {
         outboundNext!.invokeFlush(promise: promise)
     }
     
+    public func writeAndFlush(data: IOData, promise: Promise<Void>?) {
+        outboundNext!.invokeWriteAndFlush(data: data, promise: promise)
+    }
+    
     public func read(promise: Promise<Void>?) {
         outboundNext!.invokeRead(promise: promise)
     }
@@ -764,11 +782,44 @@ public final class ChannelHandlerContext : ChannelInvoker {
 
         (handler as! ChannelOutboundHandler).write(ctx: self, data: data, promise: promise)
     }
-    
+
     func invokeFlush(promise: Promise<Void>?) {
         assert(inEventLoop)
         
         (handler as! ChannelOutboundHandler).flush(ctx: self, promise: promise)
+    }
+    
+    func invokeWriteAndFlush(data: IOData, promise: Promise<Void>?) {
+        assert(inEventLoop)
+        assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
+        
+        if let promise = promise {
+            var counter = 2
+            let callback: (FutureValue<Void>) -> Void = { v in
+                switch v {
+                case .failure(let err):
+                    promise.fail(error: err)
+                case .success(_):
+                    counter -= 1
+                    if counter == 0 {
+                        promise.succeed(result: ())
+                    }
+                    assert(counter >= 0)
+                }
+            }
+            
+            let writePromise: Promise<Void> = eventLoop.newPromise()
+            let flushPromise: Promise<Void> = eventLoop.newPromise()
+            
+            (handler as! ChannelOutboundHandler).write(ctx: self, data: data, promise: writePromise)
+            (handler as! ChannelOutboundHandler).flush(ctx: self, promise: flushPromise)
+            
+            writePromise.futureResult.whenComplete(callback: callback)
+            flushPromise.futureResult.whenComplete(callback: callback)
+        } else {
+            (handler as! ChannelOutboundHandler).write(ctx: self, data: data, promise: nil)
+            (handler as! ChannelOutboundHandler).flush(ctx: self, promise: nil)
+        }
     }
     
     func invokeRead(promise: Promise<Void>?) {
