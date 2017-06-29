@@ -16,10 +16,12 @@ import Foundation
 import NIO
 import CHTTPParser
 
-public final class HTTPRequestDecoder : ChannelInboundHandler {
+public final class HTTPRequestDecoder : ByteToMessageDecoder {
     var parser: UnsafeMutablePointer<http_parser>?
     var settings: UnsafeMutablePointer<http_parser_settings>?
-
+    public var cumulationBuffer: ByteBuffer?
+    
+    
     private enum DataAwaitingState {
         case messageBegin
         case url
@@ -66,7 +68,6 @@ public final class HTTPRequestDecoder : ChannelInboundHandler {
 
     private struct HTTPParserState {
         var dataAwaitingState: DataAwaitingState = .messageBegin
-        var cumulationBuffer: ByteBuffer?
         var currentHeaders = HTTPHeaders()
         var currentUri: String?
         var currentHeaderName: String?
@@ -96,7 +97,7 @@ public final class HTTPRequestDecoder : ChannelInboundHandler {
 
     public init() { }
 
-    public func handlerAdded(ctx: ChannelHandlerContext) throws {
+    public func decoderAdded(ctx: ChannelHandlerContext) throws {
         parser = UnsafeMutablePointer<http_parser>.allocate(capacity: 1)
         http_parser_init(parser, HTTP_REQUEST)
         parser!.pointee.data = Unmanaged.passUnretained(ctx).toOpaque()
@@ -184,7 +185,7 @@ public final class HTTPRequestDecoder : ChannelInboundHandler {
         }
     }
 
-    public func handlerRemoved(ctx: ChannelHandlerContext) {
+    public func decoderRemoved(ctx: ChannelHandlerContext) {
         if let p = parser {
             p.pointee.data = UnsafeMutableRawPointer(bitPattern: 0x0000deadbeef0000)
             p.deallocate(capacity: 1)
@@ -192,43 +193,23 @@ public final class HTTPRequestDecoder : ChannelInboundHandler {
             settings = nil
             parser = nil
         }
-        if let buffer = state.cumulationBuffer {
-            ctx.fireChannelRead(data: .byteBuffer(buffer))
-        }
+        
         state = nil
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: IOData) throws {
-        if var buffer = data.tryAsByteBuffer() {
-            if buffer.readableBytes > 0 {
-                if var cum = state.cumulationBuffer, cum.readableBytes > 0 {
-                    var buf = ctx.channel!.allocator.buffer(capacity: cum.readableBytes + buffer.readableBytes)
-                    // This will never return nil as we sized the buffer when allocating it.
-                    buf.write(buffer: &cum)
-                    buf.write(buffer: &buffer)
-                    state.cumulationBuffer = buf
-                } else {
-                    state.cumulationBuffer = buffer
+    public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> Bool {
+        let result = try buffer.withReadPointer(body: { (pointer: UnsafePointer<UInt8>, len: Int) -> size_t in
+            try pointer.withMemoryRebound(to: Int8.self, capacity: len, { (bytes: UnsafePointer<Int8>) -> size_t in
+                let result = http_parser_execute(parser, settings, bytes, len)
+                let errno = parser!.pointee.http_errno
+                if errno != 0 {
+                    throw HTTPParserError.httpError(fromCHTTPParserErrno:  http_errno(rawValue: errno))!
                 }
-            }
-
-            let result = try state.cumulationBuffer!.withReadPointer(body: { (pointer: UnsafePointer<UInt8>, len: Int) -> size_t in
-                try pointer.withMemoryRebound(to: Int8.self, capacity: len, { (bytes: UnsafePointer<Int8>) -> size_t in
-                    let result = http_parser_execute(parser, settings, bytes, len)
-                    let errno = parser!.pointee.http_errno
-                    if errno != 0 {
-                        throw HTTPParserError.httpError(fromCHTTPParserErrno:  http_errno(rawValue: errno))!
-                    }
-                    return result
-                })
+                return result
             })
-            if result > 0 {
-                state.cumulationBuffer!.moveReaderIndex(forwardBy: result)
-                if state.cumulationBuffer!.readableBytes == 0 {
-                    state.cumulationBuffer = nil
-                }
-            }
-        }
+        })
+        buffer.moveReaderIndex(forwardBy: result)
+        return true
     }
 
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
