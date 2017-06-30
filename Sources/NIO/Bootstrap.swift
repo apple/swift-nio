@@ -128,6 +128,7 @@ public final class ServerBootstrap {
     }
     
     private class AcceptHandler : ChannelInboundHandler {
+        public typealias InboundIn = SocketChannel
         
         private let childHandler: ChannelHandler?
         private let childOptions: ChannelOptionStorage
@@ -138,7 +139,7 @@ public final class ServerBootstrap {
         }
         
         func channelRead(ctx: ChannelHandlerContext, data: IOData) {
-            let accepted = data.forceAsOther() as SocketChannel
+            let accepted = self.unwrapInboundIn(data)
             do {
                 try self.childOptions.applyAll(channel: accepted)
 

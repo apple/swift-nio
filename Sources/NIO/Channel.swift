@@ -21,32 +21,73 @@ import Glibc
 import Darwin
 #endif
 
-public enum IOData {
-    case byteBuffer(ByteBuffer)
-    case other(Any)
+public struct IOData {
+    private let storage: _IOData
+    public init<T>(_ value: T) {
+        self.storage = _IOData(value)
+    }
 
-    public func tryAsByteBuffer() -> ByteBuffer? {
-        if case .byteBuffer(let bb) = self {
+    enum _IOData {
+        case byteBuffer(ByteBuffer)
+        case other(Any)
+
+        init<T>(_ value: T) {
+            if T.self == ByteBuffer.self {
+                self = .byteBuffer(value as! ByteBuffer)
+            } else {
+                self = .other(value)
+            }
+        }
+
+    }
+
+    func tryAsByteBuffer() -> ByteBuffer? {
+        if case .byteBuffer(let bb) = self.storage {
             return bb
         } else {
             return nil
         }
     }
 
-    public func forceAsByteBuffer() -> ByteBuffer {
+    func forceAsByteBuffer() -> ByteBuffer {
         return tryAsByteBuffer()!
     }
 
-    public func tryAsOther<T>(type: T.Type = T.self) -> T? {
-        if case .other(let any) = self {
+    func tryAsOther<T>(type: T.Type = T.self) -> T? {
+        if case .other(let any) = self.storage {
             return any as? T
         } else {
             return nil
         }
     }
 
-    public func forceAsOther<T>(type: T.Type = T.self) -> T {
+    func forceAsOther<T>(type: T.Type = T.self) -> T {
         return tryAsOther(type: type)!
+    }
+
+    func forceAs<T>(type: T.Type = T.self) -> T {
+        if T.self == ByteBuffer.self {
+            return self.forceAsByteBuffer() as! T
+        } else {
+            return self.forceAsOther(type: type)
+        }
+    }
+
+    func tryAs<T>(type: T.Type = T.self) -> T? {
+        if T.self == ByteBuffer.self {
+            return self.tryAsByteBuffer() as! T?
+        } else {
+            return self.tryAsOther(type: type)
+        }
+    }
+
+    func asAny() -> Any {
+        switch self.storage {
+        case .byteBuffer(let bb):
+            return bb
+        case .other(let o):
+            return o
+        }
     }
 }
 
@@ -392,7 +433,7 @@ final class SocketChannel : BaseSocketChannel<Socket> {
                     readPending = false
 
                     assert(!closed)
-                    pipeline.fireChannelRead0(data: .byteBuffer(buffer))
+                    pipeline.fireChannelRead0(data: IOData(buffer))
 
                     // Reset reader and writerIndex and so allow to have the buffer filled again
                     buffer.clear()
@@ -520,7 +561,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
                 readPending = false
 
                 do {
-                    pipeline.fireChannelRead0(data: .other(try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop)))
+                    pipeline.fireChannelRead0(data: IOData(try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop)))
                 } catch let err {
                     let _ = try? accepted.close()
                     throw err

@@ -16,7 +16,10 @@ import Foundation
 import NIO
 import CHTTPParser
 
-public final class HTTPRequestDecoder : ByteToMessageDecoder {
+public final class HTTPRequestDecoder : ChannelInboundHandler, ByteToMessageDecoder {
+    public typealias InboundIn = ByteBuffer
+    public typealias InboundOut = HTTPRequest
+
     var parser: UnsafeMutablePointer<http_parser>?
     var settings: UnsafeMutablePointer<http_parser_settings>?
     public var cumulationBuffer: ByteBuffer?
@@ -127,7 +130,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
 
             handler.state.dataAwaitingState = .body
 
-            ctx.fireChannelRead(data: .other(HTTPRequest.head(request)))
+            ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequest.head(request)))
             return 0
         }
 
@@ -138,7 +141,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
 
             // This will never return nil as we allocated the buffer with the correct size
             handler.state.parserBuffer.write(int8Data: data!, len: len)
-            ctx.fireChannelRead(data: .other(HTTPRequest.body(HTTPBodyContent.more(buffer: handler.state.parserBuffer.readSlice(length: len)!))))
+            ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequest.body(HTTPBodyContent.more(buffer: handler.state.parserBuffer.readSlice(length: len)!))))
 
             return 0
         }
@@ -178,7 +181,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             let ctx = evacuateContext(parser)
             let handler = ctx.handler as! HTTPRequestDecoder
 
-            ctx.fireChannelRead(data: .other(HTTPRequest.body(.last(buffer: nil))))
+            ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequest.body(.last(buffer: nil))))
             handler.complete(state: handler.state.dataAwaitingState)
             handler.state.dataAwaitingState = .messageBegin
             return 0

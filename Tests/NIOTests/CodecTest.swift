@@ -18,6 +18,9 @@ import XCTest
 
 public class ByteToMessageDecoderTest: XCTestCase {
     private final class ByteToInt32Decoder : ByteToMessageDecoder {
+        typealias InboundIn = ByteBuffer
+        typealias InboundOut = Int32
+
         var cumulationBuffer: ByteBuffer?
         
         
@@ -25,7 +28,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
             guard buffer.readableBytes >= MemoryLayout<Int32>.size else {
                 return false
             }
-            ctx.fireChannelRead(data: .other(buffer.readInteger()! as Int32))
+            ctx.fireChannelRead(data: self.wrapInboundOut(buffer.readInteger()!))
             return true
         }
     }
@@ -40,15 +43,15 @@ public class ByteToMessageDecoderTest: XCTestCase {
         let writerIndex = buffer.writerIndex
         buffer.moveWriterIndex(to: writerIndex - 1)
         
-        channel.pipeline.fireChannelRead(data: .byteBuffer(buffer))
+        channel.pipeline.fireChannelRead(data: IOData(buffer))
         XCTAssertNil(channel.readInbound())
         
-        channel.pipeline.fireChannelRead(data: .byteBuffer(buffer.slice(at: writerIndex - 1, length: 1)!))
+        channel.pipeline.fireChannelRead(data: IOData(buffer.slice(at: writerIndex - 1, length: 1)!))
         
         var buffer2 = channel.allocator.buffer(capacity: 32)
         buffer2.write(integer: Int32(2))
         buffer2.write(integer: Int32(3))
-        channel.pipeline.fireChannelRead(data: .byteBuffer(buffer2))
+        channel.pipeline.fireChannelRead(data: IOData(buffer2))
         
         try channel.close().wait()
         
@@ -62,13 +65,15 @@ public class ByteToMessageDecoderTest: XCTestCase {
 public class MessageToByteEncoderTest: XCTestCase {
     
     private final class Int32ToByteEncoder : MessageToByteEncoder {
-        public func encode(ctx: ChannelHandlerContext, data: IOData, out: inout ByteBuffer) throws {
+        typealias OutboundIn = Int32
+        typealias OutboundOut = ByteBuffer
+
+        public func encode(ctx: ChannelHandlerContext, data value: Int32, out: inout ByteBuffer) throws {
             XCTAssertEqual(MemoryLayout<Int32>.size, out.writableBytes)
-            let value: Int32 = data.forceAsOther()
             out.write(integer: value);
         }
         
-        public func allocateOutBuffer(ctx: ChannelHandlerContext, data: IOData) throws -> ByteBuffer {
+        public func allocateOutBuffer(ctx: ChannelHandlerContext, data: Int32) throws -> ByteBuffer {
             return ctx.channel!.allocator.buffer(capacity: MemoryLayout<Int32>.size)
         }
     }
@@ -78,8 +83,7 @@ public class MessageToByteEncoderTest: XCTestCase {
         
         _ = try channel.pipeline.add(handler: Int32ToByteEncoder()).wait()
         
-        _ = try channel.writeAndFlush(data: .other(Int32(5))).wait()
-        
+        _ = try channel.writeAndFlush(data: IOData(Int32(5))).wait()
         
         var buffer = channel.readOutbound() as ByteBuffer?
         XCTAssertEqual(Int32(5), buffer?.readInteger())

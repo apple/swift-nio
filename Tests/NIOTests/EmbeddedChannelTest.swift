@@ -22,7 +22,7 @@ class EmbeddedChannelTest: XCTestCase {
         buf.write(string: "hello")
 
 
-        let f = channel.write(data: .byteBuffer(buf))
+        let f = channel.write(data: IOData(buf))
 
         var ranBlock = false
         f.whenSuccess { () -> Void in

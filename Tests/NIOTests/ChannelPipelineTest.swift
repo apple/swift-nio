@@ -58,35 +58,37 @@ class ChannelPipelineTest: XCTestCase {
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
         
-        _ = try channel.pipeline.add(handler: TestChannelOutboundHandler({ data in
-            XCTAssertEqual(1, data.forceAsOther())
-            return .byteBuffer(buf)
+        _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<Int, ByteBuffer>({ data in
+            XCTAssertEqual(1, data)
+            return buf
         })).wait()
         
-        _ = try channel.pipeline.add(handler: TestChannelOutboundHandler({ data in
-            XCTAssertEqual("msg", data.forceAsOther())
-            return .other(1)
+        _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<String, Int>({ data in
+            XCTAssertEqual("msg", data)
+            return 1
         })).wait()
         
         
-        _ = channel.write(data: .other("msg"))
+        _ = channel.write(data: IOData("msg"))
         _ = try channel.flush().wait()
         XCTAssertEqual(buf, channel.readOutbound())
         XCTAssertNil(channel.readOutbound())
         
     }
     
-    private final class TestChannelOutboundHandler: ChannelOutboundHandler {
+    private final class TestChannelOutboundHandler<In, Out>: ChannelOutboundHandler {
+        typealias OutboundIn = In
+        typealias OutboundOut = Out
         
-        private let fn: (IOData) throws -> IOData
+        private let fn: (OutboundIn) throws -> OutboundOut
         
-        init(_ fn: @escaping (IOData) throws -> IOData) {
+        init(_ fn: @escaping (OutboundIn) throws -> OutboundOut) {
             self.fn = fn
         }
         
         public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
             do {
-                ctx.write(data: try fn(data), promise: promise)
+                ctx.write(data: self.wrapOutboundOut(try fn(self.unwrapOutboundIn(data))), promise: promise)
             } catch let err {
                 promise!.fail(error: err)
             }

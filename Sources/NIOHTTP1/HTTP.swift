@@ -16,33 +16,32 @@ import Foundation
 import NIO
 
 public final class HTTPResponseEncoder : ChannelOutboundHandler {
+    public typealias OutboundIn = HTTPResponse
+    public typealias OutboundOut = ByteBuffer
 
-    public init() { }
+    public init() {}
 
     public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
-        if let response:HTTPResponseHead = data.tryAsOther() {
+        switch self.tryUnwrapOutboundIn(data) {
+        case .some(.head(let response)):
             // TODO: Is 256 really a good value here ?
             var buffer = ctx.channel!.allocator.buffer(capacity: 256)
             response.version.write(buffer: &buffer)
             response.status.write(buffer: &buffer)
             response.headers.write(buffer: &buffer)
 
-            ctx.write(data: .byteBuffer(buffer), promise: promise)
-        } else if let content: HTTPBodyContent = data.tryAsOther()  {
-            // TODO: Implement chunked encoding
-            switch content {
-            case .more(let buffer):
-                ctx.write(data: .byteBuffer(buffer), promise: promise)
-            case .last(let buffer):
-                if let buf = buffer {
-                    ctx.write(data: .byteBuffer(buf), promise: promise)
-                } else if promise != nil {
-                    // We only need to pass the promise further if the user is even interested in the result.
-                    // Empty content so just write an empty buffer
-                    ctx.write(data: .byteBuffer(ctx.channel!.allocator.buffer(capacity: 0)), promise: promise)
-                }
+            ctx.write(data: self.wrapOutboundOut(buffer), promise: promise)
+        case .some(.body(.more(let buffer))):
+                ctx.write(data: self.wrapOutboundOut(buffer), promise: promise)
+        case .some(.body(.last(let buffer))):
+            if let buf = buffer {
+                ctx.write(data: self.wrapOutboundOut(buf), promise: promise)
+            } else if promise != nil {
+                // We only need to pass the promise further if the user is even interested in the result.
+                // Empty content so just write an empty buffer
+                ctx.write(data: self.wrapOutboundOut(ctx.channel!.allocator.buffer(capacity: 0)), promise: promise)
             }
-        } else {
+        case .none:
             ctx.write(data: data, promise: promise)
         }
     }

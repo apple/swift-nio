@@ -19,7 +19,7 @@ public protocol ChannelHandler : class {
     func handlerRemoved(ctx: ChannelHandlerContext) throws
 }
 
-public protocol ChannelOutboundHandler : ChannelHandler {
+public protocol _ChannelOutboundHandler : ChannelHandler {
     func register(ctx: ChannelHandlerContext, promise: Promise<Void>?)
     func bind(ctx: ChannelHandlerContext, to: SocketAddress, promise: Promise<Void>?)
     func connect(ctx: ChannelHandlerContext, to: SocketAddress, promise: Promise<Void>?)
@@ -31,7 +31,7 @@ public protocol ChannelOutboundHandler : ChannelHandler {
     func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: Promise<Void>?)
 }
 
-public protocol ChannelInboundHandler : ChannelHandler {
+public protocol _ChannelInboundHandler : ChannelHandler {
     func channelRegistered(ctx: ChannelHandlerContext) throws
     func channelUnregistered(ctx: ChannelHandlerContext) throws
     func channelActive(ctx: ChannelHandlerContext) throws
@@ -55,7 +55,7 @@ public extension ChannelHandler {
     }
 }
 
-public extension ChannelOutboundHandler {
+public extension _ChannelOutboundHandler {
     
     public func register(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
         ctx.register(promise: promise)
@@ -91,7 +91,7 @@ public extension ChannelOutboundHandler {
 }
 
 
-public extension ChannelInboundHandler {
+public extension _ChannelInboundHandler {
     
     public func channelRegistered(ctx: ChannelHandlerContext) {
         ctx.fireChannelRegistered()

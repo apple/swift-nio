@@ -16,29 +16,33 @@ import NIO
 import NIOHTTP1
 
 private class HTTPHandler : ChannelInboundHandler {
+    public typealias InboundIn = HTTPRequest
+    public typealias OutboundOut = HTTPResponse
 
     private var buffer: ByteBuffer? = nil
     private var keepAlive = false
 
-    func channelRead(ctx: ChannelHandlerContext, data: IOData) throws {
-        if let reqPart = data.tryAsOther(type: HTTPRequest.self) {
+    func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+
+        if let reqPart = self.tryUnwrapInboundIn(data) {
             switch reqPart {
             case .head(let request):
                 keepAlive = request.isKeepAlive
 
-                var response = HTTPResponseHead(version: request.version, status: HTTPResponseStatus.ok)
-                response.headers.add(name: "content-length", value: "12")
-                ctx.write(data: .other(response), promise: nil)
+                var responseHead = HTTPResponseHead(version: request.version, status: HTTPResponseStatus.ok)
+                responseHead.headers.add(name: "content-length", value: "12")
+                let response = HTTPResponse.head(responseHead)
+                ctx.write(data: self.wrapOutboundOut(response), promise: nil)
             case .body(let content):
                 switch content {
                 case .more(_):
                     break
                 case .last:
-                    let content = HTTPBodyContent.last(buffer: buffer!.slice())
+                    let content = HTTPResponse.body(HTTPBodyContent.last(buffer: buffer!.slice()))
                     if keepAlive {
-                        ctx.write(data: .other(content), promise: nil)
+                        ctx.write(data: self.wrapOutboundOut(content), promise: nil)
                     } else {
-                        ctx.write(data: .other(content)).whenComplete(callback: { _ in
+                        ctx.write(data: self.wrapOutboundOut(content)).whenComplete(callback: { _ in
                             ctx.close(promise: nil)
                         })
                     }

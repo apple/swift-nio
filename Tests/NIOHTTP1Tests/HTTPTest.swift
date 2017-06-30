@@ -17,15 +17,17 @@ import XCTest
 @testable import NIOHTTP1
 
 private final class TestChannelInboundHandler: ChannelInboundHandler {
+    public typealias InboundIn = HTTPRequest
+    public typealias InboundOut = HTTPRequest
 
-    private let fn: (IOData) -> IOData
+    private let fn: (HTTPRequest) -> HTTPRequest
 
-    init(_ fn: @escaping (IOData) -> IOData) {
+    init(_ fn: @escaping (HTTPRequest) -> HTTPRequest) {
         self.fn = fn
     }
 
     public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
-        ctx.fireChannelRead(data: self.fn(data))
+        ctx.fireChannelRead(data: self.wrapInboundOut(self.fn(self.unwrapInboundIn(data))))
     }
 }
 
@@ -62,38 +64,34 @@ class HTTPTest: XCTestCase {
             try channel.pipeline.add(handler: HTTPRequestDecoder()).wait()
             var bodyData: Data? = nil
             var allBodyDatas: [Data] = []
-            try channel.pipeline.add(handler: TestChannelInboundHandler { data in
-                if let reqPart = data.tryAsOther(type: NIOHTTP1.HTTPRequest.self) {
-                    switch reqPart {
-                    case .head(var req):
-                        XCTAssertEqual((index * 2), step)
-                        req.headers.remove(name: "Content-Length")
-                        XCTAssertEqual(expecteds[index], req)
-                        step += 1
-                    case .body(let chunk):
-                        switch chunk {
-                        case .more(var buffer):
+            try channel.pipeline.add(handler: TestChannelInboundHandler { reqPart in
+                switch reqPart {
+                case .head(var req):
+                    XCTAssertEqual((index * 2), step)
+                    req.headers.remove(name: "Content-Length")
+                    XCTAssertEqual(expecteds[index], req)
+                    step += 1
+                case .body(let chunk):
+                    switch chunk {
+                    case .more(var buffer):
+                        if bodyData == nil {
+                            bodyData = buffer.readData(length: buffer.readableBytes)!
+                        } else {
+                            bodyData!.append(buffer.readData(length: buffer.readableBytes)!)
+                        }
+                    case .last(let buffer):
+                        if var buffer = buffer {
                             if bodyData == nil {
                                 bodyData = buffer.readData(length: buffer.readableBytes)!
                             } else {
                                 bodyData!.append(buffer.readData(length: buffer.readableBytes)!)
                             }
-                        case .last(let buffer):
-                            if var buffer = buffer {
-                                if bodyData == nil {
-                                    bodyData = buffer.readData(length: buffer.readableBytes)!
-                                } else {
-                                    bodyData!.append(buffer.readData(length: buffer.readableBytes)!)
-                                }
-                            }
-                            step += 1
-                            XCTAssertEqual(((index + 1) * 2), step)
                         }
+                        step += 1
+                        XCTAssertEqual(((index + 1) * 2), step)
                     }
-                } else {
-                    XCTFail("wrong type \(data)")
                 }
-                return data
+                return reqPart
             }).wait()
 
             for expected in expecteds {
@@ -124,7 +122,7 @@ class HTTPTest: XCTestCase {
         let bd1 = try sendAndCheckRequests(expecteds, body: body, sendStrategy: { (reqString, chan) in
             var buf = chan.allocator.buffer(capacity: 1024)
             buf.write(string: reqString)
-            chan.pipeline.fireChannelRead(data: .byteBuffer(buf))
+            chan.pipeline.fireChannelRead(data: IOData(buf))
         })
 
         /* send the bytes one by one */
@@ -133,7 +131,7 @@ class HTTPTest: XCTestCase {
                 var buf = chan.allocator.buffer(capacity: 1024)
 
                 buf.write(string: "\(c)")
-                chan.pipeline.fireChannelRead(data: .byteBuffer(buf))
+                chan.pipeline.fireChannelRead(data: IOData(buf))
             }
         })
 

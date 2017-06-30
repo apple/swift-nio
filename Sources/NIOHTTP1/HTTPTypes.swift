@@ -65,6 +65,11 @@ public extension HTTPRequestHead {
     }
 }
 
+public enum HTTPResponse {
+    case head(HTTPResponseHead)
+    case body(HTTPBodyContent)
+}
+
 public struct HTTPResponseHead {
     public let status: HTTPResponseStatus
     public let version: HTTPVersion

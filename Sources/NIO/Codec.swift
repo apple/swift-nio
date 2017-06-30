@@ -13,7 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 
-public protocol ByteToMessageDecoder : ChannelInboundHandler {
+public protocol ByteToMessageDecoder : ChannelInboundHandler where InboundIn == ByteBuffer {
+
     var cumulationBuffer: ByteBuffer? { get set }
     func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> Bool
     func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer)throws  -> Bool
@@ -24,7 +25,7 @@ public protocol ByteToMessageDecoder : ChannelInboundHandler {
 public extension ByteToMessageDecoder {
 
     public func channelRead(ctx: ChannelHandlerContext, data: IOData) throws {
-        var buffer = data.forceAsByteBuffer()
+        var buffer = self.unwrapInboundIn(data)
         
         if var cum = cumulationBuffer {
             var buf = ctx.channel!.allocator.buffer(capacity: cum.readableBytes + buffer.readableBytes)
@@ -62,10 +63,13 @@ public extension ByteToMessageDecoder {
     }
     
     public func handlerRemoved(ctx: ChannelHandlerContext) throws {
-        if let buffer = cumulationBuffer {
-            ctx.fireChannelRead(data: .byteBuffer(buffer))
-            cumulationBuffer = nil
+        if let buffer = cumulationBuffer as? InboundOut {
+            ctx.fireChannelRead(data: self.wrapInboundOut(buffer))
+        } else {
+            /* please note that we're dropping the partially received bytes (if any) on the floor here as we can't
+               send a full message to the next handler. */
         }
+        cumulationBuffer = nil
         try decoderRemoved(ctx: ctx)
     }
 
@@ -81,17 +85,18 @@ public extension ByteToMessageDecoder {
     }
 }
 
-public protocol MessageToByteEncoder : ChannelOutboundHandler {
-    func encode(ctx: ChannelHandlerContext, data: IOData, out: inout ByteBuffer) throws
-    func allocateOutBuffer(ctx: ChannelHandlerContext, data: IOData) throws -> ByteBuffer
+public protocol MessageToByteEncoder : ChannelOutboundHandler where OutboundOut == ByteBuffer {
+    func encode(ctx: ChannelHandlerContext, data: OutboundIn, out: inout ByteBuffer) throws
+    func allocateOutBuffer(ctx: ChannelHandlerContext, data: OutboundIn) throws -> ByteBuffer
 }
 
 public extension MessageToByteEncoder {
     public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
         do {
+            let data = self.unwrapOutboundIn(data)
             var buffer: ByteBuffer = try allocateOutBuffer(ctx: ctx, data: data)
             try encode(ctx: ctx, data: data, out: &buffer)
-            ctx.write(data: .byteBuffer(buffer), promise: promise)
+            ctx.write(data: self.wrapOutboundOut(buffer), promise: promise)
         } catch let err {
             promise?.fail(error: err)
         }

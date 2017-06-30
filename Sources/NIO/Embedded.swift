@@ -133,12 +133,7 @@ class EmbeddedChannelCore : ChannelCore {
     }
     
     private func addToBuffer(buffer: inout [Any], data: IOData) {
-        switch data {
-        case .byteBuffer(let buf):
-            buffer.append(buf)
-        case .other(let other):
-            buffer.append(other)
-        }
+        buffer.append(data.asAny())
     }
 }
 
