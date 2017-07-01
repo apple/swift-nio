@@ -15,7 +15,7 @@ import Foundation
 import NIO
 
 
-public class EchoHandler: ChannelInboundHandler {
+private final class EchoHandler: ChannelInboundHandler {
 
     public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
