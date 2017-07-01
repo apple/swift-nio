@@ -702,7 +702,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     private var bufferAllocator: ByteBufferAllocator = ByteBufferAllocator()
     fileprivate var recvAllocator: RecvByteBufferAllocator = AdaptiveRecvByteBufferAllocator()
     fileprivate var autoRead: Bool = true
-    fileprivate var maxMessagesPerRead: UInt = 1
+    fileprivate var maxMessagesPerRead: UInt = 4
 
     // We don't use lazy var here as this is more expensive then doing this :/
     public final var pipeline: ChannelPipeline {
