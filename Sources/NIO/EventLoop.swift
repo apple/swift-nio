@@ -45,15 +45,11 @@ extension EventLoop {
     }
 
     public func newFailedFuture<T>(error: Error) -> Future<T> {
-        let promise: Promise<T> = newPromise()
-        promise.fail(error: error)
-        return promise.futureResult
+        return Future<T>(eventLoop: self, checkForPossibleDeadlock: true, error: error)
     }
 
     public func newSucceedFuture<T>(result: T) -> Future<T> {
-        let promise: Promise<T> = newPromise()
-        promise.succeed(result: result)
-        return promise.futureResult
+        return Future<T>(eventLoop: self, checkForPossibleDeadlock: true, result: result)
     }
     
     public func next() -> EventLoop {
