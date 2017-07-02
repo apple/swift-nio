@@ -37,9 +37,9 @@ public final class Socket : BaseSocket {
     public static var writevLimit: Int {
 // UIO_MAXIOV is only exported on linux atm
 #if os(Linux)
-            return Int(UIO_MAXIOV)
+        return Int(UIO_MAXIOV)
 #else
-            return 1024
+        return 1024
 #endif
     }
     
@@ -66,7 +66,7 @@ public final class Socket : BaseSocket {
             throw IOError(errno: EBADF, reason: "can't connect socket as it's not open anymore.")
         }
         var addr = addr
-        return try withUnsafePointer(to: &addr) { (ptr: UnsafePointer<T>) -> Bool in
+        return try withUnsafePointer(to: &addr) { ptr in
             try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
                 do {
                     let _ = try wrapSyscall({ $0 != -1 }, function: "connect") {

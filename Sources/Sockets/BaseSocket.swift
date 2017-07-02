@@ -120,8 +120,8 @@ public class BaseSocket : Selectable {
         }
 
         var addr = addr
-        try withUnsafePointer(to: &addr) { (ptr: UnsafePointer<T>) -> Void in
-            try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
+        try withUnsafePointer(to: &addr) { p in
+            try p.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
                 _ = try wrapSyscall({ $0 != -1 }, function: "bind") {
                     sysBind(self.descriptor, ptr, socklen_t(MemoryLayout.size(ofValue: addr)))
                 }

@@ -213,12 +213,8 @@ final fileprivate class PendingWrites {
 
                         // buffer was completely written
                         pending.promise?.succeed(result: ())
-
-                        if !isFlushPending {
-                            // signal to the caller that there are no more buffers to consume
-                            return .nothingToBeWritten
-                        }
-                        return .writtenCompletely
+                        
+                        return isFlushPending ? .writtenCompletely : .nothingToBeWritten
                     } else {
                         // Update readerIndex of the buffer
                         pending.buffer.moveReaderIndex(forwardBy: written)
@@ -269,13 +265,7 @@ final fileprivate class PendingWrites {
                             p.promise?.succeed(result: ())
 
                             if w == 0 {
-                                if !isFlushPending {
-                                    // signal to the caller that there are no more buffers to consume
-                                    return .nothingToBeWritten
-                                } else {
-                                    // may try again depending on the writeSpinCount
-                                    return .writtenCompletely
-                                }
+                                return isFlushPending ? .writtenCompletely : .nothingToBeWritten
                             }
 
                         } else {
@@ -715,9 +705,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         if eventLoop.inEventLoop {
             try setOption0(option: option, value: value)
         } else {
-            let _ = try eventLoop.submit{
-                try self.setOption0(option: option, value: value)
-            }.wait()
+            let _ = try eventLoop.submit { try self.setOption0(option: option, value: value)}.wait()
         }
     }
 
@@ -851,16 +839,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         // Even if writable() will be called later by the EVentLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actual written once writable() is called.
         pendingWrites.markFlushCheckpoint(promise: promise)
-
-        guard !isWritePending() else {
-            return
-        }
-
-        if !flushNow() {
-            guard !closed else {
-                return
-            }
-
+        
+        if !isWritePending() && !flushNow() && !closed {
             registerForWritable()
         }
     }
@@ -970,7 +950,6 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         if finishConnect() || flushNow() {
             // Everything was written or connect was complete
             finishWritable()
-            return
         }
     }
 
@@ -1031,7 +1010,6 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             close0(error: err, promise: nil)
 
             return
-
         }
         pipeline.fireChannelReadComplete0()
         readIfNeeded0()

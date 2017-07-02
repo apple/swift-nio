@@ -108,12 +108,7 @@ public enum Endianness {
 
     private static func hostEndianness0() -> Endianness {
         let number: UInt32 = 0x12345678
-        let converted = number.bigEndian
-        if number == converted {
-            return .big
-        } else {
-            return .little
-        }
+        return number == number.bigEndian ? .big : .little
     }
 
     case big

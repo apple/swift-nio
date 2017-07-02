@@ -198,7 +198,7 @@ final class SelectableEventLoop : EventLoop {
     }
 
     private func handleEvents<C: SelectableChannel>(_ channel: C) -> Bool {
-        if channel.open {
+        guard !channel.open else {
             return true
         }
         do {
