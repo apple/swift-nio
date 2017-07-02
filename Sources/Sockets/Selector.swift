@@ -286,20 +286,19 @@ public final class Selector<R: Registration> {
     }
 
     public func deregister<S: Selectable>(selectable: S) throws {
-        let reg = registrations.removeValue(forKey: Int(selectable.descriptor))
-        guard reg != nil else {
+        guard let reg = registrations.removeValue(forKey: Int(selectable.descriptor)) else {
             return
         }
+        
 #if os(Linux)
         var ev = epoll_event()
         let _ = try wrapSyscall({ $0 == 0 }, function: "epoll_ctl") {
             CEpoll.epoll_ctl(self.fd, EPOLL_CTL_DEL, selectable.descriptor, &ev)
         }
 #else
-        try register_kqueue(selectable: selectable, interested: .none, oldInterested: reg!.interested)
+        try register_kqueue(selectable: selectable, interested: .none, oldInterested: reg.interested)
 #endif
     }
-
 
     public func whenReady(strategy: SelectorStrategy, _ fn: (SelectorEvent<R>) throws -> Void) throws -> Void {
         guard self.open else {
@@ -340,12 +339,21 @@ public final class Selector<R: Registration> {
         }
         for i in 0..<ready {
             let ev = events[i]
-            if ev.ident != 0 {
-                guard let registration = registrations[Int(ev.ident)] else {
-                    // Just ignore as this means the user deregistered already in between. This can happen as kevent returns two different events, one for EVFILT_READ and one for EVFILT_WRITE.
-                    continue
+            switch Int32(ev.filter) {
+            case EVFILT_USER:
+                // woken-up by the user, just ignore
+                break
+            case EVFILT_READ:
+                if let registration = registrations[Int(ev.ident)] {
+                    try fn((SelectorEvent(isReadable: true, isWritable: false, registration: registration)))
                 }
-                try fn((SelectorEvent(isReadable: Int32(ev.filter) == EVFILT_READ, isWritable: Int32(ev.filter) == EVFILT_WRITE, registration: registration)))
+            case EVFILT_WRITE:
+                if let registration = registrations[Int(ev.ident)] {
+                    try fn((SelectorEvent(isReadable: false, isWritable: true, registration: registration)))
+                }
+            default:
+                // We only use EVFILT_USER, EVFILT_READ and EVFILT_WRITE.
+                fatalError("unexpected filter \(ev.filter)")
             }
         }
     
