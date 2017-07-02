@@ -24,24 +24,44 @@ import Foundation
 
 public final class Selector<R: Registration> {
     private var open: Bool
+    
     #if os(Linux)
     private typealias EventType = epoll_event
-    private let eventsCapacity = 2048
     private let eventfd: Int32
     #else
     private typealias EventType = kevent
-    private let eventsCapacity = 2048
-    // TODO: Just reserve 0 is most likely not the best idea, need to think about a better way to handle this.
     #endif
 
 
     private let fd: Int32
-    private let events: UnsafeMutablePointer<EventType>
+    private var eventsCapacity = 64
+    private var events: UnsafeMutablePointer<EventType>
     private var registrations = [Int: R]()
-
-    public init() throws {
-        events = UnsafeMutablePointer.allocate(capacity: eventsCapacity)
+    
+    private static func allocateEventsArray(capacity: Int) -> UnsafeMutablePointer<EventType> {
+        let events: UnsafeMutablePointer<EventType> = UnsafeMutablePointer.allocate(capacity: capacity)
         events.initialize(to: EventType())
+        return events
+    }
+    
+    private static func deallocateEventsArray(events: UnsafeMutablePointer<EventType>, capacity: Int) {
+        events.deinitialize()
+        events.deallocate(capacity: capacity)
+    }
+    
+    private func growEventArrayIfNeeded(ready: Int) {
+        guard ready == eventsCapacity else {
+            return
+        }
+        Selector.deallocateEventsArray(events: events, capacity: eventsCapacity)
+        
+        // double capacity
+        eventsCapacity = ready << 1
+        events = Selector.allocateEventsArray(capacity: eventsCapacity)
+    }
+    
+    public init() throws {
+        events = Selector.allocateEventsArray(capacity: eventsCapacity)
         self.open = false
 
 #if os(Linux)
@@ -66,7 +86,8 @@ public final class Selector<R: Registration> {
             Darwin.kqueue()
         }
         self.open = true
-
+    
+        // TODO: Just reserve 0 is most likely not the best idea, need to think about a better way to handle this.
         var event = kevent()
         event.ident = 0
         event.filter = Int16(EVFILT_USER)
@@ -81,10 +102,8 @@ public final class Selector<R: Registration> {
 
     deinit {
         assert(!self.open, "Selector still open on deinit")
-        events.deinitialize()
-        events.deallocate(capacity: eventsCapacity)
+        Selector.deallocateEventsArray(events: events, capacity: eventsCapacity)
     }
-
 
 #if os(Linux)
     private static func toEpollWaitTimeout(strategy: SelectorStrategy) -> Int32 {
@@ -289,10 +308,10 @@ public final class Selector<R: Registration> {
 
 #if os(Linux)
         let timeout = Selector.toEpollWaitTimeout(strategy: strategy)
-        let ready = try wrapSyscall({ $0 >= 0 }, function: "epoll_wait") {
+        let ready = Int(try wrapSyscall({ $0 >= 0 }, function: "epoll_wait") {
             CEpoll.epoll_wait(self.fd, events, Int32(eventsCapacity), timeout)
-        }
-        for i in 0..<Int(ready) {
+        })
+        for i in 0..<ready {
             let ev = events[i]
             if ev.data.fd == eventfd {
                 var ev = eventfd_t()
@@ -307,6 +326,8 @@ public final class Selector<R: Registration> {
                         registration: registration))
             }
         }
+    
+        growEventArrayIfNeeded(ready: ready)
 #else
         let timespec = Selector.toKQueueTimeSpec(strategy: strategy)
 
@@ -327,6 +348,8 @@ public final class Selector<R: Registration> {
                 try fn((SelectorEvent(isReadable: Int32(ev.filter) == EVFILT_READ, isWritable: Int32(ev.filter) == EVFILT_WRITE, registration: registration)))
             }
         }
+    
+        growEventArrayIfNeeded(ready: ready)
 #endif
     }
 
