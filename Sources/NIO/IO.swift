@@ -11,9 +11,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-
-import Foundation
-import Errno
+#if os(Linux)
+import Glibc
+#else
+import Darwin
+#endif
 
 public struct IOError: Swift.Error {
     
