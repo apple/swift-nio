@@ -62,10 +62,10 @@ extension EventLoop {
 }
 
 enum NIORegistration: Registration {
-    case serverSocketChannel(ServerSocketChannel, InterestedEvent)
-    case socketChannel(SocketChannel, InterestedEvent)
+    case serverSocketChannel(ServerSocketChannel, IOEvent)
+    case socketChannel(SocketChannel, IOEvent)
 
-    var interested: InterestedEvent {
+    var interested: IOEvent {
         set {
             switch self {
             case .serverSocketChannel(let c, _):
@@ -142,25 +142,29 @@ final class SelectableEventLoop : EventLoop {
         _ = try? selector.wakeup()
     }
 
-    private func handleEvent<R: Registration, C: SelectableChannel>(_ ev: SelectorEvent<R>, channel: C) {
+    private func handleEvent<C: SelectableChannel>(_ ev: IOEvent, channel: C) {
         guard handleEvents(channel) else {
             return
         }
-
-        if ev.isWritable {
+        
+        switch ev {
+        case .write:
             channel.writable()
-
-            guard handleEvents(channel) else {
-                return
-            }
-        }
-
-        if ev.isReadable {
+        case .read:
             channel.readable()
-
+        case .all:
+            channel.writable()
             guard handleEvents(channel) else {
                 return
             }
+            channel.readable()
+        case .none:
+            // spurious wakup
+            break
+            
+        }
+        guard handleEvents(channel) else {
+            return
         }
 
         // Ensure we never reach here if the channel is not open anymore.
@@ -179,9 +183,9 @@ final class SelectableEventLoop : EventLoop {
             try selector.whenReady(strategy: .block) { ev in
                 switch ev.registration {
                 case .serverSocketChannel(let chan, _):
-                    self.handleEvent(ev, channel: chan)
+                    self.handleEvent(ev.io, channel: chan)
                 case .socketChannel(let chan, _):
-                    self.handleEvent(ev, channel: chan)
+                    self.handleEvent(ev.io, channel: chan)
                 }
             }
             

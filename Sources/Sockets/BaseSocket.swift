@@ -29,7 +29,7 @@ import Foundation
 #endif
 
 public protocol Registration {
-    var interested: InterestedEvent { get set }
+    var interested: IOEvent { get set }
 }
 
 public class BaseSocket : Selectable {

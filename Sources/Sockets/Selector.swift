@@ -117,7 +117,7 @@ public final class Selector<R: Registration> {
         }
     }
 
-    private static func toEpollEvents(interested: InterestedEvent) -> UInt32 {
+    private static func toEpollEvents(interested: IOEvent) -> UInt32 {
         // Also merge EPOLLRDHUP in so we can easily detect connection-reset
         switch interested {
         case .read:
@@ -159,7 +159,7 @@ public final class Selector<R: Registration> {
         }
     }
 
-    private func register_kqueue<S: Selectable>(selectable: S, interested: InterestedEvent, oldInterested: InterestedEvent?) throws {
+    private func register_kqueue<S: Selectable>(selectable: S, interested: IOEvent, oldInterested: IOEvent?) throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't register kqueue on selector as it's not open anymore.")
         }
@@ -243,7 +243,7 @@ public final class Selector<R: Registration> {
     }
 #endif
 
-    public func register<S: Selectable>(selectable: S, interested: InterestedEvent = .read, makeRegistration: (InterestedEvent) -> R) throws {
+    public func register<S: Selectable>(selectable: S, interested: IOEvent = .read, makeRegistration: (IOEvent) -> R) throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't register selector as it's not open anymore.")
         }
@@ -263,7 +263,7 @@ public final class Selector<R: Registration> {
         registrations[Int(selectable.descriptor)] = makeRegistration(interested)
     }
 
-    public func reregister<S: Selectable>(selectable: S, interested: InterestedEvent) throws {
+    public func reregister<S: Selectable>(selectable: S, interested: IOEvent) throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't re-register selector as it's not open anymore.")
         }
@@ -390,14 +390,17 @@ public final class Selector<R: Registration> {
 }
 
 public struct SelectorEvent<R> {
-
     public let registration: R
-    public fileprivate(set) var isReadable: Bool
-    public fileprivate(set) var isWritable: Bool
-
+    public let io: IOEvent
+    
     init(isReadable: Bool, isWritable: Bool, registration: R) {
-        self.isReadable = isReadable
-        self.isWritable = isWritable
+        if isReadable {
+            io = isWritable ? .all : .read
+        } else if isWritable {
+            io =  .write
+        } else {
+            io = .none
+        }
         self.registration = registration
     }
 }
@@ -408,7 +411,7 @@ public enum SelectorStrategy {
     case now
 }
 
-public enum InterestedEvent {
+public enum IOEvent {
     case read
     case write
     case all

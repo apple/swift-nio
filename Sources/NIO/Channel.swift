@@ -369,7 +369,7 @@ final class SocketChannel : BaseSocketChannel<Socket> {
         try super.init(socket: socket, eventLoop: eventLoop)
     }
 
-    public override func registrationFor(interested: InterestedEvent) -> NIORegistration {
+    public override func registrationFor(interested: IOEvent) -> NIORegistration {
         return .socketChannel(self, interested)
     }
 
@@ -470,7 +470,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         try super.init(socket: serverSocket, eventLoop: eventLoop)
     }
 
-    public override func registrationFor(interested: InterestedEvent) -> NIORegistration {
+    public override func registrationFor(interested: IOEvent) -> NIORegistration {
         return .serverSocketChannel(self, interested)
     }
 
@@ -592,12 +592,12 @@ protocol SelectableChannel : Channel {
     associatedtype SelectableType: Selectable
 
     var selectable: SelectableType { get }
-    var interestedEvent: InterestedEvent { get }
+    var interestedEvent: IOEvent { get }
 
     func writable()
     func readable()
 
-    func registrationFor(interested: InterestedEvent) -> NIORegistration
+    func registrationFor(interested: IOEvent) -> NIORegistration
 }
 
 extension Channel {
@@ -648,7 +648,7 @@ extension Channel {
 class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     typealias SelectableType = T
 
-    func registrationFor(interested: InterestedEvent) -> NIORegistration {
+    func registrationFor(interested: IOEvent) -> NIORegistration {
         fatalError("must override")
     }
 
@@ -660,7 +660,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
     // Visible to access from EventLoop directly
     let socket: T
-    public var interestedEvent: InterestedEvent = .none
+    public var interestedEvent: IOEvent = .none
 
     public final var closed: Bool {
         return pendingWrites.closed
@@ -1075,7 +1075,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    private func safeReregister(interested: InterestedEvent) {
+    private func safeReregister(interested: IOEvent) {
         guard !closed else {
             interestedEvent = .none
             return
@@ -1093,7 +1093,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    private func safeRegister(interested: InterestedEvent) -> Bool {
+    private func safeRegister(interested: IOEvent) -> Bool {
         guard !closed else {
             interestedEvent = .none
             return false

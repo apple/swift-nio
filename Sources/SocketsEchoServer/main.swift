@@ -38,9 +38,9 @@ func deregisterAndClose<S: Selectable, R>(selector: Sockets.Selector<R>, s: S) {
 }
 
 enum SocketRegistration: Registration {
-    case socket(Socket, Buffer, InterestedEvent)
-    case serverSocket(ServerSocket, Buffer?, InterestedEvent)
-    var interested: InterestedEvent {
+    case socket(Socket, Buffer, IOEvent)
+    case serverSocket(ServerSocket, Buffer?, IOEvent)
+    var interested: IOEvent {
         get {
             switch self {
             case .socket(_, _, let i):
@@ -85,8 +85,8 @@ try server.setOption(level: SOL_SOCKET, name: SO_REUSEADDR, value: 1)
 while true {
     // Block until there are events to handle
     try! selector.whenReady(strategy: .block) { ev in
-        if ev.isReadable {
-
+        switch ev.io {
+        case .read:
             // We can handle either read(...) or accept()
             switch ev.registration {
             case .socket(let socket, let buffer, _):
@@ -105,13 +105,13 @@ while true {
                             // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
                             // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
                             if buffer.offset < buffer.limit {
-                                try selector.reregister(selectable: socket, interested: InterestedEvent.write)
+                                try selector.reregister(selectable: socket, interested: IOEvent.write)
                             }
                             
                         case .wouldBlock:
                             // We could not write everything so we reregister with InterestedEvent.Write and so get woken up once the socket becomes writable again.
                             // This also ensure we not read anymore until we were able to echo it back (backpressure FTW).
-                            try selector.reregister(selectable: socket, interested: InterestedEvent.write)
+                            try selector.reregister(selectable: socket, interested: IOEvent.write)
                         }
                     case .wouldBlock:
                         ()
@@ -131,7 +131,7 @@ while true {
                     try selector.register(selectable: accepted) { i in .socket(accepted, buffer, i) }
                 }
             }
-        } else if ev.isWritable {
+        case .write:
             switch ev.registration {
             case .socket(let socket, let buffer, _):
                 do {
@@ -141,7 +141,7 @@ while true {
 
                         if buffer.offset == buffer.limit {
                             // Everything was written, reregister again with InterestedEvent.Read so we are notified once there is more data on the socket to read.
-                            try selector.reregister(selectable: socket, interested: InterestedEvent.read)
+                            try selector.reregister(selectable: socket, interested: IOEvent.read)
                         }
                     case .wouldBlock:
                         ()
@@ -152,6 +152,12 @@ while true {
             default:
                 fatalError("internal error: writable server socket")
             }
+            
+        case .none:
+            break
+        case .all:
+            fatalError("not expected")
         }
     }
+            
 }
