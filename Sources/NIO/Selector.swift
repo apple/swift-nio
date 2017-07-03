@@ -22,7 +22,7 @@ import Foundation
     import Darwin
 #endif
 
-public final class Selector<R: Registration> {
+final class Selector<R: Registration> {
     private var open: Bool
     
     #if os(Linux)
@@ -60,7 +60,7 @@ public final class Selector<R: Registration> {
         events = Selector.allocateEventsArray(capacity: eventsCapacity)
     }
     
-    public init() throws {
+    init() throws {
         events = Selector.allocateEventsArray(capacity: eventsCapacity)
         self.open = false
 
@@ -243,7 +243,7 @@ public final class Selector<R: Registration> {
     }
 #endif
 
-    public func register<S: Selectable>(selectable: S, interested: IOEvent = .read, makeRegistration: (IOEvent) -> R) throws {
+    func register<S: Selectable>(selectable: S, interested: IOEvent = .read, makeRegistration: (IOEvent) -> R) throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't register selector as it's not open anymore.")
         }
@@ -263,7 +263,7 @@ public final class Selector<R: Registration> {
         registrations[Int(selectable.descriptor)] = makeRegistration(interested)
     }
 
-    public func reregister<S: Selectable>(selectable: S, interested: IOEvent) throws {
+    func reregister<S: Selectable>(selectable: S, interested: IOEvent) throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't re-register selector as it's not open anymore.")
         }
@@ -285,7 +285,7 @@ public final class Selector<R: Registration> {
         registrations[Int(selectable.descriptor)] = reg
     }
 
-    public func deregister<S: Selectable>(selectable: S) throws {
+    func deregister<S: Selectable>(selectable: S) throws {
         guard let reg = registrations.removeValue(forKey: Int(selectable.descriptor)) else {
             return
         }
@@ -300,7 +300,7 @@ public final class Selector<R: Registration> {
 #endif
     }
 
-    public func whenReady(strategy: SelectorStrategy, _ fn: (SelectorEvent<R>) throws -> Void) throws -> Void {
+     func whenReady(strategy: SelectorStrategy, _ fn: (SelectorEvent<R>) throws -> Void) throws -> Void {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't call whenReady for selector as it's not open anymore.")
         }
@@ -361,7 +361,7 @@ public final class Selector<R: Registration> {
 #endif
     }
 
-    public func close() throws {
+    func close() throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't close selector as it's not open anymore.")
         }
@@ -377,7 +377,7 @@ public final class Selector<R: Registration> {
         }
     }
 
-    public func wakeup() throws {
+    func wakeup() throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't wakeup selector as it's not open anymore.")
         }
@@ -397,7 +397,7 @@ public final class Selector<R: Registration> {
     }
 }
 
-public struct SelectorEvent<R> {
+struct SelectorEvent<R> {
     public let registration: R
     public let io: IOEvent
     
@@ -413,13 +413,13 @@ public struct SelectorEvent<R> {
     }
 }
 
-public enum SelectorStrategy {
+enum SelectorStrategy {
     case block
     case blockUntilTimeout(ms: Int)
     case now
 }
 
-public enum IOEvent {
+enum IOEvent {
     case read
     case write
     case all

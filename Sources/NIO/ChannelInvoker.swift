@@ -11,8 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import Sockets
-
 public protocol ChannelOutboundInvoker {
     func register() -> Future<Void>
     func register(promise: Promise<Void>?)

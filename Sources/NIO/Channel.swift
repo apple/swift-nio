@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import Sockets
 import ConcurrencyHelpers
 
 #if os(Linux)

@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import Sockets
 
 public protocol ChannelHandler : class {
     func handlerAdded(ctx: ChannelHandlerContext) throws

@@ -27,7 +27,7 @@ import Foundation
 
 
 // TODO: Handle AF_INET6 as well
-public final class ServerSocket: BaseSocket {
+final class ServerSocket: BaseSocket {
     public class func bootstrap(host: String, port: Int32) throws -> ServerSocket {
         let socket = try ServerSocket()
         try socket.bind(to: try SocketAddresses.newAddress(for: host, on: port))
@@ -35,18 +35,18 @@ public final class ServerSocket: BaseSocket {
         return socket
     }
     
-    public init() throws {
+    init() throws {
         let sock = try BaseSocket.newSocket()
         super.init(descriptor: sock)
     }
     
-    public func listen(backlog: Int32 = 128) throws {
+    func listen(backlog: Int32 = 128) throws {
         _ = try wrapSyscall({ $0 >= 0 }, function: "listen") { () -> Int32 in
             sysListen(self.descriptor, backlog)
         }
     }
     
-    public func accept() throws -> Socket? {
+    func accept() throws -> Socket? {
         var acceptAddr = sockaddr_in()
         var addrSize = socklen_t(MemoryLayout<sockaddr_in>.size)
         

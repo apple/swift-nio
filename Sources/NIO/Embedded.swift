@@ -14,7 +14,6 @@
 
 import Foundation
 import Dispatch
-import Sockets
 
 class EmbeddedEventLoop : EventLoop {
 

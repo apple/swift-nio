@@ -61,7 +61,6 @@ public enum SocketAddressError: Error {
     case unsupported
 }
 
-
 public enum SocketAddress {
     case v4(address: sockaddr_in)
     case v6(address: sockaddr_in6)

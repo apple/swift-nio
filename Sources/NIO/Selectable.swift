@@ -14,7 +14,7 @@
 
 import Foundation
 
-public protocol Selectable {
+protocol Selectable {
     var descriptor: Int32 { get }
 
     var open: Bool { get }

@@ -28,20 +28,21 @@ import Foundation
     let sysSOCK_STREAM = SOCK_STREAM
 #endif
 
-public protocol Registration {
+protocol Registration {
     var interested: IOEvent { get set }
 }
 
-public class BaseSocket : Selectable {
+class BaseSocket : Selectable {
     public let descriptor: Int32
     public private(set) var open: Bool
     
-    public final var localAddress: SocketAddress? {
+    final var localAddress: SocketAddress? {
         get {
             return nil
         }
     }
-    public final var remoteAddress: SocketAddress? {
+    
+    final var remoteAddress: SocketAddress? {
         get {
             return nil
         }
@@ -60,7 +61,7 @@ public class BaseSocket : Selectable {
         self.open = true
     }
 
-    public final func setNonBlocking() throws {
+    final func setNonBlocking() throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't control file descriptor as it's not open anymore.")
         }
@@ -70,7 +71,7 @@ public class BaseSocket : Selectable {
         }
     }
     
-    public final func setOption<T>(level: Int32, name: Int32, value: T) throws {
+    final func setOption<T>(level: Int32, name: Int32, value: T) throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't set socket options as it's not open anymore.")
         }
@@ -87,7 +88,7 @@ public class BaseSocket : Selectable {
         }
     }
 
-    public final func getOption<T>(level: Int32, name: Int32) throws -> T {
+    final func getOption<T>(level: Int32, name: Int32) throws -> T {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't get socket options as it's not open anymore.")
         }
@@ -105,7 +106,7 @@ public class BaseSocket : Selectable {
         return val.pointee
     }
     
-    public final func bind(to address: SocketAddress) throws {
+    final func bind(to address: SocketAddress) throws {
         switch address {
         case .v4(address: let addr):
             try bindSocket(addr: addr)
@@ -129,7 +130,7 @@ public class BaseSocket : Selectable {
         }
     }
     
-    public final func close() throws {
+    final func close() throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't close socket (as it's not open anymore.")
         }

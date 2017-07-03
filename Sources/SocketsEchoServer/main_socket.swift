@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import Sockets
 
 public class Buffer {
     var data: Data

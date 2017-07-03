@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import Sockets
 import ConcurrencyHelpers
 
 public protocol EventLoop: EventLoopGroup {
@@ -88,7 +87,7 @@ enum NIORegistration: Registration {
 
 // TODO: Implement scheduling tasks in the future (a.k.a ScheduledExecutoreService
 final class SelectableEventLoop : EventLoop {
-    private let selector: Sockets.Selector<NIORegistration>
+    private let selector: NIO.Selector<NIORegistration>
     private var thread: pthread_t?
     private var tasks: [() -> ()]
     private let tasksLock = Lock()
@@ -101,7 +100,7 @@ final class SelectableEventLoop : EventLoop {
     let storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
     
     init() throws {
-        self.selector = try Sockets.Selector()
+        self.selector = try NIO.Selector()
         self.tasks = Array()
         self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimit)
         self._storageRefs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimit)

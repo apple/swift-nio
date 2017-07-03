@@ -33,8 +33,8 @@ let sysConnect = Darwin.connect
 public typealias IOVector = iovec
 
 // TODO: scattering support
-public final class Socket : BaseSocket {
-    public static var writevLimit: Int {
+final class Socket : BaseSocket {
+    static var writevLimit: Int {
 // UIO_MAXIOV is only exported on linux atm
 #if os(Linux)
         return Int(UIO_MAXIOV)
@@ -43,7 +43,7 @@ public final class Socket : BaseSocket {
 #endif
     }
     
-    public init() throws {
+    init() throws {
         let sock = try BaseSocket.newSocket()
         super.init(descriptor: sock)
     }
@@ -52,7 +52,7 @@ public final class Socket : BaseSocket {
         super.init(descriptor: descriptor)
     }
     
-    public func connect(to address: SocketAddress) throws  -> Bool {
+    func connect(to address: SocketAddress) throws  -> Bool {
         switch address {
         case .v4(address: let addr):
             return try connectSocket(addr: addr)
@@ -83,18 +83,18 @@ public final class Socket : BaseSocket {
         }
     }
     
-    public func finishConnect() throws {
+    func finishConnect() throws {
         let result: Int32 = try getOption(level: SOL_SOCKET, name: SO_ERROR)
         if result != 0 {
             throw ioError(errno: result, function: "getsockopt")
         }
     }
     
-    public func write(data: Data) throws -> IOResult<Int> {
+    func write(data: Data) throws -> IOResult<Int> {
         return try data.withUnsafeBytes({ try write(pointer: $0, size: data.count) })
     }
 
-    public func write(pointer: UnsafePointer<UInt8>, size: Int) throws -> IOResult<Int> {
+    func write(pointer: UnsafePointer<UInt8>, size: Int) throws -> IOResult<Int> {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't write to socket as it's not open anymore.")
         }
@@ -103,7 +103,7 @@ public final class Socket : BaseSocket {
         }
     }
 
-    public func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
+    func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't writev to socket as it's not open anymore.")
         }
@@ -113,11 +113,11 @@ public final class Socket : BaseSocket {
         }
     }
     
-    public func read(data: inout Data) throws -> IOResult<Int> {
+    func read(data: inout Data) throws -> IOResult<Int> {
         return try data.withUnsafeMutableBytes({ try read(pointer: $0, size: data.count) })
     }
 
-    public func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> IOResult<Int> {
+    func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> IOResult<Int> {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't read from socket as it's not open anymore.")
         }
