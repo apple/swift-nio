@@ -124,12 +124,56 @@ public final class ChannelPipeline : ChannelInvoker {
     }
     
     public func remove(handler: ChannelHandler) -> Future<Bool> {
-        let promise: Promise<Bool> = eventLoop.newPromise()
+        return remove0({ $0.handler === handler })
+    }
+    
+    public func remove(name: String) -> Future<Bool> {
+        return remove0({ $0.name == name })
+    }
+    
+    public func remove(ctx: ChannelHandlerContext) -> Future<Bool> {
+        return remove0({ $0 === ctx })
+    }
+    
+    public func context(handler: ChannelHandler) -> Future<ChannelHandlerContext> {
+        return context0({ $0.handler === handler })
+    }
+    
+    public func context(name: String) -> Future<ChannelHandlerContext> {
+        return context0({ $0.name == name })
+    }
+    
+    public func context(ctx: ChannelHandlerContext) -> Future<ChannelHandlerContext> {
+        return context0({ $0 === ctx })
+    }
+    
+    private func context0(_ fn: @escaping ((ChannelHandlerContext) -> Bool)) -> Future<ChannelHandlerContext> {
+        let promise: Promise<ChannelHandlerContext> = eventLoop.newPromise()
+        
+        func _context0() {
+            guard let ctx = contexts.first(where: fn) else {
+                promise.fail(error: ChannelPipelineError.notFound)
+                return
+            }
+            promise.succeed(result: ctx)
+        }
         if eventLoop.inEventLoop {
-            remove0(handler: handler, promise: promise)
+            _context0()
         } else {
             eventLoop.execute {
-                self.remove0(handler: handler, promise: promise)
+                _context0()
+            }
+        }
+        return promise.futureResult
+    }
+    
+    private func remove0(_ fn: @escaping ((ChannelHandlerContext) -> Bool)) -> Future<Bool> {
+        let promise: Promise<Bool> = eventLoop.newPromise()
+        if eventLoop.inEventLoop {
+            remove0(ctx: contexts.first(where: fn), promise: promise)
+        } else {
+            eventLoop.execute {
+                self.remove0(ctx: self.contexts.first(where: fn), promise: promise)
             }
         }
         return promise.futureResult
@@ -173,25 +217,24 @@ public final class ChannelPipeline : ChannelInvoker {
         assert(outboundChain != nil)
     }
     
-    private func remove0(handler: ChannelHandler, promise: Promise<Bool>) {
+    private func remove0(ctx: ChannelHandlerContext?, promise: Promise<Bool>) {
         assert(eventLoop.inEventLoop)
-
-        // find the context in the pipeline
-        if let context = contexts.first(where: { $0.handler === handler }) {
-            defer {
-                removeFromStorage(context: context)
-            }
-            do {
-                try context.invokeHandlerRemoved()
-                promise.succeed(result: true)
-            } catch let err {
-                promise.fail(error: err)
-            }
-        } else {
+        
+        guard let context = ctx else {
             promise.succeed(result: false)
+            return
+        }
+        defer {
+            removeFromStorage(context: context)
+        }
+        do {
+            try context.invokeHandlerRemoved()
+            promise.succeed(result: true)
+        } catch let err {
+            promise.fail(error: err)
         }
     }
-  
+    
     private func nextName() -> String {
         assert(eventLoop.inEventLoop)
 
@@ -204,7 +247,7 @@ public final class ChannelPipeline : ChannelInvoker {
         assert(eventLoop.inEventLoop)
         
         while let ctx = contexts.first {
-            remove0(handler: ctx.handler, promise:  eventLoop.newPromise())
+            remove0(ctx: ctx, promise:  eventLoop.newPromise())
         }
         
         // We need to set the next reference to nil to ensure we not leak memory due a cycle-reference.
@@ -584,6 +627,7 @@ private final class TailChannelHandler : ChannelInboundHandler {
 public enum ChannelPipelineError : Error {
     case alreadyRemoved
     case alreadyClosed
+    case notFound
 }
 
 
