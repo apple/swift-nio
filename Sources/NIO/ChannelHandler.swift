@@ -29,6 +29,7 @@ public protocol ChannelOutboundHandler : ChannelHandler {
     // TODO: Think about make this more flexible in terms of influence the allocation that is used to read the next amount of data
     func read(ctx: ChannelHandlerContext, promise: Promise<Void>?)
     func close(ctx: ChannelHandlerContext, promise: Promise<Void>?)
+    func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: Promise<Void>?)
 }
 
 public protocol ChannelInboundHandler : ChannelHandler {
@@ -39,7 +40,7 @@ public protocol ChannelInboundHandler : ChannelHandler {
     func channelRead(ctx: ChannelHandlerContext, data: IOData) throws
     func channelReadComplete(ctx: ChannelHandlerContext) throws
     func channelWritabilityChanged(ctx: ChannelHandlerContext) throws
-    func userEventTriggered(ctx: ChannelHandlerContext, event: Any) throws
+    func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) throws
     func errorCaught(ctx: ChannelHandlerContext, error: Error) throws
 }
 
@@ -84,6 +85,10 @@ public extension ChannelOutboundHandler {
     public func close(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
         ctx.close(promise: promise)
     }
+    
+    public func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: Promise<Void>?) {
+        ctx.triggerUserOutboundEvent(event: event, promise: promise)
+    }
 }
 
 
@@ -117,8 +122,8 @@ public extension ChannelInboundHandler {
         ctx.fireChannelWritabilityChanged()
     }
     
-    public func userEventTriggered(ctx: ChannelHandlerContext, event: Any) {
-        ctx.fireUserEventTriggered(event: event)
+    public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+        ctx.fireUserInboundEventTriggered(event: event)
     }
     
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {

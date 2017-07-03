@@ -37,7 +37,10 @@ public protocol ChannelOutboundInvoker {
 
     func close() -> Future<Void>
     func close(promise: Promise<Void>?)
-
+    
+    func triggerUserOutboundEvent(event: Any) -> Future<Void>
+    func triggerUserOutboundEvent(event: Any, promise: Promise<Void>?)
+    
     var eventLoop: EventLoop { get }
 }
 
@@ -90,6 +93,12 @@ public extension ChannelOutboundInvoker {
         return promise.futureResult
     }
     
+    public func triggerUserOutboundEvent(event: Any) -> Future<Void> {
+        let promise = newPromise()
+        triggerUserOutboundEvent(event: event, promise: promise)
+        return promise.futureResult
+    }
+    
     private func newPromise() -> Promise<Void> {
         return eventLoop.newPromise()
     }
@@ -113,7 +122,7 @@ public protocol ChannelInboundInvoker {
     
     func fireErrorCaught(error: Error)
     
-    func fireUserEventTriggered(event: Any)
+    func fireUserInboundEventTriggered(event: Any)
 }
 
 public protocol ChannelInvoker : ChannelOutboundInvoker, ChannelInboundInvoker { }

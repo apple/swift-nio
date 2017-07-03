@@ -564,6 +564,7 @@ public protocol ChannelCore : class {
     func flush0(promise: Promise<Void>?)
     func read0(promise: Promise<Void>?)
     func close0(error: Error, promise: Promise<Void>?)
+    func triggerUserOutboundEvent0(event: Any, promise: Promise<Void>?)
     func channelRead0(data: IOData)
 }
 
@@ -637,6 +638,10 @@ extension Channel {
 
     public func register(promise: Promise<Void>?) {
         pipeline.register(promise: promise)
+    }
+    
+    public func triggerUserOutboundEvent(event: Any, promise: Promise<Void>?) {
+        pipeline.triggerUserOutboundEvent(event: event, promise: promise)
     }
 }
 
@@ -940,8 +945,11 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             promise?.succeed(result: ())
         }
     }
-
-
+    
+    public final func triggerUserOutboundEvent0(event: Any, promise: Promise<Void>?) {
+        promise?.succeed(result: ())
+    }
+    
     // Methods invoked from the EventLoop itself
     public final func writable() {
         assert(eventLoop.inEventLoop)

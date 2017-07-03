@@ -292,12 +292,12 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
     
-    public func fireUserEventTriggered(event: Any) {
+    public func fireUserInboundEventTriggered(event: Any) {
         if eventLoop.inEventLoop {
-            fireUserEventTriggered0(event: event)
+            fireUserInboundEventTriggered0(event: event)
         } else {
             eventLoop.execute {
-                self.fireUserEventTriggered0(event: event)
+                self.fireUserInboundEventTriggered0(event: event)
             }
         }
     }
@@ -392,6 +392,16 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
     
+    public func triggerUserOutboundEvent(event: Any, promise: Promise<Void>?) {
+        if eventLoop.inEventLoop {
+            triggerUserOutboundEvent0(event: event, promise: promise)
+        } else {
+            eventLoop.execute {
+                self.triggerUserOutboundEvent0(event: event, promise: promise)
+            }
+        }
+    }
+    
     // These methods are expected to only be called from within the EventLoop
     
     private var firstOutboundCtx: ChannelHandlerContext {
@@ -434,6 +444,10 @@ public final class ChannelPipeline : ChannelInvoker {
         firstOutboundCtx.invokeRegister(promise: promise)
     }
     
+    func triggerUserOutboundEvent0(event: Any, promise: Promise<Void>?) {
+        firstOutboundCtx.invokeTriggerUserOutboundEvent(event: event, promise: promise)
+    }
+    
     func fireChannelRegistered0() {
         firstInboundCtx.invokeChannelRegistered()
     }
@@ -462,8 +476,8 @@ public final class ChannelPipeline : ChannelInvoker {
         firstInboundCtx.invokeChannelWritabilityChanged()
     }
     
-    func fireUserEventTriggered0(event: Any) {
-        firstInboundCtx.invokeUserEventTriggered(event: event)
+    func fireUserInboundEventTriggered0(event: Any) {
+        firstInboundCtx.invokeUserInboundEventTriggered(event: event)
     }
     
     func fireErrorCaught0(error: Error) {
@@ -518,6 +532,10 @@ private final class HeadChannelHandler : ChannelOutboundHandler {
     func read(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
         ctx.channel!._unsafe.read0(promise: promise)
     }
+    
+    func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: Promise<Void>?) {
+        ctx.channel!._unsafe.triggerUserOutboundEvent0(event: event, promise: promise)
+    }
 }
 
 private final class TailChannelHandler : ChannelInboundHandler {
@@ -550,7 +568,7 @@ private final class TailChannelHandler : ChannelInboundHandler {
         // Discard
     }
     
-    func userEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+    func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
         // Discard
     }
     
@@ -628,8 +646,8 @@ public final class ChannelHandlerContext : ChannelInvoker {
         inboundNext!.invokeErrorCaught(error: error)
     }
     
-    public func fireUserEventTriggered(event: Any) {
-        inboundNext!.invokeUserEventTriggered(event: event)
+    public func fireUserInboundEventTriggered(event: Any) {
+        inboundNext!.invokeUserInboundEventTriggered(event: event)
     }
     
     public func register(promise: Promise<Void>?){
@@ -662,6 +680,10 @@ public final class ChannelHandlerContext : ChannelInvoker {
     
     public func close(promise: Promise<Void>?) {
         outboundNext!.invokeClose(promise: promise)
+    }
+    
+    public func triggerUserOutboundEvent(event: Any, promise: Promise<Void>?) {
+        outboundNext!.invokeTriggerUserOutboundEvent(event: event, promise: promise)
     }
     
     func invokeChannelRegistered() {
@@ -745,11 +767,11 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    func invokeUserEventTriggered(event: Any) {
+    func invokeUserInboundEventTriggered(event: Any) {
         assert(inEventLoop)
         
         do {
-            try (handler as! ChannelInboundHandler).userEventTriggered(ctx: self, event: event)
+            try (handler as! ChannelInboundHandler).userInboundEventTriggered(ctx: self, event: event)
         } catch let err {
             invokeErrorCaught(error: err)
         }
@@ -833,6 +855,13 @@ public final class ChannelHandlerContext : ChannelInvoker {
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         (handler as! ChannelOutboundHandler).close(ctx: self, promise: promise)
+    }
+    
+    func invokeTriggerUserOutboundEvent(event: Any, promise: Promise<Void>?) {
+        assert(inEventLoop)
+        assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
+        
+        (handler as! ChannelOutboundHandler).triggerUserOutboundEvent(ctx: self, event: event, promise: promise)
     }
     
     func invokeHandlerAdded() throws {

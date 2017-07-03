@@ -123,8 +123,9 @@ class EmbeddedChannelCore : ChannelCore {
     func read0(promise: Promise<Void>?) {
         promise?.succeed(result: ())
     }
-
-    func readIfNeeded0() {
+    
+    public final func triggerUserOutboundEvent0(event: Any, promise: Promise<Void>?) {
+        promise?.succeed(result: ())
     }
     
     func channelRead0(data: IOData) {
