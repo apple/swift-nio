@@ -26,7 +26,7 @@ public protocol EventLoop: EventLoopGroup {
 
 extension EventLoop {
     public func submit<T>(task: @escaping () throws-> (T)) -> Future<T> {
-        let promise = Promise<T>(eventLoop: self, checkForPossibleDeadlock: true)
+        let promise: Promise<T> = newPromise()
 
         execute(task: {() -> () in
             do {
