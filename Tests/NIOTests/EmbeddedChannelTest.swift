@@ -26,7 +26,7 @@ class EmbeddedChannelTest: XCTestCase {
 
         var ranBlock = false
         f.whenSuccess { () -> Void in
-            XCTAssertEqual(buf, channel.outboundBuffer[0] as! ByteBuffer)
+            XCTAssertEqual(buf, channel.readOutbound())
             ranBlock = true
         }
         try f.wait()

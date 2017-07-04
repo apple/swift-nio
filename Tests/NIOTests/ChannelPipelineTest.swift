@@ -71,7 +71,9 @@ class ChannelPipelineTest: XCTestCase {
         
         _ = channel.write(data: .other("msg"))
         _ = try channel.flush().wait()
-        XCTAssertEqual(buf, channel.outboundBuffer[0] as! ByteBuffer)
+        XCTAssertEqual(buf, channel.readOutbound())
+        XCTAssertNil(channel.readOutbound())
+        
     }
     
     private final class TestChannelOutboundHandler: ChannelOutboundHandler {

@@ -83,7 +83,8 @@ class EmbeddedChannelCore : ChannelCore {
     deinit { closePromise.succeed(result: ()) }
 
     var outboundBuffer: [Any] = []
-
+    var inboundBuffer: [Any] = []
+    
     func close0(error: Error, promise: Promise<Void>?) {
         promise?.succeed(result: ())
         
@@ -111,7 +112,7 @@ class EmbeddedChannelCore : ChannelCore {
     }
 
     func write0(data: IOData, promise: Promise<Void>?) {
-        outboundBuffer.append(data.forceAsByteBuffer())
+        addToBuffer(buffer: &outboundBuffer, data: data)
         promise?.succeed(result: ())
     }
 
@@ -128,6 +129,16 @@ class EmbeddedChannelCore : ChannelCore {
     }
     
     func channelRead0(data: IOData) {
+        addToBuffer(buffer: &inboundBuffer, data: data)
+    }
+    
+    private func addToBuffer(buffer: inout [Any], data: IOData) {
+        switch data {
+        case .byteBuffer(let buf):
+            buffer.append(buf)
+        case .other(let other):
+            buffer.append(other)
+        }
     }
 }
 
@@ -148,14 +159,33 @@ public class EmbeddedChannel : Channel {
         return true
     }
     
+    public func finish() throws -> Bool {
+        try close().wait()
+        return !channelcore.outboundBuffer.isEmpty || !channelcore.outboundBuffer.isEmpty
+    }
+    
     private var _pipeline: ChannelPipeline!
     public let allocator: ByteBufferAllocator = ByteBufferAllocator()
     public var eventLoop: EventLoop = EmbeddedEventLoop()
 
     public var localAddress: SocketAddress? = nil
     public var remoteAddress: SocketAddress? = nil
-    var outboundBuffer: [Any] { return (_unsafe as! EmbeddedChannelCore).outboundBuffer }
-
+    
+    public func readOutbound<T>() -> T? {
+        return readFromBuffer(buffer: &(_unsafe as! EmbeddedChannelCore).outboundBuffer)
+    }
+    
+    public func readInbound<T>() -> T? {
+        return readFromBuffer(buffer: &(_unsafe as! EmbeddedChannelCore).inboundBuffer)
+    }
+    
+    private func readFromBuffer<T>(buffer: inout [Any]) -> T? {
+        guard !buffer.isEmpty else {
+            return nil
+        }
+        return (buffer.removeFirst() as! T)
+    }
+    
     init() {
         _pipeline = ChannelPipeline(channel: self)
         
