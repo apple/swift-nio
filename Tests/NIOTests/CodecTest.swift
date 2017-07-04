@@ -80,11 +80,10 @@ public class MessageToByteEncoderTest: XCTestCase {
         
         _ = try channel.writeAndFlush(data: .other(Int32(5))).wait()
         
-        XCTAssertEqual(1, channel.outboundBuffer.count)
         
-        var buffer = channel.outboundBuffer[0] as! ByteBuffer
-        XCTAssertEqual(Int32(5), buffer.readInteger())
-        XCTAssertEqual(0, buffer.readableBytes)
+        var buffer = channel.readOutbound() as ByteBuffer?
+        XCTAssertEqual(Int32(5), buffer?.readInteger())
+        XCTAssertEqual(0, buffer?.readableBytes)
         
         try channel.close().wait()
     }
