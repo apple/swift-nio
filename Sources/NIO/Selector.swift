@@ -320,8 +320,8 @@ final class Selector<R: Registration> {
                 let registration = registrations[Int(ev.data.fd)]!
                 try fn(
                     SelectorEvent(
-                        isReadable: (ev.events & EPOLLIN.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
-                        isWritable: (ev.events & EPOLLOUT.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
+                        readable: (ev.events & EPOLLIN.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
+                        writable: (ev.events & EPOLLOUT.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
                         registration: registration))
             }
         }
@@ -345,11 +345,11 @@ final class Selector<R: Registration> {
                 break
             case EVFILT_READ:
                 if let registration = registrations[Int(ev.ident)] {
-                    try fn((SelectorEvent(isReadable: true, isWritable: false, registration: registration)))
+                    try fn((SelectorEvent(readable: true, writable: false, registration: registration)))
                 }
             case EVFILT_WRITE:
                 if let registration = registrations[Int(ev.ident)] {
-                    try fn((SelectorEvent(isReadable: false, isWritable: true, registration: registration)))
+                    try fn((SelectorEvent(readable: false, writable: true, registration: registration)))
                 }
             default:
                 // We only use EVFILT_USER, EVFILT_READ and EVFILT_WRITE.
@@ -401,10 +401,10 @@ struct SelectorEvent<R> {
     public let registration: R
     public let io: IOEvent
     
-    init(isReadable: Bool, isWritable: Bool, registration: R) {
-        if isReadable {
-            io = isWritable ? .all : .read
-        } else if isWritable {
+    init(readable: Bool, writable: Bool, registration: R) {
+        if readable {
+            io = writable ? .all : .read
+        } else if writable {
             io =  .write
         } else {
             io = .none
