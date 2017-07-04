@@ -382,8 +382,9 @@ final class Selector<R: Registration> {
             throw IOError(errno: EBADF, reason: "can't wakeup selector as it's not open anymore.")
         }
 #if os(Linux)
-        // TODO: Should we throw an error if it returns != 0 ?
-        let _ = CEventfd.eventfd_write(eventfd, 1)
+        let _ = try wrapSyscall({ $0 == 0 }, function: "eventfd_write") {
+            CEventfd.eventfd_write(eventfd, 1)
+        }
 #else
         var event = kevent()
         event.ident = 0
