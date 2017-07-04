@@ -80,3 +80,24 @@ public extension ByteToMessageDecoder {
         
     }
 }
+
+public protocol MessageToByteEncoder : ChannelOutboundHandler {
+    func encode(ctx: ChannelHandlerContext, data: IOData, out: inout ByteBuffer) throws
+    func allocateOutBuffer(ctx: ChannelHandlerContext, data: IOData) throws -> ByteBuffer
+}
+
+public extension MessageToByteEncoder {
+    public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
+        do {
+            var buffer: ByteBuffer = try allocateOutBuffer(ctx: ctx, data: data)
+            try encode(ctx: ctx, data: data, out: &buffer)
+            ctx.write(data: .byteBuffer(buffer), promise: promise)
+        } catch let err {
+            promise?.fail(error: err)
+        }
+    }
+    
+    public func allocateOutBuffer(ctx: ChannelHandlerContext, data: IOData) throws -> ByteBuffer {
+        return ctx.channel!.allocator.buffer(capacity: 256)
+    }
+}

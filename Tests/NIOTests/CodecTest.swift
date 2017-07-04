@@ -77,3 +77,34 @@ public class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertEqual(Int32(3), dataArray[2])
     }
 }
+
+public class MessageToByteEncoderTest: XCTestCase {
+    
+    private final class Int32ToByteEncoder : MessageToByteEncoder {
+        public func encode(ctx: ChannelHandlerContext, data: IOData, out: inout ByteBuffer) throws {
+            XCTAssertEqual(MemoryLayout<Int32>.size, out.writableBytes)
+            let value: Int32 = data.forceAsOther()
+            out.write(integer: value);
+        }
+        
+        public func allocateOutBuffer(ctx: ChannelHandlerContext, data: IOData) throws -> ByteBuffer {
+            return ctx.channel!.allocator.buffer(capacity: MemoryLayout<Int32>.size)
+        }
+    }
+    
+    func testEncoder() throws {
+        let channel = EmbeddedChannel()
+        
+        _ = try channel.pipeline.add(handler: Int32ToByteEncoder()).wait()
+        
+        _ = try channel.writeAndFlush(data: .other(Int32(5))).wait()
+        
+        XCTAssertEqual(1, channel.outboundBuffer.count)
+        
+        var buffer = channel.outboundBuffer[0] as! ByteBuffer
+        XCTAssertEqual(Int32(5), buffer.readInteger())
+        XCTAssertEqual(0, buffer.readableBytes)
+        
+        try channel.close().wait()
+    }
+}

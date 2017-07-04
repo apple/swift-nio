@@ -31,6 +31,7 @@ import XCTest
          testCase(ByteBufferTest.allTests),
          testCase(ChannelPipelineTest.allTests),
          testCase(ByteToMessageDecoderTest.allTests),
+         testCase(MessageToByteEncoderTest.allTests),
          testCase(EmbeddedChannelTest.allTests),
          testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
     ])

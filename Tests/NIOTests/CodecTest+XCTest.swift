@@ -31,3 +31,12 @@ extension ByteToMessageDecoderTest {
    }
 }
 
+extension MessageToByteEncoderTest {
+
+   static var allTests : [(String, (MessageToByteEncoderTest) -> () throws -> Void)] {
+      return [
+                ("testEncoder", testEncoder),
+           ]
+   }
+}
+
