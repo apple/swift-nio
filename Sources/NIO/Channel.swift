@@ -582,13 +582,15 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
 
         let ch = data.forceAsOther() as SocketChannel
         let f = ch.register()
-        f.whenFailure(callback: { err in
-            _ = ch.close()
+        f.whenComplete(callback: { v in
+            switch v {
+            case .failure(_):
+                ch.close(promise: nil)
+            case .success(_):
+                ch.pipeline.fireChannelActive0()
+                ch.readIfNeeded0()
+            }
         })
-        f.whenSuccess { () -> Void in
-            ch.pipeline.fireChannelActive0()
-            ch.readIfNeeded0()
-        }
     }
 }
 
