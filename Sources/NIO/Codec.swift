@@ -51,7 +51,6 @@ public extension ByteToMessageDecoder {
     
     private func handleLeftOver(buffer: inout ByteBuffer) {
         if buffer.readableBytes > 0 {
-            buffer.discardReadBytes()
             cumulationBuffer = buffer
         } else {
             cumulationBuffer = nil
