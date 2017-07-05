@@ -16,7 +16,7 @@ import Foundation
 import NIO
 import CHTTPParser
 
-public final class HTTPRequestDecoder : ChannelInboundHandler, ByteToMessageDecoder {
+public final class HTTPRequestDecoder : ByteToMessageDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = HTTPRequest
 
@@ -58,7 +58,7 @@ public final class HTTPRequestDecoder : ChannelInboundHandler, ByteToMessageDeco
             self.state.parserBuffer.clear()
         case .headerValue:
             assert(self.state.currentUri != nil, "URI not set before header field")
-            self.state.currentHeaders.add(name: self.state.currentHeaderName!, value: self.state.parserBuffer.readString()!)
+            self.state.currentHeaders!.add(name: self.state.currentHeaderName!, value: self.state.parserBuffer.readString()!)
             self.state.parserBuffer.clear()
         case .url:
             assert(self.state.currentUri == nil)
@@ -71,7 +71,7 @@ public final class HTTPRequestDecoder : ChannelInboundHandler, ByteToMessageDeco
 
     private struct HTTPParserState {
         var dataAwaitingState: DataAwaitingState = .messageBegin
-        var currentHeaders = HTTPHeaders()
+        var currentHeaders: HTTPHeaders?
         var currentUri: String?
         var currentHeaderName: String?
         var parserBuffer: ByteBuffer
@@ -87,9 +87,9 @@ public final class HTTPRequestDecoder : ChannelInboundHandler, ByteToMessageDeco
             guard let method = HTTPMethod.from(httpParserMethod: http_method(rawValue: parser!.pointee.method)) else {
                 return nil
             }
-            let version = HTTPVersion(major: parser!.pointee.http_minor, minor: parser!.pointee.http_major)
-            let request = HTTPRequestHead(version: version, method: method, uri: currentUri!, headers: currentHeaders)
-            currentHeaders = HTTPHeaders()
+            let version = HTTPVersion(major: parser!.pointee.http_major, minor: parser!.pointee.http_minor)
+            let request = HTTPRequestHead(version: version, method: method, uri: currentUri!, headers: currentHeaders!)
+            currentHeaders = nil
             return request
         }
 
