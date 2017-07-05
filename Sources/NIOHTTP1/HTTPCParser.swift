@@ -19,10 +19,10 @@ import CHTTPParser
 public final class HTTPRequestDecoder : ByteToMessageDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = HTTPRequest
-
-    var parser: UnsafeMutablePointer<http_parser>?
-    var settings: UnsafeMutablePointer<http_parser_settings>?
     public var cumulationBuffer: ByteBuffer?
+    
+    private var parser: http_parser?
+    private var settings: http_parser_settings?
     
     
     private enum DataAwaitingState {
@@ -101,16 +101,16 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
     public init() { }
 
     public func decoderAdded(ctx: ChannelHandlerContext) throws {
-        parser = UnsafeMutablePointer<http_parser>.allocate(capacity: 1)
-        http_parser_init(parser, HTTP_REQUEST)
-        parser!.pointee.data = Unmanaged.passUnretained(ctx).toOpaque()
+        parser = http_parser()
+        http_parser_init(&parser!, HTTP_REQUEST)
+        parser!.data = Unmanaged.passUnretained(ctx).toOpaque()
 
-        settings = UnsafeMutablePointer<http_parser_settings>.allocate(capacity: 1)
-        http_parser_settings_init(settings)
+        settings = http_parser_settings()
+        http_parser_settings_init(&settings!)
 
         self.state = try HTTPParserState(allocator: ctx.channel!.allocator)
 
-        settings!.pointee.on_message_begin = { parser in
+        settings!.on_message_begin = { parser in
             let ctx = evacuateContext(parser)
             let handler = (ctx.handler as! HTTPRequestDecoder)
             handler.state.reset()
@@ -118,7 +118,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             return 0
         }
 
-        settings!.pointee.on_headers_complete = { parser in
+        settings!.on_headers_complete = { parser in
             let ctx = evacuateContext(parser)
             let handler = ctx.handler as! HTTPRequestDecoder
 
@@ -134,7 +134,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             return 0
         }
 
-        settings!.pointee.on_body = { parser, data, len in
+        settings!.on_body = { parser, data, len in
             let ctx = evacuateContext(parser)
             let handler = ctx.handler as! HTTPRequestDecoder
             assert(handler.state.dataAwaitingState == .body)
@@ -146,7 +146,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             return 0
         }
 
-        settings!.pointee.on_header_field = { parser, data, len in
+        settings!.on_header_field = { parser, data, len in
             let ctx = evacuateContext(parser)
             let handler = ctx.handler as! HTTPRequestDecoder
 
@@ -156,7 +156,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             return 0
         }
 
-        settings!.pointee.on_header_value = { parser, data, len in
+        settings!.on_header_value = { parser, data, len in
             let ctx = evacuateContext(parser)
             let handler = ctx.handler as! HTTPRequestDecoder
 
@@ -166,7 +166,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             return 0
         }
 
-        settings!.pointee.on_url = { parser, data, len in
+        settings!.on_url = { parser, data, len in
             let ctx = evacuateContext(parser)
             let handler = ctx.handler as! HTTPRequestDecoder
 
@@ -177,7 +177,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             return 0
         }
 
-        settings!.pointee.on_message_complete = { parser in
+        settings!.on_message_complete = { parser in
             let ctx = evacuateContext(parser)
             let handler = ctx.handler as! HTTPRequestDecoder
 
@@ -189,12 +189,10 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
     }
 
     public func decoderRemoved(ctx: ChannelHandlerContext) {
-        if let p = parser {
-            p.pointee.data = UnsafeMutableRawPointer(bitPattern: 0x0000deadbeef0000)
-            p.deallocate(capacity: 1)
-            settings!.deallocate(capacity: 1)
-            settings = nil
+        if parser != nil {
+            parser!.data = UnsafeMutableRawPointer(bitPattern: 0x0000deadbeef0000)
             parser = nil
+            settings = nil
         }
         
         state = nil
@@ -203,8 +201,8 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
     public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> Bool {
         let result = try buffer.withReadPointer(body: { (pointer: UnsafePointer<UInt8>, len: Int) -> size_t in
             try pointer.withMemoryRebound(to: Int8.self, capacity: len, { (bytes: UnsafePointer<Int8>) -> size_t in
-                let result = http_parser_execute(parser, settings, bytes, len)
-                let errno = parser!.pointee.http_errno
+                let result = http_parser_execute(&parser!, &settings!, bytes, len)
+                let errno = parser!.http_errno
                 if errno != 0 {
                     throw HTTPParserError.httpError(fromCHTTPParserErrno:  http_errno(rawValue: errno))!
                 }
