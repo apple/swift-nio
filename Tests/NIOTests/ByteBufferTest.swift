@@ -492,6 +492,19 @@ class ByteBufferTest: XCTestCase {
             XCTAssertEqual("0123456789abcdefX".data(using: .utf8)!, Data(buffer: bPtr))
         }
     }
+    
+    func testExpansion2() throws {
+        var buf = allocator.buffer(capacity: 2)
+        XCTAssertEqual(2, buf.capacity)
+        buf.write(data: "0123456789abcdef".data(using: .utf8)!)
+        XCTAssertEqual(16, buf.capacity)
+        XCTAssertEqual(16, buf.writerIndex)
+        buf.withUnsafeReadableBytes { ptr in
+            let bPtr = UnsafeBufferPointer(start: ptr.baseAddress!.bindMemory(to: UInt8.self, capacity: ptr.count),
+                                           count: ptr.count)
+            XCTAssertEqual("0123456789abcdef".data(using: .utf8)!, Data(buffer: bPtr))
+        }
+    }
 
     func testNotEnoughBytesToReadForIntegers() throws {
         let byteCount = 15

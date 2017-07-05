@@ -20,13 +20,10 @@
 import Foundation
 
 public struct ByteBufferAllocator {
-    public let alignment: Int
-
-    public init(alignTo alignment: Int = 1) {
-        precondition(alignment > 0, "alignTo must be greater or equal to 1 (is \(alignment))")
+    
+    public init() {
         assert(MemoryLayout<ByteBuffer>.size <= 3 * MemoryLayout<Int>.size,
                "ByteBuffer has size \(MemoryLayout<ByteBuffer>.size) which is larger than the built-in storage of the existential containers.")
-        self.alignment = alignment
     }
 
     public func buffer(capacity: Int) -> ByteBuffer {
@@ -56,9 +53,9 @@ public struct ByteBuffer {
 
     // MARK: Internal _Storage for CoW
     private final class _Storage {
-        let capacity: Capacity
-        let bytes: UnsafeMutableRawPointer
-        let fullSlice: Slice
+        private(set) var capacity: Capacity
+        private(set) var bytes: UnsafeMutableRawPointer
+        private(set) var fullSlice: Slice
         private let allocator: ByteBufferAllocator
 
         public init(bytesNoCopy: UnsafeMutableRawPointer, capacity: Capacity, allocator: ByteBufferAllocator) {
@@ -72,9 +69,9 @@ public struct ByteBuffer {
             self.deallocate()
         }
 
-        private static func allocateAndPrepareRawMemory(bytes: Capacity, alignedTo: Int) -> UnsafeMutableRawPointer {
+        private static func allocateAndPrepareRawMemory(bytes: Capacity) -> UnsafeMutableRawPointer {
             let bytes = Int(bytes)
-            let ptr = UnsafeMutableRawPointer.allocate(bytes: bytes, alignedTo: alignedTo)
+            let ptr = malloc(bytes)!
             /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
             ptr.bindMemory(to: UInt8.self, capacity: bytes)
             return ptr
@@ -84,21 +81,30 @@ public struct ByteBuffer {
             assert(slice.count <= capacity)
             let newCapacity = capacity == 0 ? 0 : capacity.nextPowerOf2()
             // TODO: Use realloc if possible
-            let new = _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity, alignedTo: self.allocator.alignment),
+            let new = _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity),
                                capacity: newCapacity,
                                allocator: self.allocator)
             new.bytes.copyBytes(from: self.bytes.advanced(by: Int(slice.lowerBound)), count: slice.count)
             return new
         }
-
+        
+        public func reallocStorage(capacity: Capacity) {
+            let ptr = realloc(self.bytes, Int(capacity))!
+            /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
+            ptr.bindMemory(to: UInt8.self, capacity: Int(capacity))
+            self.bytes = ptr
+            self.capacity = capacity
+            self.fullSlice = 0..<self.capacity
+        }
+        
         private func deallocate() {
-            self.bytes.deallocate(bytes: Int(self.capacity), alignedTo: allocator.alignment)
+            free(self.bytes)
         }
 
         public static func reallocated(minimumCapacity: Capacity, allocator: Allocator) -> _Storage {
             let newCapacity = minimumCapacity == 0 ? 0 : minimumCapacity.nextPowerOf2()
             // TODO: Use realloc if possible
-            return _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity, alignedTo: allocator.alignment),
+            return _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity),
                             capacity: newCapacity,
                             allocator: allocator)
         }
@@ -131,7 +137,16 @@ public struct ByteBuffer {
         assert(isKnownUniquelyReferenced(&self._storage))
 
         if self._slice.lowerBound + index + capacity > self._slice.upperBound {
-            self.copyStorageAndRebase(extraCapacity: self._slice.lowerBound + index + capacity - self._slice.upperBound + 1)
+            // double the capacity, we may want to use different strategies depending on the actual current capacity later on.
+            var newCapacity = toCapacity(self.capacity)
+            
+            // double the capacity until the requested capacity can be full-filled
+            repeat {
+                newCapacity = newCapacity << 1
+            } while newCapacity - index < capacity
+            
+            self._storage.reallocStorage(capacity: newCapacity)
+            self._slice = _slice.lowerBound..<_slice.lowerBound + newCapacity
         }
     }
 

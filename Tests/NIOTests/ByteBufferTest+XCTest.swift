@@ -68,6 +68,7 @@ extension ByteBufferTest {
                 ("testWithDataSlices", testWithDataSlices),
                 ("testEndianness", testEndianness),
                 ("testExpansion", testExpansion),
+                ("testExpansion2", testExpansion2),
                 ("testNotEnoughBytesToReadForIntegers", testNotEnoughBytesToReadForIntegers),
                 ("testNotEnoughBytesToReadForData", testNotEnoughBytesToReadForData),
                 ("testChangeCapacityToSameCapacityRetainsCapacityAndPointers", testChangeCapacityToSameCapacityRetainsCapacityAndPointers),
