@@ -188,15 +188,26 @@ final class SelectableEventLoop : EventLoop {
                 }
             }
             
-            // TODO: Better locking
-            tasksLock.lock()
-            // Execute all the tasks that were summited
-            while let task = tasks.first {
-                task()
+            // We need to ensure we process all tasks, even if a task added another task again
+            while true {
+                // TODO: Better locking
+                tasksLock.lock()
+                if tasks.isEmpty {
+                    tasksLock.unlock()
+                    break
+                }
+                // Make a copy of the tasks sso we can execute these while not holding the lock anymore
+                var tasksCopy = Array(tasks)
+                tasks.removeAll()
+                tasksLock.unlock()
                 
-                let _ = tasks.removeFirst()
+                // Execute all the tasks that were summited
+                while let task = tasksCopy.first {
+                    task()
+                    
+                    let _ = tasksCopy.removeFirst()
+                }
             }
-            tasksLock.unlock()
         }
     }
 
