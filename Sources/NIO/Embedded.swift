@@ -175,21 +175,23 @@ public class EmbeddedChannel : Channel {
     public var remoteAddress: SocketAddress? = nil
     
     public func readOutbound<T>() -> T? {
-        return readFromBuffer(buffer: &(_unsafe as! EmbeddedChannelCore).outboundBuffer)
+        return readFromBuffer(buffer: &channelcore.outboundBuffer)
     }
     
     public func readInbound<T>() -> T? {
-        return readFromBuffer(buffer: &(_unsafe as! EmbeddedChannelCore).inboundBuffer)
+        return readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
     
-    public func writeInbound<T>(data: T) throws {
+    @discardableResult public func writeInbound<T>(data: T) throws -> Bool {
         pipeline.fireChannelRead(data: IOData(data))
         pipeline.fireChannelReadComplete()
         try throwIfErrorCaught()
+        return !channelcore.inboundBuffer.isEmpty
     }
     
-    public func writeOutbound<T>(data: T) throws {
+    @discardableResult public func writeOutbound<T>(data: T) throws -> Bool {
         try writeAndFlush(data: IOData(data)).wait()
+        return !channelcore.outboundBuffer.isEmpty
     }
     
     private func throwIfErrorCaught() throws {

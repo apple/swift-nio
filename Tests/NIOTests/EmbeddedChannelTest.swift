@@ -21,7 +21,7 @@ class EmbeddedChannelTest: XCTestCase {
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
         
-        try channel.writeOutbound(data: buf)
+        XCTAssertTrue(try channel.writeOutbound(data: buf))
         XCTAssertTrue(try channel.finish())
         XCTAssertEqual(buf, channel.readOutbound())
         XCTAssertNil(channel.readOutbound())
@@ -33,7 +33,7 @@ class EmbeddedChannelTest: XCTestCase {
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
         
-        try channel.writeInbound(data: buf)
+        XCTAssertTrue(try channel.writeInbound(data: buf))
         XCTAssertTrue(try channel.finish())
         XCTAssertEqual(buf, channel.readInbound())
         XCTAssertNil(channel.readInbound())
@@ -44,13 +44,12 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
         _ = try channel.pipeline.add(handler: ExceptionThrowingInboundHandler()).wait()
         do {
-        try channel.writeInbound(data: "msg")
+            try channel.writeInbound(data: "msg")
             XCTFail()
         } catch let err {
             XCTAssertEqual(ChannelError.messageUnsupported, err as! ChannelError)
         }
         XCTAssertFalse(try channel.finish())
-            
     }
     
     func testWriteOutboundByteBufferReThrow() throws {
@@ -63,7 +62,6 @@ class EmbeddedChannelTest: XCTestCase {
             XCTAssertEqual(ChannelError.messageUnsupported, err as! ChannelError)
         }
         XCTAssertFalse(try channel.finish())
-        
     }
     
     private final class ExceptionThrowingInboundHandler : ChannelInboundHandler {
