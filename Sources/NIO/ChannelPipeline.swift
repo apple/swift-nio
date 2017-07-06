@@ -646,6 +646,8 @@ public final class ChannelHandlerContext : ChannelInvoker {
     }
     
     public let handler: ChannelHandler
+    private let inboundHandler: _ChannelInboundHandler!
+    private let outboundHandler: _ChannelOutboundHandler!
     public let name: String
     public let eventLoop: EventLoop
     
@@ -655,6 +657,16 @@ public final class ChannelHandlerContext : ChannelInvoker {
         self.handler = handler
         self.pipeline = pipeline
         self.eventLoop = pipeline.eventLoop
+        if let handler = handler as? _ChannelInboundHandler {
+            self.inboundHandler = handler
+        } else {
+            self.inboundHandler = nil
+        }
+        if let handler = handler as? _ChannelOutboundHandler {
+            self.outboundHandler = handler
+        } else {
+            self.outboundHandler = nil
+        }
     }
     
     public func fireChannelRegistered() {
@@ -733,7 +745,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         assert(inEventLoop)
         
         do {
-            try (handler as! _ChannelInboundHandler).channelRegistered(ctx: self)
+            try self.inboundHandler.channelRegistered(ctx: self)
         } catch let err {
             invokeErrorCaught(error: err)
         }
@@ -743,7 +755,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         assert(inEventLoop)
         
         do {
-            try (handler as! _ChannelInboundHandler).channelUnregistered(ctx: self)
+            try self.inboundHandler.channelUnregistered(ctx: self)
         } catch let err {
             invokeErrorCaught(error: err)
         }
@@ -753,7 +765,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         assert(inEventLoop)
         
         do {
-            try (handler as! _ChannelInboundHandler).channelActive(ctx: self)
+            try self.inboundHandler.channelActive(ctx: self)
         } catch let err {
             invokeErrorCaught(error: err)
         }
@@ -763,7 +775,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         assert(inEventLoop)
         
         do {
-            try (handler as! _ChannelInboundHandler).channelInactive(ctx: self)
+            try self.inboundHandler.channelInactive(ctx: self)
         } catch let err {
             invokeErrorCaught(error: err)
         }
@@ -773,7 +785,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         assert(inEventLoop)
         
         do {
-            try (handler as! _ChannelInboundHandler).channelRead(ctx: self, data: data)
+            try self.inboundHandler.channelRead(ctx: self, data: data)
         } catch let err {
             invokeErrorCaught(error: err)
         }
@@ -783,7 +795,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         assert(inEventLoop)
         
         do {
-            try (handler as! _ChannelInboundHandler).channelReadComplete(ctx: self)
+            try self.inboundHandler.channelReadComplete(ctx: self)
         } catch let err {
             invokeErrorCaught(error: err)
         }
@@ -793,7 +805,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         assert(inEventLoop)
         
         do {
-            try (handler as! _ChannelInboundHandler).channelWritabilityChanged(ctx: self)
+            try self.inboundHandler.channelWritabilityChanged(ctx: self)
         } catch let err {
             invokeErrorCaught(error: err)
         }
@@ -803,7 +815,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         assert(inEventLoop)
         
         do {
-            try (handler as! _ChannelInboundHandler).errorCaught(ctx: self, error: error)
+            try self.inboundHandler.errorCaught(ctx: self, error: error)
         } catch let err {
             // Forward the error thrown by errorCaught through the pipeline
             fireErrorCaught(error: err)
@@ -814,7 +826,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         assert(inEventLoop)
         
         do {
-            try (handler as! _ChannelInboundHandler).userInboundEventTriggered(ctx: self, event: event)
+            try self.inboundHandler.userInboundEventTriggered(ctx: self, event: event)
         } catch let err {
             invokeErrorCaught(error: err)
         }
@@ -824,34 +836,34 @@ public final class ChannelHandlerContext : ChannelInvoker {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
         
-        (handler as! _ChannelOutboundHandler).register(ctx: self, promise: promise)
+        self.outboundHandler.register(ctx: self, promise: promise)
     }
     
     func invokeBind(to address: SocketAddress, promise: Promise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
-        (handler as! _ChannelOutboundHandler).bind(ctx: self, to: address, promise: promise)
+        self.outboundHandler.bind(ctx: self, to: address, promise: promise)
     }
     
     func invokeConnect(to address: SocketAddress, promise: Promise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
-        (handler as! _ChannelOutboundHandler).connect(ctx: self, to: address, promise: promise)
+        self.outboundHandler.connect(ctx: self, to: address, promise: promise)
     }
 
     func invokeWrite(data: IOData, promise: Promise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
-        (handler as! _ChannelOutboundHandler).write(ctx: self, data: data, promise: promise)
+        self.outboundHandler.write(ctx: self, data: data, promise: promise)
     }
 
     func invokeFlush(promise: Promise<Void>?) {
         assert(inEventLoop)
         
-        (handler as! _ChannelOutboundHandler).flush(ctx: self, promise: promise)
+        self.outboundHandler.flush(ctx: self, promise: promise)
     }
     
     func invokeWriteAndFlush(data: IOData, promise: Promise<Void>?) {
@@ -876,35 +888,35 @@ public final class ChannelHandlerContext : ChannelInvoker {
             let writePromise: Promise<Void> = eventLoop.newPromise()
             let flushPromise: Promise<Void> = eventLoop.newPromise()
             
-            (handler as! _ChannelOutboundHandler).write(ctx: self, data: data, promise: writePromise)
-            (handler as! _ChannelOutboundHandler).flush(ctx: self, promise: flushPromise)
+            self.outboundHandler.write(ctx: self, data: data, promise: writePromise)
+            self.outboundHandler.flush(ctx: self, promise: flushPromise)
             
             writePromise.futureResult.whenComplete(callback: callback)
             flushPromise.futureResult.whenComplete(callback: callback)
         } else {
-            (handler as! _ChannelOutboundHandler).write(ctx: self, data: data, promise: nil)
-            (handler as! _ChannelOutboundHandler).flush(ctx: self, promise: nil)
+            self.outboundHandler.write(ctx: self, data: data, promise: nil)
+            self.outboundHandler.flush(ctx: self, promise: nil)
         }
     }
     
     func invokeRead(promise: Promise<Void>?) {
         assert(inEventLoop)
         
-        (handler as! _ChannelOutboundHandler).read(ctx: self, promise: promise)
+        self.outboundHandler.read(ctx: self, promise: promise)
     }
     
     func invokeClose(promise: Promise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
-        (handler as! _ChannelOutboundHandler).close(ctx: self, promise: promise)
+        self.outboundHandler.close(ctx: self, promise: promise)
     }
     
     func invokeTriggerUserOutboundEvent(event: Any, promise: Promise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
         
-        (handler as! _ChannelOutboundHandler).triggerUserOutboundEvent(ctx: self, event: event, promise: promise)
+        self.outboundHandler.triggerUserOutboundEvent(ctx: self, event: event, promise: promise)
     }
     
     func invokeHandlerAdded() throws {
