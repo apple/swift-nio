@@ -72,6 +72,7 @@ class EmbeddedChannelCore : ChannelCore {
     
     var eventLoop: EventLoop = EmbeddedEventLoop()
     var closePromise: Promise<Void>
+    var error: Error?
     
     private unowned let pipeline: ChannelPipeline
 
@@ -132,6 +133,12 @@ class EmbeddedChannelCore : ChannelCore {
         addToBuffer(buffer: &inboundBuffer, data: data)
     }
     
+    public func errorCaught0(error: Error) {
+        if self.error == nil {
+            self.error = error
+        }
+    }
+    
     private func addToBuffer(buffer: inout [Any], data: IOData) {
         buffer.append(data.asAny())
     }
@@ -156,7 +163,8 @@ public class EmbeddedChannel : Channel {
     
     public func finish() throws -> Bool {
         try close().wait()
-        return !channelcore.outboundBuffer.isEmpty || !channelcore.outboundBuffer.isEmpty
+        try throwIfErrorCaught()
+        return !channelcore.outboundBuffer.isEmpty || !channelcore.inboundBuffer.isEmpty
     }
     
     private var _pipeline: ChannelPipeline!
@@ -172,6 +180,23 @@ public class EmbeddedChannel : Channel {
     
     public func readInbound<T>() -> T? {
         return readFromBuffer(buffer: &(_unsafe as! EmbeddedChannelCore).inboundBuffer)
+    }
+    
+    public func writeInbound<T>(data: T) throws {
+        pipeline.fireChannelRead(data: IOData(data))
+        pipeline.fireChannelReadComplete()
+        try throwIfErrorCaught()
+    }
+    
+    public func writeOutbound<T>(data: T) throws {
+        try writeAndFlush(data: IOData(data)).wait()
+    }
+    
+    private func throwIfErrorCaught() throws {
+        if let error = channelcore.error {
+            channelcore.error = nil
+            throw error
+        }
     }
     
     private func readFromBuffer<T>(buffer: inout [Any]) -> T? {

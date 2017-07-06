@@ -615,7 +615,7 @@ private final class TailChannelHandler : _ChannelInboundHandler {
     }
     
     func errorCaught(ctx: ChannelHandlerContext, error: Error) {
-        // TODO: Log this and tell the user that its most likely a fault not handling it.
+        ctx.channel!._unsafe.errorCaught0(error: error)
     }
     
     func channelRead(ctx: ChannelHandlerContext, data: IOData) {

@@ -26,7 +26,10 @@ extension EmbeddedChannelTest {
 
    static var allTests : [(String, (EmbeddedChannelTest) -> () throws -> Void)] {
       return [
-                ("testWriteByteBuffer", testWriteByteBuffer),
+                ("testWriteOutboundByteBuffer", testWriteOutboundByteBuffer),
+                ("testWriteInboundByteBuffer", testWriteInboundByteBuffer),
+                ("testWriteInboundByteBufferReThrow", testWriteInboundByteBufferReThrow),
+                ("testWriteOutboundByteBufferReThrow", testWriteOutboundByteBufferReThrow),
            ]
    }
 }

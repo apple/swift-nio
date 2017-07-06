@@ -608,6 +608,7 @@ public protocol ChannelCore : class {
     func close0(error: Error, promise: Promise<Void>?)
     func triggerUserOutboundEvent0(event: Any, promise: Promise<Void>?)
     func channelRead0(data: IOData)
+    func errorCaught0(error: Error)
 }
 
 /*
@@ -1101,7 +1102,11 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public func channelRead0(data: IOData) {
         // Do nothing by default
     }
-
+    
+    public func errorCaught0(error: Error) {
+        // Do nothing
+    }
+    
     private func isWritePending() -> Bool {
         return interestedEvent == .write || interestedEvent == .all
     }
