@@ -631,14 +631,12 @@ public enum ChannelPipelineError : Error {
 
 public final class ChannelHandlerContext : ChannelInvoker {
     
-    // visible for ChannelPipeline to modify and also marked as weak to ensure we not create a
-    // reference-cycle for the doubly-linked-list
+    // visible for ChannelPipeline to modify
     fileprivate var outboundNext: ChannelHandlerContext?
     
     fileprivate var inboundNext: ChannelHandlerContext?
     
-    // marked as weak to not create a reference cycle between this instance and the pipeline
-    public fileprivate(set) weak var pipeline: ChannelPipeline?
+    public fileprivate(set) var pipeline: ChannelPipeline?
     
     public var channel: Channel? {
         return pipeline?.channel
