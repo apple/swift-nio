@@ -629,7 +629,6 @@ public enum ChannelPipelineError : Error {
     case notFound
 }
 
-
 public final class ChannelHandlerContext : ChannelInvoker {
     
     // visible for ChannelPipeline to modify and also marked as weak to ensure we not create a
@@ -646,13 +645,14 @@ public final class ChannelHandlerContext : ChannelInvoker {
     }
     
     public let handler: ChannelHandler
-    private let inboundHandler: _ChannelInboundHandler!
-    private let outboundHandler: _ChannelOutboundHandler!
+    
     public let name: String
     public let eventLoop: EventLoop
+    private let inboundHandler: _ChannelInboundHandler!
+    private let outboundHandler: _ChannelOutboundHandler!
     
     // Only created from within ChannelPipeline
-    init(name: String, handler: ChannelHandler, pipeline: ChannelPipeline) {
+    fileprivate init(name: String, handler: ChannelHandler, pipeline: ChannelPipeline) {
         self.name = name
         self.handler = handler
         self.pipeline = pipeline
@@ -741,7 +741,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         outboundNext!.invokeTriggerUserOutboundEvent(event: event, promise: promise)
     }
     
-    func invokeChannelRegistered() {
+    fileprivate func invokeChannelRegistered() {
         assert(inEventLoop)
         
         do {
@@ -751,7 +751,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    func invokeChannelUnregistered() {
+    fileprivate func invokeChannelUnregistered() {
         assert(inEventLoop)
         
         do {
@@ -761,7 +761,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    func invokeChannelActive() {
+    fileprivate func invokeChannelActive() {
         assert(inEventLoop)
         
         do {
@@ -771,7 +771,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    func invokeChannelInactive() {
+    fileprivate func invokeChannelInactive() {
         assert(inEventLoop)
         
         do {
@@ -781,7 +781,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    func invokeChannelRead(data: IOData) {
+    fileprivate func invokeChannelRead(data: IOData) {
         assert(inEventLoop)
         
         do {
@@ -791,7 +791,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    func invokeChannelReadComplete() {
+    fileprivate func invokeChannelReadComplete() {
         assert(inEventLoop)
         
         do {
@@ -801,7 +801,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    func invokeChannelWritabilityChanged() {
+    fileprivate func invokeChannelWritabilityChanged() {
         assert(inEventLoop)
         
         do {
@@ -811,7 +811,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    func invokeErrorCaught(error: Error) {
+    fileprivate func invokeErrorCaught(error: Error) {
         assert(inEventLoop)
         
         do {
@@ -822,7 +822,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    func invokeUserInboundEventTriggered(event: Any) {
+    fileprivate func invokeUserInboundEventTriggered(event: Any) {
         assert(inEventLoop)
         
         do {
@@ -832,41 +832,41 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    func invokeRegister(promise: Promise<Void>?) {
+    fileprivate func invokeRegister(promise: Promise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
         
         self.outboundHandler.register(ctx: self, promise: promise)
     }
     
-    func invokeBind(to address: SocketAddress, promise: Promise<Void>?) {
+   fileprivate func invokeBind(to address: SocketAddress, promise: Promise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         self.outboundHandler.bind(ctx: self, to: address, promise: promise)
     }
     
-    func invokeConnect(to address: SocketAddress, promise: Promise<Void>?) {
+    fileprivate func invokeConnect(to address: SocketAddress, promise: Promise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         self.outboundHandler.connect(ctx: self, to: address, promise: promise)
     }
 
-    func invokeWrite(data: IOData, promise: Promise<Void>?) {
+    fileprivate func invokeWrite(data: IOData, promise: Promise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         self.outboundHandler.write(ctx: self, data: data, promise: promise)
     }
 
-    func invokeFlush(promise: Promise<Void>?) {
+    fileprivate func invokeFlush(promise: Promise<Void>?) {
         assert(inEventLoop)
         
         self.outboundHandler.flush(ctx: self, promise: promise)
     }
     
-    func invokeWriteAndFlush(data: IOData, promise: Promise<Void>?) {
+    fileprivate func invokeWriteAndFlush(data: IOData, promise: Promise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
         
@@ -899,33 +899,33 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    func invokeRead(promise: Promise<Void>?) {
+    fileprivate func invokeRead(promise: Promise<Void>?) {
         assert(inEventLoop)
         
         self.outboundHandler.read(ctx: self, promise: promise)
     }
     
-    func invokeClose(promise: Promise<Void>?) {
+    fileprivate func invokeClose(promise: Promise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         self.outboundHandler.close(ctx: self, promise: promise)
     }
     
-    func invokeTriggerUserOutboundEvent(event: Any, promise: Promise<Void>?) {
+    fileprivate func invokeTriggerUserOutboundEvent(event: Any, promise: Promise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
         
         self.outboundHandler.triggerUserOutboundEvent(ctx: self, event: event, promise: promise)
     }
     
-    func invokeHandlerAdded() throws {
+    fileprivate func invokeHandlerAdded() throws {
         assert(inEventLoop)
         
         try handler.handlerAdded(ctx: self)
     }
     
-    func invokeHandlerRemoved() throws {
+    fileprivate func invokeHandlerRemoved() throws {
         assert(inEventLoop)
         try handler.handlerRemoved(ctx: self)
     }
