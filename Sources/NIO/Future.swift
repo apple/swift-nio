@@ -258,13 +258,17 @@ public struct Promise<T> {
  */
 
 public final class Future<T> {
-    fileprivate var value: FutureValue<T>? = nil
-    fileprivate let _fullfilled = Atomic<Bool>(value: false)
+    fileprivate var value: FutureValue<T>? {
+        didSet {
+            _fulfilled.store(true)
+        }
+    }
+    fileprivate let _fulfilled: Atomic<Bool>
     fileprivate let checkForPossibleDeadlock: Bool
     public let eventLoop: EventLoop
     
     internal var fulfilled: Bool {
-        return _fullfilled.load()
+        return _fulfilled.load()
     }
 
     /// Callbacks that should be run when this Future<> gets a value.
@@ -274,20 +278,24 @@ public final class Future<T> {
     fileprivate init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool) {
         self.eventLoop = eventLoop
         self.checkForPossibleDeadlock = checkForPossibleDeadlock
+        self.value = nil
+        self._fulfilled = Atomic<Bool>(value: false)
     }
     
     /// A Future<T> that has already succeeded
     init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool, result: T) {
-        self.value = .success(result)
         self.eventLoop = eventLoop
         self.checkForPossibleDeadlock = checkForPossibleDeadlock
+        self.value = .success(result)
+        self._fulfilled = Atomic<Bool>(value: true)
     }
     
     /// A Future<T> that has already failed
     init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool, error: Error) {
-        self.value = .failure(error)
         self.eventLoop = eventLoop
         self.checkForPossibleDeadlock = checkForPossibleDeadlock
+        self.value = .failure(error)
+        self._fulfilled = Atomic<Bool>(value: true)
     }
     
     deinit {
@@ -469,7 +477,6 @@ public extension Future {
         assert(eventLoop.inEventLoop)
         if self.value == nil {
             self.value = value
-            self._fullfilled.store(true)
             let callbacks = self.callbacks
             self.callbacks = CallbackList()
             return callbacks
