@@ -87,7 +87,6 @@ final class Selector<R: Registration> {
         }
         self.open = true
     
-        // TODO: Just reserve 0 is most likely not the best idea, need to think about a better way to handle this.
         var event = kevent()
         event.ident = 0
         event.filter = Int16(EVFILT_USER)
@@ -144,10 +143,6 @@ final class Selector<R: Registration> {
     }
 
     private func keventChangeSetOnly(event: UnsafePointer<kevent>?, numEvents: Int32) throws {
-        guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't kevent selector as it's not open anymore.")
-        }
-
         let _ = try wrapSyscall({ $0 >= 0 }, function: "kevent") {
             let res = kevent(self.fd, event, numEvents, nil, 0, nil)
             if res < 0  && errno == EINTR {
@@ -160,10 +155,6 @@ final class Selector<R: Registration> {
     }
 
     private func register_kqueue<S: Selectable>(selectable: S, interested: IOEvent, oldInterested: IOEvent?) throws {
-        guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't register kqueue on selector as it's not open anymore.")
-        }
-
         // Allocated on the stack
         var events = (kevent(), kevent())
 
@@ -245,9 +236,10 @@ final class Selector<R: Registration> {
 
     func register<S: Selectable>(selectable: S, interested: IOEvent = .read, makeRegistration: (IOEvent) -> R) throws {
         guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't register selector as it's not open anymore.")
+            throw IOError(errno: EBADF, reason: "can't register on selector as it's not open anymore.")
         }
-
+        
+        assert(selectable.open)
         assert(registrations[Int(selectable.descriptor)] == nil)
 #if os(Linux)
         var ev = epoll_event()
@@ -265,9 +257,10 @@ final class Selector<R: Registration> {
 
     func reregister<S: Selectable>(selectable: S, interested: IOEvent) throws {
         guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't re-register selector as it's not open anymore.")
+            throw IOError(errno: EBADF, reason: "can't re-register on selector as it's not open anymore.")
         }
-
+        assert(selectable.open)
+        
         var reg = registrations[Int(selectable.descriptor)]!
 
 #if os(Linux)
@@ -286,6 +279,11 @@ final class Selector<R: Registration> {
     }
 
     func deregister<S: Selectable>(selectable: S) throws {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't deregister from selector as it's not open anymore.")
+        }
+        assert(selectable.open)
+        
         guard let reg = registrations.removeValue(forKey: Int(selectable.descriptor)) else {
             return
         }
