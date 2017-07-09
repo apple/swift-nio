@@ -32,6 +32,8 @@ public extension ByteToMessageDecoder {
             buf.write(buffer: &cum)
             buf.write(buffer: &buffer)
             buffer = buf
+        } else {
+            cumulationBuffer = buffer
         }
         
         // Running decode method until either the buffer is not readable anymore or the user returned false.

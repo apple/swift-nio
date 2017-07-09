@@ -138,11 +138,15 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             let ctx = evacuateContext(parser)
             let handler = ctx.handler as! HTTPRequestDecoder
             assert(handler.state.dataAwaitingState == .body)
-
-            // This will never return nil as we allocated the buffer with the correct size
-            handler.state.parserBuffer.write(int8Data: data!, len: len)
-            ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequest.body(HTTPBodyContent.more(buffer: handler.state.parserBuffer.readSlice(length: len)!))))
-
+            
+            // Calculate the index of the data in the cumulationBuffer so we can slice out the ByteBuffer without doing any memory copy
+            let index = handler.cumulationBuffer!.withUnsafeBytes { pointer in
+                return pointer.baseAddress!.assumingMemoryBound(to: Int8.self).distance(to: data!)
+            }
+            
+            let slice = handler.cumulationBuffer!.slice(at: index, length: len)!
+            ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequest.body(HTTPBodyContent.more(buffer: slice))))
+            
             return 0
         }
 
