@@ -130,7 +130,21 @@ class ByteBufferTest: XCTestCase {
             XCTAssertEqual(expected, String(bytes: d!, encoding: .utf8))
         }
     }
-
+    
+    func testSetStringFailed() {
+        XCTAssertNil(buf.set(string: "ä", at: 0, encoding: .ascii))
+    }
+    
+    func testWriteStringFailed() {
+        XCTAssertNil(buf.write(string: "ä", encoding: .ascii))
+    }
+    
+    func testString() {
+        let written = buf.write(string: "Hello")!
+        let string = buf.string(at: 0, length: written)
+        XCTAssertEqual("Hello", string)
+    }
+    
     func testSliceEasy() {
         buf.write(string: "0123456789abcdefg")
         for i in 0..<16 {
