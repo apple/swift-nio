@@ -31,6 +31,7 @@ public extension ByteToMessageDecoder {
             var buf = ctx.channel!.allocator.buffer(capacity: cum.readableBytes + buffer.readableBytes)
             buf.write(buffer: &cum)
             buf.write(buffer: &buffer)
+            cumulationBuffer = buf
             buffer = buf
         } else {
             cumulationBuffer = buffer
@@ -39,7 +40,11 @@ public extension ByteToMessageDecoder {
         // Running decode method until either the buffer is not readable anymore or the user returned false.
         while try decode(ctx: ctx, buffer: &buffer) && buffer.readableBytes > 0 { }
         
-        handleLeftOver(buffer: &buffer)
+        if buffer.readableBytes > 0 {
+            cumulationBuffer = buffer
+        } else {
+            cumulationBuffer = nil
+        }
     }
     
     public func channelInactive(ctx: ChannelHandlerContext) throws {
@@ -47,15 +52,11 @@ public extension ByteToMessageDecoder {
             // Running decode method until either the buffer is not readable anymore or the user returned false.
             while try decodeLast(ctx: ctx, buffer: &buffer) && buffer.readableBytes > 0 { }
             
-            handleLeftOver(buffer: &buffer)
-        }
-    }
-    
-    private func handleLeftOver(buffer: inout ByteBuffer) {
-        if buffer.readableBytes > 0 {
-            cumulationBuffer = buffer
-        } else {
-            cumulationBuffer = nil
+            if buffer.readableBytes > 0 {
+                cumulationBuffer = buffer
+            } else {
+                cumulationBuffer = nil
+            }
         }
     }
     

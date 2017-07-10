@@ -35,7 +35,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
 
     private var state: HTTPParserState!
 
-    private func writeBytesToBuffer(currentState: DataAwaitingState,
+    private func storeSlice(currentState: DataAwaitingState,
                                     data: UnsafePointer<Int8>!,
                                     len: Int,
                                     previousComplete: (DataAwaitingState) -> Void) -> Void {
@@ -44,28 +44,39 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             self.state.dataAwaitingState = currentState
             previousComplete(oldState)
         }
-        self.state.parserBuffer.write(int8Data: data, len: len)
+        if let slice = self.state.slice {
+            // If we had a slice stored before we just need to update the length
+            self.state.slice = (slice.readerIndex, slice.length + len)
+        } else {
+            // Store the slice
+            let index = calculateIndex(data: data, length: len)
+            assert(index >= 0)
+            self.state.slice = (index, len)
+        }
     }
 
 
     private func complete(state: DataAwaitingState) {
         switch state {
         case .messageBegin:
-            assert(self.state.parserBuffer.readableBytes == 0, "non-empty buffer on begin (\(self.state.parserBuffer.readableBytes))")
+            assert(self.state.slice == nil, "non-empty slice on begin (\(self.state.slice!))")
         case .headerField:
             assert(self.state.currentUri != nil, "URI not set before header field")
-            self.state.currentHeaderName = self.state.parserBuffer.readString()!
-            self.state.parserBuffer.clear()
+            let (index, length) = self.state.slice!
+            self.state.currentHeaderName = cumulationBuffer!.string(at: index, length: length)!
+            self.state.slice = nil
         case .headerValue:
             assert(self.state.currentUri != nil, "URI not set before header field")
-            self.state.currentHeaders!.add(name: self.state.currentHeaderName!, value: self.state.parserBuffer.readString()!)
-            self.state.parserBuffer.clear()
+            let (index, length) = self.state.slice!
+            self.state.currentHeaders!.add(name: self.state.currentHeaderName!, value: cumulationBuffer!.string(at: index, length: length)!)
+            self.state.slice = nil
         case .url:
             assert(self.state.currentUri == nil)
-            self.state.currentUri = self.state.parserBuffer.readString()!
-            self.state.parserBuffer.clear()
+            let (index, length) = self.state.slice!
+            self.state.currentUri = cumulationBuffer!.string(at: index, length: length)!
+            self.state.slice = nil
         case .body:
-            ()
+            self.state.slice = nil
         }
     }
 
@@ -74,13 +85,17 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
         var currentHeaders: HTTPHeaders?
         var currentUri: String?
         var currentHeaderName: String?
-        var parserBuffer: ByteBuffer
-
+        var slice: (readerIndex: Int, length: Int)?
+        var readerIndexAdjustment = 0
+        // This is set before http_parser_execute(...) is called and set to nil again after it finish
+        var baseAddress: UnsafePointer<UInt8>?
+        
         mutating func reset() {
             self.currentHeaders = HTTPHeaders()
             self.currentUri = nil
             self.currentHeaderName = nil
-            self.parserBuffer.clear()
+            self.slice = nil
+            self.readerIndexAdjustment = 0
         }
 
         mutating func finializeHTTPRequest(parser: UnsafeMutablePointer<http_parser>?) -> HTTPRequestHead? {
@@ -92,14 +107,16 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             currentHeaders = nil
             return request
         }
-
-        init(allocator: ByteBufferAllocator) throws {
-            self.parserBuffer = allocator.buffer(capacity: 64)
-        }
     }
 
     public init() { }
-
+    
+    private func calculateIndex(data: UnsafePointer<Int8>, length: Int) -> Int {
+        return data.withMemoryRebound(to: UInt8.self, capacity: length, { p in
+            return state.baseAddress!.distance(to: p)
+        })
+    }
+    
     public func decoderAdded(ctx: ChannelHandlerContext) throws {
         parser = http_parser()
         http_parser_init(&parser!, HTTP_REQUEST)
@@ -108,7 +125,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
         settings = http_parser_settings()
         http_parser_settings_init(&settings!)
 
-        self.state = try HTTPParserState(allocator: ctx.channel!.allocator)
+        self.state = HTTPParserState()
 
         settings!.on_message_begin = { parser in
             let ctx = evacuateContext(parser)
@@ -140,9 +157,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             assert(handler.state.dataAwaitingState == .body)
             
             // Calculate the index of the data in the cumulationBuffer so we can slice out the ByteBuffer without doing any memory copy
-            let index = handler.cumulationBuffer!.withUnsafeBytes { pointer in
-                return pointer.baseAddress!.assumingMemoryBound(to: Int8.self).distance(to: data!)
-            }
+            let index = handler.calculateIndex(data: data!, length: len)
             
             let slice = handler.cumulationBuffer!.slice(at: index, length: len)!
             ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequest.body(HTTPBodyContent.more(buffer: slice))))
@@ -154,7 +169,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             let ctx = evacuateContext(parser)
             let handler = ctx.handler as! HTTPRequestDecoder
 
-            handler.writeBytesToBuffer(currentState: .headerField, data: data, len: len) { previousState in
+            handler.storeSlice(currentState: .headerField, data: data, len: len) { previousState in
                 handler.complete(state: previousState)
             }
             return 0
@@ -164,7 +179,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             let ctx = evacuateContext(parser)
             let handler = ctx.handler as! HTTPRequestDecoder
 
-            handler.writeBytesToBuffer(currentState: .headerValue, data: data, len: len) { previousState in
+            handler.storeSlice(currentState: .headerValue, data: data, len: len) { previousState in
                 handler.complete(state: previousState)
             }
             return 0
@@ -174,7 +189,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             let ctx = evacuateContext(parser)
             let handler = ctx.handler as! HTTPRequestDecoder
 
-            handler.writeBytesToBuffer(currentState: .url, data: data, len: len) { previousState in
+            handler.storeSlice(currentState: .url, data: data, len: len) { previousState in
                 assert(previousState == .messageBegin, "expected: messageBegin, actual: \(previousState)")
                 handler.complete(state: previousState)
             }
@@ -201,22 +216,42 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
         
         state = nil
     }
-
+    
     public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> Bool {
-        let result = try buffer.withReadPointer(body: { (pointer: UnsafePointer<UInt8>, len: Int) -> size_t in
-            try pointer.withMemoryRebound(to: Int8.self, capacity: len, { (bytes: UnsafePointer<Int8>) -> size_t in
-                let result = http_parser_execute(&parser!, &settings!, bytes, len)
-                let errno = parser!.http_errno
-                if errno != 0 {
-                    throw HTTPParserError.httpError(fromCHTTPParserErrno:  http_errno(rawValue: errno))!
-                }
-                return result
+        if let slice = state.slice {
+            // If we stored a slice before we need to ensure we move the readerIndex so we not try to parse the data again and also
+            // adjust the slice as it now starts from 0.
+            state.slice = (readerIndex: 0 , length: slice.length)
+            buffer.moveReaderIndex(forwardBy: state.readerIndexAdjustment)
+        }
+        
+        let result = try buffer.withUnsafeBytes { (pointer) -> size_t in
+            state.baseAddress = pointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
+            
+            let result = state.baseAddress!.withMemoryRebound(to: Int8.self, capacity: pointer.count, { p in
+                http_parser_execute(&parser!, &settings!, p.advanced(by: buffer.readerIndex), buffer.readableBytes)
             })
-        })
-        buffer.moveReaderIndex(forwardBy: result)
-        return true
+            
+            state.baseAddress = nil
+            
+            let errno = parser!.http_errno
+            if errno != 0 {
+                throw HTTPParserError.httpError(fromCHTTPParserErrno:  http_errno(rawValue: errno))!
+            }
+            return result
+        }
+        
+        if let slice = state.slice {
+            buffer.moveReaderIndex(to: slice.readerIndex)
+            state.readerIndexAdjustment = buffer.readableBytes
+            return false
+        } else {
+            buffer.moveReaderIndex(forwardBy: result)
+            state.readerIndexAdjustment = 0
+            return true
+        }
     }
-
+    
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         ctx.fireErrorCaught(error: error)
         if error is HTTPParserError {
@@ -232,14 +267,10 @@ private func evacuateContext(_ opaqueContext: UnsafeMutablePointer<http_parser>!
 
 extension ByteBuffer {
 
-    mutating func readString() -> String? {
-        return withReadPointer(body: { (pointer, length) -> String? in
-            return String(bytes: UnsafeBufferPointer(start: pointer, count: length), encoding: .utf8)
-        })
-    }
-
-    @discardableResult mutating func write(int8Data: UnsafePointer<Int8>, len: Int) -> Int {
-        return self.write(bytes: UnsafeRawBufferPointer(start: UnsafeRawPointer(int8Data), count: len))
+    func string(at index: Int, length: Int) -> String? {
+        return withUnsafeBytes { pointer in
+            return String(bytes: UnsafeBufferPointer(start: pointer.baseAddress?.assumingMemoryBound(to: UInt8.self).advanced(by: index), count: length), encoding: .utf8)
+        }
     }
 }
 
