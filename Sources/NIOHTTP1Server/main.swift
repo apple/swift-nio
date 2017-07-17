@@ -57,7 +57,7 @@ private class HTTPHandler : ChannelInboundHandler {
 
     func handlerAdded(ctx: ChannelHandlerContext) throws {
         buffer = ctx.channel!.allocator.buffer(capacity: 12)
-        buffer!.write(string: "Hello World!")
+        buffer!.write(staticString: "Hello World!")
     }
 }
 

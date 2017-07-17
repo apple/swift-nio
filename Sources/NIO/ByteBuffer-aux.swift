@@ -57,19 +57,28 @@ extension ByteBuffer {
     // MARK: String APIs
     @discardableResult
     public mutating func write(string: String, encoding: String.Encoding = .utf8) -> Int? {
-        guard let data = string.data(using: encoding) else {
+        if let written = self.set(string: string, at: self.writerIndex, encoding: encoding) {
+            self.moveWriterIndex(forwardBy: written)
+            return written
+        } else {
             return nil
         }
-        return self.write(data: data)
     }
 
     @discardableResult
     public mutating func set(string: String, at index: Int, encoding: String.Encoding = .utf8) -> Int? {
-        guard let data = string.data(using: encoding) else {
-            return nil
+        if encoding == .utf8 {
+            let bytes = Array(string.utf8)
+            return self.set(bytes: UnsafeRawBufferPointer(start: bytes, count: bytes.count), at: index)
+        } else {
+            if let data = string.data(using: encoding) {
+                return self.set(data: data, at: index)
+            } else {
+                return nil
+            }
         }
-        return self.set(data: data, at: index)
     }
+
     
     public func string(at index: Int, length: Int, encoding: String.Encoding = .utf8) -> String? {
         return withUnsafeBytes { pointer in

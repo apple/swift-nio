@@ -126,7 +126,7 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible, Equatable {
             for value in k.value {
                 buffer.write(string: value)
                 writerIndex = buffer.writerIndex
-                buffer.write(string: ",")
+                buffer.write(staticString: ",")
             }
             // Discard last ,
             buffer.moveWriterIndex(to: writerIndex)
@@ -267,11 +267,11 @@ extension HTTPVersion {
             // Optimize for HTTP/1.1
             buffer.write(data: http1_1)
         } else {
-            buffer.write(string: "HTTP/")
+            buffer.write(staticString: "HTTP/")
             buffer.write(string: String(major))
-            buffer.write(string: ".")
+            buffer.write(staticString: ".")
             buffer.write(string: String(minor))
-            buffer.write(string: " ")
+            buffer.write(staticString: " ")
         }
     }
 }

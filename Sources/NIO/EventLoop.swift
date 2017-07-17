@@ -85,6 +85,16 @@ enum NIORegistration: Registration {
 
 }
 
+private func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
+    #if os(Linux)
+    return try execute()
+    #else
+    return try autoreleasepool {
+        try execute()
+    }
+    #endif
+}
+
 // TODO: Implement scheduling tasks in the future (a.k.a ScheduledExecutoreService
 final class SelectableEventLoop : EventLoop {
     private let selector: NIO.Selector<NIORegistration>
@@ -179,12 +189,15 @@ final class SelectableEventLoop : EventLoop {
         }
         while !closed {
             // Block until there are events to handle or the selector was woken up
-            try selector.whenReady(strategy: .block) { ev in
-                switch ev.registration {
-                case .serverSocketChannel(let chan, _):
-                    self.handleEvent(ev.io, channel: chan)
-                case .socketChannel(let chan, _):
-                    self.handleEvent(ev.io, channel: chan)
+            /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
+            try withAutoReleasePool {
+                try selector.whenReady(strategy: .block) { ev in
+                    switch ev.registration {
+                    case .serverSocketChannel(let chan, _):
+                        self.handleEvent(ev.io, channel: chan)
+                    case .socketChannel(let chan, _):
+                        self.handleEvent(ev.io, channel: chan)
+                    }
                 }
             }
             
@@ -203,7 +216,10 @@ final class SelectableEventLoop : EventLoop {
                 
                 // Execute all the tasks that were summited
                 while let task = tasksCopy.first {
-                    task()
+                    /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
+                    withAutoReleasePool {
+                        task()
+                    }
                     
                     let _ = tasksCopy.removeFirst()
                 }
