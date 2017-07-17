@@ -64,9 +64,13 @@ defer {
     _ = try? group.close()
 }
 
-let channel = try bootstrap.bind(to: "0.0.0.0", on: 9999).wait()
+// First argument is the program path
+let arguments = CommandLine.arguments
+let port = arguments.count == 2 ? Int32(arguments[1])! : 9999
 
-print("Server started")
+let channel = try bootstrap.bind(to: "0.0.0.0", on: port).wait()
+
+print("Server started and listening on 0.0.0.0:\(port)")
 
 // This will never unblock as we not close the ServerChannel
 try channel.closeFuture.wait()
