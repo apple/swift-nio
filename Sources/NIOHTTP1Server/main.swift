@@ -16,8 +16,8 @@ import NIO
 import NIOHTTP1
 
 private class HTTPHandler : ChannelInboundHandler {
-    public typealias InboundIn = HTTPRequest
-    public typealias OutboundOut = HTTPResponse
+    public typealias InboundIn = HTTPRequestPart
+    public typealias OutboundOut = HTTPResponsePart
 
     private var buffer: ByteBuffer? = nil
     private var keepAlive = false
@@ -31,14 +31,14 @@ private class HTTPHandler : ChannelInboundHandler {
 
                 var responseHead = HTTPResponseHead(version: request.version, status: HTTPResponseStatus.ok)
                 responseHead.headers.add(name: "content-length", value: "12")
-                let response = HTTPResponse.head(responseHead)
+                let response = HTTPResponsePart.head(responseHead)
                 ctx.write(data: self.wrapOutboundOut(response), promise: nil)
             case .body(let content):
                 switch content {
                 case .more(_):
                     break
                 case .last:
-                    let content = HTTPResponse.body(HTTPBodyContent.last(buffer: buffer!.slice()))
+                    let content = HTTPResponsePart.body(HTTPBodyContent.last(buffer: buffer!.slice()))
                     if keepAlive {
                         ctx.write(data: self.wrapOutboundOut(content), promise: nil)
                     } else {

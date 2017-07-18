@@ -16,7 +16,7 @@ import Foundation
 import NIO
 
 public final class HTTPResponseEncoder : ChannelOutboundHandler {
-    public typealias OutboundIn = HTTPResponse
+    public typealias OutboundIn = HTTPResponsePart
     public typealias OutboundOut = ByteBuffer
 
     public init() {}

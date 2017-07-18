@@ -46,7 +46,7 @@ public struct HTTPRequestHead: Equatable {
     }
 }
 
-public enum HTTPRequest {
+public enum HTTPRequestPart {
     case head(HTTPRequestHead)
     case body(HTTPBodyContent)
 }
@@ -65,7 +65,7 @@ public extension HTTPRequestHead {
     }
 }
 
-public enum HTTPResponse {
+public enum HTTPResponsePart {
     case head(HTTPResponseHead)
     case body(HTTPBodyContent)
 }
@@ -86,23 +86,15 @@ public enum HTTPBodyContent {
     case more(buffer: ByteBuffer)
 }
 
-public struct HTTPHeaders : Sequence, CustomStringConvertible, Equatable {
-    public static func ==(lhs: HTTPHeaders, rhs: HTTPHeaders) -> Bool {
-        if lhs.storage.count != rhs.storage.count {
-            return false
-        }
-        for (k, v) in lhs.storage {
-            if let rv = rhs.storage[k], rv == v {
-                continue
-            } else {
-                return false
-            }
-        }
-        return true
-    }
-
+public struct HTTPHeaders : Sequence, CustomStringConvertible {
     private var storage: [String:[String]] = [String:[String]]()
     public var description: String { return storage.description }
+
+    public init(_ headers: [(String, String)] = []) {
+        for (key, value) in headers {
+            add(name: key, value: value)
+        }
+    }
 
     public mutating func add(name: String, value: String) {
         let keyLower = name.lowercased()
@@ -115,6 +107,10 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible, Equatable {
 
     public subscript(name: String) -> [String] {
         return storage[name.lowercased()] ?? []
+    }
+
+    public func makeIterator() -> DictionaryIterator<String, [String]> {
+        return self.storage.makeIterator()
     }
 
     func write(buffer: inout ByteBuffer) {
@@ -134,9 +130,21 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible, Equatable {
         }
         buffer.write(data: crlf)
     }
+}
 
-    public func makeIterator() -> DictionaryIterator<String, [String]> {
-        return self.storage.makeIterator()
+extension HTTPHeaders : Equatable {
+    public static func ==(lhs: HTTPHeaders, rhs: HTTPHeaders) -> Bool {
+        if lhs.storage.count != rhs.storage.count {
+            return false
+        }
+        for (k, v) in lhs.storage {
+            if let rv = rhs.storage[k], rv == v {
+                continue
+            } else {
+                return false
+            }
+        }
+        return true
     }
 }
 
@@ -257,8 +265,13 @@ public struct HTTPVersion: Equatable {
         return lhs.major == rhs.major && lhs.minor == rhs.minor
     }
 
-    let major: UInt16
-    let minor: UInt16
+    public init(major: UInt16, minor: UInt16) {
+        self.major = major
+        self.minor = minor
+    }
+
+    public let major: UInt16
+    public let minor: UInt16
 }
 
 extension HTTPVersion {
@@ -634,9 +647,13 @@ public enum HTTPResponseStatus: Equatable {
     case custom(code: UInt, reasonPhrase: String)
 
     /* all the codes from http://www.iana.org/assignments/http-status-codes */
+
+    // 1xx
     case `continue`
     case switchingProtocols
     case processing
+
+    // 2xx
     case ok
     case created
     case accepted
@@ -644,6 +661,8 @@ public enum HTTPResponseStatus: Equatable {
     case noContent
     case resetContent
     case partialContent
+
+    // 3xx
     case multiStatus
     case alreadyReported
     case imUsed
@@ -655,6 +674,8 @@ public enum HTTPResponseStatus: Equatable {
     case useProxy
     case temporaryRedirect
     case permanentRedirect
+
+    // 4xx
     case badRequest
     case unauthorized
     case paymentRequired
@@ -673,6 +694,8 @@ public enum HTTPResponseStatus: Equatable {
     case unsupportedMediaType
     case rangeNotSatisfiable
     case expectationFailed
+
+    // 5xx
     case misdirectedRequest
     case unprocessableEntity
     case locked

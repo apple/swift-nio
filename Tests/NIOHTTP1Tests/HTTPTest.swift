@@ -17,12 +17,12 @@ import XCTest
 @testable import NIOHTTP1
 
 private final class TestChannelInboundHandler: ChannelInboundHandler {
-    public typealias InboundIn = HTTPRequest
-    public typealias InboundOut = HTTPRequest
+    public typealias InboundIn = HTTPRequestPart
+    public typealias InboundOut = HTTPRequestPart
 
-    private let fn: (HTTPRequest) -> HTTPRequest
+    private let fn: (HTTPRequestPart) -> HTTPRequestPart
 
-    init(_ fn: @escaping (HTTPRequest) -> HTTPRequest) {
+    init(_ fn: @escaping (HTTPRequestPart) -> HTTPRequestPart) {
         self.fn = fn
     }
 

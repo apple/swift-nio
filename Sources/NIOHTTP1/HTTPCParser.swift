@@ -18,7 +18,7 @@ import CHTTPParser
 
 public final class HTTPRequestDecoder : ByteToMessageDecoder {
     public typealias InboundIn = ByteBuffer
-    public typealias InboundOut = HTTPRequest
+    public typealias InboundOut = HTTPRequestPart
     public var cumulationBuffer: ByteBuffer?
     
     private var parser: http_parser?
@@ -147,7 +147,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
 
             handler.state.dataAwaitingState = .body
 
-            ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequest.head(request)))
+            ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequestPart.head(request)))
             return 0
         }
 
@@ -160,7 +160,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             let index = handler.calculateIndex(data: data!, length: len)
             
             let slice = handler.cumulationBuffer!.slice(at: index, length: len)!
-            ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequest.body(HTTPBodyContent.more(buffer: slice))))
+            ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequestPart.body(HTTPBodyContent.more(buffer: slice))))
             
             return 0
         }
@@ -200,7 +200,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             let ctx = evacuateContext(parser)
             let handler = ctx.handler as! HTTPRequestDecoder
 
-            ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequest.body(.last(buffer: nil))))
+            ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequestPart.body(.last(buffer: nil))))
             handler.complete(state: handler.state.dataAwaitingState)
             handler.state.dataAwaitingState = .messageBegin
             return 0
