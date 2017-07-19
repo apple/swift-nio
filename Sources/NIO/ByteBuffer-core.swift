@@ -152,23 +152,13 @@ public struct ByteBuffer {
 
     // MARK: Internal API
 
-    private mutating func moveReaderIndex(forwardBy offset: Index) {
-        self.moveReaderIndex(to: self._readerIndex + offset)
-    }
-
     private mutating func moveReaderIndex(to newIndex: Index) {
         assert(newIndex >= 0 && newIndex <= writerIndex)
-
         self._readerIndex = newIndex
     }
-
-    private mutating func moveWriterIndex(forwardBy offset: Index) {
-        self.moveWriterIndex(to: self._writerIndex + offset)
-    }
-
+    
     private mutating func moveWriterIndex(to newIndex: Index) {
         assert(newIndex >= 0 && newIndex <= toCapacity(self._slice.count))
-
         self._writerIndex = newIndex
     }
 
@@ -237,7 +227,7 @@ public struct ByteBuffer {
         self.copyStorageAndRebaseIfNeeded()
         let bytesWritten = try fn(UnsafeMutableRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._writerIndex)),
                                                                 count: self.writableBytes))
-        self.moveWriterIndex(forwardBy: toIndex(bytesWritten))
+        self.moveWriterIndex(to: self._writerIndex + toIndex(bytesWritten))
         return bytesWritten
     }
 
@@ -315,18 +305,26 @@ extension ByteBuffer {
     }
 
     public mutating func moveReaderIndex(forwardBy offset: Int) {
-        self.moveReaderIndex(forwardBy: toIndex(offset))
+        let newIndex = self._readerIndex + toIndex(offset)
+        precondition(newIndex >= 0 && newIndex <= writerIndex, "new readerIndex: \(newIndex), expected: range(0, \(writerIndex))")
+        self.moveReaderIndex(to: newIndex)
     }
 
     public mutating func moveReaderIndex(to offset: Int) {
-        self.moveReaderIndex(to: toIndex(offset))
+        let newIndex = toIndex(offset)
+        precondition(newIndex >= 0 && newIndex <= writerIndex, "new readerIndex: \(newIndex), expected: range(0, \(writerIndex))")
+        self.moveReaderIndex(to: newIndex)
     }
 
     public mutating func moveWriterIndex(forwardBy offset: Int) {
-        self.moveWriterIndex(forwardBy: toIndex(offset))
+        let newIndex = self._writerIndex + toIndex(offset)
+        precondition(newIndex >= 0 && newIndex <= toCapacity(self._slice.count),"new writerIndex: \(newIndex), expected: range(0, \(toCapacity(self._slice.count)))")
+        self.moveWriterIndex(to: newIndex)
     }
 
     public mutating func moveWriterIndex(to offset: Int) {
-        self.moveWriterIndex(to: toIndex(offset))
+        let newIndex = toIndex(offset)
+        precondition(newIndex >= 0 && newIndex <= toCapacity(self._slice.count),"new writerIndex: \(newIndex), expected: range(0, \(toCapacity(self._slice.count)))")
+        self.moveWriterIndex(to: newIndex)
     }
 }
