@@ -55,7 +55,7 @@ public final class ServerBootstrap {
     public func bind(to host: String, on port: Int32) -> Future<Channel> {
         let evGroup = group
         do {
-            let address = try SocketAddresses.newAddress(for: host, on: port)
+            let address = try SocketAddress.newAddressResolving(host: host, port: port)
             return bind0(evGroup: evGroup, to: address)
         } catch let err {
             return evGroup.next().newFailedFuture(error: err)
@@ -202,7 +202,7 @@ public final class ClientBootstrap {
         let evGroup = group
 
         do {
-            let address = try SocketAddresses.newAddress(for: host, on: port)
+            let address = try SocketAddress.newAddressResolving(host: host, port: port)
             return execute(evGroup: evGroup, fn: { channel in
                 return channel.bind(to: address)
             })
@@ -221,7 +221,7 @@ public final class ClientBootstrap {
         let evGroup = group
         
         do {
-            let address = try SocketAddresses.newAddress(for: host, on: port)
+            let address = try SocketAddress.newAddressResolving(host: host, port: port)
             return execute(evGroup: group, fn: { channel in
                 return channel.connect(to: address)
             })

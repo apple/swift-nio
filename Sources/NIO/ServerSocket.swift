@@ -30,7 +30,7 @@ import Foundation
 final class ServerSocket: BaseSocket {
     public class func bootstrap(host: String, port: Int32) throws -> ServerSocket {
         let socket = try ServerSocket()
-        try socket.bind(to: try SocketAddresses.newAddress(for: host, on: port))
+        try socket.bind(to: try SocketAddress.newAddressResolving(host: host, port: port))
         try socket.listen()
         return socket
     }
