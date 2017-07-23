@@ -54,9 +54,9 @@ final class Socket : BaseSocket {
     
     func connect(to address: SocketAddress) throws  -> Bool {
         switch address {
-        case .v4(address: let addr):
+        case .v4(address: let addr, _):
             return try connectSocket(addr: addr)
-        case .v6(address: let addr):
+        case .v6(address: let addr, _):
             return try connectSocket(addr: addr)
         }
     }

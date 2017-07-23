@@ -108,9 +108,9 @@ class BaseSocket : Selectable {
     
     final func bind(to address: SocketAddress) throws {
         switch address {
-        case .v4(address: let addr):
+        case .v4(address: let addr, _):
             try bindSocket(addr: addr)
-        case .v6(address: let addr):
+        case .v6(address: let addr, _):
             try bindSocket(addr: addr)
         }
     }
