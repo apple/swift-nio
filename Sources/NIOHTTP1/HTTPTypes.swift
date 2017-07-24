@@ -86,8 +86,38 @@ public enum HTTPBodyContent {
     case more(buffer: ByteBuffer)
 }
 
+fileprivate typealias HTTPHeadersStorage = [String:[(String, String)]] // [lowerCasedName: [(originalCaseName, value)]
+
+
+struct HTTPHeadersIterator : IteratorProtocol {
+    fileprivate var storageIterator: HTTPHeadersStorage.Iterator
+    fileprivate var valuesIterator: Array<(String, String)>.Iterator?
+
+    fileprivate init(wrapping: HTTPHeadersStorage.Iterator) {
+        self.storageIterator = wrapping
+    }
+
+    mutating func next() -> (name: String, value: String)? {
+        // If we're already iterating an entry in the dict, grab the next one
+        if let nextValues = valuesIterator?.next() {
+            return nextValues
+        } else {
+            // If there's nothing left in this array, clear the iterator
+            valuesIterator = nil
+        }
+
+        if let entry = storageIterator.next() {
+            valuesIterator = entry.value.makeIterator()
+            return next()
+        } else {
+            return nil
+        }
+    }
+}
+
 public struct HTTPHeaders : Sequence, CustomStringConvertible {
-    private var storage: [String:[String]] = [String:[String]]()
+    // [lowerCasedName: [(originalCaseName, value)]
+    private var storage: HTTPHeadersStorage = HTTPHeadersStorage()
     public var description: String { return storage.description }
 
     public init(_ headers: [(String, String)] = []) {
@@ -98,7 +128,7 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible {
 
     public mutating func add(name: String, value: String) {
         let keyLower = name.lowercased()
-        storage[keyLower] = (storage[keyLower] ?? [])  + [value]
+        storage[keyLower] = (storage[keyLower] ?? [])  + [(name, value)]
     }
 
     public mutating func remove(name: String) {
@@ -106,20 +136,19 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible {
     }
 
     public subscript(name: String) -> [String] {
-        return storage[name.lowercased()] ?? []
-    }
-
-    public func makeIterator() -> DictionaryIterator<String, [String]> {
-        return self.storage.makeIterator()
+        if let result = storage[name.lowercased()] {
+            return result.map { tuple in tuple.1 }
+        }
+        return []
     }
 
     func write(buffer: inout ByteBuffer) {
-        for k in storage {
-            buffer.write(string: k.key)
+        for (key, values) in storage {
+            buffer.write(string: key)
             buffer.write(data: headerSeperator)
 
             var writerIndex = buffer.writerIndex
-            for value in k.value {
+            for (_, value) in values {
                 buffer.write(string: value)
                 writerIndex = buffer.writerIndex
                 buffer.write(staticString: ",")
@@ -130,6 +159,10 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible {
         }
         buffer.write(data: crlf)
     }
+
+    public func makeIterator() -> AnyIterator<(name: String, value: String)> {
+        return AnyIterator(HTTPHeadersIterator(wrapping: storage.makeIterator()))
+    }
 }
 
 extension HTTPHeaders : Equatable {
@@ -138,7 +171,7 @@ extension HTTPHeaders : Equatable {
             return false
         }
         for (k, v) in lhs.storage {
-            if let rv = rhs.storage[k], rv == v {
+            if let rv = rhs.storage[k], rv.map({ $0.1 }) == v.map({ $0.1 }) {
                 continue
             } else {
                 return false

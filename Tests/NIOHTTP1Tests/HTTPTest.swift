@@ -41,10 +41,8 @@ class HTTPTest: XCTestCase {
     func checkHTTPRequests(_ expecteds: [HTTPRequestHead], body: String? = nil) throws {
         func httpRequestStrForRequest(_ req: HTTPRequestHead) -> String {
             var s = "\(req.method) \(req.uri) HTTP/\(req.version.major).\(req.version.minor)\r\n"
-            for (k, vs) in req.headers {
-                for v in vs {
-                    s += "\(k): \(v)\r\n"
-                }
+            for (k, v) in req.headers {
+                s += "\(k): \(v)\r\n"
             }
             if let body = body {
                 let bodyData = body.data(using: .utf8)!
