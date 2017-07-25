@@ -65,6 +65,15 @@ public enum SocketAddress: CustomStringConvertible {
         return "[\(type)]\(host):\(port)"
     }
     
+    public var protocolFamily: Int32 {
+        switch self {
+        case .v4(address: _, host: _):
+            return PF_INET
+        case .v6(address: _, host: _):
+            return PF_INET6
+        }
+    }
+
     public init(IPv4Address addr: sockaddr_in, host: String) {
         self = .v4(address: addr, host: host)
     }

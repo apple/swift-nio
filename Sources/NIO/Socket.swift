@@ -43,8 +43,8 @@ final class Socket : BaseSocket {
 #endif
     }
     
-    init() throws {
-        let sock = try BaseSocket.newSocket()
+    init(protocolFamily: Int32) throws {
+        let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily)
         super.init(descriptor: sock)
     }
     

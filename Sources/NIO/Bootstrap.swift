@@ -76,7 +76,9 @@ public final class ServerBootstrap {
         
         let promise: Promise<Channel> = eventLoop.newPromise()
         do {
-            let serverChannel = try ServerSocketChannel(eventLoop: eventLoop as! SelectableEventLoop, group: chEvGroup)
+            let serverChannel = try ServerSocketChannel(eventLoop: eventLoop as! SelectableEventLoop,
+                                                        group: chEvGroup,
+                                                        protocolFamily: address.protocolFamily)
             
             func finishServerSetup() {
                 do {
@@ -198,23 +200,23 @@ public final class ClientBootstrap {
         return self
     }
     
-    public func bind(to host: String, on port: Int32) -> Future<Channel> {
+    public func bind(protocolFamily: Int32, to host: String, on port: Int32) -> Future<Channel> {
         let evGroup = group
 
         do {
             let address = try SocketAddress.newAddressResolving(host: host, port: port)
-            return execute(evGroup: evGroup, fn: { channel in
+            return execute(evGroup: evGroup, protocolFamily: protocolFamily) { channel in
                 return channel.bind(to: address)
-            })
+            }
         } catch let err {
             return evGroup.next().newFailedFuture(error: err)
         }
     }
     
     public func bind(to address: SocketAddress) -> Future<Channel> {
-        return execute(evGroup: group, fn: { channel in
+        return execute(evGroup: group, protocolFamily: address.protocolFamily) { channel in
             return channel.bind(to: address)
-        })
+        }
     }
     
     public func connect(to host: String, on port: Int32) -> Future<Channel> {
@@ -222,28 +224,30 @@ public final class ClientBootstrap {
         
         do {
             let address = try SocketAddress.newAddressResolving(host: host, port: port)
-            return execute(evGroup: group, fn: { channel in
+            return execute(evGroup: group, protocolFamily: address.protocolFamily) { channel in
                 return channel.connect(to: address)
-            })
+            }
         } catch let err {
             return evGroup.next().newFailedFuture(error: err)
         }
     }
     
     public func connect(to address: SocketAddress) -> Future<Channel> {
-        return execute(evGroup: group, fn: { channel in
+        return execute(evGroup: group, protocolFamily: address.protocolFamily) { channel in
             return channel.connect(to: address)
-        })
+        }
     }
 
-    private func execute(evGroup: EventLoopGroup, fn: @escaping (Channel) -> Future<Void>) -> Future<Channel> {
+    private func execute(evGroup: EventLoopGroup,
+                         protocolFamily: Int32,
+                         fn: @escaping (Channel) -> Future<Void>) -> Future<Channel> {
         let eventLoop = evGroup.next()
         let h = handler
         let opts = options
         
         let promise: Promise<Channel> = eventLoop.newPromise()
         do {
-            let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop)
+            let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: protocolFamily)
             
             func finishClientSetup() {
                 do {

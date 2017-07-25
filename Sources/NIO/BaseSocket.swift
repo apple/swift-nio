@@ -32,6 +32,27 @@ protocol Registration {
     var interested: IOEvent { get set }
 }
 
+protocol SockAddrProtocol {
+    mutating func withSockAddr<R>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R
+}
+extension sockaddr_in: SockAddrProtocol {
+    mutating func withSockAddr<R>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        var me = self
+        return try withUnsafeBytes(of: &me) { p in
+            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
+}
+
+extension sockaddr_in6: SockAddrProtocol {
+    mutating func withSockAddr<R>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        var me = self
+        return try withUnsafeBytes(of: &me) { p in
+            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
+}
+
 class BaseSocket : Selectable {
     public let descriptor: Int32
     public private(set) var open: Bool
@@ -48,10 +69,29 @@ class BaseSocket : Selectable {
         }
     }
 
-    static func newSocket() throws -> Int32 {
-        return try wrapSyscall({ $0 >= 0 }, function: "socket") { () -> Int32 in
-            sysSocket(AF_INET, Int32(sysSOCK_STREAM), 0)
+    static func newSocket(protocolFamily: Int32) throws -> Int32 {
+        let sock = try wrapSyscall({ $0 >= 0 }, function: "socket") { () -> Int32 in
+            sysSocket(protocolFamily, Int32(sysSOCK_STREAM), 0)
         }
+        if protocolFamily == AF_INET6 {
+            var zero: Int32 = 0
+            do {
+                _ = try wrapSyscall({ $0 == 0 }, function: "setsockopt") { () -> Int32 in
+                    setsockopt(sock, Int32(IPPROTO_IPV6), IPV6_V6ONLY, &zero, socklen_t(MemoryLayout.size(ofValue: zero)))
+                }
+            } catch let e as IOError {
+                if e.errno != EAFNOSUPPORT {
+                    _ = try wrapSyscall({ $0 == 0 }, function: "close") { () -> Int32 in
+                        sysClose(sock)
+                    }
+                    throw e
+                }
+                /* we couldn't enable dual IP4/6 support, that's okay too. */
+            } catch let e {
+                fatalError("Unexpected error type \(e)")
+            }
+        }
+        return sock
     }
     
     // TODO: This needs a way to encourage proper open/close behavior.
@@ -107,26 +147,21 @@ class BaseSocket : Selectable {
     }
     
     final func bind(to address: SocketAddress) throws {
-        switch address {
-        case .v4(address: let addr, _):
-            try bindSocket(addr: addr)
-        case .v6(address: let addr, _):
-            try bindSocket(addr: addr)
-        }
-    }
-    
-    private func bindSocket<T>(addr: T) throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't bind socket as it's not open anymore.")
         }
 
-        var addr = addr
-        try withUnsafePointer(to: &addr) { p in
-            try p.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                _ = try wrapSyscall({ $0 != -1 }, function: "bind") {
-                    sysBind(self.descriptor, ptr, socklen_t(MemoryLayout.size(ofValue: addr)))
-                }
+        func doBind(ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
+            _ = try wrapSyscall({ $0 == 0 }, function: "bind") {
+                sysBind(self.descriptor, ptr, socklen_t(bytes))
             }
+        }
+
+        switch address {
+        case .v4(address: var addr, _):
+            try addr.withSockAddr(doBind)
+        case .v6(address: var addr, _):
+            try addr.withSockAddr(doBind)
         }
     }
     

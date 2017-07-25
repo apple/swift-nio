@@ -28,15 +28,15 @@ import Foundation
 
 // TODO: Handle AF_INET6 as well
 final class ServerSocket: BaseSocket {
-    public class func bootstrap(host: String, port: Int32) throws -> ServerSocket {
-        let socket = try ServerSocket()
-        try socket.bind(to: try SocketAddress.newAddressResolving(host: host, port: port))
+    public class func bootstrap(protocolFamily: Int32, host: String, port: Int32) throws -> ServerSocket {
+        let socket = try ServerSocket(protocolFamily: protocolFamily)
+        try socket.bind(to: SocketAddress.newAddressResolving(host: host, port: port))
         try socket.listen()
         return socket
     }
     
-    init() throws {
-        let sock = try BaseSocket.newSocket()
+    init(protocolFamily: Int32) throws {
+        let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily)
         super.init(descriptor: sock)
     }
     

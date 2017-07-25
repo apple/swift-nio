@@ -397,8 +397,8 @@ extension ByteBuffer {
  */
 final class SocketChannel : BaseSocketChannel<Socket> {
 
-    init(eventLoop: SelectableEventLoop) throws {
-        let socket = try Socket()
+    init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
+        let socket = try Socket(protocolFamily: protocolFamily)
         do {
             try socket.setNonBlocking()
         } catch let err {
@@ -498,8 +498,8 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
     private var backlog: Int32 = 128
     private let group: EventLoopGroup
 
-    init(eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
-        let serverSocket = try ServerSocket()
+    init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: Int32) throws {
+        let serverSocket = try ServerSocket(protocolFamily: protocolFamily)
         do {
             try serverSocket.setNonBlocking()
         } catch let err {

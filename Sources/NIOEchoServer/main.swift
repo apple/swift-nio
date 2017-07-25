@@ -66,11 +66,26 @@ defer {
 
 // First argument is the program path
 let arguments = CommandLine.arguments
-let port = arguments.count == 2 ? Int32(arguments[1])! : 9999
+let arg1 = arguments.dropFirst().first
+let arg2 = arguments.dropFirst().dropFirst().first
 
-let channel = try bootstrap.bind(to: "0.0.0.0", on: port).wait()
+var host: String = "::1"
+var port: Int32 = 9999
+switch (arg1, arg1.flatMap { Int32($0) }, arg2.flatMap { Int32($0) }) {
+case (.some(let h), _ , .some(let p)):
+    /* we got two arguments, let's interpret that as host and port */
+    host = h
+    port = p
+case (_, .some(let p), _):
+    /* only one argument --> port */
+    port = p
+default:
+    ()
+}
 
-print("Server started and listening on 0.0.0.0:\(port)")
+let channel = try bootstrap.bind(to: host, on: port).wait()
+
+print("Server started and listening on \(host):\(port)")
 
 // This will never unblock as we not close the ServerChannel
 try channel.closeFuture.wait()
