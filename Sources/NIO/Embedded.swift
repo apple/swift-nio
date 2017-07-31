@@ -118,10 +118,18 @@ class EmbeddedChannelCore : ChannelCore {
     }
 
     func flush0(promise: Promise<Void>?) {
+        guard !closed else {
+            promise?.fail(error: ChannelError.closed)
+            return
+        }
         promise?.succeed(result: ())
     }
 
     func read0(promise: Promise<Void>?) {
+        guard !closed else {
+            promise?.fail(error: ChannelError.closed)
+            return
+        }
         promise?.succeed(result: ())
     }
     

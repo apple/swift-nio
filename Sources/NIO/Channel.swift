@@ -884,6 +884,10 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public final func flush0(promise: Promise<Void>?) {
         assert(eventLoop.inEventLoop)
 
+        guard !closed else {
+            promise?.fail(error: ChannelError.closed)
+            return;
+        }
         // Even if writable() will be called later by the EVentLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actual written once writable() is called.
         pendingWrites.markFlushCheckpoint(promise: promise)
@@ -896,11 +900,13 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public final func read0(promise: Promise<Void>?) {
         assert(eventLoop.inEventLoop)
 
+     
+        guard !closed else {
+            promise?.fail(error:ChannelError.closed)
+            return
+        }
         defer {
             promise?.succeed(result: ())
-        }
-        guard !closed else {
-            return
         }
         readPending = true
 
