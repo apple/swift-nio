@@ -59,16 +59,42 @@ class BaseSocket : Selectable {
     
     final var localAddress: SocketAddress? {
         get {
-            return nil
+            return get_addr { getsockname($0, $1, $2) }
         }
     }
     
     final var remoteAddress: SocketAddress? {
         get {
-            return nil
+            return get_addr { getpeername($0, $1, $2) }
         }
     }
 
+    private func get_addr(_ fn: (Int32, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) -> Int32) -> SocketAddress? {
+        var addr = sockaddr_storage()
+        var len: socklen_t = socklen_t(MemoryLayout<sockaddr_storage>.size)
+        
+        return withUnsafeMutablePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1, { address in
+                guard  fn(descriptor, address, &len) == 0 else {
+                    return nil
+                }
+                switch Int32(address.pointee.sa_family) {
+                case AF_INET:
+                    return address.withMemoryRebound(to: sockaddr_in.self, capacity: 1, { ipv4 in
+                        var ipAddressString = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+                        return SocketAddress(IPv4Address: ipv4.pointee, host: String(cString: inet_ntop(AF_INET, &ipv4.pointee.sin_addr, &ipAddressString, socklen_t(INET_ADDRSTRLEN))))
+                    })
+                case AF_INET6:
+                    return address.withMemoryRebound(to: sockaddr_in6.self, capacity: 1, { ipv6 in
+                        var ipAddressString = [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
+                        return SocketAddress(IPv6Address: ipv6.pointee, host: String(cString: inet_ntop(AF_INET6, &ipv6.pointee.sin6_addr, &ipAddressString, socklen_t(INET6_ADDRSTRLEN))))
+                    })
+                default:
+                    fatalError("address family \(address.pointee.sa_family) not supported")
+                }
+            })
+        }
+    }
     static func newSocket(protocolFamily: Int32) throws -> Int32 {
         let sock = try wrapSyscall({ $0 >= 0 }, function: "socket") { () -> Int32 in
             sysSocket(protocolFamily, Int32(sysSOCK_STREAM), 0)
