@@ -598,7 +598,7 @@ class ByteBufferTest: XCTestCase {
             XCTAssertEqual(cap, ptr.count)
             let intPtr = ptr.baseAddress!.bindMemory(to: UInt8.self, capacity: ptr.count)
             for i in 0..<ptr.count {
-                intPtr[i] = UInt8(extendingOrTruncating: i)
+                intPtr[i] = UInt8(truncatingIfNeeded: i)
             }
             return ptr.count
         }
@@ -607,7 +607,7 @@ class ByteBufferTest: XCTestCase {
         otherBuf?.withUnsafeReadableBytes { ptr in
             XCTAssertEqual(cap, ptr.count)
             for i in 0..<cap {
-                XCTAssertEqual(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)[i], UInt8(extendingOrTruncating: i))
+                XCTAssertEqual(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)[i], UInt8(truncatingIfNeeded: i))
             }
         }
     }

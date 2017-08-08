@@ -35,11 +35,11 @@ private typealias Index = UInt32
 private typealias Capacity = UInt32
 
 private func toCapacity(_ value: Int) -> Capacity {
-    return Capacity(extendingOrTruncating: value)
+    return Capacity(truncatingIfNeeded: value)
 }
 
 private func toIndex(_ value: Int) -> Index {
-    return Index(extendingOrTruncating: value)
+    return Index(truncatingIfNeeded: value)
 }
 
 public struct ByteBuffer {
