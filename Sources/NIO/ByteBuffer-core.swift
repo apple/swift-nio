@@ -80,7 +80,6 @@ public struct ByteBuffer {
         public func duplicate(slice: Slice, capacity: Capacity) -> _Storage {
             assert(slice.count <= capacity)
             let newCapacity = capacity == 0 ? 0 : capacity.nextPowerOf2()
-            // TODO: Use realloc if possible
             let new = _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity),
                                capacity: newCapacity,
                                allocator: self.allocator)

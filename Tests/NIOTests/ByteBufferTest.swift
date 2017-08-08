@@ -158,8 +158,8 @@ class ByteBufferTest: XCTestCase {
         var buf = allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
         XCTAssertEqual(5, buf.writerIndex)
-        let _ = buf.withUnsafeMutableReadableBytes { (ptr: UnsafeMutableRawBufferPointer) -> Int in
-            let s = String(bytesNoCopy: ptr.baseAddress!, length: ptr.count, encoding: .utf8, freeWhenDone: false)
+        let _ = buf.withUnsafeReadableBytes { (ptr: UnsafeRawBufferPointer) -> Int in
+            let s = String(bytes: ptr, encoding: .utf8)
             XCTAssertEqual("hello", s)
             return 0
         }
