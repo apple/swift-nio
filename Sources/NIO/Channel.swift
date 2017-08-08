@@ -1090,7 +1090,14 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
         do {
             if try !connectSocket(to: address) {
+                if promise != nil {
+                    pendingConnect = promise
+                } else {
+                    pendingConnect = eventLoop.newPromise()
+                }
                 registerForWritable()
+            } else {
+                promise?.succeed(result: ())
             }
         } catch let error {
             promise?.fail(error: error)
