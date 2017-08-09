@@ -41,6 +41,13 @@ final class ServerSocket: BaseSocket {
     }
     
     func listen(backlog: Int32 = 128) throws {
+        #if os(Linux)
+            /* no SO_NOSIGPIPE on Linux :( */
+            _ = try wrapSyscall({ $0 != unsafeBitCast(SIG_ERR, to: Int.self) }, function: "signal") {
+                unsafeBitCast(Glibc.signal(SIGPIPE, SIG_IGN) as sighandler_t?, to: Int.self)
+            }
+        #endif
+
         _ = try wrapSyscall({ $0 >= 0 }, function: "listen") { () -> Int32 in
             sysListen(self.descriptor, backlog)
         }
@@ -62,19 +69,11 @@ final class ServerSocket: BaseSocket {
         case .wouldBlock:
             return nil
         case .processed(let fd):
-            #if os(Linux)
-                /* no SO_NOSIGPIPE on Linux :( */
-                let old_sighandler: sighandler_t = Glibc.signal(SIGPIPE, SIG_IGN)
-
-                let old_sighandler_ptr = unsafeBitCast(old_sighandler, to: UnsafeRawPointer.self)
-                let sig_err_ptr = unsafeBitCast(SIG_ERR, to: UnsafeRawPointer.self)
-
-                if old_sighandler_ptr == sig_err_ptr {
-                    return nil
-                }
-            #else
+            #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
                 // TODO: Handle return code ?
-                _ = Darwin.fcntl(fd, F_SETNOSIGPIPE, 1);
+                _ = try wrapSyscall({ $0 != -1 }, function: "fcntl") {
+                    Darwin.fcntl(fd, F_SETNOSIGPIPE, 1);
+                }
             #endif
         
             return Socket(descriptor: fd)
