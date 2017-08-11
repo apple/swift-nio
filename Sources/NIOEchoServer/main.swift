@@ -85,7 +85,7 @@ default:
 
 let channel = try bootstrap.bind(to: host, on: port).wait()
 
-print("Server started and listening on \(channel.localAddress)")
+print("Server started and listening on \(channel.localAddress!)")
 
 // This will never unblock as we not close the ServerChannel
 try channel.closeFuture.wait()
