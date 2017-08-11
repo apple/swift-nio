@@ -23,20 +23,21 @@ import XCTest
 ///
 
 #if os(Linux) || os(FreeBSD)
-   @testable import NIOHTTP1Tests
    @testable import NIOTests
+   @testable import NIOHTTP1Tests
 
    XCTMain([
-         testCase(HTTPHeadersTest.allTests),
-         testCase(HTTPTest.allTests),
-         testCase(ByteBufferTest.allTests),
-         testCase(ChannelPipelineTest.allTests),
+         testCase(CircularBufferTests.allTests),
+         testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
+         testCase(EchoServerClientTest.allTests),
          testCase(ByteToMessageDecoderTest.allTests),
          testCase(MessageToByteEncoderTest.allTests),
-         testCase(EchoServerClientTest.allTests),
+         testCase(ByteBufferTest.allTests),
          testCase(EmbeddedChannelTest.allTests),
-         testCase(FutureTest.allTests),
-         testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
+         testCase(ChannelPipelineTest.allTests),
          testCase(SocketAddressTest.allTests),
+         testCase(FutureTest.allTests),
+         testCase(HTTPHeadersTest.allTests),
+         testCase(HTTPTest.allTests),
     ])
 #endif

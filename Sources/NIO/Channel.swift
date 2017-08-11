@@ -91,33 +91,19 @@ public struct IOData {
     }
 }
 
-final class PendingWrite {
-    var next: PendingWrite?
-    var buffer: ByteBuffer
-    var promise: Promise<Void>?
+typealias PendingWrite = (buffer: ByteBuffer, promise: Promise<Void>?)
 
-    init(buffer: ByteBuffer, promise: Promise<Void>?) {
-        self.buffer = buffer
-        self.promise = promise
-    }
-}
-
-func doPendingWriteVectorOperation(pending: PendingWrite?,
-                                   count: Int,
-                                   iovecs: UnsafeMutableBufferPointer<IOVector>,
-                                   storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
-                                   _ fn: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> IOResult<Int> {
-    var next = pending
+private func doPendingWriteVectorOperation(pending: MarkedCircularBuffer<PendingWrite>,
+                                           count: Int,
+                                           iovecs: UnsafeMutableBufferPointer<IOVector>,
+                                           storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
+                                           _ fn: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> IOResult<Int> {
+    assert(count <= pending.count, "requested to write \(count) pending writes but only \(pending.count) available")
     for i in 0..<count {
-        if let p = next {
-            p.buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
-                storageRefs[i] = storageRef.retain()
-                iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: ptr.count)
-            }
-            next = p.next
-        } else {
-            fatalError("can't find \(count) nodes in \(pending.debugDescription)")
-            break
+        let p = pending[i]
+        p.buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
+            storageRefs[i] = storageRef.retain()
+            iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: ptr.count)
         }
     }
     defer {
@@ -137,18 +123,102 @@ private enum WriteResult {
     case closed
 }
 
+struct MarkedCircularBuffer<E>: CustomStringConvertible {
+    private var buffer: CircularBuffer<E>
+    private var markedIndex: Int = -1 /* negative: nothing marked */
+
+    public init(initialRingCapacity: UInt, expandSize: UInt = 8) {
+        self.buffer = CircularBuffer(initialRingCapacity: initialRingCapacity, expandSize: expandSize)
+    }
+
+    // MARK: Forwarding
+    public mutating func append(_ value: E) {
+        self.buffer.append(value)
+    }
+
+    public mutating func removeFirst() -> E {
+        self.markedIndex -= 1
+        return self.buffer.removeFirst()
+    }
+
+    public var first: E? {
+        return self.buffer.first
+    }
+
+    public var isEmpty: Bool {
+        return self.buffer.isEmpty
+    }
+
+    public var count: Int {
+        return self.buffer.count
+    }
+
+    public subscript(index: Int) -> E {
+        get {
+            return self.buffer[index]
+        }
+        set {
+            self.buffer[index] = newValue
+        }
+    }
+
+    public var indices: CountableRange<Int> {
+        return self.buffer.indices
+    }
+
+    public var description: String {
+        return self.buffer.description
+    }
+
+    // MARK: Marking
+    public mutating func mark() {
+        let count = self.buffer.count
+        if count > 0 {
+            self.markedIndex = count - 1
+        } else {
+            assert(self.markedIndex == -1)
+        }
+    }
+
+    public func isMarked(index: Int) -> Bool {
+        precondition(index >= 0 && index < self.buffer.count)
+        return self.markedIndex == index
+    }
+
+    public func markedElementIndex() -> Int? {
+        let markedIndex = self.markedIndex
+        if markedIndex >= 0 {
+            return markedIndex
+        } else {
+            assert(markedIndex == -1, "marked index is \(markedIndex)")
+            return nil
+        }
+    }
+
+    public func markedElement() -> E? {
+        return self.markedElementIndex().map { self.buffer[$0] }
+    }
+
+    public func hasMark() -> Bool {
+        if self.markedIndex < 0 {
+            precondition(self.markedIndex == -1)
+            return false
+        } else {
+            return true
+        }
+    }
+}
+
 final fileprivate class PendingWrites {
 
-    private var head: PendingWrite?
-    private var tail: PendingWrite?
+    private var pendingWrites = MarkedCircularBuffer<PendingWrite>(initialRingCapacity: 16, expandSize: 3)
+
     // Marks the last PendingWrite that should be written by consume(...)
-    private var flushCheckpoint: PendingWrite?
     private var iovecs: UnsafeMutableBufferPointer<IOVector>
     private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
 
     fileprivate var waterMark: WriteBufferWaterMark = WriteBufferWaterMark(32 * 1024..<64 * 1024)
     private var writable: Atomic<Bool> = Atomic(value: true)
-
 
     fileprivate var writeSpinCount: UInt = 16
     private(set) var outstanding: (chunks: Int, bytes: Int) = (0, 0)
@@ -160,21 +230,12 @@ final fileprivate class PendingWrites {
     }
 
     var isEmpty: Bool {
-        return tail == nil
+        return self.pendingWrites.isEmpty
     }
 
     func add(buffer: ByteBuffer, promise: Promise<Void>?) -> Bool {
         assert(!closed)
-        let pending: PendingWrite = PendingWrite(buffer: buffer, promise: promise)
-        if let last = tail {
-            assert(head != nil)
-            last.next = pending
-            tail = pending
-        } else {
-            assert(tail == nil)
-            head = pending
-            tail = pending
-        }
+        self.pendingWrites.append((buffer: buffer, promise: promise))
         outstanding = (chunks: outstanding.chunks + 1,
                        bytes: outstanding.bytes + buffer.readableBytes)
         if outstanding.bytes > Int(waterMark.upperBound) && writable.compareAndExchange(expected: true, desired: false) {
@@ -185,18 +246,17 @@ final fileprivate class PendingWrites {
     }
 
     private var hasMultiple: Bool {
-        return head?.next != nil
+        return self.pendingWrites.count > 1
     }
 
     func markFlushCheckpoint(promise: Promise<Void>?) {
-        flushCheckpoint = tail
-        if let promise = promise {
-            if let checkpoint = flushCheckpoint {
-                if let p = checkpoint.promise {
-                    p.futureResult.cascade(promise: promise)
-                } else {
-                    checkpoint.promise = promise
-                }
+        self.pendingWrites.mark()
+        let checkpointIdx = self.pendingWrites.markedElementIndex()
+        if let promise = promise, let checkpoint = checkpointIdx {
+            if let p = self.pendingWrites[checkpoint].promise {
+                p.futureResult.cascade(promise: promise)
+            } else {
+                self.pendingWrites[checkpoint].promise = promise
             }
         }
     }
@@ -215,23 +275,18 @@ final fileprivate class PendingWrites {
         return (result, false)
     }
 
-    private func updateNodes(pending: PendingWrite) {
-        head = pending.next
-        if head == nil {
-            tail = nil
-            flushCheckpoint = nil
-        } else if pending === flushCheckpoint {
-            // pending was the flush checkpoint so reset it
-            flushCheckpoint = nil
-        }
+    @discardableResult
+    private func popFirst() -> PendingWrite {
+        return self.pendingWrites.removeFirst()
     }
 
     var isFlushPending: Bool {
-        return flushCheckpoint != nil
+        return self.pendingWrites.hasMark()
     }
 
     private func consumeOne(_ body: (UnsafePointer<UInt8>, Int) throws -> IOResult<Int>) rethrows -> WriteResult {
-        if let pending = head, isFlushPending {
+        if self.isFlushPending && !self.pendingWrites.isEmpty {
+            let pending = self.pendingWrites[0]
             for _ in 0..<writeSpinCount + 1 {
                 guard !closed else {
                     return .closed
@@ -249,15 +304,15 @@ final fileprivate class PendingWrites {
                         outstanding = (outstanding.chunks-1, outstanding.bytes)
 
                         // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
-                        updateNodes(pending: pending)
+                        popFirst()
 
                         // buffer was completely written
                         pending.promise?.succeed(result: ())
                         
-                        return isFlushPending ? .writtenCompletely : .nothingToBeWritten
+                        return self.isFlushPending ? .writtenCompletely : .nothingToBeWritten
                     } else {
                         // Update readerIndex of the buffer
-                        pending.buffer.moveReaderIndex(forwardBy: written)
+                        self.pendingWrites[0].buffer.moveReaderIndex(forwardBy: written)
                     }
                 case .wouldBlock:
                     return .wouldBlock
@@ -270,13 +325,13 @@ final fileprivate class PendingWrites {
     }
 
     private func consumeMultiple(_ body: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> WriteResult {
-        if var pending = head, isFlushPending {
+        if self.isFlushPending && !self.pendingWrites.isEmpty {
             writeLoop: for _ in 0..<writeSpinCount + 1 {
                 guard !closed else {
                     return .closed
                 }
                 var expected = 0
-                switch try doPendingWriteVectorOperation(pending: pending,
+                switch try doPendingWriteVectorOperation(pending: self.pendingWrites,
                                                          count: outstanding.chunks,
                                                          iovecs: self.iovecs,
                                                          storageRefs: self.storageRefs,
@@ -292,14 +347,15 @@ final fileprivate class PendingWrites {
                     }
 
                     var w = written
-                    while let p = head {
+                    while !self.pendingWrites.isEmpty {
+                        let p = self.pendingWrites[0]
                         if w >= p.buffer.readableBytes {
                             w -= p.buffer.readableBytes
 
                             outstanding = (outstanding.chunks-1, outstanding.bytes)
 
                             // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
-                            updateNodes(pending: p)
+                            popFirst()
 
                             // buffer was completely written
                             p.promise?.succeed(result: ())
@@ -310,10 +366,7 @@ final fileprivate class PendingWrites {
 
                         } else {
                             // Only partly written, so update the readerIndex.
-                            p.buffer.moveReaderIndex(forwardBy: w)
-
-                            // update pending so we not need to process the old PendingWrites that we already processed and completed
-                            pending = p
+                            self.pendingWrites[0].buffer.moveReaderIndex(forwardBy: w)
 
                             // may try again depending on the writeSpinCount
                             continue writeLoop
@@ -329,36 +382,19 @@ final fileprivate class PendingWrites {
         return .nothingToBeWritten
     }
 
-
-    private func killAll(node: PendingWrite?, deconstructor: (PendingWrite) -> ()) {
-        var link = node
-        while link != nil {
-            let curr = link!
-            link = curr.next
-            curr.next = nil
-            deconstructor(curr)
-        }
-    }
-
     func failAll(error: Error) {
         closed = true
 
-        /*
-         Workaround for https://bugs.swift.org/browse/SR-5145 which is that this linked list can cause a
-         stack overflow when released as the `deinit`s will get called with recursion.
-        */
-
-        killAll(node: head, deconstructor: { pending in
+        while !self.pendingWrites.isEmpty {
+            let pending = self.pendingWrites[0]
             outstanding = (outstanding.chunks-1, outstanding.bytes - pending.buffer.readableBytes)
 
+            popFirst()
             pending.promise?.fail(error: error)
-        })
+        }
 
-        // Remove references.
-        head = nil
-        tail = nil
-        flushCheckpoint = nil
-
+        assert(self.pendingWrites.isEmpty)
+        assert(self.pendingWrites.markedElement() == nil)
         assert(outstanding == (0, 0))
     }
 
@@ -889,7 +925,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             return;
         }
         // Even if writable() will be called later by the EVentLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
-        // are actual written once writable() is called.
+        // are actually written once writable() is called.
         pendingWrites.markFlushCheckpoint(promise: promise)
         
         if !isWritePending() && !flushNow() && !closed {
