@@ -29,12 +29,16 @@ public struct IOData {
 
     enum _IOData {
         case byteBuffer(ByteBuffer)
+        case file(FileRegion)
         case other(Any)
 
         init<T>(_ value: T) {
-            if T.self == ByteBuffer.self {
+            switch value {
+            case is ByteBuffer:
                 self = .byteBuffer(value as! ByteBuffer)
-            } else {
+            case is FileRegion:
+                self = .file(value as! FileRegion)
+            default:
                 self = .other(value)
             }
         }
@@ -53,6 +57,18 @@ public struct IOData {
         return tryAsByteBuffer()!
     }
 
+    func tryAsFileRegion() -> FileRegion? {
+        if case .file(let f) = self.storage {
+            return f
+        } else {
+            return nil
+        }
+    }
+    
+    func forceAsFileRegion() -> FileRegion {
+        return tryAsFileRegion()!
+    }
+    
     func tryAsOther<T>(type: T.Type = T.self) -> T? {
         if case .other(let any) = self.storage {
             return any as? T
@@ -76,6 +92,8 @@ public struct IOData {
     func tryAs<T>(type: T.Type = T.self) -> T? {
         if T.self == ByteBuffer.self {
             return self.tryAsByteBuffer() as! T?
+        } else if T.self == FileRegion.self {
+            return self.tryAsFileRegion() as! T?
         } else {
             return self.tryAsOther(type: type)
         }
@@ -85,13 +103,30 @@ public struct IOData {
         switch self.storage {
         case .byteBuffer(let bb):
             return bb
+        case .file(let f):
+            return f
         case .other(let o):
             return o
         }
     }
 }
 
-typealias PendingWrite = (buffer: ByteBuffer, promise: Promise<Void>?)
+
+private enum PendingData {
+    case buffer(ByteBuffer)
+    case file(FileRegion)
+    
+    var size: Int {
+        switch self {
+        case .buffer(let buffer):
+            return buffer.readableBytes
+        case .file(_):
+            // We don't want to account for the number of bytes in the file as these not add up to the memory used.
+            return 0
+        }
+    }
+}
+private typealias PendingWrite = (data: PendingData, promise: Promise<Void>?)
 
 private func doPendingWriteVectorOperation(pending: MarkedCircularBuffer<PendingWrite>,
                                            count: Int,
@@ -99,19 +134,29 @@ private func doPendingWriteVectorOperation(pending: MarkedCircularBuffer<Pending
                                            storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
                                            _ fn: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> IOResult<Int> {
     assert(count <= pending.count, "requested to write \(count) pending writes but only \(pending.count) available")
-    for i in 0..<count {
+    
+    // the numbers of storage refs that we need to decrease later.
+    var c = 0
+    loop: for i in 0..<count {
         let p = pending[i]
-        p.buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
-            storageRefs[i] = storageRef.retain()
-            iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: ptr.count)
+        switch p.data {
+        case .buffer(let buffer):
+            buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
+                storageRefs[i] = storageRef.retain()
+                iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: ptr.count)
+            }
+            c += 1
+        case .file(_):
+            // We found a FileRegion so stop collecting
+            break loop
         }
     }
     defer {
-        for i in 0..<count {
+        for i in 0..<c {
             storageRefs[i].release()
         }
     }
-    let result = try fn(UnsafeBufferPointer(start: iovecs.baseAddress!, count: count))
+    let result = try fn(UnsafeBufferPointer(start: iovecs.baseAddress!, count: c))
     return result
 }
 
@@ -209,10 +254,8 @@ struct MarkedCircularBuffer<E>: CustomStringConvertible {
     }
 }
 
-final fileprivate class PendingWrites {
-
+private final class PendingWrites {
     private var pendingWrites = MarkedCircularBuffer<PendingWrite>(initialRingCapacity: 16, expandSize: 3)
-
     // Marks the last PendingWrite that should be written by consume(...)
     private var iovecs: UnsafeMutableBufferPointer<IOVector>
     private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
@@ -232,12 +275,21 @@ final fileprivate class PendingWrites {
     var isEmpty: Bool {
         return self.pendingWrites.isEmpty
     }
-
+    
+    func add(file: FileRegion, promise: Promise<Void>?) -> Bool {
+        return add0(data: .file(file), promise: promise)
+    }
+    
     func add(buffer: ByteBuffer, promise: Promise<Void>?) -> Bool {
+        return add0(data: .buffer(buffer), promise: promise)
+    }
+    
+    private func add0(data: PendingData, promise: Promise<Void>?) -> Bool {
         assert(!closed)
-        self.pendingWrites.append((buffer: buffer, promise: promise))
+        self.pendingWrites.append((data: data, promise: promise))
+
         outstanding = (chunks: outstanding.chunks + 1,
-                       bytes: outstanding.bytes + buffer.readableBytes)
+                       bytes: outstanding.bytes + data.size)
         if outstanding.bytes > Int(waterMark.upperBound) && writable.compareAndExchange(expected: true, desired: false) {
             // Returns false to signal the Channel became non-writable and we need to notify the user
             return false
@@ -245,8 +297,16 @@ final fileprivate class PendingWrites {
         return true
     }
 
-    private var hasMultiple: Bool {
-        return self.pendingWrites.count > 1
+    private var hasMultipleByteBuffer: Bool {
+        guard self.pendingWrites.count > 1 else {
+            return false
+        }
+
+        if case .buffer(_) = self.pendingWrites[0].data, case .buffer(_) = self.pendingWrites[1].data {
+            // We have at least two ByteBuffer in the PendingWrites
+            return true
+        }
+        return false
     }
 
     func markFlushCheckpoint(promise: Promise<Void>?) {
@@ -264,9 +324,11 @@ final fileprivate class PendingWrites {
     /*
      Function that takes two closures and based on if there are more then one ByteBuffer pending calls either one or the other.
     */
-    func consume(oneBody: (UnsafePointer<UInt8>, Int) throws -> IOResult<Int>, multipleBody: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> (writeResult: WriteResult, writable: Bool) {
+    func consume(oneBody: (UnsafePointer<UInt8>, Int) throws -> IOResult<Int>,
+                 multipleBody: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>,
+                 fileRegionBody: (Int32, Int, Int) throws -> IOResult<Int>) throws -> (writeResult: WriteResult, writable: Bool) {
         let wasWritable = writable.load()
-        let result = try hasMultiple ? consumeMultiple(multipleBody) : consumeOne(oneBody)
+        let result = try hasMultipleByteBuffer ? consumeMultiple(multipleBody) : consumeOne(oneBody, fileRegionBody)
 
         if !wasWritable {
             // Was not writable before so signal back to the caller the possible state change
@@ -284,39 +346,68 @@ final fileprivate class PendingWrites {
         return self.pendingWrites.hasMark()
     }
 
-    private func consumeOne(_ body: (UnsafePointer<UInt8>, Int) throws -> IOResult<Int>) rethrows -> WriteResult {
+    private func consumeOne(_ body: (UnsafePointer<UInt8>, Int) throws -> IOResult<Int>, _ fileRegionBody: (Int32, Int, Int) throws -> IOResult<Int>) rethrows -> WriteResult {
         if self.isFlushPending && !self.pendingWrites.isEmpty {
             let pending = self.pendingWrites[0]
             for _ in 0..<writeSpinCount + 1 {
                 guard !closed else {
                     return .closed
                 }
-                switch try pending.buffer.withReadPointer(body: body) {
-                case .processed(let written):
-                    outstanding = (outstanding.chunks, outstanding.bytes - written)
-
-                    if outstanding.bytes < Int(waterMark.lowerBound) {
-                        writable.store(true)
-                    }
-
-                    if pending.buffer.readableBytes == written {
-
-                        outstanding = (outstanding.chunks-1, outstanding.bytes)
-
-                        // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
-                        popFirst()
-
-                        // buffer was completely written
-                        pending.promise?.succeed(result: ())
+                switch pending.data {
+                case .buffer(var buffer):
+                    switch try buffer.withReadPointer(body: body) {
+                    case .processed(let written):
+                        outstanding = (outstanding.chunks, outstanding.bytes - written)
                         
-                        return self.isFlushPending ? .writtenCompletely : .nothingToBeWritten
-                    } else {
-                        // Update readerIndex of the buffer
-                        self.pendingWrites[0].buffer.moveReaderIndex(forwardBy: written)
+                        if outstanding.bytes < Int(waterMark.lowerBound) {
+                            writable.store(true)
+                        }
+                        
+                        if buffer.readableBytes == written {
+                            
+                            outstanding = (outstanding.chunks-1, outstanding.bytes)
+                            
+                            // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
+                            popFirst()
+                            
+                            // buffer was completely written
+                            pending.promise?.succeed(result: ())
+                            
+                            return self.isFlushPending ? .writtenCompletely : .nothingToBeWritten
+                        } else {
+                            // Update readerIndex of the buffer
+                            buffer.moveReaderIndex(forwardBy: written)
+                            self.pendingWrites[0] = (.buffer(buffer), pending.promise)
+                        }
+                    case .wouldBlock(let written):
+                        assert(written == 0)
+                        return .wouldBlock
                     }
-                case .wouldBlock:
-                    return .wouldBlock
+                case .file(let file):
+                    switch try file.withMutableReader(body: fileRegionBody) {
+                    case .processed(_):
+                        if file.readableBytes == 0 {
+                            
+                            outstanding = (outstanding.chunks-1, outstanding.bytes)
+                            
+                            // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
+                            popFirst()
+
+                            
+                            // buffer was completely written
+                            pending.promise?.succeed(result: ())
+                            
+                            return isFlushPending ? .writtenCompletely : .nothingToBeWritten
+                        } else {
+                            self.pendingWrites[0] = (.file(file), pending.promise)
+                        }
+                    case .wouldBlock(_):
+                        self.pendingWrites[0] = (.file(file), pending.promise)
+
+                        return .wouldBlock
+                    }
                 }
+                
             }
             return .writtenPartially
         }
@@ -349,30 +440,38 @@ final fileprivate class PendingWrites {
                     var w = written
                     while !self.pendingWrites.isEmpty {
                         let p = self.pendingWrites[0]
-                        if w >= p.buffer.readableBytes {
-                            w -= p.buffer.readableBytes
+                        switch p.data {
+                        case .buffer(var buffer):
+                            if w >= buffer.readableBytes {
+                                w -= buffer.readableBytes
 
-                            outstanding = (outstanding.chunks-1, outstanding.bytes)
+                                outstanding = (outstanding.chunks-1, outstanding.bytes)
 
-                            // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
-                            popFirst()
+                                // Directly update nodes as a promise may trigger a callback that will access the PendingWrites class.
+                                popFirst()
 
-                            // buffer was completely written
-                            p.promise?.succeed(result: ())
+                                // buffer was completely written
+                                p.promise?.succeed(result: ())
 
-                            if w == 0 {
-                                return isFlushPending ? .writtenCompletely : .nothingToBeWritten
-                            }
+                                if w == 0 {
+                                    return isFlushPending ? .writtenCompletely : .nothingToBeWritten
+                                }
 
-                        } else {
-                            // Only partly written, so update the readerIndex.
-                            self.pendingWrites[0].buffer.moveReaderIndex(forwardBy: w)
-
-                            // may try again depending on the writeSpinCount
-                            continue writeLoop
+                            } else {
+                                // Only partly written, so update the readerIndex.
+                                buffer.moveReaderIndex(forwardBy: w)
+                                self.pendingWrites[0] = (.buffer(buffer), p.promise)
+                    
+                                // may try again depending on the writeSpinCount
+                                continue writeLoop
+                        }
+                        case .file(_):
+                             // We found a FileRegion so we can not continue with gathering writes but will need to use sendfile. Let the user call us again so we can use sendfile.
+                            return .writtenCompletely
                         }
                     }
-                case .wouldBlock:
+                case .wouldBlock(let written):
+                    assert(written == 0)
                     return .wouldBlock
                 }
             }
@@ -387,7 +486,7 @@ final fileprivate class PendingWrites {
 
         while !self.pendingWrites.isEmpty {
             let pending = self.pendingWrites[0]
-            outstanding = (outstanding.chunks-1, outstanding.bytes - pending.buffer.readableBytes)
+            outstanding = (outstanding.chunks-1, outstanding.bytes - pending.data.size)
 
             popFirst()
             pending.promise?.fail(error: error)
@@ -420,8 +519,26 @@ extension ByteBuffer {
             switch localWriteResult {
             case .processed(let written):
                 return written
-            case .wouldBlock:
-                return 0
+            case .wouldBlock(let written):
+                return written
+            }
+        }
+        return writeResult
+    }
+}
+
+extension FileRegion {
+    public func withMutableReader(body: (Int32, Int, Int) throws -> IOResult<Int>) rethrows -> IOResult<Int>  {
+        var writeResult: IOResult<Int>!
+
+        _ = try self.withMutableReader { (fd, offset, limit) -> Int in
+            let localWriteResult = try body(fd, offset, limit)
+            writeResult = localWriteResult
+            switch localWriteResult {
+            case .processed(let written):
+                return written
+            case .wouldBlock(let written):
+                return written
             }
         }
         return writeResult
@@ -477,7 +594,8 @@ final class SocketChannel : BaseSocketChannel<Socket> {
                     // end-of-file
                     throw ChannelError.eof
                 }
-            case .wouldBlock:
+            case .wouldBlock(let bytesRead):
+                assert(bytesRead == 0)
                 return
             }
         }
@@ -504,6 +622,8 @@ final class SocketChannel : BaseSocketChannel<Socket> {
                     // Gathering write
                     return try self.socket.writev(iovecs: ptrs)
                 }
+            }, fileRegionBody: { descriptor, index, endIndex in
+                return try self.socket.sendFile(fd: descriptor, offset: index, count: endIndex - index)
             })
             if result.writable {
                 // writable again
@@ -896,13 +1016,20 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             promise?.fail(error: ChannelError.closed)
             return
         }
+        if !addToPendingWrites(data: data, promise: promise) {
+            pipeline.fireChannelWritabilityChanged0()
+        }
+    }
+    
+    private func addToPendingWrites(data: IOData, promise: Promise<Void>?) -> Bool {
         if let buffer = data.tryAsByteBuffer() {
-            if !pendingWrites.add(buffer: buffer, promise: promise) {
-                pipeline.fireChannelWritabilityChanged0()
-            }
+            return pendingWrites.add(buffer: buffer, promise: promise)
+        } else if let file = data.tryAsFileRegion() {
+            return pendingWrites.add(file: file, promise: promise)
         } else {
             // Only support ByteBuffer for now.
             promise?.fail(error: ChannelError.messageUnsupported)
+            return true
         }
     }
 

@@ -40,7 +40,7 @@ func reasonForError(errno: Int32, function: String) -> String {
     }
 }
 
-private func testForBlacklistedErrno(_ code: Int32) {
+func testForBlacklistedErrno(_ code: Int32) {
     switch code {
     case EFAULT:
         fallthrough
@@ -76,7 +76,7 @@ func wrapSyscall(_ successCondition: (Int) -> Bool,
 }
 
 public enum IOResult<T> {
-    case wouldBlock
+    case wouldBlock(T)
     case processed(T)
 }
 
@@ -89,7 +89,7 @@ func wrapSyscallMayBlock(_ successCondition: (Int) -> Bool,
             let err = errno
             switch err {
             case EWOULDBLOCK:
-                return .wouldBlock
+                return .wouldBlock(0)
             case EINTR:
                 continue loop
             default:
@@ -134,7 +134,7 @@ func wrapSyscallMayBlock(_ successCondition: (Int32) -> Bool,
             let err = errno
             switch err {
             case EWOULDBLOCK:
-                return .wouldBlock
+                return .wouldBlock(0)
             case EINTR:
                 continue loop
             default:

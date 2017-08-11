@@ -21,7 +21,6 @@ let sysWrite = Glibc.write
 let sysWritev = Glibc.writev
 let sysRead = Glibc.read
 let sysConnect = Glibc.connect
-
 #else
 import Darwin
 let sysWrite = Darwin.write
@@ -125,5 +124,41 @@ final class Socket : BaseSocket {
         return try wrapSyscallMayBlock({ $0 >= 0 }, function: "read") {
             sysRead(self.descriptor, pointer, size)
         }
+    }
+    
+    func sendFile(fd: Int32, offset: Int, count: Int) throws -> IOResult<Int> {
+        guard self.open else {
+            throw IOError(errno: EBADF, reason: "can't write to socket as it's not open anymore.")
+        }
+      
+        var written: Int = 0
+        
+        do {
+            let _ = try wrapSyscall({ $0 >= 0 }, function: "sendfile") {
+                #if os(macOS)
+                    var w: off_t = off_t(count)
+                    let result = Int(Darwin.sendfile(fd, self.descriptor, off_t(offset), &w, nil, 0))
+                    written = Int(w)
+                    return result
+                #else
+                    var off: off_t = offset
+                    let result = Glibc.sendfile(self.descriptor, fd, &off, count)
+                    if result >= 0 {
+                        written = result
+                    } else {
+                        written = 0
+                    }
+                    return result
+                #endif
+            }
+            return .processed(written)
+        } catch let err as IOError {
+            if err.errno == EAGAIN {
+                
+                return .wouldBlock(written)
+            }
+            throw err
+        }
+
     }
 }
