@@ -33,13 +33,13 @@ class EchoServerClientTest : XCTestCase {
             .handler(childHandler: ChannelInitializer(initChannel: { channel in
                 // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
                 return channel.pipeline.add(handler: countingHandler)
-            })).bind(to: "127.0.0.1", on: 1234).wait()
+            })).bind(to: "127.0.0.1", on: 0).wait()
         
         defer {
             _ = serverChannel.close()
         }
         
-        let clientChannel = try ClientBootstrap(group: group).connect(to: "127.0.0.1", on: 1234).wait()
+        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
         
         defer {
             _ = clientChannel.close()
