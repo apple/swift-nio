@@ -130,6 +130,10 @@ final class SelectableEventLoop : EventLoop {
 
     func deregister<C: SelectableChannel>(channel: C) throws {
         assert(inEventLoop)
+        guard !closed else {
+            // Its possible the EventLoop was closed before we were able to call deregister, so just return in this case as there is no harm.
+            return
+        }
         try selector.deregister(selectable: channel.selectable)
     }
     

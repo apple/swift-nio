@@ -1116,7 +1116,12 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             return
         }
 
-        safeDeregister()
+        interestedEvent = .none
+        do {
+            try selectableEventLoop.deregister(channel: self)
+        } catch let err {
+            pipeline.fireErrorCaught0(error: err)
+        }
 
         do {
             try socket.close()
@@ -1286,17 +1291,6 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     
     private func isWritePending() -> Bool {
         return interestedEvent == .write || interestedEvent == .all
-    }
-
-    // Methods only used from within this class
-    private func safeDeregister() {
-        interestedEvent = .none
-        do {
-            try selectableEventLoop.deregister(channel: self)
-        } catch let err {
-            pipeline.fireErrorCaught0(error: err)
-            close0(error: err, promise: nil)
-        }
     }
 
     private func safeReregister(interested: IOEvent) {
