@@ -139,7 +139,6 @@ private func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
     #endif
 }
 
-// TODO: Implement scheduling tasks in the future (a.k.a ScheduledExecutoreService
 final class SelectableEventLoop : EventLoop {
     
     private let selector: NIO.Selector<NIORegistration>
@@ -209,7 +208,7 @@ final class SelectableEventLoop : EventLoop {
     
     func execute(task: @escaping () -> ()) {
         tasksLock.lock()
-        scheduledTasks.push(ScheduledTask(task, .microseconds(0)))
+        scheduledTasks.push(ScheduledTask(task, .nanoseconds(0)))
         tasksLock.unlock()
         
         wakeupSelector()
@@ -255,15 +254,15 @@ final class SelectableEventLoop : EventLoop {
 
     private func currentSelectorStrategy() -> SelectorStrategy {
         // TODO: Just use an atomic
-        let scheduled: ScheduledTask?
         tasksLock.lock()
-        scheduled = scheduledTasks.peek()
+        let scheduled = scheduledTasks.peek()
         tasksLock.unlock()
 
         guard let sched = scheduled else {
             // Not tasks to handle so just block
             return .block
         }
+        
         let nanos: UInt64 = sched.readyIn(DispatchTime.now())
 
         if nanos == 0 {
@@ -409,7 +408,6 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
             _ = try loop.close0()
         }
     }
-   
 }
 
 private struct ScheduledTask {
