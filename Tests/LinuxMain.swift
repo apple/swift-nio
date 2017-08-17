@@ -36,6 +36,7 @@ import XCTest
          testCase(MessageToByteEncoderTest.allTests),
          testCase(EchoServerClientTest.allTests),
          testCase(EmbeddedChannelTest.allTests),
+         testCase(EventLoopTest.allTests),
          testCase(FileRegionTest.allTests),
          testCase(FutureTest.allTests),
          testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),

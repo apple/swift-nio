@@ -14,14 +14,58 @@
 
 import Foundation
 import ConcurrencyHelpers
+import SwiftPriorityQueue
+import Dispatch
 
 public protocol EventLoop: EventLoopGroup {
     var inEventLoop: Bool { get }
     func execute(task: @escaping () -> ())
     func submit<T>(task: @escaping () throws-> (T)) -> Future<T>
+    func schedule<T>(task: @escaping () throws-> (T), in: TimeAmount) -> Future<T>
     func newPromise<T>() -> Promise<T>
     func newFailedFuture<T>(error: Error) -> Future<T>
     func newSucceedFuture<T>(result: T) -> Future<T>
+}
+
+public struct TimeAmount {
+    public let nanoseconds: UInt64
+
+    private init(_ nanoseconds: UInt64) {
+        self.nanoseconds = nanoseconds
+    }
+    
+    public static func nanoseconds(_ amount: UInt64) -> TimeAmount {
+        return TimeAmount(amount)
+    }
+    
+    public static func microseconds(_ amount: UInt64) -> TimeAmount {
+        return TimeAmount(amount * 1000)
+    }
+
+    public static func milliseconds(_ amount: Int) -> TimeAmount {
+        return TimeAmount(UInt64(amount) * 1000 * 1000)
+    }
+    
+    public static func seconds(_ amount: Int) -> TimeAmount {
+        return TimeAmount(UInt64(amount) * 1000 * 1000 * 1000)
+    }
+    
+    public static func minutes(_ amount: Int) -> TimeAmount {
+        return TimeAmount(UInt64(amount) * 1000 * 1000 * 1000 * 60)
+    }
+
+    public static func hours(_ amount: Int) -> TimeAmount {
+        return TimeAmount(UInt64(amount) * 1000 * 1000 * 1000 * 60 * 60)
+    }
+}
+
+extension TimeAmount: Comparable {
+    public static func < (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
+        return lhs.nanoseconds < rhs.nanoseconds
+    }
+    public static func == (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
+        return lhs.nanoseconds == rhs.nanoseconds
+    }
 }
 
 extension EventLoop {
@@ -97,9 +141,10 @@ private func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
 
 // TODO: Implement scheduling tasks in the future (a.k.a ScheduledExecutoreService
 final class SelectableEventLoop : EventLoop {
+    
     private let selector: NIO.Selector<NIORegistration>
     private var thread: pthread_t?
-    private var tasks: [() -> ()]
+    private var scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
     private let tasksLock = Lock()
     private var closed = false
     
@@ -111,7 +156,6 @@ final class SelectableEventLoop : EventLoop {
     
     init() throws {
         self.selector = try NIO.Selector()
-        self.tasks = Array()
         self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimit)
         self._storageRefs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimit)
         self.iovecs = UnsafeMutableBufferPointer(start: self._iovecs, count: Socket.writevLimit)
@@ -146,13 +190,37 @@ final class SelectableEventLoop : EventLoop {
         return pthread_self() == thread
     }
     
-    func execute(task: @escaping () -> ()) {
+    func schedule<T>(task: @escaping () throws -> (T), in: TimeAmount) -> Future<T> {
+        let promise: Promise<T> = newPromise()
         tasksLock.lock()
-        tasks.append(task)
+        scheduledTasks.push(ScheduledTask({() -> () in
+            do {
+                promise.succeed(result: try task())
+            } catch let err {
+                promise.fail(error: err)
+            }
+        }, `in`))
         tasksLock.unlock()
         
-        // TODO: What should we do in case of error ?
-        _ = try? selector.wakeup()
+        wakeupSelector()
+
+        return promise.futureResult
+    }
+    
+    func execute(task: @escaping () -> ()) {
+        tasksLock.lock()
+        scheduledTasks.push(ScheduledTask(task, .microseconds(0)))
+        tasksLock.unlock()
+        
+        wakeupSelector()
+    }
+    
+    private func wakeupSelector() {
+        do {
+            try selector.wakeup()
+        } catch let err {
+            fatalError("Error during Selector.wakeup(): \(err)");
+        }
     }
 
     private func handleEvent<C: SelectableChannel>(_ ev: IOEvent, channel: C) {
@@ -185,6 +253,27 @@ final class SelectableEventLoop : EventLoop {
 
     }
 
+    private func currentSelectorStrategy() -> SelectorStrategy {
+        // TODO: Just use an atomic
+        let scheduled: ScheduledTask?
+        tasksLock.lock()
+        scheduled = scheduledTasks.peek()
+        tasksLock.unlock()
+
+        guard let sched = scheduled else {
+            // Not tasks to handle so just block
+            return .block
+        }
+        let nanos: UInt64 = sched.readyIn(DispatchTime.now())
+
+        if nanos == 0 {
+            // Something is ready to be processed just do a non-blocking select of events.
+            return .now
+        } else {
+            return .blockUntilTimeout(nanoseconds: nanos)
+        }
+    }
+    
     func run() throws {
         thread = pthread_self()
         defer {
@@ -195,7 +284,8 @@ final class SelectableEventLoop : EventLoop {
             // Block until there are events to handle or the selector was woken up
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
             try withAutoReleasePool {
-                try selector.whenReady(strategy: .block) { ev in
+                
+                try selector.whenReady(strategy: currentSelectorStrategy()) { ev in
                     switch ev.registration {
                     case .serverSocketChannel(let chan, _):
                         self.handleEvent(ev.io, channel: chan)
@@ -209,13 +299,21 @@ final class SelectableEventLoop : EventLoop {
             while true {
                 // TODO: Better locking
                 tasksLock.lock()
-                if tasks.isEmpty {
+                if scheduledTasks.isEmpty {
                     tasksLock.unlock()
                     break
                 }
-                // Make a copy of the tasks sso we can execute these while not holding the lock anymore
-                var tasksCopy = Array(tasks)
-                tasks.removeAll()
+                var tasksCopy = ContiguousArray<() -> ()>()
+
+                // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
+                let now = DispatchTime.now()
+                
+                // Make a copy of the tasks so we can execute these while not holding the lock anymore
+                while let task = scheduledTasks.peek(), task.readyIn(now) == 0 {
+                    tasksCopy.append(task.task)
+
+                    let _ = scheduledTasks.pop()
+                }
                 tasksLock.unlock()
                 
                 // Execute all the tasks that were summited
@@ -229,6 +327,8 @@ final class SelectableEventLoop : EventLoop {
                 }
             }
         }
+        // This EventLoop was closed so also close the underlying selector.
+        try self.selector.close()
     }
 
     private func handleEvents<C: SelectableChannel>(_ channel: C) -> Bool {
@@ -250,7 +350,6 @@ final class SelectableEventLoop : EventLoop {
         } else {
             try self.submit(task: { () -> (Void) in
                 self.closed = true
-                try self.selector.close()
             }).wait()
         }
     }
@@ -310,6 +409,33 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
             _ = try loop.close0()
         }
     }
+   
+}
+
+private struct ScheduledTask {
+    let task: () -> ()
+    private let readyTime: UInt64
+    
+    init(_ task: @escaping () -> (), _ time: TimeAmount) {
+        self.task = task
+        self.readyTime = time.nanoseconds + DispatchTime.now().uptimeNanoseconds
+    }
+    
+    func readyIn(_ t: DispatchTime) -> UInt64 {
+        if readyTime < t.uptimeNanoseconds {
+            return 0
+        }
+        return readyTime - t.uptimeNanoseconds
+    }
+}
+
+extension ScheduledTask : Comparable {
+    public static func < (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
+        return lhs.readyTime < rhs.readyTime
+    }
+    public static func == (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
+        return lhs.readyTime == rhs.readyTime
+    }
 }
 
 extension Int {
@@ -319,4 +445,8 @@ extension Int {
         }
         return -self
     }
+}
+
+public enum EventLoopError: Error {
+    case unsupportedOperation
 }

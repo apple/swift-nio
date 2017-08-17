@@ -36,6 +36,10 @@ class EmbeddedEventLoop : EventLoop {
         return Future<T>(eventLoop: self, checkForPossibleDeadlock: false, result: result)
     }
     
+    func schedule<T>(task: @escaping () throws -> (T), in: TimeAmount) -> Future<T> {
+        return newFailedFuture(error: EventLoopError.unsupportedOperation)
+    }
+    
     // We're not really running a loop here. Tasks aren't run until run() is called,
     // at which point we run everything that's been submitted. Anything newly submitted
     // either gets on that train if it's still moving or

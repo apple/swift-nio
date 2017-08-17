@@ -17,6 +17,7 @@ import Foundation
 #if os(Linux)
     import CEpoll
     import CEventfd
+    import CTimerfd
     import Glibc
 #else
     import Darwin
@@ -28,6 +29,7 @@ final class Selector<R: Registration> {
     #if os(Linux)
     private typealias EventType = epoll_event
     private let eventfd: Int32
+    private let timerfd: Int32
     #else
     private typealias EventType = kevent
     #endif
@@ -72,6 +74,11 @@ final class Selector<R: Registration> {
         eventfd = try wrapSyscall({ $0 >= 0 }, function: "eventfd") {
             CEventfd.eventfd(0, Int32(EFD_CLOEXEC | EFD_NONBLOCK))
         }
+    
+        timerfd = try wrapSyscall({ $0 >= 0 }, function: "timerfd_create") {
+            CTimerfd.timerfd_create(CLOCK_MONOTONIC, Int32(CTimerfd.TFD_CLOEXEC | CTimerfd.TFD_NONBLOCK));
+        }
+    
         self.open = true
 
         var ev = epoll_event()
@@ -80,6 +87,13 @@ final class Selector<R: Registration> {
 
         let _ = try wrapSyscall({ $0 == 0 }, function: "epoll_ctl") {
             CEpoll.epoll_ctl(self.fd, EPOLL_CTL_ADD, eventfd, &ev)
+        }
+    
+        var timerev = epoll_event()
+        timerev.events = EPOLLIN.rawValue | EPOLLERR.rawValue | EPOLLRDHUP.rawValue | EPOLLET.rawValue
+        timerev.data.fd = timerfd
+        let _ = try wrapSyscall({ $0 == 0 }, function: "epoll_ctl") {
+            CEpoll.epoll_ctl(self.fd, EPOLL_CTL_ADD, timerfd, &timerev)
         }
 #else
         fd = try wrapSyscall({ $0 >= 0 }, function: "kqueue") {
@@ -105,16 +119,6 @@ final class Selector<R: Registration> {
     }
 
 #if os(Linux)
-    private static func toEpollWaitTimeout(strategy: SelectorStrategy) -> Int32 {
-        switch strategy {
-        case .block:
-            return -1
-        case .now:
-            return 0
-        case .blockUntilTimeout(let ms):
-            return Int32(ms)
-        }
-    }
 
     private static func toEpollEvents(interested: IOEvent) -> UInt32 {
         // Also merge EPOLLRDHUP in so we can easily detect connection-reset
@@ -130,15 +134,14 @@ final class Selector<R: Registration> {
         }
     }
 #else
-    private static func toKQueueTimeSpec(strategy: SelectorStrategy) -> timespec? {
+    private func toKQueueTimeSpec(strategy: SelectorStrategy) -> timespec? {
         switch strategy {
         case .block:
             return nil
         case .now:
             return timespec(tv_sec: 0, tv_nsec: 0)
-        case .blockUntilTimeout(let ms):
-            // Convert to nanoseconds
-            return timespec(tv_sec: ms / 1000, tv_nsec: (ms % 1000) * 1000000)
+        case .blockUntilTimeout(let nanoseconds):
+            return toTimerspec(nanoseconds)
         }
     }
 
@@ -304,17 +307,33 @@ final class Selector<R: Registration> {
         }
 
 #if os(Linux)
-        let timeout = Selector.toEpollWaitTimeout(strategy: strategy)
-        let ready = Int(try wrapSyscall({ $0 >= 0 }, function: "epoll_wait") {
-            CEpoll.epoll_wait(self.fd, events, Int32(eventsCapacity), timeout)
-        })
+        let ready = try wrapSyscall({ $0 >= 0 }, function: "epoll_wait") {
+            switch strategy {
+            case .now:
+                return Int(CEpoll.epoll_wait(self.fd, events, Int32(eventsCapacity), 0))
+            case .blockUntilTimeout(let nanoseconds):
+                var ts = itimerspec()
+                ts.it_value = toTimerspec(nanoseconds)
+                if (CTimerfd.timerfd_settime(timerfd, 0, &ts, nil) < 0) {
+                    return -1
+                }
+                fallthrough
+            case .block:
+                return Int(CEpoll.epoll_wait(self.fd, events, Int32(eventsCapacity), -1))
+            }
+        }
         for i in 0..<ready {
             let ev = events[i]
-            if ev.data.fd == eventfd {
-                var ev = eventfd_t()
+            switch ev.data.fd {
+            case eventfd:
+                var val = eventfd_t()
                 // Consume event
-                _ = eventfd_read(eventfd, &ev)
-            } else {
+                _ = eventfd_read(eventfd, &val)
+            case timerfd:
+                // Consume event
+                var val: UInt = 0
+                _ = Glibc.read(timerfd, &val, MemoryLayout<UInt>.size)
+            default:
                 let registration = registrations[Int(ev.data.fd)]!
                 try fn(
                     SelectorEvent(
@@ -326,7 +345,7 @@ final class Selector<R: Registration> {
     
         growEventArrayIfNeeded(ready: ready)
 #else
-        let timespec = Selector.toKQueueTimeSpec(strategy: strategy)
+        let timespec = toKQueueTimeSpec(strategy: strategy)
 
         let ready = try wrapSyscall({ $0 >= 0 }, function: "kevent") {
             if var ts = timespec {
@@ -359,6 +378,12 @@ final class Selector<R: Registration> {
 #endif
     }
 
+    private func toTimerspec(_ nanoseconds: UInt64) -> timespec {
+        let delaySeconds = nanoseconds / 1000000000
+        let delayNanoSeconds = nanoseconds - delaySeconds * 1000000000
+        return timespec(tv_sec: Int(delaySeconds), tv_nsec: Int(delayNanoSeconds))
+    }
+    
     func close() throws {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't close selector as it's not open anymore.")
@@ -366,8 +391,9 @@ final class Selector<R: Registration> {
         self.open = false
         let _ = try wrapSyscall({ $0 >= 0 }, function: "close") {
 #if os(Linux)
-            // Ignore closing error for eventfd
+            // Ignore closing error for eventfd and timerfd
             let _ = Glibc.close(self.eventfd)
+            let _ = Glibc.close(self.timerfd)
             return Int(Glibc.close(self.fd))
 #else
             return Int(Darwin.close(self.fd))
@@ -404,7 +430,7 @@ struct SelectorEvent<R> {
         if readable {
             io = writable ? .all : .read
         } else if writable {
-            io =  .write
+            io = .write
         } else {
             io = .none
         }
@@ -414,7 +440,7 @@ struct SelectorEvent<R> {
 
 enum SelectorStrategy {
     case block
-    case blockUntilTimeout(ms: Int)
+    case blockUntilTimeout(nanoseconds: UInt64)
     case now
 }
 
