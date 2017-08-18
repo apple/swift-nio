@@ -15,6 +15,7 @@ import Foundation
 import XCTest
 import NIO
 import Dispatch
+import ConcurrencyHelpers
 
 public class EventLoopTest : XCTestCase {
     
@@ -27,9 +28,32 @@ public class EventLoopTest : XCTestCase {
         }
         let value = try eventLoopGroup.next().schedule(task: {
             return true
-        }, in: amount).wait()
+        }, in: amount).futureResult.wait()
         
         XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= amount.nanoseconds)
         XCTAssertTrue(value)
+    }
+    
+    public func testScheduleCancelled() throws {
+        let eventLoopGroup = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            let _ = try? eventLoopGroup.close()
+        }
+        let ran = Atomic<Bool>(value: false)
+        let scheduled = eventLoopGroup.next().schedule(task: {
+            ran.store(true)
+        }, in: .seconds(2))
+        
+        scheduled.cancel()
+        
+        let nanos = DispatchTime.now().uptimeNanoseconds
+        let amount: TimeAmount = .seconds(2)
+        let value = try eventLoopGroup.next().schedule(task: {
+            return true
+        }, in: amount).futureResult.wait()
+        
+        XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= amount.nanoseconds)
+        XCTAssertTrue(value)
+        XCTAssertFalse(ran.load())
     }
 }

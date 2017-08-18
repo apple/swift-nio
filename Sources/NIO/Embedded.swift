@@ -36,8 +36,12 @@ class EmbeddedEventLoop : EventLoop {
         return Future<T>(eventLoop: self, checkForPossibleDeadlock: false, result: result)
     }
     
-    func schedule<T>(task: @escaping () throws -> (T), in: TimeAmount) -> Future<T> {
-        return newFailedFuture(error: EventLoopError.unsupportedOperation)
+    func schedule<T>(task: @escaping () throws -> (T), in: TimeAmount) -> Scheduled<T> {
+        let promise: Promise<T> = newPromise()
+        promise.fail(error: EventLoopError.unsupportedOperation)
+        return Scheduled(promise: promise, cancellationTask: {
+            // Nothing to do as we fail the promise before
+        })
     }
     
     // We're not really running a loop here. Tasks aren't run until run() is called,
