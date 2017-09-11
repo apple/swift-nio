@@ -12,11 +12,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-public protocol ChannelInboundHandler: _ChannelInboundHandler {
+public protocol _EmittingChannelHandler {
+    associatedtype OutboundOut = Never
+    
+    func wrapOutboundOut(_ value: OutboundOut) -> IOData
+}
+
+public extension _EmittingChannelHandler {
+    func wrapOutboundOut(_ value: OutboundOut) -> IOData {
+        return IOData(value)
+    }
+}
+
+public protocol ChannelInboundHandler: _ChannelInboundHandler, _EmittingChannelHandler {
     associatedtype InboundIn
     associatedtype InboundUserEventIn = Never
 
-    associatedtype OutboundOut = Never
     associatedtype InboundOut = Never
     associatedtype OutboundUserEventOut = Never
     associatedtype InboundUserEventOut = Never
@@ -27,7 +38,6 @@ public protocol ChannelInboundHandler: _ChannelInboundHandler {
     func unwrapInboundUserEventIn(_ value: Any) -> InboundUserEventIn
     func tryUnwrapInboundUserEventIn(_ value: Any) -> InboundUserEventIn?
     func wrapInboundUserEventOut(_ value: InboundUserEventOut) -> Any
-    func wrapOutboundOut(_ value: OutboundOut) -> IOData
 }
 
 public extension ChannelInboundHandler {
@@ -54,25 +64,18 @@ public extension ChannelInboundHandler {
     func wrapInboundUserEventOut(_ value: InboundUserEventOut) -> Any {
         return value
     }
-
-    func wrapOutboundOut(_ value: OutboundOut) -> IOData {
-        return IOData(value)
-    }
-
 }
 
-public protocol ChannelOutboundHandler: _ChannelOutboundHandler {
+public protocol ChannelOutboundHandler: _ChannelOutboundHandler, _EmittingChannelHandler {
     associatedtype OutboundIn
     associatedtype OutboundUserEventIn = Never
 
-    associatedtype OutboundOut
     associatedtype InboundOut = Never
     associatedtype OutboundUserEventOut = Never
     associatedtype InboundUserEventOut = Never
 
     func unwrapOutboundIn(_ value: IOData) -> OutboundIn
     func tryUnwrapOutboundIn(_ value: IOData) -> OutboundIn?
-    func wrapOutboundOut(_ value: OutboundOut) -> IOData
 
     func unwrapOutboundUserEventIn(_ value: Any) -> OutboundUserEventIn
     func tryUnwrapOutboundUserEventIn(_ value: Any) -> OutboundUserEventIn?
@@ -86,10 +89,6 @@ public extension ChannelOutboundHandler {
 
     func tryUnwrapOutboundIn(_ value: IOData) -> OutboundIn? {
         return value.tryAs()
-    }
-
-    func wrapOutboundOut(_ value: OutboundOut) -> IOData {
-        return IOData(value)
     }
 
     func unwrapOutboundUserEventIn(_ value: Any) -> OutboundUserEventIn {
