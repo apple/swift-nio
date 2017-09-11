@@ -30,6 +30,7 @@ import XCTest
          testCase(HTTPHeadersTest.allTests),
          testCase(HTTPTest.allTests),
          testCase(CircularBufferTests.allTests),
+         testCase(TypeAssistedChannelHandlerTest.allTests),
          testCase(ByteBufferTest.allTests),
          testCase(ChannelPipelineTest.allTests),
          testCase(ByteToMessageDecoderTest.allTests),
