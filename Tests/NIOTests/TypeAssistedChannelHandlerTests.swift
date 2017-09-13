@@ -17,6 +17,22 @@ import XCTest
 @testable import NIO
 
 class TypeAssistedChannelHandlerTest: XCTestCase {
+    func testOptionalInboundIn() throws {
+        class TestClass: ChannelInboundHandler {
+            public typealias InboundIn = String
+            
+            func canUnwrap(_ data: IOData) -> Bool {
+                return tryUnwrapInboundIn(data) != nil
+            }
+        }
+        
+        let c = TestClass()
+        let goodIOData = IOData("Hello, world!")
+        let badIOData = IOData(42)
+        XCTAssertTrue(c.canUnwrap(goodIOData))
+        XCTAssertFalse(c.canUnwrap(badIOData))
+    }
+
     func testCanDefineBothInboundAndOutbound() throws {
         class TestClass: ChannelInboundHandler, ChannelOutboundHandler {
             public typealias OutboundIn = ByteBuffer

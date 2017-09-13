@@ -46,7 +46,7 @@ public extension ChannelInboundHandler {
     }
 
     func tryUnwrapInboundIn(_ value: IOData) -> InboundIn? {
-        return value.forceAs()
+        return value.tryAs()
     }
 
     func wrapInboundOut(_ value: InboundOut) -> IOData {
