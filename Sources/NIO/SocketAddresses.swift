@@ -25,25 +25,6 @@ public enum SocketAddressError: Error {
     case unsupported
 }
 
-private extension UInt16 {
-    /* this takes an UInt16 in big-endian representation and converts it to
-     whatever endianness the we're running on. It does work for both big
-     and little endian machines.
-     Cf. https://commandcenter.blogspot.co.uk/2012/04/byte-order-fallacy.html
-     */
-    static func from(bigEndian input: UInt16) -> UInt16 {
-        var val: UInt16 = input
-        return withUnsafePointer(to: &val) { (ptr: UnsafePointer<UInt16>) -> UInt16 in
-            ptr.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<UInt16>.size) { data in
-                var result: UInt16 = 0
-                result |= (UInt16(data[1]))
-                result |= (UInt16(data[0]) << 8)
-                return result
-            }
-        }
-    }
-}
-
 public enum SocketAddress: CustomStringConvertible {
     case v4(address: sockaddr_in, host: String)
     case v6(address: sockaddr_in6, host: String)
@@ -56,11 +37,11 @@ public enum SocketAddress: CustomStringConvertible {
         case .v4(address: let addr, host: let h):
             host = h
             type = "IPv4"
-            port = UInt16.from(bigEndian: addr.sin_port)
+            port = UInt16(bigEndian: addr.sin_port)
         case .v6(address: let addr, host: let h):
             host = h
             type = "IPv6"
-            port = UInt16.from(bigEndian: addr.sin6_port)
+            port = UInt16(bigEndian: addr.sin6_port)
         }
         return "[\(type)]\(host):\(port)"
     }
