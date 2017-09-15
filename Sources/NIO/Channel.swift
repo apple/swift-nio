@@ -1014,7 +1014,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
         guard !closed else {
             // Channel was already closed, fail the promise and not even queue it.
-            promise?.fail(error: ChannelError.closed)
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
         if !addToPendingWrites(data: data, promise: promise) {
@@ -1060,7 +1060,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         assert(eventLoop.inEventLoop)
 
         guard !closed else {
-            promise?.fail(error: ChannelError.closed)
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
             return;
         }
         // Even if writable() will be called later by the EVentLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
@@ -1077,7 +1077,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
      
         guard !closed else {
-            promise?.fail(error:ChannelError.closed)
+            promise?.fail(error:ChannelError.ioOnClosedChannel)
             return
         }
         defer {
@@ -1124,7 +1124,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
         guard !closed else {
             // Already closed
-            promise?.succeed(result: ())
+            promise?.fail(error: ChannelError.alreadyClosed)
             return
         }
 
@@ -1377,6 +1377,9 @@ public enum ChannelError: Error {
     case connectPending
     case messageUnsupported
     case operationUnsupported
-    case closed
+    /* read, write or flush was called on a channel that is already closed */
+    case ioOnClosedChannel
+    /* close was called on a channel that is already closed */
+    case alreadyClosed
     case eof
 }

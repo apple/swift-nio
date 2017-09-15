@@ -568,7 +568,7 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
     }
     
     func close(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
-        ctx.channel!._unsafe.close0(error: ChannelError.closed, promise: promise)
+        ctx.channel!._unsafe.close0(error: ChannelError.alreadyClosed, promise: promise)
     }
     
     func read(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
