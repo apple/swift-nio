@@ -1045,6 +1045,17 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
+    private func unregisterForWritable() {
+        switch interestedEvent {
+        case .all:
+            safeReregister(interested: .read)
+        case .write:
+            safeReregister(interested: .none)
+        default:
+            break
+        }
+    }
+
     public final func flush0(promise: Promise<Void>?) {
         assert(eventLoop.inEventLoop)
 
@@ -1201,13 +1212,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             return
         }
 
-        if readPending {
-            // Start reading again
-            safeReregister(interested: .read)
-        } else {
-            // No read pending so just set the interested event to .none
-            safeReregister(interested: .none)
-        }
+        unregisterForWritable()
     }
 
     public final func readable() {

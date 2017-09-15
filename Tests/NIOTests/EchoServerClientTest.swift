@@ -81,6 +81,41 @@ class EchoServerClientTest : XCTestCase {
         
         handler.assertChannelActiveFired()
     }
+
+    func testWriteThenRead() throws {
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            _ = try? group.close()
+        }
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+                return channel.pipeline.add(handler: EchoServer())
+            })).bind(to: "127.0.0.1", on: 0).wait()
+
+        defer {
+            _ = serverChannel.close()
+        }
+
+        let numBytes = 16 * 1024
+        let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().newPromise())
+        let clientChannel = try ClientBootstrap(group: group)
+            .handler(handler: countingHandler)
+            .connect(to: serverChannel.localAddress!).wait()
+
+        defer {
+            _ = clientChannel.close()
+        }
+
+        var buffer = clientChannel.allocator.buffer(capacity: numBytes)
+        for i in 0..<numBytes {
+            buffer.write(integer: UInt8(i % 256))
+        }
+        try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
+
+        try countingHandler.assertReceived(buffer: buffer)
+    }
     
     private final class ByteCountingHandler : ChannelInboundHandler {
         typealias InboundIn = ByteBuffer
@@ -113,7 +148,7 @@ class EchoServerClientTest : XCTestCase {
             XCTAssertEqual(buffer, received)
         }
     }
-    
+
     private final class ChannelActiveHandler: ChannelInboundHandler {
         typealias InboundIn = ByteBuffer
         
@@ -130,6 +165,19 @@ class EchoServerClientTest : XCTestCase {
         
         func assertChannelActiveFired() {
             XCTAssert(promise.futureResult.fulfilled)
+        }
+    }
+
+    private final class EchoServer: ChannelInboundHandler {
+        typealias InboundIn = ByteBuffer
+        typealias OutboundOut = ByteBuffer
+        
+        func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+            ctx.write(data: data, promise: nil)
+        }
+        
+        func channelReadComplete(ctx: ChannelHandlerContext) {
+            ctx.flush(promise: nil)
         }
     }
 }
