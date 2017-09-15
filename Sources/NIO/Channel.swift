@@ -643,6 +643,7 @@ final class SocketChannel : BaseSocketChannel<Socket> {
 
     override fileprivate func finishConnectSocket() throws {
         try self.socket.finishConnect()
+        pipeline.fireChannelActive0()
     }
 }
 
