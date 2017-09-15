@@ -161,6 +161,8 @@ public final class ServerBootstrap {
                             }
                         }
                     })
+                } else {
+                    ctx.fireChannelRead(data: data)
                 }
             } catch let err {
                 closeAndFire(ctx: ctx, accepted: accepted, err: err)
