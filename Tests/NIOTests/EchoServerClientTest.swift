@@ -56,6 +56,32 @@ class EchoServerClientTest : XCTestCase {
         try countingHandler.assertReceived(buffer: buffer)
     }
     
+    func testChannelActiveOnConnect() throws {
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            _ = try? group.close()
+        }
+        
+        let handler = ChannelActiveHandler()
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .bind(to: "127.0.0.1", on: 0).wait()
+        
+        defer {
+            _ = serverChannel.close()
+        }
+        
+        let clientChannel = try ClientBootstrap(group: group)
+            .handler(handler: handler)
+            .connect(to: serverChannel.localAddress!).wait()
+        
+        defer {
+            _ = clientChannel.close()
+        }
+        
+        handler.assertChannelActiveFired()
+    }
+    
     private final class ByteCountingHandler : ChannelInboundHandler {
         typealias InboundIn = ByteBuffer
         
@@ -85,6 +111,25 @@ class EchoServerClientTest : XCTestCase {
         func assertReceived(buffer: ByteBuffer) throws {
             let received = try promise.futureResult.wait()
             XCTAssertEqual(buffer, received)
+        }
+    }
+    
+    private final class ChannelActiveHandler: ChannelInboundHandler {
+        typealias InboundIn = ByteBuffer
+        
+        private var promise: Promise<Void>! = nil
+        
+        func handlerAdded(ctx: ChannelHandlerContext) {
+            promise = ctx.channel!.eventLoop.newPromise()
+        }
+        
+        func channelActive(ctx: ChannelHandlerContext) {
+            promise.succeed(result: ())
+            ctx.fireChannelActive()
+        }
+        
+        func assertChannelActiveFired() {
+            XCTAssert(promise.futureResult.fulfilled)
         }
     }
 }
