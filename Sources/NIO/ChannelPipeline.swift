@@ -548,35 +548,67 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
     private init() { }
 
     func register(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
-        ctx.channel!._unsafe.register0(promise: promise)
+        if let channel = ctx.channel {
+            channel._unsafe.register0(promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
     
     func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: Promise<Void>?) {
-        ctx.channel!._unsafe.bind0(to: address, promise: promise)
+        if let channel = ctx.channel {
+            channel._unsafe.bind0(to: address, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
     
     func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: Promise<Void>?) {
-        ctx.channel!._unsafe.connect0(to: address, promise: promise)
+        if let channel = ctx.channel {
+            channel._unsafe.connect0(to: address, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
     
     func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
-        ctx.channel!._unsafe.write0(data: data, promise: promise)
+        if let channel = ctx.channel {
+            channel._unsafe.write0(data: data, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
     
     func flush(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
-        ctx.channel!._unsafe.flush0(promise: promise)
+        if let channel = ctx.channel {
+            channel._unsafe.flush0(promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
     
     func close(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
-        ctx.channel!._unsafe.close0(error: ChannelError.alreadyClosed, promise: promise)
+        if let channel = ctx.channel {
+            channel._unsafe.close0(error: ChannelError.alreadyClosed, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.alreadyClosed)
+        }
     }
     
     func read(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
-        ctx.channel!._unsafe.read0(promise: promise)
+        if let channel = ctx.channel {
+            channel._unsafe.read0(promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
     
     func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: Promise<Void>?) {
-        ctx.channel!._unsafe.triggerUserOutboundEvent0(event: event, promise: promise)
+        if let channel = ctx.channel {
+            channel._unsafe.triggerUserOutboundEvent0(event: event, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
 }
 
