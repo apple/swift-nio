@@ -76,6 +76,23 @@ class ChannelPipelineTest: XCTestCase {
         
     }
     
+    func testConnectingDoesntCallBind() throws {
+        let channel = EmbeddedChannel()
+        var ipv4SocketAddress = sockaddr_in()
+        ipv4SocketAddress.sin_port = (12345 as UInt16).bigEndian
+        let sa = SocketAddress(IPv4Address: ipv4SocketAddress, host: "foobar.com")
+        
+        _ = try channel.pipeline.add(handler: NoBindAllowed()).wait()
+        _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<ByteBuffer, ByteBuffer>({ data in
+            return data
+        })).wait()
+        
+        _ = try channel.connect(to: sa).wait()
+        _ = try channel.close().wait()
+        
+        return
+    }
+    
     private final class TestChannelOutboundHandler<In, Out>: ChannelOutboundHandler {
         typealias OutboundIn = In
         typealias OutboundOut = Out
@@ -92,6 +109,19 @@ class ChannelPipelineTest: XCTestCase {
             } catch let err {
                 promise!.fail(error: err)
             }
+        }
+    }
+    
+    private final class NoBindAllowed: ChannelOutboundHandler {
+        typealias OutboundIn = ByteBuffer
+        typealias OutboundOut = ByteBuffer
+        
+        enum TestFailureError: Error {
+            case CalledBind
+        }
+        
+        public func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: Promise<Void>?) {
+            promise!.fail(error: TestFailureError.CalledBind)
         }
     }
 }

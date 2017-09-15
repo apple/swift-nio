@@ -28,6 +28,7 @@ extension ChannelPipelineTest {
       return [
                 ("testAddAfterClose", testAddAfterClose),
                 ("testOutboundOrdering", testOutboundOrdering),
+                ("testConnectingDoesntCallBind", testConnectingDoesntCallBind),
            ]
    }
 }

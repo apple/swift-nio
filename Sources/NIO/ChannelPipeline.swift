@@ -712,7 +712,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
     }
     
     public func connect(to address: SocketAddress, promise: Promise<Void>?) {
-        outboundNext!.invokeBind(to: address, promise: promise)
+        outboundNext!.invokeConnect(to: address, promise: promise)
     }
 
     public func write(data: IOData, promise: Promise<Void>?) {
