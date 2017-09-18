@@ -36,7 +36,7 @@ class EmbeddedEventLoop : EventLoop {
         return Future<T>(eventLoop: self, checkForPossibleDeadlock: false, result: result)
     }
     
-    func schedule<T>(task: @escaping () throws -> (T), in: TimeAmount) -> Scheduled<T> {
+    func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
         let promise: Promise<T> = newPromise()
         promise.fail(error: EventLoopError.unsupportedOperation)
         return Scheduled(promise: promise, cancellationTask: {

@@ -26,9 +26,9 @@ public class EventLoopTest : XCTestCase {
         defer {
             let _ = try? eventLoopGroup.close()
         }
-        let value = try eventLoopGroup.next().schedule(task: {
+        let value = try eventLoopGroup.next().scheduleTask(in: amount) {
             return true
-        }, in: amount).futureResult.wait()
+        }.futureResult.wait()
         
         XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= amount.nanoseconds)
         XCTAssertTrue(value)
@@ -40,17 +40,17 @@ public class EventLoopTest : XCTestCase {
             let _ = try? eventLoopGroup.close()
         }
         let ran = Atomic<Bool>(value: false)
-        let scheduled = eventLoopGroup.next().schedule(task: {
+        let scheduled = eventLoopGroup.next().scheduleTask(in: .seconds(2)) {
             ran.store(true)
-        }, in: .seconds(2))
+        }
         
         scheduled.cancel()
         
         let nanos = DispatchTime.now().uptimeNanoseconds
         let amount: TimeAmount = .seconds(2)
-        let value = try eventLoopGroup.next().schedule(task: {
+        let value = try eventLoopGroup.next().scheduleTask(in: amount) {
             return true
-        }, in: amount).futureResult.wait()
+        }.futureResult.wait()
         
         XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= amount.nanoseconds)
         XCTAssertTrue(value)

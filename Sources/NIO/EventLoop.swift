@@ -47,7 +47,7 @@ public protocol EventLoop: EventLoopGroup {
     var inEventLoop: Bool { get }
     func execute(task: @escaping () -> ())
     func submit<T>(task: @escaping () throws-> (T)) -> Future<T>
-    func schedule<T>(task: @escaping () throws-> (T), in: TimeAmount) -> Scheduled<T>
+    func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T>
     func newPromise<T>() -> Promise<T>
     func newFailedFuture<T>(error: Error) -> Future<T>
     func newSucceedFuture<T>(result: T) -> Future<T>
@@ -213,7 +213,7 @@ final class SelectableEventLoop : EventLoop {
         return pthread_self() == thread
     }
 
-    func schedule<T>(task: @escaping () throws -> (T), in: TimeAmount) -> Scheduled<T> {
+    func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
         let promise: Promise<T> = newPromise()
         let task = ScheduledTask({
             do {
