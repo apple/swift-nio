@@ -98,8 +98,8 @@ class EmbeddedChannelCore : ChannelCore {
         promise?.succeed(result: ())
         
         // As we called register() in the constructor of EmbeddedChannel we also need to ensure we call unregistered here.
-        pipeline.fireChannelUnregistered0()
         pipeline.fireChannelInactive0()
+        pipeline.fireChannelUnregistered0()
         
         eventLoop.execute {
             // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline

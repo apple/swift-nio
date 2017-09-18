@@ -1145,11 +1145,11 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         // Fail all pending writes and so ensure all pending promises are notified
         self.pendingWrites.failAll(error: error)
 
+        pipeline.fireChannelInactive0()
+
         if !neverRegistered {
             pipeline.fireChannelUnregistered0()
         }
-
-        pipeline.fireChannelInactive0()
         
         eventLoop.execute {
             // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline

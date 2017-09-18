@@ -208,6 +208,8 @@ class EchoServerClientTest : XCTestCase {
 
         public func channelInactive(ctx: ChannelHandlerContext) {
             if alreadyClosedInChannelInactive.compareAndExchange(expected: false, desired: true) {
+                XCTAssertFalse(self.channelUnregisteredPromise.futureResult.fulfilled,
+                               "channelInactive should fire before channelUnregistered")
                 ctx.close().whenComplete { val in
                     switch val {
                     case .failure(ChannelError.alreadyClosed):
@@ -224,6 +226,8 @@ class EchoServerClientTest : XCTestCase {
 
         public func channelUnregistered(ctx: ChannelHandlerContext) {
             if alreadyClosedInChannelUnregistered.compareAndExchange(expected: false, desired: true) {
+                XCTAssertTrue(self.channelInactivePromise.futureResult.fulfilled,
+                              "when channelUnregister fires, channelInactive should already have fired")
                 ctx.close().whenComplete { val in
                     switch val {
                     case .failure(ChannelError.alreadyClosed):
