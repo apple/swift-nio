@@ -82,7 +82,7 @@ let bootstrap = ServerBootstrap(group: group)
     .option(childOption: ChannelOptions.MaxMessagesPerRead, childValue: 1)
 
 defer {
-    _ = try? group.close()
+    try! group.syncShutdownGracefully()
 }
 
 // First argument is the program path

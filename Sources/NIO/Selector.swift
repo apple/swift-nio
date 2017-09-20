@@ -23,8 +23,15 @@ import Foundation
     import Darwin
 #endif
 
+private enum SelectorLifecycleState {
+    case open
+    case closing
+    case closed
+}
+
+/* this is deliberately not thread-safe, only the wakeup() function may be called unprotectedly */
 final class Selector<R: Registration> {
-    private var open: Bool
+    private var lifecycleState: SelectorLifecycleState
     
     #if os(Linux)
     private typealias EventType = epoll_event
@@ -64,7 +71,7 @@ final class Selector<R: Registration> {
     
     init() throws {
         events = Selector.allocateEventsArray(capacity: eventsCapacity)
-        self.open = false
+        self.lifecycleState = .closed
 
 #if os(Linux)
         fd = try wrapSyscall({ $0 >= 0 }, function: "epoll_create") {
@@ -79,7 +86,7 @@ final class Selector<R: Registration> {
             CTimerfd.timerfd_create(CLOCK_MONOTONIC, Int32(CTimerfd.TFD_CLOEXEC | CTimerfd.TFD_NONBLOCK));
         }
     
-        self.open = true
+        self.lifecycleState = .open
 
         var ev = epoll_event()
         ev.events = Selector.toEpollEvents(interested: .read)
@@ -99,7 +106,7 @@ final class Selector<R: Registration> {
         fd = try wrapSyscall({ $0 >= 0 }, function: "kqueue") {
             Darwin.kqueue()
         }
-        self.open = true
+        self.lifecycleState = .open
     
         var event = kevent()
         event.ident = 0
@@ -114,8 +121,22 @@ final class Selector<R: Registration> {
     }
 
     deinit {
-        assert(!self.open, "Selector still open on deinit")
+        assert(self.lifecycleState == .closed, "Selector \(self.lifecycleState) (expected .closed) on deinit")
         Selector.deallocateEventsArray(events: events, capacity: eventsCapacity)
+
+        /* this is technically a bad idea as we're abusing ARC to deallocate scarce resources (a file descriptor)
+         for us. However, this is used for the event loop so there shouldn't be much churn.
+         The reson we do this is because `self.wakeup()` may (and will!) be called on arbitrary threads. To not
+         suffer from race conditions we would need to protect waking the selector up and closing the selector. That
+         is likely to cause performance problems. By abusing ARC, we get the guarantee that there won't be any future
+         wakeup calls as there are no references to this selector left. 💁
+         */
+#if os(Linux)
+        let res = sysClose(self.eventfd)
+#else
+        let res = sysClose(self.fd)
+#endif
+        assert(res == 0)
     }
 
 #if os(Linux)
@@ -238,8 +259,8 @@ final class Selector<R: Registration> {
 #endif
 
     func register<S: Selectable>(selectable: S, interested: IOEvent = .read, makeRegistration: (IOEvent) -> R) throws {
-        guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't register on selector as it's not open anymore.")
+        guard self.lifecycleState == .open else {
+            throw IOError(errno: EBADF, reason: "can't register on selector as it's \(self.lifecycleState).")
         }
         
         assert(selectable.open)
@@ -259,8 +280,8 @@ final class Selector<R: Registration> {
     }
 
     func reregister<S: Selectable>(selectable: S, interested: IOEvent) throws {
-        guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't re-register on selector as it's not open anymore.")
+        guard self.lifecycleState == .open else {
+            throw IOError(errno: EBADF, reason: "can't re-register on selector as it's \(self.lifecycleState).")
         }
         assert(selectable.open)
         
@@ -282,8 +303,8 @@ final class Selector<R: Registration> {
     }
 
     func deregister<S: Selectable>(selectable: S) throws {
-        guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't deregister from selector as it's not open anymore.")
+        guard self.lifecycleState == .open else {
+            throw IOError(errno: EBADF, reason: "can't deregister from selector as it's \(self.lifecycleState).")
         }
         assert(selectable.open)
         
@@ -302,8 +323,8 @@ final class Selector<R: Registration> {
     }
 
      func whenReady(strategy: SelectorStrategy, _ fn: (SelectorEvent<R>) throws -> Void) throws -> Void {
-        guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't call whenReady for selector as it's not open anymore.")
+        guard self.lifecycleState == .open else {
+            throw IOError(errno: EBADF, reason: "can't call whenReady for selector as it's \(self.lifecycleState).")
         }
 
 #if os(Linux)
@@ -384,30 +405,34 @@ final class Selector<R: Registration> {
         return timespec(tv_sec: Int(delaySeconds), tv_nsec: Int(delayNanoSeconds))
     }
     
-    func close() throws {
-        guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't close selector as it's not open anymore.")
+    public func close() throws {
+        guard self.lifecycleState == .open else {
+            throw IOError(errno: EBADF, reason: "can't close selector as it's \(self.lifecycleState).")
         }
-        self.open = false
-        let _ = try wrapSyscall({ $0 >= 0 }, function: "close") {
+        self.lifecycleState = .closed
+
+        /* note, we can't close `self.fd` (on macOS) or `self.eventfd` (on Linux) here as that's read unprotectedly and might lead to race conditions. Instead, we abuse ARC to close it for us. */
 #if os(Linux)
-            // Ignore closing error for eventfd and timerfd
-            let _ = Glibc.close(self.eventfd)
-            let _ = Glibc.close(self.timerfd)
-            return Int(Glibc.close(self.fd))
-#else
-            return Int(Darwin.close(self.fd))
-#endif
+        _ = try wrapSyscall({ $0 >= 0 }, function: "close(timerfd)") { () -> Int32 in
+            sysClose(self.timerfd)
         }
+#endif
+
+#if os(Linux)
+        /* `self.fd` is used as the event file descriptor to wake kevent() up so can't be closed here on macOS */
+        _ = try wrapSyscall({ $0 >= 0 }, function: "close(fd)") { () -> Int32 in
+            sysClose(self.fd)
+        }
+#endif
     }
 
+    /* attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`) */
     func wakeup() throws {
-        guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't wakeup selector as it's not open anymore.")
-        }
+
 #if os(Linux)
         let _ = try wrapSyscall({ $0 == 0 }, function: "eventfd_write") {
-            CEventfd.eventfd_write(eventfd, 1)
+            /* this is fine as we're abusing ARC to close `self.eventfd`) */
+            CEventfd.eventfd_write(self.eventfd, 1)
         }
 #else
         var event = kevent()
@@ -438,13 +463,40 @@ struct SelectorEvent<R> {
     }
 }
 
+internal extension Selector where R == NIORegistration {
+    internal func closeGently(eventLoop: EventLoop) -> Future<Void> {
+        let p0: Promise<Void> = eventLoop.newPromise()
+        guard self.lifecycleState == .open else {
+            p0.fail(error: IOError(errno: EBADF, reason: "can't close selector gently as it's \(self.lifecycleState)."))
+            return p0.futureResult
+        }
+
+        let futures: [Future<Void>] = self.registrations.map { (_, reg: NIORegistration) -> Future<Void> in
+            switch reg {
+            case .serverSocketChannel(let chan, _):
+                return chan.close()
+            case .socketChannel(let chan, _):
+                return chan.close()
+            }
+        }
+
+        guard futures.count > 0 else {
+            p0.succeed(result: ())
+            return p0.futureResult
+        }
+
+        p0.succeed(result: ())
+        return Future<Void>.andAll(futures, eventLoop: eventLoop)
+    }
+}
+
 enum SelectorStrategy {
     case block
     case blockUntilTimeout(nanoseconds: UInt64)
     case now
 }
 
-enum IOEvent {
+public enum IOEvent {
     case read
     case write
     case all

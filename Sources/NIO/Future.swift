@@ -590,3 +590,18 @@ extension Future {
         }
     }
 }
+
+extension Future {
+    public static func andAll(_ futures: [Future<Void>], eventLoop: EventLoop) -> Future<Void> {
+        let p0: Promise<Void> = eventLoop.newPromise()
+        guard futures.count > 0 else {
+            p0.succeed(result: ())
+            return p0.futureResult
+        }
+
+        let fn: Future<Void> = futures.reduce(p0.futureResult, { (f1: Future<Void>, f2: Future<Void>) in f1.and(f2).then(callback: { _ in return () }) })
+        p0.succeed(result: ())
+        return fn
+    }
+
+}

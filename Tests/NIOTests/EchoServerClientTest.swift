@@ -37,9 +37,9 @@ class EchoServerClientTest : XCTestCase {
     func testEcho() throws {
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            _ = try? group.close()
+            try! group.syncShutdownGracefully()
         }
-        
+
         let numBytes = 16 * 1024
         let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().newPromise())
         let serverChannel = try ServerBootstrap(group: group)
@@ -75,7 +75,7 @@ class EchoServerClientTest : XCTestCase {
     func testEchoUnixDomainSocket() throws {
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            _ = try? group.close()
+            try! group.syncShutdownGracefully()
         }
 
         let udsTempDir = buildTempDir()
@@ -118,7 +118,7 @@ class EchoServerClientTest : XCTestCase {
     func testConnectUnixDomainSocket() throws {
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            _ = try? group.close()
+            try! group.syncShutdownGracefully()
         }
 
         let udsTempDir = buildTempDir()
@@ -161,9 +161,9 @@ class EchoServerClientTest : XCTestCase {
     func testChannelActiveOnConnect() throws {
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            _ = try? group.close()
+            try! group.syncShutdownGracefully()
         }
-        
+
         let handler = ChannelActiveHandler()
         let serverChannel = try ServerBootstrap(group: group)
             .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -187,7 +187,7 @@ class EchoServerClientTest : XCTestCase {
     func testWriteThenRead() throws {
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            _ = try? group.close()
+            try! group.syncShutdownGracefully()
         }
 
         let serverChannel = try ServerBootstrap(group: group)
@@ -347,9 +347,9 @@ class EchoServerClientTest : XCTestCase {
     func testCloseInInactive() throws {
 
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
-        defer {
-            _ = try? group.close()
-        }
+            defer {
+                try! group.syncShutdownGracefully()
+            }
 
         let inactivePromise = group.next().newPromise() as Promise<()>
         let unregistredPromise = group.next().newPromise() as Promise<()>
@@ -366,7 +366,7 @@ class EchoServerClientTest : XCTestCase {
             })).bind(to: "127.0.0.1", on: 0).wait()
 
         defer {
-            _ = serverChannel.close()
+            _ = try! serverChannel.close().wait()
         }
 
         let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()

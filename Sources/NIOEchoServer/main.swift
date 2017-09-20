@@ -61,7 +61,7 @@ let bootstrap = ServerBootstrap(group: group)
     .option(childOption: ChannelOptions.MaxMessagesPerRead, childValue: 16)
     .option(childOption: ChannelOptions.RecvAllocator, childValue: FixedSizeRecvByteBufferAllocator(capacity: 8192))
 defer {
-    _ = try? group.close()
+    try! group.syncShutdownGracefully()
 }
 
 // First argument is the program path

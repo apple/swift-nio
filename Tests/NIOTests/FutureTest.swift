@@ -31,4 +31,54 @@ class FutureTest : XCTestCase {
         let f = Future<Void>(eventLoop: eventLoop, checkForPossibleDeadlock: true, error: FutureTestError.example)
         XCTAssertTrue(f.fulfilled)
     }
+
+    func testAndAllWithAllSuccesses() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let promises: [Promise<Void>] = (0..<100).map { _ in eventLoop.newPromise() }
+        let futures = promises.map { $0.futureResult }
+
+        let fN: Future<Void> = Future<Void>.andAll(futures, eventLoop: eventLoop)
+        _ = promises.map { $0.succeed(result: ()) }
+        () = try fN.wait()
+    }
+
+    func testAndAllWithAllFailures() throws {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        let promises: [Promise<Void>] = (0..<100).map { _ in eventLoop.newPromise() }
+        let futures = promises.map { $0.futureResult }
+
+        let fN: Future<Void> = Future<Void>.andAll(futures, eventLoop: eventLoop)
+        _ = promises.map { $0.fail(error: E()) }
+        do {
+            () = try fN.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
+
+    func testAndAllWithOneFailure() throws {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        var promises: [Promise<Void>] = (0..<100).map { _ in eventLoop.newPromise() }
+        _ = promises.map { $0.succeed(result: ()) }
+        let failedPromise: Promise<()> = eventLoop.newPromise()
+        failedPromise.fail(error: E())
+        promises.append(failedPromise)
+
+        let futures = promises.map { $0.futureResult }
+
+        let fN: Future<Void> = Future<Void>.andAll(futures, eventLoop: eventLoop)
+        do {
+            () = try fN.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
 }

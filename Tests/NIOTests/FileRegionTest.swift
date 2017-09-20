@@ -21,7 +21,7 @@ class FileRegionTest : XCTestCase {
     func testWriteFileRegion() throws {
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            _ = try? group.close()
+            _ = try? group.unsafeClose()
         }
         
         let numBytes = 16 * 1024

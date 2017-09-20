@@ -71,7 +71,11 @@ class EmbeddedEventLoop : EventLoop {
         // Nothing to do here
     }
 
-
+    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+        queue.async {
+            callback(nil)
+        }
+    }
 }
 
 class EmbeddedChannelCore : ChannelCore {

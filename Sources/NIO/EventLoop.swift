@@ -164,12 +164,18 @@ private func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
     #endif
 }
 
-final class SelectableEventLoop : EventLoop {
+private enum EventLoopLifecycleState {
+    case open
+    case closing
+    case closed
+}
+
+internal final class SelectableEventLoop : EventLoop {
     private let selector: NIO.Selector<NIORegistration>
     private var thread: pthread_t?
     private var scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
     private let tasksLock = Lock()
-    private var closed = false
+    private var lifecycleState: EventLoopLifecycleState = .open
     
     private let _iovecs: UnsafeMutablePointer<IOVector>
     private let _storageRefs: UnsafeMutablePointer<Unmanaged<AnyObject>>
@@ -177,7 +183,7 @@ final class SelectableEventLoop : EventLoop {
     let iovecs: UnsafeMutableBufferPointer<IOVector>
     let storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
     
-    init() throws {
+    public init() throws {
         self.selector = try NIO.Selector()
         self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimit)
         self._storageRefs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimit)
@@ -190,30 +196,30 @@ final class SelectableEventLoop : EventLoop {
         _storageRefs.deallocate(capacity: Socket.writevLimit)
     }
     
-    func register<C: SelectableChannel>(channel: C) throws {
+    public func register<C: SelectableChannel>(channel: C) throws {
         assert(inEventLoop)
         try selector.register(selectable: channel.selectable, interested: channel.interestedEvent, makeRegistration: channel.registrationFor(interested:))
     }
 
-    func deregister<C: SelectableChannel>(channel: C) throws {
+    public func deregister<C: SelectableChannel>(channel: C) throws {
         assert(inEventLoop)
-        guard !closed else {
+        guard lifecycleState == .open else {
             // Its possible the EventLoop was closed before we were able to call deregister, so just return in this case as there is no harm.
             return
         }
         try selector.deregister(selectable: channel.selectable)
     }
     
-    func reregister<C: SelectableChannel>(channel: C) throws {
+    public func reregister<C: SelectableChannel>(channel: C) throws {
         assert(inEventLoop)
         try selector.reregister(selectable: channel.selectable, interested: channel.interestedEvent)
     }
     
-    var inEventLoop: Bool {
+    public var inEventLoop: Bool {
         return pthread_self() == thread
     }
 
-    func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
+    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
         let promise: Promise<T> = newPromise()
         let task = ScheduledTask({
             do {
@@ -236,7 +242,7 @@ final class SelectableEventLoop : EventLoop {
         return scheduled
     }
     
-    func execute(task: @escaping () -> ()) {
+    public func execute(task: @escaping () -> ()) {
         schedule0(ScheduledTask(task, { error in
             // do nothing
         }, .nanoseconds(0)))
@@ -274,7 +280,7 @@ final class SelectableEventLoop : EventLoop {
             }
             channel.readable()
         case .none:
-            // spurious wakup
+            // spurious wakeup
             break
             
         }
@@ -294,7 +300,7 @@ final class SelectableEventLoop : EventLoop {
         tasksLock.unlock()
 
         guard let sched = scheduled else {
-            // Not tasks to handle so just block
+            // No tasks to handle so just block
             return .block
         }
         
@@ -308,7 +314,7 @@ final class SelectableEventLoop : EventLoop {
         }
     }
     
-    func run() throws {
+    public func run() throws {
         thread = pthread_self()
         defer {
             var tasksCopy = ContiguousArray<ScheduledTask>()
@@ -327,7 +333,7 @@ final class SelectableEventLoop : EventLoop {
             // Ensure we reset the running Thread when this methods returns.
             thread = nil
         }
-        while !closed {
+        while lifecycleState != .closed {
             // Block until there are events to handle or the selector was woken up
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
             try withAutoReleasePool {
@@ -392,13 +398,52 @@ final class SelectableEventLoop : EventLoop {
         return false
     }
     
-    func close0() throws {
+    fileprivate func close0() throws {
         if inEventLoop {
-            try self.selector.close()
+            self.lifecycleState = .closed
         } else {
-            try self.submit(task: { () -> (Void) in
-                self.closed = true
-            }).wait()
+            _ = self.submit(task: { () -> (Void) in
+                self.lifecycleState = .closed
+            })
+        }
+    }
+
+    public func closeGently() -> Future<Void> {
+        func closeGently0() -> Future<Void> {
+            guard self.lifecycleState == .open else {
+                return self.newFailedFuture(error: ChannelError.alreadyClosed)
+            }
+            self.lifecycleState = .closing
+            return self.selector.closeGently(eventLoop: self)
+        }
+        if self.inEventLoop {
+            return closeGently0()
+        } else {
+            let p: Promise<Void> = self.newPromise()
+            _ = self.submit {
+                closeGently0().cascade(promise: p)
+            }
+            return p.futureResult
+        }
+    }
+
+    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+        self.closeGently().whenComplete { closeGentlyResult in
+            let closeResult: ()? = try? self.close0()
+            switch (closeGentlyResult, closeResult) {
+            case (.success(()), .some(())):
+                queue.async {
+                    callback(nil)
+                }
+            case (.failure(let error), _):
+                queue.async {
+                    callback(error)
+                }
+            case (_, .none):
+                queue.async {
+                    callback(EventLoopError.shutdownFailed)
+                }
+            }
         }
     }
 }
@@ -407,10 +452,40 @@ final class SelectableEventLoop : EventLoop {
  Provides an "endless" stream of `EventLoop`s to use.
  */
 public protocol EventLoopGroup {
-    /*
-     Returns the next `EventLoop` to use.
-    */
+    /// Returns the next `EventLoop` to use.
     func next() -> EventLoop
+
+    /// Shuts down the eventloop gracefully. This function is clearly an outlier in that it uses a completion
+    /// callback instead of a Future. The reason for that is that NIO's Futures will call back on an event loop.
+    /// The virtue of this function is to shut the event loop down. To work around that we call back on a DispatchQueue
+    /// instead.
+    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void)
+}
+
+public extension EventLoopGroup {
+    public func shutdownGracefully(_ callback: @escaping (Error?) -> Void) {
+        self.shutdownGracefully(queue: .global(), callback)
+    }
+
+    public func syncShutdownGracefully() throws {
+        let errorStorageLock = Lock()
+        var errorStorage: Error? = nil
+        let continuation = DispatchWorkItem {}
+        self.shutdownGracefully { error in
+            if let error = error {
+                errorStorageLock.withLock {
+                    errorStorage = error
+                }
+            }
+            continuation.perform()
+        }
+        continuation.wait()
+        try errorStorageLock.withLock {
+            if let error = errorStorage {
+                throw error
+            }
+        }
+    }
 }
 
 /*
@@ -451,10 +526,36 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
         return eventLoops[(index.add(1) % eventLoops.count).abs()]
     }
     
-    public func close() throws {
+    internal func unsafeClose() throws {
         for loop in eventLoops {
             // TODO: Should we log this somehow or just rethrow the first error ?
             _ = try loop.close0()
+        }
+    }
+
+    public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+        let g = DispatchGroup()
+        let q = DispatchQueue(label: "nio.shutdownGracefullyQueue", target: queue)
+        var error: Error? = nil
+        let futures: [Future<Void>] = self.eventLoops.map { eventLoop in eventLoop.closeGently() }
+        g.enter()
+        g.notify(queue: q) {
+            callback(error)
+        }
+        Future<Void>.andAll(futures, eventLoop: self.eventLoops[0]).whenComplete { result in
+            switch result {
+            case .success(_):
+                ()
+            case .failure(let err):
+                q.async { error = err }
+            }
+            let failure = self.eventLoops.map { try? $0.close0() }.filter { $0 == nil }.count > 0
+            if failure {
+                q.async {
+                    error = EventLoopError.shutdownFailed
+                }
+            }
+            g.leave()
         }
     }
 }
@@ -504,4 +605,5 @@ public enum EventLoopError: Error {
     case unsupportedOperation
     case cancelled
     case shutdown
+    case shutdownFailed
 }
