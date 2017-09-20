@@ -487,7 +487,7 @@ extension ScheduledTask : Comparable {
         return lhs.readyTime < rhs.readyTime
     }
     public static func == (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
-        return lhs.readyTime == rhs.readyTime
+        return lhs === rhs
     }
 }
 
