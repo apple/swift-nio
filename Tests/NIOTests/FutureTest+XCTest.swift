@@ -28,6 +28,9 @@ extension FutureTest {
       return [
                 ("testFutureFulfilledIfHasResult", testFutureFulfilledIfHasResult),
                 ("testFutureFulfilledIfHasError", testFutureFulfilledIfHasError),
+                ("testAndAllWithAllSuccesses", testAndAllWithAllSuccesses),
+                ("testAndAllWithAllFailures", testAndAllWithAllFailures),
+                ("testAndAllWithOneFailure", testAndAllWithOneFailure),
            ]
    }
 }

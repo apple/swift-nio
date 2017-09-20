@@ -27,6 +27,7 @@ extension EventLoopTest {
    static var allTests : [(String, (EventLoopTest) -> () throws -> Void)] {
       return [
                 ("testSchedule", testSchedule),
+                ("testScheduleCancelled", testScheduleCancelled),
            ]
    }
 }
