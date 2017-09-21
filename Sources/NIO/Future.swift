@@ -274,28 +274,27 @@ public final class Future<T> {
     /// Callbacks that should be run when this Future<> gets a value.
     /// These callbacks may give values to other Futures; if that happens, they return any callbacks from those Futures so that we can run the entire chain from the top without recursing.
     fileprivate var callbacks: CallbackList = CallbackList()
-        
-    fileprivate init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool) {
+
+    private init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool, value: FutureValue<T>?, file: StaticString = #file, line: Int = #line) {
         self.eventLoop = eventLoop
         self.checkForPossibleDeadlock = checkForPossibleDeadlock
-        self.value = nil
-        self._fulfilled = Atomic<Bool>(value: false)
+        self.value = value
+        self._fulfilled = Atomic(value: value != nil)
+    }
+
+
+    fileprivate convenience init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool, file: StaticString = #file, line: Int = #line) {
+        self.init(eventLoop: eventLoop, checkForPossibleDeadlock: checkForPossibleDeadlock, value: nil, file: file, line: line)
     }
     
     /// A Future<T> that has already succeeded
-    init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool, result: T) {
-        self.eventLoop = eventLoop
-        self.checkForPossibleDeadlock = checkForPossibleDeadlock
-        self.value = .success(result)
-        self._fulfilled = Atomic<Bool>(value: true)
+    convenience init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool, result: T, file: StaticString = #file, line: Int = #line) {
+        self.init(eventLoop: eventLoop, checkForPossibleDeadlock: checkForPossibleDeadlock, value: .success(result), file: file, line: line)
     }
     
     /// A Future<T> that has already failed
-    init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool, error: Error) {
-        self.eventLoop = eventLoop
-        self.checkForPossibleDeadlock = checkForPossibleDeadlock
-        self.value = .failure(error)
-        self._fulfilled = Atomic<Bool>(value: true)
+    convenience init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool, error: Error, file: StaticString = #file, line: Int = #line) {
+        self.init(eventLoop: eventLoop, checkForPossibleDeadlock: checkForPossibleDeadlock, value: .failure(error), file: file, line: line)
     }
     
     deinit {
