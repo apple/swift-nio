@@ -57,6 +57,8 @@ final class Socket : BaseSocket {
             return try connectSocket(addr: addr)
         case .v6(address: let addr, _):
             return try connectSocket(addr: addr)
+        case .unixDomainSocket(address: let addr):
+            return try connectSocket(addr: addr)
         }
     }
     

@@ -53,6 +53,15 @@ extension sockaddr_in6: SockAddrProtocol {
     }
 }
 
+extension sockaddr_un: SockAddrProtocol {
+    mutating func withSockAddr<R>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        var me = self
+        return try withUnsafeBytes(of: &me) { p in
+            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
+}
+
 class BaseSocket : Selectable {
     public let descriptor: Int32
     public private(set) var open: Bool
@@ -89,6 +98,10 @@ class BaseSocket : Selectable {
                         var ipAddressString = [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
                         return SocketAddress(IPv6Address: ipv6.pointee, host: String(cString: inet_ntop(AF_INET6, &ipv6.pointee.sin6_addr, &ipAddressString, socklen_t(INET6_ADDRSTRLEN))))
                     })
+                case AF_UNIX:
+                    return address.withMemoryRebound(to: sockaddr_un.self, capacity: 1) { uds in
+                        return SocketAddress.unixDomainSocket(address: uds.pointee)
+                    }
                 default:
                     fatalError("address family \(address.pointee.sa_family) not supported")
                 }
@@ -187,6 +200,8 @@ class BaseSocket : Selectable {
         case .v4(address: var addr, _):
             try addr.withSockAddr(doBind)
         case .v6(address: var addr, _):
+            try addr.withSockAddr(doBind)
+        case .unixDomainSocket(address: var addr):
             try addr.withSockAddr(doBind)
         }
     }

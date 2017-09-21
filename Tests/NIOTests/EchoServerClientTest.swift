@@ -18,6 +18,21 @@ import ConcurrencyHelpers
 @testable import NIO
 
 class EchoServerClientTest : XCTestCase {
+
+    func buildTempDir() -> String {
+        let template = "/tmp/.NIOTests-UDS-container-dir_XXXXXX"
+        var templateBytes = Array(template.utf8)
+        templateBytes.append(0)
+        templateBytes.withUnsafeMutableBufferPointer { ptr in
+            ptr.baseAddress!.withMemoryRebound(to: Int8.self, capacity: templateBytes.count) { (ptr: UnsafeMutablePointer<Int8>) in
+                let ret = mkdtemp(ptr)
+                XCTAssertNotNil(ret)
+            }
+        }
+        templateBytes.removeLast()
+        let udsTempDir = String(bytes: templateBytes, encoding: .utf8)!
+        return udsTempDir
+    }
     
     func testEcho() throws {
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
@@ -57,6 +72,92 @@ class EchoServerClientTest : XCTestCase {
         try countingHandler.assertReceived(buffer: buffer)
     }
     
+    func testEchoUnixDomainSocket() throws {
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            _ = try? group.close()
+        }
+
+        let udsTempDir = buildTempDir()
+        defer {
+            try! FileManager.default.removeItem(atPath: udsTempDir)
+        }
+
+        let numBytes = 16 * 1024
+        let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().newPromise())
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+
+            // Set the handlers that are appled to the accepted Channels
+            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+                // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
+                return channel.pipeline.add(handler: countingHandler)
+            })).bind(unixDomainSocket: udsTempDir + "/server.sock").wait()
+
+        defer {
+            _ = serverChannel.close()
+        }
+
+        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+
+        defer {
+            _ = clientChannel.close()
+        }
+
+        var buffer = clientChannel.allocator.buffer(capacity: numBytes)
+
+        for i in 0..<numBytes {
+            buffer.write(integer: UInt8(i % 256))
+        }
+
+        try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
+
+        try countingHandler.assertReceived(buffer: buffer)
+    }
+
+    func testConnectUnixDomainSocket() throws {
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            _ = try? group.close()
+        }
+
+        let udsTempDir = buildTempDir()
+        defer {
+            try! FileManager.default.removeItem(atPath: udsTempDir)
+        }
+
+        let numBytes = 16 * 1024
+        let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().newPromise())
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+
+            // Set the handlers that are appled to the accepted Channels
+            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+                // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
+                return channel.pipeline.add(handler: countingHandler)
+            })).bind(unixDomainSocket: udsTempDir + "/server.sock").wait()
+
+        defer {
+            _ = serverChannel.close()
+        }
+
+        let clientChannel = try ClientBootstrap(group: group).connect(to: udsTempDir + "/server.sock").wait()
+
+        defer {
+            _ = clientChannel.close()
+        }
+
+        var buffer = clientChannel.allocator.buffer(capacity: numBytes)
+
+        for i in 0..<numBytes {
+            buffer.write(integer: UInt8(i % 256))
+        }
+
+        try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
+
+        try countingHandler.assertReceived(buffer: buffer)
+    }
+
     func testChannelActiveOnConnect() throws {
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
         defer {

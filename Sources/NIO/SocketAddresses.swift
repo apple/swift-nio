@@ -23,27 +23,36 @@ import Foundation
 public enum SocketAddressError: Error {
     case unknown
     case unsupported
+    case unixDomainSocketPathTooLong
 }
 
 public enum SocketAddress: CustomStringConvertible {
     case v4(address: sockaddr_in, host: String)
     case v6(address: sockaddr_in6, host: String)
+    case unixDomainSocket(address: sockaddr_un)
 
     public var description: String {
-        let port: UInt16
-        let host: String
+        let port: String
+        let host: String?
         let type: String
         switch self {
         case .v4(address: let addr, host: let h):
             host = h
             type = "IPv4"
-            port = UInt16(bigEndian: addr.sin_port)
+            port = "\(UInt16(bigEndian: addr.sin_port))"
         case .v6(address: let addr, host: let h):
             host = h
             type = "IPv6"
-            port = UInt16(bigEndian: addr.sin6_port)
+            port = "\(UInt16(bigEndian: addr.sin6_port))"
+        case .unixDomainSocket(address: var addr):
+            host = nil
+            type = "UDS"
+            port = withUnsafeBytes(of: &addr.sun_path) { ptr in
+                let ptr = ptr.baseAddress!.bindMemory(to: UInt8.self, capacity: 104)
+                return String(cString: ptr)
+            }
         }
-        return "[\(type)]\(host):\(port)"
+        return "[\(type)]\(host.map { "\($0):" } ?? "")\(port)"
     }
     
     public var protocolFamily: Int32 {
@@ -52,6 +61,8 @@ public enum SocketAddress: CustomStringConvertible {
             return PF_INET
         case .v6(address: _, host: _):
             return PF_INET6
+        case .unixDomainSocket(address: _):
+            return PF_UNIX
         }
     }
 
@@ -61,6 +72,27 @@ public enum SocketAddress: CustomStringConvertible {
 
     public init(IPv6Address addr: sockaddr_in6, host: String) {
         self = .v6(address: addr, host: host)
+    }
+
+    public static func unixDomainSocketAddress(path: String) throws -> SocketAddress {
+        guard path.utf8.count <= 103 else {
+            throw SocketAddressError.unixDomainSocketPathTooLong
+        }
+
+        var pathBytes = Array(path.utf8)
+        pathBytes.append(0)
+
+        var addr = sockaddr_un()
+        addr.sun_family = sa_family_t(AF_UNIX)
+        pathBytes.withUnsafeBufferPointer { srcPtr in
+            withUnsafeMutablePointer(to: &addr.sun_path) { dstPtr in
+                dstPtr.withMemoryRebound(to: UInt8.self, capacity: pathBytes.count) { dstPtr in
+                    dstPtr.assign(from: srcPtr.baseAddress!, count: pathBytes.count)
+                }
+            }
+        }
+
+        return .unixDomainSocket(address: addr)
     }
 
     public static func newAddressResolving(host: String, port: Int32) throws -> SocketAddress {

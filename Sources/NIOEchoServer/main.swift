@@ -69,21 +69,37 @@ let arguments = CommandLine.arguments
 let arg1 = arguments.dropFirst().first
 let arg2 = arguments.dropFirst().dropFirst().first
 
-var host: String = "::1"
-var port: Int32 = 9999
+let defaultHost = "::1"
+let defaultPort: Int32 = 9999
+
+enum BindTo {
+    case ip(host: String, port: Int32)
+    case unixDomainSocket(path: String)
+}
+
+var bindTarget = BindTo.ip(host: defaultHost, port: defaultPort)
 switch (arg1, arg1.flatMap { Int32($0) }, arg2.flatMap { Int32($0) }) {
 case (.some(let h), _ , .some(let p)):
     /* we got two arguments, let's interpret that as host and port */
-    host = h
-    port = p
+    bindTarget = .ip(host: h, port: p)
+case (.some(let portString), .none, _):
+    /* couldn't parse as number, expecting unix domain socket path */
+    bindTarget = .unixDomainSocket(path: portString)
 case (_, .some(let p), _):
     /* only one argument --> port */
-    port = p
+    bindTarget = .ip(host: defaultHost, port: p)
 default:
     ()
 }
 
-let channel = try bootstrap.bind(to: host, on: port).wait()
+let channel = try { () -> Channel in
+    switch bindTarget {
+    case .ip(let host, let port):
+        return try bootstrap.bind(to: host, on: port).wait()
+    case .unixDomainSocket(let path):
+        return try bootstrap.bind(unixDomainSocket: path).wait()
+    }
+}()
 
 print("Server started and listening on \(channel.localAddress!)")
 

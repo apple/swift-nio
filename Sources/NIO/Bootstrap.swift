@@ -66,6 +66,16 @@ public final class ServerBootstrap {
         return bind0(evGroup: group, to: address)
     }
     
+    public func bind(unixDomainSocket path: String) -> Future<Channel> {
+        let evGroup = group
+        do {
+            let address = try SocketAddress.unixDomainSocketAddress(path: path)
+            return bind0(evGroup: evGroup, to: address)
+        } catch let err {
+            return evGroup.next().newFailedFuture(error: err)
+        }
+    }
+
     private func bind0(evGroup: EventLoopGroup, to address: SocketAddress) -> Future<Channel> {
         let chEvGroup = childGroup
         let opts = options
@@ -237,6 +247,15 @@ public final class ClientBootstrap {
     public func connect(to address: SocketAddress) -> Future<Channel> {
         return execute(evGroup: group, protocolFamily: address.protocolFamily) { channel in
             return channel.connect(to: address)
+        }
+    }
+
+    public func connect(to unixDomainSocket: String) -> Future<Channel> {
+        do {
+            let address = try SocketAddress.unixDomainSocketAddress(path: unixDomainSocket)
+            return connect(to: address)
+        } catch {
+            return group.next().newFailedFuture(error: error)
         }
     }
 
