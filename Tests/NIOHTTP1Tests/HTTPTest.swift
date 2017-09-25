@@ -55,7 +55,7 @@ class HTTPTest: XCTestCase {
             return s
         }
 
-        func sendAndCheckRequests(_ expecteds: [HTTPRequestHead], body: String?, sendStrategy: (String, Channel) throws -> Void) throws -> String? {
+        func sendAndCheckRequests(_ expecteds: [HTTPRequestHead], body: String?, sendStrategy: (String, EmbeddedChannel) throws -> Void) throws -> String? {
             var step = 0
             var index = 0
             let channel = EmbeddedChannel()
@@ -120,7 +120,7 @@ class HTTPTest: XCTestCase {
         let bd1 = try sendAndCheckRequests(expecteds, body: body, sendStrategy: { (reqString, chan) in
             var buf = chan.allocator.buffer(capacity: 1024)
             buf.write(string: reqString)
-            chan.pipeline.fireChannelRead(data: IOData(buf))
+            try chan.writeInbound(data: buf)
         })
 
         /* send the bytes one by one */
@@ -129,7 +129,7 @@ class HTTPTest: XCTestCase {
                 var buf = chan.allocator.buffer(capacity: 1024)
 
                 buf.write(string: "\(c)")
-                chan.pipeline.fireChannelRead(data: IOData(buf))
+                try chan.writeInbound(data: buf)
             }
         })
 

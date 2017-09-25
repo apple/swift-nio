@@ -40,6 +40,7 @@ import XCTest
          testCase(SocketAddressTest.allTests),
          testCase(FutureTest.allTests),
          testCase(EventLoopTest.allTests),
+         testCase(HTTPServerClientTest.allTests),
          testCase(HTTPHeadersTest.allTests),
          testCase(HTTPTest.allTests),
     ])

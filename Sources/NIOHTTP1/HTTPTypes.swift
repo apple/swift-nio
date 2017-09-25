@@ -16,10 +16,10 @@ import Foundation
 import NIO
 
 
-let crlf = "\r\n".data(using: .ascii)!
-let headerSeperator = ": ".data(using: .ascii)!
-let http1_1 = "HTTP/1.1 ".data(using: .ascii)!
-let status200 = "200 ok\r\n".data(using: .ascii)!
+let crlf: StaticString = "\r\n"
+let headerSeparator: StaticString = ": "
+let http1_1: StaticString = "HTTP/1.1"
+let status200: StaticString = "200 OK"
 
 public struct HTTPRequestHead: Equatable {
     public static func ==(lhs: HTTPRequestHead, rhs: HTTPRequestHead) -> Bool {
@@ -131,6 +131,11 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible {
         storage[keyLower] = (storage[keyLower] ?? [])  + [(name, value)]
     }
 
+    public mutating func replaceOrAdd(name: String, value: String) {
+        let keyLower = name.lowercased()
+        storage[keyLower] = [(name, value)]
+    }
+
     public mutating func remove(name: String) {
         self.storage[name.lowercased()] = nil
     }
@@ -145,7 +150,7 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible {
     func write(buffer: inout ByteBuffer) {
         for (key, values) in storage {
             buffer.write(string: key)
-            buffer.write(data: headerSeperator)
+            buffer.write(staticString: headerSeparator)
 
             var writerIndex = buffer.writerIndex
             for (_, value) in values {
@@ -155,9 +160,9 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible {
             }
             // Discard last ,
             buffer.moveWriterIndex(to: writerIndex)
-            buffer.write(data: crlf)
+            buffer.write(staticString: crlf)
         }
-        buffer.write(data: crlf)
+        buffer.write(staticString: crlf)
     }
 
     public func makeIterator() -> AnyIterator<(name: String, value: String)> {
@@ -311,13 +316,12 @@ extension HTTPVersion {
     func write(buffer: inout ByteBuffer) {
         if major == 1 && minor == 1 {
             // Optimize for HTTP/1.1
-            buffer.write(data: http1_1)
+            buffer.write(staticString: http1_1)
         } else {
             buffer.write(staticString: "HTTP/")
             buffer.write(string: String(major))
             buffer.write(staticString: ".")
             buffer.write(string: String(minor))
-            buffer.write(staticString: " ")
         }
     }
 }
@@ -664,12 +668,11 @@ extension HTTPResponseStatus {
         switch self {
         case .ok:
             // Optimize for 200 ok, which should be the most likely code (...hopefully).
-            buffer.write(data: status200)
+            buffer.write(staticString: status200)
         default:
             buffer.write(string: String(code))
             buffer.write(string: " ")
             buffer.write(string: reasonPhrase)
-            buffer.write(data: crlf)
         }
     }
 }

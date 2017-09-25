@@ -23,6 +23,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
     
     private var parser: http_parser?
     private var settings: http_parser_settings?
+    private var pendingCallouts: [() -> Void] = []
     
     
     private enum DataAwaitingState {
@@ -147,7 +148,9 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
 
             handler.state.dataAwaitingState = .body
 
-            ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequestPart.head(request)))
+            handler.pendingCallouts.append {
+                ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequestPart.head(request)))
+            }
             return 0
         }
 
@@ -160,7 +163,9 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             let index = handler.calculateIndex(data: data!, length: len)
             
             let slice = handler.cumulationBuffer!.slice(at: index, length: len)!
-            ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequestPart.body(HTTPBodyContent.more(buffer: slice))))
+            handler.pendingCallouts.append {
+                ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequestPart.body(HTTPBodyContent.more(buffer: slice))))
+            }
             
             return 0
         }
@@ -200,9 +205,12 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             let ctx = evacuateContext(parser)
             let handler = ctx.handler as! HTTPRequestDecoder
 
-            ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequestPart.body(.last(buffer: nil))))
             handler.complete(state: handler.state.dataAwaitingState)
             handler.state.dataAwaitingState = .messageBegin
+
+            handler.pendingCallouts.append {
+                ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequestPart.body(.last(buffer: nil))))
+            }
             return 0
         }
     }
@@ -236,11 +244,11 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             
             let errno = parser!.http_errno
             if errno != 0 {
-                throw HTTPParserError.httpError(fromCHTTPParserErrno:  http_errno(rawValue: errno))!
+                throw HTTPParserError.httpError(fromCHTTPParserErrno: http_errno(rawValue: errno))!
             }
             return result
         }
-        
+
         if let slice = state.slice {
             buffer.moveReaderIndex(to: slice.readerIndex)
             state.readerIndexAdjustment = buffer.readableBytes
@@ -252,6 +260,13 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
         }
     }
     
+    public func channelReadComplete(ctx: ChannelHandlerContext) {
+        /* call all the callbacks generated while parsing */
+        let pending = self.pendingCallouts
+        self.pendingCallouts = []
+        pending.forEach { $0() }
+    }
+
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         ctx.fireErrorCaught(error: error)
         if error is HTTPParserError {

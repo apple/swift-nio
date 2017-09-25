@@ -194,7 +194,10 @@ struct MarkedCircularBuffer<E>: CustomStringConvertible {
     }
 
     public mutating func removeFirst() -> E {
-        self.markedIndex -= 1
+        assert(self.buffer.count > 0)
+        if self.markedIndex != -1 {
+            self.markedIndex -= 1
+        }
         return self.buffer.removeFirst()
     }
 
