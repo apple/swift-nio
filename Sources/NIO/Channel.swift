@@ -54,7 +54,11 @@ public struct IOData {
     }
 
     func forceAsByteBuffer() -> ByteBuffer {
-        return tryAsByteBuffer()!
+        if let v = tryAsByteBuffer() {
+            return v
+        } else {
+            fatalError("tried to decode as type \(ByteBuffer.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
+        }
     }
 
     func tryAsFileRegion() -> FileRegion? {
@@ -66,7 +70,11 @@ public struct IOData {
     }
     
     func forceAsFileRegion() -> FileRegion {
-        return tryAsFileRegion()!
+        if let v = tryAsFileRegion() {
+            return v
+        } else {
+            fatalError("tried to decode as type \(FileRegion.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
+        }
     }
     
     func tryAsOther<T>(type: T.Type = T.self) -> T? {
@@ -78,7 +86,11 @@ public struct IOData {
     }
 
     func forceAsOther<T>(type: T.Type = T.self) -> T {
-        return tryAsOther(type: type)!
+        if let v = tryAsOther(type: type) {
+            return v
+        } else {
+            fatalError("tried to decode as type \(T.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
+        }
     }
 
     func forceAs<T>(type: T.Type = T.self) -> T {
