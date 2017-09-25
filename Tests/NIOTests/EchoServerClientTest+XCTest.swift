@@ -27,6 +27,8 @@ extension EchoServerClientTest {
    static var allTests : [(String, (EchoServerClientTest) -> () throws -> Void)] {
       return [
                 ("testEcho", testEcho),
+                ("testEchoUnixDomainSocket", testEchoUnixDomainSocket),
+                ("testConnectUnixDomainSocket", testConnectUnixDomainSocket),
                 ("testChannelActiveOnConnect", testChannelActiveOnConnect),
                 ("testWriteThenRead", testWriteThenRead),
                 ("testCloseInInactive", testCloseInInactive),
