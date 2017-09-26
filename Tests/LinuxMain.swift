@@ -24,6 +24,7 @@ import XCTest
 
 #if os(Linux) || os(FreeBSD)
    @testable import NIOTests
+   @testable import NIOOpenSSLTests
    @testable import NIOHTTP1Tests
 
    XCTMain([
@@ -40,6 +41,7 @@ import XCTest
          testCase(SocketAddressTest.allTests),
          testCase(FutureTest.allTests),
          testCase(EventLoopTest.allTests),
+         testCase(OpenSSLIntegrationTest.allTests),
          testCase(HTTPServerClientTest.allTests),
          testCase(HTTPHeadersTest.allTests),
          testCase(HTTPTest.allTests),
