@@ -333,6 +333,10 @@ private final class PendingWrites {
             } else {
                 self.pendingWrites[checkpoint].promise = promise
             }
+        } else if let promise = promise {
+            // No checkpoint index means this is a flush on empty, so we can
+            // satisfy it immediately.
+            promise.succeed(result: ())
         }
     }
 

@@ -32,6 +32,7 @@ extension EchoServerClientTest {
                 ("testChannelActiveOnConnect", testChannelActiveOnConnect),
                 ("testWriteThenRead", testWriteThenRead),
                 ("testCloseInInactive", testCloseInInactive),
+                ("testFlushOnEmpty", testFlushOnEmpty),
            ]
    }
 }

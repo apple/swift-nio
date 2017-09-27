@@ -380,4 +380,52 @@ class EchoServerClientTest : XCTestCase {
         XCTAssertTrue(handler.alreadyClosedInChannelInactive.load())
         XCTAssertTrue(handler.alreadyClosedInChannelUnregistered.load())
     }
+
+    func testFlushOnEmpty() throws {
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let writingBytes = "hello"
+        let bytesReceivedPromise: Promise<ByteBuffer> = group.next().newPromise()
+        let byteCountingHandler = ByteCountingHandler(numBytes: writingBytes.utf8.count, promise: bytesReceivedPromise)
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+                // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
+                return channel.pipeline.add(handler: byteCountingHandler)
+            })).bind(to: "127.0.0.1", on: 0).wait()
+
+        defer {
+            _ = try! serverChannel.close().wait()
+        }
+
+        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+        defer {
+            _ = clientChannel.close()
+        }
+
+        // First we confirm that the channel really is up by sending in the appropriate number of bytes.
+        var bytesToWrite = clientChannel.allocator.buffer(capacity: writingBytes.utf8.count)
+        bytesToWrite.write(string: writingBytes)
+        clientChannel.writeAndFlush(data: IOData(bytesToWrite), promise: nil)
+
+        // When we've received all the bytes we know the connection is up. Remove the handler.
+        _ = try bytesReceivedPromise.futureResult.then { _ in
+            clientChannel.pipeline.remove(handler: byteCountingHandler)
+        }.wait()
+
+        // Now, with an empty write pipeline, we want to flush. This should complete immediately and without error.
+        let flushFuture = clientChannel.flush()
+        flushFuture.whenComplete { result in
+            switch result {
+            case .success:
+                break
+            case .failure(let err):
+                XCTFail("\(err)")
+            }
+        }
+        try flushFuture.wait()
+    }
 }
