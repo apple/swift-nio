@@ -344,6 +344,24 @@ class EchoServerClientTest : XCTestCase {
         }
     }
 
+    /// A channel handler that calls write on connect.
+    private class WriteOnConnectHandler: ChannelInboundHandler {
+        typealias InboundIn = ByteBuffer
+
+        private let toWrite: String
+
+        init(toWrite: String) {
+            self.toWrite = toWrite
+        }
+
+        func channelActive(ctx: ChannelHandlerContext) {
+            var dataToWrite = ctx.channel!.allocator.buffer(capacity: toWrite.utf8.count)
+            dataToWrite.write(string: toWrite)
+            ctx.writeAndFlush(data: IOData(dataToWrite), promise: nil)
+            ctx.fireChannelActive()
+        }
+    }
+
     func testCloseInInactive() throws {
 
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
@@ -427,5 +445,70 @@ class EchoServerClientTest : XCTestCase {
             }
         }
         try flushFuture.wait()
+    }
+
+    func testWriteOnConnect() throws {
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+                return channel.pipeline.add(handler: EchoServer())
+            })).bind(to: "127.0.0.1", on: 0).wait()
+
+        defer {
+            _ = try! serverChannel.close().wait()
+        }
+
+        let stringToWrite = "hello"
+        let promise: Promise<ByteBuffer> = group.next().newPromise()
+        let clientChannel = try ClientBootstrap(group: group)
+            .handler(handler: ChannelInitializer(initChannel: { channel in
+                return channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite)).then { v2 in
+                    return channel.pipeline.add(handler: ByteCountingHandler(numBytes: stringToWrite.utf8.count, promise: promise))
+                }
+            }))
+            .connect(to: serverChannel.localAddress!).wait()
+        defer {
+            _ = clientChannel.close()
+        }
+
+        let bytes = try promise.futureResult.wait()
+        XCTAssertEqual(bytes.string(at: bytes.readerIndex, length: bytes.readableBytes), stringToWrite)
+    }
+
+    func testWriteOnAccept() throws {
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let stringToWrite = "hello"
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+                return channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite))
+            })).bind(to: "127.0.0.1", on: 0).wait()
+
+        defer {
+            _ = try! serverChannel.close().wait()
+        }
+
+        let promise: Promise<ByteBuffer> = group.next().newPromise()
+        let clientChannel = try ClientBootstrap(group: group)
+            .handler(handler: ChannelInitializer(initChannel: { channel in
+                return channel.pipeline.add(handler: ByteCountingHandler(numBytes: stringToWrite.utf8.count, promise: promise))
+            }))
+            .connect(to: serverChannel.localAddress!).wait()
+
+        defer {
+            _ = clientChannel.close()
+        }
+
+        let bytes = try promise.futureResult.wait()
+        XCTAssertEqual(bytes.string(at: bytes.readerIndex, length: bytes.readableBytes), stringToWrite)
     }
 }

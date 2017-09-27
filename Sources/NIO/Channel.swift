@@ -1206,13 +1206,14 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         assert(eventLoop.inEventLoop)
         assert(!closed)
 
-        if finishConnect() || flushNow() {
+        finishConnect()  // If we were connecting, that has finished.
+        if flushNow() {
             // Everything was written or connect was complete
             finishWritable()
         }
     }
 
-    private func finishConnect() -> Bool {
+    private func finishConnect() {
         if let connectPromise = pendingConnect {
             pendingConnect = nil
             do {
@@ -1221,9 +1222,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             } catch let error {
                 connectPromise.fail(error: error)
             }
-            return true
         }
-        return false
     }
 
     private func finishWritable() {

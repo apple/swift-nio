@@ -33,6 +33,8 @@ extension EchoServerClientTest {
                 ("testWriteThenRead", testWriteThenRead),
                 ("testCloseInInactive", testCloseInInactive),
                 ("testFlushOnEmpty", testFlushOnEmpty),
+                ("testWriteOnConnect", testWriteOnConnect),
+                ("testWriteOnAccept", testWriteOnAccept),
            ]
    }
 }
