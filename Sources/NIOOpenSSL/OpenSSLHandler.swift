@@ -143,8 +143,11 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
     public func close(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
         switch state {
         case .closing:
-            // We're in the process of TLS shutdown, so let's let that happen.
-            break
+            // We're in the process of TLS shutdown, so let's let that happen. However,
+            // we want to cascade the result of the first request into this new one.
+            if let promise = promise {
+                closePromise!.futureResult.cascade(promise: promise)
+            }
         case .idle:
             state = .closed
             fallthrough
@@ -178,12 +181,11 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
             // before we completed the handshake.
             doUnbufferWrites(ctx: ctx)
         case .failed(let err):
-            state = .closed
             writeDataToNetwork(ctx: ctx, promise: nil)
             
             // TODO(cory): This event should probably fire out of the OpenSSL info callback.
             ctx.fireUserInboundEventTriggered(event: wrapInboundUserEventOut(TLSUserEvent.handshakeFailed(err)))
-            ctx.close(promise: nil)
+            channelClose(ctx: ctx)
         }
     }
     
@@ -200,14 +202,11 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
 
             // TODO(cory): This should probably fire out of the OpenSSL info callback.
             ctx.fireUserInboundEventTriggered(event: wrapInboundUserEventOut(TLSUserEvent.cleanShutdown))
-            ctx.close(promise: closePromise)
+            channelClose(ctx: ctx)
         case .failed(let err):
-            state = .closed
-            // TODO(cory): We really need to log an error.
-
             // TODO(cory): This should probably fire out of the OpenSSL info callback.
             ctx.fireUserInboundEventTriggered(event: wrapInboundUserEventOut(TLSUserEvent.shutdownFailed(err)))
-            ctx.close(promise: closePromise)
+            channelClose(ctx: ctx)
         }
     }
     
@@ -230,8 +229,7 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
                 break readLoop
             case .failed(let err):
                 ctx.fireErrorCaught(error: err)
-                state = .closed
-                ctx.close(promise: nil)
+                channelClose(ctx: ctx)
             }
         }
     }
@@ -252,9 +250,8 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
             bufferedWrites.append((data: data, promise: promise))
         case .failed(let err):
             // TODO(cory): This is too aggressive.
-            state = .closed
+            channelClose(ctx: ctx)
             promise?.fail(error: err)
-            ctx.close(promise: nil)
         }
     }
     
@@ -287,10 +284,9 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
                 newBuffer.append((data: data, promise: promise))
             case .failed(let err):
                 // Once a write fails, all subsequent writes must fail.
-                state = .closed
+                channelClose(ctx: ctx)
                 promise?.fail(error: err)
                 originalError = err
-                ctx.close(promise: nil)
             }
         }
         
@@ -313,5 +309,17 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
         }
         
         ctx.writeAndFlush(data: self.wrapInboundOut(dataToWrite), promise: promise)
+    }
+
+    /// Close the underlying channel.
+    ///
+    /// This method does not perform any kind of I/O. Instead, it simply calls ChannelHandlerContext.close with
+    /// any promise we may have already been given. It also transitions our state into closed. This should only be
+    /// used to clean up after an error, or to perform the final call to close after a clean shutdown attempt.
+    private func channelClose(ctx: ChannelHandlerContext) {
+        state = .closed
+        let closePromise = self.closePromise
+        self.closePromise = nil
+        ctx.close(promise: closePromise)
     }
 }

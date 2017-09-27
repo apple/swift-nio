@@ -300,4 +300,59 @@ class OpenSSLIntegrationTest: XCTestCase {
 
         XCTAssertEqual(expectedEvents, serverHandler.events)
     }
+
+    func testMultipleClose() throws {
+        var serverClosed = false
+        let ctx = try configuredSSLContext()
+
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let completionPromise: Promise<ByteBuffer> = group.next().newPromise()
+
+        let serverChannel = try serverTLSChannel(withContext: ctx, andHandlers: [SimpleEchoServer()], onGroup: group)
+        defer {
+            if !serverClosed {
+                _ = try! serverChannel.close().wait()
+            }
+        }
+
+        let clientChannel = try clientTLSChannel(withContext: ctx,
+                                                 andHandler: PromiseOnReadHandler(promise: completionPromise),
+                                                 onGroup: group,
+                                                 connectingTo: serverChannel.localAddress!)
+        defer {
+            _ = try! clientChannel.close().wait()
+        }
+
+        var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
+        originalBuffer.write(string: "Hello")
+        try clientChannel.writeAndFlush(data: IOData(originalBuffer)).wait()
+
+        let newBuffer = try completionPromise.futureResult.wait()
+        XCTAssertEqual(newBuffer, originalBuffer)
+
+        // Ok, the connection is definitely up. Now we want to forcibly call close() on the channel several times with
+        // different promises. None of these will fire until clean shutdown happens, but we want to confirm that *all* of them
+        // fire.
+        //
+        // To avoid the risk of the I/O loop actually closing the connection before we're done, we need to hijack the
+        // I/O loop and issue all the closes on that thread. Otherwise, the channel will probably pull off the TLS shutdown
+        // before we get to the third call to close().
+        let promises: [Promise<Void>] = [group.next().newPromise(), group.next().newPromise(), group.next().newPromise()]
+        group.next().execute {
+            for promise in promises {
+                serverChannel.close(promise: promise)
+            }
+        }
+
+        _ = try! promises.first!.futureResult.wait()
+        serverClosed = true
+
+        for promise in promises {
+            XCTAssert(promise.futureResult.fulfilled)
+        }
+    }
 }

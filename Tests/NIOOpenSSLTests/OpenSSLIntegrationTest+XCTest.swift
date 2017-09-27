@@ -29,6 +29,7 @@ extension OpenSSLIntegrationTest {
                 ("testSimpleEcho", testSimpleEcho),
                 ("testHandshakeEventSequencing", testHandshakeEventSequencing),
                 ("testShutdownEventSequencing", testShutdownEventSequencing),
+                ("testMultipleClose", testMultipleClose),
            ]
    }
 }
