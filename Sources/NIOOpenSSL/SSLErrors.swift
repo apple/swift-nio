@@ -19,7 +19,7 @@ import OpenSSL
     import Glibc
 #endif
 
-public struct OpenSSLInternalError: Equatable {
+public struct OpenSSLInternalError: Equatable, CustomStringConvertible {
     let errorCode: u_long
 
     var errorMessage: String? {
@@ -27,6 +27,10 @@ public struct OpenSSLInternalError: Equatable {
             return String.init(cString: cErrorMessage)
         }
         return nil
+    }
+
+    public var description: String {
+        return"Error: \(errorCode) \(errorMessage ?? "")"
     }
 
     init(errorCode: u_long) {

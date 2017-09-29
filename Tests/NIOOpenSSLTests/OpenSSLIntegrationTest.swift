@@ -150,7 +150,7 @@ public final class EventRecorderHandler<UserEventType>: ChannelInboundHandler wh
     }
 }
 
-private func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, andHandlers: [ChannelHandler], onGroup: EventLoopGroup) throws -> Channel {
+internal func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, andHandlers: [ChannelHandler], onGroup: EventLoopGroup) throws -> Channel {
     return try ServerBootstrap(group: onGroup)
         .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
         .handler(childHandler: ChannelInitializer(initChannel: { channel in
@@ -165,7 +165,7 @@ private func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, andHandlers: [
         })).bind(to: "127.0.0.1", on: 0).wait()
 }
 
-private func clientTLSChannel(withContext: NIOOpenSSL.SSLContext,
+internal func clientTLSChannel(withContext: NIOOpenSSL.SSLContext,
                               preHandlers: [ChannelHandler],
                               postHandlers: [ChannelHandler],
                               onGroup: EventLoopGroup,
@@ -188,8 +188,8 @@ private func clientTLSChannel(withContext: NIOOpenSSL.SSLContext,
 }
 
 class OpenSSLIntegrationTest: XCTestCase {
-    static var cert: UnsafeMutablePointer<X509>!
-    static var key: UnsafeMutablePointer<EVP_PKEY>!
+    static var cert: OpenSSLCertificate!
+    static var key: OpenSSLPrivateKey!
     
     override class func setUp() {
         super.setUp()
@@ -199,10 +199,10 @@ class OpenSSLIntegrationTest: XCTestCase {
     }
     
     private func configuredSSLContext() throws -> NIOOpenSSL.SSLContext {
-        let ctx = SSLContext()!
-        try ctx.setLeafCertificate(OpenSSLIntegrationTest.cert)
-        try ctx.setPrivateKey(OpenSSLIntegrationTest.key)
-        try ctx.addRootCertificate(OpenSSLIntegrationTest.cert)
+        let config = TLSConfiguration.forServer(certificateChain: [.certificate(OpenSSLIntegrationTest.cert)],
+                                                privateKey: .privateKey(OpenSSLIntegrationTest.key),
+                                                trustRoots: .certificates([OpenSSLIntegrationTest.cert]))
+        let ctx = try SSLContext(configuration: config)
         return ctx
     }
     

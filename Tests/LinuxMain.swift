@@ -45,7 +45,10 @@ import XCTest
          testCase(MarkedCircularBufferTests.allTests),
          testCase(MessageToByteEncoderTest.allTests),
          testCase(OpenSSLIntegrationTest.allTests),
+         testCase(SSLCertificateTest.allTests),
+         testCase(SSLPrivateKeyTest.allTests),
          testCase(SocketAddressTest.allTests),
+         testCase(TLSConfigurationTest.allTests),
          testCase(TypeAssistedChannelHandlerTest.allTests),
     ])
 #endif

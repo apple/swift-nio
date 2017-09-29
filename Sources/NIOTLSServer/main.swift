@@ -29,9 +29,7 @@ private final class EchoHandler: ChannelInboundHandler {
     }
 }
 
-let sslContext = SSLContext()!
-sslContext.useCertificateChainFile(atPath: URL.init(string: "cert.pem")!)
-sslContext.usePrivateKeyFile(atPath: URL.init(string: "key.pem")!)
+let sslContext = try! SSLContext(configuration: TLSConfiguration.forServer(certificateChain: [.file("cert.pem")], privateKey: .file("key.pem")))
 
 
 let group = try MultiThreadedEventLoopGroup(numThreads: 1)
