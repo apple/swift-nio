@@ -68,8 +68,7 @@ extension ByteBuffer {
     @discardableResult
     public mutating func set(string: String, at index: Int, encoding: String.Encoding = .utf8) -> Int? {
         if encoding == .utf8 {
-            let bytes = Array(string.utf8)
-            return self.set(bytes: UnsafeRawBufferPointer(start: bytes, count: bytes.count), at: index)
+            return self.set(bytes: string.utf8, at: index)
         } else {
             if let data = string.data(using: encoding) {
                 return self.set(data: data, at: index)
@@ -112,7 +111,7 @@ extension ByteBuffer {
     }
 
     @discardableResult
-    public mutating func write(bytes: UnsafeRawBufferPointer) -> Int {
+    public mutating func write<S: Collection>(bytes: S) -> Int where S.Element == UInt8 {
         let written = set(bytes: bytes, at: self.writerIndex)
         self.moveWriterIndex(forwardBy: written)
         return written

@@ -736,4 +736,33 @@ class ByteBufferTest: XCTestCase {
         let actualString = String(bytes: actualData, encoding: .utf8)
         XCTAssertEqual(Array(repeating: str, count: 3).joined(), actualString)
     }
+
+    func testWriteABunchOfCollections() throws {
+        let overallData = "0123456789abcdef".data(using: .utf8)!
+        buf.write(bytes: "0123".utf8)
+        "4567".withCString { ptr in
+            ptr.withMemoryRebound(to: UInt8.self, capacity: 4) { ptr in
+                _ = buf.write(bytes: UnsafeBufferPointer<UInt8>(start: ptr, count: 4))
+            }
+        }
+        buf.write(bytes: Array("89ab".utf8))
+        buf.write(bytes: "cdef".data(using: .utf8)!)
+        let actual = buf.data(at: 0, length: buf.readableBytes)
+        XCTAssertEqual(overallData, actual)
+    }
+
+    func testSetABunchOfCollections() throws {
+        let overallData = "0123456789abcdef".data(using: .utf8)!
+        _ = buf.set(bytes: "0123".utf8, at: 0)
+        "4567".withCString { ptr in
+            ptr.withMemoryRebound(to: UInt8.self, capacity: 4) { ptr in
+                _ = buf.set(bytes: UnsafeBufferPointer<UInt8>(start: ptr, count: 4), at: 4)
+            }
+        }
+        _ = buf.set(bytes: Array("89ab".utf8), at: 8)
+        _ = buf.set(bytes: "cdef".data(using: .utf8)!, at: 12)
+        let actual = buf.data(at: 0, length: 16)
+        XCTAssertEqual(overallData, actual)
+    }
+
 }

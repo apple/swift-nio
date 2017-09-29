@@ -171,16 +171,21 @@ public struct ByteBuffer {
                     deallocator: .custom { _, _ in storageRef.release() })
     }
 
-    private mutating func set(bytes: UnsafeRawBufferPointer, at index: Index) -> Capacity {
-        let newEndIndex: Index = index + toIndex(bytes.count)
+    private mutating func set<S: Collection>(bytes: S, at index: Index) -> Capacity where S.Element == UInt8 {
+        let newEndIndex: Index = index + toIndex(Int(bytes.count))
         if !isKnownUniquelyReferenced(&self._storage) {
             let extraCapacity = newEndIndex > self._slice.upperBound ? newEndIndex - self._slice.upperBound : 0
             self.copyStorageAndRebase(extraCapacity: extraCapacity)
         }
 
         self.ensureAvailableCapacity(Capacity(bytes.count), at: index)
-        self._storage.bytes.advanced(by: Int(self._slice.lowerBound + index)).copyBytes(from: bytes.baseAddress!, count: bytes.count)
-        return toCapacity(bytes.count)
+        let base = self._storage.bytes.advanced(by: Int(self._slice.lowerBound + index)).assumingMemoryBound(to: UInt8.self)
+        var idx = 0
+        for b in bytes {
+            base[idx] = b
+            idx += 1
+        }
+        return toCapacity(Int(bytes.count))
     }
 
     // MARK: Public Core API
@@ -295,7 +300,7 @@ extension ByteBuffer: CustomStringConvertible {
 
 /* change types to the user visible `Int` */
 extension ByteBuffer {
-    public mutating func set(bytes: UnsafeRawBufferPointer, at index: Int) -> Int {
+    public mutating func set<S: Collection>(bytes: S, at index: Int) -> Int where S.Element == UInt8 {
         return Int(self.set(bytes: bytes, at: toIndex(index)))
     }
 
