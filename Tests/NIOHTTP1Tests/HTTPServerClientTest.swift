@@ -60,7 +60,7 @@ class HTTPServerClientTest : XCTestCase {
                     ctx.write(data: self.wrapOutboundOut(r), promise: nil)
                     var b = ctx.channel!.allocator.buffer(capacity: replyString.count)
                     b.write(string: replyString)
-                    ctx.writeAndFlush(data: self.wrapOutboundOut(.body(.last(buffer: b)))).whenComplete { r in
+                    ctx.write(data: self.wrapOutboundOut(.body(.last(buffer: b)))).whenComplete { r in
                         assertSuccess(r)
                         ctx.close().whenComplete { r in
                             assertSuccess(r)
@@ -70,18 +70,18 @@ class HTTPServerClientTest : XCTestCase {
                     var head = HTTPResponseHead(version: req.version, status: .ok)
                     head.headers.add(name: "Connection", value: "close")
                     let r = HTTPResponsePart.head(head)
-                    ctx.writeAndFlush(data: self.wrapOutboundOut(r)).whenComplete { r in
+                    ctx.write(data: self.wrapOutboundOut(r)).whenComplete { r in
                         assertSuccess(r)
                     }
                     var b = ctx.channel!.allocator.buffer(capacity: 1024)
                     for i in 1...10 {
                         b.clear()
                         b.write(string: "\(i)")
-                        ctx.writeAndFlush(data: self.wrapOutboundOut(.body(.more(buffer: b)))).whenComplete { r in
+                        ctx.write(data: self.wrapOutboundOut(.body(.more(buffer: b)))).whenComplete { r in
                             assertSuccess(r)
                         }
                     }
-                    ctx.writeAndFlush(data: self.wrapOutboundOut(.body(.last(buffer: nil)))).whenComplete { r in
+                    ctx.write(data: self.wrapOutboundOut(.body(.last(buffer: nil)))).whenComplete { r in
                         assertSuccess(r)
                         ctx.close().whenComplete { r in
                             assertSuccess(r)
@@ -94,6 +94,12 @@ class HTTPServerClientTest : XCTestCase {
                 XCTAssertNil(chunk)
             default:
                 XCTFail("wrong")
+            }
+        }
+
+        public func channelReadComplete(ctx: ChannelHandlerContext) {
+            ctx.flush().whenComplete {
+                assertSuccess($0)
             }
         }
     }
