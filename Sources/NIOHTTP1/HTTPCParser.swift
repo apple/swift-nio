@@ -265,6 +265,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
         let pending = self.pendingCallouts
         self.pendingCallouts = []
         pending.forEach { $0() }
+        ctx.fireChannelReadComplete()
     }
 
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
