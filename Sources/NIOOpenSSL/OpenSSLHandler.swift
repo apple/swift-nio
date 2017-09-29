@@ -264,7 +264,9 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
         var originalError: OpenSSLError? = nil
         var newBuffer: [BufferedWrite] = []
         
-        for var (data, promise) in bufferedWrites {
+        for bufferedWrite in bufferedWrites {
+            let promise = bufferedWrite.promise
+            var data = bufferedWrite.data
             if let err = originalError {
                 promise?.fail(error: err)
                 continue
