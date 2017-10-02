@@ -28,6 +28,7 @@ import XCTest
    @testable import NIOHTTP1Tests
 
    XCTMain([
+         testCase(MarkedCircularBufferTests.allTests),
          testCase(TypeAssistedChannelHandlerTest.allTests),
          testCase(CircularBufferTests.allTests),
          testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
