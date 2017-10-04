@@ -21,9 +21,7 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
     public typealias InboundUserEventOut = TLSUserEvent
-    
-    private typealias BufferedWrite = (data: ByteBuffer, promise: Promise<Void>?)
-    
+
     private enum ConnectionState {
         case idle
         case handshaking
@@ -35,12 +33,13 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
     private let context: SSLContext
     private var state: ConnectionState = .idle
     private var connection: SSLConnection? = nil
-    private var bufferedWrites: [BufferedWrite] = []
+    private var bufferedWrites: MarkedCircularBuffer<BufferedEvent>
     private var closePromise: Promise<Void>?
     private var didDeliverData: Bool = false
     
     public init (context: SSLContext) {
         self.context = context
+        self.bufferedWrites = MarkedCircularBuffer(initialRingCapacity: 96)  // 96 brings the total size of the buffer to just shy of one page
     }
     
     public func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: Promise<Void>?) {
@@ -136,8 +135,12 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
     }
     
     public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
-        var binaryData = unwrapOutboundIn(data)
-        doEncodeData(data: &binaryData, ctx: ctx, promise: promise)
+        bufferWrite(data: unwrapOutboundIn(data), promise: promise)
+    }
+
+    public func flush(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+        bufferFlush(promise: promise)
+        doUnbufferWrites(ctx: ctx)
     }
     
     public func close(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
@@ -234,82 +237,13 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
         }
     }
     
-    private func doEncodeData(data: inout ByteBuffer, ctx: ChannelHandlerContext, promise: Promise<Void>?) {
-        if state == .closing || state == .closed {
-            // We're either shutting down or shut down: no further encoded data is allowed.
-            promise?.fail(error: NIOOpenSSLError.writeDuringTLSShutdown)
-            return
-        }
-        
-        let result = connection!.writeDataToNetwork(&data)
-        switch result {
-        case .complete:
-            writeDataToNetwork(ctx: ctx, promise: promise)
-        case .incomplete:
-            // We need to buffer this write and retry it.
-            bufferedWrites.append((data: data, promise: promise))
-        case .failed(let err):
-            // TODO(cory): This is too aggressive.
-            channelClose(ctx: ctx)
-            promise?.fail(error: err)
-        }
-    }
-    
-    private func doUnbufferWrites(ctx: ChannelHandlerContext) {
-        // Early exit if there are no buffered writes.
-        if bufferedWrites.count == 0 {
-            return
-        }
-        
-        var originalError: OpenSSLError? = nil
-        var newBuffer: [BufferedWrite] = []
-        
-        for bufferedWrite in bufferedWrites {
-            let promise = bufferedWrite.promise
-            var data = bufferedWrite.data
-            if let err = originalError {
-                promise?.fail(error: err)
-                continue
-            } else if newBuffer.count > 0 {
-                newBuffer.append((data: data, promise: promise))
-                continue
-            }
-            
-            let result = connection!.writeDataToNetwork(&data)
-            
-            switch result {
-            case .complete:
-                writeDataToNetwork(ctx: ctx, promise: promise)
-            case .incomplete:
-                // We need to start a new buffer. At this point, all further writes
-                // must be buffered.
-                newBuffer.append((data: data, promise: promise))
-            case .failed(let err):
-                // Once a write fails, all subsequent writes must fail.
-                channelClose(ctx: ctx)
-                promise?.fail(error: err)
-                originalError = err
-            }
-        }
-        
-        bufferedWrites = newBuffer
-    }
-    
-    private func discardBufferedWrites(reason: Error) {
-        for (_, promise) in bufferedWrites {
-            promise?.fail(error:reason)
-        }
-        
-        bufferedWrites = []
-    }
-    
     private func writeDataToNetwork(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
         // There may be no data to write, in which case we can just exit early.
         guard let dataToWrite = connection!.getDataForNetwork(allocator: ctx.channel!.allocator) else {
-            assert(promise == nil, "Promise present for nonexistent write.")
+            promise?.succeed(result: ())
             return
         }
-        
+
         ctx.writeAndFlush(data: self.wrapInboundOut(dataToWrite), promise: promise)
     }
 
@@ -323,5 +257,118 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
         let closePromise = self.closePromise
         self.closePromise = nil
         ctx.close(promise: closePromise)
+    }
+}
+
+
+// MARK: Code that handles buffering/unbuffering writes.
+extension OpenSSLHandler {
+    private enum BufferedEvent {
+        case write(BufferedWrite)
+        case flush(Promise<Void>?)
+    }
+    private typealias BufferedWrite = (data: ByteBuffer, promise: Promise<Void>?)
+
+    private func bufferWrite(data: ByteBuffer, promise: Promise<Void>?) {
+        bufferedWrites.append(.write((data: data, promise: promise)))
+    }
+
+    private func bufferFlush(promise: Promise<Void>?) {
+        bufferedWrites.append(.flush(promise))
+        bufferedWrites.mark()
+    }
+
+    private func discardBufferedWrites(reason: Error) {
+        while bufferedWrites.count > 0 {
+            let promise: Promise<Void>?
+            switch bufferedWrites.removeFirst() {
+            case .write(_, let p):
+                promise = p
+            case .flush(let p):
+                promise = p
+            }
+
+            promise?.fail(error: reason)
+        }
+    }
+
+    private func doUnbufferWrites(ctx: ChannelHandlerContext) {
+        // Return early if the user hasn't called flush.
+        guard bufferedWrites.hasMark() else {
+            return
+        }
+
+        // These are some annoying variables we use to persist state across invocations of
+        // our closures. A better version of this code might be able to simplify this somewhat.
+        var writeCount = 0
+        var promises: [Promise<Void>] = []
+
+        /// Given a byte buffer to encode, passes it to OpenSSL and handles the result.
+        func encodeWrite(buf: inout ByteBuffer, promise: Promise<Void>?) throws -> Bool {
+            let result = connection!.writeDataToNetwork(&buf)
+
+            switch result {
+            case .complete:
+                if let promise = promise { promises.append(promise) }
+                writeCount += 1
+                return true
+            case .incomplete:
+                // Ok, we can't write. Let's stop.
+                // We believe this can only ever happen on the first attempt to write.
+                precondition(writeCount == 0, "Unexpected change in OpenSSL state during write unbuffering: write count \(writeCount)")
+                return false
+            case .failed(let err):
+                // Once a write fails, all writes must fail. This includes prior writes
+                // that successfully made it through OpenSSL.
+                throw err
+            }
+        }
+
+        /// Given a flush request, grabs the data from OpenSSL and flushes it to the network.
+        func flushData(userFlushPromise: Promise<Void>?) throws -> Bool {
+            // This is a flush. We can go ahead and flush now.
+            if let promise = userFlushPromise { promises.append(promise) }
+            let ourPromise: Promise<Void> = ctx.eventLoop.newPromise()
+            promises.forEach { ourPromise.futureResult.cascade(promise: $0) }
+            writeDataToNetwork(ctx: ctx, promise: ourPromise)
+            return true
+        }
+
+        do {
+            try bufferedWrites.forEachElementUntilMark { element in
+                switch element {
+                case .write(var d, let p):
+                    return try encodeWrite(buf: &d, promise: p)
+                case .flush(let p):
+                    return try flushData(userFlushPromise: p)
+                }
+            }
+        } catch {
+            // We encountered an error, it's cleanup time. Close ourselves down.
+            channelClose(ctx: ctx)
+            // Fail any writes we've previously encoded but not flushed.
+            promises.forEach { $0.fail(error: error) }
+            // Fail everything else.
+            bufferedWrites.forEachRemoving {
+                switch $0 {
+                case .write(_, let p), .flush(let p):
+                    p?.fail(error: error)
+                }
+            }
+        }
+    }
+}
+
+fileprivate extension MarkedCircularBuffer {
+    fileprivate mutating func forEachElementUntilMark(callback: (E) throws -> Bool) rethrows {
+        while try self.hasMark() && callback(self.first!) {
+            _ = self.removeFirst()
+        }
+    }
+
+    fileprivate mutating func forEachRemoving(callback: (E) -> Void) {
+        while self.count > 0 {
+            callback(self.removeFirst())
+        }
     }
 }

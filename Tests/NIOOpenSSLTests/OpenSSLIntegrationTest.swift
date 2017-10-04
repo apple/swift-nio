@@ -25,10 +25,12 @@ private final class SimpleEchoServer: ChannelInboundHandler {
     
     public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
         ctx.write(data: data, promise: nil)
+        ctx.fireChannelRead(data: data)
     }
     
     public func channelReadComplete(ctx: ChannelHandlerContext) {
         ctx.flush(promise: nil)
+        ctx.fireChannelReadComplete()
     }
 }
 
@@ -46,10 +48,24 @@ private final class PromiseOnReadHandler: ChannelInboundHandler {
     
     public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
         self.data = data
+        ctx.fireChannelRead(data: data)
     }
 
     public func channelReadComplete(ctx: ChannelHandlerContext) {
         promise.succeed(result: unwrapInboundIn(data!))
+        ctx.fireChannelReadComplete()
+    }
+}
+
+private final class WriteCountingHandler: ChannelOutboundHandler {
+    public typealias OutboundIn = Any
+    public typealias OutboundOut = Any
+
+    public var writeCount = 0
+
+    public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
+        writeCount += 1
+        ctx.write(data: data, promise: promise)
     }
 }
 
@@ -150,13 +166,23 @@ private func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, andHandlers: [
 }
 
 private func clientTLSChannel(withContext: NIOOpenSSL.SSLContext,
-                              andHandler: ChannelHandler,
+                              preHandlers: [ChannelHandler],
+                              postHandlers: [ChannelHandler],
                               onGroup: EventLoopGroup,
                               connectingTo: SocketAddress) throws -> Channel {
     return try ClientBootstrap(group: onGroup)
         .handler(handler: ChannelInitializer(initChannel: { channel in
-            return channel.pipeline.add(handler: OpenSSLHandler(context: withContext)).then(callback: { v2 in
-                return channel.pipeline.add(handler: andHandler)
+            let results = preHandlers.map { channel.pipeline.add(handler: $0) }
+
+            return (results.last ?? channel.eventLoop.newSucceedFuture(result: ())).then(callback: { v2 in
+                return channel.pipeline.add(handler: OpenSSLHandler(context: withContext)).then(callback: { v2 in
+                    let results = postHandlers.map { channel.pipeline.add(handler: $0) }
+
+                    // NB: This assumes that the futures will always fire in order. This is not necessarily guaranteed
+                    // but in the absence of a way to gather a complete set of Future results, there is no other
+                    // option.
+                    return results.last ?? channel.eventLoop.newSucceedFuture(result: ())
+                })
             })
         })).connect(to: connectingTo).wait()
 }
@@ -196,7 +222,8 @@ class OpenSSLIntegrationTest: XCTestCase {
         }
         
         let clientChannel = try clientTLSChannel(withContext: ctx,
-                                                 andHandler: PromiseOnReadHandler(promise: completionPromise),
+                                                 preHandlers: [],
+                                                 postHandlers: [PromiseOnReadHandler(promise: completionPromise)],
                                                  onGroup: group,
                                                  connectingTo: serverChannel.localAddress!)
         defer {
@@ -229,7 +256,8 @@ class OpenSSLIntegrationTest: XCTestCase {
         }
 
         let clientChannel = try clientTLSChannel(withContext: ctx,
-                                                 andHandler: SimpleEchoServer(),
+                                                 preHandlers: [],
+                                                 postHandlers: [SimpleEchoServer()],
                                                  onGroup: group,
                                                  connectingTo: serverChannel.localAddress!)
         defer {
@@ -272,7 +300,8 @@ class OpenSSLIntegrationTest: XCTestCase {
                                                  onGroup: group)
 
         let clientChannel = try clientTLSChannel(withContext: ctx,
-                                                 andHandler: SimpleEchoServer(),
+                                                 preHandlers: [],
+                                                 postHandlers: [SimpleEchoServer()],
                                                  onGroup: group,
                                                  connectingTo: serverChannel.localAddress!)
 
@@ -320,7 +349,8 @@ class OpenSSLIntegrationTest: XCTestCase {
         }
 
         let clientChannel = try clientTLSChannel(withContext: ctx,
-                                                 andHandler: PromiseOnReadHandler(promise: completionPromise),
+                                                 preHandlers: [],
+                                                 postHandlers: [PromiseOnReadHandler(promise: completionPromise)],
                                                  onGroup: group,
                                                  connectingTo: serverChannel.localAddress!)
         defer {
@@ -354,5 +384,107 @@ class OpenSSLIntegrationTest: XCTestCase {
         for promise in promises {
             XCTAssert(promise.futureResult.fulfilled)
         }
+    }
+
+    func testCoalescedWrites() throws {
+        let ctx = try configuredSSLContext()
+
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let recorderHandler = EventRecorderHandler<TLSUserEvent>()
+        let serverChannel = try serverTLSChannel(withContext: ctx, andHandlers: [SimpleEchoServer()], onGroup: group)
+        defer {
+            _ = try! serverChannel.close().wait()
+        }
+
+        let writeCounter = WriteCountingHandler()
+        let readPromise: Promise<ByteBuffer> = group.next().newPromise()
+        let clientChannel = try clientTLSChannel(withContext: ctx,
+                                                 preHandlers: [writeCounter],
+                                                 postHandlers: [PromiseOnReadHandler(promise: readPromise)],
+                                                 onGroup: group,
+                                                 connectingTo: serverChannel.localAddress!)
+        defer {
+            _ = try! clientChannel.close().wait()
+        }
+
+        // We're going to issue a number of small writes. Each of these should be coalesced together
+        // such that the underlying layer sees only one write for them. The total number of
+        // writes should be (after we flush) 3: one for Client Hello, one for Finished, and one
+        // for the coalesced writes.
+        var originalBuffer = clientChannel.allocator.buffer(capacity: 1)
+        originalBuffer.write(string: "A")
+        for _ in 0..<5 {
+            clientChannel.write(data: IOData(originalBuffer), promise: nil)
+        }
+
+        try clientChannel.flush().wait()
+        let writeCount = try readPromise.futureResult.then { _ in
+            // Here we're in the I/O loop, so we know that no further channel action will happen
+            // while we dispatch this callback. This is the perfect time to check how many writes
+            // happened.
+            return writeCounter.writeCount
+        }.wait()
+        XCTAssertEqual(writeCount, 3)
+    }
+
+    func testCoalescedWritesWithFutures() throws {
+        let ctx = try configuredSSLContext()
+
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let recorderHandler = EventRecorderHandler<TLSUserEvent>()
+        let serverChannel = try serverTLSChannel(withContext: ctx, andHandlers: [SimpleEchoServer()], onGroup: group)
+        defer {
+            _ = try! serverChannel.close().wait()
+        }
+
+        let clientChannel = try clientTLSChannel(withContext: ctx,
+                                                 preHandlers: [],
+                                                 postHandlers: [],
+                                                 onGroup: group,
+                                                 connectingTo: serverChannel.localAddress!)
+        defer {
+            _ = try! clientChannel.close().wait()
+        }
+
+        // We're going to issue a number of small writes. Each of these should be coalesced together
+        // and all their futures (along with the one for the flush) should fire, in order, with nothing
+        // missed.
+        var firedFutures: Array<Int> = []
+        var originalBuffer = clientChannel.allocator.buffer(capacity: 1)
+        originalBuffer.write(string: "A")
+        for index in 0..<5 {
+            let promise: Promise<Void> = group.next().newPromise()
+            promise.futureResult.whenComplete { result in
+                switch result {
+                case .success:
+                    XCTAssertEqual(firedFutures.count, index)
+                    firedFutures.append(index)
+                case .failure:
+                    XCTFail("Write promise failed: \(result)")
+                }
+            }
+            clientChannel.write(data: IOData(originalBuffer), promise: promise)
+        }
+
+        let flushPromise: Promise<Void> = group.next().newPromise()
+        flushPromise.futureResult.whenComplete { result in
+            switch result {
+            case .success:
+                XCTAssertEqual(firedFutures, [0, 1, 2, 3, 4])
+            case .failure:
+                XCTFail("Write promised failed: \(result)")
+            }
+        }
+        clientChannel.flush(promise: flushPromise)
+
+        try flushPromise.futureResult.wait()
     }
 }

@@ -30,6 +30,8 @@ extension OpenSSLIntegrationTest {
                 ("testHandshakeEventSequencing", testHandshakeEventSequencing),
                 ("testShutdownEventSequencing", testShutdownEventSequencing),
                 ("testMultipleClose", testMultipleClose),
+                ("testCoalescedWrites", testCoalescedWrites),
+                ("testCoalescedWritesWithFutures", testCoalescedWritesWithFutures),
            ]
    }
 }
