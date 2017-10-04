@@ -59,7 +59,8 @@ class HTTPServerClientTest : XCTestCase {
                     ctx.write(data: self.wrapOutboundOut(r), promise: nil)
                     var b = ctx.channel!.allocator.buffer(capacity: replyString.count)
                     b.write(string: replyString)
-                    ctx.write(data: self.wrapOutboundOut(.body(.last(buffer: b)))).whenComplete { r in
+                    ctx.write(data: self.wrapOutboundOut(.body(b)), promise: nil)
+                    ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
                         assertSuccess(r)
                         ctx.close().whenComplete { r in
                             assertSuccess(r)
@@ -76,11 +77,37 @@ class HTTPServerClientTest : XCTestCase {
                     for i in 1...10 {
                         b.clear()
                         b.write(string: "\(i)")
-                        ctx.write(data: self.wrapOutboundOut(.body(.more(buffer: b)))).whenComplete { r in
+                        ctx.write(data: self.wrapOutboundOut(.body(b))).whenComplete { r in
                             assertSuccess(r)
                         }
                     }
-                    ctx.write(data: self.wrapOutboundOut(.body(.last(buffer: nil)))).whenComplete { r in
+                    ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
+                        assertSuccess(r)
+                        ctx.close().whenComplete { r in
+                            assertSuccess(r)
+                        }
+                    }
+                case "/trailers":
+                    var head = HTTPResponseHead(version: req.version, status: .ok)
+                    head.headers.add(name: "Connection", value: "close")
+                    head.headers.add(name: "Transfer-Encoding", value: "chunked")
+                    let r = HTTPResponsePart.head(head)
+                    ctx.write(data: self.wrapOutboundOut(r)).whenComplete { r in
+                        assertSuccess(r)
+                    }
+                    var b = ctx.channel!.allocator.buffer(capacity: 1024)
+                    for i in 1...10 {
+                        b.clear()
+                        b.write(string: "\(i)")
+                        ctx.write(data: self.wrapOutboundOut(.body(b))).whenComplete { r in
+                            assertSuccess(r)
+                        }
+                    }
+
+                    var trailers = HTTPHeaders()
+                    trailers.add(name: "X-URL-Path", value: "/trailers")
+                    trailers.add(name: "X-Should-Trail", value: "sure")
+                    ctx.write(data: self.wrapOutboundOut(.end(trailers))).whenComplete { r in
                         assertSuccess(r)
                         ctx.close().whenComplete { r in
                             assertSuccess(r)
@@ -89,8 +116,8 @@ class HTTPServerClientTest : XCTestCase {
                 default:
                     XCTFail("received request to unknown URI \(req.uri)")
                 }
-            case .body(.last(let chunk)):
-                XCTAssertNil(chunk)
+            case .end(let trailers):
+                XCTAssertNil(trailers)
             default:
                 XCTFail("wrong")
             }
@@ -228,5 +255,56 @@ class HTTPServerClientTest : XCTestCase {
         try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
         accumulation.syncWaitForCompletion()
     }
+
+    func testSimpleGetTrailers() throws {
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let accumulation = ArrayAccumulationHandler<ByteBuffer> { bbs in
+            let expectedPrefix = "HTTP/1.1 200 OK\r\n"
+
+            // Due to header order being random, there are two possible appearances for the trailer.
+            let expectedSuffix1 = "0\r\nx-url-path: /trailers\r\nx-should-trail: sure\r\n\r\n"
+            let expectedSuffix2 = "0\r\nx-should-trail: sure\r\nx-url-path: /trailers\r\n\r\n"
+
+            let actual = bbs.allAsString() ?? "<nothing>"
+            XCTAssert(actual.hasPrefix(expectedPrefix))
+            XCTAssert(actual.hasSuffix(expectedSuffix1) || actual.hasSuffix(expectedSuffix2))
+            XCTAssert(actual.contains("\r\ntransfer-encoding: chunked\r\n"))
+        }
+        let numBytes = 16 * 1024
+        let httpHandler = SimpleHTTPServer()
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+                channel.pipeline.add(handler: HTTPRequestDecoder()).then {
+                    channel.pipeline.add(handler: HTTPResponseEncoder(allocator: channel.allocator)).then {
+                        channel.pipeline.add(handler: httpHandler)
+                    }
+                }
+            })).bind(to: "127.0.0.1", on: 0).wait()
+
+        defer {
+            _ = serverChannel.close()
+        }
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .handler(handler: accumulation)
+            .connect(to: serverChannel.localAddress!)
+            .wait()
+
+        defer {
+            _ = clientChannel.close()
+        }
+
+        var buffer = clientChannel.allocator.buffer(capacity: numBytes)
+        buffer.write(staticString: "GET /trailers HTTP/1.1\r\nHost: nio.net\r\n\r\n")
+
+        try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
+        accumulation.syncWaitForCompletion()
+    }
+
 
 }

@@ -75,40 +75,26 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
             response.headers.write(buffer: &self.scratchBuffer)
 
             ctx.write(data: self.wrapOutboundOut(self.scratchBuffer), promise: promise)
-        case .some(.body(.more(let buffer))):
+        case .some(.body(let buffer)):
             self.writeChunk(ctx: ctx, chunk: buffer, promise: promise)
-        case .some(.body(.last(let buffer))):
-            let (mW1, mW2): (Promise<()>?, Promise<()>?)
-
-            switch (self.isChunked, buffer, promise) {
-            case (true, .some(_), .some(let p)):
-                let (w1, w2) = (ctx.eventLoop.newPromise() as Promise<()>, ctx.eventLoop.newPromise() as Promise<()>)
-                w1.futureResult.and(w2.futureResult).then(callback: { _ in return () }).cascade(promise: p)
-                (mW1, mW2) = (w1, w2)
-            case (true, .none, .some(let p)):
-                /* we're chunked but don't have a buffer and the user's interested, let's just use the user's promise */
-                (mW1, mW2) = (nil, p)
-            case (false, .some(_), .some(let p)):
-                /* not chunked, so just use the user's promise for the actual data */
-                (mW1, mW2) = (p, nil)
-            case (false, .none, .some(let p)):
-                /* neither chunked nor a buffer (nothing to write) */
-                p.succeed(result: ())
-                (mW1, mW2) = (nil, nil)
-                return
-            case (_, _, .none):
-                /* user isn't interested, let's not bother even allocating promises */
-                (mW1, mW2) = (nil, nil)
-            }
-
-            if let buffer = buffer {
-                self.writeChunk(ctx: ctx, chunk: buffer, promise: mW1)
-            }
-
-            if self.isChunked {
+        case .some(.end(let trailers)):
+            switch (self.isChunked, promise) {
+            case (true, let p):
                 self.scratchBuffer.clear()
-                self.scratchBuffer.write(staticString: "0\r\n\r\n")
-                ctx.write(data: self.wrapOutboundOut(self.scratchBuffer), promise: mW2)
+                if let trailers = trailers {
+                    self.scratchBuffer.write(staticString: "0\r\n")
+                    trailers.write(buffer: &self.scratchBuffer)  // Includes trailing CRLF.
+                } else {
+                    self.scratchBuffer.write(staticString: "0\r\n\r\n")
+                }
+                ctx.write(data: self.wrapOutboundOut(self.scratchBuffer), promise: p)
+            case (false, .some(let p)):
+                // Not chunked so we have nothing to write. However, we don't want to satisfy this promise out-of-order
+                // so we issue a zero-length write down the chain.
+                let buf = ctx.channel!.allocator.buffer(capacity: 0)
+                ctx.write(data: self.wrapOutboundOut(buf), promise: p)
+            case (false, .none):
+                break
             }
         case .none:
             ctx.write(data: data, promise: promise)

@@ -37,19 +37,18 @@ private class HTTPHandler : ChannelInboundHandler {
                 responseHead.headers.add(name: "content-length", value: "12")
                 let response = HTTPResponsePart.head(responseHead)
                 ctx.write(data: self.wrapOutboundOut(response), promise: nil)
-            case .body(let content):
-                switch content {
-                case .more(_):
-                    break
-                case .last:
-                    let content = HTTPResponsePart.body(HTTPBodyContent.last(buffer: buffer!.slice()))
-                    if keepAlive {
-                        ctx.write(data: self.wrapOutboundOut(content), promise: nil)
-                    } else {
-                        ctx.write(data: self.wrapOutboundOut(content)).whenComplete(callback: { _ in
-                            ctx.close(promise: nil)
-                        })
-                    }
+            case .body:
+                break
+            case .end:
+                let content = HTTPResponsePart.body(buffer!.slice())
+                ctx.write(data: self.wrapOutboundOut(content), promise: nil)
+
+                if keepAlive {
+                    ctx.write(data: self.wrapOutboundOut(HTTPResponsePart.end(nil)), promise: nil)
+                } else {
+                    ctx.write(data: self.wrapOutboundOut(HTTPResponsePart.end(nil))).whenComplete(callback: { _ in
+                        ctx.close(promise: nil)
+                    })
                 }
             }
         }

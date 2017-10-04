@@ -34,17 +34,33 @@ private final class TestChannelInboundHandler: ChannelInboundHandler {
 
 class HTTPTest: XCTestCase {
 
-    func checkHTTPRequest(_ expected: HTTPRequestHead, body: String? = nil) throws {
-        try checkHTTPRequests([expected], body: body)
+    func checkHTTPRequest(_ expected: HTTPRequestHead, body: String? = nil, trailers: HTTPHeaders? = nil) throws {
+        try checkHTTPRequests([expected], body: body, trailers: trailers)
     }
 
-    func checkHTTPRequests(_ expecteds: [HTTPRequestHead], body: String? = nil) throws {
+    func checkHTTPRequests(_ expecteds: [HTTPRequestHead], body: String? = nil, trailers: HTTPHeaders? = nil) throws {
         func httpRequestStrForRequest(_ req: HTTPRequestHead) -> String {
             var s = "\(req.method) \(req.uri) HTTP/\(req.version.major).\(req.version.minor)\r\n"
             for (k, v) in req.headers {
                 s += "\(k): \(v)\r\n"
             }
-            if let body = body {
+            if trailers != nil {
+                s += "Transfer-Encoding: chunked\r\n"
+                s += "\r\n"
+                if let body = body {
+                    s += String(body.utf8.count, radix: 16)
+                    s += "\r\n"
+                    s += body
+                    s += "\r\n"
+                }
+                s += "0\r\n"
+                if let trailers = trailers {
+                    for (k, v) in trailers {
+                        s += "\(k): \(v)\r\n"
+                    }
+                }
+                s += "\r\n"
+            } else if let body = body {
                 let bodyData = body.data(using: .utf8)!
                 s += "Content-Length: \(bodyData.count)\r\n"
                 s += "\r\n"
@@ -55,7 +71,7 @@ class HTTPTest: XCTestCase {
             return s
         }
 
-        func sendAndCheckRequests(_ expecteds: [HTTPRequestHead], body: String?, sendStrategy: (String, EmbeddedChannel) throws -> Void) throws -> String? {
+        func sendAndCheckRequests(_ expecteds: [HTTPRequestHead], body: String?, trailers: HTTPHeaders?, sendStrategy: (String, EmbeddedChannel) throws -> Void) throws -> String? {
             var step = 0
             var index = 0
             let channel = EmbeddedChannel()
@@ -67,27 +83,19 @@ class HTTPTest: XCTestCase {
                 case .head(var req):
                     XCTAssertEqual((index * 2), step)
                     req.headers.remove(name: "Content-Length")
+                    req.headers.remove(name: "Transfer-Encoding")
                     XCTAssertEqual(expecteds[index], req)
                     step += 1
-                case .body(let chunk):
-                    switch chunk {
-                    case .more(var buffer):
-                        if bodyData == nil {
-                            bodyData = buffer.readData(length: buffer.readableBytes)!
-                        } else {
-                            bodyData!.append(buffer.readData(length: buffer.readableBytes)!)
-                        }
-                    case .last(let buffer):
-                        if var buffer = buffer {
-                            if bodyData == nil {
-                                bodyData = buffer.readData(length: buffer.readableBytes)!
-                            } else {
-                                bodyData!.append(buffer.readData(length: buffer.readableBytes)!)
-                            }
-                        }
-                        step += 1
-                        XCTAssertEqual(((index + 1) * 2), step)
+                case .body(var buffer):
+                    if bodyData == nil {
+                        bodyData = buffer.readData(length: buffer.readableBytes)!
+                    } else {
+                        bodyData!.append(buffer.readData(length: buffer.readableBytes)!)
                     }
+                case .end(let receivedTrailers):
+                    XCTAssertEqual(trailers, receivedTrailers)
+                    step += 1
+                    XCTAssertEqual(((index + 1) * 2), step)
                 }
                 return reqPart
             }).wait()
@@ -117,14 +125,14 @@ class HTTPTest: XCTestCase {
         }
 
         /* send all bytes in one go */
-        let bd1 = try sendAndCheckRequests(expecteds, body: body, sendStrategy: { (reqString, chan) in
+        let bd1 = try sendAndCheckRequests(expecteds, body: body, trailers: trailers, sendStrategy: { (reqString, chan) in
             var buf = chan.allocator.buffer(capacity: 1024)
             buf.write(string: reqString)
             try chan.writeInbound(data: buf)
         })
 
         /* send the bytes one by one */
-        let bd2 = try sendAndCheckRequests(expecteds, body: body, sendStrategy: { (reqString, chan) in
+        let bd2 = try sendAndCheckRequests(expecteds, body: body, trailers: trailers, sendStrategy: { (reqString, chan) in
             for c in reqString {
                 var buf = chan.allocator.buffer(capacity: 1024)
 
@@ -181,4 +189,10 @@ class HTTPTest: XCTestCase {
                              body: "1")
     }
 
+    func testChunkedBody() throws {
+        var trailers = HTTPHeaders()
+        trailers.add(name: "X-Key", value: "X-Value")
+        trailers.add(name: "Something", value: "Else")
+        try checkHTTPRequest(HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .POST, uri: "/"), body: "100", trailers: trailers)
+    }
 }

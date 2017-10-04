@@ -68,7 +68,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
         case .headerValue:
             assert(self.state.currentUri != nil, "URI not set before header field")
             let (index, length) = self.state.slice!
-            self.state.currentHeaders!.add(name: self.state.currentHeaderName!, value: cumulationBuffer!.string(at: index, length: length)!)
+            self.state.currentHeaders.add(name: self.state.currentHeaderName!, value: cumulationBuffer!.string(at: index, length: length)!)
             self.state.slice = nil
         case .url:
             assert(self.state.currentUri == nil)
@@ -82,7 +82,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
 
     private struct HTTPParserState {
         var dataAwaitingState: DataAwaitingState = .messageBegin
-        var currentHeaders: HTTPHeaders?
+        var currentHeaders: HTTPHeaders!
         var currentUri: String?
         var currentHeaderName: String?
         var slice: (readerIndex: Int, length: Int)?
@@ -103,8 +103,8 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
                 return nil
             }
             let version = HTTPVersion(major: parser!.pointee.http_major, minor: parser!.pointee.http_minor)
-            let request = HTTPRequestHead(version: version, method: method, uri: currentUri!, headers: currentHeaders!)
-            currentHeaders = nil
+            let request = HTTPRequestHead(version: version, method: method, uri: currentUri!, headers: currentHeaders)
+            currentHeaders = HTTPHeaders()
             return request
         }
     }
@@ -163,7 +163,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             
             let slice = handler.cumulationBuffer!.slice(at: index, length: len)!
             handler.pendingCallouts.append {
-                ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequestPart.body(HTTPBodyContent.more(buffer: slice))))
+                ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequestPart.body(slice)))
             }
             
             return 0
@@ -207,8 +207,9 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             handler.complete(state: handler.state.dataAwaitingState)
             handler.state.dataAwaitingState = .messageBegin
 
+            let trailers = handler.state.currentHeaders.count > 0 ? handler.state.currentHeaders : nil
             handler.pendingCallouts.append {
-                ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequestPart.body(.last(buffer: nil))))
+                ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPRequestPart.end(trailers)))
             }
             return 0
         }

@@ -33,6 +33,7 @@ extension HTTPTest {
                 ("testHTTPBody", testHTTPBody),
                 ("test1ByteHTTPBody", test1ByteHTTPBody),
                 ("testHTTPPipeliningWithBody", testHTTPPipeliningWithBody),
+                ("testChunkedBody", testChunkedBody),
            ]
    }
 }

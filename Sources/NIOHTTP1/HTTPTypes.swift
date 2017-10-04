@@ -46,7 +46,8 @@ public struct HTTPRequestHead: Equatable {
 
 public enum HTTPRequestPart {
     case head(HTTPRequestHead)
-    case body(HTTPBodyContent)
+    case body(ByteBuffer)
+    case end(HTTPHeaders?)
 }
 
 public extension HTTPRequestHead {
@@ -65,7 +66,8 @@ public extension HTTPRequestHead {
 
 public enum HTTPResponsePart {
     case head(HTTPResponseHead)
-    case body(HTTPBodyContent)
+    case body(ByteBuffer)
+    case end(HTTPHeaders?)
 }
 
 public struct HTTPResponseHead {
@@ -77,11 +79,6 @@ public struct HTTPResponseHead {
         self.version = version
         self.status = status
     }
-}
-
-public enum HTTPBodyContent {
-    case last(buffer: ByteBuffer?)
-    case more(buffer: ByteBuffer)
 }
 
 fileprivate typealias HTTPHeadersStorage = [String:[(String, String)]] // [lowerCasedName: [(originalCaseName, value)]
@@ -114,9 +111,19 @@ struct HTTPHeadersIterator : IteratorProtocol {
 }
 
 public struct HTTPHeaders : Sequence, CustomStringConvertible {
+
     // [lowerCasedName: [(originalCaseName, value)]
     private var storage: HTTPHeadersStorage = HTTPHeadersStorage()
     public var description: String { return storage.description }
+
+    // This is expressly *not* public because it doesn't do anything sensible:
+    // it doesn't return the number of header fields in the structure, just the number
+    // of unique header names. That's not really a useful question to ask, but we need it
+    // in NIOHTTP1 so we're adding it internally. At some point this type should be made
+    // to conform to Collection, and when that's done we can add something a bit more sensible.
+    var count: Int {
+        return storage.count
+    }
 
     public init(_ headers: [(String, String)] = []) {
         for (key, value) in headers {
