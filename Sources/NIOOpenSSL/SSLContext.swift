@@ -47,14 +47,10 @@ public final class SSLContext {
         SSL_CTX_setAutoECDH(ctx)
         assert(1 == SSL_CTX_set_default_verify_paths(ctx))
 
-        // TODO(cory): Oh god oh god what about OpenSSL 1.1 and the great opaquifying?
-        // This can only really be fixed by requiring that the modulemap for OpenSSL expose
-        // this flag in an appropriate function.
-        ctx.pointee.options |= UInt(
-            SSL_OP_NO_SSLv2 |
-            SSL_OP_NO_SSLv3 |
-            SSL_OP_NO_COMPRESSION
-        )
+        // It's not really very clear here, but this is the actual way to spell SSL_CTX_set_options in Swift code.
+        // Sadly, SSL_CTX_set_options is a macro, which means we cannot use it directly, and our modulemap doesn't
+        // reveal it in a helpful way, so we write it like this instead.
+        SSL_CTX_ctrl(ctx, SSL_CTRL_OPTIONS, Int(SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION), nil)
         
         sslContext = ctx
     }
