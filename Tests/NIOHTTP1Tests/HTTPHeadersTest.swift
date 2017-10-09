@@ -14,6 +14,7 @@
 
 import Foundation
 import XCTest
+@testable import NIO
 @testable import NIOHTTP1
 
 class HTTPHeadersTest : XCTestCase {
@@ -48,5 +49,26 @@ class HTTPHeadersTest : XCTestCase {
                 XCTFail("Unexpected key: \(key)")
             }
         }
+    }
+
+    func testWriteHeadersSeparately() {
+        let originalHeaders = [ ("User-Agent", "1"),
+                                ("host", "2"),
+                                ("X-SOMETHING", "3"),
+                                ("X-Something", "4"),
+                                ("SET-COOKIE", "foo=bar"),
+                                ("Set-Cookie", "buz=cux")]
+
+        let headers = HTTPHeaders(originalHeaders)
+        let channel = EmbeddedChannel()
+        var buffer = channel.allocator.buffer(capacity: 1024)
+        headers.write(buffer: &buffer)
+
+        let writtenBytes = buffer.string(at: buffer.readerIndex, length: buffer.readableBytes)!
+        XCTAssertTrue(writtenBytes.contains("user-agent: 1\r\n"))
+        XCTAssertTrue(writtenBytes.contains("host: 2\r\n"))
+        XCTAssertTrue(writtenBytes.contains("x-something: 3,4\r\n"))
+        XCTAssertTrue(writtenBytes.contains("set-cookie: foo=bar\r\n"))
+        XCTAssertTrue(writtenBytes.contains("set-cookie: buz=cux\r\n"))
     }
 }

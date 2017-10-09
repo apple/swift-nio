@@ -149,20 +149,39 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible {
 
     func write(buffer: inout ByteBuffer) {
         for (key, values) in storage {
-            buffer.write(string: key)
-            buffer.write(staticString: headerSeparator)
-
-            var writerIndex = buffer.writerIndex
-            for (_, value) in values {
-                buffer.write(string: value)
-                writerIndex = buffer.writerIndex
-                buffer.write(staticString: ",")
+            if key != "set-cookie" {
+                writeListHeaderValues(buffer: &buffer, key: key, values: values)
+            } else {
+                writeSequentialHeaderValues(buffer: &buffer, key: key, values: values)
             }
-            // Discard last ,
-            buffer.moveWriterIndex(to: writerIndex)
-            buffer.write(staticString: crlf)
         }
         buffer.write(staticString: crlf)
+    }
+
+    /// Used for most HTTP headers, which can be represented as a single line joined by commas.
+    private func writeListHeaderValues(buffer: inout ByteBuffer, key: String, values: [(String, String)]) {
+        buffer.write(string: key)
+        buffer.write(staticString: headerSeparator)
+
+        var writerIndex = buffer.writerIndex
+        for (_, value) in values {
+            buffer.write(string: value)
+            writerIndex = buffer.writerIndex
+            buffer.write(staticString: ",")
+        }
+        // Discard last ,
+        buffer.moveWriterIndex(to: writerIndex)
+        buffer.write(staticString: crlf)
+    }
+
+    /// Used for HTTP headers that cannot be joined with commas, e.g. set-cookie.
+    private func writeSequentialHeaderValues(buffer: inout ByteBuffer, key: String, values: [(String, String)]) {
+        for (_, value) in values {
+            buffer.write(string: key)
+            buffer.write(staticString: headerSeparator)
+            buffer.write(string: value)
+            buffer.write(staticString: crlf)
+        }
     }
 
     public func makeIterator() -> AnyIterator<(name: String, value: String)> {

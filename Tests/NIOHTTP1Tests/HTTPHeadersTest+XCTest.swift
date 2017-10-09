@@ -27,6 +27,7 @@ extension HTTPHeadersTest {
    static var allTests : [(String, (HTTPHeadersTest) -> () throws -> Void)] {
       return [
                 ("testCasePreservedButInsensitiveLookup", testCasePreservedButInsensitiveLookup),
+                ("testWriteHeadersSeparately", testWriteHeadersSeparately),
            ]
    }
 }
