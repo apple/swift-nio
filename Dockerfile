@@ -3,7 +3,7 @@ MAINTAINER tomerd@apple.com
 ENTRYPOINT /bin/bash
 
 # install dependencies
-RUN apt-get -y update && apt-get -y install curl git libicu-dev clang-3.8 libpython2.7-dev libxml2 python-lldb-3.9 wget
+RUN apt-get -y update && apt-get -y install curl git libicu-dev clang-3.8 libpython2.7-dev libxml2 python-lldb-3.9 wget libssl-dev
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-3.8 100
 RUN update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-3.8 100
 
