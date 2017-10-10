@@ -367,7 +367,13 @@ internal final class SelectableEventLoop : EventLoop {
 
                     let _ = scheduledTasks.pop()
                 }
+
                 tasksLock.unlock()
+                
+                // all pending tasks are set to occur in the future, so we can stop looping.
+                if tasksCopy.count == 0 {
+                    break
+                }
                 
                 // Execute all the tasks that were summited
                 while let task = tasksCopy.first {
