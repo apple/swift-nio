@@ -63,6 +63,29 @@ class EmbeddedChannelTest: XCTestCase {
         }
         XCTAssertFalse(try channel.finish())
     }
+
+    func testCloseMultipleTimesThrows() throws {
+        let channel = EmbeddedChannel()
+        _ = try channel.close().wait()
+
+        // Close a second time. This must fail.
+        do {
+            try _ = channel.close().wait()
+            XCTFail("Second close succeeded")
+        } catch ChannelError.alreadyClosed {
+            // Nothing to do here.
+        }
+    }
+
+    func testCloseOnInactiveIsOk() throws {
+        let channel = EmbeddedChannel()
+        let inactiveHandler = CloseInChannelInactiveHandler()
+        _ = try channel.pipeline.add(handler: inactiveHandler).wait()
+        _ = try channel.close().wait()
+
+        // channelInactive should fire only once.
+        XCTAssertEqual(inactiveHandler.inactiveNotifications, 1)
+    }
     
     private final class ExceptionThrowingInboundHandler : ChannelInboundHandler {
         typealias InboundIn = String
@@ -79,6 +102,16 @@ class EmbeddedChannelTest: XCTestCase {
         
         public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
             promise!.fail(error: ChannelError.messageUnsupported)
+        }
+    }
+
+    private final class CloseInChannelInactiveHandler: ChannelInboundHandler {
+        typealias InboundIn = ByteBuffer
+        public var inactiveNotifications = 0
+
+        public func channelInactive(ctx: ChannelHandlerContext) {
+            inactiveNotifications += 1
+            ctx.close(promise: nil)
         }
     }
 }

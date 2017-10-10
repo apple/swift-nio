@@ -78,7 +78,7 @@ class EmbeddedEventLoop : EventLoop {
 }
 
 class EmbeddedChannelCore : ChannelCore {
-    var closed: Bool { return closePromise.futureResult.fulfilled }
+    var closed: Bool = false
 
     
     var eventLoop: EventLoop = EmbeddedEventLoop()
@@ -92,14 +92,22 @@ class EmbeddedChannelCore : ChannelCore {
         self.pipeline = pipeline
     }
     
-    deinit { closePromise.succeed(result: ()) }
+    deinit {
+        closed = true
+        closePromise.succeed(result: ())
+    }
 
     var outboundBuffer: [Any] = []
     var inboundBuffer: [Any] = []
     
     func close0(error: Error, promise: Promise<Void>?) {
+        guard !closed else {
+            promise?.fail(error: ChannelError.alreadyClosed)
+            return
+        }
+        closed = true
         promise?.succeed(result: ())
-        
+
         // As we called register() in the constructor of EmbeddedChannel we also need to ensure we call unregistered here.
         pipeline.fireChannelInactive0()
         pipeline.fireChannelUnregistered0()
