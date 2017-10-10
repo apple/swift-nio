@@ -28,15 +28,15 @@ private func assertSuccess(_ f: FutureValue<()>, file: StaticString = #file, lin
 }
 
 extension Array where Array.Element == ByteBuffer {
-    public func allAsData() -> Data {
+    public func allAsBytes() -> [UInt8] {
         return self.flatMap {
             var bb = $0
-            return bb.readData(length: bb.readableBytes)
-            }.reduce(Data(), { $0 + $1 })
+            return bb.readBytes(length: bb.readableBytes)
+            }.reduce([], { $0 + $1 })
     }
     
     public func allAsString() -> String? {
-        return String(bytes: self.allAsData(), encoding: .utf8)
+        return String(decoding: self.allAsBytes(), as: UTF8.self)
     }
 }
 

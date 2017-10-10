@@ -29,7 +29,7 @@ class EchoServerClientTest : XCTestCase {
             }
         }
         templateBytes.removeLast()
-        let udsTempDir = String(bytes: templateBytes, encoding: .utf8)!
+        let udsTempDir = String(decoding: templateBytes, as: UTF8.self)
         return udsTempDir
     }
     

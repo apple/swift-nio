@@ -32,8 +32,6 @@ extension ByteBufferTest {
                 ("testSimpleWrites", testSimpleWrites),
                 ("testReadWrite", testReadWrite),
                 ("testStaticStringReadTests", testStaticStringReadTests),
-                ("testSetStringFailed", testSetStringFailed),
-                ("testWriteStringFailed", testWriteStringFailed),
                 ("testString", testString),
                 ("testSliceEasy", testSliceEasy),
                 ("testWriteStringMovesWriterIndex", testWriteStringMovesWriterIndex),
@@ -87,6 +85,11 @@ extension ByteBufferTest {
                 ("testSetAndWriteBytes", testSetAndWriteBytes),
                 ("testWriteABunchOfCollections", testWriteABunchOfCollections),
                 ("testSetABunchOfCollections", testSetABunchOfCollections),
+                ("testTryStringTooLong", testTryStringTooLong),
+                ("testSetGetBytesAllFine", testSetGetBytesAllFine),
+                ("testGetBytesTooLong", testGetBytesTooLong),
+                ("testReadWriteBytesOkay", testReadWriteBytesOkay),
+                ("testReadTooLong", testReadTooLong),
            ]
    }
 }

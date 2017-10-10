@@ -33,7 +33,7 @@ extension ByteBuffer {
     }
 
     public func integer<T: EndiannessInteger>(at index: Int, endianness: Endianness = Endianness.big) -> T? {
-        return self.withUnsafeBytes { ptr in
+        return self.withVeryUnsafeBytes { ptr in
             if index + MemoryLayout<T>.size > ptr.count {
                 return nil
             }

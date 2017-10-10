@@ -11,13 +11,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-//  swift-new-bytebuffer
-//
-//  Created by Johannes Weiß on 09/06/2017.
-//  Copyright © 2017 Apple Inc. All rights reserved.
-//
 
-import Foundation
+#if os(macOS) || os(tvOS) || os(iOS)
+    import Darwin
+#else
+    import Glibc
+#endif
 
 public struct ByteBufferAllocator {
     
@@ -161,16 +160,6 @@ public struct ByteBuffer {
         self._writerIndex = newIndex
     }
 
-    private func data(at index: Index, length: Capacity) -> Data? {
-        guard index + length <= self._slice.count else {
-            return nil
-        }
-        let storageRef = Unmanaged.passRetained(self._storage)
-        return Data(bytesNoCopy: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + index)),
-                    count: Int(length),
-                    deallocator: .custom { _, _ in storageRef.release() })
-    }
-
     private mutating func set<S: Collection>(bytes: S, at index: Index) -> Capacity where S.Element == UInt8 {
         let newEndIndex: Index = index + toIndex(Int(bytes.count))
         if !isKnownUniquelyReferenced(&self._storage) {
@@ -235,7 +224,9 @@ public struct ByteBuffer {
         return bytesWritten
     }
 
-    public func withUnsafeBytes<T>(_ fn: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
+    /// This vends a pointer to the storage of the `ByteBuffer`. It's marked as _very unsafe_ because it might contain
+    /// uninitialised memory and it's undefined behaviour to read it. In most cases you should use `withUnsafeReadableBytes`.
+    public func withVeryUnsafeBytes<T>(_ fn: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
         return try fn(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound)),
                                              count: self._slice.count))
     }
@@ -249,6 +240,12 @@ public struct ByteBuffer {
         let storageReference: Unmanaged<AnyObject> = Unmanaged.passUnretained(self._storage)
         return try fn(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
                                              count: self.readableBytes), storageReference)
+    }
+
+    public func withVeryUnsafeBytesWithStorageManagement<T>(_ fn: (UnsafeRawBufferPointer, Unmanaged<AnyObject>) throws -> T) rethrows -> T {
+        let storageReference: Unmanaged<AnyObject> = Unmanaged.passUnretained(self._storage)
+        return try fn(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound)),
+                                             count: self._slice.count), storageReference)
     }
 
     public func slice(at index: Int, length: Int) -> ByteBuffer? {
@@ -300,12 +297,9 @@ extension ByteBuffer: CustomStringConvertible {
 
 /* change types to the user visible `Int` */
 extension ByteBuffer {
+    @discardableResult
     public mutating func set<S: Collection>(bytes: S, at index: Int) -> Int where S.Element == UInt8 {
         return Int(self.set(bytes: bytes, at: toIndex(index)))
-    }
-
-    public func data(at index: Int, length: Int) -> Data? {
-        return self.data(at: toIndex(index), length: toCapacity(length))
     }
 
     public mutating func moveReaderIndex(forwardBy offset: Int) {

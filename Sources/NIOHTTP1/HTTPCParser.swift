@@ -232,7 +232,7 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
             buffer.moveReaderIndex(forwardBy: state.readerIndexAdjustment)
         }
         
-        let result = try buffer.withUnsafeBytes { (pointer) -> size_t in
+        let result = try buffer.withVeryUnsafeBytes { (pointer) -> size_t in
             state.baseAddress = pointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
             
             let result = state.baseAddress!.withMemoryRebound(to: Int8.self, capacity: pointer.count, { p in
@@ -278,15 +278,6 @@ public final class HTTPRequestDecoder : ByteToMessageDecoder {
 
 private func evacuateContext(_ opaqueContext: UnsafeMutablePointer<http_parser>!) -> ChannelHandlerContext {
     return Unmanaged.fromOpaque(opaqueContext.pointee.data).takeUnretainedValue()
-}
-
-extension ByteBuffer {
-
-    func string(at index: Int, length: Int) -> String? {
-        return withUnsafeBytes { pointer in
-            return String(bytes: UnsafeBufferPointer(start: pointer.baseAddress?.assumingMemoryBound(to: UInt8.self).advanced(by: index), count: length), encoding: .utf8)
-        }
-    }
 }
 
 extension HTTPParserError {

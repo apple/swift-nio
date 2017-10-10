@@ -12,32 +12,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
+#if os(macOS) || os(tvOS) || os(iOS)
+    import Darwin
+#else
+    import Glibc
+#endif
 
 extension ByteBuffer {
 
-    // MARK: Data APIs
-    public mutating func readData(length: Int) -> Data? {
+    // MARK: Bytes ([UInt8]) APIs
+    public func bytes(at index: Int, length: Int) -> [UInt8]? {
+        guard index + length <= self.capacity else {
+            return nil
+        }
+
+        return self.withVeryUnsafeBytes { ptr in
+            Array.init(UnsafeBufferPointer<UInt8>(start: ptr.baseAddress?.advanced(by: index).assumingMemoryBound(to: UInt8.self),
+                                                  count: length))
+        }
+    }
+
+    public mutating func readBytes(length: Int) -> [UInt8]? {
         guard self.readableBytes >= length else {
             return nil
         }
-        let data = self.data(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
-        self.moveReaderIndex(forwardBy: length)
-        return data
-    }
-
-    @discardableResult
-    public mutating func write(data: Data) -> Int {
-        let bytesWritten = self.set(data: data, at: self.writerIndex)
-        self.moveWriterIndex(forwardBy: bytesWritten)
-        return bytesWritten
-    }
-
-    @discardableResult
-    public mutating func set(data: Data, at index: Int) -> Int {
-        return data.withUnsafeBytes { ptr in
-            self.set(bytes: UnsafeRawBufferPointer(start: ptr, count: data.count), at: index)
+        defer {
+            self.moveReaderIndex(forwardBy: length)
         }
+        return self.bytes(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
     }
 
     // MARK: StaticString APIs
@@ -56,8 +58,8 @@ extension ByteBuffer {
 
     // MARK: String APIs
     @discardableResult
-    public mutating func write(string: String, encoding: String.Encoding = .utf8) -> Int? {
-        if let written = self.set(string: string, at: self.writerIndex, encoding: encoding) {
+    public mutating func write(string: String) -> Int? {
+        if let written = self.set(string: string, at: self.writerIndex) {
             self.moveWriterIndex(forwardBy: written)
             return written
         } else {
@@ -66,25 +68,17 @@ extension ByteBuffer {
     }
 
     @discardableResult
-    public mutating func set(string: String, at index: Int, encoding: String.Encoding = .utf8) -> Int? {
-        if encoding == .utf8 {
-            return self.set(bytes: string.utf8, at: index)
-        } else {
-            if let data = string.data(using: encoding) {
-                return self.set(data: data, at: index)
-            } else {
-                return nil
-            }
-        }
+    public mutating func set(string: String, at index: Int) -> Int? {
+        return self.set(bytes: string.utf8, at: index)
     }
 
-    
-    public func string(at index: Int, length: Int, encoding: String.Encoding = .utf8) -> String? {
-        return withUnsafeBytes { pointer in
+    public func string(at index: Int, length: Int) -> String? {
+        return withVeryUnsafeBytes { pointer in
             if index + length > pointer.count {
                 return nil
             }
-            return String(bytes: UnsafeBufferPointer(start: pointer.baseAddress?.assumingMemoryBound(to: UInt8.self).advanced(by: index), count: length), encoding: encoding)
+            return String(decoding: UnsafeBufferPointer(start: pointer.baseAddress?.assumingMemoryBound(to: UInt8.self).advanced(by: index), count: length),
+                          as: UTF8.self)
         }
     }
 
