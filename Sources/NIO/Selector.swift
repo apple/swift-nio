@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-
 #if os(Linux)
     import CEpoll
     import CEventfd

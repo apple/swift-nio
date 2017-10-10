@@ -11,9 +11,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import Foundation
 import NIO
 import NIOHTTP1
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+    import Darwin
+#elseif os(Linux)
+    import Glibc
+#endif
 
 private class HTTPHandler : ChannelInboundHandler {
     public typealias InboundIn = HTTPRequestPart

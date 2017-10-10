@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import NIO
+import Foundation // TODO(JW): investigate linker errors if this is missing
 
 public final class HTTPResponseEncoder : ChannelOutboundHandler {
     public typealias OutboundIn = HTTPResponsePart

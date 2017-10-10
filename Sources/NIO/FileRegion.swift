@@ -12,8 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+    import Darwin
+#elseif os(Linux)
+    import Glibc
+#endif
 
 public final class FileRegion {
     public let descriptor: Int32

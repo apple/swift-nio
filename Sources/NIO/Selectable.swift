@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-
 protocol Selectable {
     var descriptor: Int32 { get }
 

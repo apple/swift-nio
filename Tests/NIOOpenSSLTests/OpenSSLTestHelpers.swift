@@ -12,9 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import OpenSSL
-
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+    import Darwin
+#elseif os(Linux)
+    import Glibc
+#endif
 
 // This function generates a random number suitable for use in an X509
 // serial field. This needs to be a positive number less than 2^159

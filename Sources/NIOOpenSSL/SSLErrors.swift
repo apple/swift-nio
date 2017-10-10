@@ -12,8 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import OpenSSL
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+    import Darwin
+#elseif os(Linux)
+    import Glibc
+#endif
 
 public struct OpenSSLInternalError: Equatable {
     let errorCode: u_long

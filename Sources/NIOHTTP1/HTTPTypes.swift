@@ -12,9 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import NIO
-
 
 let crlf: StaticString = "\r\n"
 let headerSeparator: StaticString = ": "

@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-
 public protocol ChannelOption {
     associatedtype AssociatedValueType
     associatedtype OptionType

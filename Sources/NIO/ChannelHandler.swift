@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-
 public protocol ChannelHandler : class {
     func handlerAdded(ctx: ChannelHandlerContext) throws
     func handlerRemoved(ctx: ChannelHandlerContext) throws

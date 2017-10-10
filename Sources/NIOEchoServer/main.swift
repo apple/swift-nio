@@ -11,9 +11,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import Foundation
 import NIO
-
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+    import Darwin
+#elseif os(Linux)
+    import Glibc
+#endif
 
 private final class EchoHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer

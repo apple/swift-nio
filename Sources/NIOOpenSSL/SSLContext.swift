@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
+import Foundation // for URL
 import NIO
 import OpenSSL
 

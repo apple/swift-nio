@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import XCTest
 @testable import NIO
 
@@ -30,8 +29,7 @@ class FileRegionTest : XCTestCase {
         for i in 0..<numBytes {
             content.append("\(i)")
         }
-        let bytes = content.data(using: .ascii)!
-
+        let bytes = Array(content.utf8)
         
         let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().newPromise())
 
@@ -67,7 +65,7 @@ class FileRegionTest : XCTestCase {
         try clientChannel.writeAndFlush(data: IOData(FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count))).wait()
             
         var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
-        buffer.write(data: bytes)
+        buffer.write(bytes: bytes)
         try countingHandler.assertReceived(buffer: buffer)
     }
 

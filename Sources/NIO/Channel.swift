@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import ConcurrencyHelpers
 
 #if os(Linux)

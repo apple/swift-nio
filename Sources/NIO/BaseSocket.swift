@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-
 #if os(Linux)
     import Glibc
     let sysBind = Glibc.bind

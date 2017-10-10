@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import XCTest
 import ConcurrencyHelpers
 import NIO

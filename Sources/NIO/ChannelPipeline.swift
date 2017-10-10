@@ -12,9 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-
-
 /*
  All operations on ChannelPipeline are thread-safe
  */

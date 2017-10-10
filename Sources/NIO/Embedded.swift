@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import Dispatch
 
 class EmbeddedEventLoop : EventLoop {

@@ -12,9 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-
-
 #if os(Linux)
 import Glibc
 let sysWrite = Glibc.write
@@ -91,10 +88,6 @@ final class Socket : BaseSocket {
         }
     }
     
-    func write(data: Data) throws -> IOResult<Int> {
-        return try data.withUnsafeBytes({ try write(pointer: $0, size: data.count) })
-    }
-
     func write(pointer: UnsafePointer<UInt8>, size: Int) throws -> IOResult<Int> {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't write to socket as it's not open anymore.")
@@ -114,10 +107,6 @@ final class Socket : BaseSocket {
         }
     }
     
-    func read(data: inout Data) throws -> IOResult<Int> {
-        return try data.withUnsafeMutableBytes({ try read(pointer: $0, size: data.count) })
-    }
-
     func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> IOResult<Int> {
         guard self.open else {
             throw IOError(errno: EBADF, reason: "can't read from socket as it's not open anymore.")

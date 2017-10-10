@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
     import Darwin
 #elseif os(Linux)

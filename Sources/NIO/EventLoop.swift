@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import ConcurrencyHelpers
-import SwiftPriorityQueue
 import Dispatch
+import Foundation // for Thread
+import SwiftPriorityQueue
 
 public struct Scheduled<T> {
     private let promise: Promise<T>

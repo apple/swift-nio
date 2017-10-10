@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
+import Foundation // for Data
 import XCTest
 @testable import NIO
 

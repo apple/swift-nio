@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import OpenSSL
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)

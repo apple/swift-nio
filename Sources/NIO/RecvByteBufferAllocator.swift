@@ -20,9 +20,6 @@
 //
 //
 
-import Foundation
-
-
 public protocol RecvByteBufferAllocator {
     func buffer(allocator: ByteBufferAllocator) throws -> ByteBuffer
     

@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-
 public final class ServerBootstrap {
     
     private let group: EventLoopGroup
