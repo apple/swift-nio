@@ -88,15 +88,9 @@ extension HTTPRequestHead {
 public struct HTTPResponseHead : Equatable {
     public let status: HTTPResponseStatus
     public let version: HTTPVersion
-    public var headers: HTTPHeaders = HTTPHeaders()
+    public var headers: HTTPHeaders
 
-    public init(version: HTTPVersion, status: HTTPResponseStatus) {
-        self.version = version
-        self.status = status
-    }
-    
-    
-    init(version: HTTPVersion, status: HTTPResponseStatus, headers: HTTPHeaders) {
+    public init(version: HTTPVersion, status: HTTPResponseStatus, headers: HTTPHeaders = HTTPHeaders()) {
         self.version = version
         self.status = status
         self.headers = headers

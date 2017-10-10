@@ -96,7 +96,7 @@ public class EventLoopTest : XCTestCase {
         // Do not ignore intermittent failures in this test!
         let threads = 8
         let numBytes = 256
-        let group = try MultiThreadedEventLoopGroup(numThreads: threads)
+        let group = MultiThreadedEventLoopGroup(numThreads: threads)
 
         // Create a server channel.
         let serverChannel = try ServerBootstrap(group: group)
