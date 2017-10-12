@@ -19,8 +19,8 @@ $ docker run -it -v `pwd`:/code -w /code swift-nio bash
 
 ```
 # do your thing
-$ swift build
-$ swift test
+$ ./swiftw build
+$ ./swiftw test
 ```
 
 **testing on linux**
