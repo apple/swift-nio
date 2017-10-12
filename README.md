@@ -7,7 +7,7 @@
 
 ```
 # create the docker image for linux (one time or when dockerfile changes)
-$ docker build . --build-arg version=$(cat .swift-version) -t=nio
+$ docker build . --build-arg version=4.0 -t=nio
 ```
 
 **using the linux docker image**
