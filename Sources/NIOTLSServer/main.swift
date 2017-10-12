@@ -12,9 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation // for URL
+import struct Foundation.URL
 import NIO
 import NIOOpenSSL
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+    import Darwin
+#elseif os(Linux)
+    import Glibc
+#endif
 
 private final class EchoHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer

@@ -14,8 +14,13 @@
 
 import ConcurrencyHelpers
 import Dispatch
-import Foundation // for Thread
+import class Foundation.Thread
 import SwiftPriorityQueue
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+    import Darwin
+#else
+    import Glibc
+#endif
 
 public struct Scheduled<T> {
     private let promise: Promise<T>

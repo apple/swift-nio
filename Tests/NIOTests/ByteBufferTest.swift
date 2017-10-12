@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation // for Data
+import struct Foundation.Data
 import XCTest
 @testable import NIO
 

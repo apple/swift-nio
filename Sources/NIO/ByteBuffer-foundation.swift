@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
+import struct Foundation.Data
 
 extension ByteBuffer {
 

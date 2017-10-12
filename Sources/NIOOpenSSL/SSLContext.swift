@@ -12,7 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation // for URL
+import struct Foundation.URL
+import struct Foundation.ObjCBool
+import class Foundation.FileManager
 import NIO
 import OpenSSL
 

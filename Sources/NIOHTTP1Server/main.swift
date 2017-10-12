@@ -13,10 +13,14 @@
 //===----------------------------------------------------------------------===//
 import NIO
 import NIOHTTP1
+import class Foundation.FileManager
+import class Foundation.NSData
+import struct Foundation.Data
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-    import Darwin
-#elseif os(Linux)
-    import Glibc
+import Darwin
+import struct Foundation.NSFileManager.FileAttributeKey
+#else
+import Glibc
 #endif
 
 private class HTTPHandler : ChannelInboundHandler {
