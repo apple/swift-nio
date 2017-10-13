@@ -46,5 +46,6 @@ import XCTest
          testCase(HTTPServerClientTest.allTests),
          testCase(HTTPHeadersTest.allTests),
          testCase(HTTPTest.allTests),
+         testCase(HTTPEncoderTests.allTests),
     ])
 #endif

@@ -62,10 +62,8 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
     public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
         switch self.tryUnwrapOutboundIn(data) {
         case .some(.head(var response)):
-            self.isChunked = response.headers["Content-Length"].count == 0
-            if self.isChunked {
-                response.headers.replaceOrAdd(name: "Transfer-Encoding", value: "chunked")
-            }
+            sanitizeTransportHeaders(status: response.status, headers: &response.headers)
+            self.isChunked = response.headers["transfer-encoding"].contains("chunked")
 
             self.scratchBuffer.clear()
             response.version.write(buffer: &self.scratchBuffer)
@@ -98,6 +96,21 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
             }
         case .none:
             ctx.write(data: data, promise: promise)
+        }
+    }
+
+    /// Adjusts the response headers to ensure that the response will be well-framed.
+    ///
+    /// This method strips Content-Length and Transfer-Encoding headers from responses that must
+    /// not have a body. It also adds Transfer-Encoding headers to responses that do have bodies
+    /// but do not have any other transport headers. This ensures that we can always safely
+    /// reuse a connection.
+    private func sanitizeTransportHeaders(status: HTTPResponseStatus, headers: inout HTTPHeaders) {
+        if !status.mayHaveResponseBody {
+            headers.remove(name: "content-length")
+            headers.remove(name: "transfer-encoding")
+        } else if headers["content-length"].count == 0 {
+            headers.replaceOrAdd(name: "transfer-encoding", value: "chunked")
         }
     }
 }

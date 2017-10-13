@@ -776,6 +776,19 @@ public enum HTTPResponseStatus: Equatable {
     case loopDetected
     case notExtended
     case networkAuthenticationRequired
+
+    public var mayHaveResponseBody: Bool {
+        switch self {
+        case .`continue`,
+             .switchingProtocols,
+             .processing,
+             .noContent,
+             .custom where (code < 200) && (code >= 100):
+            return false
+        default:
+            return true
+        }
+    }
 }
 
 public func ==(lhs: HTTPResponseStatus, rhs: HTTPResponseStatus) -> Bool {
