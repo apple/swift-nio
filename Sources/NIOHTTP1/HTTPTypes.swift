@@ -192,6 +192,23 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible {
     public func makeIterator() -> AnyIterator<(name: String, value: String)> {
         return AnyIterator(HTTPHeadersIterator(wrapping: storage.makeIterator()))
     }
+
+    /// Retrieves the header values for the given header field in "canonical form": that is,
+    /// splitting them on commas as extensively as possible such that multiple values received on the
+    /// one line are returned as separate entries. Also respects the fact that Set-Cookie should not
+    /// be split in this way.
+    public func getCanonicalForm(_ name: String) -> [String] {
+        // It's not safe to split Set-Cookie on comma.
+        let queryName = name.lowercased()
+        if queryName == "set-cookie" {
+            return self[name]
+        }
+
+        if let result = storage[queryName] {
+            return result.map { tuple in tuple.1.split(separator: ",").map { substring in String(substring).trimmingCharacters(in: .whitespaces) } }.reduce([], +)
+        }
+        return []
+    }
 }
 
 extension HTTPHeaders : Equatable {

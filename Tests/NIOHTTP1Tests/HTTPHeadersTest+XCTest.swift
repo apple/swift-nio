@@ -28,6 +28,9 @@ extension HTTPHeadersTest {
       return [
                 ("testCasePreservedButInsensitiveLookup", testCasePreservedButInsensitiveLookup),
                 ("testWriteHeadersSeparately", testWriteHeadersSeparately),
+                ("testRevealHeadersSeparately", testRevealHeadersSeparately),
+                ("testSubscriptDoesntSplitHeaders", testSubscriptDoesntSplitHeaders),
+                ("testCanonicalisationDoesntHappenForSetCookie", testCanonicalisationDoesntHappenForSetCookie),
            ]
    }
 }

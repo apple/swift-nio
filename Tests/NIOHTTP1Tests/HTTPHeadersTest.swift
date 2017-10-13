@@ -70,4 +70,43 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertTrue(writtenBytes.contains("set-cookie: foo=bar\r\n"))
         XCTAssertTrue(writtenBytes.contains("set-cookie: buz=cux\r\n"))
     }
+
+    func testRevealHeadersSeparately() {
+        let originalHeaders = [ ("User-Agent", "1"),
+                                ("host", "2"),
+                                ("X-SOMETHING", "3, 4"),
+                                ("X-Something", "5")]
+
+        let headers = HTTPHeaders(originalHeaders)
+        XCTAssertEqual(headers.getCanonicalForm("user-agent"), ["1"])
+        XCTAssertEqual(headers.getCanonicalForm("host"), ["2"])
+        XCTAssertEqual(headers.getCanonicalForm("x-something"), ["3", "4", "5"])
+        XCTAssertEqual(headers.getCanonicalForm("foo"), [])
+    }
+
+    func testSubscriptDoesntSplitHeaders() {
+        let originalHeaders = [ ("User-Agent", "1"),
+                                ("host", "2"),
+                                ("X-SOMETHING", "3, 4"),
+                                ("X-Something", "5")]
+
+        let headers = HTTPHeaders(originalHeaders)
+        XCTAssertEqual(headers["user-agent"], ["1"])
+        XCTAssertEqual(headers["host"], ["2"])
+        XCTAssertEqual(headers["x-something"], ["3, 4", "5"])
+        XCTAssertEqual(headers["foo"], [])
+    }
+
+    func testCanonicalisationDoesntHappenForSetCookie() {
+        let originalHeaders = [ ("User-Agent", "1"),
+                                ("host", "2"),
+                                ("Set-Cookie", "foo=bar; expires=Sun, 17-Mar-2013 13:49:50 GMT"),
+                                ("Set-Cookie", "buz=cux; expires=Fri, 13 Oct 2017 21:21:41 GMT")]
+
+        let headers = HTTPHeaders(originalHeaders)
+        XCTAssertEqual(headers.getCanonicalForm("user-agent"), ["1"])
+        XCTAssertEqual(headers.getCanonicalForm("host"), ["2"])
+        XCTAssertEqual(headers.getCanonicalForm("set-cookie"), ["foo=bar; expires=Sun, 17-Mar-2013 13:49:50 GMT",
+                                                                "buz=cux; expires=Fri, 13 Oct 2017 21:21:41 GMT"])
+    }
 }
