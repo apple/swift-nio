@@ -44,6 +44,30 @@ extension Array where Array.Element == ByteBuffer {
     }
 }
 
+internal class ArrayAccumulationHandler<T>: ChannelInboundHandler {
+    typealias InboundIn = T
+    private var receiveds: [T] = []
+    private var allDoneBlock: DispatchWorkItem! = nil
+
+    public init(completion: @escaping ([T]) -> Void) {
+        self.allDoneBlock = DispatchWorkItem { [unowned self] () -> Void in
+            completion(self.receiveds)
+        }
+    }
+
+    public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+        self.receiveds.append(self.unwrapInboundIn(data))
+    }
+
+    public func channelUnregistered(ctx: ChannelHandlerContext) {
+        self.allDoneBlock.perform()
+    }
+
+    public func syncWaitForCompletion() {
+        self.allDoneBlock.wait()
+    }
+}
+
 class HTTPServerClientTest : XCTestCase {
     
     /* needs to be something reasonably large and odd so it has good odds producing incomplete writes even on the loopback interface */
@@ -169,30 +193,6 @@ class HTTPServerClientTest : XCTestCase {
             ctx.flush().whenComplete {
                 assertSuccess($0)
             }
-        }
-    }
-    
-    private class ArrayAccumulationHandler<T>: ChannelInboundHandler {
-        typealias InboundIn = T
-        private var receiveds: [T] = []
-        private var allDoneBlock: DispatchWorkItem! = nil
-        
-        public init(completion: @escaping ([T]) -> Void) {
-            self.allDoneBlock = DispatchWorkItem { [unowned self] () -> Void in
-                completion(self.receiveds)
-            }
-        }
-        
-        public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
-            self.receiveds.append(self.unwrapInboundIn(data))
-        }
-        
-        public func channelUnregistered(ctx: ChannelHandlerContext) {
-            self.allDoneBlock.perform()
-        }
-        
-        public func syncWaitForCompletion() {
-            self.allDoneBlock.wait()
         }
     }
 

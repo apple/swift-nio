@@ -44,10 +44,23 @@ public struct HTTPRequestHead: Equatable {
     }
 }
 
-public enum HTTPRequestPart {
+public enum HTTPRequestPart: Equatable {
     case head(HTTPRequestHead)
     case body(ByteBuffer)
     case end(HTTPHeaders?)
+
+    public static func ==(lhs: HTTPRequestPart, rhs: HTTPRequestPart) -> Bool {
+        switch (lhs, rhs) {
+        case (.head(let h1), .head(let h2)):
+            return h1 == h2
+        case (.body(let b1), .body(let b2)):
+            return b1 == b2
+        case (.end(let h1), .end(let h2)):
+            return h1 == h2
+        default:
+            return false
+        }
+    }
 }
 
 public extension HTTPRequestHead {

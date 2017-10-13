@@ -42,6 +42,7 @@ import XCTest
          testCase(HTTPHeadersTest.allTests),
          testCase(HTTPServerClientTest.allTests),
          testCase(HTTPTest.allTests),
+         testCase(HTTPUpgradeTestCase.allTests),
          testCase(MarkedCircularBufferTests.allTests),
          testCase(MessageToByteEncoderTest.allTests),
          testCase(OpenSSLIntegrationTest.allTests),
