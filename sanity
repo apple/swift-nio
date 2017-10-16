@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -eu
+
+# check linux tests
+
+ruby generate_linux_tests.rb > /dev/null
+if [[ -n $(git diff Tests/LinuxMain.swift) ]]; then
+  printf "\033[0;31mMissing linux test changes!\033[0m\n"
+  exit 1
+else
+  printf "\033[0;32mLinux tests okay\033[0m\n"
+fi
