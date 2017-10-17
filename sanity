@@ -7,6 +7,7 @@ set -eu
 ruby generate_linux_tests.rb > /dev/null
 if [[ -n $(git diff Tests/LinuxMain.swift) ]]; then
   printf "\033[0;31mMissing linux test changes!\033[0m\n"
+  git diff Tests/LinuxMain.swift
   exit 1
 else
   printf "\033[0;32mLinux tests okay\033[0m\n"
