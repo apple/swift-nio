@@ -23,29 +23,29 @@ import XCTest
 ///
 
 #if os(Linux) || os(FreeBSD)
-   @testable import NIOTests
-   @testable import NIOOpenSSLTests
    @testable import NIOHTTP1Tests
+   @testable import NIOOpenSSLTests
+   @testable import NIOTests
 
    XCTMain([
-         testCase(MarkedCircularBufferTests.allTests),
-         testCase(TypeAssistedChannelHandlerTest.allTests),
-         testCase(CircularBufferTests.allTests),
          testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
-         testCase(EchoServerClientTest.allTests),
-         testCase(ByteToMessageDecoderTest.allTests),
-         testCase(MessageToByteEncoderTest.allTests),
-         testCase(FileRegionTest.allTests),
          testCase(ByteBufferTest.allTests),
-         testCase(EmbeddedChannelTest.allTests),
+         testCase(ByteToMessageDecoderTest.allTests),
          testCase(ChannelPipelineTest.allTests),
-         testCase(SocketAddressTest.allTests),
-         testCase(FutureTest.allTests),
+         testCase(CircularBufferTests.allTests),
+         testCase(EchoServerClientTest.allTests),
+         testCase(EmbeddedChannelTest.allTests),
          testCase(EventLoopTest.allTests),
-         testCase(OpenSSLIntegrationTest.allTests),
-         testCase(HTTPServerClientTest.allTests),
-         testCase(HTTPHeadersTest.allTests),
-         testCase(HTTPTest.allTests),
+         testCase(FileRegionTest.allTests),
+         testCase(FutureTest.allTests),
          testCase(HTTPEncoderTests.allTests),
+         testCase(HTTPHeadersTest.allTests),
+         testCase(HTTPServerClientTest.allTests),
+         testCase(HTTPTest.allTests),
+         testCase(MarkedCircularBufferTests.allTests),
+         testCase(MessageToByteEncoderTest.allTests),
+         testCase(OpenSSLIntegrationTest.allTests),
+         testCase(SocketAddressTest.allTests),
+         testCase(TypeAssistedChannelHandlerTest.allTests),
     ])
 #endif

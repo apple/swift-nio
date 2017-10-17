@@ -85,16 +85,21 @@ def createLinuxMain(testsDirectory, allTestSubDirectories, files)
         file.write "\n"
 
         file.write "#if os(Linux) || os(FreeBSD)\n"
-        for testSubDirectory in allTestSubDirectories
+        for testSubDirectory in allTestSubDirectories.sort { |x,y| x <=> y }
             file.write "   @testable import " + testSubDirectory + "\n"
         end
         file.write "\n"
         file.write "   XCTMain([\n"
 
+        testCases = []
         for classes in files
             for classArray in classes
-                file.write "         testCase(" + classArray[0] + ".allTests),\n"
+                testCases << classArray[0]
             end
+        end
+
+        for testCase in testCases.sort { |x,y| x <=> y }
+            file.write "         testCase(" + testCase + ".allTests),\n"
         end
         file.write"    ])\n"
         file.write "#endif"
