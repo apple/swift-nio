@@ -29,6 +29,7 @@ extension HTTPServerClientTest {
                 ("testSimpleGet", testSimpleGet),
                 ("testSimpleGetChunkedEncoding", testSimpleGetChunkedEncoding),
                 ("testSimpleGetTrailers", testSimpleGetTrailers),
+                ("testMassiveResponse", testMassiveResponse),
            ]
    }
 }

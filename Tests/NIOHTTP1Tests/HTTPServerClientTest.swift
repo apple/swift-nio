@@ -29,10 +29,14 @@ private func assertSuccess(_ f: FutureValue<()>, file: StaticString = #file, lin
 
 extension Array where Array.Element == ByteBuffer {
     public func allAsBytes() -> [UInt8] {
-        return self.flatMap {
-            var bb = $0
-            return bb.readBytes(length: bb.readableBytes)
-            }.reduce([], { $0 + $1 })
+        var out: [UInt8] = []
+        out.reserveCapacity(self.reduce(0, { $0 + $1.readableBytes }))
+        self.forEach { bb in
+            bb.withUnsafeReadableBytes { ptr in
+                out.append(contentsOf: ptr)
+            }
+        }
+        return out
     }
     
     public func allAsString() -> String? {
@@ -42,6 +46,17 @@ extension Array where Array.Element == ByteBuffer {
 
 class HTTPServerClientTest : XCTestCase {
     
+    /* needs to be something reasonably large and odd so it has good odds producing incomplete writes even on the loopback interface */
+    private static let massiveResponseLength = 5 * 1024 * 1024 + 7
+    private static let massiveResponseBytes: [UInt8] = {
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(HTTPServerClientTest.massiveResponseLength)
+        for f in 0..<HTTPServerClientTest.massiveResponseLength {
+            bytes.append(UInt8(f % 255))
+        }
+        return bytes
+    }()
+
     private class SimpleHTTPServer: ChannelInboundHandler {
         typealias InboundIn = HTTPRequestPart
         typealias OutboundOut = HTTPResponsePart
@@ -108,6 +123,33 @@ class HTTPServerClientTest : XCTestCase {
                     trailers.add(name: "X-URL-Path", value: "/trailers")
                     trailers.add(name: "X-Should-Trail", value: "sure")
                     ctx.write(data: self.wrapOutboundOut(.end(trailers))).whenComplete { r in
+                        assertSuccess(r)
+                        ctx.close().whenComplete { r in
+                            assertSuccess(r)
+                        }
+                    }
+
+                case "/massive-response":
+                    var buf = ctx.channel!.allocator.buffer(capacity: HTTPServerClientTest.massiveResponseLength)
+                    buf.writeWithUnsafeMutableBytes { targetPtr in
+                        return HTTPServerClientTest.massiveResponseBytes.withUnsafeBytes { srcPtr in
+                            precondition(targetPtr.count >= srcPtr.count)
+                            targetPtr.copyBytes(from: srcPtr)
+                            return srcPtr.count
+                        }
+                    }
+                    buf.write(bytes: HTTPServerClientTest.massiveResponseBytes)
+                    var head = HTTPResponseHead(version: req.version, status: .ok)
+                    head.headers.add(name: "Connection", value: "close")
+                    head.headers.add(name: "Content-Length", value: "\(HTTPServerClientTest.massiveResponseLength)")
+                    let r = HTTPResponsePart.head(head)
+                    ctx.write(data: self.wrapOutboundOut(r)).whenComplete { r in
+                        assertSuccess(r)
+                    }
+                    ctx.writeAndFlush(data: self.wrapOutboundOut(.body(buf))).whenComplete { r in
+                        assertSuccess(r)
+                    }
+                    ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
                         assertSuccess(r)
                         ctx.close().whenComplete { r in
                             assertSuccess(r)
@@ -301,6 +343,55 @@ class HTTPServerClientTest : XCTestCase {
 
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
         buffer.write(staticString: "GET /trailers HTTP/1.1\r\nHost: nio.net\r\n\r\n")
+
+        try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
+        accumulation.syncWaitForCompletion()
+    }
+
+    func testMassiveResponse() throws {
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let accumulation = ArrayAccumulationHandler<ByteBuffer> { bbs in
+            let expectedSuffix = HTTPServerClientTest.massiveResponseBytes
+            let actual = bbs.allAsBytes()
+            XCTAssertGreaterThan(actual.count, expectedSuffix.count)
+            let actualSuffix = actual[(actual.count - expectedSuffix.count)..<actual.count]
+            XCTAssertEqual(expectedSuffix.count, actualSuffix.count)
+            XCTAssert(expectedSuffix.elementsEqual(actualSuffix))
+        }
+        let numBytes = 16 * 1024
+        let httpHandler = SimpleHTTPServer()
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+
+            // Set the handlers that are appled to the accepted Channels
+            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+                // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
+                channel.pipeline.add(handler: HTTPRequestDecoder()).then {
+                    channel.pipeline.add(handler: HTTPResponseEncoder(allocator: channel.allocator)).then {
+                        channel.pipeline.add(handler: httpHandler)
+                    }
+                }
+            })).bind(to: "127.0.0.1", on: 0).wait()
+
+        defer {
+            _ = serverChannel.close()
+        }
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .handler(handler: accumulation)
+            .connect(to: serverChannel.localAddress!)
+            .wait()
+
+        defer {
+            _ = clientChannel.close()
+        }
+
+        var buffer = clientChannel.allocator.buffer(capacity: numBytes)
+        buffer.write(staticString: "GET /massive-response HTTP/1.1\r\nHost: nio.net\r\n\r\n")
 
         try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
         accumulation.syncWaitForCompletion()

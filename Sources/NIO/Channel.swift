@@ -253,7 +253,7 @@ private final class PendingWrites {
     /*
      Function that takes two closures and based on if there are more then one ByteBuffer pending calls either one or the other.
     */
-    func consume(oneBody: (UnsafePointer<UInt8>, Int) throws -> IOResult<Int>,
+    func consume(oneBody: (UnsafeRawBufferPointer) throws -> IOResult<Int>,
                  multipleBody: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>,
                  fileRegionBody: (Int32, Int, Int) throws -> IOResult<Int>) throws -> (writeResult: WriteResult, writable: Bool) {
         let wasWritable = writable.load()
@@ -275,17 +275,19 @@ private final class PendingWrites {
         return self.pendingWrites.hasMark()
     }
 
-    private func consumeOne(_ body: (UnsafePointer<UInt8>, Int) throws -> IOResult<Int>, _ fileRegionBody: (Int32, Int, Int) throws -> IOResult<Int>) rethrows -> WriteResult {
+    private func consumeOne(_ body: (UnsafeRawBufferPointer) throws -> IOResult<Int>, _ fileRegionBody: (Int32, Int, Int) throws -> IOResult<Int>) rethrows -> WriteResult {
+
         if self.isFlushPending && !self.pendingWrites.isEmpty {
-            let pending = self.pendingWrites[0]
             for _ in 0..<writeSpinCount + 1 {
                 guard !closed else {
                     return .closed
                 }
+                let pending = self.pendingWrites[0]
                 switch pending.data {
                 case .buffer(var buffer):
-                    switch try buffer.withReadPointer(body: body) {
+                    switch try buffer.withUnsafeReadableBytes(body) {
                     case .processed(let written):
+                        assert(outstanding.bytes >= written)
                         outstanding = (outstanding.chunks, outstanding.bytes - written)
                         
                         if outstanding.bytes < Int(waterMark.lowerBound) {
@@ -360,6 +362,7 @@ private final class PendingWrites {
                                                             return try body(pointer)
                 }) {
                 case .processed(let written):
+                    assert(outstanding.bytes >= written)
                     outstanding = (outstanding.chunks, outstanding.bytes - written)
 
                     if outstanding.bytes < Int(waterMark.lowerBound) {
@@ -415,6 +418,7 @@ private final class PendingWrites {
 
         while !self.pendingWrites.isEmpty {
             let pending = self.pendingWrites[0]
+            assert(outstanding.bytes >= pending.data.size)
             outstanding = (outstanding.chunks-1, outstanding.bytes - pending.data.size)
 
             popFirst()
@@ -434,12 +438,6 @@ private final class PendingWrites {
 
 // MARK: Compatibility
 extension ByteBuffer {
-    public func withReadPointer<T>(body: (UnsafePointer<UInt8>, Int) throws -> T) rethrows -> T {
-        return try self.withUnsafeReadableBytes { ptr in
-            try body(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), ptr.count)
-        }
-    }
-
     public mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> IOResult<Int>) rethrows -> IOResult<Int> {
         var writeResult: IOResult<Int>!
         _ = try self.writeWithUnsafeMutableBytes { ptr in
@@ -532,13 +530,13 @@ final class SocketChannel : BaseSocketChannel<Socket> {
 
     override fileprivate func writeToSocket(pendingWrites: PendingWrites) throws -> WriteResult {
         repeat {
-            let result = try pendingWrites.consume(oneBody: { ptr, length in
-                guard length > 0 else {
+            let result = try pendingWrites.consume(oneBody: { ptr in
+                guard ptr.count > 0 else {
                     // No need to call write if the buffer is empty.
                     return .processed(0)
                 }
                 // normal write
-                return try self.socket.write(pointer: ptr, size: length)
+                return try self.socket.write(pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), size: ptr.count)
             }, multipleBody: { ptrs in
                 switch ptrs.count {
                 case 0:

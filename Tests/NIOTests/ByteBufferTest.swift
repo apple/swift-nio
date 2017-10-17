@@ -178,7 +178,7 @@ class ByteBufferTest: XCTestCase {
         // so first we need some data there!
         buf.write(string: "hello again")
         
-        let bytesConsumed = buf.readWithUnsafeMutableBytes { dst in
+        let bytesConsumed = buf.readWithUnsafeReadableBytes { dst in
             // Pretend we did some operation which made use of entire 11 byte string
             return 11
         }
@@ -803,4 +803,69 @@ class ByteBufferTest: XCTestCase {
         XCTAssertNil(buf.readBytes(length: buf.readableBytes+1))
     }
 
+    func testReadWithUnsafeReadableBytesVariantsNothingToRead() throws {
+        buf.changeCapacity(to: 1024)
+        buf.clear()
+        XCTAssertEqual(0, buf.readerIndex)
+        XCTAssertEqual(0, buf.writerIndex)
+
+        var rInt = buf.readWithUnsafeReadableBytes { ptr in
+            XCTAssertEqual(0, ptr.count)
+            return 0
+        }
+        XCTAssertEqual(0, rInt)
+
+        rInt = buf.readWithUnsafeMutableReadableBytes { ptr in
+            XCTAssertEqual(0, ptr.count)
+            return 0
+        }
+        XCTAssertEqual(0, rInt)
+
+        var rString = buf.readWithUnsafeReadableBytes { (ptr: UnsafeRawBufferPointer) -> (Int, String) in
+            XCTAssertEqual(0, ptr.count)
+            return (0, "blah")
+        }
+        XCTAssert(rString == "blah")
+
+        rString = buf.readWithUnsafeMutableReadableBytes { (ptr: UnsafeMutableRawBufferPointer) -> (Int, String) in
+            XCTAssertEqual(0, ptr.count)
+            return (0, "blah")
+        }
+        XCTAssert(rString == "blah")
+    }
+
+    func testReadWithUnsafeReadableBytesVariantsSomethingToRead() throws {
+        buf.changeCapacity(to: 1)
+        buf.clear()
+        buf.write(bytes: [1, 2, 3, 4, 5, 6, 7, 8])
+        XCTAssertEqual(0, buf.readerIndex)
+        XCTAssertEqual(8, buf.writerIndex)
+
+        var rInt = buf.readWithUnsafeReadableBytes { ptr in
+            XCTAssertEqual(8, ptr.count)
+            return 0
+        }
+        XCTAssertEqual(0, rInt)
+
+        rInt = buf.readWithUnsafeMutableReadableBytes { ptr in
+            XCTAssertEqual(8, ptr.count)
+            return 1
+        }
+        XCTAssertEqual(1, rInt)
+
+        var rString = buf.readWithUnsafeReadableBytes { (ptr: UnsafeRawBufferPointer) -> (Int, String) in
+            XCTAssertEqual(7, ptr.count)
+            return (2, "blah")
+        }
+        XCTAssert(rString == "blah")
+
+        rString = buf.readWithUnsafeMutableReadableBytes { (ptr: UnsafeMutableRawBufferPointer) -> (Int, String) in
+            XCTAssertEqual(5, ptr.count)
+            return (3, "blah")
+        }
+        XCTAssert(rString == "blah")
+
+        XCTAssertEqual(6, buf.readerIndex)
+        XCTAssertEqual(8, buf.writerIndex)
+    }
 }

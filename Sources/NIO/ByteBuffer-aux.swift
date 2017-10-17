@@ -83,10 +83,28 @@ extension ByteBuffer {
     }
 
     // MARK: Other APIs
-    public mutating func readWithUnsafeMutableBytes(_ fn: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
+    public mutating func readWithUnsafeReadableBytes(_ fn: (UnsafeRawBufferPointer) throws -> Int) rethrows -> Int {
+        let bytesRead = try self.withUnsafeReadableBytes(fn)
+        self.moveReaderIndex(forwardBy: bytesRead)
+        return bytesRead
+    }
+
+    public mutating func readWithUnsafeReadableBytes<T>(_ fn: (UnsafeRawBufferPointer) throws -> (Int, T)) rethrows -> T {
+        let (bytesRead, ret) = try self.withUnsafeReadableBytes(fn)
+        self.moveReaderIndex(forwardBy: bytesRead)
+        return ret
+    }
+
+    public mutating func readWithUnsafeMutableReadableBytes(_ fn: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
         let bytesRead = try self.withUnsafeMutableReadableBytes(fn)
         self.moveReaderIndex(forwardBy: bytesRead)
         return bytesRead
+    }
+
+    public mutating func readWithUnsafeMutableReadableBytes<T>(_ fn: (UnsafeMutableRawBufferPointer) throws -> (Int, T)) rethrows -> T {
+        let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes(fn)
+        self.moveReaderIndex(forwardBy: bytesRead)
+        return ret
     }
 
     @discardableResult
