@@ -125,6 +125,8 @@ class EmbeddedChannelCore : ChannelCore {
 
     func connect0(to address: SocketAddress, promise: Promise<Void>?) {
         promise?.succeed(result: ())
+        pipeline.fireChannelRegistered0()
+        pipeline.fireChannelActive0()
     }
 
     func register0(promise: Promise<Void>?) {

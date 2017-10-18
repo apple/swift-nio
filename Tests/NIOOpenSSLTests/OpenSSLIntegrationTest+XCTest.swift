@@ -32,6 +32,7 @@ extension OpenSSLIntegrationTest {
                 ("testMultipleClose", testMultipleClose),
                 ("testCoalescedWrites", testCoalescedWrites),
                 ("testCoalescedWritesWithFutures", testCoalescedWritesWithFutures),
+                ("testImmediateCloseSatisfiesPromises", testImmediateCloseSatisfiesPromises),
            ]
    }
 }

@@ -161,8 +161,8 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
         default:
             // We need to begin processing shutdown now. We can't fire the promise for a
             // while though.
-            doShutdownStep(ctx: ctx)
             closePromise = promise
+            doShutdownStep(ctx: ctx)
         }
     }
     

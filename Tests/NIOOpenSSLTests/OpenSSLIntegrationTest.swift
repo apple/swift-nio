@@ -487,4 +487,19 @@ class OpenSSLIntegrationTest: XCTestCase {
 
         try flushPromise.futureResult.wait()
     }
+
+    func testImmediateCloseSatisfiesPromises() throws {
+        let ctx = try configuredSSLContext()
+        let channel = EmbeddedChannel()
+        try channel.pipeline.add(handler: OpenSSLHandler(context: ctx)).wait()
+
+        // Start by initiating the handshake.
+        try channel.connect(to: SocketAddress.unixDomainSocketAddress(path: "/tmp/doesntmatter")).wait()
+
+        // Now call close. This should immediately close, satisfying the promise.
+        let closePromise: Promise<Void> = channel.eventLoop.newPromise()
+        channel.close(promise: closePromise)
+
+        XCTAssertTrue(closePromise.futureResult.fulfilled)
+    }
 }
