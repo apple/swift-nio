@@ -570,7 +570,7 @@ final class SocketChannel : BaseSocketChannel<Socket> {
 
     override fileprivate func finishConnectSocket() throws {
         try self.socket.finishConnect()
-        pipeline.fireChannelActive0()
+        becomeActive0()
     }
 }
 
@@ -621,7 +621,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
             try socket.bind(to: address)
             try self.socket.listen(backlog: backlog)
             promise?.succeed(result: ())
-            pipeline.fireChannelActive0()
+            becomeActive0()
             readIfNeeded0()
         } catch let err {
             promise?.fail(error: err)
@@ -671,7 +671,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
             case .failure(_):
                 ch.close(promise: nil)
             case .success(_):
-                ch.pipeline.fireChannelActive0()
+                ch.becomeActive0()
                 ch.readIfNeeded0()
             }
         })
@@ -711,6 +711,7 @@ public protocol Channel : class, ChannelOutboundInvoker {
     func getOption<T: ChannelOption>(option: T) throws -> T.OptionType
 
     var isWritable: Bool { get }
+    var isActive: Bool { get }
 
     var _unsafe: ChannelCore { get }
 }
@@ -798,6 +799,10 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     private var neverRegistered = true
     private var pendingConnect: Promise<Void>?
     private let closePromise: Promise<Void>
+    private var active: Atomic<Bool> = Atomic(value: false)
+    public var isActive: Bool {
+        return active.load()
+    }
 
     public final var closeFuture: Future<Void> {
         return closePromise.futureResult
@@ -1068,11 +1073,11 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         } catch let err {
             promise?.fail(error: err)
         }
-        
+
         // Fail all pending writes and so ensure all pending promises are notified
         self.pendingWrites.failAll(error: error)
 
-        pipeline.fireChannelInactive0()
+        becomeInactive0()
 
         if !neverRegistered {
             pipeline.fireChannelUnregistered0()
@@ -1287,11 +1292,24 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         return true
     }
 
+    fileprivate func becomeActive0() {
+        assert(eventLoop.inEventLoop)
+        active.store(true)
+        pipeline.fireChannelActive0()
+    }
+
+    fileprivate func becomeInactive0() {
+        assert(eventLoop.inEventLoop)
+        active.store(false)
+        pipeline.fireChannelInactive0()
+    }
+
     fileprivate init(socket: T, eventLoop: SelectableEventLoop) throws {
         self.socket = socket
         self.selectableEventLoop = eventLoop
         self.closePromise = eventLoop.newPromise()
         self.pendingWrites = PendingWrites(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
+        active.store(false)
         self._pipeline = ChannelPipeline(channel: self)
     }
 

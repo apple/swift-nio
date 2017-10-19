@@ -79,6 +79,7 @@ class EmbeddedEventLoop : EventLoop {
 
 class EmbeddedChannelCore : ChannelCore {
     var closed: Bool = false
+    var isActive: Bool = false
 
     
     var eventLoop: EventLoop = EmbeddedEventLoop()
@@ -109,6 +110,7 @@ class EmbeddedChannelCore : ChannelCore {
         promise?.succeed(result: ())
 
         // As we called register() in the constructor of EmbeddedChannel we also need to ensure we call unregistered here.
+        isActive = false
         pipeline.fireChannelInactive0()
         pipeline.fireChannelUnregistered0()
         
@@ -126,6 +128,7 @@ class EmbeddedChannelCore : ChannelCore {
     func connect0(to address: SocketAddress, promise: Promise<Void>?) {
         promise?.succeed(result: ())
         pipeline.fireChannelRegistered0()
+        isActive = true
         pipeline.fireChannelActive0()
     }
 
@@ -174,6 +177,7 @@ class EmbeddedChannelCore : ChannelCore {
 }
 
 public class EmbeddedChannel : Channel {
+    public var isActive: Bool { return channelcore.isActive }
     public var closeFuture: Future<Void> { return channelcore.closePromise.futureResult }
 
     private lazy var channelcore: EmbeddedChannelCore = EmbeddedChannelCore(pipeline: self._pipeline)

@@ -86,6 +86,24 @@ class EmbeddedChannelTest: XCTestCase {
         // channelInactive should fire only once.
         XCTAssertEqual(inactiveHandler.inactiveNotifications, 1)
     }
+
+    func testEmbeddedLifecycle() throws {
+        let channel = EmbeddedChannel()
+        let handler = ChannelLifecycleHandler()
+        XCTAssertEqual(handler.currentState, .unregistered)
+
+        _ = try channel.pipeline.add(handler: handler).wait()
+        XCTAssertEqual(handler.currentState, .unregistered)
+        XCTAssertFalse(channel.isActive)
+
+        _ = try channel.connect(to: try SocketAddress.unixDomainSocketAddress(path: "/fake")).wait()
+        XCTAssertEqual(handler.currentState, .active)
+        XCTAssertTrue(channel.isActive)
+
+        _ = try channel.close().wait()
+        XCTAssertEqual(handler.currentState, .unregistered)
+        XCTAssertFalse(channel.isActive)
+    }
     
     private final class ExceptionThrowingInboundHandler : ChannelInboundHandler {
         typealias InboundIn = String

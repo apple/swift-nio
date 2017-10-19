@@ -32,6 +32,7 @@ import XCTest
          testCase(ByteBufferTest.allTests),
          testCase(ByteToMessageDecoderTest.allTests),
          testCase(ChannelPipelineTest.allTests),
+         testCase(ChannelTests.allTests),
          testCase(CircularBufferTests.allTests),
          testCase(EchoServerClientTest.allTests),
          testCase(EmbeddedChannelTest.allTests),
