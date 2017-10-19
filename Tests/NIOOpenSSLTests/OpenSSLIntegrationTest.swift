@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import OpenSSL
+import CNIOOpenSSL
 @testable import NIO
 @testable import NIOOpenSSL
 

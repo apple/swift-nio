@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import OpenSSL
+import CNIOOpenSSL
 
 public enum TLSVersion {
     case sslv2

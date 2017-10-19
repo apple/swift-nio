@@ -16,7 +16,7 @@ import struct Foundation.URL
 import struct Foundation.ObjCBool
 import class Foundation.FileManager
 import NIO
-import OpenSSL
+import CNIOOpenSSL
 
 // This is a neat trick. Swift lazily initializes module-globals based on when they're first
 // used. This lets us defer OpenSSL intialization as late as possible and only do it if people
@@ -50,7 +50,7 @@ public final class SSLContext {
         guard let ctx = SSL_CTX_new(SSLv23_method()) else { throw NIOOpenSSLError.unableToAllocateOpenSSLObject }
 
         // TODO(cory): It doesn't seem like this initialization should happen here: where?
-        SSL_CTX_setAutoECDH(ctx)
+        CNIOOpenSSL_SSL_CTX_setAutoECDH(ctx)
 
         var opensslOptions = Int(SSL_OP_NO_COMPRESSION)
 

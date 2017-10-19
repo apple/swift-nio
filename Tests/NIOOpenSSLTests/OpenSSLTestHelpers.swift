@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import OpenSSL
+import CNIOOpenSSL
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
     import Darwin
 #elseif os(Linux)

@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIO
-import OpenSSL
+import CNIOOpenSSL
 
 private let SSL_MAX_RECORD_SIZE = 16 * 1024;
 

@@ -17,7 +17,7 @@
 #else
     import Glibc
 #endif
-import OpenSSL
+import CNIOOpenSSL
 
 public class OpenSSLPrivateKey {
     internal let ref: UnsafeMutablePointer<EVP_PKEY>

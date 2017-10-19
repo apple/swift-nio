@@ -24,25 +24,6 @@ else
     shift
 fi
 
-openssl_libdir=""
-openssl_incdir=""
-
-export PKG_CONFIG_PATH="${PKG_CONFIG_PATH-/dev/null}:/usr/local/opt/openssl/lib/pkgconfig"
-if command -v pkg-config > /dev/null; then
-    pkg_config_bin="$(command -v pkg-config)"
-    openssl_libdir=$("$pkg_config_bin" --libs-only-L openssl)
-    openssl_incdir=$("$pkg_config_bin" --cflags openssl)
-fi
-
-if [[ ! -z "$openssl_libdir" ]]; then
-    extra_args+=("-Xlinker")
-    extra_args+=("$openssl_libdir")
-fi
-if [[ ! -z "$openssl_incdir" ]]; then
-    extra_args+=("-Xcc")
-    extra_args+=("$openssl_incdir")
-fi
-
 "$swift_binary" "$verb" \
     ${extra_args[@]+"${extra_args[@]}"} \
     "$@"

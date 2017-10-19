@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIO
-import OpenSSL
+import CNIOOpenSSL
 
 public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
     public typealias OutboundIn = ByteBuffer
