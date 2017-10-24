@@ -92,6 +92,7 @@ extension ByteBufferTest {
                 ("testReadTooLong", testReadTooLong),
                 ("testReadWithUnsafeReadableBytesVariantsNothingToRead", testReadWithUnsafeReadableBytesVariantsNothingToRead),
                 ("testReadWithUnsafeReadableBytesVariantsSomethingToRead", testReadWithUnsafeReadableBytesVariantsSomethingToRead),
+                ("testSomePotentialIntegerUnderOrOverflows", testSomePotentialIntegerUnderOrOverflows),
            ]
    }
 }

@@ -868,4 +868,43 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(6, buf.readerIndex)
         XCTAssertEqual(8, buf.writerIndex)
     }
+
+    func testSomePotentialIntegerUnderOrOverflows() throws {
+        buf.changeCapacity(to: 1024)
+        buf.write(staticString: "hello world, just some trap bytes here")
+
+        func testIndexAndLengthFunc<T>(_ fn: (Int, Int) -> T?, file: StaticString = #file, line: UInt = #line) {
+            XCTAssertNil(fn(0, -1), file: file, line: line)
+            XCTAssertNil(fn(-1, 1), file: file, line: line)
+
+            XCTAssertNil(fn(0, Int.min), file: file, line: line)
+            XCTAssertNil(fn(Int.min, 0), file: file, line: line)
+
+            XCTAssertNil(fn(Int.min, 1), file: file, line: line)
+            XCTAssertNil(fn(Int.min, Int.min), file: file, line: line)
+            XCTAssertNil(fn(Int.min, Int.max), file: file, line: line)
+            XCTAssertNil(fn(Int.max, Int.min), file: file, line: line)
+
+            XCTAssertNil(fn(Int.max, 1), file: file, line: line)
+            XCTAssertNil(fn(Int.max - 1, 2), file: file, line: line)
+            XCTAssertNil(fn(1, Int.max), file: file, line: line)
+            XCTAssertNil(fn(2, Int.max - 1), file: file, line: line)
+        }
+
+        func testIndexOrLengthFunc<T>(_ fn: (Int) -> T?, file: StaticString = #file, line: UInt = #line) {
+            XCTAssertNil(fn(Int.max))
+            XCTAssertNil(fn(Int.max - 1))
+            XCTAssertNil(fn(Int.min))
+        }
+
+        testIndexOrLengthFunc({ x in buf.integer(at: x) as UInt16? })
+        testIndexOrLengthFunc({ buf.readSlice(length: $0) })
+        testIndexOrLengthFunc({ buf.readBytes(length: $0) })
+        testIndexOrLengthFunc({ buf.readData(length: $0) })
+
+        testIndexAndLengthFunc(buf.bytes)
+        testIndexAndLengthFunc(buf.data)
+        testIndexAndLengthFunc(buf.slice)
+        testIndexAndLengthFunc(buf.string)
+    }
 }

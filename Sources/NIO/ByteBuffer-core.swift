@@ -249,11 +249,11 @@ public struct ByteBuffer {
     }
 
     public func slice(at index: Int, length: Int) -> ByteBuffer? {
-        let index = toIndex(index)
-        let length = toCapacity(length)
-        guard index + length <= self._slice.count else {
+        guard index >= 0 && length >= 0 && index <= self.capacity - length else {
             return nil
         }
+        let index = toIndex(index)
+        let length = toCapacity(length)
         var new = self
         new._slice = self._slice.lowerBound + index ..< self._slice.lowerBound + index+length
         new.moveReaderIndex(to: 0)
