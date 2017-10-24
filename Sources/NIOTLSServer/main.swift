@@ -40,7 +40,7 @@ let bootstrap = ServerBootstrap(group: group)
     
     // Set the handlers that are applied to the accepted channels.
     .handler(childHandler: ChannelInitializer(initChannel: { channel in
-        return channel.pipeline.add(handler: OpenSSLHandler(context: sslContext)).then(callback: { v2 in
+        return channel.pipeline.add(handler: try! OpenSSLServerHandler(context: sslContext)).then(callback: { v2 in
             return channel.pipeline.add(handler: EchoHandler())
         })
     }))

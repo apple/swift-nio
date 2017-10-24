@@ -15,7 +15,15 @@
 import NIO
 import CNIOOpenSSL
 
-public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
+/// The base class for all OpenSSL handlers. This class cannot actually be instantiated by
+/// users directly: instead, users must select which mode they would like their handler to
+/// operate in, client or server.
+///
+/// This class exists to deal with the reality that for almost the entirety of the lifetime
+/// of a TLS connection there is no meaningful distinction between a server and a client.
+/// For this reason almost the entirety of the implementation for the channel and server
+/// handlers in OpenSSL is shared, in the form of this parent class.
+public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
     public typealias OutboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
     public typealias InboundIn = ByteBuffer
@@ -29,49 +37,26 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
         case closing
         case closed
     }
-    
-    private let context: SSLContext
+
     private var state: ConnectionState = .idle
-    private var connection: SSLConnection? = nil
+    private var connection: SSLConnection
     private var bufferedWrites: MarkedCircularBuffer<BufferedEvent>
     private var closePromise: Promise<Void>?
     private var didDeliverData: Bool = false
     
-    public init (context: SSLContext) {
-        self.context = context
+    internal init (connection: SSLConnection) {
+        self.connection = connection
         self.bufferedWrites = MarkedCircularBuffer(initialRingCapacity: 96)  // 96 brings the total size of the buffer to just shy of one page
     }
-    
-    public func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: Promise<Void>?) {
-        // This fires when we're asked to connect to a server. Necessarily if we're doing that then we're a
-        // client, and so we should set up our underlying OpenSSL Connection object to be a client. We don't
-        // bother starting the handshake now though: we have nowhere to write to!
-        assert(connection == nil)
-        self.connection = context.createConnection()
-        guard let connection = self.connection else {
-            promise?.fail(error: NIOOpenSSLError.unableToAllocateOpenSSLObject)
-            return
+
+    public func handlerAdded(ctx: ChannelHandlerContext) {
+        // If this channel is already active, immediately begin handshaking.
+        if ctx.channel!.isActive {
+            doHandshakeStep(ctx: ctx)
         }
-        
-        connection.setConnectState()
-        ctx.connect(to: address, promise: promise)
     }
-    
+
     public func channelActive(ctx: ChannelHandlerContext) {
-        // This fires when the TCP connection is established. If we don't have a Connection object yet
-        // that means we're a server, so we should create it now and start the handshake.
-        // If we already have a connection we are a client, so we can just start handshaking.
-        if connection == nil {
-            self.connection = context.createConnection()
-            guard let connection = self.connection else {
-                ctx.fireErrorCaught(error: NIOOpenSSLError.unableToAllocateOpenSSLObject)
-                ctx.close(promise: nil)
-                return
-            }
-            
-            connection.setAcceptState()
-        }
-            
         // We fire this a bit early, entirely on purpose. This is because
         // in doHandshakeStep we may end up closing the channel again, and
         // if we do we want to make sure that the channelInactive message received
@@ -102,7 +87,7 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
         var binaryData = unwrapInboundIn(data)
         
         // The logic: feed the buffers, then take an action based on state.
-        connection!.consumeDataFromNetwork(&binaryData)
+        connection.consumeDataFromNetwork(&binaryData)
         
         switch state {
         case .handshaking:
@@ -167,7 +152,7 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
     }
     
     private func doHandshakeStep(ctx: ChannelHandlerContext) {
-        let result = connection!.doHandshake()
+        let result = connection.doHandshake()
         
         switch result {
         case .incomplete:
@@ -193,7 +178,7 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
     }
     
     private func doShutdownStep(ctx: ChannelHandlerContext) {
-        let result = connection!.doShutdown()
+        let result = connection.doShutdown()
         
         switch result {
         case .incomplete:
@@ -215,7 +200,7 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
     
     private func doDecodeData(ctx: ChannelHandlerContext) {
         readLoop: while true {
-            let result = connection!.readDataFromNetwork(allocator: ctx.channel!.allocator)
+            let result = connection.readDataFromNetwork(allocator: ctx.channel!.allocator)
             
             switch result {
             case .complete(let buf):
@@ -239,7 +224,7 @@ public final class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandle
     
     private func writeDataToNetwork(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
         // There may be no data to write, in which case we can just exit early.
-        guard let dataToWrite = connection!.getDataForNetwork(allocator: ctx.channel!.allocator) else {
+        guard let dataToWrite = connection.getDataForNetwork(allocator: ctx.channel!.allocator) else {
             promise?.succeed(result: ())
             return
         }
@@ -305,7 +290,7 @@ extension OpenSSLHandler {
 
         /// Given a byte buffer to encode, passes it to OpenSSL and handles the result.
         func encodeWrite(buf: inout ByteBuffer, promise: Promise<Void>?) throws -> Bool {
-            let result = connection!.writeDataToNetwork(&buf)
+            let result = connection.writeDataToNetwork(&buf)
 
             switch result {
             case .complete:

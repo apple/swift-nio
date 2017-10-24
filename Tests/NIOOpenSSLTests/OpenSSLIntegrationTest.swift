@@ -150,11 +150,28 @@ public final class EventRecorderHandler<UserEventType>: ChannelInboundHandler wh
     }
 }
 
+private class ChannelActiveWaiter: ChannelInboundHandler {
+    public typealias InboundIn = Any
+    private var activePromise: Promise<Void>
+
+    public init(promise: Promise<Void>) {
+        activePromise = promise
+    }
+
+    public func channelActive(ctx: ChannelHandlerContext) {
+        activePromise.succeed(result: ())
+    }
+
+    public func waitForChannelActive() throws {
+        try activePromise.futureResult.wait()
+    }
+}
+
 internal func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, andHandlers: [ChannelHandler], onGroup: EventLoopGroup) throws -> Channel {
     return try ServerBootstrap(group: onGroup)
         .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
         .handler(childHandler: ChannelInitializer(initChannel: { channel in
-            return channel.pipeline.add(handler: OpenSSLHandler(context: withContext)).then(callback: { v2 in
+            return channel.pipeline.add(handler: try! OpenSSLServerHandler(context: withContext)).then(callback: { v2 in
                 let results = andHandlers.map { channel.pipeline.add(handler: $0) }
 
                 // NB: This assumes that the futures will always fire in order. This is not necessarily guaranteed
@@ -175,7 +192,7 @@ internal func clientTLSChannel(withContext: NIOOpenSSL.SSLContext,
             let results = preHandlers.map { channel.pipeline.add(handler: $0) }
 
             return (results.last ?? channel.eventLoop.newSucceedFuture(result: ())).then(callback: { v2 in
-                return channel.pipeline.add(handler: OpenSSLHandler(context: withContext)).then(callback: { v2 in
+                return channel.pipeline.add(handler: try! OpenSSLClientHandler(context: withContext)).then(callback: { v2 in
                     let results = postHandlers.map { channel.pipeline.add(handler: $0) }
 
                     // NB: This assumes that the futures will always fire in order. This is not necessarily guaranteed
@@ -491,7 +508,7 @@ class OpenSSLIntegrationTest: XCTestCase {
     func testImmediateCloseSatisfiesPromises() throws {
         let ctx = try configuredSSLContext()
         let channel = EmbeddedChannel()
-        try channel.pipeline.add(handler: OpenSSLHandler(context: ctx)).wait()
+        try channel.pipeline.add(handler: OpenSSLClientHandler(context: ctx)).wait()
 
         // Start by initiating the handshake.
         try channel.connect(to: SocketAddress.unixDomainSocketAddress(path: "/tmp/doesntmatter")).wait()
@@ -501,5 +518,53 @@ class OpenSSLIntegrationTest: XCTestCase {
         channel.close(promise: closePromise)
 
         XCTAssertTrue(closePromise.futureResult.fulfilled)
+    }
+
+    func testAddingTlsToActiveChannelStillHandshakes() throws {
+        let ctx = try configuredSSLContext()
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let recorderHandler: EventRecorderHandler<TLSUserEvent> = EventRecorderHandler()
+        let channelActiveWaiter = ChannelActiveWaiter(promise: group.next().newPromise())
+        let serverChannel = try serverTLSChannel(withContext: ctx,
+                                                 andHandlers: [recorderHandler, SimpleEchoServer(), channelActiveWaiter],
+                                                 onGroup: group)
+        defer {
+            _ = try! serverChannel.close().wait()
+        }
+
+        // Create a client channel without TLS in it, and connect it.
+        let readPromise: Promise<ByteBuffer> = group.next().newPromise()
+        let promiseOnReadHandler = PromiseOnReadHandler(promise: readPromise)
+        let clientChannel = try ClientBootstrap(group: group)
+            .handler(handler: promiseOnReadHandler)
+            .connect(to: serverChannel.localAddress!).wait()
+        defer {
+            _ = try! clientChannel.close().wait()
+        }
+
+        // Wait until the channel comes up, then confirm that no handshake has been
+        // received. This hardly proves much, but it's enough.
+        try channelActiveWaiter.waitForChannelActive()
+        try group.next().submit {
+            XCTAssertEqual(recorderHandler.events, [.Registered, .Active])
+        }.wait()
+
+        // Now, add the TLS handler to the pipeline.
+        try clientChannel.pipeline.add(name: nil, handler: OpenSSLClientHandler(context: ctx), first: true).wait()
+        var data = clientChannel.allocator.buffer(capacity: 1)
+        data.write(staticString: "x")
+        try clientChannel.writeAndFlush(data: IOData(data)).wait()
+
+        // The echo should come back without error.
+        _ = try readPromise.futureResult.wait()
+
+        // At this point the handshake should be complete.
+        try group.next().submit {
+            XCTAssertEqual(recorderHandler.events[..<3], [.Registered, .Active, .UserEvent(.handshakeCompleted)])
+        }.wait()
     }
 }

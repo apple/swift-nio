@@ -33,6 +33,7 @@ extension OpenSSLIntegrationTest {
                 ("testCoalescedWrites", testCoalescedWrites),
                 ("testCoalescedWritesWithFutures", testCoalescedWritesWithFutures),
                 ("testImmediateCloseSatisfiesPromises", testImmediateCloseSatisfiesPromises),
+                ("testAddingTlsToActiveChannelStillHandshakes", testAddingTlsToActiveChannelStillHandshakes),
            ]
    }
 }
