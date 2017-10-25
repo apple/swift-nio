@@ -25,8 +25,9 @@
 #include <openssl/pkcs12.h>
 #include <openssl/x509v3.h>
 
-// This is a wrapper function that allows the setting of AUTO ECDH mode when running
-// on OpenSSL v1.0.2/LibreSSL.
+// MARK: OpenSSL version shims
+// These are functions that shim over differences in different OpenSSL versions,
+// which are best handled by using the C preprocessor.
 static inline void CNIOOpenSSL_SSL_CTX_setAutoECDH(SSL_CTX *ctx) {
 
 	#if (OPENSSL_VERSION_NUMBER >= 0x1000200fL && OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
@@ -34,20 +35,28 @@ static inline void CNIOOpenSSL_SSL_CTX_setAutoECDH(SSL_CTX *ctx) {
 	#endif
 }
 
+static inline int CNIOOpenSSL_SSL_set_tlsext_host_name(SSL *ssl, const char *name) {
+    return SSL_set_tlsext_host_name(ssl, name);
+}
+
+static inline const unsigned char *CNIOOpenSSL_ASN1_STRING_get0_data(ASN1_STRING *x) {
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
+    return ASN1_STRING_data(x);
+#else
+    return ASN1_STRING_get0_data(x);
+#endif
+}
+
+// MARK: Macro wrappers
+// These are functions that rely on things declared in macros in OpenSSL, at least in
+// some versions. The Swift compiler cannot expand C macros, so we need a file that
+// can.
 static inline int CNIOOpenSSL_sk_GENERAL_NAME_num(STACK_OF(GENERAL_NAME) *x) {
     return sk_GENERAL_NAME_num(x);
 }
 
 static inline const GENERAL_NAME *CNIOOpenSSL_sk_GENERAL_NAME_value(STACK_OF(GENERAL_NAME) *x, int idx) {
     return sk_GENERAL_NAME_value(x, idx);
-}
-
-static inline const unsigned char *CNIOOpenSSL_ASN1_STRING_get0_data(ASN1_STRING *x) {
-    #if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
-        return ASN1_STRING_data(x);
-    #else
-        return ASN1_STRING_get0_data(x);
-    #endif
 }
 
 #endif

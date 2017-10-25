@@ -68,6 +68,7 @@ public enum OpenSSLError: Error {
     case sslError(OpenSSLErrorStack)
     case unknownError(OpenSSLErrorStack)
     case uncleanShutdown
+    case invalidSNIName(OpenSSLErrorStack)
 }
 
 extension OpenSSLError: Equatable {}

@@ -60,6 +60,16 @@ internal final class SSLConnection {
     func setConnectState() {
         SSL_set_connect_state(ssl)
     }
+
+    func setSNIServerName(name: String) throws {
+        ERR_clear_error()
+        let rc = name.withCString {
+            return CNIOOpenSSL_SSL_set_tlsext_host_name(ssl, $0)
+        }
+        guard rc == 1 else {
+            throw OpenSSLError.invalidSNIName(OpenSSLError.buildErrorStack())
+        }
+    }
     
     func doHandshake() -> AsyncOperationResult<Int32> {
         ERR_clear_error()

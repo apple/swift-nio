@@ -169,17 +169,20 @@ private class ChannelActiveWaiter: ChannelInboundHandler {
 }
 
 internal func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, andHandlers: [ChannelHandler], onGroup: EventLoopGroup) throws -> Channel {
+    return try serverTLSChannel(withContext: withContext, preHandlers: [], postHandlers: andHandlers, onGroup: onGroup)
+}
+
+internal func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, preHandlers: [ChannelHandler], postHandlers: [ChannelHandler], onGroup: EventLoopGroup) throws -> Channel {
     return try ServerBootstrap(group: onGroup)
         .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
         .handler(childHandler: ChannelInitializer(initChannel: { channel in
-            return channel.pipeline.add(handler: try! OpenSSLServerHandler(context: withContext)).then(callback: { v2 in
-                let results = andHandlers.map { channel.pipeline.add(handler: $0) }
-
-                // NB: This assumes that the futures will always fire in order. This is not necessarily guaranteed
-                // but in the absence of a way to gather a complete set of Future results, there is no other
-                // option.
-                return results.last ?? channel.eventLoop.newSucceedFuture(result: ())
-            })
+            let results = preHandlers.map { channel.pipeline.add(handler: $0) }
+            return Future<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next()).then {
+                return channel.pipeline.add(handler: try! OpenSSLServerHandler(context: withContext)).then(callback: { v2 in
+                    let results = postHandlers.map { channel.pipeline.add(handler: $0) }
+                    return Future<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next())
+                })
+            }
         })).bind(to: "127.0.0.1", on: 0).wait()
 }
 
@@ -187,19 +190,15 @@ internal func clientTLSChannel(withContext: NIOOpenSSL.SSLContext,
                               preHandlers: [ChannelHandler],
                               postHandlers: [ChannelHandler],
                               onGroup: EventLoopGroup,
-                              connectingTo: SocketAddress) throws -> Channel {
+                              connectingTo: SocketAddress,
+                              serverHostname: String? = nil) throws -> Channel {
     return try ClientBootstrap(group: onGroup)
         .handler(handler: ChannelInitializer(initChannel: { channel in
             let results = preHandlers.map { channel.pipeline.add(handler: $0) }
-
-            return (results.last ?? channel.eventLoop.newSucceedFuture(result: ())).then(callback: { v2 in
-                return channel.pipeline.add(handler: try! OpenSSLClientHandler(context: withContext)).then(callback: { v2 in
+            return Future<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next()).then(callback: { v2 in
+                return channel.pipeline.add(handler: try! OpenSSLClientHandler(context: withContext, serverHostname: serverHostname)).then(callback: { v2 in
                     let results = postHandlers.map { channel.pipeline.add(handler: $0) }
-
-                    // NB: This assumes that the futures will always fire in order. This is not necessarily guaranteed
-                    // but in the absence of a way to gather a complete set of Future results, there is no other
-                    // option.
-                    return results.last ?? channel.eventLoop.newSucceedFuture(result: ())
+                    return Future<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next())
                 })
             })
         })).connect(to: connectingTo).wait()
