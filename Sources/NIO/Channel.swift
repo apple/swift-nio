@@ -20,124 +20,18 @@ import Glibc
 import Darwin
 #endif
 
-public struct IOData {
-    private let storage: _IOData
-    public init<T>(_ value: T) {
-        self.storage = _IOData(value)
-    }
-
-    enum _IOData {
-        case byteBuffer(ByteBuffer)
-        case file(FileRegion)
-        case other(Any)
-
-        init<T>(_ value: T) {
-            switch value {
-            case is ByteBuffer:
-                self = .byteBuffer(value as! ByteBuffer)
-            case is FileRegion:
-                self = .file(value as! FileRegion)
-            default:
-                self = .other(value)
-            }
-        }
-
-    }
-
-    func tryAsByteBuffer() -> ByteBuffer? {
-        if case .byteBuffer(let bb) = self.storage {
-            return bb
-        } else {
-            return nil
-        }
-    }
-
-    func forceAsByteBuffer() -> ByteBuffer {
-        if let v = tryAsByteBuffer() {
-            return v
-        } else {
-            fatalError("tried to decode as type \(ByteBuffer.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
-        }
-    }
-
-    func tryAsFileRegion() -> FileRegion? {
-        if case .file(let f) = self.storage {
-            return f
-        } else {
-            return nil
-        }
-    }
-    
-    func forceAsFileRegion() -> FileRegion {
-        if let v = tryAsFileRegion() {
-            return v
-        } else {
-            fatalError("tried to decode as type \(FileRegion.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
-        }
-    }
-    
-    func tryAsOther<T>(type: T.Type = T.self) -> T? {
-        if case .other(let any) = self.storage {
-            return any as? T
-        } else {
-            return nil
-        }
-    }
-
-    func forceAsOther<T>(type: T.Type = T.self) -> T {
-        if let v = tryAsOther(type: type) {
-            return v
-        } else {
-            fatalError("tried to decode as type \(T.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
-        }
-    }
-
-    func forceAs<T>(type: T.Type = T.self) -> T {
-        if T.self == ByteBuffer.self {
-            return self.forceAsByteBuffer() as! T
-        } else {
-            return self.forceAsOther(type: type)
-        }
-    }
-
-    func tryAs<T>(type: T.Type = T.self) -> T? {
-        if T.self == ByteBuffer.self {
-            return self.tryAsByteBuffer() as! T?
-        } else if T.self == FileRegion.self {
-            return self.tryAsFileRegion() as! T?
-        } else {
-            return self.tryAsOther(type: type)
-        }
-    }
-
-    func asAny() -> Any {
-        switch self.storage {
-        case .byteBuffer(let bb):
-            return bb
-        case .file(let f):
-            return f
-        case .other(let o):
-            return o
-        }
-    }
-}
-
-
-private enum PendingData {
-    case buffer(ByteBuffer)
-    case file(FileRegion)
-    
+private extension IOData {
     var size: Int {
         switch self {
-        case .buffer(let buffer):
+        case .byteBuffer(let buffer):
             return buffer.readableBytes
-        case .file(_):
+        case .fileRegion(_):
             // We don't want to account for the number of bytes in the file as these not add up to the memory used.
             return 0
         }
     }
 }
-private typealias PendingWrite = (data: PendingData, promise: Promise<Void>?)
+private typealias PendingWrite = (data: IOData, promise: Promise<Void>?)
 
 private func doPendingWriteVectorOperation(pending: MarkedCircularBuffer<PendingWrite>,
                                            count: Int,
@@ -151,13 +45,13 @@ private func doPendingWriteVectorOperation(pending: MarkedCircularBuffer<Pending
     loop: for i in 0..<count {
         let p = pending[i]
         switch p.data {
-        case .buffer(let buffer):
+        case .byteBuffer(let buffer):
             buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
                 storageRefs[i] = storageRef.retain()
                 iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: ptr.count)
             }
             c += 1
-        case .file(_):
+        case .fileRegion(_):
             // We found a FileRegion so stop collecting
             break loop
         }
@@ -201,15 +95,7 @@ private final class PendingWrites {
         return self.pendingWrites.isEmpty
     }
     
-    func add(file: FileRegion, promise: Promise<Void>?) -> Bool {
-        return add0(data: .file(file), promise: promise)
-    }
-    
-    func add(buffer: ByteBuffer, promise: Promise<Void>?) -> Bool {
-        return add0(data: .buffer(buffer), promise: promise)
-    }
-    
-    private func add0(data: PendingData, promise: Promise<Void>?) -> Bool {
+    func add(data: IOData, promise: Promise<Void>?) -> Bool {
         assert(!closed)
         self.pendingWrites.append((data: data, promise: promise))
 
@@ -227,7 +113,7 @@ private final class PendingWrites {
             return false
         }
 
-        if case .buffer(_) = self.pendingWrites[0].data, case .buffer(_) = self.pendingWrites[1].data {
+        if case .byteBuffer(_) = self.pendingWrites[0].data, case .byteBuffer(_) = self.pendingWrites[1].data {
             // We have at least two ByteBuffer in the PendingWrites
             return true
         }
@@ -284,7 +170,7 @@ private final class PendingWrites {
                 }
                 let pending = self.pendingWrites[0]
                 switch pending.data {
-                case .buffer(var buffer):
+                case .byteBuffer(var buffer):
                     switch try buffer.withUnsafeReadableBytes(body) {
                     case .processed(let written):
                         assert(outstanding.bytes >= written)
@@ -308,13 +194,13 @@ private final class PendingWrites {
                         } else {
                             // Update readerIndex of the buffer
                             buffer.moveReaderIndex(forwardBy: written)
-                            self.pendingWrites[0] = (.buffer(buffer), pending.promise)
+                            self.pendingWrites[0] = (.byteBuffer(buffer), pending.promise)
                         }
                     case .wouldBlock(let written):
                         assert(written == 0)
                         return .wouldBlock
                     }
-                case .file(let file):
+                case .fileRegion(let file):
                     switch try file.withMutableReader(body: fileRegionBody) {
                     case .processed(_):
                         if file.readableBytes == 0 {
@@ -330,10 +216,10 @@ private final class PendingWrites {
                             
                             return isFlushPending ? .writtenCompletely : .nothingToBeWritten
                         } else {
-                            self.pendingWrites[0] = (.file(file), pending.promise)
+                            self.pendingWrites[0] = (.fileRegion(file), pending.promise)
                         }
                     case .wouldBlock(_):
-                        self.pendingWrites[0] = (.file(file), pending.promise)
+                        self.pendingWrites[0] = (.fileRegion(file), pending.promise)
 
                         return .wouldBlock
                     }
@@ -373,7 +259,7 @@ private final class PendingWrites {
                     while !self.pendingWrites.isEmpty {
                         let p = self.pendingWrites[0]
                         switch p.data {
-                        case .buffer(var buffer):
+                        case .byteBuffer(var buffer):
                             if w >= buffer.readableBytes {
                                 w -= buffer.readableBytes
 
@@ -392,12 +278,12 @@ private final class PendingWrites {
                             } else {
                                 // Only partly written, so update the readerIndex.
                                 buffer.moveReaderIndex(forwardBy: w)
-                                self.pendingWrites[0] = (.buffer(buffer), p.promise)
+                                self.pendingWrites[0] = (.byteBuffer(buffer), p.promise)
                     
                                 // may try again depending on the writeSpinCount
                                 continue writeLoop
                         }
-                        case .file(_):
+                        case .fileRegion(_):
                              // We found a FileRegion so we can not continue with gathering writes but will need to use sendfile. Let the user call us again so we can use sendfile.
                             return .writtenCompletely
                         }
@@ -513,7 +399,7 @@ final class SocketChannel : BaseSocketChannel<Socket> {
                     readPending = false
 
                     assert(!closed)
-                    pipeline.fireChannelRead0(data: IOData(buffer))
+                    pipeline.fireChannelRead0(data: NIOAny(buffer))
 
                     // Reset reader and writerIndex and so allow to have the buffer filled again
                     buffer.clear()
@@ -645,7 +531,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
                 readPending = false
 
                 do {
-                    pipeline.fireChannelRead0(data: IOData(try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop)))
+                    pipeline.fireChannelRead0(data: NIOAny(try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop)))
                 } catch let err {
                     let _ = try? accepted.close()
                     throw err
@@ -661,7 +547,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         return .writtenCompletely
     }
 
-    override public func channelRead0(data: IOData) {
+    override public func channelRead0(data: NIOAny) {
         assert(eventLoop.inEventLoop)
 
         let ch = data.forceAsOther() as SocketChannel
@@ -691,7 +577,7 @@ public protocol ChannelCore : class {
     func read0(promise: Promise<Void>?)
     func close0(error: Error, promise: Promise<Void>?)
     func triggerUserOutboundEvent0(event: Any, promise: Promise<Void>?)
-    func channelRead0(data: IOData)
+    func channelRead0(data: NIOAny)
     func errorCaught0(error: Error)
 }
 
@@ -744,7 +630,7 @@ extension Channel {
         pipeline.connect(to: address, promise: promise)
     }
 
-    public func write(data: IOData, promise: Promise<Void>?) {
+    public func write(data: NIOAny, promise: Promise<Void>?) {
         pipeline.write(data: data, promise: promise)
     }
 
@@ -752,7 +638,7 @@ extension Channel {
         pipeline.flush(promise: promise)
     }
     
-    public func writeAndFlush(data: IOData, promise: Promise<Void>?) {
+    public func writeAndFlush(data: NIOAny, promise: Promise<Void>?) {
         pipeline.writeAndFlush(data: data, promise: promise)
     }
 
@@ -949,23 +835,11 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
-        if !addToPendingWrites(data: data, promise: promise) {
+        if !self.pendingWrites.add(data: data, promise: promise) {
             pipeline.fireChannelWritabilityChanged0()
         }
     }
     
-    private func addToPendingWrites(data: IOData, promise: Promise<Void>?) -> Bool {
-        if let buffer = data.tryAsByteBuffer() {
-            return pendingWrites.add(buffer: buffer, promise: promise)
-        } else if let file = data.tryAsFileRegion() {
-            return pendingWrites.add(file: file, promise: promise)
-        } else {
-            // Only support ByteBuffer for now.
-            promise?.fail(error: ChannelError.messageUnsupported)
-            return true
-        }
-    }
-
     private func registerForWritable() {
         switch interestedEvent {
         case .read:
@@ -1220,7 +1094,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         fatalError("this must be overridden by sub class")
     }
 
-    public func channelRead0(data: IOData) {
+    public func channelRead0(data: NIOAny) {
         // Do nothing by default
     }
     

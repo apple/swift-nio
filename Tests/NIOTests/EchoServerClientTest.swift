@@ -66,7 +66,7 @@ class EchoServerClientTest : XCTestCase {
             buffer.write(integer: UInt8(i % 256))
         }
         
-        try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
         
         try countingHandler.assertReceived(buffer: buffer)
     }
@@ -109,7 +109,7 @@ class EchoServerClientTest : XCTestCase {
             buffer.write(integer: UInt8(i % 256))
         }
 
-        try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
 
         try countingHandler.assertReceived(buffer: buffer)
     }
@@ -152,7 +152,7 @@ class EchoServerClientTest : XCTestCase {
             buffer.write(integer: UInt8(i % 256))
         }
 
-        try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
 
         try countingHandler.assertReceived(buffer: buffer)
     }
@@ -213,7 +213,7 @@ class EchoServerClientTest : XCTestCase {
         for i in 0..<numBytes {
             buffer.write(integer: UInt8(i % 256))
         }
-        try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
 
         try countingHandler.assertReceived(buffer: buffer)
     }
@@ -234,7 +234,7 @@ class EchoServerClientTest : XCTestCase {
             buffer = ctx.channel!.allocator.buffer(capacity: numBytes)
         }
         
-        func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+        func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             var currentBuffer = self.unwrapInboundIn(data)
             buffer.write(buffer: &currentBuffer)
             
@@ -273,7 +273,7 @@ class EchoServerClientTest : XCTestCase {
         typealias InboundIn = ByteBuffer
         typealias OutboundOut = ByteBuffer
         
-        func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+        func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             ctx.write(data: data, promise: nil)
         }
         
@@ -356,7 +356,7 @@ class EchoServerClientTest : XCTestCase {
         func channelActive(ctx: ChannelHandlerContext) {
             var dataToWrite = ctx.channel!.allocator.buffer(capacity: toWrite.utf8.count)
             dataToWrite.write(string: toWrite)
-            ctx.writeAndFlush(data: IOData(dataToWrite), promise: nil)
+            ctx.writeAndFlush(data: NIOAny(dataToWrite), promise: nil)
             ctx.fireChannelActive()
         }
     }
@@ -426,7 +426,7 @@ class EchoServerClientTest : XCTestCase {
         // First we confirm that the channel really is up by sending in the appropriate number of bytes.
         var bytesToWrite = clientChannel.allocator.buffer(capacity: writingBytes.utf8.count)
         bytesToWrite.write(string: writingBytes)
-        clientChannel.writeAndFlush(data: IOData(bytesToWrite), promise: nil)
+        clientChannel.writeAndFlush(data: NIOAny(bytesToWrite), promise: nil)
 
         // When we've received all the bytes we know the connection is up. Remove the handler.
         _ = try bytesReceivedPromise.futureResult.then { _ in

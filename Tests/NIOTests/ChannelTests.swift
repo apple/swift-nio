@@ -89,7 +89,7 @@ public class ChannelTests: XCTestCase {
 
         var buffer = clientChannel.allocator.buffer(capacity: 1)
         buffer.write(string: "a")
-        try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
 
         // Start shutting stuff down.
         try clientChannel.close().wait()

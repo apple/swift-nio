@@ -23,7 +23,7 @@ class EmbeddedChannelTest: XCTestCase {
         
         XCTAssertTrue(try channel.writeOutbound(data: buf))
         XCTAssertTrue(try channel.finish())
-        XCTAssertEqual(buf, channel.readOutbound())
+        XCTAssertEqual(.byteBuffer(buf), channel.readOutbound())
         XCTAssertNil(channel.readOutbound())
         XCTAssertNil(channel.readInbound())
     }
@@ -108,7 +108,7 @@ class EmbeddedChannelTest: XCTestCase {
     private final class ExceptionThrowingInboundHandler : ChannelInboundHandler {
         typealias InboundIn = String
         
-        public func channelRead(ctx: ChannelHandlerContext, data: IOData) throws {
+        public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) throws {
             throw ChannelError.messageUnsupported
         }
         
@@ -118,7 +118,7 @@ class EmbeddedChannelTest: XCTestCase {
         typealias OutboundIn = String
         typealias OutboundOut = Never
         
-        public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
+        public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
             promise!.fail(error: ChannelError.messageUnsupported)
         }
     }

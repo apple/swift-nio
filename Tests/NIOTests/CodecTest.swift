@@ -43,15 +43,15 @@ public class ByteToMessageDecoderTest: XCTestCase {
         let writerIndex = buffer.writerIndex
         buffer.moveWriterIndex(to: writerIndex - 1)
         
-        channel.pipeline.fireChannelRead(data: IOData(buffer))
+        channel.pipeline.fireChannelRead(data: NIOAny(buffer))
         XCTAssertNil(channel.readInbound())
         
-        channel.pipeline.fireChannelRead(data: IOData(buffer.slice(at: writerIndex - 1, length: 1)!))
+        channel.pipeline.fireChannelRead(data: NIOAny(buffer.slice(at: writerIndex - 1, length: 1)!))
         
         var buffer2 = channel.allocator.buffer(capacity: 32)
         buffer2.write(integer: Int32(2))
         buffer2.write(integer: Int32(3))
-        channel.pipeline.fireChannelRead(data: IOData(buffer2))
+        channel.pipeline.fireChannelRead(data: NIOAny(buffer2))
         
         try channel.close().wait()
         
@@ -83,11 +83,14 @@ public class MessageToByteEncoderTest: XCTestCase {
         
         _ = try channel.pipeline.add(handler: Int32ToByteEncoder()).wait()
         
-        _ = try channel.writeAndFlush(data: IOData(Int32(5))).wait()
+        _ = try channel.writeAndFlush(data: NIOAny(Int32(5))).wait()
         
-        var buffer = channel.readOutbound() as ByteBuffer?
-        XCTAssertEqual(Int32(5), buffer?.readInteger())
-        XCTAssertEqual(0, buffer?.readableBytes)
+        if case .some(.byteBuffer(var buffer)) = channel.readOutbound() {
+            XCTAssertEqual(Int32(5), buffer.readInteger())
+            XCTAssertEqual(0, buffer.readableBytes)
+        } else {
+            XCTFail("couldn't read ByteBuffer from channel")
+        }
         
         try channel.close().wait()
     }

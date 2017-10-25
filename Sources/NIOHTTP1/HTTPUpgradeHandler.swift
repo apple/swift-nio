@@ -73,7 +73,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
         self.upgradeCompletionHandler = upgradeCompletionHandler
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         // We're trying to remove ourselves from the pipeline, so just pass this on.
         guard !seenFirstRequest else {
             ctx.fireChannelRead(data: data)
@@ -150,7 +150,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     }
 
     /// Called when we know we're not upgrading. Passes the data on and then removes this object from the pipeline.
-    private func notUpgrading(ctx: ChannelHandlerContext, data: IOData) {
+    private func notUpgrading(ctx: ChannelHandlerContext, data: NIOAny) {
         ctx.fireChannelRead(data: data)
         let _ = ctx.pipeline!.remove(ctx: ctx)
     }

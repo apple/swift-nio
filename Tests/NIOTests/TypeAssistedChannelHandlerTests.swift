@@ -20,16 +20,16 @@ class TypeAssistedChannelHandlerTest: XCTestCase {
         class TestClass: ChannelInboundHandler {
             public typealias InboundIn = String
             
-            func canUnwrap(_ data: IOData) -> Bool {
+            func canUnwrap(_ data: NIOAny) -> Bool {
                 return tryUnwrapInboundIn(data) != nil
             }
         }
         
         let c = TestClass()
-        let goodIOData = IOData("Hello, world!")
-        let badIOData = IOData(42)
-        XCTAssertTrue(c.canUnwrap(goodIOData))
-        XCTAssertFalse(c.canUnwrap(badIOData))
+        let goodAny = NIOAny("Hello, world!")
+        let badAny = NIOAny(42)
+        XCTAssertTrue(c.canUnwrap(goodAny))
+        XCTAssertFalse(c.canUnwrap(badAny))
     }
 
     func testCanDefineBothInboundAndOutbound() throws {

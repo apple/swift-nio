@@ -23,7 +23,7 @@ private final class SimpleEchoServer: ChannelInboundHandler {
     public typealias OutboundOut = ByteBuffer
     public typealias InboundUserEventIn = TLSUserEvent
     
-    public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         ctx.write(data: data, promise: nil)
         ctx.fireChannelRead(data: data)
     }
@@ -40,13 +40,13 @@ private final class PromiseOnReadHandler: ChannelInboundHandler {
     public typealias InboundUserEventIn = TLSUserEvent
     
     private let promise: Promise<ByteBuffer>
-    private var data: IOData? = nil
+    private var data: NIOAny? = nil
     
     init(promise: Promise<ByteBuffer>) {
         self.promise = promise
     }
     
-    public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         self.data = data
         ctx.fireChannelRead(data: data)
     }
@@ -63,7 +63,7 @@ private final class WriteCountingHandler: ChannelOutboundHandler {
 
     public var writeCount = 0
 
-    public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
+    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
         writeCount += 1
         ctx.write(data: data, promise: promise)
     }
@@ -126,7 +126,7 @@ public final class EventRecorderHandler<UserEventType>: ChannelInboundHandler wh
         ctx.fireChannelInactive()
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         events.append(.Read)
         ctx.fireChannelRead(data: data)
     }
@@ -249,7 +249,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         
         var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
         originalBuffer.write(string: "Hello")
-        try clientChannel.writeAndFlush(data: IOData(originalBuffer)).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(originalBuffer)).wait()
         
         let newBuffer = try completionPromise.futureResult.wait()
         XCTAssertEqual(newBuffer, originalBuffer)
@@ -283,7 +283,7 @@ class OpenSSLIntegrationTest: XCTestCase {
 
         var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
         originalBuffer.write(string: "Hello")
-        try clientChannel.writeAndFlush(data: IOData(originalBuffer)).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(originalBuffer)).wait()
         _ = try readComplete.futureResult.wait()
 
         // Ok, the channel is connected and we have written data to it. This means the TLS handshake is
@@ -324,7 +324,7 @@ class OpenSSLIntegrationTest: XCTestCase {
 
         var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
         originalBuffer.write(string: "Hello")
-        try clientChannel.writeAndFlush(data: IOData(originalBuffer)).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(originalBuffer)).wait()
 
         // Ok, we want to wait for the read to finish, then close the server and client connections.
         _ = try readComplete.futureResult.then { _ in
@@ -376,7 +376,7 @@ class OpenSSLIntegrationTest: XCTestCase {
 
         var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
         originalBuffer.write(string: "Hello")
-        try clientChannel.writeAndFlush(data: IOData(originalBuffer)).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(originalBuffer)).wait()
 
         let newBuffer = try completionPromise.futureResult.wait()
         XCTAssertEqual(newBuffer, originalBuffer)
@@ -435,7 +435,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         var originalBuffer = clientChannel.allocator.buffer(capacity: 1)
         originalBuffer.write(string: "A")
         for _ in 0..<5 {
-            clientChannel.write(data: IOData(originalBuffer), promise: nil)
+            clientChannel.write(data: NIOAny(originalBuffer), promise: nil)
         }
 
         try clientChannel.flush().wait()
@@ -488,7 +488,7 @@ class OpenSSLIntegrationTest: XCTestCase {
                     XCTFail("Write promise failed: \(result)")
                 }
             }
-            clientChannel.write(data: IOData(originalBuffer), promise: promise)
+            clientChannel.write(data: NIOAny(originalBuffer), promise: promise)
         }
 
         let flushPromise: Promise<Void> = group.next().newPromise()
@@ -557,7 +557,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         try clientChannel.pipeline.add(name: nil, handler: OpenSSLClientHandler(context: ctx), first: true).wait()
         var data = clientChannel.allocator.buffer(capacity: 1)
         data.write(staticString: "x")
-        try clientChannel.writeAndFlush(data: IOData(data)).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(data)).wait()
 
         // The echo should come back without error.
         _ = try readPromise.futureResult.wait()

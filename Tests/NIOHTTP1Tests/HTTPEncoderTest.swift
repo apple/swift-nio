@@ -33,7 +33,11 @@ class HTTPEncoderTests: XCTestCase {
         var switchingResponse = HTTPResponseHead(version: HTTPVersion(major: 1, minor:1), status: status)
         switchingResponse.headers = headers
         try! channel.writeOutbound(data: HTTPResponsePart.head(switchingResponse))
-        return channel.readOutbound()!
+        if case .some(.byteBuffer(let buffer)) = channel.readOutbound() {
+            return buffer
+        } else {
+            fatalError("Could not read ByteBuffer from channel")
+        }
     }
 
     func testNoAutoHeadersFor101() throws {

@@ -69,9 +69,13 @@ class ChannelPipelineTest: XCTestCase {
         })).wait()
         
         
-        _ = channel.write(data: IOData("msg"))
+        _ = channel.write(data: NIOAny("msg"))
         _ = try channel.flush().wait()
-        XCTAssertEqual(buf, channel.readOutbound())
+        if let data = channel.readOutbound() {
+            XCTAssertEqual(IOData.byteBuffer(buf), data)
+        } else {
+            XCTFail("couldn't read from channel")
+        }
         XCTAssertNil(channel.readOutbound())
         
     }
@@ -103,7 +107,7 @@ class ChannelPipelineTest: XCTestCase {
             self.fn = fn
         }
         
-        public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
+        public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
             do {
                 ctx.write(data: self.wrapOutboundOut(try fn(self.unwrapOutboundIn(data))), promise: promise)
             } catch let err {

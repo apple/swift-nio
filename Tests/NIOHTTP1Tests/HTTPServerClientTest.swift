@@ -55,7 +55,7 @@ internal class ArrayAccumulationHandler<T>: ChannelInboundHandler {
         }
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         self.receiveds.append(self.unwrapInboundIn(data))
     }
 
@@ -85,7 +85,7 @@ class HTTPServerClientTest : XCTestCase {
         typealias InboundIn = HTTPRequestPart
         typealias OutboundOut = HTTPResponsePart
         
-        public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+        public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             switch self.unwrapInboundIn(data) {
             case .head(let req):
                 switch req.uri {
@@ -245,7 +245,7 @@ class HTTPServerClientTest : XCTestCase {
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
         buffer.write(staticString: "GET /helloworld HTTP/1.1\r\nHost: nio.net\r\n\r\n")
         
-        try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
         accumulation.syncWaitForCompletion()
     }
     
@@ -294,7 +294,7 @@ class HTTPServerClientTest : XCTestCase {
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
         buffer.write(staticString: "GET /count-to-ten HTTP/1.1\r\nHost: nio.net\r\n\r\n")
         
-        try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
         accumulation.syncWaitForCompletion()
     }
 
@@ -344,7 +344,7 @@ class HTTPServerClientTest : XCTestCase {
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
         buffer.write(staticString: "GET /trailers HTTP/1.1\r\nHost: nio.net\r\n\r\n")
 
-        try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
         accumulation.syncWaitForCompletion()
     }
 
@@ -393,7 +393,7 @@ class HTTPServerClientTest : XCTestCase {
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
         buffer.write(staticString: "GET /massive-response HTTP/1.1\r\nHost: nio.net\r\n\r\n")
 
-        try clientChannel.writeAndFlush(data: IOData(buffer)).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
         accumulation.syncWaitForCompletion()
     }
 

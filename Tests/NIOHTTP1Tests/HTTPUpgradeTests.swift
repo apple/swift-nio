@@ -186,7 +186,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         }
 
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\n\r\n"
-        try! client.writeAndFlush(data: IOData(ByteBuffer.forString(request))).wait()
+        try! client.writeAndFlush(data: NIOAny(ByteBuffer.forString(request))).wait()
 
         // At this time the channel pipeline should not contain our handler: it should have removed itself.
         try client.pipeline.assertDoesNotContain(handler: handler)
@@ -205,7 +205,7 @@ class HTTPUpgradeTestCase: XCTestCase {
 
         // This request fires a subsequent upgrade in immediately. It should also be ignored.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\n\r\nOPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\n"
-        try! client.writeAndFlush(data: IOData(ByteBuffer.forString(request))).wait()
+        try! client.writeAndFlush(data: NIOAny(ByteBuffer.forString(request))).wait()
 
         // At this time the channel pipeline should not contain our handler: it should have removed itself.
         try client.pipeline.assertDoesNotContain(handler: handler)
@@ -274,7 +274,7 @@ class HTTPUpgradeTestCase: XCTestCase {
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
-        try! client.writeAndFlush(data: IOData(ByteBuffer.forString(request))).wait()
+        try! client.writeAndFlush(data: NIOAny(ByteBuffer.forString(request))).wait()
 
         // Let the machinery do its thing.
         try! completePromise.futureResult.wait()
@@ -300,7 +300,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         }
 
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nConnection: upgrade\r\nUpgrade: myproto\r\n\r\n"
-        try! client.writeAndFlush(data: IOData(ByteBuffer.forString(request))).wait()
+        try! client.writeAndFlush(data: NIOAny(ByteBuffer.forString(request))).wait()
 
         // At this time the channel pipeline should not contain our handler: it should have removed itself.
         try client.pipeline.assertDoesNotContain(handler: handler)
@@ -318,7 +318,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         }
 
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nConnection: upgrade\r\nUpgrade: myproto\r\nKafkaesque: true\r\n\r\n"
-        try! client.writeAndFlush(data: IOData(ByteBuffer.forString(request))).wait()
+        try! client.writeAndFlush(data: NIOAny(ByteBuffer.forString(request))).wait()
 
         // At this time the channel pipeline should not contain our handler: it should have removed itself.
         try client.pipeline.assertDoesNotContain(handler: handler)
@@ -336,7 +336,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         }
 
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nConnection: upgrade\r\nUpgrade: something-else\r\n\r\n"
-        try! client.writeAndFlush(data: IOData(ByteBuffer.forString(request))).wait()
+        try! client.writeAndFlush(data: NIOAny(ByteBuffer.forString(request))).wait()
 
         // At this time the channel pipeline should not contain our handler: it should have removed itself.
         try client.pipeline.assertDoesNotContain(handler: handler)
@@ -379,7 +379,7 @@ class HTTPUpgradeTestCase: XCTestCase {
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto, exploder\r\nKafkaesque: yup\r\nConnection: upgrade, kafkaesque\r\n\r\n"
-        try! client.writeAndFlush(data: IOData(ByteBuffer.forString(request))).wait()
+        try! client.writeAndFlush(data: NIOAny(ByteBuffer.forString(request))).wait()
 
         // Let the machinery do its thing.
         try! completePromise.futureResult.wait()
@@ -423,7 +423,7 @@ class HTTPUpgradeTestCase: XCTestCase {
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade,kafkaesque\r\n\r\n"
-        try! client.writeAndFlush(data: IOData(ByteBuffer.forString(request))).wait()
+        try! client.writeAndFlush(data: NIOAny(ByteBuffer.forString(request))).wait()
 
         // Let the machinery do its thing.
         try! completePromise.futureResult.wait()
@@ -484,7 +484,7 @@ class HTTPUpgradeTestCase: XCTestCase {
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: noproto,myproto\r\nKafkaesque: yup\r\nConnection: upgrade, kafkaesque\r\n\r\n"
-        try! client.writeAndFlush(data: IOData(ByteBuffer.forString(request))).wait()
+        try! client.writeAndFlush(data: NIOAny(ByteBuffer.forString(request))).wait()
 
         // Let the machinery do its thing.
         try! completePromise.futureResult.wait()

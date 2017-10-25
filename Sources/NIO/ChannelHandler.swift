@@ -21,7 +21,7 @@ public protocol _ChannelOutboundHandler : ChannelHandler {
     func register(ctx: ChannelHandlerContext, promise: Promise<Void>?)
     func bind(ctx: ChannelHandlerContext, to: SocketAddress, promise: Promise<Void>?)
     func connect(ctx: ChannelHandlerContext, to: SocketAddress, promise: Promise<Void>?)
-    func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?)
+    func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?)
     func flush(ctx: ChannelHandlerContext, promise: Promise<Void>?)
     // TODO: Think about make this more flexible in terms of influence the allocation that is used to read the next amount of data
     func read(ctx: ChannelHandlerContext, promise: Promise<Void>?)
@@ -34,7 +34,7 @@ public protocol _ChannelInboundHandler : ChannelHandler {
     func channelUnregistered(ctx: ChannelHandlerContext) throws
     func channelActive(ctx: ChannelHandlerContext) throws
     func channelInactive(ctx: ChannelHandlerContext) throws
-    func channelRead(ctx: ChannelHandlerContext, data: IOData) throws
+    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) throws
     func channelReadComplete(ctx: ChannelHandlerContext) throws
     func channelWritabilityChanged(ctx: ChannelHandlerContext) throws
     func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) throws
@@ -67,7 +67,7 @@ public extension _ChannelOutboundHandler {
         ctx.connect(to: address, promise: promise)
     }
     
-    public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
+    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
         ctx.write(data: data, promise: promise)
     }
     
@@ -107,7 +107,7 @@ public extension _ChannelInboundHandler {
         ctx.fireChannelInactive()
     }
     
-    public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         ctx.fireChannelRead(data: data)
     }
     

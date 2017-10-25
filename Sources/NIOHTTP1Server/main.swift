@@ -30,7 +30,7 @@ private class HTTPHandler : ChannelInboundHandler {
     private var buffer: ByteBuffer? = nil
     private var keepAlive = false
 
-    func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
 
         if let reqPart = self.tryUnwrapInboundIn(data) {
             switch reqPart {

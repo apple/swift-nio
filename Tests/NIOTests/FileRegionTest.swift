@@ -62,7 +62,7 @@ class FileRegionTest : XCTestCase {
             _ = try? fileManager.removeItem(atPath: filePath)
         }
         try content.write(toFile: filePath, atomically: false, encoding: .ascii)
-        try clientChannel.writeAndFlush(data: IOData(FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count))).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count))).wait()
             
         var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
         buffer.write(bytes: bytes)
@@ -85,7 +85,7 @@ class FileRegionTest : XCTestCase {
             buffer = ctx.channel!.allocator.buffer(capacity: numBytes)
         }
         
-        func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+        func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             var currentBuffer = self.unwrapInboundIn(data)
             buffer.write(buffer: &currentBuffer)
             

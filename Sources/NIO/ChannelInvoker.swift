@@ -21,14 +21,14 @@ public protocol ChannelOutboundInvoker {
     func connect(to: SocketAddress) -> Future<Void>
     func connect(to: SocketAddress, promise: Promise<Void>?)
     
-    func write(data: IOData) -> Future<Void>
-    func write(data: IOData, promise: Promise<Void>?)
+    func write(data: NIOAny) -> Future<Void>
+    func write(data: NIOAny, promise: Promise<Void>?)
 
     func flush() -> Future<Void>
     func flush(promise: Promise<Void>?)
 
-    func writeAndFlush(data: IOData) -> Future<Void>
-    func writeAndFlush(data: IOData, promise: Promise<Void>?)
+    func writeAndFlush(data: NIOAny) -> Future<Void>
+    func writeAndFlush(data: NIOAny, promise: Promise<Void>?)
     
     func read() -> Future<Void>
     func read(promise: Promise<Void>?)
@@ -61,7 +61,7 @@ public extension ChannelOutboundInvoker {
         return promise.futureResult
     }
     
-    public func write(data: IOData) -> Future<Void> {
+    public func write(data: NIOAny) -> Future<Void> {
         let promise = newPromise()
         write(data: data, promise: promise)
         return promise.futureResult
@@ -79,7 +79,7 @@ public extension ChannelOutboundInvoker {
         return promise.futureResult
     }
     
-    public func writeAndFlush(data: IOData) -> Future<Void> {
+    public func writeAndFlush(data: NIOAny) -> Future<Void> {
         let promise = newPromise()
         writeAndFlush(data: data, promise: promise)
         return promise.futureResult
@@ -112,7 +112,7 @@ public protocol ChannelInboundInvoker {
     
     func fireChannelInactive()
     
-    func fireChannelRead(data: IOData)
+    func fireChannelRead(data: NIOAny)
     
     func fireChannelReadComplete()
     

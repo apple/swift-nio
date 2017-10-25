@@ -83,7 +83,7 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
         ctx.fireChannelInactive()
     }
     
-    public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         var binaryData = unwrapInboundIn(data)
         
         // The logic: feed the buffers, then take an action based on state.
@@ -119,7 +119,7 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
         }
     }
     
-    public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
+    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
         bufferWrite(data: unwrapOutboundIn(data), promise: promise)
     }
 

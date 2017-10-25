@@ -24,7 +24,7 @@ public protocol ByteToMessageDecoder : ChannelInboundHandler where InboundIn == 
 
 public extension ByteToMessageDecoder {
 
-    public func channelRead(ctx: ChannelHandlerContext, data: IOData) throws {
+    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) throws {
         var buffer = self.unwrapInboundIn(data)
         
         if var cum = cumulationBuffer {
@@ -93,7 +93,7 @@ public protocol MessageToByteEncoder : ChannelOutboundHandler where OutboundOut 
 }
 
 public extension MessageToByteEncoder {
-    public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
+    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
         do {
             let data = self.unwrapOutboundIn(data)
             var buffer: ByteBuffer = try allocateOutBuffer(ctx: ctx, data: data)
@@ -104,7 +104,7 @@ public extension MessageToByteEncoder {
         }
     }
     
-    public func allocateOutBuffer(ctx: ChannelHandlerContext, data: IOData) throws -> ByteBuffer {
+    public func allocateOutBuffer(ctx: ChannelHandlerContext, data: NIOAny) throws -> ByteBuffer {
         return ctx.channel!.allocator.buffer(capacity: 256)
     }
 }

@@ -59,7 +59,7 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
         }
     }
 
-    public func write(ctx: ChannelHandlerContext, data: IOData, promise: Promise<Void>?) {
+    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
         switch self.tryUnwrapOutboundIn(data) {
         case .some(.head(var response)):
             sanitizeTransportHeaders(status: response.status, headers: &response.headers)

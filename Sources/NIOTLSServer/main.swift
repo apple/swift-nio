@@ -24,7 +24,7 @@ import NIOOpenSSL
 private final class EchoHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     
-    func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         let _ = ctx.writeAndFlush(data: data)
     }
 }

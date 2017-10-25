@@ -29,6 +29,7 @@ import XCTest
 
    XCTMain([
          testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
+         testCase(BaseObjectTest.allTests),
          testCase(ByteBufferTest.allTests),
          testCase(ByteToMessageDecoderTest.allTests),
          testCase(ChannelPipelineTest.allTests),

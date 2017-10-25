@@ -148,7 +148,7 @@ public final class ServerBootstrap {
             self.childOptions = childOptions
         }
         
-        func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+        func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             let accepted = self.unwrapInboundIn(data)
             do {
                 try self.childOptions.applyAll(channel: accepted)

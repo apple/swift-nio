@@ -22,7 +22,7 @@ private final class EchoHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
 
-    public func channelRead(ctx: ChannelHandlerContext, data: IOData) {
+    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
         ctx.write(data: data, promise: nil)

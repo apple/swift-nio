@@ -98,8 +98,8 @@ class EmbeddedChannelCore : ChannelCore {
         closePromise.succeed(result: ())
     }
 
-    var outboundBuffer: [Any] = []
-    var inboundBuffer: [Any] = []
+    var outboundBuffer: [IOData] = []
+    var inboundBuffer: [NIOAny] = []
     
     func close0(error: Error, promise: Promise<Void>?) {
         guard !closed else {
@@ -161,7 +161,7 @@ class EmbeddedChannelCore : ChannelCore {
         promise?.succeed(result: ())
     }
     
-    func channelRead0(data: IOData) {
+    func channelRead0(data: NIOAny) {
         addToBuffer(buffer: &inboundBuffer, data: data)
     }
     
@@ -171,8 +171,8 @@ class EmbeddedChannelCore : ChannelCore {
         }
     }
     
-    private func addToBuffer(buffer: inout [Any], data: IOData) {
-        buffer.append(data.asAny())
+    private func addToBuffer<T>(buffer: inout [T], data: T) {
+        buffer.append(data)
     }
 }
 
@@ -207,7 +207,7 @@ public class EmbeddedChannel : Channel {
     public var localAddress: SocketAddress? = nil
     public var remoteAddress: SocketAddress? = nil
     
-    public func readOutbound<T>() -> T? {
+    public func readOutbound() -> IOData? {
         return readFromBuffer(buffer: &channelcore.outboundBuffer)
     }
     
@@ -216,14 +216,14 @@ public class EmbeddedChannel : Channel {
     }
     
     @discardableResult public func writeInbound<T>(data: T) throws -> Bool {
-        pipeline.fireChannelRead(data: IOData(data))
+        pipeline.fireChannelRead(data: NIOAny(data))
         pipeline.fireChannelReadComplete()
         try throwIfErrorCaught()
         return !channelcore.inboundBuffer.isEmpty
     }
     
     @discardableResult public func writeOutbound<T>(data: T) throws -> Bool {
-        try writeAndFlush(data: IOData(data)).wait()
+        try writeAndFlush(data: NIOAny(data)).wait()
         return !channelcore.outboundBuffer.isEmpty
     }
     
@@ -233,12 +233,19 @@ public class EmbeddedChannel : Channel {
             throw error
         }
     }
-    
-    private func readFromBuffer<T>(buffer: inout [Any]) -> T? {
+
+    private func readFromBuffer(buffer: inout [IOData]) -> IOData? {
         guard !buffer.isEmpty else {
             return nil
         }
-        return (buffer.removeFirst() as! T)
+        return buffer.removeFirst()
+    }
+
+    private func readFromBuffer<T>(buffer: inout [NIOAny]) -> T? {
+        guard !buffer.isEmpty else {
+            return nil
+        }
+        return (buffer.removeFirst().forceAs(type: T.self))
     }
     
     init() {
