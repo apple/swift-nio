@@ -105,7 +105,7 @@ enum BindTo {
     case unixDomainSocket(path: String)
 }
 
-var bindTarget = BindTo.ip(host: defaultHost, port: defaultPort)
+let bindTarget: BindTo
 switch (arg1, arg1.flatMap { Int32($0) }, arg2.flatMap { Int32($0) }) {
 case (.some(let h), _ , .some(let p)):
     /* we got two arguments, let's interpret that as host and port */
@@ -117,7 +117,7 @@ case (_, .some(let p), _):
     /* only one argument --> port */
     bindTarget = .ip(host: defaultHost, port: p)
 default:
-    ()
+    bindTarget = .ip(host: defaultHost, port: defaultPort)
 }
 
 let channel = try { () -> Channel in
