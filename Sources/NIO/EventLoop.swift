@@ -88,6 +88,10 @@ public struct TimeAmount {
     public static func hours(_ amount: Int) -> TimeAmount {
         return TimeAmount(UInt64(amount) * 1000 * 1000 * 1000 * 60 * 60)
     }
+    
+    public static func now() -> TimeAmount {
+        return nanoseconds(DispatchTime.now().uptimeNanoseconds)
+    }
 }
 
 extension TimeAmount: Comparable {
