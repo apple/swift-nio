@@ -18,57 +18,37 @@ import XCTest
 class IdleStateHandlerTest : XCTestCase {
     
     func testIdleRead() throws {
-        try testIdle(IdleStateHandler(readTimeout: .seconds(1)), false, { v in
-            if case IdleStateHandler.IdleStateEvent.read = v {
-                return true
-            } else {
-                return false
-            }
-        })
+        try testIdle(IdleStateHandler(readTimeout: .seconds(1)), false, { $0 == IdleStateHandler.IdleStateEvent.read })
     }
     
     func testIdleWrite() throws {
-        try testIdle(IdleStateHandler(writeTimeout: .seconds(1)), true, { v in
-            if case IdleStateHandler.IdleStateEvent.write = v {
-                return true
-            } else {
-                return false
-            }
-        })
+        try testIdle(IdleStateHandler(writeTimeout: .seconds(1)), true, { $0 == IdleStateHandler.IdleStateEvent.write })
     }
     
     func testIdleAllWrite() throws {
-        try testIdle(IdleStateHandler(allTimeout: .seconds(1)), true, { v in
-            if case IdleStateHandler.IdleStateEvent.all = v {
-                return true
-            } else {
-                return false
-            }
-        })
+        try testIdle(IdleStateHandler(allTimeout: .seconds(1)), true, { $0 == IdleStateHandler.IdleStateEvent.all })
     }
     
     func testIdleAllRead() throws {
-        try testIdle(IdleStateHandler(allTimeout: .seconds(1)), false, { v in
-            if case IdleStateHandler.IdleStateEvent.all = v {
-                return true
-            } else {
-                return false
-            }
-        })
+        try testIdle(IdleStateHandler(allTimeout: .seconds(1)), false, { $0 == IdleStateHandler.IdleStateEvent.all })
     }
     
-    private func testIdle(_ handler: IdleStateHandler, _ writeToChannel: Bool, _ assertEventFn: @escaping (Any) -> Bool) throws {
+    private func testIdle(_ handler: IdleStateHandler, _ writeToChannel: Bool, _ assertEventFn: @escaping (IdleStateHandler.IdleStateEvent) -> Bool) throws {
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
         
-        class TestWriteHandler: _ChannelInboundHandler {
+        class TestWriteHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+            typealias InboundUserEventIn = IdleStateHandler.IdleStateEvent
+            
             private var read = false
             private let writeToChannel: Bool
-            private let assertEventFn: (Any) -> Bool
+            private let assertEventFn: (IdleStateHandler.IdleStateEvent) -> Bool
             
-            init(_ writeToChannel: Bool, _ assertEventFn: @escaping (Any) -> Bool) {
+            init(_ writeToChannel: Bool, _ assertEventFn: @escaping (IdleStateHandler.IdleStateEvent) -> Bool) {
                 self.writeToChannel = writeToChannel
                 self.assertEventFn = assertEventFn
             }
@@ -82,7 +62,7 @@ class IdleStateHandlerTest : XCTestCase {
                     XCTAssertTrue(self.read)
                 }
 
-                XCTAssertTrue(assertEventFn(event))
+                XCTAssertTrue(assertEventFn(self.unwrapInboundUserEventIn(event)))
                 ctx.close(promise: nil)
             }
             
@@ -90,7 +70,7 @@ class IdleStateHandlerTest : XCTestCase {
                 if writeToChannel {
                     var buffer = ctx.channel!.allocator.buffer(capacity: 4)
                     buffer.write(staticString: "test")
-                    ctx.writeAndFlush(data: NIOAny(buffer), promise: nil)
+                    ctx.writeAndFlush(data: self.wrapOutboundOut(buffer), promise: nil)
                 }
             }
         }
