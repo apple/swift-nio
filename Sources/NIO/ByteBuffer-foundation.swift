@@ -51,4 +51,11 @@ extension ByteBuffer {
                         deallocator: .custom { _, _ in storageRef.release() })
         }
     }
+
+    public func string(at index: Int, length: Int, encoding: String.Encoding) -> String? {
+        guard let data = self.data(at: index, length: length) else {
+            return nil
+        }
+        return String(data: data, encoding: encoding)
+    }
 }

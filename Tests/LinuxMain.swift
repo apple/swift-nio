@@ -25,6 +25,7 @@ import XCTest
 #if os(Linux) || os(FreeBSD)
    @testable import NIOHTTP1Tests
    @testable import NIOOpenSSLTests
+   @testable import NIOTLSTests
    @testable import NIOTests
 
    XCTMain([
@@ -51,6 +52,7 @@ import XCTest
          testCase(OpenSSLIntegrationTest.allTests),
          testCase(SSLCertificateTest.allTests),
          testCase(SSLPrivateKeyTest.allTests),
+         testCase(SniHandlerTest.allTests),
          testCase(SocketAddressTest.allTests),
          testCase(TLSConfigurationTest.allTests),
          testCase(TypeAssistedChannelHandlerTest.allTests),
