@@ -16,6 +16,20 @@ import XCTest
 import CNIOOpenSSL
 @testable import NIO
 @testable import NIOOpenSSL
+import NIOTLS
+
+class ErrorCatcher<T: Error>: ChannelInboundHandler {
+    public typealias InboundIn = Any
+    public var errors: [T]
+
+    public init() {
+        errors = []
+    }
+
+    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+        errors.append(error as! T)
+    }
+}
 
 class TLSConfigurationTest: XCTestCase {
     static var cert1: OpenSSLCertificate!
@@ -54,29 +68,21 @@ class TLSConfigurationTest: XCTestCase {
             try! group.syncShutdownGracefully()
         }
 
-        let eventHandler = EventRecorderHandler<TLSUserEvent>()
+        let eventHandler = ErrorCatcher<NIOOpenSSLError>()
         let serverChannel = try serverTLSChannel(withContext: serverContext, andHandlers: [], onGroup: group)
         let clientChannel = try clientTLSChannel(withContext: clientContext, preHandlers:[], postHandlers: [eventHandler], onGroup: group, connectingTo: serverChannel.localAddress!)
 
         // We expect the channel to be closed fairly swiftly as the handshake should fail.
         clientChannel.closeFuture.whenComplete { _ in
-            let errors: [OpenSSLError] = eventHandler.events.map {
-                switch $0 {
-                case .UserEvent(.handshakeFailed(let err)):
-                    return err
-                default:
-                    return nil
-                }
-                }.flatMap { $0 }
-            XCTAssertEqual(errors.count, 1)
+            XCTAssertEqual(eventHandler.errors.count, 1)
 
-            switch errors[0] {
-            case .sslError(let errs):
+            switch eventHandler.errors[0] {
+            case .handshakeFailed(.sslError(let errs)):
                 XCTAssertEqual(errs.count, 1)
                 let correctError: Bool = messages.map { errs[0].description.contains($0) }.reduce(false) { $0 || $1 }
                 XCTAssert(correctError, errs[0].description)
             default:
-                XCTFail("Unexpected error: \(errors[0])")
+                XCTFail("Unexpected error: \(eventHandler.errors[0])")
             }
         }
         try clientChannel.closeFuture.wait()

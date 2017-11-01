@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-//import Foundation
+// This Foundation import is needed for the encoding stuff.
+import struct Foundation.NSStringEncoding
 import NIO
 
 /// The length of the TLS record header in bytes.

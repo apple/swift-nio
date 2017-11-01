@@ -14,6 +14,7 @@
 
 import NIO
 import CNIOOpenSSL
+import NIOTLS
 
 /// The base class for all OpenSSL handlers. This class cannot actually be instantiated by
 /// users directly: instead, users must select which mode they would like their handler to
@@ -75,7 +76,7 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
             // This is a ragged EOF: we weren't sent a CLOSE_NOTIFY. We want to send a user
             // event to notify about this before we propagate channelInactive. We also want to fail all
             // these writes.
-            ctx.fireUserInboundEventTriggered(event: wrapInboundUserEventOut(TLSUserEvent.uncleanShutdown))
+            ctx.fireErrorCaught(error: OpenSSLError.uncleanShutdown)
             discardBufferedWrites(reason: OpenSSLError.uncleanShutdown)
         }
         
@@ -172,7 +173,7 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
             writeDataToNetwork(ctx: ctx, promise: nil)
             
             // TODO(cory): This event should probably fire out of the OpenSSL info callback.
-            ctx.fireUserInboundEventTriggered(event: wrapInboundUserEventOut(TLSUserEvent.handshakeFailed(err)))
+            ctx.fireErrorCaught(error: NIOOpenSSLError.handshakeFailed(err))
             channelClose(ctx: ctx)
         }
     }
@@ -189,11 +190,11 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
             writeDataToNetwork(ctx: ctx, promise: nil)
 
             // TODO(cory): This should probably fire out of the OpenSSL info callback.
-            ctx.fireUserInboundEventTriggered(event: wrapInboundUserEventOut(TLSUserEvent.cleanShutdown))
+            ctx.fireUserInboundEventTriggered(event: wrapInboundUserEventOut(TLSUserEvent.shutdownCompleted))
             channelClose(ctx: ctx)
         case .failed(let err):
             // TODO(cory): This should probably fire out of the OpenSSL info callback.
-            ctx.fireUserInboundEventTriggered(event: wrapInboundUserEventOut(TLSUserEvent.shutdownFailed(err)))
+            ctx.fireErrorCaught(error:NIOOpenSSLError.shutdownFailed(err))
             channelClose(ctx: ctx)
         }
     }

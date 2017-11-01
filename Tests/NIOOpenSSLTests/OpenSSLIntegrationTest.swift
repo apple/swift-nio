@@ -16,6 +16,7 @@ import XCTest
 import CNIOOpenSSL
 @testable import NIO
 @testable import NIOOpenSSL
+import NIOTLS
 
 
 private final class SimpleEchoServer: ChannelInboundHandler {
@@ -339,7 +340,7 @@ class OpenSSLIntegrationTest: XCTestCase {
             .UserEvent(TLSUserEvent.handshakeCompleted),
             .Read,
             .ReadComplete,
-            .UserEvent(TLSUserEvent.cleanShutdown),
+            .UserEvent(TLSUserEvent.shutdownCompleted),
             .Inactive,
             .Unregistered
         ]

@@ -52,6 +52,8 @@ public enum NIOOpenSSLError: Error {
     case noSuchFilesystemObject
     case failedToLoadCertificate
     case failedToLoadPrivateKey
+    case handshakeFailed(OpenSSLError)
+    case shutdownFailed(OpenSSLError)
 }
 
 public enum OpenSSLError: Error {
