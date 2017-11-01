@@ -103,9 +103,14 @@ class HTTPEncoderTests: XCTestCase {
         // This response contains neither Transfer-Encoding: chunked or Content-Length.
         let response = HTTPResponseHead(version: HTTPVersion(major: 1, minor:0), status: .ok)
         try! channel.writeOutbound(data: HTTPResponsePart.head(response))
-        let writtenData: ByteBuffer = channel.readOutbound()!
-        let writtenResponse = writtenData.string(at: writtenData.readerIndex, length: writtenData.readableBytes)!
+        let writtenData: IOData = channel.readOutbound()!
 
-        XCTAssertEqual(writtenResponse, "HTTP/1.0 200 OK\r\n\r\n")
+        switch writtenData{
+        case .byteBuffer(let b):
+            let writtenResponse = b.string(at: b.readerIndex, length: b.readableBytes)!
+            XCTAssertEqual(writtenResponse, "HTTP/1.0 200 OK\r\n\r\n")
+        case .fileRegion:
+            XCTFail("Unexpected file region")
+        }
     }
 }
