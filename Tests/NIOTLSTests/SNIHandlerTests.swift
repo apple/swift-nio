@@ -228,7 +228,7 @@ q6U/lEvy1/7zGQ==
 
 private let ludicrouslyTruncatedPacket = "FgMBAAEB"
 
-private extension ChannelPipeline {
+internal extension ChannelPipeline {
     func contains(handler: ChannelHandler) throws -> Bool {
         do {
             let _ = try self.context(handler: handler).wait()

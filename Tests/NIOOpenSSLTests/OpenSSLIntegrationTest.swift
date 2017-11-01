@@ -295,7 +295,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         let expectedEvents: [EventRecorderHandler<TLSUserEvent>.RecordedEvents] = [
             .Registered,
             .Active,
-            .UserEvent(TLSUserEvent.handshakeCompleted),
+            .UserEvent(TLSUserEvent.handshakeCompleted(negotiatedProtocol: nil)),
             .Read,
             .ReadComplete
         ]
@@ -337,7 +337,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         let expectedEvents: [EventRecorderHandler<TLSUserEvent>.RecordedEvents] = [
             .Registered,
             .Active,
-            .UserEvent(TLSUserEvent.handshakeCompleted),
+            .UserEvent(TLSUserEvent.handshakeCompleted(negotiatedProtocol: nil)),
             .Read,
             .ReadComplete,
             .UserEvent(TLSUserEvent.shutdownCompleted),
@@ -565,7 +565,7 @@ class OpenSSLIntegrationTest: XCTestCase {
 
         // At this point the handshake should be complete.
         try group.next().submit {
-            XCTAssertEqual(recorderHandler.events[..<3], [.Registered, .Active, .UserEvent(.handshakeCompleted)])
+            XCTAssertEqual(recorderHandler.events[..<3], [.Registered, .Active, .UserEvent(.handshakeCompleted(negotiatedProtocol: nil))])
         }.wait()
     }
 }

@@ -30,6 +30,7 @@ import XCTest
 
    XCTMain([
          testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
+         testCase(ApplicationProtocolNegotiationHandlerTests.allTests),
          testCase(BaseObjectTest.allTests),
          testCase(ByteBufferTest.allTests),
          testCase(ByteToMessageDecoderTest.allTests),
