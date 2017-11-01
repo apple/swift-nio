@@ -66,7 +66,7 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
         switch self.tryUnwrapOutboundIn(data) {
         case .some(.head(var response)):
-            sanitizeTransportHeaders(status: response.status, headers: &response.headers)
+            sanitizeTransportHeaders(status: response.status, headers: &response.headers, version: response.version)
             self.isChunked = response.headers["transfer-encoding"].contains("chunked")
 
             self.scratchBuffer.clear()
@@ -107,13 +107,16 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
     ///
     /// This method strips Content-Length and Transfer-Encoding headers from responses that must
     /// not have a body. It also adds Transfer-Encoding headers to responses that do have bodies
-    /// but do not have any other transport headers. This ensures that we can always safely
-    /// reuse a connection.
-    private func sanitizeTransportHeaders(status: HTTPResponseStatus, headers: inout HTTPHeaders) {
+    /// but do not have any other transport headers when using HTTP/1.1. This ensures that we can
+    /// always safely reuse a connection.
+    ///
+    /// Note that for HTTP/1.0 if there is no Content-Length then the response should be followed
+    /// by connection close. We require that the user send that connection close: we don't do it.
+    private func sanitizeTransportHeaders(status: HTTPResponseStatus, headers: inout HTTPHeaders, version: HTTPVersion) {
         if !status.mayHaveResponseBody {
             headers.remove(name: "content-length")
             headers.remove(name: "transfer-encoding")
-        } else if headers["content-length"].count == 0 {
+        } else if headers["content-length"].count == 0 && version.major == 1 && version.minor >= 1 {
             headers.replaceOrAdd(name: "transfer-encoding", value: "chunked")
         }
     }

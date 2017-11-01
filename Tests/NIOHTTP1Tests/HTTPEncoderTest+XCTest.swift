@@ -35,6 +35,7 @@ extension HTTPEncoderTests {
                 ("testNoTransferEncodingHeadersFor101", testNoTransferEncodingHeadersFor101),
                 ("testNoTransferEncodingHeadersForCustom1XX", testNoTransferEncodingHeadersForCustom1XX),
                 ("testNoTransferEncodingHeadersFor204", testNoTransferEncodingHeadersFor204),
+                ("testNoChunkedEncodingForHTTP10", testNoChunkedEncodingForHTTP10),
            ]
    }
 }

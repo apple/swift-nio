@@ -91,4 +91,21 @@ class HTTPEncoderTests: XCTestCase {
         let writtenData = sendResponse(withStatus: .noContent, andHeaders: headers)
         writtenData.assertContainsOnly("HTTP/1.1 204 No Content\r\n\r\n")
     }
+
+    func testNoChunkedEncodingForHTTP10() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertFalse(try! channel.finish())
+        }
+
+        try! channel.pipeline.add(handler: HTTPResponseEncoder(allocator: channel.allocator)).wait()
+
+        // This response contains neither Transfer-Encoding: chunked or Content-Length.
+        let response = HTTPResponseHead(version: HTTPVersion(major: 1, minor:0), status: .ok)
+        try! channel.writeOutbound(data: HTTPResponsePart.head(response))
+        let writtenData: ByteBuffer = channel.readOutbound()!
+        let writtenResponse = writtenData.string(at: writtenData.readerIndex, length: writtenData.readableBytes)!
+
+        XCTAssertEqual(writtenResponse, "HTTP/1.0 200 OK\r\n\r\n")
+    }
 }
