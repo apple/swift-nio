@@ -29,3 +29,14 @@ extension IOData: Equatable {
         }
     }
 }
+
+public extension IOData {
+    var readableBytes: Int {
+        switch self {
+        case .byteBuffer(let buf):
+            return buf.readableBytes
+        case .fileRegion(let region):
+            return region.readableBytes
+        }
+    }
+}

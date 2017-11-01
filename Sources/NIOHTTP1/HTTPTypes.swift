@@ -79,7 +79,7 @@ public extension HTTPRequestHead {
 
 public enum HTTPResponsePart {
     case head(HTTPResponseHead)
-    case body(ByteBuffer)
+    case body(IOData)
     case end(HTTPHeaders?)
 }
 

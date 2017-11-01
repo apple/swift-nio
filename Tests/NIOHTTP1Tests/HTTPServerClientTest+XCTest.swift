@@ -26,10 +26,14 @@ extension HTTPServerClientTest {
 
    static var allTests : [(String, (HTTPServerClientTest) -> () throws -> Void)] {
       return [
-                ("testSimpleGet", testSimpleGet),
-                ("testSimpleGetChunkedEncoding", testSimpleGetChunkedEncoding),
-                ("testSimpleGetTrailers", testSimpleGetTrailers),
-                ("testMassiveResponse", testMassiveResponse),
+                ("testSimpleGetByteBuffer", testSimpleGetByteBuffer),
+                ("testSimpleGetFileRegion", testSimpleGetFileRegion),
+                ("testSimpleGetChunkedEncodingByteBuffer", testSimpleGetChunkedEncodingByteBuffer),
+                ("testSimpleGetChunkedEncodingFileRegion", testSimpleGetChunkedEncodingFileRegion),
+                ("testSimpleGetTrailersByteBuffer", testSimpleGetTrailersByteBuffer),
+                ("testSimpleGetTrailersFileRegion", testSimpleGetTrailersFileRegion),
+                ("testMassiveResponseByteBuffer", testMassiveResponseByteBuffer),
+                ("testMassiveResponseFileRegion", testMassiveResponseFileRegion),
            ]
    }
 }

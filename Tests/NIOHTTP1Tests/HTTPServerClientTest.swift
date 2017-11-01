@@ -81,10 +81,53 @@ class HTTPServerClientTest : XCTestCase {
         return bytes
     }()
 
+    enum SendMode {
+        case byteBuffer
+        case fileRegion
+    }
+    
     private class SimpleHTTPServer: ChannelInboundHandler {
         typealias InboundIn = HTTPRequestPart
         typealias OutboundOut = HTTPResponsePart
         
+        private let mode: SendMode
+        private let fileManager = FileManager.default
+        private var files: [String] = Array()
+        
+        init(_ mode: SendMode) {
+            self.mode = mode
+        }
+        
+        private func outboundBody(_  buffer: ByteBuffer) -> HTTPResponsePart {
+            switch mode {
+            case .byteBuffer:
+                return .body(.byteBuffer(buffer))
+            case .fileRegion:
+                let filePath: String
+                #if os(Linux)
+                    filePath = "/tmp/\(UUID().uuidString)"
+                #else
+                    if #available(OSX 10.12, *) {
+                        filePath = "\(fileManager.temporaryDirectory.path)/\(UUID().uuidString)"
+                    } else {
+                        filePath = "/tmp/\(UUID().uuidString)"
+                    }
+                #endif
+                files.append(filePath)
+                
+                let content = buffer.data(at: 0, length: buffer.readableBytes)!
+                try! content.write(to: URL(fileURLWithPath: filePath))
+                let region = try! FileRegion(file: filePath, readerIndex: 0, endIndex: buffer.readableBytes)
+                return .body(.fileRegion(region))
+            }
+        }
+        
+        public func handleRemoved(ctx: ChannelHandlerContext) {
+            for f in files {
+                _ = try? fileManager.removeItem(atPath: f)
+            }
+        }
+
         public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             switch self.unwrapInboundIn(data) {
             case .head(let req):
@@ -98,7 +141,8 @@ class HTTPServerClientTest : XCTestCase {
                     ctx.write(data: self.wrapOutboundOut(r), promise: nil)
                     var b = ctx.channel!.allocator.buffer(capacity: replyString.count)
                     b.write(string: replyString)
-                    ctx.write(data: self.wrapOutboundOut(.body(b)), promise: nil)
+                    
+                    ctx.write(data: self.wrapOutboundOut(self.outboundBody(b)), promise: nil)
                     ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
                         assertSuccess(r)
                         ctx.close().whenComplete { r in
@@ -116,7 +160,8 @@ class HTTPServerClientTest : XCTestCase {
                     for i in 1...10 {
                         b.clear()
                         b.write(string: "\(i)")
-                        ctx.write(data: self.wrapOutboundOut(.body(b))).whenComplete { r in
+                        
+                        ctx.write(data: self.wrapOutboundOut(self.outboundBody(b))).whenComplete { r in
                             assertSuccess(r)
                         }
                     }
@@ -138,7 +183,8 @@ class HTTPServerClientTest : XCTestCase {
                     for i in 1...10 {
                         b.clear()
                         b.write(string: "\(i)")
-                        ctx.write(data: self.wrapOutboundOut(.body(b))).whenComplete { r in
+                        
+                        ctx.write(data: self.wrapOutboundOut(self.outboundBody(b))).whenComplete { r in
                             assertSuccess(r)
                         }
                     }
@@ -170,7 +216,7 @@ class HTTPServerClientTest : XCTestCase {
                     ctx.write(data: self.wrapOutboundOut(r)).whenComplete { r in
                         assertSuccess(r)
                     }
-                    ctx.writeAndFlush(data: self.wrapOutboundOut(.body(buf))).whenComplete { r in
+                    ctx.writeAndFlush(data: self.wrapOutboundOut(self.outboundBody(buf))).whenComplete { r in
                         assertSuccess(r)
                     }
                     ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
@@ -196,7 +242,15 @@ class HTTPServerClientTest : XCTestCase {
         }
     }
 
-    func testSimpleGet() throws {
+    func testSimpleGetByteBuffer() throws {
+        try testSimpleGet(.byteBuffer)
+    }
+    
+    func testSimpleGetFileRegion() throws {
+        try testSimpleGet(.fileRegion)
+    }
+    
+    private func testSimpleGet(_ mode: SendMode) throws {
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
@@ -215,7 +269,7 @@ class HTTPServerClientTest : XCTestCase {
             XCTAssert(actual.contains(expectedHeaderContentLength))
         }
         let numBytes = 16 * 1024
-        let httpHandler = SimpleHTTPServer()
+        let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try ServerBootstrap(group: group)
             .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             
@@ -249,7 +303,15 @@ class HTTPServerClientTest : XCTestCase {
         accumulation.syncWaitForCompletion()
     }
     
-    func testSimpleGetChunkedEncoding() throws {
+    func testSimpleGetChunkedEncodingByteBuffer() throws {
+        try testSimpleGetChunkedEncoding(.byteBuffer)
+    }
+    
+    func testSimpleGetChunkedEncodingFileRegion() throws {
+        try testSimpleGetChunkedEncoding(.fileRegion)
+    }
+    
+    private func testSimpleGetChunkedEncoding(_ mode: SendMode) throws {
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
@@ -264,7 +326,7 @@ class HTTPServerClientTest : XCTestCase {
             XCTAssert(actual.contains("\r\ntransfer-encoding: chunked\r\n"))
         }
         let numBytes = 16 * 1024
-        let httpHandler = SimpleHTTPServer()
+        let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try ServerBootstrap(group: group)
             .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             
@@ -298,7 +360,15 @@ class HTTPServerClientTest : XCTestCase {
         accumulation.syncWaitForCompletion()
     }
 
-    func testSimpleGetTrailers() throws {
+    func testSimpleGetTrailersByteBuffer() throws {
+        try testSimpleGetTrailers(.byteBuffer)
+    }
+    
+    func testSimpleGetTrailersFileRegion() throws {
+        try testSimpleGetTrailers(.fileRegion)
+    }
+    
+    private func testSimpleGetTrailers(_ mode: SendMode) throws {
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
@@ -317,7 +387,7 @@ class HTTPServerClientTest : XCTestCase {
             XCTAssert(actual.contains("\r\ntransfer-encoding: chunked\r\n"))
         }
         let numBytes = 16 * 1024
-        let httpHandler = SimpleHTTPServer()
+        let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try ServerBootstrap(group: group)
             .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .handler(childHandler: ChannelInitializer(initChannel: { channel in
@@ -348,7 +418,15 @@ class HTTPServerClientTest : XCTestCase {
         accumulation.syncWaitForCompletion()
     }
 
-    func testMassiveResponse() throws {
+    func testMassiveResponseByteBuffer() throws {
+        try testMassiveResponse(.byteBuffer)
+    }
+    
+    func testMassiveResponseFileRegion() throws {
+        try testMassiveResponse(.fileRegion)
+    }
+
+    func testMassiveResponse(_ mode: SendMode) throws {
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
@@ -363,7 +441,7 @@ class HTTPServerClientTest : XCTestCase {
             XCTAssert(expectedSuffix.elementsEqual(actualSuffix))
         }
         let numBytes = 16 * 1024
-        let httpHandler = SimpleHTTPServer()
+        let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try ServerBootstrap(group: group)
             .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
@@ -396,6 +474,4 @@ class HTTPServerClientTest : XCTestCase {
         try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
         accumulation.syncWaitForCompletion()
     }
-
-
 }

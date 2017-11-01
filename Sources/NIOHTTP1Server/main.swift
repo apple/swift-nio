@@ -44,7 +44,7 @@ private class HTTPHandler : ChannelInboundHandler {
             case .body:
                 break
             case .end:
-                let content = HTTPResponsePart.body(buffer!.slice())
+                let content = HTTPResponsePart.body(.byteBuffer(buffer!.slice()))
                 ctx.write(data: self.wrapOutboundOut(content), promise: nil)
 
                 if keepAlive {

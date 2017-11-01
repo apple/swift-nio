@@ -17,7 +17,7 @@ import Foundation // TODO(JW): investigate linker errors if this is missing
 
 public final class HTTPResponseEncoder : ChannelOutboundHandler {
     public typealias OutboundIn = HTTPResponsePart
-    public typealias OutboundOut = ByteBuffer
+    public typealias OutboundOut = IOData
 
     private var isChunked = false
     private var scratchBuffer: ByteBuffer
@@ -26,7 +26,7 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
         self.scratchBuffer = allocator.buffer(capacity: 256)
     }
 
-    private func writeChunk(ctx: ChannelHandlerContext, chunk: ByteBuffer, promise: Promise<Void>?) {
+    private func writeChunk(ctx: ChannelHandlerContext, chunk: IOData, promise: Promise<Void>?) {
         let (mW1, mW2, mW3): (Promise<()>?, Promise<()>?, Promise<()>?)
 
         switch (self.isChunked, promise) {
@@ -43,19 +43,23 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
             (mW1, mW2, mW3) = (nil, nil, nil)
         }
 
+        let readableBytes = chunk.readableBytes
+        
         /* we don't want to copy the chunk unnecessarily and therefore call write an annoyingly large number of times */
         if self.isChunked {
             self.scratchBuffer.clear()
-            let len = String(chunk.readableBytes, radix: 16)
+            let len = String(readableBytes, radix: 16)
             self.scratchBuffer.write(string: len)
             self.scratchBuffer.write(staticString: "\r\n")
-            ctx.write(data: self.wrapOutboundOut(self.scratchBuffer), promise: mW1)
+            ctx.write(data: self.wrapOutboundOut(.byteBuffer(self.scratchBuffer)), promise: mW1)
         }
+        
         ctx.write(data: self.wrapOutboundOut(chunk), promise: mW2)
+
         if self.isChunked {
             self.scratchBuffer.clear()
             self.scratchBuffer.write(staticString: "\r\n")
-            ctx.write(data: self.wrapOutboundOut(self.scratchBuffer), promise: mW3)
+            ctx.write(data: self.wrapOutboundOut(.byteBuffer(self.scratchBuffer)), promise: mW3)
         }
     }
 
@@ -72,9 +76,9 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
             self.scratchBuffer.write(staticString: "\r\n")
             response.headers.write(buffer: &self.scratchBuffer)
 
-            ctx.write(data: self.wrapOutboundOut(self.scratchBuffer), promise: promise)
-        case .some(.body(let buffer)):
-            self.writeChunk(ctx: ctx, chunk: buffer, promise: promise)
+            ctx.write(data: self.wrapOutboundOut(.byteBuffer(self.scratchBuffer)), promise: promise)
+        case .some(.body(let bodyPart)):
+            self.writeChunk(ctx: ctx, chunk: bodyPart, promise: promise)
         case .some(.end(let trailers)):
             switch (self.isChunked, promise) {
             case (true, let p):
@@ -85,12 +89,12 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
                 } else {
                     self.scratchBuffer.write(staticString: "0\r\n\r\n")
                 }
-                ctx.write(data: self.wrapOutboundOut(self.scratchBuffer), promise: p)
+                ctx.write(data: self.wrapOutboundOut(.byteBuffer(self.scratchBuffer)), promise: p)
             case (false, .some(let p)):
                 // Not chunked so we have nothing to write. However, we don't want to satisfy this promise out-of-order
                 // so we issue a zero-length write down the chain.
                 let buf = ctx.channel!.allocator.buffer(capacity: 0)
-                ctx.write(data: self.wrapOutboundOut(buf), promise: p)
+                ctx.write(data: self.wrapOutboundOut(.byteBuffer(buf)), promise: p)
             case (false, .none):
                 break
             }
