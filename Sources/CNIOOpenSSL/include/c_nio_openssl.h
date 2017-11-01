@@ -34,4 +34,20 @@ static inline void CNIOOpenSSL_SSL_CTX_setAutoECDH(SSL_CTX *ctx) {
 	#endif
 }
 
+static inline int CNIOOpenSSL_sk_GENERAL_NAME_num(STACK_OF(GENERAL_NAME) *x) {
+    return sk_GENERAL_NAME_num(x);
+}
+
+static inline const GENERAL_NAME *CNIOOpenSSL_sk_GENERAL_NAME_value(STACK_OF(GENERAL_NAME) *x, int idx) {
+    return sk_GENERAL_NAME_value(x, idx);
+}
+
+static inline const unsigned char *CNIOOpenSSL_ASN1_STRING_get0_data(ASN1_STRING *x) {
+    #if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
+        return ASN1_STRING_data(x);
+    #else
+        return ASN1_STRING_get0_data(x);
+    #endif
+}
+
 #endif

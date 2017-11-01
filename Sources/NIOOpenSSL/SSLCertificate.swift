@@ -18,9 +18,20 @@
     import Glibc
 #endif
 import CNIOOpenSSL
+import NIO
 
 public class OpenSSLCertificate {
     internal let ref: UnsafeMutablePointer<X509>
+
+    internal enum AlternativeName {
+        case dnsName(String)
+        case ipAddress(IPAddress)
+    }
+
+    internal enum IPAddress {
+        case ipv4(in_addr)
+        case ipv6(in6_addr)
+    }
 
     private init(withReference ref: UnsafeMutablePointer<X509>) {
         self.ref = ref
@@ -90,6 +101,15 @@ public class OpenSSLCertificate {
         return OpenSSLCertificate(withReference: UnsafeMutablePointer(mutating: pointer))
     }
 
+    /// Get a sequence of the alternative names in the certificate.
+    internal func subjectAlternativeNames() -> SubjectAltNameSequence? {
+        guard let sanExtension = X509_get_ext_d2i(ref, NID_subject_alt_name, nil, nil) else {
+            return nil
+        }
+        let sanNames = sanExtension.assumingMemoryBound(to: stack_st_GENERAL_NAME.self)
+        return SubjectAltNameSequence(nameStack: sanNames)
+    }
+
     deinit {
         X509_free(ref)
     }
@@ -98,5 +118,80 @@ public class OpenSSLCertificate {
 extension OpenSSLCertificate: Equatable {
     public static func ==(lhs: OpenSSLCertificate, rhs: OpenSSLCertificate) -> Bool {
         return X509_cmp(lhs.ref, rhs.ref) == 0
+    }
+}
+
+internal class SubjectAltNameSequence: Sequence, IteratorProtocol {
+    typealias Element = OpenSSLCertificate.AlternativeName
+
+    private let nameStack: UnsafeMutablePointer<stack_st_GENERAL_NAME>
+    private var nextIdx: Int32
+    private let stackSize: Int32
+
+    init(nameStack: UnsafeMutablePointer<stack_st_GENERAL_NAME>) {
+        self.nameStack = nameStack
+        self.stackSize = CNIOOpenSSL_sk_GENERAL_NAME_num(nameStack)
+        self.nextIdx = 0
+    }
+
+    private func addressFromBytes(bytes: UnsafeBufferPointer<UInt8>) -> OpenSSLCertificate.IPAddress? {
+        switch bytes.count {
+        case 4:
+            let addr = bytes.baseAddress?.withMemoryRebound(to: in_addr.self, capacity: 1) {
+                return $0.pointee
+            }
+            guard let innerAddr = addr else {
+                return nil
+            }
+            return .ipv4(innerAddr)
+        case 16:
+            let addr = bytes.baseAddress?.withMemoryRebound(to: in6_addr.self, capacity: 1) {
+                return $0.pointee
+            }
+            guard let innerAddr = addr else {
+                return nil
+            }
+            return .ipv6(innerAddr)
+        default:
+            return nil
+        }
+    }
+
+    func next() -> OpenSSLCertificate.AlternativeName? {
+        guard nextIdx < stackSize else {
+            return nil
+        }
+
+        guard let name = CNIOOpenSSL_sk_GENERAL_NAME_value(nameStack, nextIdx) else {
+            fatalError("Unexpected null pointer when unwrapping SAN value")
+        }
+
+        nextIdx += 1
+
+        switch name.pointee.type {
+        case GEN_DNS:
+            let namePtr = UnsafeBufferPointer(start: CNIOOpenSSL_ASN1_STRING_get0_data(name.pointee.d.ia5),
+                                              count: Int(ASN1_STRING_length(name.pointee.d.ia5)))
+            guard let nameString = String(bytes: namePtr, encoding: .ascii) else {
+                // This should throw, but we can't throw from next(). Skip this instead.
+                return next()
+            }
+            return .dnsName(nameString)
+        case GEN_IPADD:
+            let addrPtr = UnsafeBufferPointer(start: CNIOOpenSSL_ASN1_STRING_get0_data(name.pointee.d.ia5),
+                                              count: Int(ASN1_STRING_length(name.pointee.d.ia5)))
+            guard let addr = addressFromBytes(bytes: addrPtr) else {
+                // This should throw, but we can't throw from next(). Skip this instead.
+                return next()
+            }
+            return .ipAddress(addr)
+        default:
+            // We don't recognise this name type. Skip it.
+            return next()
+        }
+    }
+
+    deinit {
+        GENERAL_NAMES_free(nameStack)
     }
 }

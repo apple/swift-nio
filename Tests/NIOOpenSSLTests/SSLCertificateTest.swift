@@ -17,6 +17,28 @@ import XCTest
 @testable import NIO
 @testable import NIOOpenSSL
 
+let multiSanCert = """
+-----BEGIN CERTIFICATE-----
+MIIDEzCCAfugAwIBAgIURiMaUmhI1Xr0mZ4p+JmI0XjZTaIwDQYJKoZIhvcNAQEL
+BQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTE3MTAzMDEyMDUwMFoXDTQwMDEw
+MTAwMDAwMFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEF
+AAOCAQ8AMIIBCgKCAQEA26DcKAxqdWivhS/J3Klf+cEnrT2cDzLhmVRCHuQZXiIr
+tqr5401KDbRTVOg8v2qIyd8x4+YbpE47JP3fBrcMey70UK/Er8nu28RY3z7gZLLi
+Yf+obHdDFCK5JaCGmM61I0c0vp7aMXsyv7h3vjEzTuBMlKR8p37ftaXSUAe3Qk/D
+/fzA3k02E2e3ap0Sapd/wUu/0n/MFyy9HkkeykivAzLaaFhhvp3hATdFYC4FLld8
+OMB60bC2S13CAljpMlpjU/XLLOUbaPgnNUqE1nFqFBoTl6kV6+ii8Dd5ENVvE7pE
+SoNoyGLDUkDRJJMNUHAo0zbxyhd7WOtyZ7B4YBbPswIDAQABo10wWzBLBgNVHREE
+RDBCgglsb2NhbGhvc3SCC2V4YW1wbGUuY29tgRB1c2VyQGV4YW1wbGUuY29thwTA
+qAABhxAgAQ24AAAAAAAAAAAAAAABMAwGA1UdEwEB/wQCMAAwDQYJKoZIhvcNAQEL
+BQADggEBACYBArIoL9ZzVX3M+WmTD5epmGEffrH7diRJZsfpVXi86brBPrbvpTBx
+Fa+ZKxBAchPnWn4rxoWVJmTm4WYqZljek7oQKzidu88rMTbsxHA+/qyVPVlQ898I
+hgnW4h3FFapKOFqq5Hj2gKKItFIcGoVY2oLTBFkyfAx0ofromGQp3fh58KlPhC0W
+GX1nFCea74mGyq60X86aEWiyecYYj5AEcaDrTnGg3HLGTsD3mh8SUZPAda13rO4+
+RGtGsA1C9Yovlu9a6pWLgephYJ73XYPmRIGgM64fkUbSuvXNJMYbWnzpoCdW6hka
+IEaDUul/WnIkn/JZx8n+wgoWtyQa4EA=
+-----END CERTIFICATE-----
+"""
+
 private func makeTemporaryFile() -> String {
     let template = "/tmp/niotestXXXXXXX"
     var templateBytes = Array(template.utf8)
@@ -159,5 +181,40 @@ class SSLCertificateTest: XCTestCase {
         } catch NIOOpenSSLError.failedToLoadCertificate {
             // Do nothing.
         }
+    }
+
+    func testEnumeratingSanFields() throws {
+        var v4addr = in_addr()
+        var v6addr = in6_addr()
+        precondition(inet_pton(AF_INET, "192.168.0.1", &v4addr) == 1)
+        precondition(inet_pton(AF_INET6, "2001:db8::1", &v6addr) == 1)
+
+        let expectedSanFields: [OpenSSLCertificate.AlternativeName] = [
+            .dnsName("localhost"),
+            .dnsName("example.com"),
+            .ipAddress(.ipv4(v4addr)),
+            .ipAddress(.ipv6(v6addr)),
+        ]
+        let cert = try OpenSSLCertificate(buffer: [Int8](multiSanCert.utf8CString), format: .pem)
+        let sans = [OpenSSLCertificate.AlternativeName](cert.subjectAlternativeNames()!)
+
+        XCTAssertEqual(sans.count, expectedSanFields.count)
+        for index in 0..<sans.count {
+            switch (sans[index], expectedSanFields[index]) {
+            case (.dnsName(let actualName), .dnsName(let expectedName)):
+                XCTAssertEqual(actualName, expectedName)
+            case (.ipAddress(.ipv4(var actualAddr)), .ipAddress(.ipv4(var expectedAddr))):
+                XCTAssertEqual(memcmp(&actualAddr, &expectedAddr, MemoryLayout<in_addr>.size), 0)
+            case (.ipAddress(.ipv6(var actualAddr)), .ipAddress(.ipv6(var expectedAddr))):
+                XCTAssertEqual(memcmp(&actualAddr, &expectedAddr, MemoryLayout<in6_addr>.size), 0)
+            default:
+                XCTFail("Invalid entry in sans.")
+            }
+        }
+    }
+
+    func testNonexistentSan() throws {
+        let cert = try OpenSSLCertificate(buffer: [Int8](samplePemCert.utf8CString), format: .pem)
+        XCTAssertNil(cert.subjectAlternativeNames())
     }
 }
