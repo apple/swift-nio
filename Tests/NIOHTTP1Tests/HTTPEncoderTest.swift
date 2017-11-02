@@ -29,7 +29,7 @@ class HTTPEncoderTests: XCTestCase {
             XCTAssertFalse(try! channel.finish())
         }
 
-        try! channel.pipeline.add(handler: HTTPResponseEncoder(allocator: channel.allocator)).wait()
+        try! channel.pipeline.add(handler: HTTPResponseEncoder()).wait()
         var switchingResponse = HTTPResponseHead(version: HTTPVersion(major: 1, minor:1), status: status)
         switchingResponse.headers = headers
         try! channel.writeOutbound(data: HTTPResponsePart.head(switchingResponse))
@@ -98,7 +98,7 @@ class HTTPEncoderTests: XCTestCase {
             XCTAssertFalse(try! channel.finish())
         }
 
-        try! channel.pipeline.add(handler: HTTPResponseEncoder(allocator: channel.allocator)).wait()
+        try! channel.pipeline.add(handler: HTTPResponseEncoder()).wait()
 
         // This response contains neither Transfer-Encoding: chunked or Content-Length.
         let response = HTTPResponseHead(version: HTTPVersion(major: 1, minor:0), status: .ok)

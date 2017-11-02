@@ -32,7 +32,7 @@ private func serverHTTPChannel(group: EventLoopGroup, handlers: [ChannelHandler]
         .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
         .handler(childHandler: ChannelInitializer(initChannel: { channel in
             channel.pipeline.add(handler: HTTPRequestDecoder()).then {
-                channel.pipeline.add(handler: HTTPResponseEncoder(allocator: channel.allocator)).then {
+                channel.pipeline.add(handler: HTTPResponseEncoder()).then {
                     let futureResults = handlers.map { channel.pipeline.add(handler: $0) }
                     return Future<Void>.andAll(futureResults, eventLoop: channel.eventLoop)
                 }

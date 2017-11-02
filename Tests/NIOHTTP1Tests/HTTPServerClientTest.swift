@@ -277,7 +277,7 @@ class HTTPServerClientTest : XCTestCase {
             .handler(childHandler: ChannelInitializer(initChannel: { channel in
                 // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
                 channel.pipeline.add(handler: HTTPRequestDecoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseEncoder(allocator: channel.allocator)).then {
+                    channel.pipeline.add(handler: HTTPResponseEncoder()).then {
                         channel.pipeline.add(handler: httpHandler)
                     }
                 }
@@ -334,7 +334,7 @@ class HTTPServerClientTest : XCTestCase {
             .handler(childHandler: ChannelInitializer(initChannel: { channel in
                 // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
                 channel.pipeline.add(handler: HTTPRequestDecoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseEncoder(allocator: channel.allocator)).then {
+                    channel.pipeline.add(handler: HTTPResponseEncoder()).then {
                         channel.pipeline.add(handler: httpHandler)
                     }
                 }
@@ -392,7 +392,7 @@ class HTTPServerClientTest : XCTestCase {
             .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .handler(childHandler: ChannelInitializer(initChannel: { channel in
                 channel.pipeline.add(handler: HTTPRequestDecoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseEncoder(allocator: channel.allocator)).then {
+                    channel.pipeline.add(handler: HTTPResponseEncoder()).then {
                         channel.pipeline.add(handler: httpHandler)
                     }
                 }
@@ -449,7 +449,7 @@ class HTTPServerClientTest : XCTestCase {
             .handler(childHandler: ChannelInitializer(initChannel: { channel in
                 // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
                 channel.pipeline.add(handler: HTTPRequestDecoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseEncoder(allocator: channel.allocator)).then {
+                    channel.pipeline.add(handler: HTTPResponseEncoder()).then {
                         channel.pipeline.add(handler: httpHandler)
                     }
                 }
