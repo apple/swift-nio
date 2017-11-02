@@ -54,9 +54,9 @@ public protocol HTTPProtocolUpgrader {
 /// requests that we choose to punt on it entirely and not allow it. As it happens this is mostly fine:
 /// the odds of someone needing to upgrade midway through the lifetime of a connection are very low.
 public class HTTPServerUpgradeHandler: ChannelInboundHandler {
-    public typealias InboundIn = HTTPRequestPart
-    public typealias InboundOut = HTTPRequestPart
-    public typealias OutboundOut = HTTPResponsePart
+    public typealias InboundIn = HTTPServerRequestPart
+    public typealias InboundOut = HTTPServerRequestPart
+    public typealias OutboundOut = HTTPServerResponsePart
 
     private let upgraders: [String: HTTPProtocolUpgrader]
     private let upgradeCompletionHandler: (ChannelHandlerContext) -> Void
@@ -146,7 +146,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     private func sendUpgradeResponse(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead, responseHeaders: HTTPHeaders) -> Future<Void> {
         var response = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .switchingProtocols)
         response.headers = responseHeaders
-        return ctx.writeAndFlush(data: wrapOutboundOut(HTTPResponsePart.head(response)))
+        return ctx.writeAndFlush(data: wrapOutboundOut(HTTPServerResponsePart.head(response)))
     }
 
     /// Called when we know we're not upgrading. Passes the data on and then removes this object from the pipeline.

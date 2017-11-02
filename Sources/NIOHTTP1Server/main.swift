@@ -24,8 +24,8 @@ import Glibc
 #endif
 
 private class HTTPHandler : ChannelInboundHandler {
-    public typealias InboundIn = HTTPRequestPart
-    public typealias OutboundOut = HTTPResponsePart
+    public typealias InboundIn = HTTPServerRequestPart
+    public typealias OutboundOut = HTTPServerResponsePart
 
     private var buffer: ByteBuffer? = nil
     private var keepAlive = false
@@ -39,18 +39,18 @@ private class HTTPHandler : ChannelInboundHandler {
 
                 var responseHead = HTTPResponseHead(version: request.version, status: HTTPResponseStatus.ok)
                 responseHead.headers.add(name: "content-length", value: "12")
-                let response = HTTPResponsePart.head(responseHead)
+                let response = HTTPServerResponsePart.head(responseHead)
                 ctx.write(data: self.wrapOutboundOut(response), promise: nil)
             case .body:
                 break
             case .end:
-                let content = HTTPResponsePart.body(.byteBuffer(buffer!.slice()))
+                let content = HTTPServerResponsePart.body(.byteBuffer(buffer!.slice()))
                 ctx.write(data: self.wrapOutboundOut(content), promise: nil)
 
                 if keepAlive {
-                    ctx.write(data: self.wrapOutboundOut(HTTPResponsePart.end(nil)), promise: nil)
+                    ctx.write(data: self.wrapOutboundOut(HTTPServerResponsePart.end(nil)), promise: nil)
                 } else {
-                    ctx.write(data: self.wrapOutboundOut(HTTPResponsePart.end(nil))).whenComplete(callback: { _ in
+                    ctx.write(data: self.wrapOutboundOut(HTTPServerResponsePart.end(nil))).whenComplete(callback: { _ in
                         ctx.close(promise: nil)
                     })
                 }

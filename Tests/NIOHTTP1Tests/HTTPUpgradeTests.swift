@@ -220,7 +220,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         let handler = HTTPServerUpgradeHandler(upgraders: [ExplodingUpgrader(forProtocol: "myproto")]) { _ in
             XCTFail("upgrade completed")
         }
-        let data = HTTPRequestPart.body(ByteBuffer.forString("hello"))
+        let data = HTTPServerRequestPart.body(ByteBuffer.forString("hello"))
 
         try! channel.pipeline.add(handler: handler).wait()
 
@@ -234,7 +234,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         // The handler removed itself from the pipeline and passed the unexpected
         // data on.
         try channel.pipeline.assertDoesNotContain(handler: handler)
-        let receivedData: HTTPRequestPart = channel.readInbound()!
+        let receivedData: HTTPServerRequestPart = channel.readInbound()!
         XCTAssertEqual(data, receivedData)
     }
 
