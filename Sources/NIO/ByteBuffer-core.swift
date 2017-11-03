@@ -160,7 +160,24 @@ public struct ByteBuffer {
         self._writerIndex = newIndex
     }
 
+    private mutating func set<S: ContiguousCollection>(bytes: S, at index: Index) -> Capacity where S.Element == UInt8 {
+        let newEndIndex: Index = index + toIndex(Int(bytes.count))
+        if !isKnownUniquelyReferenced(&self._storage) {
+            let extraCapacity = newEndIndex > self._slice.upperBound ? newEndIndex - self._slice.upperBound : 0
+            self.copyStorageAndRebase(extraCapacity: extraCapacity)
+        }
+
+        self.ensureAvailableCapacity(Capacity(bytes.count), at: index)
+        let base = self._storage.bytes.advanced(by: Int(self._slice.lowerBound + index)).assumingMemoryBound(to: UInt8.self)
+        bytes.withUnsafeBytes { srcPtr in
+            base.assign(from: srcPtr.baseAddress!.assumingMemoryBound(to: S.Element.self), count: srcPtr.count)
+        }
+        return toCapacity(Int(bytes.count))
+    }
+
     private mutating func set<S: Collection>(bytes: S, at index: Index) -> Capacity where S.Element == UInt8 {
+        assert(!([Array<S.Element>.self, StaticString.self, ContiguousArray<S.Element>.self, UnsafeRawBufferPointer.self, UnsafeBufferPointer<UInt8>.self].contains(where: { (t: Any.Type) -> Bool in t == type(of: bytes) })),
+               "called the slower set<S: Collection> function even though \(S.self) is a ContiguousCollection")
         let newEndIndex: Index = index + toIndex(Int(bytes.count))
         if !isKnownUniquelyReferenced(&self._storage) {
             let extraCapacity = newEndIndex > self._slice.upperBound ? newEndIndex - self._slice.upperBound : 0
@@ -295,10 +312,59 @@ extension ByteBuffer: CustomStringConvertible {
     }
 }
 
+public protocol ContiguousCollection: Collection {
+    func withUnsafeBytes<R>(_ fn: (UnsafeRawBufferPointer) throws -> R) rethrows -> R
+}
+
+extension StaticString: Collection {
+    public func _customIndexOfEquatableElement(_ element: UInt8) -> Int?? {
+        return Int(element)
+    }
+
+    public typealias Element = UInt8
+    public typealias SubSequence = ArraySlice<UInt8>
+
+    public typealias Index = Int
+
+    public var startIndex: Index { return 0 }
+    public var endIndex: Index { return self.utf8CodeUnitCount }
+    public func index(after i: Index) -> Index { return i + 1 }
+    public func index(before i: Index) -> Index { return i - 1 }
+
+    public subscript(position: Int) -> StaticString.Element {
+        get {
+            return self[position]
+        }
+    }
+}
+
+extension Array: ContiguousCollection {}
+extension ContiguousArray: ContiguousCollection {}
+extension StaticString: ContiguousCollection {
+    public func withUnsafeBytes<R>(_ fn: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+        return try fn(UnsafeRawBufferPointer(start: self.utf8Start, count: self.utf8CodeUnitCount))
+    }
+}
+extension UnsafeRawBufferPointer: ContiguousCollection {
+    public func withUnsafeBytes<R>(_ fn: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+        return try fn(self)
+    }
+}
+extension UnsafeBufferPointer: ContiguousCollection {
+    public func withUnsafeBytes<R>(_ fn: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+        return try fn(UnsafeRawBufferPointer(self))
+    }
+}
+
 /* change types to the user visible `Int` */
 extension ByteBuffer {
     @discardableResult
     public mutating func set<S: Collection>(bytes: S, at index: Int) -> Int where S.Element == UInt8 {
+        return Int(self.set(bytes: bytes, at: toIndex(index)))
+    }
+
+    @discardableResult
+    public mutating func set<S: ContiguousCollection>(bytes: S, at index: Int) -> Int where S.Element == UInt8 {
         return Int(self.set(bytes: bytes, at: toIndex(index)))
     }
 

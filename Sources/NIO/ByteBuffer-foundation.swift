@@ -14,6 +14,14 @@
 
 import struct Foundation.Data
 
+extension Data: ContiguousCollection {
+    public func withUnsafeBytes<R>(_ fn: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+        return try self.withUnsafeBytes { (ptr: UnsafePointer<UInt8>) -> R in
+            return try fn(UnsafeRawBufferPointer(start: ptr, count: self.count))
+        }
+    }
+}
+
 extension ByteBuffer {
 
     // MARK: Data APIs
@@ -24,20 +32,6 @@ extension ByteBuffer {
         let data = self.data(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
         self.moveReaderIndex(forwardBy: length)
         return data
-    }
-
-    @discardableResult
-    public mutating func write(data: Data) -> Int {
-        let bytesWritten = self.set(data: data, at: self.writerIndex)
-        self.moveWriterIndex(forwardBy: bytesWritten)
-        return bytesWritten
-    }
-
-    @discardableResult
-    public mutating func set(data: Data, at index: Int) -> Int {
-        return data.withUnsafeBytes { ptr in
-            self.set(bytes: UnsafeRawBufferPointer(start: ptr, count: data.count), at: index)
-        }
     }
 
     public func data(at index: Int, length: Int) -> Data? {

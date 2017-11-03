@@ -93,6 +93,8 @@ extension ByteBufferTest {
                 ("testReadWithUnsafeReadableBytesVariantsNothingToRead", testReadWithUnsafeReadableBytesVariantsNothingToRead),
                 ("testReadWithUnsafeReadableBytesVariantsSomethingToRead", testReadWithUnsafeReadableBytesVariantsSomethingToRead),
                 ("testSomePotentialIntegerUnderOrOverflows", testSomePotentialIntegerUnderOrOverflows),
+                ("testWriteForContiguousCollections", testWriteForContiguousCollections),
+                ("testWriteForNonContiguousCollections", testWriteForNonContiguousCollections),
            ]
    }
 }

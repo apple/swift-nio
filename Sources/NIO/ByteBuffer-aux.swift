@@ -129,6 +129,13 @@ extension ByteBuffer {
         return written
     }
 
+    @discardableResult
+    public mutating func write<S: ContiguousCollection>(bytes: S) -> Int where S.Element == UInt8 {
+        let written = set(bytes: bytes, at: self.writerIndex)
+        self.moveWriterIndex(forwardBy: written)
+        return written
+    }
+
     public func slice() -> ByteBuffer {
         return slice(at: self.readerIndex, length: self.readableBytes)!
     }
