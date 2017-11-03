@@ -37,6 +37,11 @@ extension SSLCertificateTest {
                 ("testLoadingGibberishFromFileAsDerFails", testLoadingGibberishFromFileAsDerFails),
                 ("testEnumeratingSanFields", testEnumeratingSanFields),
                 ("testNonexistentSan", testNonexistentSan),
+                ("testCommonName", testCommonName),
+                ("testCommonNameForGeneratedCert", testCommonNameForGeneratedCert),
+                ("testMultipleCommonNames", testMultipleCommonNames),
+                ("testNoCommonName", testNoCommonName),
+                ("testUnicodeCommonName", testUnicodeCommonName),
            ]
    }
 }

@@ -110,6 +110,50 @@ public class OpenSSLCertificate {
         return SubjectAltNameSequence(nameStack: sanNames)
     }
 
+    /// Returns the commonName field in the Subject of this certificate.
+    ///
+    /// It is technically possible to have multiple common names in a certificate. As the primary
+    /// purpose of this field in SwiftNIO is to validate TLS certificates, we only ever return
+    /// the *most significant* (i.e. last) instance of commonName in the subject.
+    internal func commonName() -> [UInt8]? {
+        // No subject name is unexpected, but it gives us an easy time of handling this at least.
+        guard let subjectName = X509_get_subject_name(ref) else {
+            return nil
+        }
+
+        // Per the man page, to find the first entry we set lastIndex to -1. When there are no
+        // more entries, -1 is returned as the index of the next entry.
+        var lastIndex: Int32 = -1
+        var nextIndex: Int32 = -1
+        repeat {
+            lastIndex = nextIndex
+            nextIndex = X509_NAME_get_index_by_NID(subjectName, NID_commonName, lastIndex)
+        } while nextIndex >= 0
+
+        // It's totally allowed to have no commonName.
+        guard lastIndex >= 0 else {
+            return nil
+        }
+
+        // This is very unlikely, but it could happen.
+        guard let nameData = X509_NAME_ENTRY_get_data(X509_NAME_get_entry(subjectName, lastIndex)) else {
+            return nil
+        }
+
+        // Cool, we have the name. Let's have OpenSSL give it to us in UTF-8 form and then put those bytes
+        // into our own array.
+        var encodedName: UnsafeMutablePointer<UInt8>? = nil
+        let stringLength = ASN1_STRING_to_UTF8(&encodedName, nameData)
+
+        guard let namePtr = encodedName else {
+            return nil
+        }
+
+        let arr = [UInt8](UnsafeBufferPointer(start: namePtr, count: Int(stringLength)))
+        CRYPTO_free(namePtr)
+        return arr
+    }
+
     deinit {
         X509_free(ref)
     }
