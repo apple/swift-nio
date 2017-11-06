@@ -135,7 +135,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
     public init(readTimeout: TimeAmount? = nil, writeTimeout: TimeAmount? = nil, allTimeout: TimeAmount? = nil) {
         self.readTimeout = readTimeout
         self.writeTimeout = writeTimeout
-        self.allTimeout = allTimeout;
+        self.allTimeout = allTimeout
     }
     
     public func handlerAdded(ctx: ChannelHandlerContext) {
@@ -262,7 +262,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
         if let timeout = amount {
             return ctx.eventLoop.scheduleTask(in: timeout, fn(ctx, timeout))
         }
-        return nil;
+        return nil
     }
     
     private func initIdleTasks(_ ctx: ChannelHandlerContext) {
