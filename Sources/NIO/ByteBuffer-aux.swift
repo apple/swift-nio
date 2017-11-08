@@ -87,6 +87,17 @@ extension ByteBuffer {
         }
     }
 
+    public mutating func readString(length: Int) -> String? {
+        precondition(length >= 0, "length must not be negative")
+        guard self.readableBytes >= length else {
+            return nil
+        }
+        defer {
+            self.moveReaderIndex(forwardBy: length)
+        }
+        return self.string(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
+    }
+
     // MARK: Other APIs
     public mutating func readWithUnsafeReadableBytes(_ fn: (UnsafeRawBufferPointer) throws -> Int) rethrows -> Int {
         let bytesRead = try self.withUnsafeReadableBytes(fn)

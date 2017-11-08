@@ -930,4 +930,24 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(expected, buf.readBytes(length: written)!)
     }
 
+    func testReadStringOkay() throws {
+        buf.clear()
+        let expected = "hello"
+        buf.write(string: expected)
+        let actual = buf.readString(length: expected.utf8.count)
+        XCTAssertEqual(expected, actual)
+        XCTAssertEqual("", buf.readString(length: 0))
+        XCTAssertNil(buf.readString(length: 1))
+    }
+
+    func testReadStringTooMuch() throws {
+        buf.clear()
+        XCTAssertNil(buf.readString(length: 1))
+
+        buf.write(string: "a")
+        XCTAssertNil(buf.readString(length: 2))
+
+        XCTAssertEqual("a", buf.readString(length: 1))
+    }
+
 }

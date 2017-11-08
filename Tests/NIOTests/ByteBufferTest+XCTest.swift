@@ -95,6 +95,8 @@ extension ByteBufferTest {
                 ("testSomePotentialIntegerUnderOrOverflows", testSomePotentialIntegerUnderOrOverflows),
                 ("testWriteForContiguousCollections", testWriteForContiguousCollections),
                 ("testWriteForNonContiguousCollections", testWriteForNonContiguousCollections),
+                ("testReadStringOkay", testReadStringOkay),
+                ("testReadStringTooMuch", testReadStringTooMuch),
            ]
    }
 }
