@@ -35,6 +35,7 @@ extension MessageToByteEncoderTest {
 
    static var allTests : [(String, (MessageToByteEncoderTest) -> () throws -> Void)] {
       return [
+                ("testEncoderOverrideAllocateOutBuffer", testEncoderOverrideAllocateOutBuffer),
                 ("testEncoder", testEncoder),
            ]
    }
