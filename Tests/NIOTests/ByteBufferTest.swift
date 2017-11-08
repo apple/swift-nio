@@ -20,14 +20,14 @@ class ByteBufferTest: XCTestCase {
     private let allocator = ByteBufferAllocator()
     private var buf: ByteBuffer! = nil
 
-    private func setGetInt<T: Numeric & FixedWidthInteger>(index: Int, v: T) throws {
+    private func setGetInt<T: FixedWidthInteger>(index: Int, v: T) throws {
         var buffer = allocator.buffer(capacity: 32)
 
         XCTAssertEqual(MemoryLayout<T>.size, buffer.set(integer: v, at: index))
         XCTAssertEqual(v, buffer.integer(at: index))
     }
 
-    private func writeReadInt<T: Numeric & FixedWidthInteger>(v: T) throws {
+    private func writeReadInt<T: FixedWidthInteger>(v: T) throws {
         var buffer = allocator.buffer(capacity: 32)
         XCTAssertEqual(0, buffer.writerIndex)
         XCTAssertEqual(MemoryLayout<T>.size, buffer.write(integer: v))
