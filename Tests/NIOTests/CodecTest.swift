@@ -78,7 +78,25 @@ public class MessageToByteEncoderTest: XCTestCase {
         }
     }
     
+    private final class Int32ToByteEncoderWithDefaultImpl : MessageToByteEncoder {
+        typealias OutboundIn = Int32
+        typealias OutboundOut = ByteBuffer
+        
+        public func encode(ctx: ChannelHandlerContext, data value: Int32, out: inout ByteBuffer) throws {
+            XCTAssertEqual(MemoryLayout<Int32>.size, 256)
+            out.write(integer: value);
+        }
+    }
+    
+    func testEncoderOverrideAllocateOutBuffer() throws {
+        try testEncoder(Int32ToByteEncoder())
+    }
+
     func testEncoder() throws {
+        try testEncoder(Int32ToByteEncoderWithDefaultImpl())
+    }
+    
+    private func testEncoder(_ handler: ChannelHandler) throws {
         let channel = EmbeddedChannel()
         
         _ = try channel.pipeline.add(handler: Int32ToByteEncoder()).wait()

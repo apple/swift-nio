@@ -104,7 +104,7 @@ public extension MessageToByteEncoder {
         }
     }
     
-    public func allocateOutBuffer(ctx: ChannelHandlerContext, data: NIOAny) throws -> ByteBuffer {
+    public func allocateOutBuffer(ctx: ChannelHandlerContext, data: OutboundIn) throws -> ByteBuffer {
         return ctx.channel!.allocator.buffer(capacity: 256)
     }
 }
