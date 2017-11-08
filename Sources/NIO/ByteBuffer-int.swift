@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 extension ByteBuffer {
-    private func toEndianness<T: EndiannessInteger> (value: T, endianness: Endianness) -> T {
+    private func toEndianness<T: FixedWidthInteger> (value: T, endianness: Endianness) -> T {
         switch endianness {
         case .little:
             return value.littleEndian
@@ -22,7 +22,7 @@ extension ByteBuffer {
         }
     }
 
-    public mutating func readInteger<T: EndiannessInteger>(endianness: Endianness = .big) -> T? {
+    public mutating func readInteger<T: FixedWidthInteger>(endianness: Endianness = .big) -> T? {
         guard self.readableBytes >= MemoryLayout<T>.size else {
             return nil
         }
@@ -32,7 +32,7 @@ extension ByteBuffer {
         return value
     }
 
-    public func integer<T: EndiannessInteger>(at index: Int, endianness: Endianness = Endianness.big) -> T? {
+    public func integer<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big) -> T? {
         return self.withVeryUnsafeBytes { ptr in
             guard index <= ptr.count - MemoryLayout<T>.size && index >= 0 else {
                 return nil
@@ -47,14 +47,14 @@ extension ByteBuffer {
     }
 
     @discardableResult
-    public mutating func write<T: EndiannessInteger>(integer: T, endianness: Endianness = .big) -> Int {
+    public mutating func write<T: FixedWidthInteger>(integer: T, endianness: Endianness = .big) -> Int {
         let bytesWritten = self.set(integer: integer, at: self.writerIndex, endianness: endianness)
         self.moveWriterIndex(forwardBy: bytesWritten)
         return Int(bytesWritten)
     }
 
     @discardableResult
-    public mutating func set<T: EndiannessInteger>(integer: T, at index: Int, endianness: Endianness = .big) -> Int {
+    public mutating func set<T: FixedWidthInteger>(integer: T, at index: Int, endianness: Endianness = .big) -> Int {
         var value = toEndianness(value: integer, endianness: endianness)
         return Swift.withUnsafeBytes(of: &value) { ptr in
             self.set(bytes: ptr, at: index)
@@ -116,40 +116,3 @@ public enum Endianness {
 }
 
 
-// Extensions to allow convert to different Endianness.
-
-extension UInt8 : EndiannessInteger {
-    public var littleEndian: UInt8 {
-        return self
-    }
-
-    public var bigEndian: UInt8 {
-        return self
-    }
-}
-extension UInt16 : EndiannessInteger { }
-extension UInt32 : EndiannessInteger { }
-extension UInt64 : EndiannessInteger { }
-extension Int8 : EndiannessInteger {
-    public var littleEndian: Int8 {
-        return self
-    }
-
-    public var bigEndian: Int8 {
-        return self
-    }
-}
-extension Int16 : EndiannessInteger { }
-extension Int32 : EndiannessInteger { }
-extension Int64 : EndiannessInteger { }
-
-public protocol EndiannessInteger: Numeric {
-
-    /// Returns the big-endian representation of the integer, changing the
-    /// byte order if necessary.
-    var bigEndian: Self { get }
-
-    /// Returns the little-endian representation of the integer, changing the
-    /// byte order if necessary.
-    var littleEndian: Self { get }
-}

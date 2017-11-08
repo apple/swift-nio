@@ -65,7 +65,7 @@ private extension ByteBuffer {
         self.moveReaderIndex(forwardBy: distance)
     }
 
-    mutating func readIntegerIfPossible<T: EndiannessInteger>() throws -> T {
+    mutating func readIntegerIfPossible<T: FixedWidthInteger>() throws -> T {
         guard let integer: T = self.readInteger() else {
             throw InternalSniErrors.invalidLengthInRecord
         }

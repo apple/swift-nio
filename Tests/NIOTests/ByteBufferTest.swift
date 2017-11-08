@@ -20,14 +20,14 @@ class ByteBufferTest: XCTestCase {
     private let allocator = ByteBufferAllocator()
     private var buf: ByteBuffer! = nil
 
-    private func setGetInt<T: Numeric & EndiannessInteger>(index: Int, v: T) throws {
+    private func setGetInt<T: Numeric & FixedWidthInteger>(index: Int, v: T) throws {
         var buffer = allocator.buffer(capacity: 32)
 
         XCTAssertEqual(MemoryLayout<T>.size, buffer.set(integer: v, at: index))
         XCTAssertEqual(v, buffer.integer(at: index))
     }
 
-    private func writeReadInt<T: Numeric & EndiannessInteger>(v: T) throws {
+    private func writeReadInt<T: Numeric & FixedWidthInteger>(v: T) throws {
         var buffer = allocator.buffer(capacity: 32)
         XCTAssertEqual(0, buffer.writerIndex)
         XCTAssertEqual(MemoryLayout<T>.size, buffer.write(integer: v))
@@ -519,7 +519,7 @@ class ByteBufferTest: XCTestCase {
             XCTAssertEqual(byteCount, written)
         }
 
-        func tryWith<T: EndiannessInteger>(_ type: T.Type) {
+        func tryWith<T: FixedWidthInteger>(_ type: T.Type) {
             initBuffer()
 
             let tooMany = (byteCount + 1)/MemoryLayout<T>.size
