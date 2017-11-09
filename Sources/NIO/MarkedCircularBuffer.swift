@@ -89,7 +89,8 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible {
 
     /// Returns true if the buffer is currently marked at the given index.
     public func isMarked(index: Int) -> Bool {
-        precondition(index >= 0 && index < self.buffer.count)
+        precondition(index >= 0, "index must not be negative")
+        precondition(index < self.buffer.count, "index \(index) out of range (0..<\(self.buffer.count))")
         return self.markedIndex == index
     }
 

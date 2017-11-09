@@ -33,8 +33,9 @@ extension ByteBuffer {
     }
 
     public func integer<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big) -> T? {
+        precondition(index >= 0, "index must not be negative")
         return self.withVeryUnsafeBytes { ptr in
-            guard index <= ptr.count - MemoryLayout<T>.size && index >= 0 else {
+            guard index <= ptr.count - MemoryLayout<T>.size else {
                 return nil
             }
             var value: T = 0

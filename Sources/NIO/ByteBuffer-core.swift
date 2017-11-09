@@ -266,7 +266,9 @@ public struct ByteBuffer {
     }
 
     public func slice(at index: Int, length: Int) -> ByteBuffer? {
-        guard index >= 0 && length >= 0 && index <= self.capacity - length else {
+        precondition(index >= 0, "index must not be negative")
+        precondition(length >= 0, "length must not be negative")
+        guard index <= self.capacity - length else {
             return nil
         }
         let index = toIndex(index)

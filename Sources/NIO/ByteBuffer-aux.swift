@@ -22,7 +22,9 @@ extension ByteBuffer {
 
     // MARK: Bytes ([UInt8]) APIs
     public func bytes(at index: Int, length: Int) -> [UInt8]? {
-        guard index >= 0 && length >= 0 && index <= self.capacity - length else {
+        precondition(index >= 0, "index must not be negative")
+        precondition(length >= 0, "length must not be negative")
+        guard index <= self.capacity - length else {
             return nil
         }
 
@@ -33,7 +35,8 @@ extension ByteBuffer {
     }
 
     public mutating func readBytes(length: Int) -> [UInt8]? {
-        guard length >= 0 && self.readableBytes >= length else {
+        precondition(length >= 0, "length must not be negative")
+        guard self.readableBytes >= length else {
             return nil
         }
         defer {
@@ -73,8 +76,10 @@ extension ByteBuffer {
     }
 
     public func string(at index: Int, length: Int) -> String? {
+        precondition(index >= 0, "index must not be negative")
+        precondition(length >= 0, "length must not be negative")
         return withVeryUnsafeBytes { pointer in
-            guard index >= 0 && length >= 0 && index <= pointer.count - length else {
+            guard index <= pointer.count - length else {
                 return nil
             }
             return String(decoding: UnsafeBufferPointer(start: pointer.baseAddress?.assumingMemoryBound(to: UInt8.self).advanced(by: index), count: length),
@@ -141,7 +146,8 @@ extension ByteBuffer {
     }
 
     public mutating func readSlice(length: Int) -> ByteBuffer? {
-        guard length >= 0 && self.readableBytes >= length else {
+        precondition(length >= 0, "length must not be negative")
+        guard self.readableBytes >= length else {
             return nil
         }
 

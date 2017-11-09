@@ -26,7 +26,8 @@ extension ByteBuffer {
 
     // MARK: Data APIs
     public mutating func readData(length: Int) -> Data? {
-        guard length >= 0 && self.readableBytes >= length else {
+        precondition(length >= 0, "length must not be negative")
+        guard self.readableBytes >= length else {
             return nil
         }
         let data = self.data(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
@@ -35,7 +36,9 @@ extension ByteBuffer {
     }
 
     public func data(at index: Int, length: Int) -> Data? {
-        guard index >= 0 && length >= 0 && index <= self.capacity - length else {
+        precondition(length >= 0, "length must not be negative")
+        precondition(index >= 0, "index must not be negative")
+        guard index <= self.capacity - length else {
             return nil
         }
         return self.withVeryUnsafeBytesWithStorageManagement { ptr, storageRef in
