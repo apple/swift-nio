@@ -24,12 +24,12 @@ public struct NIOAny {
         
         init<T>(_ value: T) {
             switch value {
-            case is ByteBuffer:
-                self = .ioData(.byteBuffer(value as! ByteBuffer))
-            case is FileRegion:
-                self = .ioData(.fileRegion(value as! FileRegion))
-            case is IOData:
-                self = .ioData(value as! IOData)
+            case let value as ByteBuffer:
+                self = .ioData(.byteBuffer(value))
+            case let value as FileRegion:
+                self = .ioData(.fileRegion(value))
+            case let value as IOData:
+                self = .ioData(value)
             default:
                 self = .other(value)
             }
