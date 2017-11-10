@@ -39,6 +39,10 @@ private func doPendingWriteVectorOperation(pending: MarkedCircularBuffer<Pending
                                            storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
                                            _ fn: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> IOResult<Int> {
     assert(count <= pending.count, "requested to write \(count) pending writes but only \(pending.count) available")
+    assert(iovecs.count >= Socket.writevLimit, "Insufficiently sized buffer for a maximal writev")
+
+    // Clamp the number of writes we're willing to issue to the limit for writev.
+    let count = min(count, Socket.writevLimit)
     
     // the numbers of storage refs that we need to decrease later.
     var c = 0

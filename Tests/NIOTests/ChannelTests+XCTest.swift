@@ -27,6 +27,7 @@ extension ChannelTests {
    static var allTests : [(String, (ChannelTests) -> () throws -> Void)] {
       return [
                 ("testBasicLifecycle", testBasicLifecycle),
+                ("testManyManyWrites", testManyManyWrites),
            ]
    }
 }

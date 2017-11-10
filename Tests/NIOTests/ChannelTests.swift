@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import NIO
+@testable import NIO
 
 
 class ChannelLifecycleHandler: ChannelInboundHandler {
@@ -101,5 +101,31 @@ public class ChannelTests: XCTestCase {
             XCTAssertEqual(clientLifecycleHandler.stateHistory, [.unregistered, .inactive, .active, .inactive, .unregistered])
             XCTAssertEqual(serverLifecycleHandler.stateHistory, [.unregistered, .inactive, .active, .inactive, .unregistered])
         }.wait()
+    }
+
+    func testManyManyWrites() throws {
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .bind(to: "127.0.0.1", on: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+
+        // We're going to try to write loads, and loads, and loads of data. In this case, one more
+        // write than the iovecs max.
+        for _ in 0...Socket.writevLimit {
+            var buffer = clientChannel.allocator.buffer(capacity: 1)
+            buffer.write(string: "a")
+            clientChannel.write(data: NIOAny(buffer), promise: nil)
+        }
+        try clientChannel.flush().wait()
+
+        // Start shutting stuff down.
+        try clientChannel.close().wait()
     }
 }
