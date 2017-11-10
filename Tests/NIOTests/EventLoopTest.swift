@@ -21,7 +21,7 @@ public class EventLoopTest : XCTestCase {
     public func testSchedule() throws {
         let nanos = DispatchTime.now().uptimeNanoseconds
         let amount: TimeAmount = .seconds(1)
-        let eventLoopGroup = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! eventLoopGroup.syncShutdownGracefully()
         }
@@ -36,7 +36,7 @@ public class EventLoopTest : XCTestCase {
     public func testScheduleWithDelay() throws {
         let smallAmount: TimeAmount = .milliseconds(100)
         let longAmount: TimeAmount = .seconds(1)
-        let eventLoopGroup = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! eventLoopGroup.syncShutdownGracefully()
         }
@@ -69,7 +69,7 @@ public class EventLoopTest : XCTestCase {
     }
     
     public func testScheduleCancelled() throws {
-        let eventLoopGroup = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! eventLoopGroup.syncShutdownGracefully()
         }

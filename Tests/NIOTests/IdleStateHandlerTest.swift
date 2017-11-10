@@ -34,7 +34,7 @@ class IdleStateHandlerTest : XCTestCase {
     }
     
     private func testIdle(_ handler: IdleStateHandler, _ writeToChannel: Bool, _ assertEventFn: @escaping (IdleStateHandler.IdleStateEvent) -> Bool) throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }

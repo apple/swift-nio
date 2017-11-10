@@ -68,7 +68,7 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
 
 public class ChannelTests: XCTestCase {
     func testBasicLifecycle() throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -104,7 +104,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testManyManyWrites() throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -130,7 +130,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testWritevLotsOfData() throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }

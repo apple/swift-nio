@@ -226,7 +226,7 @@ class OpenSSLIntegrationTest: XCTestCase {
     func testSimpleEcho() throws {
         let ctx = try configuredSSLContext()
         
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -258,7 +258,7 @@ class OpenSSLIntegrationTest: XCTestCase {
     func testHandshakeEventSequencing() throws {
         let ctx = try configuredSSLContext()
 
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -305,7 +305,7 @@ class OpenSSLIntegrationTest: XCTestCase {
     func testShutdownEventSequencing() throws {
         let ctx = try configuredSSLContext()
 
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -351,7 +351,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         var serverClosed = false
         let ctx = try configuredSSLContext()
 
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -406,7 +406,7 @@ class OpenSSLIntegrationTest: XCTestCase {
     func testCoalescedWrites() throws {
         let ctx = try configuredSSLContext()
 
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -451,7 +451,7 @@ class OpenSSLIntegrationTest: XCTestCase {
     func testCoalescedWritesWithFutures() throws {
         let ctx = try configuredSSLContext()
 
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -522,7 +522,7 @@ class OpenSSLIntegrationTest: XCTestCase {
 
     func testAddingTlsToActiveChannelStillHandshakes() throws {
         let ctx = try configuredSSLContext()
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }

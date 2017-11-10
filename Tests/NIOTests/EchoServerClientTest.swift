@@ -34,7 +34,7 @@ class EchoServerClientTest : XCTestCase {
     }
     
     func testEcho() throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -105,7 +105,7 @@ class EchoServerClientTest : XCTestCase {
     }
 
     func testEchoUnixDomainSocket() throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -148,7 +148,7 @@ class EchoServerClientTest : XCTestCase {
     }
 
     func testConnectUnixDomainSocket() throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -191,7 +191,7 @@ class EchoServerClientTest : XCTestCase {
     }
 
     func testChannelActiveOnConnect() throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -217,7 +217,7 @@ class EchoServerClientTest : XCTestCase {
     }
 
     func testWriteThenRead() throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -411,7 +411,7 @@ class EchoServerClientTest : XCTestCase {
 
     func testCloseInInactive() throws {
 
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
             defer {
                 try! group.syncShutdownGracefully()
             }
@@ -447,7 +447,7 @@ class EchoServerClientTest : XCTestCase {
     }
 
     func testFlushOnEmpty() throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -495,7 +495,7 @@ class EchoServerClientTest : XCTestCase {
     }
 
     func testWriteOnConnect() throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -528,7 +528,7 @@ class EchoServerClientTest : XCTestCase {
     }
 
     func testWriteOnAccept() throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }

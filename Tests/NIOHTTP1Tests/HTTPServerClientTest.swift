@@ -287,7 +287,7 @@ class HTTPServerClientTest : XCTestCase {
     }
     
     private func testSimpleGet(_ mode: SendMode) throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -349,7 +349,7 @@ class HTTPServerClientTest : XCTestCase {
     }
     
     private func testSimpleGetChunkedEncoding(_ mode: SendMode) throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -410,7 +410,7 @@ class HTTPServerClientTest : XCTestCase {
     }
     
     private func testSimpleGetTrailers(_ mode: SendMode) throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -473,7 +473,7 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     func testMassiveResponse(_ mode: SendMode) throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }

@@ -40,7 +40,7 @@ class ClientSNITests: XCTestCase {
     private func assertSniResult(sniField: String?, expectedResult: SniResult) throws {
         let ctx = try configuredSSLContext()
 
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }

@@ -181,7 +181,7 @@ private enum EventLoopLifecycleState {
 
 internal final class SelectableEventLoop : EventLoop {
     private let selector: NIO.Selector<NIORegistration>
-    private var thread: pthread_t?
+    private let thread: pthread_t
     private var scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
     private let tasksLock = Lock()
     private var lifecycleState: EventLoopLifecycleState = .open
@@ -192,8 +192,9 @@ internal final class SelectableEventLoop : EventLoop {
     let iovecs: UnsafeMutableBufferPointer<IOVector>
     let storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
     
-    public init() throws {
+    public init(thread: pthread_t) throws {
         self.selector = try NIO.Selector()
+        self.thread = thread
         self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimit)
         self._storageRefs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimit)
         self.iovecs = UnsafeMutableBufferPointer(start: self._iovecs, count: Socket.writevLimit)
@@ -225,7 +226,7 @@ internal final class SelectableEventLoop : EventLoop {
     }
     
     public var inEventLoop: Bool {
-        return pthread_self() == thread
+        return pthread_equal(pthread_self(), thread) != 0
     }
 
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
@@ -324,7 +325,7 @@ internal final class SelectableEventLoop : EventLoop {
     }
     
     public func run() throws {
-        thread = pthread_self()
+        precondition(self.inEventLoop, "tried to run the EventLoop on the wrong thread.")
         defer {
             var tasksCopy = ContiguousArray<ScheduledTask>()
             
@@ -338,9 +339,6 @@ internal final class SelectableEventLoop : EventLoop {
             while let task = tasksCopy.first {
                 task.fail(error: EventLoopError.shutdown)
             }
-
-            // Ensure we reset the running Thread when this methods returns.
-            thread = nil
         }
         while lifecycleState != .closed {
             // Block until there are events to handle or the selector was woken up
@@ -509,31 +507,43 @@ public extension EventLoopGroup {
 final public class MultiThreadedEventLoopGroup : EventLoopGroup {
     
     private let index = Atomic<Int>(value: 0)
-
     private let eventLoops: [SelectableEventLoop]
 
-    public init(numThreads: Int) throws {
-        var loops: [SelectableEventLoop] = []
-        for _ in 0..<numThreads {
-            let loop = try SelectableEventLoop()
-            loops.append(loop)
-        }
-        
-        eventLoops = loops
+    private static func setupThreadAndEventLoop(name: String) -> SelectableEventLoop {
+        let lock = Lock()
+        /* the `loopUpAndRunningGroup` is done by the calling thread when the EventLoop has been created and was written to `_loop` */
+        let loopUpAndRunningGroup = DispatchGroup()
 
-        for loop in loops {
-            if #available(OSX 10.12, *) {
-                let t = Thread {
-                    do {
-                        try loop.run()
-                    } catch let err {
-                        fatalError("unexpected error while executing EventLoop \(err)")
+        /* synchronised by `lock` */
+        var _loop: SelectableEventLoop! = nil
+
+        if #available(OSX 10.12, *) {
+            loopUpAndRunningGroup.enter()
+            let thread = Thread {
+                do {
+                    /* we try! this as this must work (just setting up kqueue/epoll) or else there's not much we can do here */
+                    let l = try! SelectableEventLoop(thread: pthread_self())
+                    lock.withLock {
+                        _loop = l
                     }
+                    loopUpAndRunningGroup.leave()
+                    try l.run()
+                } catch let err {
+                    fatalError("unexpected error while executing EventLoop \(err)")
                 }
-                t.start()
-            } else {
-                fatalError("Unsupported platform / OS version")
             }
+            thread.start()
+            thread.name = name
+            loopUpAndRunningGroup.wait()
+            return lock.withLock { _loop }
+        } else {
+            fatalError("Unsupported platform / OS version")
+        }
+    }
+
+    public init(numThreads: Int) {
+        self.eventLoops = (0..<numThreads).map { threadNo in
+            MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name: "SwiftNIO event loop thread #\(threadNo)")
         }
     }
     

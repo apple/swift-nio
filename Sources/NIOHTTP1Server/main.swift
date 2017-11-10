@@ -68,7 +68,7 @@ private class HTTPHandler : ChannelInboundHandler {
     }
 }
 
-let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+let group = MultiThreadedEventLoopGroup(numThreads: 1)
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .option(option: ChannelOptions.Backlog, value: 256)
