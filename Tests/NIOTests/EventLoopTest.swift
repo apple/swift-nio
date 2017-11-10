@@ -90,4 +90,33 @@ public class EventLoopTest : XCTestCase {
         XCTAssertTrue(value)
         XCTAssertFalse(ran.load())
     }
+
+    public func testMultipleShutdown() throws {
+        // This test catches a regression that causes it to intermittently fail: it reveals bugs in synchronous shutdown.
+        // Do not ignore intermittent failures in this test!
+        let threads = 8
+        let numBytes = 256
+        let group = try MultiThreadedEventLoopGroup(numThreads: threads)
+
+        // Create a server channel.
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .bind(to: "127.0.0.1", on: 0).wait()
+
+        // We now want to connect to it. To try to slow this stuff down, we're going to use a multiple of the number
+        // of event loops.
+        for _ in 0..<(threads * 5) {
+            let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+
+            var buffer = clientChannel.allocator.buffer(capacity: numBytes)
+            for i in 0..<numBytes {
+                buffer.write(integer: UInt8(i % 256))
+            }
+
+            try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
+        }
+
+        // We should now shut down gracefully.
+        try group.syncShutdownGracefully()
+    }
 }

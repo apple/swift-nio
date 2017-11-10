@@ -559,28 +559,33 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
     }
 
     public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+        // This method cannot perform its final cleanup using Futures, because it requires that all
+        // our event loops still be alive, and they may not be. Instead, we use Dispatch to manage
+        // our shutdown signaling, and then do our cleanup once the DispatchQueue is empty.
         let g = DispatchGroup()
         let q = DispatchQueue(label: "nio.shutdownGracefullyQueue", target: queue)
         var error: Error? = nil
-        let futures: [Future<Void>] = self.eventLoops.map { eventLoop in eventLoop.closeGently() }
-        g.enter()
-        g.notify(queue: q) {
-            callback(error)
-        }
-        Future<Void>.andAll(futures, eventLoop: self.eventLoops[0]).whenComplete { result in
-            switch result {
-            case .success(_):
-                ()
-            case .failure(let err):
-                q.async { error = err }
+
+        for loop in self.eventLoops {
+            g.enter()
+            loop.closeGently().whenComplete {
+                switch $0 {
+                case .success:
+                    break
+                case .failure(let err):
+                    q.sync { error = err }
+                }
+                g.leave()
             }
+        }
+
+        g.notify(queue: q) {
             let failure = self.eventLoops.map { try? $0.close0() }.filter { $0 == nil }.count > 0
             if failure {
-                q.async {
-                    error = EventLoopError.shutdownFailed
-                }
+                error = EventLoopError.shutdownFailed
             }
-            g.leave()
+
+            callback(error)
         }
     }
 }

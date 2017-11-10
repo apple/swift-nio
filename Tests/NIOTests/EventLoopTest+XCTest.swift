@@ -29,6 +29,7 @@ extension EventLoopTest {
                 ("testSchedule", testSchedule),
                 ("testScheduleWithDelay", testScheduleWithDelay),
                 ("testScheduleCancelled", testScheduleCancelled),
+                ("testMultipleShutdown", testMultipleShutdown),
            ]
    }
 }
