@@ -20,10 +20,6 @@ let http1_1: StaticString = "HTTP/1.1"
 let status200: StaticString = "200 OK"
 
 public struct HTTPRequestHead: Equatable {
-    public static func ==(lhs: HTTPRequestHead, rhs: HTTPRequestHead) -> Bool {
-        return lhs.method == rhs.method && lhs.uri == rhs.uri && lhs.version == rhs.version && lhs.headers == rhs.headers
-    }
-
     public let method: HTTPMethod
     public let uri: String
     public let version: HTTPVersion
@@ -42,10 +38,15 @@ public struct HTTPRequestHead: Equatable {
         self.uri = uri
         self.headers = headers
     }
+
+    public static func ==(lhs: HTTPRequestHead, rhs: HTTPRequestHead) -> Bool {
+        return lhs.method == rhs.method && lhs.uri == rhs.uri && lhs.version == rhs.version && lhs.headers == rhs.headers
+    }
 }
-public enum HTTPPart<H: Equatable, T: Equatable> {
-    case head(H)
-    case body(T)
+
+public enum HTTPPart<HeadT: Equatable, BodyT: Equatable> {
+    case head(HeadT)
+    case body(BodyT)
     case end(HTTPHeaders?)
 }
 
@@ -67,6 +68,9 @@ extension HTTPPart : Equatable {
 public typealias HTTPClientRequestPart = HTTPPart<HTTPRequestHead, IOData>
 public typealias HTTPServerRequestPart = HTTPPart<HTTPRequestHead, ByteBuffer>
 
+public typealias HTTPClientResponsePart = HTTPPart<HTTPResponseHead, ByteBuffer>
+public typealias HTTPServerResponsePart = HTTPPart<HTTPResponseHead, IOData>
+
 public extension HTTPRequestHead {
     var isKeepAlive: Bool {
         guard let connection = headers["connection"].first?.lowercased() else {
@@ -80,9 +84,6 @@ public extension HTTPRequestHead {
         return connection == "keep-alive"
     }
 }
-
-public typealias HTTPClientResponsePart = HTTPPart<HTTPResponseHead, ByteBuffer>
-public typealias HTTPServerResponsePart = HTTPPart<HTTPResponseHead, IOData>
 
 public struct HTTPResponseHead : Equatable {
     public let status: HTTPResponseStatus
