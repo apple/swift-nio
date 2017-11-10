@@ -33,6 +33,9 @@ private extension IOData {
 }
 private typealias PendingWrite = (data: IOData, promise: Promise<Void>?)
 
+// We need to know the maximum value of a 32-bit int, but in Swift's regular int size. Store it here.
+private let maxInt = Int(INT32_MAX)
+
 private func doPendingWriteVectorOperation(pending: MarkedCircularBuffer<PendingWrite>,
                                            count: Int,
                                            iovecs: UnsafeMutableBufferPointer<IOVector>,
@@ -46,10 +49,19 @@ private func doPendingWriteVectorOperation(pending: MarkedCircularBuffer<Pending
     
     // the numbers of storage refs that we need to decrease later.
     var c = 0
+
+    // Must not write more than INT32_MAX in one go.
+    var toWrite = 0
+
     loop: for i in 0..<count {
         let p = pending[i]
         switch p.data {
         case .byteBuffer(let buffer):
+            guard maxInt - toWrite >= buffer.readableBytes else {
+                break loop
+            }
+            toWrite += buffer.readableBytes
+
             buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
                 storageRefs[i] = storageRef.retain()
                 iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: ptr.count)

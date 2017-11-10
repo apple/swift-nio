@@ -28,6 +28,7 @@ extension ChannelTests {
       return [
                 ("testBasicLifecycle", testBasicLifecycle),
                 ("testManyManyWrites", testManyManyWrites),
+                ("testWritevLotsOfData", testWritevLotsOfData),
            ]
    }
 }

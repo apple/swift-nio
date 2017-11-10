@@ -128,4 +128,39 @@ public class ChannelTests: XCTestCase {
         // Start shutting stuff down.
         try clientChannel.close().wait()
     }
+
+    func testWritevLotsOfData() throws {
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .bind(to: "127.0.0.1", on: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+
+        let bufferSize = 1024 * 1024 * 2
+        var buffer = clientChannel.allocator.buffer(capacity: bufferSize)
+        for _ in 0..<bufferSize {
+            buffer.write(staticString: "a")
+        }
+
+        var written = 0
+        while written <= Int(INT32_MAX) {
+            clientChannel.write(data: NIOAny(buffer), promise: nil)
+            written += bufferSize
+        }
+
+        do {
+            _ = try clientChannel.flush().wait()
+        } catch let error {
+            XCTFail("Error occured: \(error)")
+        }
+
+        // Start shutting stuff down.
+        try clientChannel.close().wait()
+    }
 }
