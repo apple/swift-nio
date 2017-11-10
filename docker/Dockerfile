@@ -21,4 +21,4 @@ RUN chmod 755 $HOME/scripts/symbolicate-linux-fatal
 
 # install swift
 ARG version
-RUN $HOME/.swiftenv/bin/swiftenv install ${version:-3.0.1}
+RUN $HOME/.swiftenv/bin/swiftenv install ${version:-4.0}

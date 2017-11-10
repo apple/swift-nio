@@ -19,13 +19,42 @@ and from some other terminal
 
     echo Hello SwiftNIO | nc localhost 9999
 
+## Alternative way using `docker-compose`
+
+First `cd docker` and then:
+
+- `docker-compose test`
+
+  Will create a base image with Swift 4.0 (if missing), compile SwiftNIO and run tests
+
+- `docker-compose up echo`
+
+  Will create a base image, compile SwiftNIO, and run a sample `NIOEchoServer` on
+  `localhost:9999`. Test it by `echo Hello SwiftNIO | nc localhost 9999`.
+
+- `docker-compose up http`
+
+  Will create a base image, compile SwiftNIO, and run a sample `NIOHTTP1Server` on
+  `localhost:8888`. Test it by `curl http://localhost:8888`
+
+- `docker-compose run swift-nio /scripts/gen-cert.sh`
+
+  Will generate self-signed certificate for a TLS Server example.
+
+- `docker-compose up tls`
+
+  Will create a base image, compile SwiftNIO, and run a sample `NIOTLSServer`
+  on `localhost:4433`. It is an echo server that you can test using
+  `openssl s_client -crlf -connect localhost:4433`.
+
+
 ## Prerequisites for Linux (using Docker)
 
 ### Creating a Docker Image for Linux
 
 ```
 # create the docker image for linux (one time or when Dockerfile changes)
-$ docker build . --build-arg version=4.0 -t=nio
+$ docker build . -f docker/Dockerfile --build-arg version=4.0 -t=nio
 ```
 
 ### Using the Linux Docker Image
