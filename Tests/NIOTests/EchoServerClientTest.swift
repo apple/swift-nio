@@ -71,6 +71,39 @@ class EchoServerClientTest : XCTestCase {
         try countingHandler.assertReceived(buffer: buffer)
     }
     
+    func testLotsOfUnflushedWrites() throws {
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+                return channel.pipeline.add(handler: WriteALotHandler())
+            })).bind(to: "127.0.0.1", on: 0).wait()
+
+        defer {
+            _ = try! serverChannel.close().wait()
+        }
+
+        let promise: Promise<ByteBuffer> = group.next().newPromise()
+        let clientChannel = try ClientBootstrap(group: group)
+            .handler(handler: ChannelInitializer(initChannel: { channel in
+                return channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: "X")).then { v2 in
+                    return channel.pipeline.add(handler: ByteCountingHandler(numBytes: 10000, promise: promise))
+                }
+            }))
+            .connect(to: serverChannel.localAddress!).wait()
+        defer {
+            _ = clientChannel.close()
+        }
+
+        let bytes = try promise.futureResult.wait()
+        let expected = String(decoding: Array(repeating: "X".utf8.first!, count: 10000), as: UTF8.self)
+        XCTAssertEqual(expected, bytes.string(at: bytes.readerIndex, length: bytes.readableBytes))
+    }
+
     func testEchoUnixDomainSocket() throws {
         let group = try MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
@@ -277,6 +310,21 @@ class EchoServerClientTest : XCTestCase {
             ctx.write(data: data, promise: nil)
         }
         
+        func channelReadComplete(ctx: ChannelHandlerContext) {
+            ctx.flush(promise: nil)
+        }
+    }
+
+    private final class WriteALotHandler: ChannelInboundHandler {
+        typealias InboundIn = ByteBuffer
+        typealias OutboundOut = ByteBuffer
+
+        func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            for _ in 0..<10000 {
+                ctx.write(data: data, promise: nil)
+            }
+        }
+
         func channelReadComplete(ctx: ChannelHandlerContext) {
             ctx.flush(promise: nil)
         }
