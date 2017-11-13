@@ -287,7 +287,7 @@ private final class PendingWrites {
                                 // buffer was completely written
                                 p.promise?.succeed(result: ())
 
-                                if w == 0 {
+                                if w == 0 && buffer.readableBytes > 0 {
                                     return isFlushPending ? .writtenCompletely : .nothingToBeWritten
                                 }
 
@@ -450,6 +450,10 @@ final class SocketChannel : BaseSocketChannel<Socket> {
                     return .processed(0)
                 case 1:
                     let p = ptrs[0]
+                    guard p.iov_len > 0 else {
+                        // No need to call write if the buffer is empty.
+                        return .processed(0)
+                    }
                     return try self.socket.write(pointer: p.iov_base.assumingMemoryBound(to: UInt8.self), size: p.iov_len)
                 default:
                     // Gathering write
