@@ -29,6 +29,7 @@ extension ChannelTests {
                 ("testBasicLifecycle", testBasicLifecycle),
                 ("testManyManyWrites", testManyManyWrites),
                 ("testWritevLotsOfData", testWritevLotsOfData),
+                ("testParentsOfSocketChannels", testParentsOfSocketChannels),
            ]
    }
 }

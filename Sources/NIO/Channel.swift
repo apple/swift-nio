@@ -387,7 +387,6 @@ final class SocketChannel : BaseSocketChannel<Socket> {
             let _ = try? socket.close()
             throw err
         }
-
         try super.init(socket: socket, eventLoop: eventLoop)
     }
 
@@ -398,6 +397,11 @@ final class SocketChannel : BaseSocketChannel<Socket> {
     fileprivate override init(socket: Socket, eventLoop: SelectableEventLoop) throws {
         try socket.setNonBlocking()
         try super.init(socket: socket, eventLoop: eventLoop)
+    }
+
+    fileprivate convenience init(socket: Socket, eventLoop: SelectableEventLoop, parent: Channel) throws {
+        try self.init(socket: socket, eventLoop: eventLoop)
+        self.parent = parent
     }
 
     override fileprivate func readFromSocket() throws {
@@ -547,7 +551,8 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
                 readPending = false
 
                 do {
-                    pipeline.fireChannelRead0(data: NIOAny(try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop)))
+                    let chan = try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop, parent: self)
+                    pipeline.fireChannelRead0(data: NIOAny(chan))
                 } catch let err {
                     let _ = try? accepted.close()
                     throw err
@@ -608,6 +613,8 @@ public protocol Channel : class, ChannelOutboundInvoker {
     var pipeline: ChannelPipeline { get }
     var localAddress: SocketAddress? { get }
     var remoteAddress: SocketAddress? { get }
+
+    var parent: Channel? { get }
 
     func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws
     func getOption<T: ChannelOption>(option: T) throws -> T.OptionType
@@ -705,6 +712,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public var isActive: Bool {
         return active.load()
     }
+
+    public var parent: Channel? = nil
 
     public final var closeFuture: Future<Void> {
         return closePromise.futureResult

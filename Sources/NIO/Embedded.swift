@@ -206,6 +206,9 @@ public class EmbeddedChannel : Channel {
 
     public var localAddress: SocketAddress? = nil
     public var remoteAddress: SocketAddress? = nil
+
+    // Embedded channels never have parents.
+    public let parent: Channel? = nil
     
     public func readOutbound() -> IOData? {
         return readFromBuffer(buffer: &channelcore.outboundBuffer)

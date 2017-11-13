@@ -163,4 +163,40 @@ public class ChannelTests: XCTestCase {
         // Start shutting stuff down.
         try clientChannel.close().wait()
     }
+
+    func testParentsOfSocketChannels() throws {
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let childChannelPromise: Promise<Channel> = group.next().newPromise()
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+                childChannelPromise.succeed(result: channel)
+                return channel.eventLoop.newSucceedFuture(result: ())
+            })).bind(to: "127.0.0.1", on: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+
+        // Check the child channel has a parent, and that that parent is the server channel.
+        childChannelPromise.futureResult.whenComplete {
+            switch $0 {
+            case .success(let chan):
+                XCTAssertTrue(chan.parent === serverChannel)
+            case .failure(let err):
+                XCTFail("Unexpected error \(err)")
+            }
+        }
+        _ = try childChannelPromise.futureResult.wait()
+
+        // Neither the server nor client channels have parents.
+        XCTAssertNil(serverChannel.parent)
+        XCTAssertNil(clientChannel.parent)
+
+        // Start shutting stuff down.
+        try clientChannel.close().wait()
+    }
 }
