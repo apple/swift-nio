@@ -69,6 +69,7 @@ public enum OpenSSLError: Error {
     case unknownError(OpenSSLErrorStack)
     case uncleanShutdown
     case invalidSNIName(OpenSSLErrorStack)
+    case failedToSetALPN(OpenSSLErrorStack)
 }
 
 extension OpenSSLError: Equatable {}

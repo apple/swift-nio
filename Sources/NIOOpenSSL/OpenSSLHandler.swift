@@ -164,7 +164,8 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
             writeDataToNetwork(ctx: ctx, promise: nil)
             
             // TODO(cory): This event should probably fire out of the OpenSSL info callback.
-            ctx.fireUserInboundEventTriggered(event: wrapInboundUserEventOut(TLSUserEvent.handshakeCompleted(negotiatedProtocol: nil)))
+            let negotiatedProtocol = connection.getAlpnProtocol()
+            ctx.fireUserInboundEventTriggered(event: wrapInboundUserEventOut(TLSUserEvent.handshakeCompleted(negotiatedProtocol: negotiatedProtocol)))
             
             // We need to unbuffer any pending writes. We will have pending writes if the user attempted to write
             // before we completed the handshake.

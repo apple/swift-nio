@@ -72,6 +72,20 @@ public let defaultCipherSuites = [
     "!MD5",
     ].joined(separator: ":")
 
+/// Encodes a string to the wire format of an ALPN identifier. These MUST be ASCII, and so
+/// this routine will crash the program if they aren't, as these are always user-supplied
+/// strings.
+internal func encodeALPNIdentifier(identifier: String) -> [UInt8] {
+    var encodedIdentifier = [UInt8]()
+    encodedIdentifier.append(UInt8(identifier.utf8.count))
+
+    for codePoint in identifier.unicodeScalars {
+        encodedIdentifier.append(contentsOf: Unicode.ASCII.encode(codePoint)!)
+    }
+
+    return encodedIdentifier
+}
+
 /// Manages configuration of OpenSSL for SwiftNIO programs.
 ///
 /// OpenSSL has a number of configuration options that are worth setting. This structure allows
@@ -102,13 +116,20 @@ public struct TLSConfiguration {
     /// The private key associated with the leaf certificate.
     public let privateKey: OpenSSLPrivateKeySource?
 
+    /// The application protocols to use in the connection. Should be an ordered list of ASCII
+    /// strings representing the ALPN identifiers of the protocols to negotiate. For clients,
+    /// the protocols will be offered in the order given. For servers, the protocols will be matched
+    /// against the client's offered protocols in order.
+    public let applicationProtocols: [[UInt8]]
+
     private init(cipherSuites: String,
                 minimumTLSVersion: TLSVersion,
                 maximumTLSVersion: TLSVersion?,
                 certificateVerification: Bool,
                 trustRoots: OpenSSLTrustRoots,
                 certificateChain: [OpenSSLCertificateSource],
-                privateKey: OpenSSLPrivateKeySource?) {
+                privateKey: OpenSSLPrivateKeySource?,
+                applicationProtocols: [String]) {
         self.cipherSuites = cipherSuites
         self.minimumTLSVersion = minimumTLSVersion
         self.maximumTLSVersion = maximumTLSVersion
@@ -116,6 +137,13 @@ public struct TLSConfiguration {
         self.trustRoots = trustRoots
         self.certificateChain = certificateChain
         self.privateKey = privateKey
+
+        var encodedProtocols = [[UInt8]]()
+        for `protocol` in applicationProtocols {
+            encodedProtocols.append(encodeALPNIdentifier(identifier: `protocol`))
+        }
+
+        self.applicationProtocols = encodedProtocols
     }
 
     /// Create a TLS configuration for use with server-side contexts.
@@ -128,14 +156,16 @@ public struct TLSConfiguration {
                                  minimumTLSVersion: TLSVersion = .tlsv1,
                                  maximumTLSVersion: TLSVersion? = nil,
                                  certificateVerification: Bool = false,
-                                 trustRoots: OpenSSLTrustRoots = .default) -> TLSConfiguration {
+                                 trustRoots: OpenSSLTrustRoots = .default,
+                                 applicationProtocols: [String] = []) -> TLSConfiguration {
         return TLSConfiguration(cipherSuites: cipherSuites,
                                 minimumTLSVersion: minimumTLSVersion,
                                 maximumTLSVersion: maximumTLSVersion,
                                 certificateVerification: certificateVerification,
                                 trustRoots: trustRoots,
                                 certificateChain: certificateChain,
-                                privateKey: privateKey)
+                                privateKey: privateKey,
+                                applicationProtocols: applicationProtocols)
     }
 
 
@@ -149,13 +179,15 @@ public struct TLSConfiguration {
                                  certificateVerification: Bool = true,
                                  trustRoots: OpenSSLTrustRoots = .default,
                                  certificateChain: [OpenSSLCertificateSource] = [],
-                                 privateKey: OpenSSLPrivateKeySource? = nil) -> TLSConfiguration {
+                                 privateKey: OpenSSLPrivateKeySource? = nil,
+                                 applicationProtocols: [String] = []) -> TLSConfiguration {
         return TLSConfiguration(cipherSuites: cipherSuites,
                                 minimumTLSVersion: minimumTLSVersion,
                                 maximumTLSVersion: maximumTLSVersion,
                                 certificateVerification: certificateVerification,
                                 trustRoots: trustRoots,
                                 certificateChain: certificateChain,
-                                privateKey: privateKey)
+                                privateKey: privateKey,
+                                applicationProtocols: applicationProtocols)
     }
 }

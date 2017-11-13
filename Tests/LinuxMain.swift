@@ -52,6 +52,7 @@ import XCTest
          testCase(IdleStateHandlerTest.allTests),
          testCase(MarkedCircularBufferTests.allTests),
          testCase(MessageToByteEncoderTest.allTests),
+         testCase(OpenSSLALPNTest.allTests),
          testCase(OpenSSLIntegrationTest.allTests),
          testCase(SSLCertificateTest.allTests),
          testCase(SSLPrivateKeyTest.allTests),

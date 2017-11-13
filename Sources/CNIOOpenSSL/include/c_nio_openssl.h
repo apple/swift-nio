@@ -59,4 +59,46 @@ static inline const GENERAL_NAME *CNIOOpenSSL_sk_GENERAL_NAME_value(STACK_OF(GEN
     return sk_GENERAL_NAME_value(x, idx);
 }
 
+static inline int CNIOOpenSSL_SSL_CTX_set_app_data(SSL_CTX *ctx, void *arg) {
+    return SSL_CTX_set_app_data(ctx, arg);
+}
+
+static inline void *CNIOOpenSSL_SSL_CTX_get_app_data(SSL_CTX *ctx) {
+    return SSL_CTX_get_app_data(ctx);
+}
+
+// We bring this typedef forward in case it's not present in the version of OpenSSL
+// we have.
+typedef int (*CNIOOpenSSL_SSL_CTX_alpn_select_cb_func)(SSL *ssl,
+                                                          const unsigned char **out,
+                                                          unsigned char *outlen,
+                                                          const unsigned char *in,
+                                                          unsigned int inlen,
+                                                          void *arg);
+
+static inline int CNIOOpenSSL_SSL_CTX_set_alpn_protos(SSL_CTX *ctx,
+                                                         const unsigned char *protos,
+                                                         unsigned int protos_len) {
+    #if OPENSSL_VERSION_NUMBER >= 0x10002000L
+        return SSL_CTX_set_alpn_protos(ctx, protos, protos_len);
+    #else
+        return 1;
+    #endif
+}
+
+static inline void CNIOOpenSSL_SSL_CTX_set_alpn_select_cb(SSL_CTX *ctx,
+                                                             CNIOOpenSSL_SSL_CTX_alpn_select_cb_func cb,
+                                                             void *arg) {
+    #if OPENSSL_VERSION_NUMBER >= 0x10002000L
+        SSL_CTX_set_alpn_select_cb(ctx, cb, arg);
+    #endif
+}
+
+static inline void CNIOOpenSSL_SSL_get0_alpn_selected(const SSL *ssl,
+                                                         const unsigned char **data,
+                                                         unsigned int *len) {
+    #if OPENSSL_VERSION_NUMBER >= 0x10002000L
+        SSL_get0_alpn_selected(ssl, data, len);
+    #endif
+}
 #endif

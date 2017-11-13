@@ -35,7 +35,7 @@ private final class SimpleEchoServer: ChannelInboundHandler {
     }
 }
 
-private final class PromiseOnReadHandler: ChannelInboundHandler {
+internal final class PromiseOnReadHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
     public typealias InboundUserEventIn = TLSUserEvent

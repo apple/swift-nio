@@ -36,14 +36,78 @@ fileprivate var initialized: Bool = initializeOpenSSL()
     }
 #endif
 
+// This bizarre extension to UnsafeBufferPointer is very useful for handling ALPN identifiers. OpenSSL
+// likes to work with them in wire format, so rather than us decoding them we can just encode ours to
+// the wire format and then work with them from there.
+private extension UnsafeBufferPointer where Element == UInt8 {
+    func locateAlpnIdentifier<T>(identifier: UnsafeBufferPointer<T>) -> (index: Int, length: Int)? where T == Element {
+        precondition(identifier.count != 0)
+        let targetLength = Int(identifier[0])
+
+        var index = 0
+        outerLoop: while index < self.count {
+            let length = Int(self[index])
+            guard index + length + 1 <= self.count else {
+                // Invalid length of ALPN identifier, no match.
+                return nil
+            }
+
+            guard targetLength == length else {
+                index += length + 1
+                continue outerLoop
+            }
+
+            for innerIndex in 1...length {
+                guard identifier[innerIndex] == self[index + innerIndex] else {
+                    index += length + 1
+                    continue outerLoop
+                }
+            }
+
+            // Found it
+            return (index: index + 1, length: length)
+        }
+        return nil
+    }
+}
+
 private func verifyCallback(preverifyOk: Int32, ctx: UnsafeMutablePointer<X509_STORE_CTX>?) -> Int32 {
     // This is a no-op verify callback for use with OpenSSL.
     return preverifyOk
 }
 
+private func alpnCallback(ssl: UnsafeMutablePointer<SSL>?,
+                          out: UnsafeMutablePointer<UnsafePointer<UInt8>?>?,
+                          outlen: UnsafeMutablePointer<UInt8>?,
+                          in: UnsafePointer<UInt8>?,
+                          inlen: UInt32,
+                          appData: UnsafeMutableRawPointer?) -> Int32 {
+    // Perform some sanity checks. We don't want NULL pointers around here.
+    guard let ssl = ssl, let out = out, let outlen = outlen, let `in` = `in` else {
+        return SSL_TLSEXT_ERR_ALERT_FATAL
+    }
+
+    // We want to take the SSL pointer and extract the parent Swift object.
+    let parentCtx = SSL_get_SSL_CTX(ssl)!
+    let parentPtr = CNIOOpenSSL_SSL_CTX_get_app_data(parentCtx)!
+    let parentSwiftContext: SSLContext = Unmanaged.fromOpaque(parentPtr).takeUnretainedValue()
+
+    let offeredProtocols = UnsafeBufferPointer(start: `in`, count: Int(inlen))
+    guard let (index, length) = parentSwiftContext.alpnSelectCallback(offeredProtocols: offeredProtocols) else {
+        out.pointee = nil
+        outlen.pointee = 0
+        return SSL_TLSEXT_ERR_ALERT_FATAL
+    }
+
+    out.pointee = `in` + index
+    outlen.pointee = UInt8(length)
+    return SSL_TLSEXT_ERR_OK
+}
+
 
 public final class SSLContext {
     private let sslContext: UnsafeMutablePointer<SSL_CTX>
+    private let configuration: TLSConfiguration
     
     public init(configuration: TLSConfiguration) throws {
         precondition(initialized)
@@ -141,7 +205,17 @@ public final class SSLContext {
             }
         }
 
-        sslContext = ctx
+        if configuration.applicationProtocols.count > 0 {
+            try SSLContext.setAlpnProtocols(configuration.applicationProtocols, context: ctx)
+            SSLContext.setAlpnCallback(context: ctx)
+        }
+
+        self.sslContext = ctx
+        self.configuration = configuration
+
+        // Always make it possible to get from an SSL_CTX structure back to this.
+        let ptrToSelf = Unmanaged.passUnretained(self).toOpaque()
+        CNIOOpenSSL_SSL_CTX_set_app_data(ctx, ptrToSelf)
     }
 
     internal func createConnection() -> SSLConnection? {
@@ -149,6 +223,17 @@ public final class SSLContext {
             return nil
         }
         return SSLConnection(ssl, parentContext:self)
+    }
+
+    fileprivate func alpnSelectCallback(offeredProtocols: UnsafeBufferPointer<UInt8>) ->  (index: Int, length: Int)? {
+        for possibility in configuration.applicationProtocols {
+            let match = possibility.withUnsafeBufferPointer {
+                offeredProtocols.locateAlpnIdentifier(identifier: $0)
+            }
+            if match != nil { return match }
+        }
+
+        return nil
     }
 
     deinit {
@@ -239,4 +324,21 @@ extension SSLContext {
         }
     }
 
+    private static func setAlpnProtocols(_ protocols: [[UInt8]], context: UnsafeMutablePointer<SSL_CTX>) throws {
+        // This copy should be done infrequently, so we don't worry too much about it.
+        let protoBuf = protocols.reduce([UInt8](), +)
+        let rc = protoBuf.withUnsafeBufferPointer {
+            CNIOOpenSSL_SSL_CTX_set_alpn_protos(context, $0.baseAddress!, UInt32($0.count))
+        }
+
+        // Annoyingly this function reverses the error convention: 0 is success, non-zero is failure.
+        if rc != 0 {
+            let errorStack = OpenSSLError.buildErrorStack()
+            throw OpenSSLError.failedToSetALPN(errorStack)
+        }
+    }
+
+    private static func setAlpnCallback(context: UnsafeMutablePointer<SSL_CTX>) {
+        CNIOOpenSSL_SSL_CTX_set_alpn_select_cb(context, alpnCallback, nil)
+    }
 }

@@ -201,4 +201,16 @@ internal final class SSLConnection {
             }
         }
     }
+
+    func getAlpnProtocol() -> String? {
+        var protoName = UnsafePointer<UInt8>(bitPattern: 0)
+        var protoLen: UInt32 = 0
+
+        CNIOOpenSSL_SSL_get0_alpn_selected(ssl, &protoName, &protoLen)
+        guard protoLen > 0 else {
+            return nil
+        }
+
+        return String(decoding: UnsafeBufferPointer(start: protoName, count: Int(protoLen)), as: UTF8.self)
+    }
 }
