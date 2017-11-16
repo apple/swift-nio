@@ -58,6 +58,7 @@ import XCTest
          testCase(SSLPrivateKeyTest.allTests),
          testCase(SniHandlerTest.allTests),
          testCase(SocketAddressTest.allTests),
+         testCase(SystemTest.allTests),
          testCase(TLSConfigurationTest.allTests),
          testCase(TypeAssistedChannelHandlerTest.allTests),
     ])

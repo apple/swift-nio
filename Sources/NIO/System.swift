@@ -35,6 +35,8 @@ private func testForBlacklistedErrno(_ code: Int32) {
     }
 }
 
+/* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
+@inline(__always)
 private func wrapSyscallMayBlock<T: FixedWidthInteger>(_ fn: () -> T, where: StaticString = #function) throws -> IOResult<T> {
     while true {
         do {
@@ -51,6 +53,8 @@ private func wrapSyscallMayBlock<T: FixedWidthInteger>(_ fn: () -> T, where: Sta
     }
 }
 
+/* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
+@inline(__always)
 private func wrapSyscall<T: FixedWidthInteger>(_ fn: () throws -> T, where: StaticString = #function) throws -> T {
     while true {
         let res = try fn()
