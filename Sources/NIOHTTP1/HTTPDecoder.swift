@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIO
-import CHTTPParser
+import CNIOHTTPParser
 
 public typealias HTTPRequestDecoder = HTTPDecoder<HTTPServerRequestPart>
 public typealias HTTPResponseDecoder = HTTPDecoder<HTTPClientResponsePart>

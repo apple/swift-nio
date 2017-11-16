@@ -18,10 +18,8 @@
 //  Created by Norman Maurer on 11/10/17.
 //
 #if os(Linux)
-import CEventfd
+import CNIOLinux
 import Glibc
-import CTimerfd
-import CEpoll
 #else
 import Darwin
 #endif
@@ -273,80 +271,80 @@ internal enum Posix {
 
 #if os(Linux)
 internal enum TimerFd {
-    public static let TFD_CLOEXEC = CTimerfd.TFD_CLOEXEC
-    public static let TFD_NONBLOCK = CTimerfd.TFD_NONBLOCK
+    public static let TFD_CLOEXEC = CNIOLinux.TFD_CLOEXEC
+    public static let TFD_NONBLOCK = CNIOLinux.TFD_NONBLOCK
     
     @inline(never)
     public static func timerfd_settime(fd: Int32, flags: Int32, newValue: UnsafePointer<itimerspec>, oldValue: UnsafeMutablePointer<itimerspec>?) throws  {
         _ = try wrapSyscall({
-           CTimerfd.timerfd_settime(fd, flags, newValue, oldValue)
+           CNIOLinux.timerfd_settime(fd, flags, newValue, oldValue)
         })
     }
     
     @inline(never)
     public static func timerfd_create(clockId: Int32, flags: Int32) throws -> Int32 {
         return try wrapSyscall({
-            CTimerfd.timerfd_create(clockId, flags)
+            CNIOLinux.timerfd_create(clockId, flags)
         })
     }
 }
 
 internal enum EventFd {
-    public static let EFD_CLOEXEC = CEventfd.EFD_CLOEXEC
-    public static let EFD_NONBLOCK = CEventfd.EFD_NONBLOCK
-    public typealias eventfd_t = CEventfd.eventfd_t
+    public static let EFD_CLOEXEC = CNIOLinux.EFD_CLOEXEC
+    public static let EFD_NONBLOCK = CNIOLinux.EFD_NONBLOCK
+    public typealias eventfd_t = CNIOLinux.eventfd_t
     
     @inline(never)
     public static func eventfd_write(fd: Int32, value: UInt64) throws -> Int32 {
         return try wrapSyscall({
-            CEventfd.eventfd_write(fd, value)
+            CNIOLinux.eventfd_write(fd, value)
         })
     }
     
     @inline(never)
     public static func eventfd_read(fd: Int32, value: UnsafeMutablePointer<UInt64>) throws -> Int32 {
         return try wrapSyscall({
-            CEventfd.eventfd_read(fd, value)
+            CNIOLinux.eventfd_read(fd, value)
         })
     }
     
     @inline(never)
     public static func eventfd(initval: Int32, flags: Int32) throws -> Int32 {
         return try wrapSyscall({
-            CEventfd.eventfd(0, Int32(EFD_CLOEXEC | EFD_NONBLOCK))
+            CNIOLinux.eventfd(0, Int32(EFD_CLOEXEC | EFD_NONBLOCK))
         })
     }
 }
 
 internal enum Epoll {
-    public typealias epoll_event = CEpoll.epoll_event
-    public static let EPOLL_CTL_ADD = CEpoll.EPOLL_CTL_ADD
-    public static let EPOLL_CTL_MOD = CEpoll.EPOLL_CTL_MOD
-    public static let EPOLL_CTL_DEL = CEpoll.EPOLL_CTL_DEL
-    public static let EPOLLIN = CEpoll.EPOLLIN
-    public static let EPOLLOUT = CEpoll.EPOLLOUT
-    public static let EPOLLERR = CEpoll.EPOLLERR
-    public static let EPOLLRDHUP = CEpoll.EPOLLRDHUP
-    public static let EPOLLET = CEpoll.EPOLLET
+    public typealias epoll_event = CNIOLinux.epoll_event
+    public static let EPOLL_CTL_ADD = CNIOLinux.EPOLL_CTL_ADD
+    public static let EPOLL_CTL_MOD = CNIOLinux.EPOLL_CTL_MOD
+    public static let EPOLL_CTL_DEL = CNIOLinux.EPOLL_CTL_DEL
+    public static let EPOLLIN = CNIOLinux.EPOLLIN
+    public static let EPOLLOUT = CNIOLinux.EPOLLOUT
+    public static let EPOLLERR = CNIOLinux.EPOLLERR
+    public static let EPOLLRDHUP = CNIOLinux.EPOLLRDHUP
+    public static let EPOLLET = CNIOLinux.EPOLLET
 
     @inline(never)
     public static func epoll_create(size: Int32) throws -> Int32 {
         return try wrapSyscall({
-            CEpoll.epoll_create(size)
+            CNIOLinux.epoll_create(size)
         })
     }
     
     @inline(never)
     public static func epoll_ctl(epfd: Int32, op: Int32, fd: Int32, event: UnsafeMutablePointer<epoll_event>) throws -> Int32 {
         return try wrapSyscall({
-            CEpoll.epoll_ctl(epfd, op, fd, event)
+            CNIOLinux.epoll_ctl(epfd, op, fd, event)
         })
     }
     
     @inline(never)
     public static func epoll_wait(epfd: Int32, events: UnsafeMutablePointer<epoll_event>, maxevents: Int32, timeout: Int32) throws -> Int32 {
         return try wrapSyscall({
-            return CEpoll.epoll_wait(epfd, events, maxevents, timeout)
+            return CNIOLinux.epoll_wait(epfd, events, maxevents, timeout)
         })
     }
 }
