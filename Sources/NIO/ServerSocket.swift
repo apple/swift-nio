@@ -13,13 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-    import Darwin
-    let sysAccept = Darwin.accept
-    let sysListen = Darwin.listen
+import Darwin
 #elseif os(Linux)
-    import Glibc
-    let sysAccept = Glibc.accept
-    let sysListen = Glibc.listen
+import Glibc
 #endif
 
 
@@ -38,42 +34,22 @@ final class ServerSocket: BaseSocket {
     }
     
     func listen(backlog: Int32 = 128) throws {
-        #if os(Linux)
-            /* no SO_NOSIGPIPE on Linux :( */
-            _ = try wrapSyscall({ $0 != unsafeBitCast(SIG_ERR, to: Int.self) }, function: "signal") {
-                unsafeBitCast(Glibc.signal(SIGPIPE, SIG_IGN) as sighandler_t?, to: Int.self)
-            }
-        #endif
-
-        _ = try wrapSyscall({ $0 >= 0 }, function: "listen") { () -> Int32 in
-            sysListen(self.descriptor, backlog)
-        }
+        _ = try Posix.listen(descriptor: descriptor, backlog: backlog)
     }
     
     func accept() throws -> Socket? {
         var acceptAddr = sockaddr_in()
         var addrSize = socklen_t(MemoryLayout<sockaddr_in>.size)
         
-        let ret = try withUnsafeMutablePointer(to: &acceptAddr) { ptr in
+        let result = try withUnsafeMutablePointer(to: &acceptAddr) { ptr in
             try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                try wrapSyscallMayBlock({ $0 >= 0 }, function: "accept") {
-                    sysAccept(self.descriptor, ptr, &addrSize)
-                }
+                try Posix.accept(descriptor: self.descriptor, addr: ptr, len: &addrSize)
             }
         }
         
-        switch ret {
-        case .wouldBlock:
+        guard let fd = result else {
             return nil
-        case .processed(let fd):
-            #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-                // TODO: Handle return code ?
-                _ = try wrapSyscall({ $0 != -1 }, function: "fcntl") {
-                    Darwin.fcntl(fd, F_SETNOSIGPIPE, 1);
-                }
-            #endif
-        
-            return Socket(descriptor: fd)
         }
+        return Socket(descriptor: fd)
     }
 }

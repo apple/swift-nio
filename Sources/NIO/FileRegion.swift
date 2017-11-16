@@ -36,9 +36,7 @@ public final class FileRegion {
             throw IOError(errno: EBADF, reason: "can't close file (as it's not open anymore).")
         }
         
-        let _ = try wrapSyscall({ $0 >= 0 }, function: "close") {
-            sysClose(self.descriptor)
-        }
+        try Posix.close(descriptor: self.descriptor)
         self.open = false
     }
     
@@ -63,13 +61,7 @@ public final class FileRegion {
 
 public extension FileRegion {
     public convenience init(file: String, readerIndex: Int, endIndex: Int) throws {
-        let fd = try wrapSyscall({ $0 >= 0 }, function: "open") {
-#if os(Linux)
-            return Int(Glibc.open(file, O_RDONLY))
-#else
-            return Int(Darwin.open(file, O_RDONLY))
-#endif
-        }
+        let fd = try Posix.open(file: file, oFlag: O_RDONLY)
         self.init(descriptor: Int32(fd), readerIndex: readerIndex, endIndex: endIndex)
     }
 }

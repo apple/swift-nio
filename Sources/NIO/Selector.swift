@@ -13,12 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Linux)
-    import CEpoll
-    import CEventfd
-    import CTimerfd
-    import Glibc
+import Glibc
 #else
-    import Darwin
+import Darwin
 #endif
 
 private enum SelectorLifecycleState {
@@ -32,7 +29,7 @@ final class Selector<R: Registration> {
     private var lifecycleState: SelectorLifecycleState
     
     #if os(Linux)
-    private typealias EventType = epoll_event
+    private typealias EventType = Epoll.epoll_event
     private let eventfd: Int32
     private let timerfd: Int32
     #else
@@ -72,38 +69,24 @@ final class Selector<R: Registration> {
         self.lifecycleState = .closed
 
 #if os(Linux)
-        fd = try wrapSyscall({ $0 >= 0 }, function: "epoll_create") {
-            CEpoll.epoll_create(128)
-        }
-
-        eventfd = try wrapSyscall({ $0 >= 0 }, function: "eventfd") {
-            CEventfd.eventfd(0, Int32(EFD_CLOEXEC | EFD_NONBLOCK))
-        }
-    
-        timerfd = try wrapSyscall({ $0 >= 0 }, function: "timerfd_create") {
-            CTimerfd.timerfd_create(CLOCK_MONOTONIC, Int32(CTimerfd.TFD_CLOEXEC | CTimerfd.TFD_NONBLOCK));
-        }
+        fd = try Epoll.epoll_create(size: 128)
+        eventfd = try EventFd.eventfd(initval: 0, flags: Int32(EventFd.EFD_CLOEXEC | EventFd.EFD_NONBLOCK))
+        timerfd = try TimerFd.timerfd_create(clockId: CLOCK_MONOTONIC, flags: Int32(TimerFd.TFD_CLOEXEC | TimerFd.TFD_NONBLOCK))
     
         self.lifecycleState = .open
 
-        var ev = epoll_event()
+        var ev = Epoll.epoll_event()
         ev.events = Selector.toEpollEvents(interested: .read)
         ev.data.fd = eventfd
 
-        let _ = try wrapSyscall({ $0 == 0 }, function: "epoll_ctl") {
-            CEpoll.epoll_ctl(self.fd, EPOLL_CTL_ADD, eventfd, &ev)
-        }
+        _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: eventfd, event: &ev)
     
-        var timerev = epoll_event()
-        timerev.events = EPOLLIN.rawValue | EPOLLERR.rawValue | EPOLLRDHUP.rawValue | EPOLLET.rawValue
+        var timerev = Epoll.epoll_event()
+        timerev.events = Epoll.EPOLLIN.rawValue | Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue | Epoll.EPOLLET.rawValue
         timerev.data.fd = timerfd
-        let _ = try wrapSyscall({ $0 == 0 }, function: "epoll_ctl") {
-            CEpoll.epoll_ctl(self.fd, EPOLL_CTL_ADD, timerfd, &timerev)
-        }
+        _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: timerfd, event: &timerev)
 #else
-        fd = try wrapSyscall({ $0 >= 0 }, function: "kqueue") {
-            Darwin.kqueue()
-        }
+        fd = try KQueue.kqueue()
         self.lifecycleState = .open
     
         var event = kevent()
@@ -130,11 +113,10 @@ final class Selector<R: Registration> {
          wakeup calls as there are no references to this selector left. 💁
          */
 #if os(Linux)
-        let res = sysClose(self.eventfd)
+        try! Posix.close(descriptor: self.eventfd)
 #else
-        let res = sysClose(self.fd)
+        try! Posix.close(descriptor: self.fd)
 #endif
-        assert(res == 0)
     }
 
 #if os(Linux)
@@ -143,13 +125,13 @@ final class Selector<R: Registration> {
         // Also merge EPOLLRDHUP in so we can easily detect connection-reset
         switch interested {
         case .read:
-            return EPOLLIN.rawValue | EPOLLERR.rawValue | EPOLLRDHUP.rawValue
+            return Epoll.EPOLLIN.rawValue | Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue
         case .write:
-            return EPOLLOUT.rawValue | EPOLLERR.rawValue | EPOLLRDHUP.rawValue
+            return Epoll.EPOLLOUT.rawValue | Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue
         case .all:
-            return EPOLLIN.rawValue | EPOLLOUT.rawValue | EPOLLERR.rawValue | EPOLLRDHUP.rawValue
+            return Epoll.EPOLLIN.rawValue | Epoll.EPOLLOUT.rawValue | Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue
         case .none:
-            return EPOLLERR.rawValue | EPOLLRDHUP.rawValue
+            return Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue
         }
     }
 #else
@@ -165,14 +147,15 @@ final class Selector<R: Registration> {
     }
 
     private func keventChangeSetOnly(event: UnsafePointer<kevent>?, numEvents: Int32) throws {
-        let _ = try wrapSyscall({ $0 >= 0 }, function: "kevent") {
-            let res = kevent(self.fd, event, numEvents, nil, 0, nil)
-            if res < 0  && errno == EINTR {
+        do {
+            _ = try KQueue.kevent0(kq: self.fd, changelist: event, nchanges: numEvents, eventlist: nil, nevents: 0, timeout: nil)
+        } catch let err as IOError {
+            if err.errno == EINTR {
                 // See https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
                 // When kevent() call fails with EINTR error, all changes in the changelist have been applied.
-                return 0
+                return
             }
-            return Int(res)
+            throw err
         }
     }
 
@@ -264,13 +247,11 @@ final class Selector<R: Registration> {
         assert(selectable.open)
         assert(registrations[Int(selectable.descriptor)] == nil)
 #if os(Linux)
-        var ev = epoll_event()
+        var ev = Epoll.epoll_event()
         ev.events = Selector.toEpollEvents(interested: interested)
         ev.data.fd = selectable.descriptor
 
-        let _ = try wrapSyscall({ $0 == 0 }, function: "epoll_ctl") {
-            CEpoll.epoll_ctl(self.fd, EPOLL_CTL_ADD, selectable.descriptor, &ev)
-        }
+        _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd:  selectable.descriptor, event: &ev)
 #else
         try register_kqueue(selectable: selectable, interested: interested, oldInterested: nil)
 #endif
@@ -286,13 +267,11 @@ final class Selector<R: Registration> {
         var reg = registrations[Int(selectable.descriptor)]!
 
 #if os(Linux)
-        var ev = epoll_event()
+        var ev = Epoll.epoll_event()
         ev.events = Selector.toEpollEvents(interested: interested)
         ev.data.fd = selectable.descriptor
 
-        let _ = try wrapSyscall({ $0 == 0 }, function: "epoll_ctl") {
-            CEpoll.epoll_ctl(self.fd, EPOLL_CTL_MOD, selectable.descriptor, &ev)
-        }
+        _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_MOD, fd:  selectable.descriptor, event: &ev)
 #else
         try register_kqueue(selectable: selectable, interested: interested, oldInterested: reg.interested)
 #endif
@@ -311,10 +290,8 @@ final class Selector<R: Registration> {
         }
         
 #if os(Linux)
-        var ev = epoll_event()
-        let _ = try wrapSyscall({ $0 == 0 }, function: "epoll_ctl") {
-            CEpoll.epoll_ctl(self.fd, EPOLL_CTL_DEL, selectable.descriptor, &ev)
-        }
+        var ev = Epoll.epoll_event()
+        _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_DEL, fd:  selectable.descriptor, event: &ev)
 #else
         try register_kqueue(selectable: selectable, interested: .none, oldInterested: reg.interested)
 #endif
@@ -326,38 +303,38 @@ final class Selector<R: Registration> {
         }
 
 #if os(Linux)
-        let ready = try wrapSyscall({ $0 >= 0 }, function: "epoll_wait") {
-            switch strategy {
-            case .now:
-                return Int(CEpoll.epoll_wait(self.fd, events, Int32(eventsCapacity), 0))
-            case .blockUntilTimeout(let nanoseconds):
-                var ts = itimerspec()
-                ts.it_value = toTimerspec(nanoseconds)
-                if (CTimerfd.timerfd_settime(timerfd, 0, &ts, nil) < 0) {
-                    return -1
-                }
-                fallthrough
-            case .block:
-                return Int(CEpoll.epoll_wait(self.fd, events, Int32(eventsCapacity), -1))
-            }
+        let ready: Int
+    
+        switch strategy {
+        case .now:
+            ready = Int(try Epoll.epoll_wait(epfd: self.fd, events: events, maxevents: Int32(eventsCapacity), timeout: 0))
+        case .blockUntilTimeout(let nanoseconds):
+            var ts = itimerspec()
+            ts.it_value = toTimerspec(nanoseconds)
+            try TimerFd.timerfd_settime(fd: timerfd, flags: 0, newValue: &ts, oldValue: nil)
+            fallthrough
+        case .block:
+            ready = Int(try Epoll.epoll_wait(epfd: self.fd, events: events, maxevents: Int32(eventsCapacity), timeout: -1))
         }
+    
         for i in 0..<ready {
             let ev = events[i]
             switch ev.data.fd {
             case eventfd:
-                var val = eventfd_t()
+                var val = EventFd.eventfd_t()
                 // Consume event
-                _ = eventfd_read(eventfd, &val)
+                _ = try EventFd.eventfd_read(fd: eventfd, value: &val)
             case timerfd:
                 // Consume event
                 var val: UInt = 0
+                // We are not interested in the result
                 _ = Glibc.read(timerfd, &val, MemoryLayout<UInt>.size)
             default:
                 let registration = registrations[Int(ev.data.fd)]!
                 try fn(
                     SelectorEvent(
-                        readable: (ev.events & EPOLLIN.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
-                        writable: (ev.events & EPOLLOUT.rawValue) != 0 || (ev.events & EPOLLERR.rawValue) != 0 || (ev.events & EPOLLRDHUP.rawValue) != 0,
+                        readable: (ev.events & Epoll.EPOLLIN.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
+                        writable: (ev.events & Epoll.EPOLLOUT.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
                         registration: registration))
             }
         }
@@ -366,13 +343,13 @@ final class Selector<R: Registration> {
 #else
         let timespec = toKQueueTimeSpec(strategy: strategy)
 
-        let ready = try wrapSyscall({ $0 >= 0 }, function: "kevent") {
-            if var ts = timespec {
-                return Int(kevent(self.fd, nil, 0, events, Int32(eventsCapacity), &ts))
-            } else {
-                return Int(kevent(self.fd, nil, 0, events, Int32(eventsCapacity), nil))
-            }
+        let ready: Int
+        if var ts = timespec {
+            ready = Int(try KQueue.kevent0(kq: self.fd, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: &ts))
+        } else {
+            ready = Int(try KQueue.kevent0(kq: self.fd, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: nil))
         }
+    
         for i in 0..<ready {
             let ev = events[i]
             switch Int32(ev.filter) {
@@ -411,16 +388,12 @@ final class Selector<R: Registration> {
 
         /* note, we can't close `self.fd` (on macOS) or `self.eventfd` (on Linux) here as that's read unprotectedly and might lead to race conditions. Instead, we abuse ARC to close it for us. */
 #if os(Linux)
-        _ = try wrapSyscall({ $0 >= 0 }, function: "close(timerfd)") { () -> Int32 in
-            sysClose(self.timerfd)
-        }
+        _ = try Posix.close(descriptor: self.timerfd)
 #endif
 
 #if os(Linux)
         /* `self.fd` is used as the event file descriptor to wake kevent() up so can't be closed here on macOS */
-        _ = try wrapSyscall({ $0 >= 0 }, function: "close(fd)") { () -> Int32 in
-            sysClose(self.fd)
-        }
+        _ = try Posix.close(descriptor: self.fd)
 #endif
     }
 
@@ -428,10 +401,8 @@ final class Selector<R: Registration> {
     func wakeup() throws {
 
 #if os(Linux)
-        let _ = try wrapSyscall({ $0 == 0 }, function: "eventfd_write") {
-            /* this is fine as we're abusing ARC to close `self.eventfd`) */
-            CEventfd.eventfd_write(self.eventfd, 1)
-        }
+        /* this is fine as we're abusing ARC to close `self.eventfd`) */
+        _ = try EventFd.eventfd_write(fd: self.eventfd, value: 1)
 #else
         var event = kevent()
         event.ident = 0

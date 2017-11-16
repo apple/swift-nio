@@ -20,6 +20,7 @@ import Darwin
 public struct IOError: Swift.Error {
     
     public let errno: Int32
+    // TODO: Fix me to lazy create
     public let reason: String?
     
     public init(errno errnoNumber: Int32, reason: String) {
@@ -40,108 +41,7 @@ func reasonForError(errno: Int32, function: String) -> String {
     }
 }
 
-func testForBlacklistedErrno(_ code: Int32) {
-    switch code {
-    case EFAULT:
-        fallthrough
-    case EBADF:
-        fatalError("blacklisted errno \(code) \(strerror(code)!)")
-    default:
-        ()
-    }
-}
-
-func wrapSyscall(function: @autoclosure () -> String,
-                 _ successCondition: (Int) -> Bool, _ fn: () -> Int) throws -> Int {
-    while true {
-        let result = fn()
-        if !successCondition(result) {
-            let err = errno
-            switch err {
-            case EINTR:
-                continue
-            case let err:
-                testForBlacklistedErrno(err)
-                throw ioError(errno: err, function: function())
-            }
-        } else {
-            return result
-        }
-    }
-}
-
-func wrapSyscall(_ successCondition: (Int) -> Bool,
-                 function: @autoclosure () -> String, _ fn: () -> Int) throws -> Int {
-    return try wrapSyscall(function: function, successCondition, fn)
-}
-
 public enum IOResult<T> {
     case wouldBlock(T)
     case processed(T)
-}
-
-
-func wrapSyscallMayBlock(_ successCondition: (Int) -> Bool,
-                         function: @autoclosure () -> String, _ fn: () -> Int) throws -> IOResult<Int> {
-    loop: repeat {
-        let result = fn()
-        guard successCondition(result) else {
-            let err = errno
-            switch err {
-            case EWOULDBLOCK:
-                return .wouldBlock(0)
-            case EINTR:
-                continue loop
-            default:
-                testForBlacklistedErrno(err)
-                throw ioError(errno: err, function: function())
-            }
-        }
-        return .processed(result)
-    } while true
-}
-
-func wrapSyscall(function: @autoclosure () -> String,
-                 _ successCondition: (Int32) -> Bool, _ fn: () -> Int32) throws -> Int32 {
-    while true {
-        let result = fn()
-        if !successCondition(result) {
-            let err = errno
-            switch err {
-            case EINTR:
-                continue
-            case let err:
-                testForBlacklistedErrno(err)
-                throw ioError(errno: err, function: function())
-            }
-        } else {
-            return result
-        }
-    }
-}
-
-func wrapSyscall(_ successCondition: (Int32) -> Bool,
-                 function: @autoclosure () -> String, _ fn: () -> Int32) throws -> Int32 {
-    return try wrapSyscall(function: function, successCondition, fn)
-}
-
-func wrapSyscallMayBlock(_ successCondition: (Int32) -> Bool,
-                         function: @autoclosure () -> String, _ fn: () -> Int32) throws -> IOResult<Int32> {
-    
-    loop: repeat {
-        let result = fn()
-        guard successCondition(result) else {
-            let err = errno
-            switch err {
-            case EWOULDBLOCK:
-                return .wouldBlock(0)
-            case EINTR:
-                continue loop
-            default:
-                testForBlacklistedErrno(err)
-                throw ioError(errno: err, function: function())
-            }
-        }
-        return .processed(result)
-    } while true
 }

@@ -11,18 +11,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-
 #if os(Linux)
     import Glibc
-    let sysBind = Glibc.bind
-    let sysClose = Glibc.close
-    let sysSocket = Glibc.socket
     let sysSOCK_STREAM = SOCK_STREAM.rawValue
 #else
     import Darwin
-    let sysBind = Darwin.bind
-    let sysClose = Darwin.close
-    let sysSocket = Darwin.socket
     let sysSOCK_STREAM = SOCK_STREAM
 #endif
 
@@ -107,20 +100,17 @@ class BaseSocket : Selectable {
         }
     }
     static func newSocket(protocolFamily: Int32) throws -> Int32 {
-        let sock = try wrapSyscall({ $0 >= 0 }, function: "socket") { () -> Int32 in
-            sysSocket(protocolFamily, Int32(sysSOCK_STREAM), 0)
-        }
+        let sock = try Posix.socket(domain: protocolFamily, type: Int32(sysSOCK_STREAM), protocol: 0)
+        
         if protocolFamily == AF_INET6 {
             var zero: Int32 = 0
             do {
-                _ = try wrapSyscall({ $0 == 0 }, function: "setsockopt") { () -> Int32 in
-                    setsockopt(sock, Int32(IPPROTO_IPV6), IPV6_V6ONLY, &zero, socklen_t(MemoryLayout.size(ofValue: zero)))
-                }
+                _ = try Posix.setsockopt(socket: sock, level: Int32(IPPROTO_IPV6), optionName: IPV6_V6ONLY, optionValue: &zero, optionLen: socklen_t(MemoryLayout.size(ofValue: zero)))
+
             } catch let e as IOError {
                 if e.errno != EAFNOSUPPORT {
-                    _ = try wrapSyscall({ $0 == 0 }, function: "close") { () -> Int32 in
-                        sysClose(sock)
-                    }
+                    // Ignore error that may be thrown by close.
+                    _ = try? Posix.close(descriptor: sock)
                     throw e
                 }
                 /* we couldn't enable dual IP4/6 support, that's okay too. */
@@ -143,9 +133,7 @@ class BaseSocket : Selectable {
             throw IOError(errno: EBADF, reason: "can't control file descriptor as it's not open anymore.")
         }
 
-        let _ = try wrapSyscall({ $0 >= 0 }, function: "fcntl") {
-            fcntl(self.descriptor, F_SETFL, O_NONBLOCK)
-        }
+        try Posix.fcntl(descriptor: descriptor, command: F_SETFL, value: O_NONBLOCK)
     }
     
     final func setOption<T>(level: Int32, name: Int32, value: T) throws {
@@ -155,14 +143,12 @@ class BaseSocket : Selectable {
 
         var val = value
         
-        let _ = try wrapSyscall({ $0 != -1 }, function: "setsockopt") {
-            setsockopt(
-                self.descriptor,
-                level,
-                name,
-                &val,
-                socklen_t(MemoryLayout.size(ofValue: val)))
-        }
+        let _ = try Posix.setsockopt(
+            socket: self.descriptor,
+            level: level,
+            optionName: name,
+            optionValue: &val,
+            optionLen: socklen_t(MemoryLayout.size(ofValue: val)))
     }
 
     final func getOption<T>(level: Int32, name: Int32) throws -> T {
@@ -177,9 +163,7 @@ class BaseSocket : Selectable {
             val.deallocate(capacity: 1)
         }
         
-        let _ = try wrapSyscall({ $0 != -1 }, function: "getsockopt") {
-            getsockopt(self.descriptor, level, name, val, &length)
-        }
+        try Posix.getsockopt(socket: self.descriptor, level: level, optionName: name, optionValue: val, optionLen: &length)
         return val.pointee
     }
     
@@ -189,9 +173,7 @@ class BaseSocket : Selectable {
         }
 
         func doBind(ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
-            _ = try wrapSyscall({ $0 == 0 }, function: "bind") {
-                sysBind(self.descriptor, ptr, socklen_t(bytes))
-            }
+           try Posix.bind(descriptor: self.descriptor, ptr: ptr, bytes: bytes)
         }
 
         switch address {
@@ -209,9 +191,8 @@ class BaseSocket : Selectable {
             throw IOError(errno: EBADF, reason: "can't close socket (as it's not open anymore.")
         }
 
-        let _ = try wrapSyscall({ $0 >= 0 }, function: "close") {
-             sysClose(self.descriptor)
-        }
+        try Posix.close(descriptor: self.descriptor)
+
         self.open = false
     }
 }
