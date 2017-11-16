@@ -12,7 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-public struct CircularBuffer<E>: CustomStringConvertible {
+/// AppendableCollection is a protocol partway between Collection and
+/// RangeReplaceableCollection. It defines the append method that is present
+/// on RangeReplaceableCollection, which makes all RangeReplaceableCollections
+/// trivially able to implement this protocol.
+public protocol AppendableCollection: Collection {
+    mutating func append(_ newElement: Self.Iterator.Element)
+}
+
+public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
     private var buffer: ContiguousArray<E?>
     
     /* the capacity of the underlying buffer */
@@ -100,15 +108,7 @@ public struct CircularBuffer<E>: CustomStringConvertible {
             return self.buffer[self.startIdx]
         }
     }
-    
-    public var isEmpty: Bool {
-        return self.bufferLength == 0
-    }
-    
-    public var count: Int {
-        return self.bufferLength
-    }
-    
+
     private func bufferIndex(ofIndex index: Int) -> Int {
         if index < self.ringLength {
             return (self.startIdx + index) % self.ringCapacity
@@ -116,7 +116,8 @@ public struct CircularBuffer<E>: CustomStringConvertible {
             return self.ringCapacity + index - ringLength
         }
     }
-    
+
+    // MARK: Collection implementation
     public subscript(index: Int) -> E {
         get {
             return self.buffer[self.bufferIndex(ofIndex: index)]!
@@ -125,11 +126,40 @@ public struct CircularBuffer<E>: CustomStringConvertible {
             self.buffer[self.bufferIndex(ofIndex: index)] = newValue
         }
     }
-    
-    public var indices: CountableRange<Int> {
-        return 0..<self.ringLength
+
+    public subscript(bounds: Range<Int>) -> Slice<CircularBuffer<E>> {
+        get {
+            return Slice(base: self, bounds: bounds)
+        }
     }
     
+    public var indices: CountableRange<Int> {
+        return 0..<self.bufferLength
+    }
+
+    public var isEmpty: Bool {
+        return self.bufferLength == 0
+    }
+
+    public var count: Int {
+        return self.bufferLength
+    }
+
+    public var startIndex: Int {
+        return 0
+    }
+
+    public var endIndex: Int {
+        return self.bufferLength
+    }
+
+    public func index(after: Int) -> Int {
+        let nextIndex = after + 1
+        precondition(nextIndex <= endIndex)
+        return nextIndex
+    }
+
+    // MARK: CustomStringConvertible implementation
     public var description: String {
         var desc = "[ "
         for el in self.buffer.enumerated() {
@@ -141,7 +171,7 @@ public struct CircularBuffer<E>: CustomStringConvertible {
             desc += el.1.map { "\($0) " } ?? "_ "
         }
         desc += "]"
-        desc += " (bufferCapacity: \(self.bufferCapacity), bufferLength: \(self.bufferLength), ringCapacityacity: \(self.ringCapacity), ringLength: \(self.ringLength))"
+        desc += " (bufferCapacity: \(self.bufferCapacity), bufferLength: \(self.bufferLength), ringCapacity: \(self.ringCapacity), ringLength: \(self.ringLength))"
         return desc
     }
 }

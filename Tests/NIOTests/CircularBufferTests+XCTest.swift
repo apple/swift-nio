@@ -30,6 +30,7 @@ extension CircularBufferTests {
                 ("testAddRemoveInALoop", testAddRemoveInALoop),
                 ("testAddAllRemoveAll", testAddAllRemoveAll),
                 ("testHarderExpansion", testHarderExpansion),
+                ("testCollection", testCollection),
            ]
    }
 }

@@ -17,7 +17,7 @@
 /// This object is used extensively within SwiftNIO to handle flushable buffers. It can be used to store buffered
 /// writes and mark how far through the buffer the user has flushed, and therefore how far through the buffer is
 /// safe to write.
-public struct MarkedCircularBuffer<E>: CustomStringConvertible {
+public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollection {
     private var buffer: CircularBuffer<E>
     private var markedIndex: Int = -1 /* negative: nothing marked */
 
@@ -69,6 +69,14 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible {
     /// The valid indices into the buffer.
     public var indices: CountableRange<Int> {
         return self.buffer.indices
+    }
+
+    public var startIndex: Int { return self.buffer.startIndex }
+
+    public var endIndex: Int { return self.buffer.startIndex }
+
+    public func index(after i: Int) -> Int {
+        return self.buffer.index(after: i)
     }
 
     public var description: String {
