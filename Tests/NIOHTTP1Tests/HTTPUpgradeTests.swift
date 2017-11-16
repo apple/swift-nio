@@ -47,7 +47,7 @@ private func connectedClientChannel(group: EventLoopGroup, serverAddress: Socket
 }
 
 private func setUpTest(withHandlers handlers: [ChannelHandler]) -> (EventLoopGroup, Channel, Channel) {
-    let group = try! MultiThreadedEventLoopGroup(numThreads: 1)
+    let group = MultiThreadedEventLoopGroup(numThreads: 1)
     let serverChannel = serverHTTPChannel(group: group, handlers: handlers)
     let clientChannel = connectedClientChannel(group: group, serverAddress: serverChannel.localAddress!)
     return (group, serverChannel, clientChannel)

@@ -165,7 +165,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testParentsOfSocketChannels() throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }

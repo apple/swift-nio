@@ -40,7 +40,7 @@ class OpenSSLALPNTest: XCTestCase {
     private func assertNegotiatedProtocol(protocol: String?,
                                           serverContext: NIOOpenSSL.SSLContext,
                                           clientContext: NIOOpenSSL.SSLContext) throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }

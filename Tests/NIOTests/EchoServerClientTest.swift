@@ -72,7 +72,7 @@ class EchoServerClientTest : XCTestCase {
     }
     
     func testLotsOfUnflushedWrites() throws {
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
