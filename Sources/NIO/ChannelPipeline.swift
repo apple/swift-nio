@@ -696,75 +696,129 @@ public final class ChannelHandlerContext : ChannelInvoker {
     }
     
     public func fireChannelRegistered() {
-        inboundNext!.invokeChannelRegistered()
+        if let inboundNext = inboundNext {
+            inboundNext.invokeChannelRegistered()
+        }
     }
     
     public func fireChannelUnregistered() {
-        inboundNext!.invokeChannelUnregistered()
+        if let inboundNext = inboundNext {
+            inboundNext.invokeChannelUnregistered()
+        }
     }
     
     public func fireChannelActive() {
-        inboundNext!.invokeChannelActive()
+        if let inboundNext = inboundNext {
+            inboundNext.invokeChannelActive()
+        }
     }
     
     public func fireChannelInactive() {
-        inboundNext!.invokeChannelInactive()
+        if let inboundNext = inboundNext {
+            inboundNext.invokeChannelInactive()
+        }
     }
     
     public func fireChannelRead(data: NIOAny) {
-        inboundNext!.invokeChannelRead(data: data)
+        if let inboundNext = inboundNext {
+            inboundNext.invokeChannelRead(data: data)
+        }
     }
     
     public func fireChannelReadComplete() {
-        inboundNext!.invokeChannelReadComplete()
+        if let inboundNext = inboundNext {
+            inboundNext.invokeChannelReadComplete()
+        }
     }
     
     public func fireChannelWritabilityChanged() {
-        inboundNext!.invokeChannelWritabilityChanged()
+        if let inboundNext = inboundNext {
+            inboundNext.invokeChannelWritabilityChanged()
+        }
     }
     
     public func fireErrorCaught(error: Error) {
-        inboundNext!.invokeErrorCaught(error: error)
+        if let inboundNext = inboundNext {
+            inboundNext.invokeErrorCaught(error: error)
+        }
     }
     
     public func fireUserInboundEventTriggered(event: Any) {
-        inboundNext!.invokeUserInboundEventTriggered(event: event)
+        if let inboundNext = inboundNext {
+            inboundNext.invokeUserInboundEventTriggered(event: event)
+        }
     }
     
-    public func register(promise: Promise<Void>?){
-        outboundNext!.invokeRegister(promise: promise)
+    public func register(promise: Promise<Void>?) {
+        if let outboundNext = outboundNext {
+            outboundNext.invokeRegister(promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.alreadyClosed)
+        }
     }
     
     public func bind(to address: SocketAddress, promise: Promise<Void>?) {
-        outboundNext!.invokeBind(to: address, promise: promise)
+        if let outboundNext = outboundNext {
+            outboundNext.invokeBind(to: address, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.alreadyClosed)
+        }
     }
     
     public func connect(to address: SocketAddress, promise: Promise<Void>?) {
-        outboundNext!.invokeConnect(to: address, promise: promise)
+        if let outboundNext = outboundNext {
+            outboundNext.invokeConnect(to: address, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.alreadyClosed)
+        }
     }
 
     public func write(data: NIOAny, promise: Promise<Void>?) {
-        outboundNext!.invokeWrite(data: data, promise: promise)
+        if let outboundNext = outboundNext {
+            outboundNext.invokeWrite(data: data, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.alreadyClosed)
+        }
     }
 
     public func flush(promise: Promise<Void>?) {
-        outboundNext!.invokeFlush(promise: promise)
+        if let outboundNext = outboundNext {
+            outboundNext.invokeFlush(promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.alreadyClosed)
+        }
     }
     
     public func writeAndFlush(data: NIOAny, promise: Promise<Void>?) {
-        outboundNext!.invokeWriteAndFlush(data: data, promise: promise)
+        if let outboundNext = outboundNext {
+            outboundNext.invokeWriteAndFlush(data: data, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.alreadyClosed)
+        }
     }
     
     public func read(promise: Promise<Void>?) {
-        outboundNext!.invokeRead(promise: promise)
+        if let outboundNext = outboundNext {
+            outboundNext.invokeRead(promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.alreadyClosed)
+        }
     }
     
     public func close(promise: Promise<Void>?) {
-        outboundNext!.invokeClose(promise: promise)
+        if let outboundNext = outboundNext {
+            outboundNext.invokeClose(promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.alreadyClosed)
+        }
     }
     
     public func triggerUserOutboundEvent(event: Any, promise: Promise<Void>?) {
-        outboundNext!.invokeTriggerUserOutboundEvent(event: event, promise: promise)
+        if let outboundNext = outboundNext {
+            outboundNext.invokeTriggerUserOutboundEvent(event: event, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.alreadyClosed)
+        }
     }
     
     fileprivate func invokeChannelRegistered() {

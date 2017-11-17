@@ -36,6 +36,7 @@ extension EchoServerClientTest {
                 ("testFlushOnEmpty", testFlushOnEmpty),
                 ("testWriteOnConnect", testWriteOnConnect),
                 ("testWriteOnAccept", testWriteOnAccept),
+                ("testWriteAfterChannelIsDead", testWriteAfterChannelIsDead),
            ]
    }
 }

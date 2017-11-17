@@ -14,6 +14,7 @@
 
 import XCTest
 import ConcurrencyHelpers
+import Dispatch
 @testable import NIO
 
 class EchoServerClientTest : XCTestCase {
@@ -315,6 +316,42 @@ class EchoServerClientTest : XCTestCase {
         }
     }
 
+    private final class EchoAndEchoAgainAfterSomeTimeServer: ChannelInboundHandler {
+        typealias InboundIn = ByteBuffer
+        typealias OutboundOut = ByteBuffer
+
+        private let timeAmount: TimeAmount
+        private let group = DispatchGroup()
+        private var numberOfReads: Int = 0
+        private let calloutQ = DispatchQueue(label: "EchoAndEchoAgainAfterSomeTimeServer callback queue")
+
+        public init(time: TimeAmount, secondWriteDoneHandler: @escaping () -> Void) {
+            self.timeAmount = time
+            self.group.enter()
+            self.group.notify(queue: self.calloutQ) {
+                secondWriteDoneHandler()
+            }
+        }
+
+        func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            self.numberOfReads += 1
+            precondition(self.numberOfReads == 1, "\(self) is only ever allowed to read once")
+            _ = ctx.eventLoop.scheduleTask(in: self.timeAmount) {
+                ctx.writeAndFlush(data: data, promise: nil)
+                self.group.leave()
+            }.futureResult.whenComplete { res in
+                switch res {
+                case .failure(let e):
+                    XCTFail("we failed to schedule the task: \(e)")
+                    self.group.leave()
+                default:
+                    ()
+                }
+            }
+            ctx.writeAndFlush(data: data, promise: nil)
+        }
+    }
+
     private final class WriteALotHandler: ChannelInboundHandler {
         typealias InboundIn = ByteBuffer
         typealias OutboundOut = ByteBuffer
@@ -557,5 +594,43 @@ class EchoServerClientTest : XCTestCase {
 
         let bytes = try promise.futureResult.wait()
         XCTAssertEqual(bytes.string(at: bytes.readerIndex, length: bytes.readableBytes), stringToWrite)
+    }
+
+    func testWriteAfterChannelIsDead() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let dpGroup = DispatchGroup()
+
+        dpGroup.enter()
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+                return channel.pipeline.add(handler: EchoAndEchoAgainAfterSomeTimeServer(time: .seconds(1), secondWriteDoneHandler: {
+                    dpGroup.leave()
+
+                }))
+            })).bind(to: "127.0.0.1", on: 0).wait()
+
+        defer {
+            _ = serverChannel.close()
+        }
+
+        let str = "hi there"
+        let countingHandler = ByteCountingHandler(numBytes: str.utf8.count, promise: group.next().newPromise())
+        let clientChannel = try ClientBootstrap(group: group)
+            .handler(handler: countingHandler)
+            .connect(to: serverChannel.localAddress!).wait()
+
+        var buffer = clientChannel.allocator.buffer(capacity: str.utf8.count)
+        buffer.write(string: str)
+        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
+
+        try countingHandler.assertReceived(buffer: buffer)
+
+        /* close the client channel so that the second write should fail */
+        try clientChannel.close().wait()
+
+        dpGroup.wait() /* make sure we stick around until the second write has happened */
+
+        try group.syncShutdownGracefully()
     }
 }
