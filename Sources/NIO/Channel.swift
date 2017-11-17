@@ -181,7 +181,7 @@ private final class PendingWrites {
 
         if self.isFlushPending && !self.pendingWrites.isEmpty {
             for _ in 0..<writeSpinCount + 1 {
-                guard !closed else {
+                if closed {
                     return .closed
                 }
                 let pending = self.pendingWrites[0]
@@ -251,7 +251,7 @@ private final class PendingWrites {
     private func consumeMultiple(_ body: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> WriteResult {
         if self.isFlushPending && !self.pendingWrites.isEmpty {
             writeLoop: for _ in 0..<writeSpinCount + 1 {
-                guard !closed else {
+                if closed {
                     return .closed
                 }
                 var expected = 0
@@ -408,7 +408,7 @@ final class SocketChannel : BaseSocketChannel<Socket> {
         // Just allocate one time for the while read loop. This is fine as ByteBuffer is a struct and uses COW.
         var buffer = try recvAllocator.buffer(allocator: allocator)
         for _ in 1...maxMessagesPerRead {
-            guard !closed else {
+            if closed {
                 return
             }
             switch try buffer.withMutableWritePointer(body: self.socket.read(pointer:size:)) {
@@ -548,7 +548,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
 
     override fileprivate func readFromSocket() throws {
         for _ in 1...maxMessagesPerRead {
-            guard !closed else {
+            if closed {
                 return
             }
             if let accepted =  try self.socket.accept() {
@@ -859,7 +859,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public func write0(data: IOData, promise: Promise<Void>?) {
         assert(eventLoop.inEventLoop)
 
-        guard !closed else {
+        if closed {
             // Channel was already closed, fail the promise and not even queue it.
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
@@ -894,9 +894,9 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public final func flush0(promise: Promise<Void>?) {
         assert(eventLoop.inEventLoop)
 
-        guard !closed else {
+        if closed {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
-            return;
+            return
         }
         // Even if writable() will be called later by the EVentLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actually written once writable() is called.
@@ -911,7 +911,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         assert(eventLoop.inEventLoop)
 
      
-        guard !closed else {
+        if closed {
             promise?.fail(error:ChannelError.ioOnClosedChannel)
             return
         }
@@ -926,10 +926,9 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     private final func pauseRead0() {
         assert(eventLoop.inEventLoop)
 
-        guard !closed else {
-            return
+        if !closed {
+            unregisterForReadable()
         }
-        unregisterForReadable()
     }
 
     private func registerForReadable() {
@@ -957,8 +956,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public final func close0(error: Error, promise: Promise<Void>?) {
         assert(eventLoop.inEventLoop)
 
-        guard !closed else {
-            // Already closed
+        if closed {
             promise?.fail(error: ChannelError.alreadyClosed)
             return
         }
@@ -1044,11 +1042,9 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     private func finishWritable() {
         assert(eventLoop.inEventLoop)
 
-        guard !closed else {
-            return
+        if !closed {
+            unregisterForWritable()
         }
-
-        unregisterForWritable()
     }
 
     public final func readable() {
@@ -1136,11 +1132,11 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     private func safeReregister(interested: IOEvent) {
-        guard !closed else {
+        if closed {
             interestedEvent = .none
             return
         }
-        guard interested != interestedEvent && interestedEvent != .none else {
+        if interested == interestedEvent || interestedEvent == .none {
             // we not need to update and so cause a syscall if we already are registered with the correct event
             return
         }
@@ -1154,7 +1150,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     private func safeRegister(interested: IOEvent) -> Bool {
-        guard !closed else {
+        if closed {
             interestedEvent = .none
             return false
         }

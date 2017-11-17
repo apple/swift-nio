@@ -399,7 +399,7 @@ internal final class SelectableEventLoop : EventLoop {
     }
 
     private func handleEvents<C: SelectableChannel>(_ channel: C) -> Bool {
-        guard !channel.open else {
+        if channel.open {
             return true
         }
         do {

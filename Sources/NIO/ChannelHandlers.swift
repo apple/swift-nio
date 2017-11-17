@@ -168,7 +168,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
     }
     
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
-        guard writeTimeout != nil || allTimeout != nil else {
+        if writeTimeout == nil && allTimeout == nil {
             ctx.write(data: data, promise: promise)
             return
         }
@@ -193,7 +193,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
                 return
             }
             
-            guard !self.reading else {
+            if self.reading {
                 self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newReadTimeoutTask(ctx, timeout))
                 return
             }
@@ -238,7 +238,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
                 return
             }
             
-            guard !self.reading else {
+            if self.reading {
                 self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newAllTimeoutTask(ctx, timeout))
                 return
             }

@@ -276,7 +276,7 @@ extension SSLContext {
     
     private static func addRootCertificate(_ cert: OpenSSLCertificate, context: UnsafeMutablePointer<SSL_CTX>) throws {
         let store = SSL_CTX_get_cert_store(context)!
-        guard 0 != X509_STORE_add_cert(store, cert.ref) else {
+        if 0 == X509_STORE_add_cert(store, cert.ref) {
             throw NIOOpenSSLError.failedToLoadCertificate
         }
     }

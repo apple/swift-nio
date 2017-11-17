@@ -43,7 +43,7 @@ public final class OpenSSLClientHandler: OpenSSLHandler {
 
         connection.setConnectState()
         if let serverHostname = serverHostname {
-            guard !serverHostname.isIPAddress() else {
+            if serverHostname.isIPAddress() {
                 throw OpenSSLError.invalidSNIName([])
             }
 

@@ -55,7 +55,7 @@ public class OpenSSLCertificate {
             x509 = d2i_X509_fp(fileObject, nil)
         }
 
-        guard x509 != nil else {
+        if x509 == nil {
             throw NIOOpenSSLError.failedToLoadCertificate
         }
 
@@ -80,7 +80,7 @@ public class OpenSSLCertificate {
             x509 = d2i_X509_bio(bio, nil)
         }
 
-        guard x509 != nil else {
+        if x509 == nil {
             throw NIOOpenSSLError.failedToLoadCertificate
         }
 

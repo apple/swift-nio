@@ -102,7 +102,7 @@ class EmbeddedChannelCore : ChannelCore {
     var inboundBuffer: [NIOAny] = []
     
     func close0(error: Error, promise: Promise<Void>?) {
-        guard !closed else {
+        if closed {
             promise?.fail(error: ChannelError.alreadyClosed)
             return
         }
@@ -142,7 +142,7 @@ class EmbeddedChannelCore : ChannelCore {
     }
 
     func flush0(promise: Promise<Void>?) {
-        guard !closed else {
+        if closed {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
@@ -150,7 +150,7 @@ class EmbeddedChannelCore : ChannelCore {
     }
 
     func read0(promise: Promise<Void>?) {
-        guard !closed else {
+        if closed {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
@@ -238,14 +238,14 @@ public class EmbeddedChannel : Channel {
     }
 
     private func readFromBuffer(buffer: inout [IOData]) -> IOData? {
-        guard !buffer.isEmpty else {
+        if buffer.isEmpty {
             return nil
         }
         return buffer.removeFirst()
     }
 
     private func readFromBuffer<T>(buffer: inout [NIOAny]) -> T? {
-        guard !buffer.isEmpty else {
+        if buffer.isEmpty {
             return nil
         }
         return (buffer.removeFirst().forceAs(type: T.self))

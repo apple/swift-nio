@@ -44,7 +44,7 @@ public class OpenSSLPrivateKey {
             key = d2i_PrivateKey_fp(fileObject, nil)
         }
 
-        guard key != nil else {
+        if key == nil {
             throw NIOOpenSSLError.failedToLoadPrivateKey
         }
 
@@ -69,7 +69,7 @@ public class OpenSSLPrivateKey {
             key = d2i_PrivateKey_bio(bio, nil)
         }
 
-        guard key != nil else {
+        if key == nil {
             throw NIOOpenSSLError.failedToLoadPrivateKey
         }
 

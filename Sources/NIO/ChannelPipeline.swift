@@ -44,7 +44,7 @@ public final class ChannelPipeline : ChannelInvoker {
     public func add0(name: String?, handler: ChannelHandler, first: Bool, promise: Promise<Void>) {
         assert(eventLoop.inEventLoop)
 
-        guard !destroyed else {
+        if destroyed {
             promise.fail(error: ChannelPipelineError.alreadyClosed)
             return
         }

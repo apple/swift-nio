@@ -75,7 +75,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         // We're trying to remove ourselves from the pipeline, so just pass this on.
-        guard !seenFirstRequest else {
+        if seenFirstRequest {
             ctx.fireChannelRead(data: data)
             return
         }

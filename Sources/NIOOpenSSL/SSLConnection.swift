@@ -38,7 +38,7 @@ internal final class SSLConnection {
         let fromNetwork = BIO_new(BIO_s_mem())
         let toNetwork = BIO_new(BIO_s_mem())
         
-        guard (fromNetwork != nil) && (toNetwork != nil) else {
+        if fromNetwork == nil || toNetwork == nil {
             // TODO(cory): I don't love having this cleanup here, it means I have to remember it.
             SSL_free(ssl)
             return nil
@@ -76,8 +76,6 @@ internal final class SSLConnection {
         let rc = SSL_do_handshake(ssl)
         
         if (rc == 1) { return .complete(rc) }
-            
-        guard (rc != 1) else { return .complete(rc) }
         
         let result = SSL_get_error(ssl, rc)
         let error = OpenSSLError.fromSSLGetErrorResult(result)!
