@@ -319,10 +319,6 @@ public protocol ContiguousCollection: Collection {
 }
 
 extension StaticString: Collection {
-    public func _customIndexOfEquatableElement(_ element: UInt8) -> Int?? {
-        return Int(element)
-    }
-
     public typealias Element = UInt8
     public typealias SubSequence = ArraySlice<UInt8>
 
