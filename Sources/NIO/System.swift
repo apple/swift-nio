@@ -24,14 +24,14 @@ import Glibc
 import Darwin
 #endif
 
-private func testForBlacklistedErrno(_ code: Int32) {
+private func isBlacklistedErrno(_ code: Int32) -> Bool {
     switch code {
     case EFAULT:
         fallthrough
     case EBADF:
-        fatalError("blacklisted errno \(code) \(strerror(code)!)")
+        return true
     default:
-        ()
+        return false
     }
 }
 
@@ -63,7 +63,7 @@ private func wrapSyscall<T: FixedWidthInteger>(_ fn: () throws -> T, where: Stat
             if err == EINTR {
                 continue
             }
-            testForBlacklistedErrno(err)
+            assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(strerror(err)!)")
             throw ioError(errno: err, function: `where`.withUTF8Buffer { String(decoding: $0, as: UTF8.self) })
         }
         return res
