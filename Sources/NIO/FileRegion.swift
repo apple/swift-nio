@@ -33,7 +33,7 @@ public final class FileRegion {
     
     public func close() throws {
         guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't close file (as it's not open anymore).")
+            throw IOError(errnoCode: EBADF, reason: "can't close file (as it's not open anymore).")
         }
         
         try Posix.close(descriptor: self.descriptor)

@@ -194,7 +194,7 @@ internal enum Posix {
             })
             return true
         } catch let err as IOError {
-            if err.errno == EINPROGRESS {
+            if err.errnoCode == EINPROGRESS {
                 return false
             }
             throw err
@@ -269,7 +269,7 @@ internal enum Posix {
             })
             return .processed(written)
         } catch let err as IOError {
-            if err.errno == EAGAIN {
+            if err.errnoCode == EAGAIN {
                 return .wouldBlock(written)
             }
             throw err

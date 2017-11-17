@@ -108,7 +108,7 @@ class BaseSocket : Selectable {
                 _ = try Posix.setsockopt(socket: sock, level: Int32(IPPROTO_IPV6), optionName: IPV6_V6ONLY, optionValue: &zero, optionLen: socklen_t(MemoryLayout.size(ofValue: zero)))
 
             } catch let e as IOError {
-                if e.errno != EAFNOSUPPORT {
+                if e.errnoCode != EAFNOSUPPORT {
                     // Ignore error that may be thrown by close.
                     _ = try? Posix.close(descriptor: sock)
                     throw e
@@ -130,7 +130,7 @@ class BaseSocket : Selectable {
 
     final func setNonBlocking() throws {
         guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't control file descriptor as it's not open anymore.")
+            throw IOError(errnoCode: EBADF, reason: "can't control file descriptor as it's not open anymore.")
         }
 
         try Posix.fcntl(descriptor: descriptor, command: F_SETFL, value: O_NONBLOCK)
@@ -138,7 +138,7 @@ class BaseSocket : Selectable {
     
     final func setOption<T>(level: Int32, name: Int32, value: T) throws {
         guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't set socket options as it's not open anymore.")
+            throw IOError(errnoCode: EBADF, reason: "can't set socket options as it's not open anymore.")
         }
 
         var val = value
@@ -153,7 +153,7 @@ class BaseSocket : Selectable {
 
     final func getOption<T>(level: Int32, name: Int32) throws -> T {
         guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't get socket options as it's not open anymore.")
+            throw IOError(errnoCode: EBADF, reason: "can't get socket options as it's not open anymore.")
         }
 
         var length = socklen_t(MemoryLayout<T>.size)
@@ -169,7 +169,7 @@ class BaseSocket : Selectable {
     
     final func bind(to address: SocketAddress) throws {
         guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't bind socket as it's not open anymore.")
+            throw IOError(errnoCode: EBADF, reason: "can't bind socket as it's not open anymore.")
         }
 
         func doBind(ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
@@ -188,7 +188,7 @@ class BaseSocket : Selectable {
     
     final func close() throws {
         guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't close socket (as it's not open anymore.")
+            throw IOError(errnoCode: EBADF, reason: "can't close socket (as it's not open anymore.")
         }
 
         try Posix.close(descriptor: self.descriptor)

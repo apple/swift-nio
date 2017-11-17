@@ -53,7 +53,7 @@ final class Socket : BaseSocket {
     
     private func connectSocket<T>(addr: T) throws -> Bool {
         guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't connect socket as it's not open anymore.")
+            throw IOError(errnoCode: EBADF, reason: "can't connect socket as it's not open anymore.")
         }
         var addr = addr
         return try withUnsafePointer(to: &addr) { ptr in
@@ -72,14 +72,14 @@ final class Socket : BaseSocket {
     
     func write(pointer: UnsafePointer<UInt8>, size: Int) throws -> IOResult<Int> {
         guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't write to socket as it's not open anymore.")
+            throw IOError(errnoCode: EBADF, reason: "can't write to socket as it's not open anymore.")
         }
         return try Posix.write(descriptor: self.descriptor, pointer: pointer, size: size)
     }
 
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
         guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't writev to socket as it's not open anymore.")
+            throw IOError(errnoCode: EBADF, reason: "can't writev to socket as it's not open anymore.")
         }
 
         return try Posix.writev(descriptor: self.descriptor, iovecs: iovecs)
@@ -87,7 +87,7 @@ final class Socket : BaseSocket {
     
     func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> IOResult<Int> {
         guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't read from socket as it's not open anymore.")
+            throw IOError(errnoCode: EBADF, reason: "can't read from socket as it's not open anymore.")
         }
 
         return try Posix.read(descriptor: self.descriptor, pointer: pointer, size: size)
@@ -95,7 +95,7 @@ final class Socket : BaseSocket {
     
     func sendFile(fd: Int32, offset: Int, count: Int) throws -> IOResult<Int> {
         guard self.open else {
-            throw IOError(errno: EBADF, reason: "can't write to socket as it's not open anymore.")
+            throw IOError(errnoCode: EBADF, reason: "can't write to socket as it's not open anymore.")
         }
       
         return try Posix.sendfile(descriptor: self.descriptor, fd: fd, offset: offset, count: count)

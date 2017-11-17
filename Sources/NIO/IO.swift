@@ -19,23 +19,23 @@ import Darwin
 
 public struct IOError: Swift.Error {
     
-    public let errno: Int32
+    public let errnoCode: Int32
     // TODO: Fix me to lazy create
     public let reason: String?
     
-    public init(errno errnoNumber: Int32, reason: String) {
-        self.errno = errnoNumber
+    public init(errnoCode: Int32, reason: String) {
+        self.errnoCode = errnoCode
         self.reason = reason
     }
 }
 
 func ioError(errno: Int32, function: String) -> IOError {
-    return IOError(errno: errno, reason: reasonForError(errno: errno, function: function))
+    return IOError(errnoCode: errno, reason: reasonForError(errnoCode: errno, function: function))
 }
 
-func reasonForError(errno: Int32, function: String) -> String {
-    if let strError = String(utf8String: strerror(errno)) {
-        return "\(function) failed: errno(\(errno)) \(strError)"
+private func reasonForError(errnoCode: Int32, function: String) -> String {
+    if let strError = String(utf8String: strerror(errnoCode)) {
+        return "\(function) failed: errno(\(errnoCode)) \(strError)"
     } else {
         return "\(function) failed"
     }

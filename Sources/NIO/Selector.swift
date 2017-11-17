@@ -150,7 +150,7 @@ final class Selector<R: Registration> {
         do {
             _ = try KQueue.kevent0(kq: self.fd, changelist: event, nchanges: numEvents, eventlist: nil, nevents: 0, timeout: nil)
         } catch let err as IOError {
-            if err.errno == EINTR {
+            if err.errnoCode == EINTR {
                 // See https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
                 // When kevent() call fails with EINTR error, all changes in the changelist have been applied.
                 return
@@ -241,7 +241,7 @@ final class Selector<R: Registration> {
 
     func register<S: Selectable>(selectable: S, interested: IOEvent = .read, makeRegistration: (IOEvent) -> R) throws {
         guard self.lifecycleState == .open else {
-            throw IOError(errno: EBADF, reason: "can't register on selector as it's \(self.lifecycleState).")
+            throw IOError(errnoCode: EBADF, reason: "can't register on selector as it's \(self.lifecycleState).")
         }
         
         assert(selectable.open)
@@ -260,7 +260,7 @@ final class Selector<R: Registration> {
 
     func reregister<S: Selectable>(selectable: S, interested: IOEvent) throws {
         guard self.lifecycleState == .open else {
-            throw IOError(errno: EBADF, reason: "can't re-register on selector as it's \(self.lifecycleState).")
+            throw IOError(errnoCode: EBADF, reason: "can't re-register on selector as it's \(self.lifecycleState).")
         }
         assert(selectable.open)
         
@@ -281,7 +281,7 @@ final class Selector<R: Registration> {
 
     func deregister<S: Selectable>(selectable: S) throws {
         guard self.lifecycleState == .open else {
-            throw IOError(errno: EBADF, reason: "can't deregister from selector as it's \(self.lifecycleState).")
+            throw IOError(errnoCode: EBADF, reason: "can't deregister from selector as it's \(self.lifecycleState).")
         }
         assert(selectable.open)
         
@@ -299,7 +299,7 @@ final class Selector<R: Registration> {
 
      func whenReady(strategy: SelectorStrategy, _ fn: (SelectorEvent<R>) throws -> Void) throws -> Void {
         guard self.lifecycleState == .open else {
-            throw IOError(errno: EBADF, reason: "can't call whenReady for selector as it's \(self.lifecycleState).")
+            throw IOError(errnoCode: EBADF, reason: "can't call whenReady for selector as it's \(self.lifecycleState).")
         }
 
 #if os(Linux)
@@ -382,7 +382,7 @@ final class Selector<R: Registration> {
     
     public func close() throws {
         guard self.lifecycleState == .open else {
-            throw IOError(errno: EBADF, reason: "can't close selector as it's \(self.lifecycleState).")
+            throw IOError(errnoCode: EBADF, reason: "can't close selector as it's \(self.lifecycleState).")
         }
         self.lifecycleState = .closed
 
@@ -436,7 +436,7 @@ internal extension Selector where R == NIORegistration {
     internal func closeGently(eventLoop: EventLoop) -> Future<Void> {
         let p0: Promise<Void> = eventLoop.newPromise()
         guard self.lifecycleState == .open else {
-            p0.fail(error: IOError(errno: EBADF, reason: "can't close selector gently as it's \(self.lifecycleState)."))
+            p0.fail(error: IOError(errnoCode: EBADF, reason: "can't close selector gently as it's \(self.lifecycleState)."))
             return p0.futureResult
         }
 
