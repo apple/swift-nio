@@ -37,19 +37,23 @@ private func isBlacklistedErrno(_ code: Int32) -> Bool {
 
 /* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
 @inline(__always)
-private func wrapSyscallMayBlock<T: FixedWidthInteger>(_ fn: () -> T, where: StaticString = #function) throws -> IOResult<T> {
+private func wrapSyscallMayBlock<T: FixedWidthInteger>(_ fn: () throws -> T , where: StaticString = #function) throws -> IOResult<T> {
     while true {
-        do {
-            return .processed(try wrapSyscall(fn, where: `where`))
-        } catch let err as IOError {
-            let errnoValue = err.errno
-            switch errnoValue {
+        let res = try fn()
+        if res == -1 {
+            let err = errno
+            switch err {
+            case EINTR:
+                continue
             case EWOULDBLOCK:
                 return .wouldBlock(0)
             default:
-                throw err
+                assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(strerror(err)!)")
+                throw ioError(errno: err, function: `where`.withUTF8Buffer { String(decoding: $0, as: UTF8.self) })
             }
+           
         }
+        return .processed(res)
     }
 }
 
