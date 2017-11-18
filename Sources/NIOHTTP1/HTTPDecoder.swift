@@ -112,13 +112,13 @@ private protocol AnyHTTPDecoder: class {
     var pendingCallouts: [() -> Void] { get set }
 }
 
-public extension HTTPDecoder where HTTPMessageT == HTTPClientResponsePart {
+extension HTTPDecoder where HTTPMessageT == HTTPClientResponsePart {
     public convenience init() {
         self.init(type: HTTPMessageT.self)
     }
 }
 
-public extension HTTPDecoder where HTTPMessageT == HTTPServerRequestPart {
+extension HTTPDecoder where HTTPMessageT == HTTPServerRequestPart {
     public convenience init() {
         self.init(type: HTTPMessageT.self)
     }
@@ -351,7 +351,7 @@ public final class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecod
     }
 }
 
-public extension HTTPDecoder {
+extension HTTPDecoder {
     public var cumulationBuffer: ByteBuffer? {
         get {
             return self.state.cumulationBuffer

@@ -71,8 +71,8 @@ public typealias HTTPServerRequestPart = HTTPPart<HTTPRequestHead, ByteBuffer>
 public typealias HTTPClientResponsePart = HTTPPart<HTTPResponseHead, ByteBuffer>
 public typealias HTTPServerResponsePart = HTTPPart<HTTPResponseHead, IOData>
 
-public extension HTTPRequestHead {
-    var isKeepAlive: Bool {
+extension HTTPRequestHead {
+    public var isKeepAlive: Bool {
         guard let connection = headers["connection"].first?.lowercased() else {
             // HTTP 1.1 use keep-alive by default if not otherwise told.
             return version.major == 1 && version.minor == 1

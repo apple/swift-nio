@@ -42,7 +42,7 @@ public protocol ChannelOutboundInvoker {
     var eventLoop: EventLoop { get }
 }
 
-public extension ChannelOutboundInvoker {
+extension ChannelOutboundInvoker {
     public func register() -> Future<Void> {
         let promise = newPromise()
         register(promise: promise)

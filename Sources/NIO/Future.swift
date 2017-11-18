@@ -309,7 +309,7 @@ public func ==<T>(lhs: Future<T>, rhs: Future<T>) -> Bool {
 /**
  'then' implementations.  This is really the key of the entire system.
  */
-public extension Future {
+extension Future {
     /**
      When the current `Future<T>` is fulfilled, run the provided callback, which will provide a new `Future`.
      
@@ -485,7 +485,7 @@ public extension Future {
 }
 
 
-public extension Future {
+extension Future {
     /**
      * Return a new Future that succeeds when this "and" another
      * provided Future both succeed.  It then provides the pair

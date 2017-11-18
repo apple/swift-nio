@@ -18,8 +18,8 @@ public protocol _EmittingChannelHandler {
     func wrapOutboundOut(_ value: OutboundOut) -> NIOAny
 }
 
-public extension _EmittingChannelHandler {
-    func wrapOutboundOut(_ value: OutboundOut) -> NIOAny {
+extension _EmittingChannelHandler {
+    public func wrapOutboundOut(_ value: OutboundOut) -> NIOAny {
         return NIOAny(value)
     }
 }
@@ -40,28 +40,28 @@ public protocol ChannelInboundHandler: _ChannelInboundHandler, _EmittingChannelH
     func wrapInboundUserEventOut(_ value: InboundUserEventOut) -> Any
 }
 
-public extension ChannelInboundHandler {
-    func unwrapInboundIn(_ value: NIOAny) -> InboundIn {
+extension ChannelInboundHandler {
+    public func unwrapInboundIn(_ value: NIOAny) -> InboundIn {
         return value.forceAs()
     }
 
-    func tryUnwrapInboundIn(_ value: NIOAny) -> InboundIn? {
+    public func tryUnwrapInboundIn(_ value: NIOAny) -> InboundIn? {
         return value.tryAs()
     }
 
-    func wrapInboundOut(_ value: InboundOut) -> NIOAny {
+    public func wrapInboundOut(_ value: InboundOut) -> NIOAny {
         return NIOAny(value)
     }
 
-    func unwrapInboundUserEventIn(_ value: Any) -> InboundUserEventIn {
+    public func unwrapInboundUserEventIn(_ value: Any) -> InboundUserEventIn {
         return value as! InboundUserEventIn
     }
 
-    func tryUnwrapInboundUserEventIn(_ value: Any) -> InboundUserEventIn? {
+    public func tryUnwrapInboundUserEventIn(_ value: Any) -> InboundUserEventIn? {
         return value as? InboundUserEventIn
     }
 
-    func wrapInboundUserEventOut(_ value: InboundUserEventOut) -> Any {
+    public func wrapInboundUserEventOut(_ value: InboundUserEventOut) -> Any {
         return value
     }
 }
@@ -82,24 +82,24 @@ public protocol ChannelOutboundHandler: _ChannelOutboundHandler, _EmittingChanne
     func wrapOutboundUserEventOut(_ value: OutboundUserEventOut) -> Any
 }
 
-public extension ChannelOutboundHandler {
-    func unwrapOutboundIn(_ value: NIOAny) -> OutboundIn {
+extension ChannelOutboundHandler {
+    public func unwrapOutboundIn(_ value: NIOAny) -> OutboundIn {
         return value.forceAs()
     }
 
-    func tryUnwrapOutboundIn(_ value: NIOAny) -> OutboundIn? {
+    public func tryUnwrapOutboundIn(_ value: NIOAny) -> OutboundIn? {
         return value.tryAs()
     }
 
-    func unwrapOutboundUserEventIn(_ value: Any) -> OutboundUserEventIn {
+    public func unwrapOutboundUserEventIn(_ value: Any) -> OutboundUserEventIn {
         return value as! OutboundUserEventIn
     }
 
-    func tryUnwrapOutboundUserEventIn(_ value: Any) -> OutboundUserEventIn? {
+    public func tryUnwrapOutboundUserEventIn(_ value: Any) -> OutboundUserEventIn? {
         return value as? OutboundUserEventIn
     }
 
-    func wrapOutboundUserEventOut(_ value: OutboundUserEventOut) -> Any {
+    public func wrapOutboundUserEventOut(_ value: OutboundUserEventOut) -> Any {
         return value
     }
 }

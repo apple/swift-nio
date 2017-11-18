@@ -59,7 +59,7 @@ public final class FileRegion {
     }
 }
 
-public extension FileRegion {
+extension FileRegion {
     public convenience init(file: String, readerIndex: Int, endIndex: Int) throws {
         let fd = try Posix.open(file: file, oFlag: O_RDONLY)
         self.init(descriptor: Int32(fd), readerIndex: readerIndex, endIndex: endIndex)

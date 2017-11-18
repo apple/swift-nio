@@ -475,7 +475,7 @@ public protocol EventLoopGroup {
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void)
 }
 
-public extension EventLoopGroup {
+extension EventLoopGroup {
     public func shutdownGracefully(_ callback: @escaping (Error?) -> Void) {
         self.shutdownGracefully(queue: .global(), callback)
     }

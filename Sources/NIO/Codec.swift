@@ -22,7 +22,7 @@ public protocol ByteToMessageDecoder : ChannelInboundHandler where InboundIn == 
     func decoderAdded(ctx: ChannelHandlerContext) throws
 }
 
-public extension ByteToMessageDecoder {
+extension ByteToMessageDecoder {
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) throws {
         var buffer = self.unwrapInboundIn(data)
@@ -92,7 +92,7 @@ public protocol MessageToByteEncoder : ChannelOutboundHandler where OutboundOut 
     func allocateOutBuffer(ctx: ChannelHandlerContext, data: OutboundIn) throws -> ByteBuffer
 }
 
-public extension MessageToByteEncoder {
+extension MessageToByteEncoder {
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
         do {
             let data = self.unwrapOutboundIn(data)

@@ -42,7 +42,7 @@ public protocol _ChannelInboundHandler : ChannelHandler {
 }
 
 //  Default implementation for the ChannelHandler protocol
-public extension ChannelHandler {
+extension ChannelHandler {
     
     public func handlerAdded(ctx: ChannelHandlerContext) {
         // Do nothing by default
@@ -53,7 +53,7 @@ public extension ChannelHandler {
     }
 }
 
-public extension _ChannelOutboundHandler {
+extension _ChannelOutboundHandler {
     
     public func register(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
         ctx.register(promise: promise)
@@ -89,7 +89,7 @@ public extension _ChannelOutboundHandler {
 }
 
 
-public extension _ChannelInboundHandler {
+extension _ChannelInboundHandler {
     
     public func channelRegistered(ctx: ChannelHandlerContext) {
         ctx.fireChannelRegistered()
