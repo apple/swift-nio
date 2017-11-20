@@ -34,6 +34,8 @@ extension OpenSSLIntegrationTest {
                 ("testCoalescedWritesWithFutures", testCoalescedWritesWithFutures),
                 ("testImmediateCloseSatisfiesPromises", testImmediateCloseSatisfiesPromises),
                 ("testAddingTlsToActiveChannelStillHandshakes", testAddingTlsToActiveChannelStillHandshakes),
+                ("testValidatesHostnameOnConnectionFails", testValidatesHostnameOnConnectionFails),
+                ("testValidatesHostnameOnConnectionSucceeds", testValidatesHostnameOnConnectionSucceeds),
            ]
    }
 }

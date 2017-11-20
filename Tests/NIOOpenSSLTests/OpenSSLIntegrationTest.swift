@@ -222,6 +222,11 @@ class OpenSSLIntegrationTest: XCTestCase {
         let ctx = try SSLContext(configuration: config)
         return ctx
     }
+
+    private func configuredClientContext() throws -> NIOOpenSSL.SSLContext {
+        let config = TLSConfiguration.forClient(trustRoots: .certificates([OpenSSLIntegrationTest.cert]))
+        return try SSLContext(configuration: config)
+    }
     
     func testSimpleEcho() throws {
         let ctx = try configuredSSLContext()
@@ -566,5 +571,80 @@ class OpenSSLIntegrationTest: XCTestCase {
         try group.next().submit {
             XCTAssertEqual(recorderHandler.events[..<3], [.Registered, .Active, .UserEvent(.handshakeCompleted(negotiatedProtocol: nil))])
         }.wait()
+    }
+
+    func testValidatesHostnameOnConnectionFails() throws {
+        let serverCtx = try configuredSSLContext()
+        let clientCtx = try configuredClientContext()
+
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let serverChannel = try serverTLSChannel(withContext: serverCtx,
+                                                 andHandlers: [],
+                                                 onGroup: group)
+        defer {
+            _ = try! serverChannel.close().wait()
+        }
+
+        let errorHandler = ErrorCatcher<NIOOpenSSLError>()
+        let clientChannel = try clientTLSChannel(withContext: clientCtx,
+                                                 preHandlers: [],
+                                                 postHandlers: [errorHandler],
+                                                 onGroup: group,
+                                                 connectingTo: serverChannel.localAddress!)
+
+        var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
+        originalBuffer.write(string: "Hello")
+        let writeFuture = clientChannel.writeAndFlush(data: NIOAny(originalBuffer))
+        let errorsFuture: Future<[NIOOpenSSLError]> = writeFuture.thenIfError { _ in
+            // We're swallowing errors here, on purpose, because we'll definitely
+            // hit them.
+            return ()
+        }.then { _ in
+            return errorHandler.errors
+        }
+        let actualErrors = try errorsFuture.wait()
+
+        // This write will have failed, but that's fine: we just want it as a signal that
+        // the handshake is done so we can make our assertions.
+        let expectedErrors: [NIOOpenSSLError] = [NIOOpenSSLError.unableToValidateCertificate]
+
+        XCTAssertEqual(expectedErrors, actualErrors)
+    }
+
+    func testValidatesHostnameOnConnectionSucceeds() throws {
+        let serverCtx = try configuredSSLContext()
+        let clientCtx = try configuredClientContext()
+
+        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let serverChannel = try serverTLSChannel(withContext: serverCtx,
+                                                 andHandlers: [],
+                                                 onGroup: group)
+        defer {
+            _ = try! serverChannel.close().wait()
+        }
+
+        let eventHandler = EventRecorderHandler<TLSUserEvent>()
+        let clientChannel = try clientTLSChannel(withContext: clientCtx,
+                                                 preHandlers: [],
+                                                 postHandlers: [eventHandler],
+                                                 onGroup: group,
+                                                 connectingTo: serverChannel.localAddress!,
+                                                 serverHostname: "localhost")
+
+        var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
+        originalBuffer.write(string: "Hello")
+        let writeFuture = clientChannel.writeAndFlush(data: NIOAny(originalBuffer))
+        writeFuture.whenComplete { _ in
+            XCTAssertEqual(eventHandler.events[..<3], [.Registered, .Active, .UserEvent(.handshakeCompleted(negotiatedProtocol: nil))])
+        }
+        try writeFuture.wait()
     }
 }

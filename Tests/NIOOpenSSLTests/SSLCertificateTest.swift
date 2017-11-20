@@ -39,7 +39,7 @@ IEaDUul/WnIkn/JZx8n+wgoWtyQa4EA=
 -----END CERTIFICATE-----
 """
 
-private let multiCNCert = """
+let multiCNCert = """
 -----BEGIN CERTIFICATE-----
 MIIDLjCCAhagAwIBAgIUR6eOMdEFZAqorykK6u6rwPGfsh0wDQYJKoZIhvcNAQEL
 BQAwSDELMAkGA1UEBhMCVVMxEjAQBgNVBAMMCUlnbm9yZSBtZTERMA8GA1UECAwI
@@ -62,7 +62,7 @@ TLiPC0Jd3x5tf9qeSv1eWHuhQd9R908EhZdC6rgN8fZfMux2tQxNbIsNPYAQhmsB
 -----END CERTIFICATE-----
 """
 
-private let noCNCert = """
+let noCNCert = """
 -----BEGIN CERTIFICATE-----
 MIIC3jCCAcagAwIBAgIUeB9gFXDDe/kTcsPGlHIZ4M+SpyYwDQYJKoZIhvcNAQEL
 BQAwIDELMAkGA1UEBhMCVVMxETAPBgNVBAgMCE5lYnJhc2thMB4XDTE3MTEwMjEz
@@ -83,7 +83,7 @@ u9dFQrCkq8MilGSO1L2bZsqY
 -----END CERTIFICATE-----
 """
 
-private let unicodeCNCert = """
+let unicodeCNCert = """
 -----BEGIN CERTIFICATE-----
 MIICyjCCAbKgAwIBAgIUeK7KUVK7tcUhxVnkSWEsqHj07TEwDQYJKoZIhvcNAQEL
 BQAwFjEUMBIGA1UEAwwLc3RyYcOfZS5vcmcwHhcNMTcxMTAyMTM0NzQxWhcNNDAw
@@ -254,8 +254,8 @@ class SSLCertificateTest: XCTestCase {
         precondition(inet_pton(AF_INET6, "2001:db8::1", &v6addr) == 1)
 
         let expectedSanFields: [OpenSSLCertificate.AlternativeName] = [
-            .dnsName("localhost"),
-            .dnsName("example.com"),
+            .dnsName(Array("localhost".utf8)),
+            .dnsName(Array("example.com".utf8)),
             .ipAddress(.ipv4(v4addr)),
             .ipAddress(.ipv6(v6addr)),
         ]

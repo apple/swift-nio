@@ -24,7 +24,7 @@ public class OpenSSLCertificate {
     internal let ref: UnsafeMutablePointer<X509>
 
     internal enum AlternativeName {
-        case dnsName(String)
+        case dnsName([UInt8])
         case ipAddress(IPAddress)
     }
 
@@ -216,10 +216,7 @@ internal class SubjectAltNameSequence: Sequence, IteratorProtocol {
         case GEN_DNS:
             let namePtr = UnsafeBufferPointer(start: CNIOOpenSSL_ASN1_STRING_get0_data(name.pointee.d.ia5),
                                               count: Int(ASN1_STRING_length(name.pointee.d.ia5)))
-            guard let nameString = String(bytes: namePtr, encoding: .ascii) else {
-                // This should throw, but we can't throw from next(). Skip this instead.
-                return next()
-            }
+            let nameString = [UInt8](namePtr)
             return .dnsName(nameString)
         case GEN_IPADD:
             let addrPtr = UnsafeBufferPointer(start: CNIOOpenSSL_ASN1_STRING_get0_data(name.pointee.d.ia5),

@@ -54,6 +54,31 @@ public enum NIOOpenSSLError: Error {
     case failedToLoadPrivateKey
     case handshakeFailed(OpenSSLError)
     case shutdownFailed(OpenSSLError)
+    case cannotMatchULabel
+    case noCertificateToValidate
+    case unableToValidateCertificate
+    case cannotFindPeerIP
+}
+
+extension NIOOpenSSLError: Equatable {
+    public static func ==(lhs: NIOOpenSSLError, rhs: NIOOpenSSLError) -> Bool {
+        switch (lhs, rhs) {
+        case (.writeDuringTLSShutdown, .writeDuringTLSShutdown),
+             (.unableToAllocateOpenSSLObject, .unableToAllocateOpenSSLObject),
+             (.noSuchFilesystemObject, .noSuchFilesystemObject),
+             (.failedToLoadCertificate, .failedToLoadCertificate),
+             (.failedToLoadPrivateKey, .failedToLoadPrivateKey),
+             (.cannotMatchULabel, .cannotMatchULabel),
+             (.noCertificateToValidate, .noCertificateToValidate),
+             (.unableToValidateCertificate, .unableToValidateCertificate):
+            return true
+        case (.handshakeFailed(let err1), .handshakeFailed(let err2)),
+             (.shutdownFailed(let err1), .shutdownFailed(let err2)):
+            return err1 == err2
+        default:
+            return false
+        }
+    }
 }
 
 public enum OpenSSLError: Error {

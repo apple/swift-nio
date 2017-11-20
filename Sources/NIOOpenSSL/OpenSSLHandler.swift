@@ -44,10 +44,12 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
     private var bufferedWrites: MarkedCircularBuffer<BufferedEvent>
     private var closePromise: Promise<Void>?
     private var didDeliverData: Bool = false
+    private let expectedHostname: String?
     
-    internal init (connection: SSLConnection) {
+    internal init (connection: SSLConnection, expectedHostname: String? = nil) {
         self.connection = connection
         self.bufferedWrites = MarkedCircularBuffer(initialRingCapacity: 96)  // 96 brings the total size of the buffer to just shy of one page
+        self.expectedHostname = expectedHostname
     }
 
     public func handlerAdded(ctx: ChannelHandlerContext) {
@@ -160,6 +162,15 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
             state = .handshaking
             writeDataToNetwork(ctx: ctx, promise: nil)
         case .complete:
+            do {
+                try validateHostname(ctx: ctx)
+            } catch {
+                // This counts as a failure.
+                ctx.fireErrorCaught(error: error)
+                channelClose(ctx: ctx)
+                return
+            }
+
             state = .active
             writeDataToNetwork(ctx: ctx, promise: nil)
             
@@ -244,6 +255,31 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
         let closePromise = self.closePromise
         self.closePromise = nil
         ctx.close(promise: closePromise)
+    }
+
+    /// Validates the hostname from the certificate against the hostname provided by
+    /// the user, assuming one has been provided at all.
+    private func validateHostname(ctx: ChannelHandlerContext) throws {
+        guard connection.validateHostnames else {
+            return
+        }
+
+        // If there is no remote address, something weird is happening here. We can't
+        // validate a certificate without it, so bail.
+        guard let ipAddress = ctx.channel?.remoteAddress else {
+            throw NIOOpenSSLError.cannotFindPeerIP
+        }
+
+        // We want the leaf certificate.
+        guard let peerCert = connection.getPeerCertificate() else {
+            throw NIOOpenSSLError.noCertificateToValidate
+        }
+
+        guard try validIdentityForService(serverHostname: expectedHostname,
+                                         socketAddress: ipAddress,
+                                         leafCertificate: peerCert) else {
+            throw NIOOpenSSLError.unableToValidateCertificate
+        }
     }
 }
 

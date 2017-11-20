@@ -50,6 +50,6 @@ public final class OpenSSLClientHandler: OpenSSLHandler {
             // IP addresses must not be provided in the SNI extension, so filter them.
             try connection.setSNIServerName(name: serverHostname)
         }
-        super.init(connection: connection)
+        super.init(connection: connection, expectedHostname: serverHostname)
     }
 }

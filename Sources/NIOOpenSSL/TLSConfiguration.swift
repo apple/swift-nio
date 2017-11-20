@@ -44,6 +44,12 @@ public enum OpenSSLSerializationFormats {
     case der
 }
 
+public enum CertificateVerification {
+    case none
+    case noHostnameVerification
+    case fullVerification
+}
+
 /// A secure default configuration of cipher suites.
 ///
 /// The goal of this cipher suite string is:
@@ -104,7 +110,7 @@ public struct TLSConfiguration {
     public let cipherSuites: String
 
     /// Whether to verify remote certificates.
-    public let certificateVerification: Bool
+    public let certificateVerification: CertificateVerification
 
     /// The trust roots to use to validate certificates. This only needs to be provided if you intend to validate
     /// certificates.
@@ -125,7 +131,7 @@ public struct TLSConfiguration {
     private init(cipherSuites: String,
                 minimumTLSVersion: TLSVersion,
                 maximumTLSVersion: TLSVersion?,
-                certificateVerification: Bool,
+                certificateVerification: CertificateVerification,
                 trustRoots: OpenSSLTrustRoots,
                 certificateChain: [OpenSSLCertificateSource],
                 privateKey: OpenSSLPrivateKeySource?,
@@ -155,7 +161,7 @@ public struct TLSConfiguration {
                                  cipherSuites: String = defaultCipherSuites,
                                  minimumTLSVersion: TLSVersion = .tlsv1,
                                  maximumTLSVersion: TLSVersion? = nil,
-                                 certificateVerification: Bool = false,
+                                 certificateVerification: CertificateVerification = .none,
                                  trustRoots: OpenSSLTrustRoots = .default,
                                  applicationProtocols: [String] = []) -> TLSConfiguration {
         return TLSConfiguration(cipherSuites: cipherSuites,
@@ -176,7 +182,7 @@ public struct TLSConfiguration {
     public static func forClient(cipherSuites: String = defaultCipherSuites,
                                  minimumTLSVersion: TLSVersion = .tlsv1,
                                  maximumTLSVersion: TLSVersion? = nil,
-                                 certificateVerification: Bool = true,
+                                 certificateVerification: CertificateVerification = .fullVerification,
                                  trustRoots: OpenSSLTrustRoots = .default,
                                  certificateChain: [OpenSSLCertificateSource] = [],
                                  privateKey: OpenSSLPrivateKeySource? = nil,

@@ -236,7 +236,7 @@ func generateSelfSignedCert() -> (OpenSSLCertificate, OpenSSLPrivateKey) {
     
     addExtension(x509: x, nid: NID_basic_constraints, value: "critical,CA:FALSE")
     addExtension(x509: x, nid: NID_subject_key_identifier, value: "hash")
-    addExtension(x509: x, nid: NID_subject_alt_name, value: "DNS:localhost,IP:127.0.0.1")
+    addExtension(x509: x, nid: NID_subject_alt_name, value: "DNS:localhost")
     
     X509_sign(x, pkey, EVP_sha256())
     

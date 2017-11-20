@@ -107,7 +107,7 @@ private func alpnCallback(ssl: UnsafeMutablePointer<SSL>?,
 
 public final class SSLContext {
     private let sslContext: UnsafeMutablePointer<SSL_CTX>
-    private let configuration: TLSConfiguration
+    internal let configuration: TLSConfiguration
     
     public init(configuration: TLSConfiguration) throws {
         precondition(initialized)
@@ -166,7 +166,8 @@ public final class SSLContext {
         }
 
         // If validation is turned on, set the trust roots and turn on cert validation.
-        if configuration.certificateVerification {
+        switch configuration.certificateVerification {
+        case .fullVerification, .noHostnameVerification:
             SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, verifyCallback)
 
             switch configuration.trustRoots {
@@ -177,6 +178,8 @@ public final class SSLContext {
             case .some(.certificates(let certs)):
                     try certs.forEach { try SSLContext.addRootCertificate($0, context: ctx) }
             }
+        default:
+            break
         }
 
         // If we were given a certificate chain to use, load it and its associated private key.

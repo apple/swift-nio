@@ -23,13 +23,19 @@ enum AsyncOperationResult<T> {
     case failed(OpenSSLError)
 }
 
-// TODO(cory): This should definitely be a struct, but if it is we cannot use a deinitializer to clean up
-// resources. What's the Swift idiom for managing lifetimes?
 internal final class SSLConnection {
     private let ssl: UnsafeMutablePointer<SSL>
     private let parentContext: SSLContext
     private let fromNetwork: UnsafeMutablePointer<BIO>
     private let toNetwork: UnsafeMutablePointer<BIO>
+
+    /// Whether certificate hostnames should be validated.
+    var validateHostnames: Bool {
+        if case .fullVerification = parentContext.configuration.certificateVerification {
+            return true
+        }
+        return false
+    }
     
     init? (_ ssl: UnsafeMutablePointer<SSL>, parentContext: SSLContext) {
         self.ssl = ssl
@@ -210,5 +216,15 @@ internal final class SSLConnection {
         }
 
         return String(decoding: UnsafeBufferPointer(start: protoName, count: Int(protoLen)), as: UTF8.self)
+    }
+
+    /// Get the leaf certificate from the peer certificate chain as a managed object,
+    /// if available.
+    func getPeerCertificate() -> OpenSSLCertificate? {
+        guard let certPtr = SSL_get_peer_certificate(ssl) else {
+            return nil
+        }
+
+        return OpenSSLCertificate.fromUnsafePointer(pointer: certPtr)
     }
 }

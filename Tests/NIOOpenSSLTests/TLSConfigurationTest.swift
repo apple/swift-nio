@@ -122,7 +122,7 @@ class TLSConfigurationTest: XCTestCase {
                                                       privateKey: .privateKey(TLSConfigurationTest.key2))
         let serverConfig = TLSConfiguration.forServer(certificateChain: [.certificate(TLSConfigurationTest.cert1)],
                                                       privateKey: .privateKey(TLSConfigurationTest.key1),
-                                                      certificateVerification: true)
+                                                      certificateVerification: .noHostnameVerification)
 
         try assertHandshakeError(withClientConfig: clientConfig, andServerConfig: serverConfig, errorTextContains: "alert unknown ca")
     }
@@ -133,7 +133,7 @@ class TLSConfigurationTest: XCTestCase {
                                                       privateKey: .privateKey(TLSConfigurationTest.key2))
         let serverConfig = TLSConfiguration.forServer(certificateChain: [.certificate(TLSConfigurationTest.cert1)],
                                                       privateKey: .privateKey(TLSConfigurationTest.key1),
-                                                      certificateVerification: true,
+                                                      certificateVerification: .noHostnameVerification,
                                                       trustRoots: .certificates([TLSConfigurationTest.cert2]))
 
         let clientContext = try SSLContext(configuration: clientConfig)
@@ -146,7 +146,7 @@ class TLSConfigurationTest: XCTestCase {
 
         let eventHandler = EventRecorderHandler<TLSUserEvent>()
         let serverChannel = try serverTLSChannel(withContext: serverContext, andHandlers: [], onGroup: group)
-        let clientChannel = try clientTLSChannel(withContext: clientContext, preHandlers: [], postHandlers: [eventHandler], onGroup: group, connectingTo: serverChannel.localAddress!)
+        let clientChannel = try clientTLSChannel(withContext: clientContext, preHandlers: [], postHandlers: [eventHandler], onGroup: group, connectingTo: serverChannel.localAddress!, serverHostname: "localhost")
 
         // Wait for a successful flush: that indicates the channel is up.
         var buf = clientChannel.allocator.buffer(capacity: 5)
