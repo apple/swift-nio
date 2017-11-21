@@ -16,14 +16,17 @@ function start_server() {
     local tok_type="--unix-socket"
     local curl_port=80
 
+    maybe_host=""
     if [[ "${2:-uds}" == "tcp" ]]; then
         type=""
         port="0"
         tok_type=""
+        maybe_host="localhost"
     fi
 
     mkdir "$tmp/htdocs"
-    "${SWIFT_EXEC-swift}" run NIOHTTP1Server "$port" "$tmp/htdocs" &
+    swift build
+    "$(swift build --show-bin-path)/NIOHTTP1Server" $maybe_host "$port" "$tmp/htdocs" &
     for f in $(seq 30); do if [[ -S "$port" ]]; then break; else sleep 0.1; fi; done
     if [[ -z "$type" ]]; then
         port=$(lsof -n -p $! | grep -Eo 'TCP .*:[0-9]+ ' | grep -Eo '[0-9]{4,5} ' | tr -d ' ')
