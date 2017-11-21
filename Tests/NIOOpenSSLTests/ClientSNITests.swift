@@ -45,7 +45,7 @@ class ClientSNITests: XCTestCase {
             try! group.syncShutdownGracefully()
         }
 
-        let sniPromise: Promise<SniResult> = group.next().newPromise()
+        let sniPromise: EventLoopPromise<SniResult> = group.next().newPromise()
         let sniHandler = SniHandler {
             sniPromise.succeed(result: $0)
             return group.next().newSucceedFuture(result: ())

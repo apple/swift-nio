@@ -95,7 +95,7 @@ public class ChannelTests: XCTestCase {
         try clientChannel.close().wait()
 
         // Wait for the close promises. These fire last.
-        try Future<Void>.andAll([clientChannel.closeFuture, serverAcceptedChannel!.closeFuture], eventLoop: group.next()).then { _ in
+        try EventLoopFuture<Void>.andAll([clientChannel.closeFuture, serverAcceptedChannel!.closeFuture], eventLoop: group.next()).then { _ in
             XCTAssertEqual(clientLifecycleHandler.currentState, .unregistered)
             XCTAssertEqual(serverLifecycleHandler.currentState, .unregistered)
             XCTAssertEqual(clientLifecycleHandler.stateHistory, [.unregistered, .inactive, .active, .inactive, .unregistered])
@@ -170,7 +170,7 @@ public class ChannelTests: XCTestCase {
             try! group.syncShutdownGracefully()
         }
 
-        let childChannelPromise: Promise<Channel> = group.next().newPromise()
+        let childChannelPromise: EventLoopPromise<Channel> = group.next().newPromise()
         let serverChannel = try ServerBootstrap(group: group)
             .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .handler(childHandler: ChannelInitializer(initChannel: { channel in

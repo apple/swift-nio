@@ -88,7 +88,7 @@ class EchoServerClientTest : XCTestCase {
             _ = try! serverChannel.close().wait()
         }
 
-        let promise: Promise<ByteBuffer> = group.next().newPromise()
+        let promise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let clientChannel = try ClientBootstrap(group: group)
             .handler(handler: ChannelInitializer(initChannel: { channel in
                 return channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: "X")).then { v2 in
@@ -256,10 +256,10 @@ class EchoServerClientTest : XCTestCase {
         typealias InboundIn = ByteBuffer
         
         private let numBytes: Int
-        private let promise: Promise<ByteBuffer>
+        private let promise: EventLoopPromise<ByteBuffer>
         private var buffer: ByteBuffer!
         
-        init(numBytes: Int, promise: Promise<ByteBuffer>) {
+        init(numBytes: Int, promise: EventLoopPromise<ByteBuffer>) {
             self.numBytes = numBytes
             self.promise = promise
         }
@@ -287,7 +287,7 @@ class EchoServerClientTest : XCTestCase {
     private final class ChannelActiveHandler: ChannelInboundHandler {
         typealias InboundIn = ByteBuffer
         
-        private var promise: Promise<Void>! = nil
+        private var promise: EventLoopPromise<Void>! = nil
         
         func handlerAdded(ctx: ChannelHandlerContext) {
             promise = ctx.channel!.eventLoop.newPromise()
@@ -371,11 +371,11 @@ class EchoServerClientTest : XCTestCase {
         typealias InboundIn = Never
         let alreadyClosedInChannelInactive = Atomic<Bool>(value: false)
         let alreadyClosedInChannelUnregistered = Atomic<Bool>(value: false)
-        let channelUnregisteredPromise: Promise<()>
-        let channelInactivePromise: Promise<()>
+        let channelUnregisteredPromise: EventLoopPromise<()>
+        let channelInactivePromise: EventLoopPromise<()>
 
-        public init(channelUnregisteredPromise: Promise<()>,
-                    channelInactivePromise: Promise<()>) {
+        public init(channelUnregisteredPromise: EventLoopPromise<()>,
+                    channelInactivePromise: EventLoopPromise<()>) {
             self.channelUnregisteredPromise = channelUnregisteredPromise
             self.channelInactivePromise = channelInactivePromise
         }
@@ -453,8 +453,8 @@ class EchoServerClientTest : XCTestCase {
                 try! group.syncShutdownGracefully()
             }
 
-        let inactivePromise = group.next().newPromise() as Promise<()>
-        let unregistredPromise = group.next().newPromise() as Promise<()>
+        let inactivePromise = group.next().newPromise() as EventLoopPromise<()>
+        let unregistredPromise = group.next().newPromise() as EventLoopPromise<()>
         let handler = CloseInInActiveAndUnregisteredChannelHandler(channelUnregisteredPromise: unregistredPromise,
                                                                    channelInactivePromise: inactivePromise)
 
@@ -490,7 +490,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         let writingBytes = "hello"
-        let bytesReceivedPromise: Promise<ByteBuffer> = group.next().newPromise()
+        let bytesReceivedPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let byteCountingHandler = ByteCountingHandler(numBytes: writingBytes.utf8.count, promise: bytesReceivedPromise)
         let serverChannel = try ServerBootstrap(group: group)
             .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -548,7 +548,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         let stringToWrite = "hello"
-        let promise: Promise<ByteBuffer> = group.next().newPromise()
+        let promise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let clientChannel = try ClientBootstrap(group: group)
             .handler(handler: ChannelInitializer(initChannel: { channel in
                 return channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite)).then { v2 in
@@ -581,7 +581,7 @@ class EchoServerClientTest : XCTestCase {
             _ = try! serverChannel.close().wait()
         }
 
-        let promise: Promise<ByteBuffer> = group.next().newPromise()
+        let promise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let clientChannel = try ClientBootstrap(group: group)
             .handler(handler: ChannelInitializer(initChannel: { channel in
                 return channel.pipeline.add(handler: ByteCountingHandler(numBytes: stringToWrite.utf8.count, promise: promise))

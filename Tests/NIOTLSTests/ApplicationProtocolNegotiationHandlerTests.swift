@@ -56,7 +56,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
     private func negotiateTest(event: TLSUserEvent, expectedResult: ALPNResult) throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise: Promise<Void> = loop.newPromise()
+        let continuePromise: EventLoopPromise<Void> = loop.newPromise()
 
         let expectedResult: ALPNResult = .negotiated("h2")
         var called = false
@@ -111,7 +111,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
     func testBufferingWhileWaitingForFuture() throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise: Promise<Void> = loop.newPromise()
+        let continuePromise: EventLoopPromise<Void> = loop.newPromise()
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             return continuePromise.futureResult
@@ -140,7 +140,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
     func testNothingBufferedDoesNotFireReadCompleted() throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise: Promise<Void> = loop.newPromise()
+        let continuePromise: EventLoopPromise<Void> = loop.newPromise()
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             return continuePromise.futureResult
@@ -165,7 +165,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
     func testUnbufferingFiresReadCompleted() throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise: Promise<Void> = loop.newPromise()
+        let continuePromise: EventLoopPromise<Void> = loop.newPromise()
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             return continuePromise.futureResult

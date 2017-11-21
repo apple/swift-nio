@@ -433,14 +433,14 @@ struct SelectorEvent<R> {
 }
 
 internal extension Selector where R == NIORegistration {
-    internal func closeGently(eventLoop: EventLoop) -> Future<Void> {
-        let p0: Promise<Void> = eventLoop.newPromise()
+    internal func closeGently(eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        let p0: EventLoopPromise<Void> = eventLoop.newPromise()
         guard self.lifecycleState == .open else {
             p0.fail(error: IOError(errnoCode: EBADF, reason: "can't close selector gently as it's \(self.lifecycleState)."))
             return p0.futureResult
         }
 
-        let futures: [Future<Void>] = self.registrations.map { (_, reg: NIORegistration) -> Future<Void> in
+        let futures: [EventLoopFuture<Void>] = self.registrations.map { (_, reg: NIORegistration) -> EventLoopFuture<Void> in
             switch reg {
             case .serverSocketChannel(let chan, _):
                 return chan.close()
@@ -455,7 +455,7 @@ internal extension Selector where R == NIORegistration {
         }
 
         p0.succeed(result: ())
-        return Future<Void>.andAll(futures, eventLoop: eventLoop)
+        return EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
     }
 }
 

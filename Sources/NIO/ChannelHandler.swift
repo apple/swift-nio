@@ -18,15 +18,15 @@ public protocol ChannelHandler : class {
 }
 
 public protocol _ChannelOutboundHandler : ChannelHandler {
-    func register(ctx: ChannelHandlerContext, promise: Promise<Void>?)
-    func bind(ctx: ChannelHandlerContext, to: SocketAddress, promise: Promise<Void>?)
-    func connect(ctx: ChannelHandlerContext, to: SocketAddress, promise: Promise<Void>?)
-    func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?)
-    func flush(ctx: ChannelHandlerContext, promise: Promise<Void>?)
+    func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?)
+    func bind(ctx: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?)
+    func connect(ctx: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?)
+    func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?)
+    func flush(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?)
     // TODO: Think about make this more flexible in terms of influence the allocation that is used to read the next amount of data
-    func read(ctx: ChannelHandlerContext, promise: Promise<Void>?)
-    func close(ctx: ChannelHandlerContext, promise: Promise<Void>?)
-    func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: Promise<Void>?)
+    func read(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?)
+    func close(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?)
+    func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?)
 }
 
 public protocol _ChannelInboundHandler : ChannelHandler {
@@ -55,35 +55,35 @@ extension ChannelHandler {
 
 extension _ChannelOutboundHandler {
     
-    public func register(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+    public func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         ctx.register(promise: promise)
     }
     
-    public func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: Promise<Void>?) {
+    public func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         ctx.bind(to: address, promise: promise)
     }
     
-    public func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: Promise<Void>?) {
+    public func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         ctx.connect(to: address, promise: promise)
     }
     
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
+    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         ctx.write(data: data, promise: promise)
     }
     
-    public func flush(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+    public func flush(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         ctx.flush(promise: promise)
     }
     
-    public func read(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+    public func read(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         ctx.read(promise: promise)
     }
     
-    public func close(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+    public func close(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         ctx.close(promise: promise)
     }
     
-    public func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: Promise<Void>?) {
+    public func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
         ctx.triggerUserOutboundEvent(event: event, promise: promise)
     }
 }

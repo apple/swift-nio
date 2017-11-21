@@ -92,10 +92,10 @@ public class SniHandler: ByteToMessageDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
 
-    private let completionHandler: (SniResult) -> Future<Void>
+    private let completionHandler: (SniResult) -> EventLoopFuture<Void>
     private var waitingForUser: Bool
 
-    public init(sniCompleteHandler: @escaping (SniResult) -> Future<Void>) {
+    public init(sniCompleteHandler: @escaping (SniResult) -> EventLoopFuture<Void>) {
         self.cumulationBuffer = nil
         self.completionHandler = sniCompleteHandler
         self.waitingForUser = false

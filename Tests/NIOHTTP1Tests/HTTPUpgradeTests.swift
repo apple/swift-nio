@@ -34,7 +34,7 @@ private func serverHTTPChannel(group: EventLoopGroup, handlers: [ChannelHandler]
             channel.pipeline.add(handler: HTTPRequestDecoder()).then {
                 channel.pipeline.add(handler: HTTPResponseEncoder()).then {
                     let futureResults = handlers.map { channel.pipeline.add(handler: $0) }
-                    return Future<Void>.andAll(futureResults, eventLoop: channel.eventLoop)
+                    return EventLoopFuture<Void>.andAll(futureResults, eventLoop: channel.eventLoop)
                 }
             }
         })).bind(to: "127.0.0.1", on: 0).wait()
@@ -262,7 +262,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             try! group.syncShutdownGracefully()
         }
 
-        let completePromise: Promise<Void> = group.next().newPromise()
+        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.string(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
@@ -367,7 +367,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             try! group.syncShutdownGracefully()
         }
 
-        let completePromise: Promise<Void> = group.next().newPromise()
+        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.string(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
@@ -411,7 +411,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             try! group.syncShutdownGracefully()
         }
 
-        let completePromise: Promise<Void> = group.next().newPromise()
+        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.string(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
@@ -472,7 +472,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             try! group.syncShutdownGracefully()
         }
 
-        let completePromise: Promise<Void> = group.next().newPromise()
+        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.string(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,

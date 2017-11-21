@@ -118,7 +118,7 @@ class EmbeddedChannelTest: XCTestCase {
         typealias OutboundIn = String
         typealias OutboundOut = Never
         
-        public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
+        public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             promise!.fail(error: ChannelError.messageUnsupported)
         }
     }

@@ -93,7 +93,7 @@ public protocol MessageToByteEncoder : ChannelOutboundHandler where OutboundOut 
 }
 
 extension MessageToByteEncoder {
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
+    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         do {
             let data = self.unwrapOutboundIn(data)
             var buffer: ByteBuffer = try allocateOutBuffer(ctx: ctx, data: data)

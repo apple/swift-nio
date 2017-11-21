@@ -12,92 +12,92 @@
 //
 //===----------------------------------------------------------------------===//
 public protocol ChannelOutboundInvoker {
-    func register() -> Future<Void>
-    func register(promise: Promise<Void>?)
+    func register() -> EventLoopFuture<Void>
+    func register(promise: EventLoopPromise<Void>?)
 
-    func bind(to: SocketAddress) -> Future<Void>
-    func bind(to: SocketAddress, promise: Promise<Void>?)
+    func bind(to: SocketAddress) -> EventLoopFuture<Void>
+    func bind(to: SocketAddress, promise: EventLoopPromise<Void>?)
 
-    func connect(to: SocketAddress) -> Future<Void>
-    func connect(to: SocketAddress, promise: Promise<Void>?)
+    func connect(to: SocketAddress) -> EventLoopFuture<Void>
+    func connect(to: SocketAddress, promise: EventLoopPromise<Void>?)
     
-    func write(data: NIOAny) -> Future<Void>
-    func write(data: NIOAny, promise: Promise<Void>?)
+    func write(data: NIOAny) -> EventLoopFuture<Void>
+    func write(data: NIOAny, promise: EventLoopPromise<Void>?)
 
-    func flush() -> Future<Void>
-    func flush(promise: Promise<Void>?)
+    func flush() -> EventLoopFuture<Void>
+    func flush(promise: EventLoopPromise<Void>?)
 
-    func writeAndFlush(data: NIOAny) -> Future<Void>
-    func writeAndFlush(data: NIOAny, promise: Promise<Void>?)
+    func writeAndFlush(data: NIOAny) -> EventLoopFuture<Void>
+    func writeAndFlush(data: NIOAny, promise: EventLoopPromise<Void>?)
     
-    func read() -> Future<Void>
-    func read(promise: Promise<Void>?)
+    func read() -> EventLoopFuture<Void>
+    func read(promise: EventLoopPromise<Void>?)
 
-    func close() -> Future<Void>
-    func close(promise: Promise<Void>?)
+    func close() -> EventLoopFuture<Void>
+    func close(promise: EventLoopPromise<Void>?)
     
-    func triggerUserOutboundEvent(event: Any) -> Future<Void>
-    func triggerUserOutboundEvent(event: Any, promise: Promise<Void>?)
+    func triggerUserOutboundEvent(event: Any) -> EventLoopFuture<Void>
+    func triggerUserOutboundEvent(event: Any, promise: EventLoopPromise<Void>?)
     
     var eventLoop: EventLoop { get }
 }
 
 extension ChannelOutboundInvoker {
-    public func register() -> Future<Void> {
+    public func register() -> EventLoopFuture<Void> {
         let promise = newPromise()
         register(promise: promise)
         return promise.futureResult
     }
     
-    public func bind(to address: SocketAddress) -> Future<Void> {
+    public func bind(to address: SocketAddress) -> EventLoopFuture<Void> {
         let promise = newPromise()
         bind(to: address, promise: promise)
         return promise.futureResult
     }
     
-    public func connect(to address: SocketAddress) -> Future<Void> {
+    public func connect(to address: SocketAddress) -> EventLoopFuture<Void> {
         let promise = newPromise()
         connect(to: address, promise: promise)
         return promise.futureResult
     }
     
-    public func write(data: NIOAny) -> Future<Void> {
+    public func write(data: NIOAny) -> EventLoopFuture<Void> {
         let promise = newPromise()
         write(data: data, promise: promise)
         return promise.futureResult
     }
     
-    public func read() -> Future<Void> {
+    public func read() -> EventLoopFuture<Void> {
         let promise = newPromise()
         read(promise: promise)
         return promise.futureResult
     }
     
-    public func flush() -> Future<Void> {
+    public func flush() -> EventLoopFuture<Void> {
         let promise = newPromise()
         flush(promise: promise)
         return promise.futureResult
     }
     
-    public func writeAndFlush(data: NIOAny) -> Future<Void> {
+    public func writeAndFlush(data: NIOAny) -> EventLoopFuture<Void> {
         let promise = newPromise()
         writeAndFlush(data: data, promise: promise)
         return promise.futureResult
     }
     
-    public func close() -> Future<Void> {
+    public func close() -> EventLoopFuture<Void> {
         let promise = newPromise()
         close(promise: promise)
         return promise.futureResult
     }
     
-    public func triggerUserOutboundEvent(event: Any) -> Future<Void> {
+    public func triggerUserOutboundEvent(event: Any) -> EventLoopFuture<Void> {
         let promise = newPromise()
         triggerUserOutboundEvent(event: event, promise: promise)
         return promise.futureResult
     }
     
-    private func newPromise() -> Promise<Void> {
+    private func newPromise() -> EventLoopPromise<Void> {
         return eventLoop.newPromise()
     }
 }

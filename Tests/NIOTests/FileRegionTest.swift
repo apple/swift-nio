@@ -73,10 +73,10 @@ class FileRegionTest : XCTestCase {
         typealias InboundIn = ByteBuffer
         
         private let numBytes: Int
-        private let promise: Promise<ByteBuffer>
+        private let promise: EventLoopPromise<ByteBuffer>
         private var buffer: ByteBuffer!
         
-        init(numBytes: Int, promise: Promise<ByteBuffer>) {
+        init(numBytes: Int, promise: EventLoopPromise<ByteBuffer>) {
             self.numBytes = numBytes
             self.promise = promise
         }

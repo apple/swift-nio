@@ -42,7 +42,7 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
     private var state: ConnectionState = .idle
     private var connection: SSLConnection
     private var bufferedWrites: MarkedCircularBuffer<BufferedEvent>
-    private var closePromise: Promise<Void>?
+    private var closePromise: EventLoopPromise<Void>?
     private var didDeliverData: Bool = false
     private let expectedHostname: String?
     
@@ -122,16 +122,16 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
         }
     }
     
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
+    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         bufferWrite(data: unwrapOutboundIn(data), promise: promise)
     }
 
-    public func flush(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+    public func flush(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         bufferFlush(promise: promise)
         doUnbufferWrites(ctx: ctx)
     }
     
-    public func close(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+    public func close(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         switch state {
         case .closing:
             // We're in the process of TLS shutdown, so let's let that happen. However,
@@ -235,7 +235,7 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
         }
     }
     
-    private func writeDataToNetwork(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+    private func writeDataToNetwork(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         // There may be no data to write, in which case we can just exit early.
         guard let dataToWrite = connection.getDataForNetwork(allocator: ctx.channel!.allocator) else {
             promise?.succeed(result: ())
@@ -288,22 +288,22 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
 extension OpenSSLHandler {
     private enum BufferedEvent {
         case write(BufferedWrite)
-        case flush(Promise<Void>?)
+        case flush(EventLoopPromise<Void>?)
     }
-    private typealias BufferedWrite = (data: ByteBuffer, promise: Promise<Void>?)
+    private typealias BufferedWrite = (data: ByteBuffer, promise: EventLoopPromise<Void>?)
 
-    private func bufferWrite(data: ByteBuffer, promise: Promise<Void>?) {
+    private func bufferWrite(data: ByteBuffer, promise: EventLoopPromise<Void>?) {
         bufferedWrites.append(.write((data: data, promise: promise)))
     }
 
-    private func bufferFlush(promise: Promise<Void>?) {
+    private func bufferFlush(promise: EventLoopPromise<Void>?) {
         bufferedWrites.append(.flush(promise))
         bufferedWrites.mark()
     }
 
     private func discardBufferedWrites(reason: Error) {
         while bufferedWrites.count > 0 {
-            let promise: Promise<Void>?
+            let promise: EventLoopPromise<Void>?
             switch bufferedWrites.removeFirst() {
             case .write(_, let p):
                 promise = p
@@ -324,10 +324,10 @@ extension OpenSSLHandler {
         // These are some annoying variables we use to persist state across invocations of
         // our closures. A better version of this code might be able to simplify this somewhat.
         var writeCount = 0
-        var promises: [Promise<Void>] = []
+        var promises: [EventLoopPromise<Void>] = []
 
         /// Given a byte buffer to encode, passes it to OpenSSL and handles the result.
-        func encodeWrite(buf: inout ByteBuffer, promise: Promise<Void>?) throws -> Bool {
+        func encodeWrite(buf: inout ByteBuffer, promise: EventLoopPromise<Void>?) throws -> Bool {
             let result = connection.writeDataToNetwork(&buf)
 
             switch result {
@@ -348,10 +348,10 @@ extension OpenSSLHandler {
         }
 
         /// Given a flush request, grabs the data from OpenSSL and flushes it to the network.
-        func flushData(userFlushPromise: Promise<Void>?) throws -> Bool {
+        func flushData(userFlushPromise: EventLoopPromise<Void>?) throws -> Bool {
             // This is a flush. We can go ahead and flush now.
             if let promise = userFlushPromise { promises.append(promise) }
-            let ourPromise: Promise<Void> = ctx.eventLoop.newPromise()
+            let ourPromise: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
             promises.forEach { ourPromise.futureResult.cascade(promise: $0) }
             writeDataToNetwork(ctx: ctx, promise: ourPromise)
             return true

@@ -35,11 +35,11 @@ public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler {
     public typealias InboundOut = Any
     public typealias InboundUserEventIn = TLSUserEvent
 
-    private let completionHandler: (ALPNResult) -> Future<Void>
+    private let completionHandler: (ALPNResult) -> EventLoopFuture<Void>
     private var waitingForUser: Bool
     private var eventBuffer: [NIOAny]
 
-    public init(alpnCompleteHandler: @escaping (ALPNResult) -> Future<Void>) {
+    public init(alpnCompleteHandler: @escaping (ALPNResult) -> EventLoopFuture<Void>) {
         self.completionHandler = alpnCompleteHandler
         self.waitingForUser = false
         self.eventBuffer = []

@@ -41,7 +41,7 @@ private final class HTTPHandler: ChannelInboundHandler {
     private var continuousCount: Int = 0
 
     private var handler: ((ChannelHandlerContext, HTTPServerRequestPart) -> Void)? = nil
-    private var handlerFuture: Future<()>?
+    private var handlerFuture: EventLoopFuture<()>?
 
     public init(htdocsPath: String) {
         self.htdocsPath = htdocsPath

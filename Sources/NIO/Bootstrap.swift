@@ -50,7 +50,7 @@ public final class ServerBootstrap {
         return self
     }
     
-    public func bind(to host: String, on port: Int32) -> Future<Channel> {
+    public func bind(to host: String, on port: Int32) -> EventLoopFuture<Channel> {
         let evGroup = group
         do {
             let address = try SocketAddress.newAddressResolving(host: host, port: port)
@@ -60,11 +60,11 @@ public final class ServerBootstrap {
         }
     }
 
-    public func bind(to address: SocketAddress) -> Future<Channel> {
+    public func bind(to address: SocketAddress) -> EventLoopFuture<Channel> {
         return bind0(evGroup: group, to: address)
     }
     
-    public func bind(unixDomainSocket path: String) -> Future<Channel> {
+    public func bind(unixDomainSocket path: String) -> EventLoopFuture<Channel> {
         let evGroup = group
         do {
             let address = try SocketAddress.unixDomainSocketAddress(path: path)
@@ -74,7 +74,7 @@ public final class ServerBootstrap {
         }
     }
 
-    private func bind0(evGroup: EventLoopGroup, to address: SocketAddress) -> Future<Channel> {
+    private func bind0(evGroup: EventLoopGroup, to address: SocketAddress) -> EventLoopFuture<Channel> {
         let chEvGroup = childGroup
         let opts = options
         let eventLoop = evGroup.next()
@@ -82,7 +82,7 @@ public final class ServerBootstrap {
         let chHandler = childHandler
         let chOptions = childOptions
         
-        let promise: Promise<Channel> = eventLoop.newPromise()
+        let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
         do {
             let serverChannel = try ServerSocketChannel(eventLoop: eventLoop as! SelectableEventLoop,
                                                         group: chEvGroup,
@@ -91,7 +91,7 @@ public final class ServerBootstrap {
             func finishServerSetup() {
                 do {
                     try opts.applyAll(channel: serverChannel)
-                    let f = serverChannel.register().then(callback: { (_) -> Future<()> in serverChannel.bind(to: address) })
+                    let f = serverChannel.register().then(callback: { (_) -> EventLoopFuture<()> in serverChannel.bind(to: address) })
                     f.whenComplete(callback: { v in
                         switch v {
                         case .failure(let err):
@@ -210,7 +210,7 @@ public final class ClientBootstrap {
         return self
     }
     
-    public func bind(protocolFamily: Int32, to host: String, on port: Int32) -> Future<Channel> {
+    public func bind(protocolFamily: Int32, to host: String, on port: Int32) -> EventLoopFuture<Channel> {
         let evGroup = group
 
         do {
@@ -223,13 +223,13 @@ public final class ClientBootstrap {
         }
     }
     
-    public func bind(to address: SocketAddress) -> Future<Channel> {
+    public func bind(to address: SocketAddress) -> EventLoopFuture<Channel> {
         return execute(evGroup: group, protocolFamily: address.protocolFamily) { channel in
             return channel.bind(to: address)
         }
     }
     
-    public func connect(to host: String, on port: Int32) -> Future<Channel> {
+    public func connect(to host: String, on port: Int32) -> EventLoopFuture<Channel> {
         let evGroup = group
         
         do {
@@ -242,13 +242,13 @@ public final class ClientBootstrap {
         }
     }
     
-    public func connect(to address: SocketAddress) -> Future<Channel> {
+    public func connect(to address: SocketAddress) -> EventLoopFuture<Channel> {
         return execute(evGroup: group, protocolFamily: address.protocolFamily) { channel in
             return channel.connect(to: address)
         }
     }
 
-    public func connect(to unixDomainSocket: String) -> Future<Channel> {
+    public func connect(to unixDomainSocket: String) -> EventLoopFuture<Channel> {
         do {
             let address = try SocketAddress.unixDomainSocketAddress(path: unixDomainSocket)
             return connect(to: address)
@@ -259,19 +259,19 @@ public final class ClientBootstrap {
 
     private func execute(evGroup: EventLoopGroup,
                          protocolFamily: Int32,
-                         fn: @escaping (Channel) -> Future<Void>) -> Future<Channel> {
+                         fn: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
         let eventLoop = evGroup.next()
         let h = handler
         let opts = options
         
-        let promise: Promise<Channel> = eventLoop.newPromise()
+        let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
         do {
             let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: protocolFamily)
             
             func finishClientSetup() {
                 do {
                     try opts.applyAll(channel: channel)
-                    let f = channel.register().then  { (_) -> Future<Void> in
+                    let f = channel.register().then  { (_) -> EventLoopFuture<Void> in
                         fn(channel)
                     }
                     f.whenComplete(callback: { v in

@@ -31,7 +31,7 @@ private extension IOData {
         }
     }
 }
-private typealias PendingWrite = (data: IOData, promise: Promise<Void>?)
+private typealias PendingWrite = (data: IOData, promise: EventLoopPromise<Void>?)
 
 // We need to know the maximum value of a 32-bit int, but in Swift's regular int size. Store it here.
 private let maxInt = Int(INT32_MAX)
@@ -111,7 +111,7 @@ private final class PendingWrites {
         return self.pendingWrites.isEmpty
     }
     
-    func add(data: IOData, promise: Promise<Void>?) -> Bool {
+    func add(data: IOData, promise: EventLoopPromise<Void>?) -> Bool {
         assert(!closed)
         self.pendingWrites.append((data: data, promise: promise))
 
@@ -136,7 +136,7 @@ private final class PendingWrites {
         return false
     }
 
-    func markFlushCheckpoint(promise: Promise<Void>?) {
+    func markFlushCheckpoint(promise: EventLoopPromise<Void>?) {
         self.pendingWrites.mark()
         let checkpointIdx = self.pendingWrites.markedElementIndex()
         if let promise = promise, let checkpoint = checkpointIdx {
@@ -525,7 +525,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         return try super.getOption0(option: option)
     }
 
-    override public func bind0(to address: SocketAddress, promise: Promise<Void>?) {
+    override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
         do {
             try socket.bind(to: address)
@@ -594,14 +594,14 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
  All methods must be called from the EventLoop thread
  */
 public protocol ChannelCore : class {
-    func register0(promise: Promise<Void>?)
-    func bind0(to: SocketAddress, promise: Promise<Void>?)
-    func connect0(to: SocketAddress, promise: Promise<Void>?)
-    func write0(data: IOData, promise: Promise<Void>?)
-    func flush0(promise: Promise<Void>?)
-    func read0(promise: Promise<Void>?)
-    func close0(error: Error, promise: Promise<Void>?)
-    func triggerUserOutboundEvent0(event: Any, promise: Promise<Void>?)
+    func register0(promise: EventLoopPromise<Void>?)
+    func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?)
+    func connect0(to: SocketAddress, promise: EventLoopPromise<Void>?)
+    func write0(data: IOData, promise: EventLoopPromise<Void>?)
+    func flush0(promise: EventLoopPromise<Void>?)
+    func read0(promise: EventLoopPromise<Void>?)
+    func close0(error: Error, promise: EventLoopPromise<Void>?)
+    func triggerUserOutboundEvent0(event: Any, promise: EventLoopPromise<Void>?)
     func channelRead0(data: NIOAny)
     func errorCaught0(error: Error)
 }
@@ -612,7 +612,7 @@ public protocol ChannelCore : class {
 public protocol Channel : class, ChannelOutboundInvoker {
     var allocator: ByteBufferAllocator { get }
 
-    var closeFuture: Future<Void> { get }
+    var closeFuture: EventLoopFuture<Void> { get }
 
     var pipeline: ChannelPipeline { get }
     var localAddress: SocketAddress? { get }
@@ -646,42 +646,42 @@ extension Channel {
         return !closeFuture.fulfilled
     }
 
-    public func bind(to address: SocketAddress, promise: Promise<Void>?) {
+    public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         pipeline.bind(to: address, promise: promise)
     }
 
     // Methods invoked from the HeadHandler of the ChannelPipeline
     // By default, just pass through to pipeline
 
-    public func connect(to address: SocketAddress, promise: Promise<Void>?) {
+    public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         pipeline.connect(to: address, promise: promise)
     }
 
-    public func write(data: NIOAny, promise: Promise<Void>?) {
+    public func write(data: NIOAny, promise: EventLoopPromise<Void>?) {
         pipeline.write(data: data, promise: promise)
     }
 
-    public func flush(promise: Promise<Void>?) {
+    public func flush(promise: EventLoopPromise<Void>?) {
         pipeline.flush(promise: promise)
     }
     
-    public func writeAndFlush(data: NIOAny, promise: Promise<Void>?) {
+    public func writeAndFlush(data: NIOAny, promise: EventLoopPromise<Void>?) {
         pipeline.writeAndFlush(data: data, promise: promise)
     }
 
-    public func read(promise: Promise<Void>?) {
+    public func read(promise: EventLoopPromise<Void>?) {
         pipeline.read(promise: promise)
     }
 
-    public func close(promise: Promise<Void>?) {
+    public func close(promise: EventLoopPromise<Void>?) {
         pipeline.close(promise: promise)
     }
 
-    public func register(promise: Promise<Void>?) {
+    public func register(promise: EventLoopPromise<Void>?) {
         pipeline.register(promise: promise)
     }
     
-    public func triggerUserOutboundEvent(event: Any, promise: Promise<Void>?) {
+    public func triggerUserOutboundEvent(event: Any, promise: EventLoopPromise<Void>?) {
         pipeline.triggerUserOutboundEvent(event: event, promise: promise)
     }
 }
@@ -710,8 +710,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     private let pendingWrites: PendingWrites
     fileprivate var readPending = false
     private var neverRegistered = true
-    private var pendingConnect: Promise<Void>?
-    private let closePromise: Promise<Void>
+    private var pendingConnect: EventLoopPromise<Void>?
+    private let closePromise: EventLoopPromise<Void>
     private var active: Atomic<Bool> = Atomic(value: false)
     public var isActive: Bool {
         return active.load()
@@ -719,7 +719,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
     public var parent: Channel? = nil
 
-    public final var closeFuture: Future<Void> {
+    public final var closeFuture: EventLoopFuture<Void> {
         return closePromise.futureResult
     }
 
@@ -845,7 +845,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     // Methods invoked from the HeadHandler of the ChannelPipeline
-    public func bind0(to address: SocketAddress, promise: Promise<Void>?) {
+    public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
         do {
@@ -856,7 +856,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public func write0(data: IOData, promise: Promise<Void>?) {
+    public func write0(data: IOData, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
         if closed {
@@ -891,7 +891,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public final func flush0(promise: Promise<Void>?) {
+    public final func flush0(promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
         if closed {
@@ -907,7 +907,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public final func read0(promise: Promise<Void>?) {
+    public final func read0(promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
      
@@ -953,7 +953,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public final func close0(error: Error, promise: Promise<Void>?) {
+    public final func close0(error: Error, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
         if closed {
@@ -998,7 +998,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
 
-    public final func register0(promise: Promise<Void>?) {
+    public final func register0(promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
         // Was not registered yet so do it now.
@@ -1011,7 +1011,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
     
-    public final func triggerUserOutboundEvent0(event: Any, promise: Promise<Void>?) {
+    public final func triggerUserOutboundEvent0(event: Any, promise: EventLoopPromise<Void>?) {
         promise?.succeed(result: ())
     }
     
@@ -1087,7 +1087,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         fatalError("this must be overridden by sub class")
     }
 
-    public final func connect0(to address: SocketAddress, promise: Promise<Void>?) {
+    public final func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
         guard pendingConnect == nil else {

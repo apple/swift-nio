@@ -23,10 +23,10 @@ import SwiftPriorityQueue
 #endif
 
 public struct Scheduled<T> {
-    private let promise: Promise<T>
+    private let promise: EventLoopPromise<T>
     private let cancellationTask: () -> ()
     
-    init(promise: Promise<T>, cancellationTask: @escaping () -> ()) {
+    init(promise: EventLoopPromise<T>, cancellationTask: @escaping () -> ()) {
         self.promise = promise
         promise.futureResult.whenFailure(callback: { error in
             guard let err = error as? EventLoopError else {
@@ -43,7 +43,7 @@ public struct Scheduled<T> {
         promise.fail(error: EventLoopError.cancelled)
     }
     
-    public var futureResult: Future<T> {
+    public var futureResult: EventLoopFuture<T> {
         return promise.futureResult
     }
 }
@@ -51,11 +51,11 @@ public struct Scheduled<T> {
 public protocol EventLoop: EventLoopGroup {
     var inEventLoop: Bool { get }
     func execute(task: @escaping () -> ())
-    func submit<T>(task: @escaping () throws-> (T)) -> Future<T>
+    func submit<T>(task: @escaping () throws-> (T)) -> EventLoopFuture<T>
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T>
-    func newPromise<T>() -> Promise<T>
-    func newFailedFuture<T>(error: Error) -> Future<T>
-    func newSucceedFuture<T>(result: T) -> Future<T>
+    func newPromise<T>() -> EventLoopPromise<T>
+    func newFailedFuture<T>(error: Error) -> EventLoopFuture<T>
+    func newSucceedFuture<T>(result: T) -> EventLoopFuture<T>
 }
 
 public struct TimeAmount {
@@ -104,8 +104,8 @@ extension TimeAmount: Comparable {
 }
 
 extension EventLoop {
-    public func submit<T>(task: @escaping () throws-> (T)) -> Future<T> {
-        let promise: Promise<T> = newPromise()
+    public func submit<T>(task: @escaping () throws-> (T)) -> EventLoopFuture<T> {
+        let promise: EventLoopPromise<T> = newPromise()
 
         execute(task: {() -> () in
             do {
@@ -118,16 +118,16 @@ extension EventLoop {
         return promise.futureResult
     }
 
-    public func newPromise<T>() -> Promise<T> {
-        return Promise<T>(eventLoop: self, checkForPossibleDeadlock: true)
+    public func newPromise<T>() -> EventLoopPromise<T> {
+        return EventLoopPromise<T>(eventLoop: self, checkForPossibleDeadlock: true)
     }
 
-    public func newFailedFuture<T>(error: Error) -> Future<T> {
-        return Future<T>(eventLoop: self, checkForPossibleDeadlock: true, error: error)
+    public func newFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
+        return EventLoopFuture<T>(eventLoop: self, checkForPossibleDeadlock: true, error: error)
     }
 
-    public func newSucceedFuture<T>(result: T) -> Future<T> {
-        return Future<T>(eventLoop: self, checkForPossibleDeadlock: true, result: result)
+    public func newSucceedFuture<T>(result: T) -> EventLoopFuture<T> {
+        return EventLoopFuture<T>(eventLoop: self, checkForPossibleDeadlock: true, result: result)
     }
     
     public func next() -> EventLoop {
@@ -230,7 +230,7 @@ internal final class SelectableEventLoop : EventLoop {
     }
 
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
-        let promise: Promise<T> = newPromise()
+        let promise: EventLoopPromise<T> = newPromise()
         let task = ScheduledTask({
             do {
                 promise.succeed(result: try task())
@@ -421,8 +421,8 @@ internal final class SelectableEventLoop : EventLoop {
         }
     }
 
-    public func closeGently() -> Future<Void> {
-        func closeGently0() -> Future<Void> {
+    public func closeGently() -> EventLoopFuture<Void> {
+        func closeGently0() -> EventLoopFuture<Void> {
             guard self.lifecycleState == .open else {
                 return self.newFailedFuture(error: ChannelError.alreadyClosed)
             }
@@ -432,7 +432,7 @@ internal final class SelectableEventLoop : EventLoop {
         if self.inEventLoop {
             return closeGently0()
         } else {
-            let p: Promise<Void> = self.newPromise()
+            let p: EventLoopPromise<Void> = self.newPromise()
             _ = self.submit {
                 closeGently0().cascade(promise: p)
             }
@@ -469,7 +469,7 @@ public protocol EventLoopGroup {
     func next() -> EventLoop
 
     /// Shuts down the eventloop gracefully. This function is clearly an outlier in that it uses a completion
-    /// callback instead of a Future. The reason for that is that NIO's Futures will call back on an event loop.
+    /// callback instead of an EventLoopFuture. The reason for that is that NIO's EventLoopFutures will call back on an event loop.
     /// The virtue of this function is to shut the event loop down. To work around that we call back on a DispatchQueue
     /// instead.
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void)
@@ -559,7 +559,7 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
     }
 
     public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
-        // This method cannot perform its final cleanup using Futures, because it requires that all
+        // This method cannot perform its final cleanup using EventLoopFutures, because it requires that all
         // our event loops still be alive, and they may not be. Instead, we use Dispatch to manage
         // our shutdown signaling, and then do our cleanup once the DispatchQueue is empty.
         let g = DispatchGroup()

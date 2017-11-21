@@ -26,7 +26,7 @@ public class BackPressureHandler: ChannelInboundHandler, _ChannelOutboundHandler
 
     private enum PendingRead {
         case none
-        case promise(promise: Promise<Void>?)
+        case promise(promise: EventLoopPromise<Void>?)
     }
     
     private var pendingRead: PendingRead = .none
@@ -34,7 +34,7 @@ public class BackPressureHandler: ChannelInboundHandler, _ChannelOutboundHandler
     
     public init() { }
 
-    public func read(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+    public func read(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         if writable {
             ctx.read(promise: promise)
         } else {
@@ -78,9 +78,9 @@ public class BackPressureHandler: ChannelInboundHandler, _ChannelOutboundHandler
 }
 
 public class ChannelInitializer: _ChannelInboundHandler {
-    private let initChannel: (Channel) -> (Future<Void>)
+    private let initChannel: (Channel) -> (EventLoopFuture<Void>)
     
-    public init(initChannel: @escaping (Channel) -> (Future<Void>)) {
+    public init(initChannel: @escaping (Channel) -> (EventLoopFuture<Void>)) {
         self.initChannel = initChannel
     }
 
@@ -167,7 +167,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
         ctx.fireChannelReadComplete()
     }
     
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
+    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         if writeTimeout == nil && allTimeout == nil {
             ctx.write(data: data, promise: promise)
             return

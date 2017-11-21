@@ -29,8 +29,8 @@ public final class ChannelPipeline : ChannelInvoker {
 
     public unowned let channel: Channel
 
-    public func add(name: String? = nil, handler: ChannelHandler, first: Bool = false) -> Future<Void> {
-        let promise: Promise<Void> = eventLoop.newPromise()
+    public func add(name: String? = nil, handler: ChannelHandler, first: Bool = false) -> EventLoopFuture<Void> {
+        let promise: EventLoopPromise<Void> = eventLoop.newPromise()
         if eventLoop.inEventLoop {
             add0(name: name, handler: handler, first: first, promise: promise)
         } else {
@@ -41,7 +41,7 @@ public final class ChannelPipeline : ChannelInvoker {
         return promise.futureResult
     }
 
-    public func add0(name: String?, handler: ChannelHandler, first: Bool, promise: Promise<Void>) {
+    public func add0(name: String?, handler: ChannelHandler, first: Bool, promise: EventLoopPromise<Void>) {
         assert(eventLoop.inEventLoop)
 
         if destroyed {
@@ -118,32 +118,32 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
     
-    public func remove(handler: ChannelHandler) -> Future<Bool> {
+    public func remove(handler: ChannelHandler) -> EventLoopFuture<Bool> {
         return remove0({ $0.handler === handler })
     }
     
-    public func remove(name: String) -> Future<Bool> {
+    public func remove(name: String) -> EventLoopFuture<Bool> {
         return remove0({ $0.name == name })
     }
     
-    public func remove(ctx: ChannelHandlerContext) -> Future<Bool> {
+    public func remove(ctx: ChannelHandlerContext) -> EventLoopFuture<Bool> {
         return remove0({ $0 === ctx })
     }
     
-    public func context(handler: ChannelHandler) -> Future<ChannelHandlerContext> {
+    public func context(handler: ChannelHandler) -> EventLoopFuture<ChannelHandlerContext> {
         return context0({ $0.handler === handler })
     }
     
-    public func context(name: String) -> Future<ChannelHandlerContext> {
+    public func context(name: String) -> EventLoopFuture<ChannelHandlerContext> {
         return context0({ $0.name == name })
     }
     
-    public func context(ctx: ChannelHandlerContext) -> Future<ChannelHandlerContext> {
+    public func context(ctx: ChannelHandlerContext) -> EventLoopFuture<ChannelHandlerContext> {
         return context0({ $0 === ctx })
     }
     
-    private func context0(_ fn: @escaping ((ChannelHandlerContext) -> Bool)) -> Future<ChannelHandlerContext> {
-        let promise: Promise<ChannelHandlerContext> = eventLoop.newPromise()
+    private func context0(_ fn: @escaping ((ChannelHandlerContext) -> Bool)) -> EventLoopFuture<ChannelHandlerContext> {
+        let promise: EventLoopPromise<ChannelHandlerContext> = eventLoop.newPromise()
         
         func _context0() {
             guard let ctx = contexts.first(where: fn) else {
@@ -162,8 +162,8 @@ public final class ChannelPipeline : ChannelInvoker {
         return promise.futureResult
     }
     
-    private func remove0(_ fn: @escaping ((ChannelHandlerContext) -> Bool)) -> Future<Bool> {
-        let promise: Promise<Bool> = eventLoop.newPromise()
+    private func remove0(_ fn: @escaping ((ChannelHandlerContext) -> Bool)) -> EventLoopFuture<Bool> {
+        let promise: EventLoopPromise<Bool> = eventLoop.newPromise()
         if eventLoop.inEventLoop {
             remove0(ctx: contexts.first(where: fn), promise: promise)
         } else {
@@ -212,7 +212,7 @@ public final class ChannelPipeline : ChannelInvoker {
         assert(outboundChain != nil)
     }
     
-    private func remove0(ctx: ChannelHandlerContext?, promise: Promise<Bool>) {
+    private func remove0(ctx: ChannelHandlerContext?, promise: EventLoopPromise<Bool>) {
         assert(eventLoop.inEventLoop)
         
         guard let context = ctx else {
@@ -350,7 +350,7 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
 
-    public func close(promise: Promise<Void>?) {
+    public func close(promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
             close0(promise: promise)
         } else {
@@ -360,7 +360,7 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
 
-    public func flush(promise: Promise<Void>?) {
+    public func flush(promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
             flush0(promise: promise)
         } else {
@@ -370,7 +370,7 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
     
-    public func read(promise: Promise<Void>?) {
+    public func read(promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
             read0(promise: promise)
         } else {
@@ -380,7 +380,7 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
 
-    public func write(data: NIOAny, promise: Promise<Void>?) {
+    public func write(data: NIOAny, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
             write0(data: data, promise: promise)
         } else {
@@ -390,7 +390,7 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
 
-    public func writeAndFlush(data: NIOAny, promise: Promise<Void>?) {
+    public func writeAndFlush(data: NIOAny, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
             writeAndFlush0(data: data, promise: promise)
         } else {
@@ -400,7 +400,7 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
     
-    public func bind(to address: SocketAddress, promise: Promise<Void>?) {
+    public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
             bind0(to: address, promise: promise)
         } else {
@@ -410,7 +410,7 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
     
-    public func connect(to address: SocketAddress, promise: Promise<Void>?) {
+    public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
             connect0(to: address, promise: promise)
         } else {
@@ -420,7 +420,7 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
     
-    public func register(promise: Promise<Void>?) {
+    public func register(promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
             register0(promise: promise)
         } else {
@@ -430,7 +430,7 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
     
-    public func triggerUserOutboundEvent(event: Any, promise: Promise<Void>?) {
+    public func triggerUserOutboundEvent(event: Any, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
             triggerUserOutboundEvent0(event: event, promise: promise)
         } else {
@@ -450,39 +450,39 @@ public final class ChannelPipeline : ChannelInvoker {
         return inboundChain!
     }
     
-    func close0(promise: Promise<Void>?) {
+    func close0(promise: EventLoopPromise<Void>?) {
         firstOutboundCtx.invokeClose(promise: promise)
     }
     
-    func flush0(promise: Promise<Void>?) {
+    func flush0(promise: EventLoopPromise<Void>?) {
         firstOutboundCtx.invokeFlush(promise: promise)
     }
     
-    func read0(promise: Promise<Void>?) {
+    func read0(promise: EventLoopPromise<Void>?) {
         firstOutboundCtx.invokeRead(promise: promise)
     }
     
-    func write0(data: NIOAny, promise: Promise<Void>?) {
+    func write0(data: NIOAny, promise: EventLoopPromise<Void>?) {
         firstOutboundCtx.invokeWrite(data: data, promise: promise)
     }
     
-    func writeAndFlush0(data: NIOAny, promise: Promise<Void>?) {
+    func writeAndFlush0(data: NIOAny, promise: EventLoopPromise<Void>?) {
         firstOutboundCtx.invokeWriteAndFlush(data: data, promise: promise)
     }
     
-    func bind0(to address: SocketAddress, promise: Promise<Void>?) {
+    func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         firstOutboundCtx.invokeBind(to: address, promise: promise)
     }
     
-    func connect0(to address: SocketAddress, promise: Promise<Void>?) {
+    func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         firstOutboundCtx.invokeConnect(to: address, promise: promise)
     }
     
-    func register0(promise: Promise<Void>?) {
+    func register0(promise: EventLoopPromise<Void>?) {
         firstOutboundCtx.invokeRegister(promise: promise)
     }
     
-    func triggerUserOutboundEvent0(event: Any, promise: Promise<Void>?) {
+    func triggerUserOutboundEvent0(event: Any, promise: EventLoopPromise<Void>?) {
         firstOutboundCtx.invokeTriggerUserOutboundEvent(event: event, promise: promise)
     }
     
@@ -543,7 +543,7 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
 
     private init() { }
 
-    func register(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+    func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         if let channel = ctx.channel {
             channel._unsafe.register0(promise: promise)
         } else {
@@ -551,7 +551,7 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
         }
     }
     
-    func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: Promise<Void>?) {
+    func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         if let channel = ctx.channel {
             channel._unsafe.bind0(to: address, promise: promise)
         } else {
@@ -559,7 +559,7 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
         }
     }
     
-    func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: Promise<Void>?) {
+    func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         if let channel = ctx.channel {
             channel._unsafe.connect0(to: address, promise: promise)
         } else {
@@ -567,7 +567,7 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
         }
     }
     
-    func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
+    func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         if let channel = ctx.channel {
             channel._unsafe.write0(data: data.forceAsIOData(), promise: promise)
         } else {
@@ -575,7 +575,7 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
         }
     }
     
-    func flush(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+    func flush(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         if let channel = ctx.channel {
             channel._unsafe.flush0(promise: promise)
         } else {
@@ -583,7 +583,7 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
         }
     }
     
-    func close(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+    func close(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         if let channel = ctx.channel {
             channel._unsafe.close0(error: ChannelError.alreadyClosed, promise: promise)
         } else {
@@ -591,7 +591,7 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
         }
     }
     
-    func read(ctx: ChannelHandlerContext, promise: Promise<Void>?) {
+    func read(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         if let channel = ctx.channel {
             channel._unsafe.read0(promise: promise)
         } else {
@@ -599,7 +599,7 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
         }
     }
     
-    func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: Promise<Void>?) {
+    func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
         if let channel = ctx.channel {
             channel._unsafe.triggerUserOutboundEvent0(event: event, promise: promise)
         } else {
@@ -749,7 +749,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    public func register(promise: Promise<Void>?) {
+    public func register(promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeRegister(promise: promise)
         } else {
@@ -757,7 +757,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    public func bind(to address: SocketAddress, promise: Promise<Void>?) {
+    public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeBind(to: address, promise: promise)
         } else {
@@ -765,7 +765,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    public func connect(to address: SocketAddress, promise: Promise<Void>?) {
+    public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeConnect(to: address, promise: promise)
         } else {
@@ -773,7 +773,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
 
-    public func write(data: NIOAny, promise: Promise<Void>?) {
+    public func write(data: NIOAny, promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeWrite(data: data, promise: promise)
         } else {
@@ -781,7 +781,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
 
-    public func flush(promise: Promise<Void>?) {
+    public func flush(promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeFlush(promise: promise)
         } else {
@@ -789,7 +789,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    public func writeAndFlush(data: NIOAny, promise: Promise<Void>?) {
+    public func writeAndFlush(data: NIOAny, promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeWriteAndFlush(data: data, promise: promise)
         } else {
@@ -797,7 +797,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    public func read(promise: Promise<Void>?) {
+    public func read(promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeRead(promise: promise)
         } else {
@@ -805,7 +805,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    public func close(promise: Promise<Void>?) {
+    public func close(promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeClose(promise: promise)
         } else {
@@ -813,7 +813,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    public func triggerUserOutboundEvent(event: Any, promise: Promise<Void>?) {
+    public func triggerUserOutboundEvent(event: Any, promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeTriggerUserOutboundEvent(event: event, promise: promise)
         } else {
@@ -912,47 +912,47 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    fileprivate func invokeRegister(promise: Promise<Void>?) {
+    fileprivate func invokeRegister(promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
         
         self.outboundHandler.register(ctx: self, promise: promise)
     }
     
-   fileprivate func invokeBind(to address: SocketAddress, promise: Promise<Void>?) {
+   fileprivate func invokeBind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         self.outboundHandler.bind(ctx: self, to: address, promise: promise)
     }
     
-    fileprivate func invokeConnect(to address: SocketAddress, promise: Promise<Void>?) {
+    fileprivate func invokeConnect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         self.outboundHandler.connect(ctx: self, to: address, promise: promise)
     }
 
-    fileprivate func invokeWrite(data: NIOAny, promise: Promise<Void>?) {
+    fileprivate func invokeWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         self.outboundHandler.write(ctx: self, data: data, promise: promise)
     }
 
-    fileprivate func invokeFlush(promise: Promise<Void>?) {
+    fileprivate func invokeFlush(promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
         
         self.outboundHandler.flush(ctx: self, promise: promise)
     }
     
-    fileprivate func invokeWriteAndFlush(data: NIOAny, promise: Promise<Void>?) {
+    fileprivate func invokeWriteAndFlush(data: NIOAny, promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
         
         if let promise = promise {
             var counter = 2
-            let callback: (FutureValue<Void>) -> Void = { v in
+            let callback: (EventLoopFutureValue<Void>) -> Void = { v in
                 switch v {
                 case .failure(let err):
                     promise.fail(error: err)
@@ -965,8 +965,8 @@ public final class ChannelHandlerContext : ChannelInvoker {
                 }
             }
             
-            let writePromise: Promise<Void> = eventLoop.newPromise()
-            let flushPromise: Promise<Void> = eventLoop.newPromise()
+            let writePromise: EventLoopPromise<Void> = eventLoop.newPromise()
+            let flushPromise: EventLoopPromise<Void> = eventLoop.newPromise()
             
             self.outboundHandler.write(ctx: self, data: data, promise: writePromise)
             self.outboundHandler.flush(ctx: self, promise: flushPromise)
@@ -979,20 +979,20 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
-    fileprivate func invokeRead(promise: Promise<Void>?) {
+    fileprivate func invokeRead(promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
         
         self.outboundHandler.read(ctx: self, promise: promise)
     }
     
-    fileprivate func invokeClose(promise: Promise<Void>?) {
+    fileprivate func invokeClose(promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         self.outboundHandler.close(ctx: self, promise: promise)
     }
     
-    fileprivate func invokeTriggerUserOutboundEvent(event: Any, promise: Promise<Void>?) {
+    fileprivate func invokeTriggerUserOutboundEvent(event: Any, promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
         

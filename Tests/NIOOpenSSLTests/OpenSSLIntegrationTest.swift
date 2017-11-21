@@ -40,10 +40,10 @@ internal final class PromiseOnReadHandler: ChannelInboundHandler {
     public typealias OutboundOut = ByteBuffer
     public typealias InboundUserEventIn = TLSUserEvent
     
-    private let promise: Promise<ByteBuffer>
+    private let promise: EventLoopPromise<ByteBuffer>
     private var data: NIOAny? = nil
     
-    init(promise: Promise<ByteBuffer>) {
+    init(promise: EventLoopPromise<ByteBuffer>) {
         self.promise = promise
     }
     
@@ -64,7 +64,7 @@ private final class WriteCountingHandler: ChannelOutboundHandler {
 
     public var writeCount = 0
 
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
+    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         writeCount += 1
         ctx.write(data: data, promise: promise)
     }
@@ -153,9 +153,9 @@ public final class EventRecorderHandler<UserEventType>: ChannelInboundHandler wh
 
 private class ChannelActiveWaiter: ChannelInboundHandler {
     public typealias InboundIn = Any
-    private var activePromise: Promise<Void>
+    private var activePromise: EventLoopPromise<Void>
 
-    public init(promise: Promise<Void>) {
+    public init(promise: EventLoopPromise<Void>) {
         activePromise = promise
     }
 
@@ -177,10 +177,10 @@ internal func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, preHandlers: 
         .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
         .handler(childHandler: ChannelInitializer(initChannel: { channel in
             let results = preHandlers.map { channel.pipeline.add(handler: $0) }
-            return Future<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next()).then {
+            return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next()).then {
                 return channel.pipeline.add(handler: try! OpenSSLServerHandler(context: withContext)).then(callback: { v2 in
                     let results = postHandlers.map { channel.pipeline.add(handler: $0) }
-                    return Future<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next())
+                    return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next())
                 })
             }
         })).bind(to: "127.0.0.1", on: 0).wait()
@@ -195,10 +195,10 @@ internal func clientTLSChannel(withContext: NIOOpenSSL.SSLContext,
     return try ClientBootstrap(group: onGroup)
         .handler(handler: ChannelInitializer(initChannel: { channel in
             let results = preHandlers.map { channel.pipeline.add(handler: $0) }
-            return Future<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next()).then(callback: { v2 in
+            return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next()).then(callback: { v2 in
                 return channel.pipeline.add(handler: try! OpenSSLClientHandler(context: withContext, serverHostname: serverHostname)).then(callback: { v2 in
                     let results = postHandlers.map { channel.pipeline.add(handler: $0) }
-                    return Future<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next())
+                    return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next())
                 })
             })
         })).connect(to: connectingTo).wait()
@@ -236,7 +236,7 @@ class OpenSSLIntegrationTest: XCTestCase {
             try! group.syncShutdownGracefully()
         }
         
-        let completionPromise: Promise<ByteBuffer> = group.next().newPromise()
+        let completionPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
 
         let serverChannel = try serverTLSChannel(withContext: ctx, andHandlers: [SimpleEchoServer()], onGroup: group)
         defer {
@@ -268,7 +268,7 @@ class OpenSSLIntegrationTest: XCTestCase {
             try! group.syncShutdownGracefully()
         }
 
-        let readComplete: Promise<ByteBuffer> = group.next().newPromise()
+        let readComplete: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let serverHandler: EventRecorderHandler<TLSUserEvent> = EventRecorderHandler()
         let serverChannel = try serverTLSChannel(withContext: ctx,
                                                  andHandlers: [serverHandler, PromiseOnReadHandler(promise: readComplete)],
@@ -315,7 +315,7 @@ class OpenSSLIntegrationTest: XCTestCase {
             try! group.syncShutdownGracefully()
         }
 
-        let readComplete: Promise<ByteBuffer> = group.next().newPromise()
+        let readComplete: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let serverHandler: EventRecorderHandler<TLSUserEvent> = EventRecorderHandler()
         let serverChannel = try serverTLSChannel(withContext: ctx,
                                                  andHandlers: [serverHandler, PromiseOnReadHandler(promise: readComplete)],
@@ -361,7 +361,7 @@ class OpenSSLIntegrationTest: XCTestCase {
             try! group.syncShutdownGracefully()
         }
 
-        let completionPromise: Promise<ByteBuffer> = group.next().newPromise()
+        let completionPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
 
         let serverChannel = try serverTLSChannel(withContext: ctx, andHandlers: [SimpleEchoServer()], onGroup: group)
         defer {
@@ -393,7 +393,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         // To avoid the risk of the I/O loop actually closing the connection before we're done, we need to hijack the
         // I/O loop and issue all the closes on that thread. Otherwise, the channel will probably pull off the TLS shutdown
         // before we get to the third call to close().
-        let promises: [Promise<Void>] = [group.next().newPromise(), group.next().newPromise(), group.next().newPromise()]
+        let promises: [EventLoopPromise<Void>] = [group.next().newPromise(), group.next().newPromise(), group.next().newPromise()]
         group.next().execute {
             for promise in promises {
                 serverChannel.close(promise: promise)
@@ -423,7 +423,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         }
 
         let writeCounter = WriteCountingHandler()
-        let readPromise: Promise<ByteBuffer> = group.next().newPromise()
+        let readPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let clientChannel = try clientTLSChannel(withContext: ctx,
                                                  preHandlers: [writeCounter],
                                                  postHandlers: [PromiseOnReadHandler(promise: readPromise)],
@@ -483,7 +483,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         var originalBuffer = clientChannel.allocator.buffer(capacity: 1)
         originalBuffer.write(string: "A")
         for index in 0..<5 {
-            let promise: Promise<Void> = group.next().newPromise()
+            let promise: EventLoopPromise<Void> = group.next().newPromise()
             promise.futureResult.whenComplete { result in
                 switch result {
                 case .success:
@@ -496,7 +496,7 @@ class OpenSSLIntegrationTest: XCTestCase {
             clientChannel.write(data: NIOAny(originalBuffer), promise: promise)
         }
 
-        let flushPromise: Promise<Void> = group.next().newPromise()
+        let flushPromise: EventLoopPromise<Void> = group.next().newPromise()
         flushPromise.futureResult.whenComplete { result in
             switch result {
             case .success:
@@ -519,7 +519,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         try channel.connect(to: SocketAddress.unixDomainSocketAddress(path: "/tmp/doesntmatter")).wait()
 
         // Now call close. This should immediately close, satisfying the promise.
-        let closePromise: Promise<Void> = channel.eventLoop.newPromise()
+        let closePromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
         channel.close(promise: closePromise)
 
         XCTAssertTrue(closePromise.futureResult.fulfilled)
@@ -542,7 +542,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         }
 
         // Create a client channel without TLS in it, and connect it.
-        let readPromise: Promise<ByteBuffer> = group.next().newPromise()
+        let readPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let promiseOnReadHandler = PromiseOnReadHandler(promise: readPromise)
         let clientChannel = try ClientBootstrap(group: group)
             .handler(handler: promiseOnReadHandler)
@@ -599,7 +599,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
         originalBuffer.write(string: "Hello")
         let writeFuture = clientChannel.writeAndFlush(data: NIOAny(originalBuffer))
-        let errorsFuture: Future<[NIOOpenSSLError]> = writeFuture.thenIfError { _ in
+        let errorsFuture: EventLoopFuture<[NIOOpenSSLError]> = writeFuture.thenIfError { _ in
             // We're swallowing errors here, on purpose, because we'll definitely
             // hit them.
             return ()

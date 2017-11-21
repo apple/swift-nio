@@ -15,29 +15,29 @@
 import XCTest
 @testable import NIO
 
-enum FutureTestError : Error {
+enum EventLoopFutureTestError : Error {
     case example
 }
 
-class FutureTest : XCTestCase {
+class EventLoopFutureTest : XCTestCase {
     func testFutureFulfilledIfHasResult() throws {
         let eventLoop = EmbeddedEventLoop()
-        let f = Future(eventLoop: eventLoop, checkForPossibleDeadlock: true, result: 5)
+        let f = EventLoopFuture(eventLoop: eventLoop, checkForPossibleDeadlock: true, result: 5)
         XCTAssertTrue(f.fulfilled)
     }
 
     func testFutureFulfilledIfHasError() throws {
         let eventLoop = EmbeddedEventLoop()
-        let f = Future<Void>(eventLoop: eventLoop, checkForPossibleDeadlock: true, error: FutureTestError.example)
+        let f = EventLoopFuture<Void>(eventLoop: eventLoop, checkForPossibleDeadlock: true, error: EventLoopFutureTestError.example)
         XCTAssertTrue(f.fulfilled)
     }
 
     func testAndAllWithAllSuccesses() throws {
         let eventLoop = EmbeddedEventLoop()
-        let promises: [Promise<Void>] = (0..<100).map { _ in eventLoop.newPromise() }
+        let promises: [EventLoopPromise<Void>] = (0..<100).map { _ in eventLoop.newPromise() }
         let futures = promises.map { $0.futureResult }
 
-        let fN: Future<Void> = Future<Void>.andAll(futures, eventLoop: eventLoop)
+        let fN: EventLoopFuture<Void> = EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
         _ = promises.map { $0.succeed(result: ()) }
         () = try fN.wait()
     }
@@ -45,10 +45,10 @@ class FutureTest : XCTestCase {
     func testAndAllWithAllFailures() throws {
         struct E: Error {}
         let eventLoop = EmbeddedEventLoop()
-        let promises: [Promise<Void>] = (0..<100).map { _ in eventLoop.newPromise() }
+        let promises: [EventLoopPromise<Void>] = (0..<100).map { _ in eventLoop.newPromise() }
         let futures = promises.map { $0.futureResult }
 
-        let fN: Future<Void> = Future<Void>.andAll(futures, eventLoop: eventLoop)
+        let fN: EventLoopFuture<Void> = EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
         _ = promises.map { $0.fail(error: E()) }
         do {
             () = try fN.wait()
@@ -63,15 +63,15 @@ class FutureTest : XCTestCase {
     func testAndAllWithOneFailure() throws {
         struct E: Error {}
         let eventLoop = EmbeddedEventLoop()
-        var promises: [Promise<Void>] = (0..<100).map { _ in eventLoop.newPromise() }
+        var promises: [EventLoopPromise<Void>] = (0..<100).map { _ in eventLoop.newPromise() }
         _ = promises.map { $0.succeed(result: ()) }
-        let failedPromise: Promise<()> = eventLoop.newPromise()
+        let failedPromise: EventLoopPromise<()> = eventLoop.newPromise()
         failedPromise.fail(error: E())
         promises.append(failedPromise)
 
         let futures = promises.map { $0.futureResult }
 
-        let fN: Future<Void> = Future<Void>.andAll(futures, eventLoop: eventLoop)
+        let fN: EventLoopFuture<Void> = EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
         do {
             () = try fN.wait()
             XCTFail("should've thrown an error")

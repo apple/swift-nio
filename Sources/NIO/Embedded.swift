@@ -23,20 +23,20 @@ class EmbeddedEventLoop : EventLoop {
     // Would be better to have this as a Queue
     var tasks: [() -> ()] = Array()
     
-    public func newPromise<T>() -> Promise<T> {
-        return Promise<T>(eventLoop: self, checkForPossibleDeadlock: false)
+    public func newPromise<T>() -> EventLoopPromise<T> {
+        return EventLoopPromise<T>(eventLoop: self, checkForPossibleDeadlock: false)
     }
     
-    public func newFailedFuture<T>(error: Error) -> Future<T> {
-        return Future<T>(eventLoop: self, checkForPossibleDeadlock: false, error: error)
+    public func newFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
+        return EventLoopFuture<T>(eventLoop: self, checkForPossibleDeadlock: false, error: error)
     }
     
-    public func newSucceedFuture<T>(result: T) -> Future<T> {
-        return Future<T>(eventLoop: self, checkForPossibleDeadlock: false, result: result)
+    public func newSucceedFuture<T>(result: T) -> EventLoopFuture<T> {
+        return EventLoopFuture<T>(eventLoop: self, checkForPossibleDeadlock: false, result: result)
     }
     
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
-        let promise: Promise<T> = newPromise()
+        let promise: EventLoopPromise<T> = newPromise()
         promise.fail(error: EventLoopError.unsupportedOperation)
         return Scheduled(promise: promise, cancellationTask: {
             // Nothing to do as we fail the promise before
@@ -83,7 +83,7 @@ class EmbeddedChannelCore : ChannelCore {
 
     
     var eventLoop: EventLoop = EmbeddedEventLoop()
-    var closePromise: Promise<Void>
+    var closePromise: EventLoopPromise<Void>
     var error: Error?
     
     private unowned let pipeline: ChannelPipeline
@@ -101,7 +101,7 @@ class EmbeddedChannelCore : ChannelCore {
     var outboundBuffer: [IOData] = []
     var inboundBuffer: [NIOAny] = []
     
-    func close0(error: Error, promise: Promise<Void>?) {
+    func close0(error: Error, promise: EventLoopPromise<Void>?) {
         if closed {
             promise?.fail(error: ChannelError.alreadyClosed)
             return
@@ -121,27 +121,27 @@ class EmbeddedChannelCore : ChannelCore {
         }
     }
 
-    func bind0(to address: SocketAddress, promise: Promise<Void>?) {
+    func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         promise?.succeed(result: ())
     }
 
-    func connect0(to address: SocketAddress, promise: Promise<Void>?) {
+    func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         promise?.succeed(result: ())
         pipeline.fireChannelRegistered0()
         isActive = true
         pipeline.fireChannelActive0()
     }
 
-    func register0(promise: Promise<Void>?) {
+    func register0(promise: EventLoopPromise<Void>?) {
         promise?.succeed(result: ())
     }
 
-    func write0(data: IOData, promise: Promise<Void>?) {
+    func write0(data: IOData, promise: EventLoopPromise<Void>?) {
         addToBuffer(buffer: &outboundBuffer, data: data)
         promise?.succeed(result: ())
     }
 
-    func flush0(promise: Promise<Void>?) {
+    func flush0(promise: EventLoopPromise<Void>?) {
         if closed {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
@@ -149,7 +149,7 @@ class EmbeddedChannelCore : ChannelCore {
         promise?.succeed(result: ())
     }
 
-    func read0(promise: Promise<Void>?) {
+    func read0(promise: EventLoopPromise<Void>?) {
         if closed {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
@@ -157,7 +157,7 @@ class EmbeddedChannelCore : ChannelCore {
         promise?.succeed(result: ())
     }
     
-    public final func triggerUserOutboundEvent0(event: Any, promise: Promise<Void>?) {
+    public final func triggerUserOutboundEvent0(event: Any, promise: EventLoopPromise<Void>?) {
         promise?.succeed(result: ())
     }
     
@@ -178,7 +178,7 @@ class EmbeddedChannelCore : ChannelCore {
 
 public class EmbeddedChannel : Channel {
     public var isActive: Bool { return channelcore.isActive }
-    public var closeFuture: Future<Void> { return channelcore.closePromise.futureResult }
+    public var closeFuture: EventLoopFuture<Void> { return channelcore.closePromise.futureResult }
 
     private lazy var channelcore: EmbeddedChannelCore = EmbeddedChannelCore(pipeline: self._pipeline)
 

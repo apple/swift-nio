@@ -18,7 +18,7 @@ import NIO
 import Dispatch
 @testable import NIOHTTP1
 
-private func assertSuccess(_ f: FutureValue<()>, file: StaticString = #file, line: Int = #line) {
+private func assertSuccess(_ f: EventLoopFutureValue<()>, file: StaticString = #file, line: Int = #line) {
     switch f {
     case .success(()):
         ()

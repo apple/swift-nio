@@ -107,7 +107,7 @@ class ChannelPipelineTest: XCTestCase {
             self.fn = fn
         }
         
-        public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
+        public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             do {
                 ctx.write(data: self.wrapOutboundOut(try fn(self.unwrapOutboundIn(data))), promise: promise)
             } catch let err {
@@ -124,7 +124,7 @@ class ChannelPipelineTest: XCTestCase {
             case CalledBind
         }
         
-        public func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: Promise<Void>?) {
+        public func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
             promise!.fail(error: TestFailureError.CalledBind)
         }
     }

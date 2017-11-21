@@ -143,7 +143,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     }
 
     /// Sends the 101 Switching Protocols response for the pipeline.
-    private func sendUpgradeResponse(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead, responseHeaders: HTTPHeaders) -> Future<Void> {
+    private func sendUpgradeResponse(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead, responseHeaders: HTTPHeaders) -> EventLoopFuture<Void> {
         var response = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .switchingProtocols)
         response.headers = responseHeaders
         return ctx.writeAndFlush(data: wrapOutboundOut(HTTPServerResponsePart.head(response)))

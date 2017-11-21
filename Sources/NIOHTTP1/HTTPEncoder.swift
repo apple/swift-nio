@@ -15,13 +15,13 @@
 import NIO
 import Foundation // TODO(JW): investigate linker errors if this is missing
 
-private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandlerContext, isChunked: Bool, chunk: IOData, promise: Promise<Void>?) {
-    let (mW1, mW2, mW3): (Promise<()>?, Promise<()>?, Promise<()>?)
+private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandlerContext, isChunked: Bool, chunk: IOData, promise: EventLoopPromise<Void>?) {
+    let (mW1, mW2, mW3): (EventLoopPromise<()>?, EventLoopPromise<()>?, EventLoopPromise<()>?)
     
     switch (isChunked, promise) {
     case (true, .some(let p)):
         /* chunked encoding and the user's interested: we need three promises and need to cascade into the users promise */
-        let (w1, w2, w3) = (ctx.eventLoop.newPromise() as Promise<()>, ctx.eventLoop.newPromise() as Promise<()>, ctx.eventLoop.newPromise() as Promise<()>)
+        let (w1, w2, w3) = (ctx.eventLoop.newPromise() as EventLoopPromise<()>, ctx.eventLoop.newPromise() as EventLoopPromise<()>, ctx.eventLoop.newPromise() as EventLoopPromise<()>)
         w1.futureResult.and(w2.futureResult).and(w3.futureResult).then { _ in () }.cascade(promise: p)
         (mW1, mW2, mW3) = (w1, w2, w3)
     case (false, .some(let p)):
@@ -52,7 +52,7 @@ private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandler
     }
 }
 
-private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandlerContext, isChunked: Bool, trailers: HTTPHeaders?, promise: Promise<Void>?) {
+private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandlerContext, isChunked: Bool, trailers: HTTPHeaders?, promise: EventLoopPromise<Void>?) {
     switch (isChunked, promise) {
     case (true, let p):
         var buffer: ByteBuffer
@@ -75,7 +75,7 @@ private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHand
     }
 }
 
-private func writeHead(wrapOutboundOut: (IOData) -> NIOAny, writeStartLine: (inout ByteBuffer) -> (), ctx: ChannelHandlerContext, headers: HTTPHeaders, promise: Promise<Void>?) {
+private func writeHead(wrapOutboundOut: (IOData) -> NIOAny, writeStartLine: (inout ByteBuffer) -> (), ctx: ChannelHandlerContext, headers: HTTPHeaders, promise: EventLoopPromise<Void>?) {
     
     var buffer = ctx.channel!.allocator.buffer(capacity: 256)
     writeStartLine(&buffer)
@@ -113,7 +113,7 @@ public final class HTTPRequestEncoder : ChannelOutboundHandler {
     
     public init () { }
     
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
+    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch self.tryUnwrapOutboundIn(data) {
         case .some(.head(var request)):
             sanitizeTransportHeaders(mayHaveBody: request.method.mayHaveRequestBody, headers: &request.headers, version: request.version)
@@ -146,7 +146,7 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
 
     public init () { }
 
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: Promise<Void>?) {
+    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch self.tryUnwrapOutboundIn(data) {
         case .some(.head(var response)):
             sanitizeTransportHeaders(mayHaveBody: response.status.mayHaveResponseBody, headers: &response.headers, version: response.version)
