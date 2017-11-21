@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import ConcurrencyHelpers
+import NIOConcurrencyHelpers
 @testable import NIO
 
 class ChannelPipelineTest: XCTestCase {

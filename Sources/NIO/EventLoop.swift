@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import ConcurrencyHelpers
+import NIOConcurrencyHelpers
 import Dispatch
 import class Foundation.Thread
 import SwiftPriorityQueue

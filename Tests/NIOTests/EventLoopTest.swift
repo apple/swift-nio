@@ -14,7 +14,7 @@
 import XCTest
 import NIO
 import Dispatch
-import ConcurrencyHelpers
+import NIOConcurrencyHelpers
 
 public class EventLoopTest : XCTestCase {
     

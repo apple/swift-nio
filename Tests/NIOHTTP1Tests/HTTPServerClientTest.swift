@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import ConcurrencyHelpers
+import NIOConcurrencyHelpers
 import NIO
 import Dispatch
 @testable import NIOHTTP1

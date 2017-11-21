@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import ConcurrencyHelpers
+import NIOConcurrencyHelpers
 
 
 public enum EventLoopFutureValue<T> {

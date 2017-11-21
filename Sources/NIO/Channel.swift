@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import ConcurrencyHelpers
+import NIOConcurrencyHelpers
 
 #if os(Linux)
 import Glibc
