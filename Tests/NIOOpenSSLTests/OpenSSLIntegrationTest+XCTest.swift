@@ -36,6 +36,7 @@ extension OpenSSLIntegrationTest {
                 ("testAddingTlsToActiveChannelStillHandshakes", testAddingTlsToActiveChannelStillHandshakes),
                 ("testValidatesHostnameOnConnectionFails", testValidatesHostnameOnConnectionFails),
                 ("testValidatesHostnameOnConnectionSucceeds", testValidatesHostnameOnConnectionSucceeds),
+                ("testDontLoseClosePromises", testDontLoseClosePromises),
            ]
    }
 }

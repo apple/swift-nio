@@ -271,6 +271,9 @@ public class EmbeddedChannel : Channel {
     }
 
     public func getOption<T>(option: T) throws -> T.OptionType where T : ChannelOption {
+        if option is AutoReadOption {
+            return true as! T.OptionType
+        }
         fatalError("option \(option) not supported")
     }
 }

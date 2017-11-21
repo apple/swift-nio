@@ -18,6 +18,24 @@ import CNIOOpenSSL
 @testable import NIOOpenSSL
 import NIOTLS
 
+private func interactInMemory(clientChannel: EmbeddedChannel, serverChannel: EmbeddedChannel) throws {
+    var workToDo = true
+    while workToDo {
+        workToDo = false
+        let clientDatum = clientChannel.readOutbound()
+        let serverDatum = serverChannel.readOutbound()
+
+        if let clientMsg = clientDatum {
+            try serverChannel.writeInbound(data: clientMsg)
+            workToDo = true
+        }
+
+        if let serverMsg = serverDatum {
+            try clientChannel.writeInbound(data: serverMsg)
+            workToDo = true
+        }
+    }
+}
 
 private final class SimpleEchoServer: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
@@ -577,9 +595,9 @@ class OpenSSLIntegrationTest: XCTestCase {
         let serverCtx = try configuredSSLContext()
         let clientCtx = try configuredClientContext()
 
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            try? group.syncShutdownGracefully()
         }
 
         let serverChannel = try serverTLSChannel(withContext: serverCtx,
@@ -619,7 +637,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         let serverCtx = try configuredSSLContext()
         let clientCtx = try configuredClientContext()
 
-        let group = try MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             try! group.syncShutdownGracefully()
         }
@@ -646,5 +664,43 @@ class OpenSSLIntegrationTest: XCTestCase {
             XCTAssertEqual(eventHandler.events[..<3], [.Registered, .Active, .UserEvent(.handshakeCompleted(negotiatedProtocol: nil))])
         }
         try writeFuture.wait()
+    }
+
+    func testDontLoseClosePromises() throws {
+        let serverChannel = EmbeddedChannel()
+        let clientChannel = EmbeddedChannel()
+
+        let ctx = try configuredSSLContext()
+
+        try serverChannel.pipeline.add(handler: try OpenSSLServerHandler(context: ctx)).wait()
+        try clientChannel.pipeline.add(handler: try OpenSSLClientHandler(context: ctx)).wait()
+
+        let addr: SocketAddress = try .unixDomainSocketAddress(path: "/tmp/whatever")
+        let connectFuture = clientChannel.connect(to: addr)
+        serverChannel.pipeline.fireChannelActive()
+        try interactInMemory(clientChannel: clientChannel, serverChannel: serverChannel)
+        try connectFuture.wait()
+
+        // Ok, we're connected. Good stuff! Now, we want to hit this specific window:
+        // 1. Call close() on the server channel. This will transition it to the closing state.
+        // 2. Fire channelInactive on the serverChannel. This should cause it to drop all state and
+        //    fire the close promise.
+        // Because we're using the embedded channel here, we don't need to worry about thread
+        // synchronization: all of this should succeed synchronously. If it doesn't, that's
+        // a bug too!
+        let closePromise = serverChannel.close()
+        XCTAssertFalse(closePromise.fulfilled)
+
+        serverChannel.pipeline.fireChannelInactive()
+        XCTAssertTrue(closePromise.fulfilled)
+
+        closePromise.whenComplete {
+            switch $0 {
+            case .failure(OpenSSLError.uncleanShutdown):
+                break
+            default:
+                XCTFail("Unexpected result: \($0)")
+            }
+        }
     }
 }

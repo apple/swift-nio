@@ -69,8 +69,13 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
     }
     
     public func channelInactive(ctx: ChannelHandlerContext) {
-        // This fires when the TCP connection goes away.
-        switch state {
+        // This fires when the TCP connection goes away. Whatever happens, we end up in the closed
+        // state here. This function calls out to a lot of user code, so we need to make sure we're
+        // keeping track of the state we're in properly before we do anything else.
+        let oldState = state
+        state = .closed
+
+        switch oldState {
         case .closed, .idle:
             // Nothing to do, but discard any buffered writes we still have.
             discardBufferedWrites(reason: ChannelError.ioOnClosedChannel)
@@ -78,11 +83,14 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
             // This is a ragged EOF: we weren't sent a CLOSE_NOTIFY. We want to send a user
             // event to notify about this before we propagate channelInactive. We also want to fail all
             // these writes.
+            if let closePromise = self.closePromise {
+                self.closePromise = nil
+                closePromise.fail(error: OpenSSLError.uncleanShutdown)
+            }
             ctx.fireErrorCaught(error: OpenSSLError.uncleanShutdown)
             discardBufferedWrites(reason: OpenSSLError.uncleanShutdown)
         }
-        
-        state = .closed
+
         ctx.fireChannelInactive()
     }
     
