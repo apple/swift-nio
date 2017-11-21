@@ -25,6 +25,7 @@ import Glibc
 import class Foundation.FileManager
 import struct Foundation.FileAttributeKey
 #endif
+import class Foundation.NSNumber
 
 private final class HTTPHandler: ChannelInboundHandler {
     public typealias InboundIn = HTTPServerRequestPart
@@ -215,7 +216,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             let path = self.htdocsPath + "/" + request.uri
             do {
                 let attrs = try FileManager.default.attributesOfItem(atPath: path)
-                let fileSize = attrs[FileAttributeKey.size] as! Int
+                let fileSize = (attrs[FileAttributeKey.size] as! NSNumber).intValue
                 let region = try FileRegion(file: path, readerIndex: 0, endIndex: fileSize)
                 var response = HTTPResponseHead(version: request.version, status: .ok)
 

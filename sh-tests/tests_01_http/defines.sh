@@ -1,5 +1,9 @@
 #!/bin/bash
 
+function server_lsof() {
+    lsof -a -d 0-1024 -p "$1"
+}
+
 function create_token() {
     mktemp "$tmp/server_token_XXXXXX"
 }
@@ -19,11 +23,10 @@ function start_server() {
     fi
 
     mkdir "$tmp/htdocs"
-    "$root/.build/x86_64-apple-macosx10.10/debug/NIOHTTP1Server" "$port" "$tmp/htdocs" &
+    "${SWIFT_EXEC-swift}" run NIOHTTP1Server "$port" "$tmp/htdocs" &
     for f in $(seq 30); do if [[ -S "$port" ]]; then break; else sleep 0.1; fi; done
     if [[ -z "$type" ]]; then
         port=$(lsof -n -p $! | grep -Eo 'TCP .*:[0-9]+ ' | grep -Eo '[0-9]{4,5} ' | tr -d ' ')
-        lsof -n -p $!
         echo "port = '$port'"
         curl_port="$port"
     fi
@@ -35,7 +38,8 @@ function start_server() {
     do_curl "$token" http://localhost:$curl_port/dynamic/write-delay | grep -q 'Hello World'
     tmp_server_pid=$(get_server_pid "$token")
     echo "local token_open_fds" >> "$token"
-    echo "token_open_fds='$(lsof -n -p "$tmp_server_pid" | wc -l)'" >> "$token"
+    echo "token_open_fds='$(server_lsof "$tmp_server_pid" | wc -l)'" >> "$token"
+    server_lsof "$tmp_server_pid"
 }
 
 function get_htdocs() {
@@ -52,9 +56,9 @@ function stop_server() {
     source "$1"
     sleep 0.05 # just to make sure all the fds could be closed
     if command -v lsof > /dev/null 2> /dev/null; then
-        lsof -n -p "$token_pid"
+        server_lsof "$token_pid"
         local open_fds
-        open_fds=$(lsof -n -p "$token_pid" | wc -l)
+        open_fds=$(server_lsof "$token_pid" | wc -l)
         assert_equal "$token_open_fds" "$open_fds" \
             "expected $token_open_fds open fds, found $open_fds"
     fi
