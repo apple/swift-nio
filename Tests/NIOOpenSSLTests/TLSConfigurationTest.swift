@@ -168,4 +168,17 @@ class TLSConfigurationTest: XCTestCase {
         }
         try flushFuture.wait()
     }
+
+    func testNonexistentFileObject() throws {
+        let clientConfig = TLSConfiguration.forClient(trustRoots: .file("/thispathbetternotexist/bogus.foo"))
+
+        do {
+            _ = try SSLContext(configuration: clientConfig)
+            XCTFail("Did not throw")
+        } catch NIOOpenSSLError.noSuchFilesystemObject {
+            // This is fine
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
 }

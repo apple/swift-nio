@@ -12,9 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import struct Foundation.URL
-import struct Foundation.ObjCBool
-import class Foundation.FileManager
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+    import Darwin
+#elseif os(Linux)
+    import Glibc
+#endif
 import NIO
 import CNIOOpenSSL
 
@@ -23,18 +25,19 @@ import CNIOOpenSSL
 // actually create any object that uses OpenSSL.
 fileprivate var initialized: Bool = initializeOpenSSL()
 
-// This insane extension is required for Linux. Annoyingly, Linux Foundation as of Swift 4
-// declares ObjCBool as a typealias of Bool, meaning it's quite substantially incompatible with
-// the Darwin ObjCBool type. In our case we just need boolValue, but sadly we need to shove this
-// extension in to get this to work as intended.
-// See also: https://github.com/apple/swift-corelibs-foundation/pull/1223
-#if os(Linux)
-    extension ObjCBool {
-        var boolValue: Bool {
-            return self
+private enum FileSystemObject {
+    case directory
+    case file
+
+    static func pathType(path: String) -> FileSystemObject? {
+        var statObj = stat()
+        guard stat(path, &statObj) == 0 else {
+            return nil
         }
+
+        return (statObj.st_mode & S_IFDIR) != 0 ? .directory : .file
     }
-#endif
+}
 
 // This bizarre extension to UnsafeBufferPointer is very useful for handling ALPN identifiers. OpenSSL
 // likes to work with them in wire format, so rather than us decoding them we can just encode ours to
@@ -285,22 +288,20 @@ extension SSLContext {
     }
     
     private static func usePrivateKeyFile(_ path: String, context: UnsafeMutablePointer<SSL_CTX>) {
-        // TODO(cory): This shouldn't be an assert but should instead be actual error handling.
-        // assert(atPath.isFileURL)
-        let path = URL(string: path)!
+        let pathExtension = path.split(separator: ".").last
         let fileType: Int32
         
-        switch path.pathExtension.lowercased() {
-        case "pem":
+        switch pathExtension?.lowercased() {
+        case .some("pem"):
             fileType = SSL_FILETYPE_PEM
-        case "der", "key":
+        case .some("der"), .some("key"):
             fileType = SSL_FILETYPE_ASN1
         default:
             // TODO(cory): Again, error handling here would be good.
             fatalError("Unknown private key file type.")
         }
         
-        let result = path.withUnsafeFileSystemRepresentation { (pointer) -> Int32 in
+        let result = path.withCString { (pointer) -> Int32 in
             return SSL_CTX_use_PrivateKey_file(context, pointer, fileType)
         }
         
@@ -309,15 +310,19 @@ extension SSLContext {
     }
     
     private static func loadVerifyLocations(_ path: String, context: UnsafeMutablePointer<SSL_CTX>) throws {
-        var isDirectory: ObjCBool = false
-        let exists = FileManager().fileExists(atPath: path, isDirectory: &isDirectory)
-        guard exists else {
+        let isDirectory: Bool
+        switch FileSystemObject.pathType(path: path) {
+        case .some(.directory):
+            isDirectory = true
+        case .some(.file):
+            isDirectory = false
+        case .none:
             throw NIOOpenSSLError.noSuchFilesystemObject
         }
         
         let result = path.withCString { (pointer) -> Int32 in
-            let file = !(isDirectory.boolValue) ? pointer : nil
-            let directory = isDirectory.boolValue ? pointer: nil
+            let file = !isDirectory ? pointer : nil
+            let directory = isDirectory ? pointer: nil
             return SSL_CTX_load_verify_locations(context, file, directory)
         }
         

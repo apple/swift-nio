@@ -31,6 +31,7 @@ extension TLSConfigurationTest {
                 ("testCannotVerifySelfSigned", testCannotVerifySelfSigned),
                 ("testServerCannotValidateClient", testServerCannotValidateClient),
                 ("testMutualValidation", testMutualValidation),
+                ("testNonexistentFileObject", testNonexistentFileObject),
            ]
    }
 }

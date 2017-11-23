@@ -17,6 +17,7 @@ import CNIOOpenSSL
 @testable import NIO
 @testable import NIOOpenSSL
 import NIOTLS
+import class Foundation.Process
 
 private func interactInMemory(clientChannel: EmbeddedChannel, serverChannel: EmbeddedChannel) throws {
     var workToDo = true
@@ -244,6 +245,21 @@ class OpenSSLIntegrationTest: XCTestCase {
     private func configuredClientContext() throws -> NIOOpenSSL.SSLContext {
         let config = TLSConfiguration.forClient(trustRoots: .certificates([OpenSSLIntegrationTest.cert]))
         return try SSLContext(configuration: config)
+    }
+
+    func withTrustBundleInFile<T>(fn: (String) throws -> T) rethrows -> T {
+        let fileName = "/tmp/niocacerts.pem"
+        let tempFile: Int32 = fileName.withCString { ptr in
+            return open(ptr, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0o644)
+        }
+        precondition(tempFile > 1, String(cString: strerror(errno)))
+        let fileBio = BIO_new_fp(fdopen(tempFile, "w+"), BIO_CLOSE)
+        precondition(fileBio != nil)
+
+        let rc = PEM_write_bio_X509(fileBio, OpenSSLIntegrationTest.cert.ref)
+        BIO_free(fileBio)
+        precondition(rc == 1)
+        return try fn(fileName)
     }
     
     func testSimpleEcho() throws {
@@ -702,5 +718,88 @@ class OpenSSLIntegrationTest: XCTestCase {
                 XCTFail("Unexpected result: \($0)")
             }
         }
+    }
+
+    func testTrustStoreOnDisk() throws {
+        let serverCtx = try configuredSSLContext()
+        let config = withTrustBundleInFile {
+            return TLSConfiguration.forClient(certificateVerification: .noHostnameVerification,
+                                              trustRoots: .file($0),
+                                              certificateChain: [.certificate(OpenSSLIntegrationTest.cert)],
+                                              privateKey: .privateKey(OpenSSLIntegrationTest.key))
+        }
+        let clientCtx = try SSLContext(configuration: config)
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let completionPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
+        let serverChannel = try serverTLSChannel(withContext: serverCtx, andHandlers: [SimpleEchoServer()], onGroup: group)
+        defer {
+            _ = try? serverChannel.close().wait()
+        }
+
+        let clientChannel = try clientTLSChannel(withContext: clientCtx,
+                                                 preHandlers: [],
+                                                 postHandlers: [PromiseOnReadHandler(promise: completionPromise)],
+                                                 onGroup: group,
+                                                 connectingTo: serverChannel.localAddress!)
+        defer {
+            _ = try? clientChannel.close().wait()
+        }
+
+        var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
+        originalBuffer.write(string: "Hello")
+
+        try clientChannel.writeAndFlush(data: NIOAny(originalBuffer)).wait()
+        let newBuffer = try completionPromise.futureResult.wait()
+        XCTAssertEqual(newBuffer, originalBuffer)
+    }
+
+    func testChecksTrustStoreOnDisk() throws {
+        let serverCtx = try configuredSSLContext()
+        let clientConfig = TLSConfiguration.forClient(certificateVerification: .noHostnameVerification,
+                                                      trustRoots: .file("/tmp"),
+                                                      certificateChain: [.certificate(OpenSSLIntegrationTest.cert)],
+                                                      privateKey: .privateKey(OpenSSLIntegrationTest.key))
+        let clientCtx = try SSLContext(configuration: clientConfig)
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        let serverChannel = try serverTLSChannel(withContext: serverCtx,
+                                                 andHandlers: [],
+                                                 onGroup: group)
+        defer {
+            _ = try! serverChannel.close().wait()
+        }
+
+        let errorHandler = ErrorCatcher<NIOOpenSSLError>()
+        let clientChannel = try clientTLSChannel(withContext: clientCtx,
+                                                 preHandlers: [],
+                                                 postHandlers: [errorHandler],
+                                                 onGroup: group,
+                                                 connectingTo: serverChannel.localAddress!)
+
+        var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
+        originalBuffer.write(string: "Hello")
+        let writeFuture = clientChannel.writeAndFlush(data: NIOAny(originalBuffer))
+        let errorsFuture: EventLoopFuture<[NIOOpenSSLError]> = writeFuture.thenIfError { _ in
+            // We're swallowing errors here, on purpose, because we'll definitely
+            // hit them.
+            return ()
+            }.then { _ in
+                return errorHandler.errors
+        }
+        let actualErrors = try errorsFuture.wait()
+
+        // The actual error is non-deterministic depending on platform and version, so we don't
+        // really try to make too many assertions here.
+        XCTAssertEqual(actualErrors.count, 1)
+        try clientChannel.closeFuture.wait()
     }
 }

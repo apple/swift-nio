@@ -37,6 +37,8 @@ extension OpenSSLIntegrationTest {
                 ("testValidatesHostnameOnConnectionFails", testValidatesHostnameOnConnectionFails),
                 ("testValidatesHostnameOnConnectionSucceeds", testValidatesHostnameOnConnectionSucceeds),
                 ("testDontLoseClosePromises", testDontLoseClosePromises),
+                ("testTrustStoreOnDisk", testTrustStoreOnDisk),
+                ("testChecksTrustStoreOnDisk", testChecksTrustStoreOnDisk),
            ]
    }
 }
