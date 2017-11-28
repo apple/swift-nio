@@ -26,6 +26,7 @@ import XCTest
    @testable import NIOConcurrencyHelpersTests
    @testable import NIOHTTP1Tests
    @testable import NIOOpenSSLTests
+   @testable import NIOPriorityQueueTests
    @testable import NIOTLSTests
    @testable import NIOTests
 
@@ -50,12 +51,14 @@ import XCTest
          testCase(HTTPServerClientTest.allTests),
          testCase(HTTPTest.allTests),
          testCase(HTTPUpgradeTestCase.allTests),
+         testCase(HeapTests.allTests),
          testCase(IdentityVerificationTest.allTests),
          testCase(IdleStateHandlerTest.allTests),
          testCase(MarkedCircularBufferTests.allTests),
          testCase(MessageToByteEncoderTest.allTests),
          testCase(OpenSSLALPNTest.allTests),
          testCase(OpenSSLIntegrationTest.allTests),
+         testCase(PriorityQueueTest.allTests),
          testCase(SSLCertificateTest.allTests),
          testCase(SSLPrivateKeyTest.allTests),
          testCase(SniHandlerTest.allTests),

@@ -15,7 +15,7 @@
 import NIOConcurrencyHelpers
 import Dispatch
 import class Foundation.Thread
-import SwiftPriorityQueue
+import NIOPriorityQueue
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
     import Darwin
 #else
