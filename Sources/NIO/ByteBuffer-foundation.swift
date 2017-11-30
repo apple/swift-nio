@@ -25,6 +25,12 @@ extension Data: ContiguousCollection {
 extension ByteBuffer {
 
     // MARK: Data APIs
+    /// Read `length` bytes off this `ByteBuffer`, move the reader index forward by `length` bytes and return the result
+    /// as `Data`.
+    ///
+    /// - parameters:
+    ///     - length: The number of bytes to be read from this `ByteBuffer`.
+    /// - returns: A `Data` value containing `length` bytes of `Data` or `nil` if there aren't at least `length` bytes readable.
     public mutating func readData(length: Int) -> Data? {
         precondition(length >= 0, "length must not be negative")
         guard self.readableBytes >= length else {
@@ -35,6 +41,12 @@ extension ByteBuffer {
         return data
     }
 
+    /// Return `length` bytes starting at `index` and return the result as `Data`. This will not change the reader index.
+    ///
+    /// - parameters:
+    ///     - index: The starting index of the bytes of interest into the `ByteBuffer`
+    ///     - length: The number of bytes of interest
+    /// - returns: A `Data` value containing the bytes of interest or `nil` if the `ByteBuffer` doesn't contain those bytes.
     public func data(at index: Int, length: Int) -> Data? {
         precondition(length >= 0, "length must not be negative")
         precondition(index >= 0, "index must not be negative")
