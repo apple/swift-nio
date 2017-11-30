@@ -14,7 +14,12 @@
 
 /// Common user events sent by all TLS implementations.
 public enum TLSUserEvent: Equatable {
+    /// The TLS handshake has completed. If ALPN or NPN were used,
+    /// the negotiated protocol is provided as `negotiatedProtocol`.
     case handshakeCompleted(negotiatedProtocol: String?)
+
+    /// The TLS connection has been successfully and cleanly shut down.
+    /// No further application data can be sent or received at this time.
     case shutdownCompleted
 
     public static func ==(lhs: TLSUserEvent, rhs: TLSUserEvent) -> Bool {
