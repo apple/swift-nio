@@ -12,8 +12,42 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// `NIOAny` is an opaque container for values of *any* type, similar to Swift's builtin `Any` type. Contrary to
+/// `Any` the overhead of `NIOAny` depends on the the type of the wrapped value. Certain types that are important
+/// for the performance of a SwiftNIO appliation like `ByteBuffer` and `FileRegion` can be expected to be wrapped almost
+/// without overhead. All others will have similar performance as if they were passed as an `Any` as `NIOAny` just
+/// like `Any` will contain them within an existential container.
+///
+/// The most important use-cases for `NIOAny` are values travelling through the channel pipeline whose type can't
+/// be calculated at compile time. For example:
+///
+///  - the `channelRead` of any `ChannelInboundHandler`
+///  - the `write` method of a `ChannelOutboundHandler`
+///
+/// The abstraction that delivers a `NIOAny` to user code must provide a mechanism to unwrap a `NIOAny` as a
+/// certain type known at run-time. Canonical example:
+///
+///     class SandwichHandler: ChannelInboundHandler {
+///         typealias InboundIn = Bacon /* we expected to be delivered `Bacon` ... */
+///         typealias InboundOut = Sandwich /* ... and we will make and deliver a `Sandwich` from that */
+///
+///         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+///              /* we receive the `Bacon` as a `NIOAny` as at compile-time the exact configuration of the channel
+///                 pipeline can't be computed. The pipeline can't be computed at compile time as it can change
+///                 dynamically at run-time. Yet, we assert that in any configuration the channel handler before
+///                 `SandwichHandler` does actually send us a stream of `Bacon`.
+///              */
+///              let bacon = self.unwrapInboundIn(data) /* `Bacon` or crash */
+///              let sandwich = makeSandwich(bacon)
+///              ctx.fireChannelRead(data: self.wrapInboundOut(sandwich)) /* as promised we deliver a wrapped `Sandwich` */
+///         }
+///     }
 public struct NIOAny {
     private let storage: _NIOAny
+
+    /// Wrap a value in a `NIOAny`. In most cases you should not create a `NIOAny` directly using this constructor.
+    /// The abstraction that accepts values of type `NIOAny` must also provide a mechanism to do the wrapping. An
+    /// example is a `ChannelInboundHandler` which provides `self.wrapInboundOut(aValueOfTypeInboundOut)`.
     public init<T>(_ value: T) {
         self.storage = _NIOAny(value)
     }
