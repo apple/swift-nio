@@ -12,11 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// `IOData` unifies standard SwiftNIO types that are raw bytes of data; currently `ByteBuffer` and `FileRegion`.
+///
+/// Many `ChannelHandler`s receive or emit bytes and in most cases this can be either a `ByteBuffer` or a `FileRegion`
+/// from disk. To still form a well-typed `ChannelPipeline` such handlers should receive and emit value of type `IOData`.
 public enum IOData {
     case byteBuffer(ByteBuffer)
     case fileRegion(FileRegion)
 }
 
+/// `IOData` objects are comparable just like the values they wrap.
 extension IOData: Equatable {
     public static func ==(lhs: IOData, rhs: IOData) -> Bool {
         switch (lhs, rhs) {
@@ -30,7 +35,9 @@ extension IOData: Equatable {
     }
 }
 
+/// `IOData` provide a number of readable bytes.
 extension IOData {
+    /// Returns the number of readable bytes in this `IOData`.
     public var readableBytes: Int {
         switch self {
         case .byteBuffer(let buf):
