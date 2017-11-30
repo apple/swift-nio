@@ -20,6 +20,15 @@
 import CNIOOpenSSL
 import NIO
 
+/// A reference to an OpenSSL Certificate object (`X509 *`).
+///
+/// This thin wrapper class allows us to use ARC to automatically manage
+/// the memory associated with this TLS certificate. That ensures that OpenSSL
+/// will not free the underlying buffer until we are done with the certificate.
+///
+/// This class also provides several convenience constructors that allow users
+/// to obtain an in-memory representation of a TLS certificate from a buffer of
+/// bytes or from a file path.
 public class OpenSSLCertificate {
     internal let ref: UnsafeMutablePointer<X509>
 
@@ -39,6 +48,8 @@ public class OpenSSLCertificate {
 
     /// Create an OpenSSLCertificate from a file at a given path in either PEM or
     /// DER format.
+    ///
+    /// Note that this method will only ever load the first certificate from a given file.
     public convenience init (file: String, format: OpenSSLSerializationFormats) throws {
         let fileObject = file.withCString { filePtr in
             return fopen(filePtr, "rb")
@@ -90,13 +101,13 @@ public class OpenSSLCertificate {
     /// Create an OpenSSLCertificate wrapping a pointer into OpenSSL.
     ///
     /// This is a function that should be avoided as much as possible because it plays poorly with
-    /// OpenSSL's reference-counted memory. This function does not increment the reference count for the X509
+    /// OpenSSL's reference-counted memory. This function does not increment the reference count for the `X509`
     /// object here, nor does it duplicate it: it just takes ownership of the copy here. This object
-    /// **will** deallocate the underlying X509 object when deinited, and so if you need to keep that
-    /// X509 object alive you should call X509_dup before passing the pointer here.
+    /// **will** deallocate the underlying `X509` object when deinited, and so if you need to keep that
+    /// `X509` object alive you should call `X509_dup` before passing the pointer here.
     ///
     /// In general, however, this function should be avoided in favour of one of the convenience
-    /// initializers, which ensure that the lifetime of the X509 object is better-managed.
+    /// initializers, which ensure that the lifetime of the `X509` object is better-managed.
     static public func fromUnsafePointer(pointer: UnsafePointer<X509>) -> OpenSSLCertificate {
         return OpenSSLCertificate(withReference: UnsafeMutablePointer(mutating: pointer))
     }
@@ -165,6 +176,8 @@ extension OpenSSLCertificate: Equatable {
     }
 }
 
+/// A helper sequence object that enables us to represent subject alternative names
+/// as an iterable Swift sequence.
 internal class SubjectAltNameSequence: Sequence, IteratorProtocol {
     typealias Element = OpenSSLCertificate.AlternativeName
 

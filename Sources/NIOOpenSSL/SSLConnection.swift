@@ -17,12 +17,24 @@ import CNIOOpenSSL
 
 private let SSL_MAX_RECORD_SIZE = 16 * 1024;
 
+/// Encodes the return value of a non-blocking OpenSSL method call.
+///
+/// This enum maps OpenSSL's return values to a small number of cases. A success
+/// value naturally maps to `.complete`, and most errors map to `.failed`. However,
+/// the OpenSSL "errors" `WANT_READ` and `WANT_WRITE` are mapped to `.incomplete`, to
+/// help distinguish them from the other error cases. This makes it easier for code to
+/// handle the "must wait for more data" case by calling it out directly.
 enum AsyncOperationResult<T> {
     case incomplete
     case complete(T)
     case failed(OpenSSLError)
 }
 
+/// A wrapper class that encapsulates OpenSSL's `SSL *` object.
+///
+/// This class represents a single TLS connection, and performs all of crypto and record
+/// framing required by TLS. It also records the configuration and parent `SSLContext` object
+/// used to create the connection.
 internal final class SSLConnection {
     private let ssl: UnsafeMutablePointer<SSL>
     private let parentContext: SSLContext
@@ -58,15 +70,22 @@ internal final class SSLConnection {
     deinit {
         SSL_free(ssl)
     }
-    
+
+    /// Configures this as a server connection.
     func setAcceptState() {
         SSL_set_accept_state(ssl)
     }
-    
+
+    /// Configures this as a client connection.
     func setConnectState() {
         SSL_set_connect_state(ssl)
     }
 
+    /// Sets the value of the SNI extension to send to the server.
+    ///
+    /// This method must only be called with a hostname, not an IP address. Sending
+    /// an IP address in the SNI extension is invalid, and may result in handshake
+    /// failure.
     func setSNIServerName(name: String) throws {
         ERR_clear_error()
         let rc = name.withCString {
@@ -76,7 +95,14 @@ internal final class SSLConnection {
             throw OpenSSLError.invalidSNIName(OpenSSLError.buildErrorStack())
         }
     }
-    
+
+    /// Spins the handshake state machine and performs the next step of the handshake
+    /// protocol.
+    ///
+    /// This method may write data into internal buffers that must be sent: call
+    /// `getDataForNetwork` after this method is called. This method also consumes
+    /// data from internal buffers: call `consumeDataFromNetwork` before calling this
+    /// method.
     func doHandshake() -> AsyncOperationResult<Int32> {
         ERR_clear_error()
         let rc = SSL_do_handshake(ssl)
@@ -94,7 +120,14 @@ internal final class SSLConnection {
             return .failed(error)
         }
     }
-    
+
+    /// Spins the shutdown state machine and performs the next step of the shutdown
+    /// protocol.
+    ///
+    /// This method may write data into internal buffers that must be sent: call
+    /// `getDataForNetwork` after this method is called. This method also consumes
+    /// data from internal buffers: call `consumeDataFromNetwork` before calling this
+    /// method.
     func doShutdown() -> AsyncOperationResult<Int32> {
         ERR_clear_error()
         let rc = SSL_shutdown(ssl)
@@ -118,8 +151,16 @@ internal final class SSLConnection {
         }
     }
     
-    // Note that this function has no return value. This is because there is as-yet no notion of
-    // a BIO with bounded buffer size, so this will always succeed.
+    /// Given some unprocessed data from the remote peer, places it into
+    /// OpenSSL's receive buffer ready for handling by OpenSSL.
+    ///
+    /// This method should be called whenever data is received from the remote
+    /// peer.
+    ///
+    /// Right now this method has no return value because we are using OpenSSL's
+    /// default `BIO`s, which are unbounded. A future enhancement to this package
+    /// may allow this to consume only part of the data, in which case this method
+    /// will gain a return value.
     func consumeDataFromNetwork(_ data: inout ByteBuffer) {
         let consumedBytes = data.withUnsafeReadableBytes { (pointer) -> Int32 in
             let bytesWritten = BIO_write(self.fromNetwork, pointer.baseAddress, Int32(pointer.count))
@@ -129,7 +170,16 @@ internal final class SSLConnection {
         
         data.moveReaderIndex(forwardBy: Int(consumedBytes))
     }
-    
+
+    /// Obtains some encrypted data ready for the network from OpenSSL.
+    ///
+    /// This call obtains only data that OpenSSL has already written into its send
+    /// buffer. As a result, it should be called last, after all other operations have
+    /// been performed, to allow OpenSSL to write as much data as necessary into the
+    /// `BIO`.
+    ///
+    /// Returns `nil` if there is no data to write. Otherwise, returns all of the pending
+    /// data.
     func getDataForNetwork(allocator: ByteBufferAllocator) -> ByteBuffer? {
         let bufferedBytes = BIO_ctrl_pending(toNetwork)
         if bufferedBytes == 0 {
@@ -145,7 +195,11 @@ internal final class SSLConnection {
         assert(writtenBytes == bufferedBytes) // I can't see how this would fail, but...it might!
         return outputBuffer
     }
-    
+
+    /// Attempts to decrypt any application data sent by the remote peer, and returns a buffer
+    /// containing the cleartext bytes.
+    ///
+    /// This method can only consume data previously fed into OpenSSL in `consumeDataFromNetwork`.
     func readDataFromNetwork(allocator: ByteBufferAllocator, size: Int) -> AsyncOperationResult<ByteBuffer> {
         var outputBuffer = allocator.buffer(capacity: size)
         
@@ -179,7 +233,11 @@ internal final class SSLConnection {
     func readDataFromNetwork(allocator: ByteBufferAllocator) -> AsyncOperationResult<ByteBuffer> {
         return readDataFromNetwork(allocator: allocator, size: SSL_MAX_RECORD_SIZE)
     }
-    
+
+    /// Encrypts cleartext application data ready for sending on the network.
+    ///
+    /// This call will only write the data into OpenSSL's internal buffers. It needs to be obtained
+    /// by calling `getDataForNetwork` after this call completes.
     func writeDataToNetwork(_ data: inout ByteBuffer) -> AsyncOperationResult<Int32> {
         let writtenBytes = data.withUnsafeReadableBytes { (pointer) -> Int32 in
             return SSL_write(ssl, pointer.baseAddress, Int32(pointer.count))
@@ -206,6 +264,8 @@ internal final class SSLConnection {
         }
     }
 
+    /// Returns the protocol negotiated via ALPN, if any. Returns `nil` if no protocol
+    /// was negotiated.
     func getAlpnProtocol() -> String? {
         var protoName = UnsafePointer<UInt8>(bitPattern: 0)
         var protoLen: UInt32 = 0

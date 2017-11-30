@@ -161,7 +161,15 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
             doShutdownStep(ctx: ctx)
         }
     }
-    
+
+    /// Attempt to perform another stage of the TLS handshake.
+    ///
+    /// A TLS connection has a multi-step handshake that requires at least two messages sent by each
+    /// peer. As a result, a handshake will never complete in a single call to OpenSSL. This method
+    /// will call `doHandshake`, and will then attempt to write whatever data this generated to the
+    /// network. If we are waiting on data from the remote peer, this method will do nothing.
+    ///
+    /// This method must not be called once the connection is established.
     private func doHandshakeStep(ctx: ChannelHandlerContext) {
         let result = connection.doHandshake()
         
@@ -197,7 +205,18 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
             channelClose(ctx: ctx)
         }
     }
-    
+
+    /// Attempt to perform a stage of orderly TLS shutdown.
+    ///
+    /// Orderly TLS shutdown requires each peer to send a TLS CloseNotify message.
+    /// This message is a signal that the data being sent has been completely sent,
+    /// without truncation. Where possible we attempt to perform an orderly shutdown,
+    /// and so we will send a CloseNotify. We also try to wait for the remote peer to
+    /// send a CloseNotify in response. This means we may call this multiple times,
+    /// potentially writing our own CloseNotify each time.
+    ///
+    /// Once `state` has transitioned to `.closed`, further calls to this method will
+    /// do nothing.
     private func doShutdownStep(ctx: ChannelHandlerContext) {
         let result = connection.doShutdown()
         
@@ -218,7 +237,9 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
             channelClose(ctx: ctx)
         }
     }
-    
+
+    /// Loops over the `SSL` object, decoding encrypted application data until there is
+    /// no more available.
     private func doDecodeData(ctx: ChannelHandlerContext) {
         readLoop: while true {
             let result = connection.readDataFromNetwork(allocator: ctx.channel!.allocator)
@@ -242,7 +263,11 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
             }
         }
     }
-    
+
+    /// Encrypts application data and writes it to the channel.
+    ///
+    /// This method always flushes. For this reason, it should only ever be called when a flush
+    /// is intended.
     private func writeDataToNetwork(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         // There may be no data to write, in which case we can just exit early.
         guard let dataToWrite = connection.getDataForNetwork(allocator: ctx.channel!.allocator) else {

@@ -17,7 +17,7 @@ import NIO
 /// A channel handler that wraps a channel in TLS using OpenSSL, or an
 /// OpenSSL-compatible library. This handler can be used in channels that
 /// are acting as the server in the TLS dialog. For client connections,
-/// use the OpenSSLClientHandler.
+/// use the `OpenSSLClientHandler`.
 public final class OpenSSLServerHandler: OpenSSLHandler {
     public init(context: SSLContext) throws {
         guard let connection = context.createConnection() else {

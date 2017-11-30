@@ -19,6 +19,7 @@ import CNIOOpenSSL
     import Glibc
 #endif
 
+/// Wraps a single error from OpenSSL.
 public struct OpenSSLInternalError: Equatable, CustomStringConvertible {
     let errorCode: u_long
 
@@ -43,9 +44,11 @@ public struct OpenSSLInternalError: Equatable, CustomStringConvertible {
 
 }
 
+/// A representation of OpenSSL's internal error stack: a list of OpenSSL errors.
 public typealias OpenSSLErrorStack = [OpenSSLInternalError]
 
 
+/// Errors that can be raised by NIO's OpenSSL wrapper.
 public enum NIOOpenSSLError: Error {
     case writeDuringTLSShutdown
     case unableToAllocateOpenSSLObject
@@ -81,6 +84,7 @@ extension NIOOpenSSLError: Equatable {
     }
 }
 
+/// An enum that wraps individual OpenSSL errors directly.
 public enum OpenSSLError: Error {
     case noError
     case zeroReturn

@@ -14,6 +14,7 @@
 
 import CNIOOpenSSL
 
+/// Known and supported TLS versions.
 public enum TLSVersion {
     case sslv2
     case sslv3
@@ -23,30 +24,42 @@ public enum TLSVersion {
     case tlsv13
 }
 
+/// Places OpenSSL can obtain certificates from.
 public enum OpenSSLCertificateSource {
     case file(String)
     case certificate(OpenSSLCertificate)
 }
 
+/// Places OpenSSL can obtain private keys from.
 public enum OpenSSLPrivateKeySource {
     case file(String)
     case privateKey(OpenSSLPrivateKey)
 }
 
+/// Places OpenSSL can obtain a trust store from.
 public enum OpenSSLTrustRoots {
     case file(String)
     case certificates([OpenSSLCertificate])
     case `default`
 }
 
+/// Formats OpenSSL supports for serializing keys and certificates.
 public enum OpenSSLSerializationFormats {
     case pem
     case der
 }
 
+/// Certificate verification modes.
 public enum CertificateVerification {
+    /// All certificate verification disabled.
     case none
+
+    /// Certificates will be validated against the trust store, but will not
+    /// be checked to see if they are valid for the given hostname.
     case noHostnameVerification
+
+    /// Certificates will be validated against the trust store and checked
+    /// against the hostname of the service we are contacting.
     case fullVerification
 }
 

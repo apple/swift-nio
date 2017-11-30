@@ -34,7 +34,7 @@ private extension String {
 /// A channel handler that wraps a channel in TLS using OpenSSL, or an
 /// OpenSSL-compatible library. This handler can be used in channels that
 /// are acting as the client in the TLS dialog. For server connections,
-/// use the OpenSSLServerHandler.
+/// use the `OpenSSLServerHandler`.
 public final class OpenSSLClientHandler: OpenSSLHandler {
     public init(context: SSLContext, serverHostname: String? = nil) throws {
         guard let connection = context.createConnection() else {

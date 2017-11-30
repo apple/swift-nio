@@ -107,11 +107,16 @@ private func alpnCallback(ssl: UnsafeMutablePointer<SSL>?,
     return SSL_TLSEXT_ERR_OK
 }
 
-
+/// A wrapper class that encapsulates OpenSSL's `SSL_CTX *` object.
+///
+/// This class represents configuration for a collection of TLS connections, all of
+/// which are expected to be broadly the same.
 public final class SSLContext {
     private let sslContext: UnsafeMutablePointer<SSL_CTX>
     internal let configuration: TLSConfiguration
-    
+
+    /// Initialize a context that will create multiple connections, all with the same
+    /// configuration.
     public init(configuration: TLSConfiguration) throws {
         precondition(initialized)
         guard let ctx = SSL_CTX_new(SSLv23_method()) else { throw NIOOpenSSLError.unableToAllocateOpenSSLObject }
@@ -224,6 +229,8 @@ public final class SSLContext {
         CNIOOpenSSL_SSL_CTX_set_app_data(ctx, ptrToSelf)
     }
 
+    /// Create a new connection object with the configuration from this
+    /// context.
     internal func createConnection() -> SSLConnection? {
         guard let ssl = SSL_new(sslContext) else {
             return nil

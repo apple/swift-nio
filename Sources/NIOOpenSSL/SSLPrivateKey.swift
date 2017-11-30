@@ -19,6 +19,15 @@
 #endif
 import CNIOOpenSSL
 
+/// A reference to an OpenSSL private key object in the form of an `EVP_PKEY *`.
+///
+/// This thin wrapper class allows us to use ARC to automatically manage
+/// the memory associated with this key. That ensures that OpenSSL
+/// will not free the underlying buffer until we are done with the key.
+///
+/// This class also provides several convenience constructors that allow users
+/// to obtain an in-memory representation of a key from a buffer of
+/// bytes or from a file path.
 public class OpenSSLPrivateKey {
     internal let ref: UnsafeMutablePointer<EVP_PKEY>
 
