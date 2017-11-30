@@ -97,6 +97,10 @@ extension ByteBufferTest {
                 ("testWriteForNonContiguousCollections", testWriteForNonContiguousCollections),
                 ("testReadStringOkay", testReadStringOkay),
                 ("testReadStringTooMuch", testReadStringTooMuch),
+                ("testSetIntegerBeyondCapacity", testSetIntegerBeyondCapacity),
+                ("testGetIntegerBeyondCapacity", testGetIntegerBeyondCapacity),
+                ("testSetStringBeyondCapacity", testSetStringBeyondCapacity),
+                ("testGetStringBeyondCapacity", testGetStringBeyondCapacity),
            ]
    }
 }

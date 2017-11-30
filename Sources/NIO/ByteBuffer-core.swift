@@ -141,7 +141,7 @@ public struct ByteBuffer {
             // double the capacity until the requested capacity can be full-filled
             repeat {
                 newCapacity = newCapacity << 1
-            } while newCapacity - index < capacity
+            } while newCapacity < index || newCapacity - index < capacity
             
             self._storage.reallocStorage(capacity: newCapacity)
             self._slice = _slice.lowerBound..<_slice.lowerBound + newCapacity

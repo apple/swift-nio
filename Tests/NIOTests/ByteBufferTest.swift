@@ -950,4 +950,44 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("a", buf.readString(length: 1))
     }
 
+    func testSetIntegerBeyondCapacity() throws {
+        buf.clear()
+        buf.changeCapacity(to: 32)
+        XCTAssertLessThan(buf.capacity, 200)
+
+        buf.set(integer: 17, at: 201)
+        let i: Int = buf.integer(at: 201)!
+        XCTAssertEqual(17, i)
+        XCTAssertGreaterThanOrEqual(buf.capacity, 200 + MemoryLayout.size(ofValue: i))
+    }
+
+    func testGetIntegerBeyondCapacity() throws {
+        buf.clear()
+        buf.changeCapacity(to: 32)
+        XCTAssertLessThan(buf.capacity, 200)
+
+        let i: Int? = buf.integer(at: 201)
+        XCTAssertNil(i)
+    }
+
+    func testSetStringBeyondCapacity() throws {
+        buf.clear()
+        buf.changeCapacity(to: 32)
+        XCTAssertLessThan(buf.capacity, 200)
+
+        buf.set(string: "HW", at: 201)
+        let s = buf.string(at: 201, length: 2)!
+        XCTAssertEqual("HW", s)
+        XCTAssertGreaterThanOrEqual(buf.capacity, 202)
+    }
+
+    func testGetStringBeyondCapacity() throws {
+        buf.clear()
+        buf.changeCapacity(to: 32)
+        XCTAssertLessThan(buf.capacity, 200)
+
+        let i: String? = buf.string(at: 201, length: 1)
+        XCTAssertNil(i)
+    }
+
 }
