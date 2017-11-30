@@ -19,12 +19,25 @@ let headerSeparator: StaticString = ": "
 let http1_1: StaticString = "HTTP/1.1"
 let status200: StaticString = "200 OK"
 
+/// A representation of the request line and header fields of a HTTP request.
 public struct HTTPRequestHead: Equatable {
+    /// The HTTP method for this request.
     public let method: HTTPMethod
+
+    /// The URI used on this request.
     public let uri: String
+
+    /// The version for this HTTP request.
     public let version: HTTPVersion
+
+    /// The header fields for this HTTP request.
     public var headers: HTTPHeaders
 
+    /// Create a `HTTPRequestHead`
+    ///
+    /// - Parameter version: The version for this HTTP request.
+    /// - Parameter method: The HTTP method for this request.
+    /// - Parameter uri: The URI used on this request.
     public init(version: HTTPVersion, method: HTTPMethod, uri: String) {
         self.version = version
         self.method = method
@@ -32,6 +45,12 @@ public struct HTTPRequestHead: Equatable {
         self.headers = HTTPHeaders()
     }
 
+    /// Create a `HTTPRequestHead`
+    ///
+    /// - Parameter version: The version for this HTTP request.
+    /// - Parameter method: The HTTP method for this request.
+    /// - Parameter uri: The URI used on this request.
+    /// - Parameter headers: The headers for this HTTP request.
     init(version: HTTPVersion, method: HTTPMethod, uri: String, headers: HTTPHeaders) {
         self.version = version
         self.method = method
@@ -44,6 +63,12 @@ public struct HTTPRequestHead: Equatable {
     }
 }
 
+/// The parts of a complete HTTP message, either request or response.
+///
+/// A HTTP message is made up of a request or status line with several headers,
+/// encoded by `.head`, zero or more body parts, and optionally some trailers. To
+/// indicate that a complete HTTP message has been sent or received, we use `.end`,
+/// which may also contain any trailers that make up the mssage.
 public enum HTTPPart<HeadT: Equatable, BodyT: Equatable> {
     case head(HeadT)
     case body(BodyT)
@@ -65,13 +90,21 @@ extension HTTPPart : Equatable {
     }
 }
 
+/// The components of a HTTP request from the view of a HTTP client.
 public typealias HTTPClientRequestPart = HTTPPart<HTTPRequestHead, IOData>
+
+/// The components of a HTTP request from the view of a HTTP server.
 public typealias HTTPServerRequestPart = HTTPPart<HTTPRequestHead, ByteBuffer>
 
+/// The components of a HTTP response from the view of a HTTP client.
 public typealias HTTPClientResponsePart = HTTPPart<HTTPResponseHead, ByteBuffer>
+
+/// The components of a HTTP response from the view of a HTTP server.
 public typealias HTTPServerResponsePart = HTTPPart<HTTPResponseHead, IOData>
 
 extension HTTPRequestHead {
+    /// Whether this HTTP request is a keep-alive request: that is, whether the
+    /// connection should remain open after the request is complete.
     public var isKeepAlive: Bool {
         guard let connection = headers["connection"].first?.lowercased() else {
             // HTTP 1.1 use keep-alive by default if not otherwise told.
@@ -85,11 +118,22 @@ extension HTTPRequestHead {
     }
 }
 
+/// A representation of the status line and header fields of a HTTP response.
 public struct HTTPResponseHead : Equatable {
+    /// The HTTP response status.
     public let status: HTTPResponseStatus
+
+    /// The HTTP version that corresponds to this response.
     public let version: HTTPVersion
+
+    /// The HTTP headers on this response.
     public var headers: HTTPHeaders
 
+    /// Create a `HTTPResponseHead`
+    ///
+    /// - Parameter version: The version for this HTTP response.
+    /// - Parameter status: The status for this HTTP response.
+    /// - Parameter headers: The headers for this HTTP response.
     public init(version: HTTPVersion, status: HTTPResponseStatus, headers: HTTPHeaders = HTTPHeaders()) {
         self.version = version
         self.status = status
@@ -104,6 +148,10 @@ public struct HTTPResponseHead : Equatable {
 fileprivate typealias HTTPHeadersStorage = [String:[(String, String)]] // [lowerCasedName: [(originalCaseName, value)]
 
 
+/// An iterator of HTTP header fields.
+///
+/// This iterator will return each value for a given header name separately. That
+/// means that `name` is not guaranteed to be unique in a given block of headers.
 struct HTTPHeadersIterator : IteratorProtocol {
     fileprivate var storageIterator: HTTPHeadersStorage.Iterator
     fileprivate var valuesIterator: Array<(String, String)>.Iterator?
@@ -130,6 +178,18 @@ struct HTTPHeadersIterator : IteratorProtocol {
     }
 }
 
+/// A representation of a block of HTTP header fields.
+///
+/// HTTP header fields are a complex data structure. The most natural representation
+/// for these is a sequence of two-tuples of field name and field value, both as
+/// strings. This structure preserves that representation, but provides a number of
+/// convenience features in addition to it.
+///
+/// For example, this structure enables access to header fields based on the
+/// case-insensitive form of the field name, but preserves the original case of the
+/// field when needed. It also supports recomposing headers to a maximally joined
+/// or split representation, such that header fields that are able to be repeated
+/// can be represented appropriately.
 public struct HTTPHeaders : Sequence, CustomStringConvertible {
 
     // [lowerCasedName: [(originalCaseName, value)]
@@ -145,26 +205,69 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible {
         return storage.count
     }
 
+    /// Construct a `HTTPHeaders` structure.
+    ///
+    /// - Parameter headers: An initial set of headers to use to populate the
+    ///     header block.
     public init(_ headers: [(String, String)] = []) {
         for (key, value) in headers {
             add(name: key, value: value)
         }
     }
 
+    /// Add a header name/value pair to the block.
+    ///
+    /// This method is strictly additive: if there are other values for the given header name
+    /// already in the block, this will add a new entry. `add` performs case-insensitive
+    /// comparisons on the header field name.
+    ///
+    /// - Parameter name: The header field name. For maximum compatibility this should be an
+    ///     ASCII string. For future-proofing with HTTP/2 lowercase header names are strongly
+    //      recommended.
+    /// - Parameter value: The header field value to add for the given name.
     public mutating func add(name: String, value: String) {
         let keyLower = name.lowercased()
         storage[keyLower] = (storage[keyLower] ?? [])  + [(name, value)]
     }
 
+    /// Add a header name/value pair to the block, replacing any previous values for the
+    /// same header name that are already in the block.
+    ///
+    /// This is a supplemental method to `add` that essentially combines `remove` and `add`
+    /// in a single function. It can be used to ensure that a header block is in a
+    /// well-defined form without having to check whether the value was previously there.
+    /// Like `add`, this method performs case-insensitive comparisons of the header field
+    /// names.
+    ///
+    /// - Parameter name: The header field name. For maximum compatibility this should be an
+    ///     ASCII string. For future-proofing with HTTP/2 lowercase header names are strongly
+    //      recommended.
+    /// - Parameter value: The header field value to add for the given name.
     public mutating func replaceOrAdd(name: String, value: String) {
         let keyLower = name.lowercased()
         storage[keyLower] = [(name, value)]
     }
 
+    /// Remove all values for a given header name from the block.
+    ///
+    /// This method uses case-insensitive comparisons for the header field name.
+    ///
+    /// - Parameter name: The name of the header field to remove from the block.
     public mutating func remove(name: String) {
         self.storage[name.lowercased()] = nil
     }
 
+    /// Retrieve all of the values for a give header field name from the block.
+    ///
+    /// This method uses case-insensitive comparisons for the header field name. It
+    /// does not return a maximally-decomposed list of the header fields, but instead
+    /// returns them in their original representation: that means that a comma-separated
+    /// header field list may contain more than one entry, some of which contain commas
+    /// and some do not. If you want a representation of the header fields suitable for
+    /// performing computation on, consider `getCanonicalForm`.
+    ///
+    /// - Parameter name: The header field name whose values are to be retrieved.
+    /// - Returns: A list of the values for that header field name.
     public subscript(name: String) -> [String] {
         if let result = storage[name.lowercased()] {
             return result.map { tuple in tuple.1 }
@@ -172,6 +275,10 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible {
         return []
     }
 
+    /// Serializes this HTTP header block to bytes suitable for writing to the wire.
+    ///
+    /// - Parameter buffer: A buffer to write the serialized bytes into. Will increment
+    ///     the writer index of this buffer.
     func write(buffer: inout ByteBuffer) {
         for (key, values) in storage {
             if key != "set-cookie" {
@@ -217,6 +324,9 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible {
     /// splitting them on commas as extensively as possible such that multiple values received on the
     /// one line are returned as separate entries. Also respects the fact that Set-Cookie should not
     /// be split in this way.
+    ///
+    /// - Parameter name: The header field name whose values are to be retrieved.
+    /// - Returns: A list of the values for that header field name.
     public func getCanonicalForm(_ name: String) -> [String] {
         // It's not safe to split Set-Cookie on comma.
         let queryName = name.lowercased()
@@ -357,7 +467,8 @@ public enum HTTPMethod: Equatable {
     case MKACTIVITY
     case UNSUBSCRIBE
     case RAW(value: String)
-    
+
+    /// Whether requests with this verb may have a request body.
     public var mayHaveRequestBody: Bool {
         // TODO: Add more
         switch self {
@@ -370,6 +481,10 @@ public enum HTTPMethod: Equatable {
 }
 
 extension HTTPMethod {
+    /// Serializes this HTTP method bytes suitable for writing to the wire.
+    ///
+    /// - Parameter buffer: A buffer to write the serialized bytes into. Will increment
+    ///     the writer index of this buffer.
     func write(buffer: inout ByteBuffer) {
         switch self {
         case .GET:
@@ -444,21 +559,33 @@ extension HTTPMethod {
     }
 }
 
+/// A structure representing a HTTP version.
 public struct HTTPVersion: Equatable {
     public static func ==(lhs: HTTPVersion, rhs: HTTPVersion) -> Bool {
         return lhs.major == rhs.major && lhs.minor == rhs.minor
     }
 
+    /// Create a HTTP version.
+    ///
+    /// - Parameter major: The major version number.
+    /// - Parameter minor: The minor version number.
     public init(major: UInt16, minor: UInt16) {
         self.major = major
         self.minor = minor
     }
 
+    /// The major version number.
     public let major: UInt16
+
+    /// The minor version number.
     public let minor: UInt16
 }
 
 extension HTTPVersion {
+    /// Serializes this HTTP version to bytes suitable for writing to the wire.
+    ///
+    /// - Parameter buffer: A buffer to write the serialized bytes into. Will increment
+    ///     the writer index of this buffer.
     func write(buffer: inout ByteBuffer) {
         if major == 1 && minor == 1 {
             // Optimize for HTTP/1.1
@@ -527,6 +654,7 @@ extension HTTPParserError: CustomDebugStringConvertible {
     }
 }
 
+/// Errors that can be raised while parsing HTTP/1.1.
 public enum HTTPParserError: Error {
     case invalidCharactersUsed
     case trailingGarbage
@@ -556,6 +684,7 @@ public enum HTTPParserError: Error {
 }
 
 extension HTTPResponseStatus {
+    /// The numerical status code for a given HTTP response status.
     public var code: UInt {
         get {
             switch self {
@@ -683,6 +812,7 @@ extension HTTPResponseStatus {
         }
     }
 
+    /// The string reason phrase for a given HTTP response status.
     public var reasonPhrase: String {
         get {
             switch self {
@@ -810,6 +940,10 @@ extension HTTPResponseStatus {
         }
     }
 
+    /// Serializes this response status to bytes suitable for writing to the wire.
+    ///
+    /// - Parameter buffer: A buffer to write the serialized bytes into. Will increment
+    ///     the writer index of this buffer.
     func write(buffer: inout ByteBuffer) {
         switch self {
         case .ok:
@@ -823,6 +957,7 @@ extension HTTPResponseStatus {
     }
 }
 
+/// A HTTP response status code.
 public enum HTTPResponseStatus {
     /* use custom if you want to use a non-standard response code or
      have it available in a (UInt, String) pair from a higher-level web framework. */
@@ -899,6 +1034,7 @@ public enum HTTPResponseStatus {
     case notExtended
     case networkAuthenticationRequired
 
+    /// Whether responses with this status code may have a response body.
     public var mayHaveResponseBody: Bool {
         switch self {
         case .`continue`,

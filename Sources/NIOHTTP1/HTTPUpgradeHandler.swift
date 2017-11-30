@@ -14,16 +14,21 @@
 
 import NIO
 
+/// Errors that may be raised by the `HTTPProtocolUpgrader`.
 public enum HTTPUpgradeErrors: Error {
     case invalidHTTPOrdering
 }
 
+/// User events that may be fired by the `HTTPProtocolUpgrader`.
 public enum HTTPUpgradeEvents {
+    /// Fired when HTTP upgrade has completed and the
+    /// `HTTPProtocolUpgrader` is about to remove itself from the
+    /// `ChannelPipeline`.
     case upgradeComplete(toProtocol: String, upgradeRequest: HTTPRequestHead)
 }
 
 
-/// An object that implements protocol upgrader knows how to handle HTTP upgrade to
+/// An object that implements `ProtocolUpgrader` knows how to handle HTTP upgrade to
 /// a protocol.
 public protocol HTTPProtocolUpgrader {
     /// The protocol this upgrader knows how to support.
@@ -64,6 +69,11 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     /// Whether we've already seen the first request.
     private var seenFirstRequest = false
 
+    /// Create a `HTTPServerUpgradeHandler`.
+    ///
+    /// - Parameter upgraders: All `HTTPProtocolUpgrader` objects that this pipeline will be able
+    ///     to use to handle HTTP upgrade.
+    /// - Parameter upgradeCompletionHandler: A block that will be fired when HTTP upgrade is complete.
     public init(upgraders: [HTTPProtocolUpgrader], upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) {
         var upgraderMap = [String: HTTPProtocolUpgrader]()
         for upgrader in upgraders {

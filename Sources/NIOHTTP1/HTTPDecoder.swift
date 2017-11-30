@@ -15,7 +15,12 @@
 import NIO
 import CNIOHTTPParser
 
+/// A `ChannelInboundHandler` used to decode HTTP requests. See the documentation
+/// on `HTTPDecoder` for more.
 public typealias HTTPRequestDecoder = HTTPDecoder<HTTPServerRequestPart>
+
+/// A `ChannelInboundHandler` used to decode HTTP responses. See the documentation
+/// on `HTTPDecoder` for more.
 public typealias HTTPResponseDecoder = HTTPDecoder<HTTPClientResponsePart>
 
 private struct HTTPParserState {
@@ -124,6 +129,13 @@ extension HTTPDecoder where HTTPMessageT == HTTPServerRequestPart {
     }
 }
 
+/// A `ChannelInboundHandler` that parses HTTP/1-style messages, converting them from
+/// unstructured bytes to a sequence of HTTP messages.
+///
+/// The `HTTPDecoder` is a generic channel handler which can produce messages in
+/// either the form of `HTTPClientResponsePart` or `HTTPServerRequestPart`: that is,
+/// it produces messages that correspond to the semantic units of HTTP produced by
+/// the remote peer.
 public final class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = HTTPMessageT
@@ -371,6 +383,11 @@ private func evacuateHTTPDecoder(_ opaqueContext: UnsafeMutablePointer<http_pars
 }
 
 extension HTTPParserError {
+    /// Create a `HTTPParserError` from an error returned by `http_parser`.
+    ///
+    /// - Parameter fromCHTTPParserErrno: The error from the underlying library.
+    /// - Returns: The corresponding `HTTPParserError`, or `nil` if there is no
+    ///     corresponding error.
     static func httpError(fromCHTTPParserErrno: http_errno) -> HTTPParserError? {
         switch fromCHTTPParserErrno {
         case HPE_INVALID_EOF_STATE:
@@ -422,6 +439,11 @@ extension HTTPParserError {
 }
 
 extension HTTPMethod {
+    /// Create a `HTTPMethod` from a given `http_method` produced by
+    /// `http_parser`.
+    ///
+    /// - Parameter httpParserMethod: The method returned by `http_parser`.
+    /// - Returns: The corresponding `HTTPMethod`.
     static func from(httpParserMethod: http_method) -> HTTPMethod {
         switch httpParserMethod {
         case HTTP_DELETE:
@@ -497,6 +519,12 @@ extension HTTPMethod {
 }
 
 extension HTTPResponseStatus {
+    /// Create a `HTTPResponseStatus` from a given status and reason produced by
+    /// `http_parser`.
+    ///
+    /// - Parameter statusCode: The integer value of the HTTP response status code
+    /// - Parameter reasonPhrase: The textual reason phrase from the response.
+    /// - Returns: The corresponding `HTTPResponseStatus`.
     static func from(_ statusCode: UInt32, _ reasonPhrase: String) -> HTTPResponseStatus {
         switch statusCode {
         case 100:

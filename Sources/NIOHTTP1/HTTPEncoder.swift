@@ -105,6 +105,10 @@ private func sanitizeTransportHeaders(mayHaveBody: Bool, headers: inout HTTPHead
     }
 }
 
+/// A `ChannelOutboundHandler` that can serialize HTTP requests.
+///
+/// This channel handler is used to translate messages from a series of
+/// `HTTPClientRequestPart` into the HTTP/1.1 wire format.
 public final class HTTPRequestEncoder : ChannelOutboundHandler {
     public typealias OutboundIn = HTTPClientRequestPart
     public typealias OutboundOut = IOData
@@ -138,6 +142,10 @@ public final class HTTPRequestEncoder : ChannelOutboundHandler {
     }
 }
 
+/// A `ChannelOutboundHandler` that can serialize HTTP responses.
+///
+/// This channel handler is used to translate messages from a series of
+/// `HTTPServerResponsePart` into the HTTP/1.1 wire format.
 public final class HTTPResponseEncoder : ChannelOutboundHandler {
     public typealias OutboundIn = HTTPServerResponsePart
     public typealias OutboundOut = IOData
