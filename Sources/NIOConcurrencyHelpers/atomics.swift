@@ -14,33 +14,105 @@
 
 import CNIOAtomics
 
+/// An encapsulation of an atomic primitive object.
+///
+/// Atomic objects support a wide range of atomic operations:
+///
+/// - Compare and swap
+/// - Add
+/// - Subtract
+/// - Exchange
+/// - Load current value
+/// - Store current value
+///
+/// Atomic primitives are useful when building constructs that need to
+/// communicate or cooperate across multiple threads. In the case of
+/// SwiftNIO this usually involves communicating across multiple event loops.
+///
+/// By necessity, all atomic values are references: after all, it makes no
+/// sense to talk about managing an atomic value when each time it's modified
+/// the thread that modified it gets a local copy!
 public final class Atomic<T: AtomicPrimitive> {
     private let value: OpaquePointer
 
+    /// Create an atomic object with `value`.
     public init(value: T) {
         self.value = T.atomic_create(value)
     }
 
+    /// Atomically compares the value against `expected` and, if they are equal,
+    /// replaces the value with `desired`.
+    ///
+    /// This implementation conforms to C11's `atomic_compare_exchange_strong`. This
+    /// means that the compare-and-swap will always succeed if `expected` is equal to
+    /// value. Additionally, it uses a *sequentially consistent ordering*. For more
+    /// details on atomic memory models, check the documentation for C11's
+    /// `stdatomic.h`.
+    ///
+    /// - Parameter expected: The value that this object must currently hold for the
+    ///     compare-and-swap to succeed.
+    /// - Parameter desired: The new value that this object will hold if the compare
+    ///     succeeds.
+    /// - Returns: `True` if the exchange occurred, or `False` if `expected` did not
+    ///     match the current value and so no exchange occurred.
     public func compareAndExchange(expected: T, desired: T) -> Bool {
         return T.atomic_compare_and_exchange(self.value, expected, desired)
     }
 
+    /// Atomically adds `rhs` to this object.
+    ///
+    /// This implementation uses a *relaxed* memory ordering. This guarantees nothing
+    /// more than that this operation is atomic: there is no guarantee that any other
+    /// event will be ordered before or after this one.
+    ///
+    /// - Parameter rhs: The value to add to this object.
+    /// - Returns: The previous value of this object, before the addition occurred.
     public func add(_ rhs: T) -> T {
         return T.atomic_add(self.value, rhs)
     }
 
+    /// Atomically subtracts `rhs` from this object.
+    ///
+    /// This implementation uses a *relaxed* memory ordering. This guarantees nothing
+    /// more than that this operation is atomic: there is no guarantee that any other
+    /// event will be ordered before or after this one.
+    ///
+    /// - Parameter rhs: The value to subtract from this object.
+    /// - Returns: The previous value of this object, before the subtraction occurred.
     public func sub(_ rhs: T) -> T {
         return T.atomic_sub(self.value, rhs)
     }
 
+    /// Atomically exchanges `value` for the current value of this object.
+    ///
+    /// This implementation uses a *relaxed* memory ordering. This guarantees nothing
+    /// more than that this operation is atomic: there is no guarantee that any other
+    /// event will be ordered before or after this one.
+    ///
+    /// - Parameter value: The new value to set this object to.
+    /// - Returns: The value previously held by this object.
     public func exchange(with value: T) -> T {
         return T.atomic_exchange(self.value, value)
     }
 
+    /// Atomically loads and returns the value of this object.
+    ///
+    /// This implementation uses a *relaxed* memory ordering. This guarantees nothing
+    /// more than that this operation is atomic: there is no guarantee that any other
+    /// event will be ordered before or after this one.
+    ///
+    /// - Returns: The value of this object
     public func load() -> T {
         return T.atomic_load(self.value)
     }
 
+    /// Atomically replaces the value of this object with `value`.
+    ///
+    /// This implementation uses a *relaxed* memory ordering. This guarantees nothing
+    /// more than that this operation is atomic: there is no guarantee that any other
+    /// event will be ordered before or after this one.
+    ///
+    /// - Parameter value: The new value to set the object to.
     public func store(_ value: T) -> Void {
         T.atomic_store(self.value, value)
     }
@@ -50,6 +122,11 @@ public final class Atomic<T: AtomicPrimitive> {
     }
 }
 
+/// The protocol that all types that can be made atomic must conform to.
+///
+/// **Do not add conformance to this protocol for arbitrary types**. Only a small range
+/// of types have appropriate atomic operations supported by the CPU, and those types
+/// already have conformances implemented.
 public protocol AtomicPrimitive {
     static var atomic_create: (Self) -> OpaquePointer { get }
     static var atomic_destroy: (OpaquePointer) -> Void { get }
