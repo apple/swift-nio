@@ -21,7 +21,7 @@ public struct IOError: Swift.Error {
     
     public let errnoCode: Int32
     // TODO: Fix me to lazy create
-    public let reason: String?
+    public let reason: String
     
     public init(errnoCode: Int32, reason: String) {
         self.errnoCode = errnoCode
@@ -34,10 +34,20 @@ func ioError(errno: Int32, function: String) -> IOError {
 }
 
 private func reasonForError(errnoCode: Int32, function: String) -> String {
-    if let strError = String(utf8String: strerror(errnoCode)) {
-        return "\(function) failed: errno(\(errnoCode)) \(strError)"
+    if let errorDescC = strerror(errnoCode) {
+        let errorDescLen = strlen(errorDescC)
+        return errorDescC.withMemoryRebound(to: UInt8.self, capacity: errorDescLen) { ptr in
+            let errorDescPtr = UnsafeBufferPointer<UInt8>(start: ptr, count: errorDescLen)
+            return "\(function) failed: \(String(decoding: errorDescPtr, as: UTF8.self)) (errno: \(errnoCode)) "
+        }
     } else {
-        return "\(function) failed"
+        return "\(function) failed: Broken strerror, unknown error: \(errnoCode)"
+    }
+}
+
+extension IOError {
+    public var localizedDescription: String {
+        return self.reason
     }
 }
 

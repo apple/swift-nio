@@ -27,6 +27,7 @@ extension SystemTest {
    static var allTests : [(String, (SystemTest) -> () throws -> Void)] {
       return [
                 ("testSystemCallWrapperPerformance", testSystemCallWrapperPerformance),
+                ("testErrorsWorkCorrectly", testErrorsWorkCorrectly),
            ]
    }
 }
