@@ -41,6 +41,8 @@ class ByteBufferTest: XCTestCase {
         super.setUp()
 
         buf = allocator.buffer(capacity: 1024)
+        buf = buf.slice(at: 256, length: 512)
+        buf.clear()
     }
 
     override func tearDown() {
@@ -554,6 +556,7 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testChangeCapacityToSameCapacityRetainsCapacityAndPointers() throws {
+        var buf = self.allocator.buffer(capacity: 1024)
         let cap = buf.capacity
         var firstBytes: UnsafeRawBufferPointer!
         var firstStorageRef: Unmanaged<AnyObject>!
