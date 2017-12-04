@@ -192,9 +192,9 @@ public struct ByteBuffer {
                             allocator: allocator)
         }
 
-        public func dumpBytes(slice: Slice) -> String {
+        public func dumpBytes(slice: Slice, offset: Int, length: Int) -> String {
             var desc = "["
-            for i in slice.lowerBound ..< min(slice.lowerBound + 32, slice.upperBound) {
+            for i in Int(slice.lowerBound) + offset ..< Int(slice.lowerBound) + offset + length {
                 desc += String(format: " %02x", self.bytes.advanced(by: Int(i)).assumingMemoryBound(to: UInt8.self).pointee)
             }
             desc += " ]"
@@ -327,6 +327,7 @@ public struct ByteBuffer {
     ///
     /// - parameters:
     ///     - fn: The closure that will accept the yielded bytes.
+    /// - returns: The value returned by `fn`.
     public mutating func withUnsafeMutableReadableBytes<T>(_ fn: (UnsafeMutableRawBufferPointer) throws -> T) rethrows -> T {
         self.copyStorageAndRebaseIfNeeded()
         return try fn(UnsafeMutableRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
@@ -341,6 +342,7 @@ public struct ByteBuffer {
     ///
     /// - parameters:
     ///     - fn: The closure that will accept the yielded bytes and return the number of bytes written.
+    /// - returns: The number of bytes written.
     @discardableResult
     public mutating func writeWithUnsafeMutableBytes(_ fn: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
         self.copyStorageAndRebaseIfNeeded()
@@ -365,6 +367,7 @@ public struct ByteBuffer {
     ///
     /// - parameters:
     ///     - fn: The closure that will accept the yielded bytes.
+    /// - returns: The value returned by `fn`.
     public func withUnsafeReadableBytes<T>(_ fn: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
         return try fn(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
                                              count: self.readableBytes))
@@ -380,6 +383,7 @@ public struct ByteBuffer {
     ///
     /// - parameters:
     ///     - fn: The closure that will accept the yielded bytes and the `storageManagement`.
+    /// - returns: The value returned by `fn`.
     public func withUnsafeReadableBytesWithStorageManagement<T>(_ fn: (UnsafeRawBufferPointer, Unmanaged<AnyObject>) throws -> T) rethrows -> T {
         let storageReference: Unmanaged<AnyObject> = Unmanaged.passUnretained(self._storage)
         return try fn(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
@@ -396,6 +400,7 @@ public struct ByteBuffer {
     /// Returns a slice of size `length` bytes, starting at `index`. The `ByteBuffer` this is invoked on and the
     /// `ByteBuffer` returned will share the same underlying storage. However, the byte at `index` in this `ByteBuffer`
     /// will correspond to index `0` in the returned `ByteBuffer`.
+    /// The `readerIndex` of the returned `ByteBuffer` will be `0`, the `writerIndex` will be `length`.
     ///
     /// - parameters:
     ///     - index: The index the requested slice starts at.
@@ -418,7 +423,7 @@ public struct ByteBuffer {
     /// Discard the bytes before the reader index. The byte at index `readerIndex` before calling this method will be
     /// at index `0` after the call returns.
     ///
-    /// - returns `true` if one or more bytes have been discarded, `false` if there are no bytes to discard.
+    /// - returns: `true` if one or more bytes have been discarded, `false` if there are no bytes to discard.
     @discardableResult public mutating func discardReadBytes() -> Bool {
         guard self._readerIndex > 0 else {
             return false
@@ -451,8 +456,34 @@ public struct ByteBuffer {
 }
 
 extension ByteBuffer: CustomStringConvertible {
+    /// A `String` describing this `ByteBuffer`. Example:
+    ///
+    ///     ByteBuffer { readerIndex: 0, writerIndex: 4, readableBytes: 4, capacity: 512, slice: 256..<768, storage: 0x0000000103001000 (1024 bytes)}
+    ///
+    /// The format of the description is not API.
+    ///
+    /// - returns: A description of this `ByteBuffer`.
     public var description: String {
-        return "ByteBuffer { readerIndex: \(self.readerIndex), writerIndex: \(self.writerIndex), bytes: \(self._storage.dumpBytes(slice: self._slice)) }"
+        return  "ByteBuffer { " +
+            /*    this     */ "readerIndex: \(self.readerIndex), " +
+            /*     is      */ "writerIndex: \(self.writerIndex), " +
+            /*     to      */ "readableBytes: \(self.readableBytes), " +
+            /*    help     */ "capacity: \(self.capacity), " +
+            /*    Xcode    */ "slice: \(self._slice), " +
+            /*   indent    */ "storage: \(self._storage.bytes) (\(self._storage.capacity) bytes)" +
+            /*             */ "}"
+    }
+
+    /// A `String` describing this `ByteBuffer` with some portion of the readable bytes dumped too. Example:
+    ///
+    ///     ByteBuffer { readerIndex: 0, writerIndex: 4, readableBytes: 4, capacity: 512, slice: 256..<768, storage: 0x0000000103001000 (1024 bytes)}
+    ///     readable bytes (max 1k): [ 00 01 02 03 ]
+    ///
+    /// The format of the description is not API.
+    ///
+    /// - returns: A description of this `ByteBuffer` useful for debugging.
+    public var debugDescription: String {
+        return "\(self.description)\nreadable bytes (max 1k): \(self._storage.dumpBytes(slice: self._slice, offset: self.readerIndex, length: min(1024, self.readableBytes)))"
     }
 }
 

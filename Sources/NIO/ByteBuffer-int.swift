@@ -22,6 +22,11 @@ extension ByteBuffer {
         }
     }
 
+    /// Read an integer off this `ByteBuffer`, move the reader index forward by the integer's byte size and return the result.
+    ///
+    /// - parameters:
+    ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
+    /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if there aren't enough bytes readable.
     public mutating func readInteger<T: FixedWidthInteger>(endianness: Endianness = .big) -> T? {
         guard self.readableBytes >= MemoryLayout<T>.size else {
             return nil
@@ -32,6 +37,12 @@ extension ByteBuffer {
         return value
     }
 
+    /// Get the integer at `index` from this `ByteBuffer`. Does not move the reader index.
+    ///
+    /// - parameters:
+    ///     - index: The starting index of the bytes for the integer into the `ByteBuffer`.
+    ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
+    /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if the bytes of interest aren't contained in the `ByteBuffer`.
     public func integer<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big) -> T? {
         precondition(index >= 0, "index must not be negative")
         return self.withVeryUnsafeBytes { ptr in
@@ -47,6 +58,12 @@ extension ByteBuffer {
         }
     }
 
+    /// Write `integer` into this `ByteBuffer`, moving the writer index forward appropriately.
+    ///
+    /// - parameters:
+    ///     - integer: The integer to serialize.
+    ///     - endianness: The endianness to use, defaults to big endian.
+    /// - returns: The number of bytes written.
     @discardableResult
     public mutating func write<T: FixedWidthInteger>(integer: T, endianness: Endianness = .big) -> Int {
         let bytesWritten = self.set(integer: integer, at: self.writerIndex, endianness: endianness)
@@ -54,6 +71,13 @@ extension ByteBuffer {
         return Int(bytesWritten)
     }
 
+    /// Write `integer` into this `ByteBuffer` starting at `index`. This does not alter the writer index.
+    ///
+    /// - parameters:
+    ///     - integer: The integer to serialize.
+    ///     - index: The index of the first byte to write.
+    ///     - endianness: The endianness to use, defaults to big endian.
+    /// - returns: The number of bytes written.
     @discardableResult
     public mutating func set<T: FixedWidthInteger>(integer: T, at index: Int, endianness: Endianness = .big) -> Int {
         var value = toEndianness(value: integer, endianness: endianness)
@@ -64,6 +88,7 @@ extension ByteBuffer {
 }
 
 extension UInt64 {
+    /// Returns the next power of two.
     public func nextPowerOf2() -> UInt64 {
         guard self > 0 else {
             return 1
@@ -85,6 +110,7 @@ extension UInt64 {
 }
 
 extension UInt32 {
+    /// Returns the next power of two.
     public func nextPowerOf2() -> UInt32 {
         guard self > 0 else {
             return 1
@@ -104,7 +130,10 @@ extension UInt32 {
     }
 }
 
+/// Endianness refers to the sequential order in which bytes are arranged into larger numerical values when stored in
+/// 	memory or when transmitted over digital links.
 public enum Endianness {
+    /// The endianness of the machine running this program.
     public static let host: Endianness = hostEndianness0()
 
     private static func hostEndianness0() -> Endianness {
@@ -112,7 +141,10 @@ public enum Endianness {
         return number == number.bigEndian ? .big : .little
     }
 
+    /// big endian, the most significat byte (MSB) is at the lowest address
     case big
+
+    /// little endian, the least significat byte (LSB) is at the lowest address
     case little
 }
 

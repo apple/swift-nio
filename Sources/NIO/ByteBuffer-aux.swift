@@ -21,6 +21,13 @@
 extension ByteBuffer {
 
     // MARK: Bytes ([UInt8]) APIs
+
+    /// Get `length` bytes starting at `index` and return the result as `[UInt8]`. This will not change the reader index.
+    ///
+    /// - parameters:
+    ///     - index: The starting index of the bytes of interest into the `ByteBuffer`.
+    ///     - length: The number of bytes of interest.
+    /// - returns: A `[UInt8]` value containing the bytes of interest or `nil` if the `ByteBuffer` doesn't contain those bytes.
     public func bytes(at index: Int, length: Int) -> [UInt8]? {
         precondition(index >= 0, "index must not be negative")
         precondition(length >= 0, "length must not be negative")
@@ -34,6 +41,12 @@ extension ByteBuffer {
         }
     }
 
+    /// Read `length` bytes off this `ByteBuffer`, move the reader index forward by `length` bytes and return the result
+    /// as `[UInt8]`.
+    ///
+    /// - parameters:
+    ///     - length: The number of bytes to be read from this `ByteBuffer`.
+    /// - returns: A `[UInt8]` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
     public mutating func readBytes(length: Int) -> [UInt8]? {
         precondition(length >= 0, "length must not be negative")
         guard self.readableBytes >= length else {
@@ -46,6 +59,12 @@ extension ByteBuffer {
     }
 
     // MARK: StaticString APIs
+
+    /// Write the static `string` into this `ByteBuffer` using UTF-8 encoding, moving the writer index forward appropriately.
+    ///
+    /// - parameters:
+    ///     - string: The string to write.
+    /// - returns: The number of bytes written.
     @discardableResult
     public mutating func write(staticString string: StaticString) -> Int {
         let written = self.set(staticString: string, at: self.writerIndex)
@@ -53,6 +72,12 @@ extension ByteBuffer {
         return written
     }
 
+    /// Write the static `string` into this `ByteBuffer` at `index` using UTF-8 encoding, moving the writer index forward appropriately.
+    ///
+    /// - parameters:
+    ///     - string: The string to write.
+    ///     - index: The index for the first serialized byte.
+    /// - returns: The number of bytes written.
     public mutating func set(staticString string: StaticString, at index: Int) -> Int {
         return string.withUTF8Buffer { ptr -> Int in
             return self.set(bytes: UnsafeRawBufferPointer(ptr), at: index)
@@ -60,6 +85,11 @@ extension ByteBuffer {
     }
 
     // MARK: String APIs
+    /// Write `string` into this `ByteBuffer` using UTF-8 encoding, moving the writer index forward appropriately.
+    ///
+    /// - parameters:
+    ///     - string: The string to write.
+    /// - returns: The number of bytes written.
     @discardableResult
     public mutating func write(string: String) -> Int? {
         if let written = self.set(string: string, at: self.writerIndex) {
@@ -70,11 +100,23 @@ extension ByteBuffer {
         }
     }
 
+    /// Write `string` into this `ByteBuffer` at `index` using UTF-8 encoding. Does not move the writer index.
+    ///
+    /// - parameters:
+    ///     - string: The string to write.
+    ///     - index: The index for the first serialized byte.
+    /// - returns: The number of bytes written.
     @discardableResult
     public mutating func set(string: String, at index: Int) -> Int? {
         return self.set(bytes: string.utf8, at: index)
     }
 
+    /// Get the string at `index` from this `ByteBuffer` decoding using the UTF-8 encoding. Does not move the reader index.
+    ///
+    /// - parameters:
+    ///     - index: The starting index into `ByteBuffer` containing the string of interest.
+    ///     - length: The number of bytes making up the string.
+    /// - returns: A `String` value deserialized from this `ByteBuffer` or `nil` if the requested bytes aren't contained in this `ByteBuffer`.
     public func string(at index: Int, length: Int) -> String? {
         precondition(index >= 0, "index must not be negative")
         precondition(length >= 0, "length must not be negative")
@@ -87,6 +129,11 @@ extension ByteBuffer {
         }
     }
 
+    /// Read `length` bytes off this `ByteBuffer`, decoding it as `String` using the UTF-8 encoding. Does not move the reader index.
+    ///
+    /// - parameters:
+    ///     - length: The number of bytes making up the string.
+    /// - returns: A `String` value deserialized from this `ByteBuffer` or `nil` if there aren't at least `length` bytes readable.
     public mutating func readString(length: Int) -> String? {
         precondition(length >= 0, "length must not be negative")
         guard self.readableBytes >= length else {
@@ -99,30 +146,69 @@ extension ByteBuffer {
     }
 
     // MARK: Other APIs
+
+    /// Yields an immutable buffer pointer containing this `ByteBuffer`'s readable bytes. Will move the reader index
+    /// by the number of bytes returned by `fn`.
+    ///
+    /// - warning: Do not escape the pointer from the closure for later use.
+    ///
+    /// - parameters:
+    ///     - fn: The closure that will accept the yielded bytes and returns the number of bytes it processed.
+    /// - returns: The number of bytes read.
     public mutating func readWithUnsafeReadableBytes(_ fn: (UnsafeRawBufferPointer) throws -> Int) rethrows -> Int {
         let bytesRead = try self.withUnsafeReadableBytes(fn)
         self.moveReaderIndex(forwardBy: bytesRead)
         return bytesRead
     }
 
+    /// Yields an immutable buffer pointer containing this `ByteBuffer`'s readable bytes. Will move the reader index
+    /// by the number of bytes `fn` returns in the first tuple component.
+    ///
+    /// - warning: Do not escape the pointer from the closure for later use.
+    ///
+    /// - parameters:
+    ///     - fn: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
+    /// - returns: The value `fn` returned in the second tuple component.
     public mutating func readWithUnsafeReadableBytes<T>(_ fn: (UnsafeRawBufferPointer) throws -> (Int, T)) rethrows -> T {
         let (bytesRead, ret) = try self.withUnsafeReadableBytes(fn)
         self.moveReaderIndex(forwardBy: bytesRead)
         return ret
     }
 
+    /// Yields a mutable buffer pointer containing this `ByteBuffer`'s readable bytes. You may modify the yielded bytes.
+    /// Will move the reader index by the number of bytes returned by `fn` but leave writer index as it was.
+    ///
+    /// - warning: Do not escape the pointer from the closure for later use.
+    ///
+    /// - parameters:
+    ///     - fn: The closure that will accept the yielded bytes and returns the number of bytes it processed.
+    /// - returns: The number of bytes read.
     public mutating func readWithUnsafeMutableReadableBytes(_ fn: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
         let bytesRead = try self.withUnsafeMutableReadableBytes(fn)
         self.moveReaderIndex(forwardBy: bytesRead)
         return bytesRead
     }
 
+    /// Yields a mutable buffer pointer containing this `ByteBuffer`'s readable bytes. You may modify the yielded bytes.
+    /// Will move the reader index by the number of bytes `fn` returns in the first tuple component but leave writer index as it was.
+    ///
+    /// - warning: Do not escape the pointer from the closure for later use.
+    ///
+    /// - parameters:
+    ///     - fn: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
+    /// - returns: The value `fn` returned in the second tuple component.
     public mutating func readWithUnsafeMutableReadableBytes<T>(_ fn: (UnsafeMutableRawBufferPointer) throws -> (Int, T)) rethrows -> T {
         let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes(fn)
         self.moveReaderIndex(forwardBy: bytesRead)
         return ret
     }
 
+    /// Copy `buffer`'s readable bytes into this `ByteBuffer` starting at `index`. Does not move any of the reader or writer indices.
+    ///
+    /// - parameters:
+    ///     - buffer: The `ByteBuffer` to copy.
+    ///     - index: The index for the first byte.
+    /// - returns: The number of bytes written.
     @discardableResult
     public mutating func set(buffer: ByteBuffer, at index: Int) -> Int {
         return buffer.withUnsafeReadableBytes{ p in
@@ -130,6 +216,12 @@ extension ByteBuffer {
         }
     }
 
+    /// Write `buffer`'s readable bytes into this `ByteBuffer` starting at `writerIndex`. This will move both this
+    /// `ByteBuffer`'s writer index as well as `buffer`'s reader index by the number of bytes readable in `buffer`.
+    ///
+    /// - parameters:
+    ///     - buffer: The `ByteBuffer` to write.
+    /// - returns: The number of bytes written to this `ByteBuffer` which is equal to the number of bytes read from `buffer`.
     @discardableResult
     public mutating func write(buffer: inout ByteBuffer) -> Int {
         let written = set(buffer: buffer, at: writerIndex)
@@ -138,6 +230,11 @@ extension ByteBuffer {
         return written
     }
 
+    /// Write `bytes`, a `Collection` of `UInt8` into this `ByteBuffer`. Moves the writer index forward by the number of bytes written.
+    ///
+    /// - parameters:
+    ///     - bytes: A `Collection` of `UInt8` to be written.
+    /// - returns: The number of bytes written or `bytes.count`.
     @discardableResult
     public mutating func write<S: Collection>(bytes: S) -> Int where S.Element == UInt8 {
         let written = set(bytes: bytes, at: self.writerIndex)
@@ -145,6 +242,12 @@ extension ByteBuffer {
         return written
     }
 
+    /// Write `bytes`, a `ContiguousCollection` of `UInt8` into this `ByteBuffer`. Moves the writer index forward by the number of bytes written.
+    /// This method is likely more efficient than the one operating on plain `Collection` as it will use `memcpy` to copy all the bytes in one go.
+    ///
+    /// - parameters:
+    ///     - bytes: A `ContiguousCollection` of `UInt8` to be written.
+    /// - returns: The number of bytes written or `bytes.count`.
     @discardableResult
     public mutating func write<S: ContiguousCollection>(bytes: S) -> Int where S.Element == UInt8 {
         let written = set(bytes: bytes, at: self.writerIndex)
@@ -152,10 +255,25 @@ extension ByteBuffer {
         return written
     }
 
+    /// Slice the readable bytes off this `ByteBuffer` without modifying the reader index. This method will return a
+    /// `ByteBuffer` sharing the underlying storage with the `ByteBuffer` the method was invoked on. The returned
+    /// `ByteBuffer` will contain the bytes in the range `readerIndex..<writerIndex` of the original `ByteBuffer`.
+    ///
+    /// - returns: A `ByteBuffer` sharing storage containing the readable bytes only.
     public func slice() -> ByteBuffer {
         return slice(at: self.readerIndex, length: self.readableBytes)!
     }
 
+    /// Slice `length` bytes off this `ByteBuffer` and move the reader index forward by `length`.
+    /// If enough bytes are readable the `ByteBuffer` returned by this method will share the underlying storage with
+    /// the `ByteBuffer` the method was invoked on.
+    /// The returned `ByteBuffer` will contain the bytes in the range `readerIndex..<(readerIndex + length)` of the
+    /// original `ByteBuffer`.
+    /// The `readerIndex` of the returned `ByteBuffer` will be `0`, the `writerIndex` will be `length`.
+    ///
+    /// - parameters:
+    ///     - length: The number of bytes to slice off.
+    /// - returns: A `ByteBuffer` sharing storage containing `length` bytes or `nil` if the not enough bytes were readable.
     public mutating func readSlice(length: Int) -> ByteBuffer? {
         precondition(length >= 0, "length must not be negative")
         guard self.readableBytes >= length else {
@@ -168,6 +286,9 @@ extension ByteBuffer {
     }
 
 
+    /// Set both reader index and writer index to `0`. This will reset the state of this `ByteBuffer` to the state
+    /// of a freshly allocated one without doing any allocations. This is the cheapest way to recycle a `ByteBuffer`
+    /// for a new use-case.
     public mutating func clear() {
         self.moveWriterIndex(to: 0)
         self.moveReaderIndex(to: 0)
@@ -175,6 +296,9 @@ extension ByteBuffer {
 }
 
 extension ByteBuffer: Equatable {
+    // TODO: I don't think this makes sense. This should compare bytes 0..<writerIndex instead.
+
+    /// Compare two `ByteBuffer` values. Two `ByteBuffer` values are considered equal if the readable bytes are equal.
     public static func ==(lhs: ByteBuffer, rhs: ByteBuffer) -> Bool {
         guard lhs.readableBytes == rhs.readableBytes else {
             return false
