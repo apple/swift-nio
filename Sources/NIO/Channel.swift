@@ -406,23 +406,28 @@ final class SocketChannel : BaseSocketChannel<Socket> {
 
     override fileprivate func readFromSocket() throws {
         // Just allocate one time for the while read loop. This is fine as ByteBuffer is a struct and uses COW.
-        var buffer = try recvAllocator.buffer(allocator: allocator)
-        for _ in 1...maxMessagesPerRead {
+        var buffer = recvAllocator.buffer(allocator: allocator)
+        for i in 1...maxMessagesPerRead {
             if closed {
                 return
             }
             switch try buffer.withMutableWritePointer(body: self.socket.read(pointer:size:)) {
             case .processed(let bytesRead):
                 if bytesRead > 0 {
-                    recvAllocator.record(actualReadBytes: bytesRead)
+                    let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
 
                     readPending = false
 
                     assert(!closed)
                     pipeline.fireChannelRead0(data: NIOAny(buffer))
-
-                    // Reset reader and writerIndex and so allow to have the buffer filled again
-                    buffer.clear()
+                    if mayGrow && i < maxMessagesPerRead {
+                        // if the ByteBuffer may grow on the next allocation due we used all the writable bytes we should allocate a new `ByteBuffer` to allow ramping up how much data
+                        // we are able to read on the next read operation.
+                        buffer = recvAllocator.buffer(allocator: allocator)
+                    } else {
+                        // Reset reader and writerIndex and so allow to have the buffer filled again
+                        buffer.clear()
+                    }
                 } else {
                     // end-of-file
                     throw ChannelError.eof

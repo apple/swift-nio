@@ -21,51 +21,51 @@ public class AdaptiveRecvByteBufferAllocatorTest : XCTestCase {
     private var fixed = FixedSizeRecvByteBufferAllocator(capacity: 1024)
 
     func testAdaptive() throws {
-        let buffer = try adaptive.buffer(allocator: allocator)
+        let buffer = adaptive.buffer(allocator: allocator)
         XCTAssertEqual(1024, buffer.capacity)
         
-        try testActualReadBytes(actualReadBytes: 1024, expectedCapacity: 16384)
-        try testActualReadBytes(actualReadBytes: 16384, expectedCapacity: 16384)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 1024, expectedCapacity: 16384)
+        testActualReadBytes(mayGrow: true, actualReadBytes: 16384, expectedCapacity: 16384)
         
         // Will never go over maximum
-        try testActualReadBytes(actualReadBytes: 32768, expectedCapacity: 16384)
+        testActualReadBytes(mayGrow: true, actualReadBytes: 32768, expectedCapacity: 16384)
 
-        try testActualReadBytes(actualReadBytes: 4096, expectedCapacity: 16384)
-        try testActualReadBytes(actualReadBytes: 8192, expectedCapacity: 16384)
-        try testActualReadBytes(actualReadBytes: 4096, expectedCapacity: 8192)
-        try testActualReadBytes(actualReadBytes: 4096, expectedCapacity: 8192)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 4096, expectedCapacity: 16384)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 8192, expectedCapacity: 16384)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 4096, expectedCapacity: 8192)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 4096, expectedCapacity: 8192)
 
-        try testActualReadBytes(actualReadBytes: 64, expectedCapacity: 8192)
-        try testActualReadBytes(actualReadBytes: 64, expectedCapacity: 4096)
-        try testActualReadBytes(actualReadBytes: 64, expectedCapacity: 4096)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 8192)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 4096)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 4096)
 
-        try testActualReadBytes(actualReadBytes: 64, expectedCapacity: 2048)
-        try testActualReadBytes(actualReadBytes: 64, expectedCapacity: 2048)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 2048)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 2048)
 
-        try testActualReadBytes(actualReadBytes: 64, expectedCapacity: 1024)
-        try testActualReadBytes(actualReadBytes: 64, expectedCapacity: 1024)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 1024)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 1024)
         
-        try testActualReadBytes(actualReadBytes: 64, expectedCapacity: 512)
-        try testActualReadBytes(actualReadBytes: 64, expectedCapacity: 512)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 512)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 512)
 
-        try testActualReadBytes(actualReadBytes: 32, expectedCapacity: 512)
-        try testActualReadBytes(actualReadBytes: 32, expectedCapacity: 512)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 32, expectedCapacity: 512)
+        testActualReadBytes(mayGrow: false, actualReadBytes: 32, expectedCapacity: 512)
     }
     
-    private func testActualReadBytes(actualReadBytes: Int, expectedCapacity: Int) throws {
-        adaptive.record(actualReadBytes: actualReadBytes)
-        let buffer = try adaptive.buffer(allocator: allocator)
+    private func testActualReadBytes(mayGrow: Bool, actualReadBytes: Int, expectedCapacity: Int) {
+        XCTAssertEqual(mayGrow, adaptive.record(actualReadBytes: actualReadBytes))
+        let buffer = adaptive.buffer(allocator: allocator)
         XCTAssertEqual(expectedCapacity, buffer.capacity)
     }
     
     func testFixed() throws {
-        var buffer = try fixed.buffer(allocator: allocator)
+        var buffer = fixed.buffer(allocator: allocator)
         XCTAssertEqual(fixed.capacity, buffer.capacity)
-        fixed.record(actualReadBytes: 32768)
-        buffer = try fixed.buffer(allocator: allocator)
+        XCTAssert(!fixed.record(actualReadBytes: 32768))
+        buffer = fixed.buffer(allocator: allocator)
         XCTAssertEqual(fixed.capacity, buffer.capacity)
-        fixed.record(actualReadBytes: 64)
-        buffer = try fixed.buffer(allocator: allocator)
+        XCTAssert(!fixed.record(actualReadBytes: 64))
+        buffer = fixed.buffer(allocator: allocator)
         XCTAssertEqual(fixed.capacity, buffer.capacity)
     }
 }

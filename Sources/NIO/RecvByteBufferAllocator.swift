@@ -20,10 +20,17 @@
 //
 //
 
+/// Allocates `ByteBuffer` to by used to read bytes from a `Channel` and record the number of the actual bytes that were used.
 public protocol RecvByteBufferAllocator {
-    func buffer(allocator: ByteBufferAllocator) throws -> ByteBuffer
+    /// Allocates a new `ByteBuffer` that will be used to read bytes from a `Channel`.
+    func buffer(allocator: ByteBufferAllocator) -> ByteBuffer
     
-    mutating func record(actualReadBytes: Int)
+    /// Records the actual number of bytes that were read by the last socket call.
+    ///
+    /// - parameters:
+    ///     - actualReadBytes: The number of bytes that were used by the previous allocated `ByteBuffer`
+    /// - returns: `true` if the next call to `buffer` may return a bigger buffer then the last call to `buffer`.
+    mutating func record(actualReadBytes: Int) -> Bool
 }
 
 
@@ -38,9 +45,12 @@ public struct FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
         self.capacity = capacity
     }
     
-    public mutating func record(actualReadBytes: Int) { }
+    public mutating func record(actualReadBytes: Int) -> Bool {
+        // Returns false as we always allocate the same size of buffers.
+        return false
+    }
     
-    public func buffer(allocator: ByteBufferAllocator) throws -> ByteBuffer {
+    public func buffer(allocator: ByteBufferAllocator) -> ByteBuffer {
         return allocator.buffer(capacity: capacity)
     }
 }
@@ -118,7 +128,6 @@ public struct AdaptiveRecvByteBufferAllocator : RecvByteBufferAllocator {
         var high: Int = sizeTable.count - 1
         
         repeat {
-        
             if high < low {
                 return low
             }
@@ -144,11 +153,11 @@ public struct AdaptiveRecvByteBufferAllocator : RecvByteBufferAllocator {
         } while true
     }
     
-    public func buffer(allocator: ByteBufferAllocator) throws -> ByteBuffer {
+    public func buffer(allocator: ByteBufferAllocator) -> ByteBuffer {
         return allocator.buffer(capacity: nextReceiveBufferSize)
     }
     
-    public mutating func record(actualReadBytes: Int) {
+    public mutating func record(actualReadBytes: Int) -> Bool {
         if actualReadBytes <= AdaptiveRecvByteBufferAllocator.sizeTable[max(0, index - AdaptiveRecvByteBufferAllocator.indexDecrement - 1)] {
             if decreaseNow {
                 index = max(index - AdaptiveRecvByteBufferAllocator.indexDecrement, minIndex)
@@ -161,6 +170,8 @@ public struct AdaptiveRecvByteBufferAllocator : RecvByteBufferAllocator {
             index = min(index + AdaptiveRecvByteBufferAllocator.indexIncrement, maxIndex)
             nextReceiveBufferSize = AdaptiveRecvByteBufferAllocator.sizeTable[index]
             decreaseNow = false
+            
         }
+        return actualReadBytes >= nextReceiveBufferSize
     }
 }
