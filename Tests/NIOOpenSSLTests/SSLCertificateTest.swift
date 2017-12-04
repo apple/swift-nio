@@ -107,11 +107,12 @@ private func makeTemporaryFile() -> String {
     let template = "/tmp/niotestXXXXXXX"
     var templateBytes = Array(template.utf8)
     templateBytes.append(0)
-    _ = templateBytes.withUnsafeMutableBufferPointer { ptr in
+    let fd = templateBytes.withUnsafeMutableBufferPointer { ptr in
         ptr.baseAddress!.withMemoryRebound(to: Int8.self, capacity: templateBytes.count) { (ptr: UnsafeMutablePointer<Int8>) in
-            return mktemp(ptr)
+            return mkstemp(ptr)
         }
     }
+    close(fd)
     templateBytes.removeLast()
     return String(decoding: templateBytes, as: UTF8.self)
 }
