@@ -90,7 +90,7 @@ private enum WriteResult {
 }
 
 private final class PendingWrites {
-    private var pendingWrites = MarkedCircularBuffer<PendingWrite>(initialRingCapacity: 16, expandSize: 3)
+    private var pendingWrites = MarkedCircularBuffer<PendingWrite>(initialRingCapacity: 16)
     // Marks the last PendingWrite that should be written by consume(...)
     private var iovecs: UnsafeMutableBufferPointer<IOVector>
     private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>

@@ -21,8 +21,8 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
     private var buffer: CircularBuffer<E>
     private var markedIndex: Int = -1 /* negative: nothing marked */
 
-    public init(initialRingCapacity: UInt, expandSize: UInt = 8) {
-        self.buffer = CircularBuffer(initialRingCapacity: initialRingCapacity, expandSize: expandSize)
+    public init(initialRingCapacity: Int) {
+        self.buffer = CircularBuffer(initialRingCapacity: initialRingCapacity)
     }
 
     // MARK: Forwarding

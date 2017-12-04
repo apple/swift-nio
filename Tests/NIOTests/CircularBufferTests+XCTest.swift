@@ -31,6 +31,12 @@ extension CircularBufferTests {
                 ("testAddAllRemoveAll", testAddAllRemoveAll),
                 ("testHarderExpansion", testHarderExpansion),
                 ("testCollection", testCollection),
+                ("testWeCanDistinguishBetweenEmptyAndFull", testWeCanDistinguishBetweenEmptyAndFull),
+                ("testExpandZeroBasedRingWorks", testExpandZeroBasedRingWorks),
+                ("testExpandNonZeroBasedRingWorks", testExpandNonZeroBasedRingWorks),
+                ("testEmptyingExpandedRingWorks", testEmptyingExpandedRingWorks),
+                ("testChangeElements", testChangeElements),
+                ("testSliceTheRing", testSliceTheRing),
            ]
    }
 }
