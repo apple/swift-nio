@@ -27,22 +27,38 @@ function start_server() {
     mkdir "$tmp/htdocs"
     swift build
     "$(swift build --show-bin-path)/NIOHTTP1Server" $maybe_host "$port" "$tmp/htdocs" &
-    for f in $(seq 30); do if [[ -S "$port" ]]; then break; else sleep 0.1; fi; done
+    tmp_server_pid=$!
     if [[ -z "$type" ]]; then
-        port=$(lsof -n -p $! | grep -Eo 'TCP .*:[0-9]+ ' | grep -Eo '[0-9]{4,5} ' | tr -d ' ')
-        echo "port = '$port'"
-        curl_port="$port"
+        # TCP mode, need to wait until we found a port that we can curl
+        worked=false
+        for f in $(seq 20); do
+            server_lsof "$tmp_server_pid"
+            port=$(server_lsof "$tmp_server_pid" | grep -Eo 'TCP .*:[0-9]+ ' | grep -Eo '[0-9]{4,5} ' | tr -d ' ' || true)
+            echo "port = '$port'"
+            curl_port="$port"
+            if curl "http://localhost:$curl_port/dynamic/pid" > /dev/null 2>&1; then
+                worked=true
+                break
+            else
+                server_lsof "$tmp_server_pid"
+                sleep 0.1 # wait for the socket to be bound
+            fi
+        done
+        "$worked" || fail "Could not reach server 2s after lauching..."
+    else
+        # Unix Domain Socket, wait for the file to appear
+        for f in $(seq 30); do if [[ -S "$port" ]]; then break; else sleep 0.1; fi; done
     fi
     echo "port: $port"
     echo "curl port: $curl_port"
     echo "local token_port;   local token_htdocs;         local token_pid;"      >> "$token"
     echo "      token_port='$port'; token_htdocs='$tmp/htdocs'; token_pid='$!';" >> "$token"
     echo "      token_type='$tok_type';" >> "$token"
-    do_curl "$token" http://localhost:$curl_port/dynamic/write-delay | grep -q 'Hello World'
     tmp_server_pid=$(get_server_pid "$token")
     echo "local token_open_fds" >> "$token"
     echo "token_open_fds='$(server_lsof "$tmp_server_pid" | wc -l)'" >> "$token"
     server_lsof "$tmp_server_pid"
+    do_curl "$token" "http://localhost:$curl_port/dynamic/pid"
 }
 
 function get_htdocs() {
