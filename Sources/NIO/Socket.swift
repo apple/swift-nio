@@ -66,7 +66,7 @@ final class Socket : BaseSocket {
     func finishConnect() throws {
         let result: Int32 = try getOption(level: SOL_SOCKET, name: SO_ERROR)
         if result != 0 {
-            throw ioError(errno: result, function: "getsockopt")
+            throw ioError(errnoCode: result, function: "getsockopt")
         }
     }
     

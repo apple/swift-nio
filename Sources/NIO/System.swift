@@ -49,7 +49,7 @@ private func wrapSyscallMayBlock<T: FixedWidthInteger>(_ fn: () throws -> T , wh
                 return .wouldBlock(0)
             default:
                 assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(strerror(err)!)")
-                throw ioError(errno: err, function: `where`.withUTF8Buffer { String(decoding: $0, as: UTF8.self) })
+                throw ioError(errnoCode: err, function: `where`.withUTF8Buffer { String(decoding: $0, as: UTF8.self) })
             }
            
         }
@@ -68,7 +68,7 @@ private func wrapSyscall<T: FixedWidthInteger>(_ fn: () throws -> T, where: Stat
                 continue
             }
             assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(strerror(err)!)")
-            throw ioError(errno: err, function: `where`.withUTF8Buffer { String(decoding: $0, as: UTF8.self) })
+            throw ioError(errnoCode: err, function: `where`.withUTF8Buffer { String(decoding: $0, as: UTF8.self) })
         }
         return res
     }

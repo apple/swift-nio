@@ -12,10 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// Represents a selectable resource which can be registered to a `Selector` to be notified once there are some events ready for it.
 protocol Selectable {
+    
+    /// The file descriptor itself.
     var descriptor: Int32 { get }
 
+    /// `true` if this `Selectable` is open (which means it was not closed yet).
     var open: Bool { get }
 
+    /// Close this `Selectable` (and so its `descriptor`).
     func close() throws
 }
