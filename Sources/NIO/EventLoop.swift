@@ -22,6 +22,10 @@ import NIOPriorityQueue
     import Glibc
 #endif
 
+/// Returned once a task was scheduled on the `EventLoop` for later execution.
+///
+/// A `Scheduled` allows the user to either `cancel()` the execution of the scheduled task (if possible) or obtain a reference to the `EventLoopFuture` that
+/// will be notified once the execution is complete.
 public struct Scheduled<T> {
     private let promise: EventLoopPromise<T>
     private let cancellationTask: () -> ()
@@ -39,56 +43,147 @@ public struct Scheduled<T> {
         self.cancellationTask = cancellationTask
     }
     
+    /// Try to cancel the execution of the scheduled task.
+    ///
+    /// Whether this is successful depends on whether the execution of the task already begun.
+    ///  This means that cancellation is not guaranteed.
     public func cancel() {
         promise.fail(error: EventLoopError.cancelled)
     }
     
+    /// Returns the `EventLoopFuture` which will be notified once the execution of the scheduled task completes.
     public var futureResult: EventLoopFuture<T> {
         return promise.futureResult
     }
 }
 
+/// An EventLoop processes IO / tasks in an endless loop for `Channel`s until it's closed.
+///
+/// Usually multiple `Channel`s share the same `EventLoop` for processing IO / tasks and so share the same processing `Thread`.
+/// For a better understanding of how such an `EventLoop` works internally the following pseudo code may be helpful:
+///
+/// ```
+/// while eventLoop.isOpen {
+///     /// Block until there is something to process for 1...n Channels
+///     let readyChannels = blockUntilIoOrTasksAreReady()
+///     /// Loop through all the Channels
+///     for channel in readyChannels {
+///         /// Process IO and / or tasks for the Channel.
+///         /// This may include things like:
+///         ///    - accept new connection
+///         ///    - connect to a remote host
+///         ///    - read from socket
+///         ///    - write to socket
+///         ///    - tasks that were submitted via EventLoop methods
+///         /// and others.
+///         processIoAndTasks(channel)
+///     }
+/// }
+/// ```
+///
+/// Because an `EventLoop` may be shared between multiple `Channel`s its important to _NOT_ block while processing IO / tasks. This also includes long running computations which will have the same
+/// effect as blocking in this case.
 public protocol EventLoop: EventLoopGroup {
+    /// Returns `true` if the current `Thread` is the same as the `Thread` that is tied to this `EventLoop`. `false` otherwise.
     var inEventLoop: Bool { get }
+    
+    /// Submit a given task to be executed by the `EventLoop`
     func execute(task: @escaping () -> ())
+
+    /// Submit a given task to be executed by the `EventLoop`. Once the execution is complete the returned `EventLoopFuture` is notified.
+    ///
+    /// - parameters:
+    ///     - task: The closure that will be submited to the `EventLoop` for execution.
+    /// - returns: `EventLoopFuture` that is notified once the task was executed.
     func submit<T>(task: @escaping () throws-> (T)) -> EventLoopFuture<T>
+    
+    /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T>
+    
+    /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `Thread`.
     func newPromise<T>() -> EventLoopPromise<T>
+    
+    /// Creates and returns a new `EventLoopFuture` that is already marked as failed. Notifications will be done using this `EventLoop` as execution `Thread`.
+    ///
+    /// - parameters:
+    ///     - error: the `Error` that is used by the `EventLoopFuture`.
+    /// - returns: a failed `EventLoopFuture`.
     func newFailedFuture<T>(error: Error) -> EventLoopFuture<T>
+    
+    /// Creates and returns a new `EventLoopFuture` that is already marked as success. Notifications will be done using this `EventLoop` as execution `Thread`.
+    ///
+    /// - parameters:
+    ///     - result: the value that is used by the `EventLoopFuture`.
+    /// - returns: a failed `EventLoopFuture`.
     func newSucceedFuture<T>(result: T) -> EventLoopFuture<T>
 }
 
+/// Represent an amount of time since the start of the system.
 public struct TimeAmount {
+    /// The nanoseconds representation of the `TimeAmount`.
     public let nanoseconds: UInt64
 
     private init(_ nanoseconds: UInt64) {
         self.nanoseconds = nanoseconds
     }
     
+    /// Creates a new `TimeAmount` for the given amount of nanoseconds.
+    ///
+    /// - parameters:
+    ///     - amount: the amount of nanoseconds this `TimeAmount` represents.
+    /// - returns: the `TimeAmount` for the given amount.
     public static func nanoseconds(_ amount: UInt64) -> TimeAmount {
         return TimeAmount(amount)
     }
     
+    /// Creates a new `TimeAmount` for the given amount of microseconds.
+    ///
+    /// - parameters:
+    ///     - amount: the amount of microseconds this `TimeAmount` represents.
+    /// - returns: the `TimeAmount` for the given amount.
     public static func microseconds(_ amount: UInt64) -> TimeAmount {
         return TimeAmount(amount * 1000)
     }
 
+    /// Creates a new `TimeAmount` for the given amount of milliseconds.
+    ///
+    /// - parameters:
+    ///     - amount: the amount of milliseconds this `TimeAmount` represents.
+    /// - returns: the `TimeAmount` for the given amount.
     public static func milliseconds(_ amount: Int) -> TimeAmount {
         return TimeAmount(UInt64(amount) * 1000 * 1000)
     }
     
+    /// Creates a new `TimeAmount` for the given amount of seconds.
+    ///
+    /// - parameters:
+    ///     - amount: the amount of seconds this `TimeAmount` represents.
+    /// - returns: the `TimeAmount` for the given amount.
     public static func seconds(_ amount: Int) -> TimeAmount {
         return TimeAmount(UInt64(amount) * 1000 * 1000 * 1000)
     }
     
+    /// Creates a new `TimeAmount` for the given amount of minutes.
+    ///
+    /// - parameters:
+    ///     - amount: the amount of minutes this `TimeAmount` represents.
+    /// - returns: the `TimeAmount` for the given amount.
     public static func minutes(_ amount: Int) -> TimeAmount {
         return TimeAmount(UInt64(amount) * 1000 * 1000 * 1000 * 60)
     }
 
+    /// Creates a new `TimeAmount` for the given amount of hours.
+    ///
+    /// - parameters:
+    ///     - amount: the amount of hours this `TimeAmount` represents.
+    /// - returns: the `TimeAmount` for the given amount.
     public static func hours(_ amount: Int) -> TimeAmount {
         return TimeAmount(UInt64(amount) * 1000 * 1000 * 1000 * 60 * 60)
     }
     
+    /// Creates a new `TimeAmount` represent the current point in time.
+    ///
+    /// - returns: the `TimeAmount` for the current time.
     public static func now() -> TimeAmount {
         return nanoseconds(DispatchTime.now().uptimeNanoseconds)
     }
@@ -139,10 +234,16 @@ extension EventLoop {
     }
 }
 
+/// Internal representation of a `Registration` to an `Selector`.
+///
+/// Whenever a `Selectable` is registered to a `Selector` a `Registration` is created internally that is also provided within the
+/// `SelectorEvent` that is provided to the user when an event is ready to be consumed for a `Selectable`. As we need to have access to the `ServerSocketChannel`
+/// and `SocketChannel` (to dispatch the events) we create our own `Registration` that holds a reference to these.
 enum NIORegistration: Registration {
     case serverSocketChannel(ServerSocketChannel, IOEvent)
     case socketChannel(SocketChannel, IOEvent)
 
+    /// The `IOEvent` in which this `NIORegistration` is interested in.
     var interested: IOEvent {
         set {
             switch self {
@@ -163,6 +264,7 @@ enum NIORegistration: Registration {
     }
 }
 
+/// Execute the given closure and ensure we release all auto pools if needed.
 private func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
     #if os(Linux)
     return try execute()
@@ -173,12 +275,19 @@ private func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
     #endif
 }
 
+/// The different state in the lifecycle of an `EventLoop`.
 private enum EventLoopLifecycleState {
+    /// `EventLoop` is open and so can process more work.
     case open
+    /// `EventLoop` is currently in the process of closing.
     case closing
+    /// `EventLoop` is closed.
     case closed
 }
 
+/// `EventLoop` implementation that uses a `Selector` to get notified once there is more I/O or tasks to process.
+/// The whole processing of I/O and tasks is done by a `Thread` that is tied to the `SelectableEventLoop`. This `Thread`
+/// is guaranteed to never change!
 internal final class SelectableEventLoop : EventLoop {
     private let selector: NIO.Selector<NIORegistration>
     private let thread: pthread_t
@@ -192,6 +301,7 @@ internal final class SelectableEventLoop : EventLoop {
     let iovecs: UnsafeMutableBufferPointer<IOVector>
     let storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
     
+    /// Creates a new `SelectableEventLoop` instance that is tied to the given `pthread_t`.
     public init(thread: pthread_t) throws {
         self.selector = try NIO.Selector()
         self.thread = thread
@@ -206,11 +316,14 @@ internal final class SelectableEventLoop : EventLoop {
         _storageRefs.deallocate(capacity: Socket.writevLimit)
     }
     
+    /// Register the given `SelectableChannel` with this `SelectableEventLoop`. After this point all I/O for the `SelectableChannel` will be processed by this `SelectableEventLoop` until it
+    /// is deregistered by calling `deregister`.
     public func register<C: SelectableChannel>(channel: C) throws {
         assert(inEventLoop)
         try selector.register(selectable: channel.selectable, interested: channel.interestedEvent, makeRegistration: channel.registrationFor(interested:))
     }
 
+    /// Deregister the given `SelectableChannel` from this `SelectableEventLoop`.
     public func deregister<C: SelectableChannel>(channel: C) throws {
         assert(inEventLoop)
         guard lifecycleState == .open else {
@@ -220,6 +333,8 @@ internal final class SelectableEventLoop : EventLoop {
         try selector.deregister(selectable: channel.selectable)
     }
     
+    /// Register the given `SelectableChannel` with this `SelectableEventLoop`. This should be done whenever `channel.interestedEvents` has changed and it should be taken into account when
+    /// waiting for new I/O for the given `SelectableChannel`.
     public func reregister<C: SelectableChannel>(channel: C) throws {
         assert(inEventLoop)
         try selector.reregister(selectable: channel.selectable, interested: channel.interestedEvent)
@@ -258,6 +373,7 @@ internal final class SelectableEventLoop : EventLoop {
         }, .nanoseconds(0)))
     }
     
+    /// Add the `ScheduledTask` to be executed.
     private func schedule0(_ task: ScheduledTask) {
         tasksLock.lock()
         scheduledTasks.push(task)
@@ -265,6 +381,8 @@ internal final class SelectableEventLoop : EventLoop {
         
         wakeupSelector()
     }
+    
+    /// Wake the `Selector` which means `Selector.whenReady(...)` will unblock.
     private func wakeupSelector() {
         do {
             try selector.wakeup()
@@ -273,6 +391,7 @@ internal final class SelectableEventLoop : EventLoop {
         }
     }
 
+    /// Handle the given `IOEvent` for the `SelectableChannel`.
     private func handleEvent<C: SelectableChannel>(_ ev: IOEvent, channel: C) {
         guard handleEvents(channel) else {
             return
@@ -300,7 +419,6 @@ internal final class SelectableEventLoop : EventLoop {
 
         // Ensure we never reach here if the channel is not open anymore.
         assert(channel.open)
-
     }
 
     private func currentSelectorStrategy() -> SelectorStrategy {
@@ -324,6 +442,7 @@ internal final class SelectableEventLoop : EventLoop {
         }
     }
     
+    /// Start processing I/O and tasks for this `SelectableEventLoop`. This method will continue running (and so block) until the `SelectableEventLoop` is closed.
     public func run() throws {
         precondition(self.inEventLoop, "tried to run the EventLoop on the wrong thread.")
         defer {
@@ -398,6 +517,8 @@ internal final class SelectableEventLoop : EventLoop {
         try self.selector.close()
     }
 
+    /// Returns `true` if the `SelectableChannel` is still open and so we should continue handling IO / tasks for it. Otherwise it returns `false` and will deregister the `SelectableChannel`
+    /// from this `SelectableEventLoop`.
     private func handleEvents<C: SelectableChannel>(_ channel: C) -> Bool {
         if channel.open {
             return true
@@ -421,6 +542,7 @@ internal final class SelectableEventLoop : EventLoop {
         }
     }
 
+    /// Gently close this `SelectableEventLoop` which means we will close all `SelectableChannel`s before finally close this `SelectableEventLoop` as well.
     public func closeGently() -> EventLoopFuture<Void> {
         func closeGently0() -> EventLoopFuture<Void> {
             guard self.lifecycleState == .open else {
@@ -461,9 +583,8 @@ internal final class SelectableEventLoop : EventLoop {
     }
 }
 
-/**
- Provides an "endless" stream of `EventLoop`s to use.
- */
+
+/// Provides an endless stream of `EventLoop`s to use.
 public protocol EventLoopGroup {
     /// Returns the next `EventLoop` to use.
     func next() -> EventLoop
@@ -501,9 +622,7 @@ extension EventLoopGroup {
     }
 }
 
-/*
- An `EventLoopGroup` which will create multiple `EventLoop`s, each tight to its own `Thread`.
- */
+/// An `EventLoopGroup` which will create multiple `EventLoop`s, each tied to its own `Thread`.
 final public class MultiThreadedEventLoopGroup : EventLoopGroup {
     
     private let index = Atomic<Int>(value: 0)
@@ -623,6 +742,7 @@ extension ScheduledTask : Comparable {
 }
 
 extension Int {
+    /// Returns the the absolute value of the `Int`.
     public func abs() -> Int {
         if self >= 0 {
             return self
@@ -631,9 +751,17 @@ extension Int {
     }
 }
 
+/// Different `Error`s that are specific to `EventLoop` operations / implementations.
 public enum EventLoopError: Error {
+    /// An operation was executed that is not supported by the `EventLoop`
     case unsupportedOperation
+    
+    /// An scheduled task was cancelled.
     case cancelled
+    
+    /// The `EventLoop` was shutdown already.
     case shutdown
+    
+    /// Shutting down the `EventLoop` failed.
     case shutdownFailed
 }
