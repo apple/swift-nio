@@ -102,7 +102,7 @@ public enum BacklogOption: ChannelOption {
     case const(())
 }
 
-public typealias WriteBufferWaterMark = Range<UInt32>
+public typealias WriteBufferWaterMark = Range<Int>
 
 public enum WriteBufferWaterMarkOption: ChannelOption {
     public typealias AssociatedValueType = ()

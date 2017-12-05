@@ -753,7 +753,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         if let outboundNext = outboundNext {
             outboundNext.invokeRegister(promise: promise)
         } else {
-            promise?.fail(error: ChannelError.alreadyClosed)
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
         }
     }
     
@@ -761,7 +761,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         if let outboundNext = outboundNext {
             outboundNext.invokeBind(to: address, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.alreadyClosed)
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
         }
     }
     
@@ -769,7 +769,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         if let outboundNext = outboundNext {
             outboundNext.invokeConnect(to: address, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.alreadyClosed)
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
         }
     }
 
@@ -777,7 +777,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         if let outboundNext = outboundNext {
             outboundNext.invokeWrite(data: data, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.alreadyClosed)
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
         }
     }
 
@@ -785,7 +785,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         if let outboundNext = outboundNext {
             outboundNext.invokeFlush(promise: promise)
         } else {
-            promise?.fail(error: ChannelError.alreadyClosed)
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
         }
     }
     
@@ -793,7 +793,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         if let outboundNext = outboundNext {
             outboundNext.invokeWriteAndFlush(data: data, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.alreadyClosed)
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
         }
     }
     
@@ -801,7 +801,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         if let outboundNext = outboundNext {
             outboundNext.invokeRead(promise: promise)
         } else {
-            promise?.fail(error: ChannelError.alreadyClosed)
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
         }
     }
     
@@ -809,7 +809,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         if let outboundNext = outboundNext {
             outboundNext.invokeClose(promise: promise)
         } else {
-            promise?.fail(error: ChannelError.alreadyClosed)
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
         }
     }
     
@@ -817,7 +817,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         if let outboundNext = outboundNext {
             outboundNext.invokeTriggerUserOutboundEvent(event: event, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.alreadyClosed)
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
         }
     }
     

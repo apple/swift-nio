@@ -27,6 +27,8 @@ extension FileRegionTest {
    static var allTests : [(String, (FileRegionTest) -> () throws -> Void)] {
       return [
                 ("testWriteFileRegion", testWriteFileRegion),
+                ("testWriteEmptyFileRegionDoesNotHang", testWriteEmptyFileRegionDoesNotHang),
+                ("testOutstandingFileRegionsWork", testOutstandingFileRegionsWork),
            ]
    }
 }
