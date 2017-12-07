@@ -37,7 +37,8 @@ class SystemTest: XCTestCase {
             XCTFail("success even though the call was invalid")
         } catch let e as IOError {
             XCTAssertEqual(ENOTSOCK, e.errnoCode)
-            XCTAssert(e.reason.contains("\(ENOTSOCK)"))
+            XCTAssert(e.description.contains("setsockopt"))
+            XCTAssert(e.description.contains("\(ENOTSOCK)"))
             XCTAssert(e.localizedDescription.contains("\(ENOTSOCK)"), "\(e.localizedDescription)")
         } catch let e {
             XCTFail("wrong error thrown: \(e)")

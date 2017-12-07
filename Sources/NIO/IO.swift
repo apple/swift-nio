@@ -19,33 +19,40 @@ import Darwin
 
 /// An `Error` for an IO operation.
 public struct IOError: Swift.Error {
-    
+    public enum FailureDescription {
+        case function(StaticString)
+        case reason(String)
+    }
     /// The `errno` that was set for the operation.
     public let errnoCode: Int32
 
     // TODO: Fix me to lazy create
     /// The actual reason (in an human-readable form) for this `IOError`.
-    public let reason: String
+    public let reason: FailureDescription
     
     /// Creates a new `IOError``
+    ///
+    /// - note: At the moment, this constructor is more expensive than `IOError(errnoCode:function:)` as the `String` will incur reference counting
     ///
     /// - parameters:
     ///       - errorCode: the `errno` that was set for the operation.
     ///       - reason: the actual reason (in an human-readable form).
     public init(errnoCode: Int32, reason: String) {
         self.errnoCode = errnoCode
-        self.reason = reason
+        self.reason = .reason(reason)
     }
-}
 
-/// Creates a new IOError for a function call
-///
-/// - parameters:
-///       - errorCode: the `errno` that was set for the operation.
-///       - function: the function / syscall that caused the error.
-/// - returns: error that was created.
-func ioError(errnoCode: Int32, function: String) -> IOError {
-    return IOError(errnoCode: errnoCode, reason: reasonForError(errnoCode: errno, function: function))
+    /// Creates a new `IOError``
+    ///
+    /// - note: This constructor is the cheapest way to create an `IOError`.
+    ///
+    /// - parameters:
+    ///       - errorCode: the `errno` that was set for the operation.
+    ///       - function: The function the error happened in, the human readable description will be generated automatically when needed.
+    public init(errnoCode: Int32, function: StaticString) {
+        self.errnoCode = errnoCode
+        self.reason = .function(function)
+    }
 }
 
 /// Returns a reason to use when constructing a `IOError`.
@@ -54,7 +61,7 @@ func ioError(errnoCode: Int32, function: String) -> IOError {
 ///       - errorCode: the `errno` that was set for the operation.
 ///       - function: the function / syscall that caused the error.
 /// -returns: the constructed reason.
-private func reasonForError(errnoCode: Int32, function: String) -> String {
+private func reasonForError(errnoCode: Int32, function: StaticString) -> String {
     if let errorDescC = strerror(errnoCode) {
         let errorDescLen = strlen(errorDescC)
         return errorDescC.withMemoryRebound(to: UInt8.self, capacity: errorDescLen) { ptr in
@@ -66,9 +73,18 @@ private func reasonForError(errnoCode: Int32, function: String) -> String {
     }
 }
 
-extension IOError {
+extension IOError: CustomStringConvertible {
+    public var description: String {
+        return self.localizedDescription
+    }
+
     public var localizedDescription: String {
-        return self.reason
+        switch self.reason {
+        case .reason(let reason):
+            return reason
+        case .function(let function):
+            return reasonForError(errnoCode: self.errnoCode, function: function)
+        }
     }
 }
 

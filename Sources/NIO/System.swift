@@ -37,7 +37,7 @@ private func isBlacklistedErrno(_ code: Int32) -> Bool {
 
 /* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
 @inline(__always)
-private func wrapSyscallMayBlock<T: FixedWidthInteger>(_ fn: () throws -> T , where: StaticString = #function) throws -> IOResult<T> {
+private func wrapSyscallMayBlock<T: FixedWidthInteger>(_ fn: () throws -> T , where function: StaticString = #function) throws -> IOResult<T> {
     while true {
         let res = try fn()
         if res == -1 {
@@ -49,7 +49,7 @@ private func wrapSyscallMayBlock<T: FixedWidthInteger>(_ fn: () throws -> T , wh
                 return .wouldBlock(0)
             default:
                 assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(strerror(err)!)")
-                throw ioError(errnoCode: err, function: `where`.withUTF8Buffer { String(decoding: $0, as: UTF8.self) })
+                throw IOError(errnoCode: err, function: function)
             }
            
         }
@@ -59,7 +59,7 @@ private func wrapSyscallMayBlock<T: FixedWidthInteger>(_ fn: () throws -> T , wh
 
 /* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
 @inline(__always)
-private func wrapSyscall<T: FixedWidthInteger>(_ fn: () throws -> T, where: StaticString = #function) throws -> T {
+private func wrapSyscall<T: FixedWidthInteger>(_ fn: () throws -> T, where function: StaticString = #function) throws -> T {
     while true {
         let res = try fn()
         if res == -1 {
@@ -68,7 +68,7 @@ private func wrapSyscall<T: FixedWidthInteger>(_ fn: () throws -> T, where: Stat
                 continue
             }
             assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(strerror(err)!)")
-            throw ioError(errnoCode: err, function: `where`.withUTF8Buffer { String(decoding: $0, as: UTF8.self) })
+            throw IOError(errnoCode: err, function: function)
         }
         return res
     }
