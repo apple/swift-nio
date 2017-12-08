@@ -101,6 +101,7 @@ extension ByteBufferTest {
                 ("testGetIntegerBeyondCapacity", testGetIntegerBeyondCapacity),
                 ("testSetStringBeyondCapacity", testSetStringBeyondCapacity),
                 ("testGetStringBeyondCapacity", testGetStringBeyondCapacity),
+                ("testAllocationOfReallyBigByteBuffer", testAllocationOfReallyBigByteBuffer),
            ]
    }
 }

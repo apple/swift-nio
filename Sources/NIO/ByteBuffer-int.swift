@@ -110,6 +110,27 @@ extension UInt64 {
 }
 
 extension UInt32 {
+    /// Returns the next power of two unless that would overflow in which case UInt32.max is returned.
+    public func nextPowerOf2ClampedToMax() -> UInt32 {
+        guard self > 0 else {
+            return 1
+        }
+
+        var n = self
+
+        n -= 1
+        n |= n >> 1
+        n |= n >> 2
+        n |= n >> 4
+        n |= n >> 8
+        n |= n >> 16
+        if n != .max {
+            n += 1
+        }
+
+        return n
+    }
+
     /// Returns the next power of two.
     public func nextPowerOf2() -> UInt32 {
         guard self > 0 else {

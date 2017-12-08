@@ -17,6 +17,9 @@
 #else
     import Glibc
 #endif
+let sysMalloc = malloc
+let sysRealloc = realloc
+let sysFree = free
 
 /// The preferred allocator for `ByteBuffer` values. The allocation strategy is opaque but is currently libc's
 /// `malloc`, `realloc` and `free`.
@@ -26,8 +29,22 @@ public struct ByteBufferAllocator {
     /// therefore it's recommended to reuse `ByteBufferAllocators` where possible instead of creating fresh ones in
     /// many places.
     public init() {
+        self.init(hookedMalloc: { sysMalloc($0) },
+                  hookedRealloc: { sysRealloc($0, $1) },
+                  hookedFree: { sysFree($0) },
+                  hookedMemcpy: { $0.copyBytes(from: $1, count: $2) })
+    }
+
+    internal init(hookedMalloc: @escaping @convention(c) (Int) -> UnsafeMutableRawPointer!,
+                  hookedRealloc: @escaping @convention(c) (UnsafeMutableRawPointer, Int) -> UnsafeMutableRawPointer!,
+                  hookedFree: @escaping @convention(c) (UnsafeMutableRawPointer) -> Void,
+                  hookedMemcpy: @escaping @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, Int) -> Void) {
         assert(MemoryLayout<ByteBuffer>.size <= 3 * MemoryLayout<Int>.size,
                "ByteBuffer has size \(MemoryLayout<ByteBuffer>.size) which is larger than the built-in storage of the existential containers.")
+        self.malloc = hookedMalloc
+        self.realloc = hookedRealloc
+        self.free = hookedFree
+        self.memcpy = hookedMemcpy
     }
 
     /// Request a freshly allocated `ByteBuffer` of size `capacity` or larger.
@@ -37,6 +54,12 @@ public struct ByteBufferAllocator {
     public func buffer(capacity: Int) -> ByteBuffer {
         return ByteBuffer(allocator: self, startingCapacity: capacity)
     }
+
+    internal let malloc: @convention(c) (Int) -> UnsafeMutableRawPointer!
+    internal let realloc: @convention(c) (UnsafeMutableRawPointer, Int) -> UnsafeMutableRawPointer!
+    internal let free: @convention(c) (UnsafeMutableRawPointer) -> Void
+    internal let memcpy: @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, Int) -> Void
+
 }
 
 private typealias Index = UInt32
@@ -153,9 +176,9 @@ public struct ByteBuffer {
             self.deallocate()
         }
 
-        private static func allocateAndPrepareRawMemory(bytes: Capacity) -> UnsafeMutableRawPointer {
+        private static func allocateAndPrepareRawMemory(bytes: Capacity, allocator: Allocator) -> UnsafeMutableRawPointer {
             let bytes = Int(bytes)
-            let ptr = malloc(bytes)!
+            let ptr = allocator.malloc(bytes)!
             /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
             ptr.bindMemory(to: UInt8.self, capacity: bytes)
             return ptr
@@ -163,16 +186,16 @@ public struct ByteBuffer {
 
         public func duplicate(slice: Slice, capacity: Capacity) -> _Storage {
             assert(slice.count <= capacity)
-            let newCapacity = capacity == 0 ? 0 : capacity.nextPowerOf2()
-            let new = _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity),
+            let newCapacity = capacity == 0 ? 0 : capacity.nextPowerOf2ClampedToMax()
+            let new = _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity, allocator: self.allocator),
                                capacity: newCapacity,
                                allocator: self.allocator)
-            new.bytes.copyBytes(from: self.bytes.advanced(by: Int(slice.lowerBound)), count: slice.count)
+            self.allocator.memcpy(new.bytes, self.bytes.advanced(by: Int(slice.lowerBound)), slice.count)
             return new
         }
         
         public func reallocStorage(capacity: Capacity) {
-            let ptr = realloc(self.bytes, Int(capacity))!
+            let ptr = self.allocator.realloc(self.bytes, Int(capacity))!
             /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
             ptr.bindMemory(to: UInt8.self, capacity: Int(capacity))
             self.bytes = ptr
@@ -181,13 +204,13 @@ public struct ByteBuffer {
         }
         
         private func deallocate() {
-            free(self.bytes)
+            self.allocator.free(self.bytes)
         }
 
         public static func reallocated(minimumCapacity: Capacity, allocator: Allocator) -> _Storage {
-            let newCapacity = minimumCapacity == 0 ? 0 : minimumCapacity.nextPowerOf2()
+            let newCapacity = minimumCapacity == 0 ? 0 : minimumCapacity.nextPowerOf2ClampedToMax()
             // TODO: Use realloc if possible
-            return _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity),
+            return _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity, allocator: allocator),
                             capacity: newCapacity,
                             allocator: allocator)
         }
@@ -225,7 +248,12 @@ public struct ByteBuffer {
             
             // double the capacity until the requested capacity can be full-filled
             repeat {
-                newCapacity = newCapacity << 1
+                precondition(newCapacity != Capacity.max, "cannot make ByteBuffers larger than \(newCapacity)")
+                if newCapacity < (Capacity.max >> 1) {
+                    newCapacity = newCapacity << 1
+                } else {
+                    newCapacity = Capacity.max
+                }
             } while newCapacity < index || newCapacity - index < capacity
             
             self._storage.reallocStorage(capacity: newCapacity)
