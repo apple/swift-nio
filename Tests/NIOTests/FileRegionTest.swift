@@ -183,10 +183,13 @@ class FileRegionTest : XCTestCase {
         try content.write(toFile: filePath, atomically: false, encoding: .ascii)
         do {
             () = try clientChannel.writeAndFlush(data: NIOAny(FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count))).then(callback: { _ in
-                let f = try! clientChannel.write(data: NIOAny(FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count)))
+                let frFuture = try! clientChannel.write(data: NIOAny(FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count)))
+                var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
+                buffer.write(bytes: bytes)
+                let bbFuture = clientChannel.write(data: NIOAny(buffer))
                 clientChannel.close(promise: nil)
                 clientChannel.flush(promise: nil)
-                return f
+                return frFuture.then { bbFuture }
             }).wait()
             XCTFail("no error happened even though we closed before flush")
         } catch let e as ChannelError {

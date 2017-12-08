@@ -268,13 +268,6 @@ private struct PendingWritesState {
         var promises: [EventLoopPromise<()>] = []
         promises.reserveCapacity(self.pendingWrites.count)
         while !self.pendingWrites.isEmpty {
-            let pending = self[0]
-            switch pending.data {
-            case .byteBuffer(let buffer):
-                self.subtractOutstanding(bytes: buffer.readableBytes)
-            case .fileRegion(_):
-                () /* not accounting for file region sizes */
-            }
             if let p = self.fullyWrittenFirst() {
                 promises.append(p)
             }
