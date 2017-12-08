@@ -386,6 +386,8 @@ final class Selector<R: Registration> {
         }
         self.lifecycleState = .closed
 
+        self.registrations.removeAll()
+
         /* note, we can't close `self.fd` (on macOS) or `self.eventfd` (on Linux) here as that's read unprotectedly and might lead to race conditions. Instead, we abuse ARC to close it for us. */
 #if os(Linux)
         _ = try Posix.close(descriptor: self.timerfd)
