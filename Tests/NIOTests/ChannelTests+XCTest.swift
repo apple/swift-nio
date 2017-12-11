@@ -30,6 +30,14 @@ extension ChannelTests {
                 ("testManyManyWrites", testManyManyWrites),
                 ("testWritevLotsOfData", testWritevLotsOfData),
                 ("testParentsOfSocketChannels", testParentsOfSocketChannels),
+                ("testPendingWritesEmptyWritesWorkAndWeDontWriteUnflushedThings", testPendingWritesEmptyWritesWorkAndWeDontWriteUnflushedThings),
+                ("testPendingWritesUsesVectorWriteOperationAndDoesntWriteTooMuch", testPendingWritesUsesVectorWriteOperationAndDoesntWriteTooMuch),
+                ("testPendingWritesWorkWithPartialWrites", testPendingWritesWorkWithPartialWrites),
+                ("testPendingWritesSpinCountWorksForSingleWrites", testPendingWritesSpinCountWorksForSingleWrites),
+                ("testPendingWritesSpinCountWorksForVectorWrites", testPendingWritesSpinCountWorksForVectorWrites),
+                ("testPendingWritesCancellationWorksCorrectly", testPendingWritesCancellationWorksCorrectly),
+                ("testPendingWritesNoMoreThanWritevLimitIsWritten", testPendingWritesNoMoreThanWritevLimitIsWritten),
+                ("testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk", testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk),
            ]
    }
 }

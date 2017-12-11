@@ -26,29 +26,30 @@ private func doPendingWriteVectorOperation(pending: PendingWritesState,
                                            iovecs: UnsafeMutableBufferPointer<IOVector>,
                                            storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
                                            _ fn: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> IOResult<Int> {
-    assert(iovecs.count >= Socket.writevLimit, "Insufficiently sized buffer for a maximal writev")
+    assert(iovecs.count >= Socket.writevLimitIOVectors, "Insufficiently sized buffer for a maximal writev")
 
     // Clamp the number of writes we're willing to issue to the limit for writev.
-    let count = min(pending.chunks, Socket.writevLimit)
+    let count = min(pending.flushedChunks, Socket.writevLimitIOVectors)
     
     // the numbers of storage refs that we need to decrease later.
     var c = 0
 
-    // Must not write more than Int32.max in one go.
     var toWrite: Int = 0
 
     loop: for i in 0..<count {
         let p = pending[i]
         switch p.data {
         case .byteBuffer(let buffer):
-            guard Int(Int32.max) - toWrite >= buffer.readableBytes else {
+            // Must not write more than Int32.max in one go.
+            guard (c == 0) || (Socket.writevLimitBytes - toWrite >= buffer.readableBytes) else {
                 break loop
             }
-            toWrite += buffer.readableBytes
+            let toWriteForThisBuffer = min(Socket.writevLimitBytes, buffer.readableBytes)
+            toWrite += toWriteForThisBuffer
 
             buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
                 storageRefs[i] = storageRef.retain()
-                iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: ptr.count)
+                iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: toWriteForThisBuffer)
             }
             c += 1
         case .fileRegion(_):
@@ -66,7 +67,7 @@ private func doPendingWriteVectorOperation(pending: PendingWritesState,
 }
 
 /// The high-level result of a write operation.
-private enum WriteResult {
+/* private but tests */ enum WriteResult {
     /// Wrote everything asked.
     case writtenCompletely
 
@@ -93,8 +94,12 @@ private enum WriteResult {
 ///  - `failAll` if for some reason all outstanding writes need to be discarded and the corresponding `EventLoopPromise` needs to be failed.
 private struct PendingWritesState {
     private var pendingWrites = MarkedCircularBuffer<PendingWrite>(initialRingCapacity: 16)
-    public private(set) var chunks: Int = 0
+    private var chunks: Int = 0
     public private(set) var bytes: Int = 0
+
+    public var flushedChunks: Int {
+        return self.pendingWrites.markedElementIndex().map { $0 + 1 } ?? 0
+    }
 
     /// Subtract `bytes` from the number of outstanding bytes to write.
     private mutating func subtractOutstanding(bytes: Int) {
@@ -187,6 +192,20 @@ private struct PendingWritesState {
         }
     }
 
+    /// Are there at least two `ByteBuffer`s to be written (they must be flushed)? This helps to decide if we should
+    /// call `writev` instead of `write` or `sendfile`.
+    public var hasMultipleFlushedByteBuffers: Bool {
+        guard self.flushedChunks > 1 else {
+            return false
+        }
+
+        if case .byteBuffer(_) = self.pendingWrites[0].data, case .byteBuffer(_) = self.pendingWrites[1].data {
+            // We have at least two flushed ByteBuffer in the PendingWrites
+            return true
+        }
+        return false
+    }
+
     /// Indicate that a write has happened, this may be a write of multiple outstanding writes (using for example `writev`).
     ///
     /// - warning: The closure will simply fulfill all the promises in order. If one of those promises does for example close the `Channel` we might see subsequent writes fail out of order. Example: Imagine the user issues three writes: `A`, `B` and `C`. Imagine that `A` and `B` both get successfully written in one write operation but the user closes the `Channel` in `A`'s callback. Then overall the promises will be fulfilled in this order: 1) `A`: success 2) `C`: error 3) `B`: success. Note how `B` and `C` get fulfilled out of order.
@@ -214,8 +233,9 @@ private struct PendingWritesState {
                             promises.append(promise)
                         }
 
-                        if unaccountedWrites == 0 && buffer.readableBytes > 0 {
-                            return (fulfillPromises, self.isFlushPending ? .writtenCompletely : .nothingToBeWritten)
+                        if unaccountedWrites == 0 && !self.pendingWrites.hasMark() {
+                            /* we wrote fully if there's no unaccounted writes left and we don't have a flush mark anymore */
+                            return (fulfillPromises, .writtenCompletely)
                         }
                     } else {
                         /* we could only write a part of the first ByteBuffer, so don't drop it but remember what we wrote */
@@ -279,15 +299,15 @@ private struct PendingWritesState {
 /// This class manages the writing of pending writes. The state is held in a `PendingWritesState` value. The most
 /// important purpose of this object is to call `write`, `writev` or `sendfile` depending on the currently pending
 /// writes.
-private final class PendingWritesManager {
+/* private but tests */ final class PendingWritesManager {
     private var state = PendingWritesState()
     private var iovecs: UnsafeMutableBufferPointer<IOVector>
     private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
 
-    fileprivate var waterMark: WriteBufferWaterMark = WriteBufferWaterMark(32 * 1024..<64 * 1024)
+    fileprivate fileprivate(set) var waterMark: WriteBufferWaterMark = WriteBufferWaterMark(32 * 1024..<64 * 1024)
     private var writable: Atomic<Bool> = Atomic(value: true)
 
-    fileprivate var writeSpinCount: UInt = 16
+    internal fileprivate(set) var writeSpinCount: UInt = 16
 
     private(set) var closed = false
 
@@ -315,6 +335,11 @@ private final class PendingWritesManager {
     }
     
     /// Add a pending write alongside its promise.
+    ///
+    /// - parameters:
+    ///     - data: The `IOData` to write.
+    ///     - promise: Optionally an `EventLoopPromise` that will get the write operation's result
+    /// - result: If the `Channel` is still writable after adding the write of `data`.
     func add(data: IOData, promise: EventLoopPromise<Void>?) -> Bool {
         assert(!closed)
         self.state.append(data: data, promise: promise)
@@ -325,21 +350,6 @@ private final class PendingWritesManager {
         }
         return true
     }
-
-    /// Are the first two writes both `ByteBuffer` values? This helps to decide if we should call `writev` instead of
-    /// `write` or `sendfile`.
-    private var hasMultipleByteBuffer: Bool {
-        guard self.state.chunks > 1 else {
-            return false
-        }
-
-        if case .byteBuffer(_) = self.state[0].data, case .byteBuffer(_) = self.state[1].data {
-            // We have at least two ByteBuffer in the PendingWrites
-            return true
-        }
-        return false
-    }
-
 
     /// Triggers the appropriate write operation. This is a fancy way of saying trigger either `write`, `writev` or
     /// `sendfile`.
@@ -354,7 +364,7 @@ private final class PendingWritesManager {
                                           fileWriteOperation: (Int32, Int, Int) throws -> IOResult<Int>) throws -> (writeResult: WriteResult, writable: Bool) {
         let wasWritable = writable.load()
         let result: WriteResult
-        if hasMultipleByteBuffer {
+        if self.state.hasMultipleFlushedByteBuffers {
             result = try triggerVectorWrite(vectorWriteOperation: vectorWriteOperation)
         } else {
             result = try triggerSingleWrite(singleWriteOperation: singleWriteOperation, fileWriteOperation: fileWriteOperation)

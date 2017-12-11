@@ -22,7 +22,10 @@ public typealias IOVector = iovec
 
 // TODO: scattering support
 final class Socket : BaseSocket {
-    static var writevLimit: Int {
+    static var writevLimitBytes: Int {
+        return Int(Int32.max)
+    }
+    static var writevLimitIOVectors: Int {
 // UIO_MAXIOV is only exported on linux atm
 #if os(Linux)
         return Int(UIO_MAXIOV)

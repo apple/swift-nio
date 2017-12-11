@@ -305,15 +305,15 @@ internal final class SelectableEventLoop : EventLoop {
     public init(thread: pthread_t) throws {
         self.selector = try NIO.Selector()
         self.thread = thread
-        self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimit)
-        self._storageRefs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimit)
-        self.iovecs = UnsafeMutableBufferPointer(start: self._iovecs, count: Socket.writevLimit)
-        self.storageRefs = UnsafeMutableBufferPointer(start: self._storageRefs, count: Socket.writevLimit)
+        self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
+        self._storageRefs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
+        self.iovecs = UnsafeMutableBufferPointer(start: self._iovecs, count: Socket.writevLimitIOVectors)
+        self.storageRefs = UnsafeMutableBufferPointer(start: self._storageRefs, count: Socket.writevLimitIOVectors)
     }
     
     deinit {
-        _iovecs.deallocate(capacity: Socket.writevLimit)
-        _storageRefs.deallocate(capacity: Socket.writevLimit)
+        _iovecs.deallocate(capacity: Socket.writevLimitIOVectors)
+        _storageRefs.deallocate(capacity: Socket.writevLimitIOVectors)
     }
     
     /// Register the given `SelectableChannel` with this `SelectableEventLoop`. After this point all I/O for the `SelectableChannel` will be processed by this `SelectableEventLoop` until it

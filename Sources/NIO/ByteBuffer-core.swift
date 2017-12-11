@@ -598,3 +598,26 @@ extension ByteBuffer {
         self.moveWriterIndex(to: newIndex)
     }
 }
+
+extension ByteBuffer: Equatable {
+    // TODO: I don't think this makes sense. This should compare bytes 0..<writerIndex instead.
+
+    /// Compare two `ByteBuffer` values. Two `ByteBuffer` values are considered equal if the readable bytes are equal.
+    public static func ==(lhs: ByteBuffer, rhs: ByteBuffer) -> Bool {
+        guard lhs.readableBytes == rhs.readableBytes else {
+            return false
+        }
+
+        if lhs._slice == rhs._slice && lhs._storage === rhs._storage {
+            return true
+        }
+
+        return lhs.withUnsafeReadableBytes { lPtr in
+            rhs.withUnsafeReadableBytes { rPtr in
+                // Shouldn't get here otherwise because of readableBytes check
+                assert(lPtr.count == rPtr.count)
+                return memcmp(lPtr.baseAddress!, rPtr.baseAddress!, lPtr.count) == 0
+            }
+        }
+    }
+}
