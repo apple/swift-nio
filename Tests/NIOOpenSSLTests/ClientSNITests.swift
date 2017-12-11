@@ -42,7 +42,7 @@ class ClientSNITests: XCTestCase {
 
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            try? group.syncShutdownGracefully()
         }
 
         let sniPromise: EventLoopPromise<SniResult> = group.next().newPromise()
@@ -52,7 +52,7 @@ class ClientSNITests: XCTestCase {
         }
         let serverChannel = try serverTLSChannel(withContext: ctx, preHandlers: [sniHandler], postHandlers: [], onGroup: group)
         defer {
-            _ = try! serverChannel.close().wait()
+            _ = try? serverChannel.close().wait()
         }
 
         let clientChannel = try clientTLSChannel(withContext: ctx,
@@ -62,7 +62,7 @@ class ClientSNITests: XCTestCase {
                                                  connectingTo: serverChannel.localAddress!,
                                                  serverHostname: sniField)
         defer {
-            _ = try! clientChannel.close().wait()
+            _ = try? clientChannel.close().wait()
         }
 
         let sniResult = try sniPromise.futureResult.wait()
