@@ -15,6 +15,19 @@
 import XCTest
 @testable import NIOPriorityQueue
 
+public func getRandomNumbers(count: Int) -> [UInt8] {
+    var values: [UInt8] = .init(repeating: 0, count: count)
+    let fd = open("/dev/urandom", O_RDONLY)
+    precondition(fd >= 0)
+    defer {
+        close(fd)
+    }
+    _ = values.withUnsafeMutableBytes { ptr in
+        read(fd, ptr.baseAddress!, ptr.count)
+    }
+    return values
+}
+
 class HeapTests: XCTestCase {
     func testSimple() throws {
         var h = Heap<Int>(type: .maxHeap)
@@ -72,18 +85,6 @@ class HeapTests: XCTestCase {
     }
 
     func testAddAndRemoveRandomNumbers() throws {
-        func getRandomNumbers(count: Int) -> [UInt8] {
-            var values: [UInt8] = .init(repeating: 0, count: count)
-            let fd = open("/dev/urandom", O_RDONLY)
-            precondition(fd >= 0)
-            defer {
-                close(fd)
-            }
-            _ = values.withUnsafeMutableBytes { ptr in
-                read(fd, ptr.baseAddress!, ptr.count)
-            }
-            return values
-        }
         var maxHeap = Heap<UInt8>(type: .maxHeap)
         var minHeap = Heap<UInt8>(type: .minHeap)
         var maxHeapLast = UInt8.max

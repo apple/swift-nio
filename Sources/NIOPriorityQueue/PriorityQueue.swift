@@ -51,6 +51,11 @@ public struct PriorityQueue<T: Comparable> {
     }
 }
 
+extension PriorityQueue: Equatable {
+    public static func ==(lhs: PriorityQueue<T>, rhs: PriorityQueue<T>) -> Bool {
+        return Array(lhs) == Array(rhs)
+    }
+}
 
 extension PriorityQueue: Sequence {
     public struct PriorityQueueIterator<T: Comparable>: IteratorProtocol {
@@ -74,8 +79,14 @@ extension PriorityQueue: Sequence {
     }
 }
 
+public extension PriorityQueue {
+    public var count: Int {
+        return self.heap.count
+    }
+}
+
 extension PriorityQueue: CustomStringConvertible {
     public var description: String {
-        return "PriorityQueue(count: \(self.underestimatedCount))"
+        return "PriorityQueue(count: \(self.underestimatedCount)): \(Array(self))"
     }
 }

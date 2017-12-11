@@ -272,4 +272,8 @@ extension Heap: Sequence {
     func index(after i: Int) -> Int {
         return i + 1
     }
+
+    var count: Int {
+        return self.storage.count
+    }
 }

@@ -75,4 +75,37 @@ class PriorityQueueTest: XCTestCase {
 
         XCTAssertTrue(pq.isEmpty)
     }
+
+    func testBuildAndRemoveFromRandomPriorityQueues() {
+        for ascending in [true, false] {
+            for size in 0...50 {
+                var pq = PriorityQueue<UInt8>(ascending: ascending)
+                let randoms = getRandomNumbers(count: size)
+                randoms.forEach { pq.push($0) }
+
+                /* remove one random member, add it back and assert we're still the same */
+                randoms.forEach { random in
+                    var pq2 = pq
+                    pq2.remove(random)
+                    XCTAssertEqual(pq.count - 1, pq2.count)
+                    XCTAssertNotEqual(pq, pq2)
+                    pq2.push(random)
+                    XCTAssertEqual(pq, pq2)
+                }
+
+                /* remove up to `n` members and add them back at the end and check that the priority queues are still the same */
+                for n in 1...5 where n <= size {
+                    var pq2 = pq
+                    let deleted = randoms.prefix(n).map { (random: UInt8) -> UInt8 in
+                        pq2.remove(random)
+                        return random
+                    }
+                    XCTAssertEqual(pq.count - n, pq2.count)
+                    XCTAssertNotEqual(pq, pq2)
+                    deleted.reversed().forEach { pq2.push($0) }
+                    XCTAssertEqual(pq, pq2, "pq: \(pq), pq2: \(pq2), deleted: \(deleted)")
+                }
+            }
+        }
+    }
 }
