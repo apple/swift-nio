@@ -16,6 +16,20 @@
 import XCTest
 @testable import NIO
 
+private final class ChannelInactivePromiser: ChannelInboundHandler {
+    typealias InboundIn = Any
+
+    let channelInactivePromise: EventLoopPromise<Void>
+
+    init(channel: Channel) {
+        channelInactivePromise = channel.eventLoop.newPromise()
+    }
+
+    func channelInactive(ctx: ChannelHandlerContext) {
+        channelInactivePromise.succeed(result: ())
+    }
+}
+
 public class ByteToMessageDecoderTest: XCTestCase {
     private final class ByteToInt32Decoder : ByteToMessageDecoder {
         typealias InboundIn = ByteBuffer
@@ -59,6 +73,23 @@ public class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertEqual(Int32(2), channel.readInbound())
         XCTAssertEqual(Int32(3), channel.readInbound())
         XCTAssertNil(channel.readInbound())
+    }
+
+    func testDecoderPropagatesChannelInactive() throws {
+        let channel = EmbeddedChannel()
+        let inactivePromiser = ChannelInactivePromiser(channel: channel)
+        _ = try channel.pipeline.add(handler: ByteToInt32Decoder()).wait()
+        _ = try channel.pipeline.add(handler: inactivePromiser).wait()
+
+        var buffer = channel.allocator.buffer(capacity: 32)
+        buffer.write(integer: Int32(1))
+        channel.pipeline.fireChannelRead(data: NIOAny(buffer))
+        XCTAssertEqual(Int32(1), channel.readInbound())
+
+        XCTAssertFalse(inactivePromiser.channelInactivePromise.futureResult.fulfilled)
+
+        channel.pipeline.fireChannelInactive()
+        XCTAssertTrue(inactivePromiser.channelInactivePromise.futureResult.fulfilled)
     }
 }
 

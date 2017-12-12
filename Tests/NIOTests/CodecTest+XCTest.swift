@@ -27,6 +27,7 @@ extension ByteToMessageDecoderTest {
    static var allTests : [(String, (ByteToMessageDecoderTest) -> () throws -> Void)] {
       return [
                 ("testDecoder", testDecoder),
+                ("testDecoderPropagatesChannelInactive", testDecoderPropagatesChannelInactive),
            ]
    }
 }

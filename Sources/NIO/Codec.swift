@@ -58,6 +58,8 @@ extension ByteToMessageDecoder {
                 cumulationBuffer = nil
             }
         }
+        
+        ctx.fireChannelInactive()
     }
     
     public func handlerAdded(ctx: ChannelHandlerContext) throws {
