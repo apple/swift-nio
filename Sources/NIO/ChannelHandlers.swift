@@ -16,8 +16,8 @@
 //
 
 /**
- ChannelHandler implementation which enforces back-pressure by stop reading from the remote-peer when it can not write back fast-enough and start reading again
- once pending data was written.
+ ChannelHandler implementation which enforces back-pressure by stopping to read from the remote peer when it cannot write back fast enough.
+ It will start reading again once pending data was written.
 */
 public class BackPressureHandler: ChannelInboundHandler, _ChannelOutboundHandler {
     public typealias InboundIn = ByteBuffer
@@ -113,11 +113,11 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
     public typealias OutboundOut = NIOAny
     
     enum IdleStateEvent {
-        /// Will be triggered when no write was performed for the specified period of time
+        /// Will be triggered when no write was performed for the specified amount of time
         case write
-        /// Will be triggered when no read was performed for the specified period of time
+        /// Will be triggered when no read was performed for the specified amount of time
         case read
-        /// Will be triggered when neither read nor write was performed for the specified period of time
+        /// Will be triggered when neither read nor write was performed for the specified amount of time
         case all
     }
     

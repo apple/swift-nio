@@ -115,7 +115,7 @@ class PriorityQueueTest: XCTestCase {
         let inTheMiddles = zip(1...99, (1...99).reversed()).map { SomePartiallyOrderedDataType(width: $0, height: $1) }
 
         /*
-         the four values are only partially orderd (from small (top) to large (bottom)):
+         the four values are only partially ordered (from small (top) to large (bottom)):
 
                            clearlyTheSmallest
                           /         |        \
