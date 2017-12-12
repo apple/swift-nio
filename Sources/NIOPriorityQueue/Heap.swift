@@ -98,7 +98,7 @@ internal struct Heap<T: Comparable> {
     private static func heapInsert(storage: inout ContiguousArray<T>, compare: (T, T) -> Bool, key: T) {
         var i = storage.count
         storage.append(key)
-        while i > 0 && !(storage[parentIndex(i)] == storage[i]) && !compare(storage[parentIndex(i)], storage[i]) {
+        while i > 0 && compare(storage[i], storage[parentIndex(i)]) {
             storage.swapAt(i, parentIndex(i))
             i = parentIndex(i)
         }
@@ -107,12 +107,12 @@ internal struct Heap<T: Comparable> {
     // named `HEAP-INCREASE-KEY` in CRLS
     private static func heapRootify(storage: inout ContiguousArray<T>, compare: (T, T) -> Bool, index: Int, key: T) {
         var index = index
-        if key != storage[index] && !compare(key, storage[index]) {
-            fatalError()
+        if compare(storage[index], key) {
+            fatalError("New key must be closer to the root than current key")
         }
 
         storage[index] = key
-        while index > 0 && (storage[parentIndex(index)] != storage[index]) && !compare(storage[parentIndex(index)], storage[index]) {
+        while index > 0 && compare(storage[index], storage[parentIndex(index)]) {
             storage.swapAt(index, parentIndex(index))
             index = parentIndex(index)
         }
@@ -166,11 +166,11 @@ internal struct Heap<T: Comparable> {
                 var rCond = true
                 if li < self.storage.count {
                     let l = self.storage[li]
-                    lCond = me == l || self.comparator(me, l)
+                    lCond = !self.comparator(l, me)
                 }
                 if ri < self.storage.count {
                     let r = self.storage[ri]
-                    rCond = me == r || self.comparator(me, r)
+                    rCond = !self.comparator(r, me)
                 }
                 return lCond && rCond && checkHeapProperty(index: li) && checkHeapProperty(index: ri)
             }

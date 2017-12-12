@@ -732,6 +732,12 @@ private final class ScheduledTask {
     }
 }
 
+extension ScheduledTask: CustomStringConvertible {
+    var description: String {
+        return "ScheduledTask(readyTime: \(self.readyTime))"
+    }
+}
+
 extension ScheduledTask : Comparable {
     public static func < (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs.readyTime < rhs.readyTime

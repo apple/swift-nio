@@ -108,4 +108,58 @@ class PriorityQueueTest: XCTestCase {
             }
         }
     }
+
+    func testPartialOrder() {
+        let clearlyTheSmallest = SomePartiallyOrderedDataType(width: 0, height: 0)
+        let clearlyTheLargest = SomePartiallyOrderedDataType(width: 100, height: 100)
+        let inTheMiddles = zip(1...99, (1...99).reversed()).map { SomePartiallyOrderedDataType(width: $0, height: $1) }
+
+        /*
+         the four values are only partially orderd (from small (top) to large (bottom)):
+
+                           clearlyTheSmallest
+                          /         |        \
+                   inTheMiddle[0]   |    inTheMiddle[1...]
+                          \         |        /
+                            clearlyTheLargest
+         */
+
+        var pq = PriorityQueue<SomePartiallyOrderedDataType>(ascending: true)
+        pq.push(clearlyTheLargest)
+        pq.push(inTheMiddles[0])
+        pq.push(clearlyTheSmallest)
+        inTheMiddles[1...].forEach {
+            pq.push($0)
+        }
+        let pop1 = pq.pop()
+        XCTAssertEqual(clearlyTheSmallest, pop1)
+        for _ in inTheMiddles {
+            let popN = pq.pop()!
+            XCTAssert(inTheMiddles.contains(popN))
+        }
+        XCTAssertEqual(clearlyTheLargest, pq.pop()!)
+        XCTAssert(pq.isEmpty)
+    }
+}
+
+/// This data type is only partially ordered. Ie. from `a < b` and `a != b` we can't imply `a > b`.
+struct SomePartiallyOrderedDataType: Comparable, CustomStringConvertible {
+    public static func <(lhs: SomePartiallyOrderedDataType, rhs: SomePartiallyOrderedDataType) -> Bool {
+        return lhs.width < rhs.width && lhs.height < rhs.height
+    }
+
+    public static func ==(lhs: SomePartiallyOrderedDataType, rhs: SomePartiallyOrderedDataType) -> Bool {
+        return lhs.width == rhs.width && lhs.height == rhs.height
+    }
+
+    private let width: Int
+    private let height: Int
+    public init(width: Int, height: Int) {
+        self.width = width
+        self.height = height
+    }
+
+    public var description: String {
+        return "(w: \(self.width), h: \(self.height))"
+    }
 }
