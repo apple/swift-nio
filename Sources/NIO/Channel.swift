@@ -252,11 +252,9 @@ private struct PendingWritesState {
                             promises.append(promise)
                         }
                     case (true, let n) where n > 0:
-                        /* this is sendfile returning success but writing short, only known to happen on Linux */
-                        #if os(macOS) || os(tvOS) || os(iOS) || os(watchOS)
-                        assert(false, "we have sendfile returning success and writing short, shouldn't happen on Darwin")
-                        #endif
-                        () /* do nothing here as we don't account for bytes written by sendfile */
+                        /* this is sendfile returning success but writing short, only known to happen on Linux (and in the ChannelTests) */
+                        assert(promises.isEmpty)
+                        return (fulfillPromises, .writtenPartially) /* don't alter the state as we don't account for bytes written by sendfile */
                     case (false, _):
                         assert(unaccountedWrites == 0, "still got \(unaccountedWrites) bytes of unaccounted writes")
                     default:
@@ -267,8 +265,19 @@ private struct PendingWritesState {
                 }
             }
             assert(unaccountedWrites == 0, "after doing all the accounting for the byte written, \(unaccountedWrites) bytes of unaccounted writes remain.")
-        case .wouldBlock(_):
+        case .wouldBlock(let n) where n != 0:
+            assert(n > 0, "sendfile returned negative amount of bytes written: \(n)")
+            if _isDebugAssertConfiguration() {
+                switch self.pendingWrites[0].data {
+                case .byteBuffer(let buffer):
+                    fatalError("write with .wouldBlock(\(n)) but a ByteBuffer (\(buffer)) was written")
+                case .fileRegion(let file):
+                    assert(file.readableBytes > 0, "write with .wouldBlock(\(n)) but sendfile wrote fully on \(file)")
+                }
+            }
             /* we don't update here as we get non-zero only if sendfile was used and we don't track bytes to be sent as `FileRegion` */
+            return (fulfillPromises, .writtenPartially)
+        case .wouldBlock(_ /* this is 0 but the compiler can't prove it */):
             return (fulfillPromises, .wouldBlock)
         }
         return (fulfillPromises, .writtenPartially)

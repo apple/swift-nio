@@ -38,6 +38,9 @@ extension ChannelTests {
                 ("testPendingWritesCancellationWorksCorrectly", testPendingWritesCancellationWorksCorrectly),
                 ("testPendingWritesNoMoreThanWritevLimitIsWritten", testPendingWritesNoMoreThanWritevLimitIsWritten),
                 ("testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk", testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk),
+                ("testPendingWritesFileRegion", testPendingWritesFileRegion),
+                ("testPendingWritesEmptyFileRegion", testPendingWritesEmptyFileRegion),
+                ("testPendingWritesInterleavedBuffersAndFiles", testPendingWritesInterleavedBuffersAndFiles),
            ]
    }
 }
