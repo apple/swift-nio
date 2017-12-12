@@ -411,9 +411,8 @@ private struct PendingWritesState {
                                     fileWriteOperation: (Int32, Int, Int) throws -> IOResult<Int>) rethrows -> WriteResult {
         if self.state.isFlushPending && !self.state.isEmpty {
             for _ in 0...writeSpinCount {
-                if closed {
-                    return .closed
-                }
+                assert(!closed,
+                       "Channel got closed during the spinning of a single write operation which should be impossible as we don't call out")
                 let pending = self.state[0]
                 switch pending.data {
                 case .byteBuffer(let buffer):
@@ -443,25 +442,23 @@ private struct PendingWritesState {
     /// - parameters:
     ///     - vectorWriteOperation: The vector write operation to use. Usually `writev`.
     private func triggerVectorWrite(vectorWriteOperation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> WriteResult {
-        if self.state.isFlushPending && !self.state.isEmpty {
-            for _ in 0...writeSpinCount {
-                if closed {
-                    return .closed
-                }
-                switch self.didWrite(try doPendingWriteVectorOperation(pending: self.state,
-                                                                       iovecs: self.iovecs,
-                                                                       storageRefs: self.storageRefs,
-                                                                       vectorWriteOperation)) {
-                case .writtenPartially:
-                    continue
-                case let other:
-                    return other
-                }
+        assert(self.state.isFlushPending && !self.state.isEmpty,
+               "vector write called in state flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty)")
+        for _ in 0...writeSpinCount {
+            if closed {
+                return .closed
             }
-            return .writtenPartially
+            switch self.didWrite(try doPendingWriteVectorOperation(pending: self.state,
+                                                                   iovecs: self.iovecs,
+                                                                   storageRefs: self.storageRefs,
+                                                                   vectorWriteOperation)) {
+            case .writtenPartially:
+                continue
+            case let other:
+                return other
+            }
         }
-
-        return .nothingToBeWritten
+        return .writtenPartially
     }
 
     /// Fail all the outstanding writes. This is useful if for example the `Channel` is closed.
