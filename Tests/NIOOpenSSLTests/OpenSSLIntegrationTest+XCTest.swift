@@ -39,6 +39,7 @@ extension OpenSSLIntegrationTest {
                 ("testDontLoseClosePromises", testDontLoseClosePromises),
                 ("testTrustStoreOnDisk", testTrustStoreOnDisk),
                 ("testChecksTrustStoreOnDisk", testChecksTrustStoreOnDisk),
+                ("testReadAfterCloseNotifyDoesntKillProcess", testReadAfterCloseNotifyDoesntKillProcess),
            ]
    }
 }

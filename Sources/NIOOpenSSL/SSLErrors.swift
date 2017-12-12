@@ -61,6 +61,7 @@ public enum NIOOpenSSLError: Error {
     case noCertificateToValidate
     case unableToValidateCertificate
     case cannotFindPeerIP
+    case readInInvalidTLSState
 }
 
 extension NIOOpenSSLError: Equatable {

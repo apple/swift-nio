@@ -802,4 +802,47 @@ class OpenSSLIntegrationTest: XCTestCase {
         XCTAssertEqual(actualErrors.count, 1)
         try clientChannel.closeFuture.wait()
     }
+
+    func testReadAfterCloseNotifyDoesntKillProcess() throws {
+        let serverChannel = EmbeddedChannel()
+        let clientChannel = EmbeddedChannel()
+
+        let ctx = try configuredSSLContext()
+
+        try serverChannel.pipeline.add(handler: try OpenSSLServerHandler(context: ctx)).wait()
+        try clientChannel.pipeline.add(handler: try OpenSSLClientHandler(context: ctx)).wait()
+
+        let addr: SocketAddress = try .unixDomainSocketAddress(path: "/tmp/whatever2")
+        let connectFuture = clientChannel.connect(to: addr)
+        serverChannel.pipeline.fireChannelActive()
+        try interactInMemory(clientChannel: clientChannel, serverChannel: serverChannel)
+        try connectFuture.wait()
+
+        // Ok, we're connected. Now we want to close the server, and have that trigger a client CLOSE_NOTIFY.
+        // However, when we deliver that CLOSE_NOTIFY we're then going to immediately send another chunk of
+        // data. We can get away with doing this because the Embedded channel fires any promise for close()
+        // before it fires channelInactive, which will allow us to fire channelRead from within the callback.
+        let closePromise = serverChannel.close()
+        closePromise.whenComplete { _ in
+            var buffer = serverChannel.allocator.buffer(capacity: 5)
+            buffer.write(staticString: "hello")
+            serverChannel.pipeline.fireChannelRead(data: NIOAny(buffer))
+            serverChannel.pipeline.fireChannelReadComplete()
+        }
+
+        do {
+            try serverChannel.throwIfErrorCaught()
+        } catch {
+            XCTFail("Already has error: \(error)")
+        }
+
+        do {
+            try interactInMemory(clientChannel: clientChannel, serverChannel: serverChannel)
+            XCTFail("Did not cause error")
+        } catch NIOOpenSSLError.readInInvalidTLSState {
+            // Nothing to do here.
+        } catch {
+            XCTFail("Encountered unexpected error: \(error)")
+        }
+    }
 }

@@ -109,7 +109,8 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
         case .closing:
             doShutdownStep(ctx: ctx)
         default:
-            fatalError("Read during invalid TLS state")
+            ctx.fireErrorCaught(error: NIOOpenSSLError.readInInvalidTLSState)
+            channelClose(ctx: ctx)
         }
     }
     

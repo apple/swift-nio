@@ -230,7 +230,7 @@ public class EmbeddedChannel : Channel {
         return !channelcore.outboundBuffer.isEmpty
     }
     
-    private func throwIfErrorCaught() throws {
+    public func throwIfErrorCaught() throws {
         if let error = channelcore.error {
             channelcore.error = nil
             throw error
