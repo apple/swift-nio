@@ -845,4 +845,44 @@ class OpenSSLIntegrationTest: XCTestCase {
             XCTFail("Encountered unexpected error: \(error)")
         }
     }
+
+    func testZeroLengthWrite() throws {
+        let ctx = try configuredSSLContext()
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try? group.syncShutdownGracefully()
+        }
+
+        let completionPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
+
+        let serverChannel = try serverTLSChannel(withContext: ctx,
+                                                 andHandlers: [PromiseOnReadHandler(promise: completionPromise)],
+                                                 onGroup: group)
+        defer {
+            _ = try? serverChannel.close().wait()
+        }
+
+        let clientChannel = try clientTLSChannel(withContext: ctx,
+                                                 preHandlers: [],
+                                                 postHandlers: [],
+                                                 onGroup: group,
+                                                 connectingTo: serverChannel.localAddress!)
+        defer {
+            _ = try? clientChannel.close().wait()
+        }
+
+        // Write several zero-length buffers *and* one with some actual data. Only one should
+        // be written.
+        var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
+        let promises = (0...5).map { _ in clientChannel.write(data: NIOAny(originalBuffer)) }
+        originalBuffer.write(staticString: "hello")
+        _ = try clientChannel.writeAndFlush(data: NIOAny(originalBuffer)).wait()
+
+        // At this time all the writes should have succeeded.
+        XCTAssertTrue(promises.map { $0.fulfilled }.reduce(true, { $0 && $1 }))
+
+        let newBuffer = try completionPromise.futureResult.wait()
+        XCTAssertEqual(newBuffer, originalBuffer)
+    }
 }

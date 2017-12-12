@@ -239,6 +239,12 @@ internal final class SSLConnection {
     /// This call will only write the data into OpenSSL's internal buffers. It needs to be obtained
     /// by calling `getDataForNetwork` after this call completes.
     func writeDataToNetwork(_ data: inout ByteBuffer) -> AsyncOperationResult<Int32> {
+        // OpenSSL does not allow calling SSL_write with zero-length buffers. Zero-length
+        // writes always succeed.
+        guard data.readableBytes > 0 else {
+            return .complete(0)
+        }
+
         let writtenBytes = data.withUnsafeReadableBytes { (pointer) -> Int32 in
             return SSL_write(ssl, pointer.baseAddress, Int32(pointer.count))
         }

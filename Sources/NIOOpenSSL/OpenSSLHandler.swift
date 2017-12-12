@@ -357,7 +357,6 @@ extension OpenSSLHandler {
 
         // These are some annoying variables we use to persist state across invocations of
         // our closures. A better version of this code might be able to simplify this somewhat.
-        var writeCount = 0
         var promises: [EventLoopPromise<Void>] = []
 
         /// Given a byte buffer to encode, passes it to OpenSSL and handles the result.
@@ -367,12 +366,9 @@ extension OpenSSLHandler {
             switch result {
             case .complete:
                 if let promise = promise { promises.append(promise) }
-                writeCount += 1
                 return true
             case .incomplete:
                 // Ok, we can't write. Let's stop.
-                // We believe this can only ever happen on the first attempt to write.
-                precondition(writeCount == 0, "Unexpected change in OpenSSL state during write unbuffering: write count \(writeCount)")
                 return false
             case .failed(let err):
                 // Once a write fails, all writes must fail. This includes prior writes
@@ -385,10 +381,15 @@ extension OpenSSLHandler {
         func flushData(userFlushPromise: EventLoopPromise<Void>?) throws -> Bool {
             // This is a flush. We can go ahead and flush now.
             if let promise = userFlushPromise { promises.append(promise) }
+            flushWithPromises()
+            return true
+        }
+
+        func flushWithPromises() {
             let ourPromise: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
             promises.forEach { ourPromise.futureResult.cascade(promise: $0) }
             writeDataToNetwork(ctx: ctx, promise: ourPromise)
-            return true
+            promises = []
         }
 
         do {
@@ -399,6 +400,13 @@ extension OpenSSLHandler {
                 case .flush(let p):
                     return try flushData(userFlushPromise: p)
                 }
+            }
+
+            // If we got this far, but we have promises, it means that we weren't able to
+            // write everything up to our mark: the SSL object started returning WANT_{READ,WRITE}
+            // before we got there. That's ok: we'll shove the app data out to the network anyway.
+            if promises.count > 0 {
+                flushWithPromises()
             }
         } catch {
             // We encountered an error, it's cleanup time. Close ourselves down.
