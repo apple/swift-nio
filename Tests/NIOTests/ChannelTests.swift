@@ -202,8 +202,10 @@ public class ChannelTests: XCTestCase {
 
     private func withPendingWritesManager(_ fn: (PendingWritesManager) throws -> Void) rethrows {
         try withExtendedLifetime(NSObject()) { o in
-            var iovecs: [IOVector] = Array(repeating: iovec(), count: Socket.writevLimitIOVectors)
-            var managed: [Unmanaged<AnyObject>] = Array(repeating: Unmanaged.passUnretained(o), count: Socket.writevLimitIOVectors)
+            var iovecs: [IOVector] = Array(repeating: iovec(), count: Socket.writevLimitIOVectors + 1)
+            var managed: [Unmanaged<AnyObject>] = Array(repeating: Unmanaged.passUnretained(o), count: Socket.writevLimitIOVectors + 1)
+            /* put a canary value at the end */
+            iovecs[iovecs.count - 1] = iovec(iov_base: UnsafeMutableRawPointer(bitPattern: 0xdeadbeef), iov_len: 0xdeadbeef)
             try iovecs.withUnsafeMutableBufferPointer { iovecs in
                 try managed.withUnsafeMutableBufferPointer { managed in
                     let pwm = NIO.PendingWritesManager(iovecs: iovecs, storageRefs: managed)
@@ -218,6 +220,10 @@ public class ChannelTests: XCTestCase {
                     XCTAssertFalse(pwm.isFlushPending)
                 }
             }
+            /* assert that the canary values are still okay, we should definitely have never written those */
+            XCTAssertEqual(managed.last!.toOpaque(), Unmanaged.passUnretained(o).toOpaque())
+            XCTAssertEqual(0xdeadbeef, Int(bitPattern: iovecs.last!.iov_base))
+            XCTAssertEqual(0xdeadbeef, iovecs.last!.iov_len)
         }
     }
 
