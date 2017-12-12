@@ -503,7 +503,7 @@ public class ChannelTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
 
         withPendingWritesManager { pwm in
-            let numberOfBytes = Int(pwm.writeSpinCount + 1 /* because we spin 1 + spin count */ + 1 /* so one byte remains at the end */)
+            let numberOfBytes = Int(pwm.writeSpinCount + 1 /* so one byte remains at the end */)
             buffer.clear()
             buffer.write(bytes: Array<UInt8>(repeating: 0xff, count: numberOfBytes))
             let ps: [EventLoopPromise<()>] = (0..<1).map { _ in el.newPromise() }
@@ -541,7 +541,7 @@ public class ChannelTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
 
         withPendingWritesManager { pwm in
-            let numberOfBytes = Int(pwm.writeSpinCount + 1 /* because we spin 1 + spin count */ + 1 /* so one byte remains at the end */)
+            let numberOfBytes = Int(pwm.writeSpinCount + 1 /* so one byte remains at the end */)
             buffer.clear()
             buffer.write(bytes: [0xff] as [UInt8])
             let ps: [EventLoopPromise<()>] = (0..<numberOfBytes).map { _ in

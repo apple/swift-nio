@@ -410,7 +410,7 @@ private struct PendingWritesState {
     private func triggerSingleWrite(singleWriteOperation: (UnsafeRawBufferPointer) throws -> IOResult<Int>,
                                     fileWriteOperation: (Int32, Int, Int) throws -> IOResult<Int>) rethrows -> WriteResult {
         if self.state.isFlushPending && !self.state.isEmpty {
-            for _ in 0...writeSpinCount {
+            for _ in 0..<writeSpinCount {
                 assert(!closed,
                        "Channel got closed during the spinning of a single write operation which should be impossible as we don't call out")
                 let pending = self.state[0]
@@ -444,7 +444,7 @@ private struct PendingWritesState {
     private func triggerVectorWrite(vectorWriteOperation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> WriteResult {
         assert(self.state.isFlushPending && !self.state.isEmpty,
                "vector write called in state flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty)")
-        for _ in 0...writeSpinCount {
+        for _ in 0..<writeSpinCount {
             if closed {
                 return .closed
             }
