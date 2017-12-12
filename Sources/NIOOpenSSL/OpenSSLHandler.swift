@@ -272,7 +272,12 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
     private func writeDataToNetwork(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         // There may be no data to write, in which case we can just exit early.
         guard let dataToWrite = connection.getDataForNetwork(allocator: ctx.channel!.allocator) else {
-            promise?.succeed(result: ())
+            if let promise = promise {
+                // If we have a promise, we need to enforce ordering so we issue a zero-length write that
+                // the event loop will have to handle.
+                let buffer = ctx.channel!.allocator.buffer(capacity: 0)
+                ctx.writeAndFlush(data: wrapInboundOut(buffer), promise: promise)
+            }
             return
         }
 

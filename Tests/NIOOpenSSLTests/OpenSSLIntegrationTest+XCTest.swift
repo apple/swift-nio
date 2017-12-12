@@ -41,6 +41,7 @@ extension OpenSSLIntegrationTest {
                 ("testChecksTrustStoreOnDisk", testChecksTrustStoreOnDisk),
                 ("testReadAfterCloseNotifyDoesntKillProcess", testReadAfterCloseNotifyDoesntKillProcess),
                 ("testZeroLengthWrite", testZeroLengthWrite),
+                ("testZeroLengthWritePromisesFireInOrder", testZeroLengthWritePromisesFireInOrder),
            ]
    }
 }

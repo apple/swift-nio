@@ -187,6 +187,28 @@ private class ChannelActiveWaiter: ChannelInboundHandler {
     }
 }
 
+/// A channel handler that delays all writes that it receives. This is useful
+/// in tests that want to ensure that writes propagate through the system in order.
+///
+/// Note that you must call forceFlush to pass all the data through, or your tests will
+/// explode.
+private class WriteDelayHandler: ChannelOutboundHandler {
+    public typealias OutboundIn = Any
+    public typealias OutboundOut = Any
+
+    private var writes: [(ChannelHandlerContext, NIOAny, EventLoopPromise<Void>?)] = []
+
+    func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        writes.append((ctx, data, promise))
+    }
+
+    func forceFlush() {
+        let writes = self.writes
+        self.writes = []
+        writes.forEach { $0.0.write(data: $0.1, promise: $0.2) }
+    }
+}
+
 internal func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, andHandlers: [ChannelHandler], onGroup: EventLoopGroup) throws -> Channel {
     return try serverTLSChannel(withContext: withContext, preHandlers: [], postHandlers: andHandlers, onGroup: onGroup)
 }
@@ -884,5 +906,51 @@ class OpenSSLIntegrationTest: XCTestCase {
 
         let newBuffer = try completionPromise.futureResult.wait()
         XCTAssertEqual(newBuffer, originalBuffer)
+    }
+
+    func testZeroLengthWritePromisesFireInOrder() throws {
+        let serverChannel = EmbeddedChannel()
+        let clientChannel = EmbeddedChannel()
+
+        let ctx = try configuredSSLContext()
+
+        try serverChannel.pipeline.add(handler: try OpenSSLServerHandler(context: ctx)).wait()
+        try clientChannel.pipeline.add(handler: try OpenSSLClientHandler(context: ctx)).wait()
+
+        let addr: SocketAddress = try .unixDomainSocketAddress(path: "/tmp/whatever2")
+        let connectFuture = clientChannel.connect(to: addr)
+        serverChannel.pipeline.fireChannelActive()
+        try interactInMemory(clientChannel: clientChannel, serverChannel: serverChannel)
+        try connectFuture.wait()
+
+        // This test fires three writes, flushing between them all. We want to confirm that all of the
+        // writes are succeeded in order. To do that, we want to add a WriteDelayHandler to
+        // prevent the EmbeddedChannel succeeding the early writes.
+        let writeDelayer = WriteDelayHandler()
+        clientChannel.pipeline.add(handler: writeDelayer, first: true)
+        var writeCount = 0
+        let emptyBuffer = clientChannel.allocator.buffer(capacity: 16)
+        var buffer = clientChannel.allocator.buffer(capacity: 16)
+        buffer.write(staticString: "hello world")
+
+        clientChannel.write(data: NIOAny(buffer)).whenComplete { _ in
+            XCTAssertEqual(writeCount, 0)
+            writeCount = 1
+        }
+        clientChannel.flush(promise: nil)
+        clientChannel.write(data: NIOAny(emptyBuffer)).whenComplete { _ in
+            XCTAssertEqual(writeCount, 1)
+            writeCount = 2
+        }
+        clientChannel.flush(promise: nil)
+        clientChannel.write(data: NIOAny(buffer)).whenComplete { _ in
+            XCTAssertEqual(writeCount, 2)
+            writeCount = 3
+        }
+        clientChannel.flush(promise: nil)
+
+        XCTAssertEqual(writeCount, 0)
+        writeDelayer.forceFlush()
+        XCTAssertEqual(writeCount, 3)
     }
 }
