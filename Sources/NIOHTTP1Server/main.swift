@@ -331,11 +331,9 @@ let bootstrap = ServerBootstrap(group: group)
 
     // Set the handlers that are applied to the accepted Channels
     .handler(childHandler: ChannelInitializer(initChannel: { channel in
-        return channel.pipeline.add(handler: HTTPResponseEncoder()).then(callback: { v2 in
-            return channel.pipeline.add(handler: HTTPRequestDecoder()).then(callback: { v2 in
-                return channel.pipeline.add(handler: HTTPHandler(htdocsPath: htdocs))
-            })
-        })
+        return channel.pipeline.addHTTPServerHandlers().then {
+            return channel.pipeline.add(handler: HTTPHandler(htdocsPath: htdocs))
+        }
     }))
 
     // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels

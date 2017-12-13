@@ -31,11 +31,9 @@ private func serverHTTPChannel(group: EventLoopGroup, handlers: [ChannelHandler]
     return try! ServerBootstrap(group: group)
         .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
         .handler(childHandler: ChannelInitializer(initChannel: { channel in
-            channel.pipeline.add(handler: HTTPRequestDecoder()).then {
-                channel.pipeline.add(handler: HTTPResponseEncoder()).then {
-                    let futureResults = handlers.map { channel.pipeline.add(handler: $0) }
-                    return EventLoopFuture<Void>.andAll(futureResults, eventLoop: channel.eventLoop)
-                }
+            channel.pipeline.addHTTPServerHandlers().then {
+                let futureResults = handlers.map { channel.pipeline.add(handler: $0) }
+                return EventLoopFuture<Void>.andAll(futureResults, eventLoop: channel.eventLoop)
             }
         })).bind(to: "127.0.0.1", on: 0).wait()
 }

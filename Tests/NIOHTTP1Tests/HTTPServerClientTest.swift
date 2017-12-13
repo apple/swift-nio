@@ -341,10 +341,8 @@ class HTTPServerClientTest : XCTestCase {
             // Set the handlers that are appled to the accepted Channels
             .handler(childHandler: ChannelInitializer(initChannel: { channel in
                 // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
-                channel.pipeline.add(handler: HTTPRequestDecoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseEncoder()).then {
-                        channel.pipeline.add(handler: httpHandler)
-                    }
+                channel.pipeline.addHTTPServerHandlers().then {
+                    channel.pipeline.add(handler: httpHandler)
                 }
             })).bind(to: "127.0.0.1", on: 0).wait()
         
@@ -354,10 +352,8 @@ class HTTPServerClientTest : XCTestCase {
         
         let clientChannel = try ClientBootstrap(group: group)
             .handler(handler: ChannelInitializer(initChannel: { channel in
-                channel.pipeline.add(handler: HTTPRequestEncoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseDecoder()).then {
-                        channel.pipeline.add(handler: accumulation)
-                    }
+                channel.pipeline.addHTTPClientHandlers().then {
+                    channel.pipeline.add(handler: accumulation)
                 }
             }))
             .connect(to: serverChannel.localAddress!)
@@ -403,10 +399,8 @@ class HTTPServerClientTest : XCTestCase {
             // Set the handlers that are appled to the accepted Channels
             .handler(childHandler: ChannelInitializer(initChannel: { channel in
                 // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
-                channel.pipeline.add(handler: HTTPRequestDecoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseEncoder()).then {
-                        channel.pipeline.add(handler: httpHandler)
-                    }
+                channel.pipeline.addHTTPServerHandlers().then {
+                    channel.pipeline.add(handler: httpHandler)
                 }
             })).bind(to: "127.0.0.1", on: 0).wait()
         
@@ -416,10 +410,8 @@ class HTTPServerClientTest : XCTestCase {
         
         let clientChannel = try ClientBootstrap(group: group)
             .handler(handler: ChannelInitializer(initChannel: { channel in
-                channel.pipeline.add(handler: HTTPRequestEncoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseDecoder()).then {
-                        channel.pipeline.add(handler: accumulation)
-                    }
+                channel.pipeline.addHTTPClientHandlers().then {
+                    channel.pipeline.add(handler: accumulation)
                 }
             }))
             .connect(to: serverChannel.localAddress!)
@@ -465,10 +457,8 @@ class HTTPServerClientTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .handler(childHandler: ChannelInitializer(initChannel: { channel in
-                channel.pipeline.add(handler: HTTPRequestDecoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseEncoder()).then {
-                        channel.pipeline.add(handler: httpHandler)
-                    }
+                channel.pipeline.addHTTPServerHandlers().then {
+                    channel.pipeline.add(handler: httpHandler)
                 }
             })).bind(to: "127.0.0.1", on: 0).wait()
 
@@ -478,10 +468,8 @@ class HTTPServerClientTest : XCTestCase {
 
         let clientChannel = try ClientBootstrap(group: group)
             .handler(handler: ChannelInitializer(initChannel: { channel in
-                channel.pipeline.add(handler: HTTPRequestEncoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseDecoder()).then {
-                        channel.pipeline.add(handler: accumulation)
-                    }
+                channel.pipeline.addHTTPClientHandlers().then {
+                    channel.pipeline.add(handler: accumulation)
                 }
             }))
             .connect(to: serverChannel.localAddress!)
@@ -529,10 +517,8 @@ class HTTPServerClientTest : XCTestCase {
             // Set the handlers that are appled to the accepted Channels
             .handler(childHandler: ChannelInitializer(initChannel: { channel in
                 // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
-                channel.pipeline.add(handler: HTTPRequestDecoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseEncoder()).then {
-                        channel.pipeline.add(handler: httpHandler)
-                    }
+                channel.pipeline.addHTTPServerHandlers().then {
+                    channel.pipeline.add(handler: httpHandler)
                 }
             })).bind(to: "127.0.0.1", on: 0).wait()
 
@@ -573,10 +559,8 @@ class HTTPServerClientTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .handler(childHandler: ChannelInitializer(initChannel: { channel in
-                channel.pipeline.add(handler: HTTPRequestDecoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseEncoder()).then {
-                        channel.pipeline.add(handler: httpHandler)
-                    }
+                channel.pipeline.addHTTPServerHandlers().then {
+                    channel.pipeline.add(handler: httpHandler)
                 }
             })).bind(to: "127.0.0.1", on: 0).wait()
         defer {
@@ -585,10 +569,8 @@ class HTTPServerClientTest : XCTestCase {
 
         let clientChannel = try ClientBootstrap(group: group)
             .handler(handler: ChannelInitializer(initChannel: { channel in
-                channel.pipeline.add(handler: HTTPRequestEncoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseDecoder()).then {
-                        channel.pipeline.add(handler: accumulation)
-                    }
+                channel.pipeline.addHTTPClientHandlers().then {
+                    channel.pipeline.add(handler: accumulation)
                 }
             }))
             .connect(to: serverChannel.localAddress!)
@@ -622,10 +604,8 @@ class HTTPServerClientTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .handler(childHandler: ChannelInitializer(initChannel: { channel in
-                channel.pipeline.add(handler: HTTPRequestDecoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseEncoder()).then {
-                        channel.pipeline.add(handler: httpHandler)
-                    }
+                channel.pipeline.addHTTPServerHandlers().then {
+                    channel.pipeline.add(handler: httpHandler)
                 }
             })).bind(to: "127.0.0.1", on: 0).wait()
         defer {
@@ -634,10 +614,8 @@ class HTTPServerClientTest : XCTestCase {
 
         let clientChannel = try ClientBootstrap(group: group)
             .handler(handler: ChannelInitializer(initChannel: { channel in
-                channel.pipeline.add(handler: HTTPRequestEncoder()).then {
-                    channel.pipeline.add(handler: HTTPResponseDecoder()).then {
-                        channel.pipeline.add(handler: accumulation)
-                    }
+                channel.pipeline.addHTTPClientHandlers().then {
+                    channel.pipeline.add(handler: accumulation)
                 }
             }))
             .connect(to: serverChannel.localAddress!)

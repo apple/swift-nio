@@ -110,8 +110,48 @@ private protocol AnyHTTPDecoder: class {
     func popRequestMethod() -> HTTPMethod?
 }
 
+public extension ChannelPipeline {
+    /// Configure a `ChannelPipeline` for use as a HTTP server.
+    ///
+    /// - parameters:
+    ///     - first: Whether to add the HTTP server at the head of the channel pipeline,
+    ///              or at the tail.
+    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    public func addHTTPServerHandlers(first: Bool = false) -> EventLoopFuture<Void> {
+        return addHandlers(HTTPResponseEncoder(), HTTPRequestDecoder(), first: first)
+    }
+
+    /// Configure a `ChannelPipeline` for use as a HTTP client.
+    ///
+    /// - parameters:
+    ///     - first: Whether to add the HTTP client at the head of the channel pipeline,
+    ///              or at the tail.
+    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    public func addHTTPClientHandlers(first: Bool = false) -> EventLoopFuture<Void> {
+        return addHandlers(HTTPRequestEncoder(), HTTPResponseDecoder(), first: first)
+    }
+
+    /// Adds the provided channel handlers to the pipeline in the order given, taking account
+    /// of the behaviour of `ChannelHandler.add(first:)`.
+    private func addHandlers(_ handlers: ChannelHandler..., first: Bool) -> EventLoopFuture<Void> {
+        var handlers = handlers
+        if first {
+            handlers = handlers.reversed()
+        }
+
+        return EventLoopFuture<Void>.andAll(handlers.map { add(handler: $0) }, eventLoop: eventLoop)
+    }
+}
+
 /// A `ChannelInboundHandler` used to decode HTTP requests. See the documentation
 /// on `HTTPDecoder` for more.
+///
+/// While the `HTTPRequestDecoder` does not currently have a specific ordering requirement in the
+/// `ChannelPipeline` (unlike `HTTPResponseDecoder`), it is possible that it will develop one. For
+/// that reason, applications should try to ensure that the `HTTPRequestDecoder` *later* in the
+/// `ChannelPipeline` than the `HTTPResponseEncoder`.
+///
+/// Rather than set this up manually, consider using `ChannelPipeline.addHTTPServerHandlers`.
 public final class HTTPRequestDecoder: HTTPDecoder<HTTPServerRequestPart> {
     public convenience init() {
         self.init(type: HTTPServerRequestPart.self)
@@ -120,6 +160,12 @@ public final class HTTPRequestDecoder: HTTPDecoder<HTTPServerRequestPart> {
 
 /// A `ChannelInboundHandler` used to decode HTTP responses. See the documentation
 /// on `HTTPDecoder` for more.
+///
+/// The `HTTPResponseDecoder` must be placed later in the channel pipeline than the `HTTPRequestEncoder`,
+/// as it needs to see the outbound messages in order to keep track of what the HTTP request methods
+/// were for accurate decoding.
+///
+/// Rather than set this up manually, consider using `ChannelPipeline.addHTTPClientHandlers`.
 public final class HTTPResponseDecoder: HTTPDecoder<HTTPClientResponsePart>, ChannelOutboundHandler {
     public typealias OutboundIn = HTTPClientRequestPart
     public typealias OutboundOut = HTTPClientRequestPart
