@@ -502,8 +502,8 @@ private extension ByteBuffer {
     }
 }
 
-extension FileRegion {
-    public func withMutableReader(_ body: (Int32, Int, Int) throws -> IOResult<Int>) rethrows -> IOResult<Int>  {
+private extension FileRegion {
+    func withMutableReader(_ body: (Int32, Int, Int) throws -> IOResult<Int>) rethrows -> IOResult<Int>  {
         var writeResult: IOResult<Int>!
 
         _ = try self.withMutableReader { (fd, offset, limit) -> Int in
@@ -520,10 +520,10 @@ extension FileRegion {
     }
 }
 
-/*
- All operations on SocketChannel are thread-safe
- */
-final class SocketChannel : BaseSocketChannel<Socket> {
+/// A `Channel` for a client socket.
+///
+/// - note: All operations on `SocketChannel` are thread-safe.
+final class SocketChannel: BaseSocketChannel<Socket> {
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
         let socket = try Socket(protocolFamily: protocolFamily)
@@ -635,9 +635,9 @@ final class SocketChannel : BaseSocketChannel<Socket> {
     }
 }
 
-/*
- All operations on ServerSocketChannel are thread-safe
- */
+/// A `Channel` for a server socket.
+///
+/// - note: All operations on `ServerSocketChannel` are thread-safe.
 final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
 
     private var backlog: Int32 = 128
@@ -741,9 +741,9 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
 }
 
 
-/*
- All methods must be called from the EventLoop thread
- */
+/// The core `Channel` methods for NIO-internal use only.
+///
+/// - note: All methods must be called from the EventLoop thread
 public protocol ChannelCore : class {
     func register0(promise: EventLoopPromise<Void>?)
     func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?)
@@ -757,38 +757,80 @@ public protocol ChannelCore : class {
     func errorCaught0(error: Error)
 }
 
-/*
- All methods exposed by Channel are thread-safe
- */
+/// A `Channel` is easiest thought of as a network socket. But it can be anything that is capable of I/O operations such
+/// as read, write, connect, and bind.
+///
+/// - note: All operations on `Channel` are thread-safe.
+///
+/// In SwiftNIO, all I/O operations are asynchronous and hence all operations on `Channel` are asynchronous too. This means
+/// that all I/O operations will return immediately, usually before the work has been completed. The `EventLoopPromise`s
+/// passed to or returned by the operations are used to retrieve the result of an operation after it has completed.
+///
+/// A `Channel` owns its `ChannelPipeline` which handles all I/O events and requests associated with the `Channel`.
 public protocol Channel : class, ChannelOutboundInvoker {
+    /// The `Channel`'s `ByteBuffer` allocator. This is _the only_ supported way of allocating `ByteBuffer`s to be used with this `Channel`.
     var allocator: ByteBufferAllocator { get }
 
+    /// The `closeFuture` will fire when the `Channel` has been closed.
     var closeFuture: EventLoopFuture<Void> { get }
 
+    /// The `ChannelPipeline` which handles all I/O events and requests associated with this `Channel`.
     var pipeline: ChannelPipeline { get }
+    
+    /// The local `SocketAddress`.
     var localAddress: SocketAddress? { get }
+    
+    /// The remote peer's `SocketAddress`.
     var remoteAddress: SocketAddress? { get }
 
+    /// `Channel`s are hierarchical and might have a parent `Channel`. `Channel` hierarchies are in use for certain
+    /// protocols such as HTTP/2.
     var parent: Channel? { get }
 
+    /// Set `option` to `value` on this `Channel`.
     func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws
+    
+    /// Get the value of `option` for this `Channel`.
     func getOption<T: ChannelOption>(option: T) throws -> T.OptionType
 
+    /// Returns if this `Channel` is currently writable.
     var isWritable: Bool { get }
+    
+    /// Returns if this `Channel` is currently active. Active is defined as the period of time after the
+    /// `channelActive` and before `channelInactive` has fired. The main use for this is to know if `channelActive`
+    /// or `channelInactive` can be expected next when `handlerAdded` was received.
     var isActive: Bool { get }
 
+    /// Reach out to the `ChannelCore`.
+    ///
+    /// - warning: Unsafe, this is for use in NIO's core only.
     var _unsafe: ChannelCore { get }
 }
 
+/// A `SelectableChannel` is a `Channel` that can be used with a `Selector` which notifies a user when certain events
+/// before possible. On UNIX a `Selector` is usually an abstraction of `select`, `poll`, `epoll` or `kqueue`.
 protocol SelectableChannel : Channel {
+    /// The type of the `Selectable`. A `Selectable` is usually wrapping a file descriptor that can be registered in a
+    /// `Selector`.
     associatedtype SelectableType: Selectable
 
+    /// Returns the `Selectable` which usually contains the file descriptor for the socket.
     var selectable: SelectableType { get }
+    
+    /// The event(s) of interest.
     var interestedEvent: IOEvent { get }
 
+    /// Called when the `SelectableChannel` is ready to be written.
     func writable()
+    
+    /// Called when the `SelectableChannel` is ready to be read.
     func readable()
 
+    /// Creates a registration for the `interested` `IOEvent` suitable for this `Channel`.
+    ///
+    /// - parameters:
+    ///     - interested: The event(s) of interest.
+    /// - returns: A suitable registration for the `IOEvent` of interest.
     func registrationFor(interested: IOEvent) -> NIORegistration
 }
 
@@ -1369,13 +1411,21 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 }
 
+/// An error that can occur on `Channel` operations.
 public enum ChannelError: Error {
+    /// Tried to connect on a `Channel` that is already connecting.
     case connectPending
-    case messageUnsupported
+    
+    /// Unsupported operation triggered on a `Channel`. For example `connect` on a `ServerSocketChannel`.
     case operationUnsupported
-    /* read, write or flush was called on a channel that is already closed */
+    
+    /// An I/O operation (e.g. read/write/flush) called on a channel that is already closed.
     case ioOnClosedChannel
-    /* close was called on a channel that is already closed */
+    
+    /// Close was called on a channel that is already closed.
     case alreadyClosed
+    
+    /// A read operation reached end-of-file. This usually means the remote peer closed the socket but it's still
+    /// open locally.
     case eof
 }

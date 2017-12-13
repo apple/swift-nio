@@ -47,7 +47,7 @@ class EmbeddedChannelTest: XCTestCase {
             try channel.writeInbound(data: "msg")
             XCTFail()
         } catch let err {
-            XCTAssertEqual(ChannelError.messageUnsupported, err as! ChannelError)
+            XCTAssertEqual(ChannelError.operationUnsupported, err as! ChannelError)
         }
         XCTAssertFalse(try channel.finish())
     }
@@ -59,7 +59,7 @@ class EmbeddedChannelTest: XCTestCase {
             try channel.writeOutbound(data: "msg")
             XCTFail()
         } catch let err {
-            XCTAssertEqual(ChannelError.messageUnsupported, err as! ChannelError)
+            XCTAssertEqual(ChannelError.operationUnsupported, err as! ChannelError)
         }
         XCTAssertFalse(try channel.finish())
     }
@@ -109,7 +109,7 @@ class EmbeddedChannelTest: XCTestCase {
         typealias InboundIn = String
         
         public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) throws {
-            throw ChannelError.messageUnsupported
+            throw ChannelError.operationUnsupported
         }
         
     }
@@ -119,7 +119,7 @@ class EmbeddedChannelTest: XCTestCase {
         typealias OutboundOut = Never
         
         public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-            promise!.fail(error: ChannelError.messageUnsupported)
+            promise!.fail(error: ChannelError.operationUnsupported)
         }
     }
 
