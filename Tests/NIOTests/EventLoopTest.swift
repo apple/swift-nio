@@ -43,7 +43,7 @@ public class EventLoopTest : XCTestCase {
 
         // First, we create a server and client channel, but don't connect them.
         let serverChannel = try ServerBootstrap(group: eventLoopGroup)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .bind(to: "127.0.0.1", on: 0).wait()
         let clientBootstrap = ClientBootstrap(group: eventLoopGroup)
 
@@ -100,7 +100,7 @@ public class EventLoopTest : XCTestCase {
 
         // Create a server channel.
         let serverChannel = try ServerBootstrap(group: group)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .bind(to: "127.0.0.1", on: 0).wait()
 
         // We now want to connect to it. To try to slow this stuff down, we're going to use a multiple of the number

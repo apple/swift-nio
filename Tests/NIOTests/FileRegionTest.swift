@@ -49,8 +49,8 @@ class FileRegionTest : XCTestCase {
         let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().newPromise())
 
         let serverChannel = try ServerBootstrap(group: group)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .handler(childHandler: countingHandler).bind(to: "127.0.0.1", on: 0).wait()
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer({ $0.pipeline.add(handler: countingHandler) }).bind(to: "127.0.0.1", on: 0).wait()
         
         defer {
             _ = serverChannel.close()
@@ -84,8 +84,8 @@ class FileRegionTest : XCTestCase {
         let countingHandler = ByteCountingHandler(numBytes: 0, promise: group.next().newPromise())
 
         let serverChannel = try ServerBootstrap(group: group)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .handler(childHandler: countingHandler).bind(to: "127.0.0.1", on: 0).wait()
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer({ $0.pipeline.add(handler: countingHandler) }).bind(to: "127.0.0.1", on: 0).wait()
 
         defer {
             _ = serverChannel.close()
@@ -162,8 +162,8 @@ class FileRegionTest : XCTestCase {
         let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().newPromise())
 
         let serverChannel = try ServerBootstrap(group: group)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .handler(childHandler: countingHandler).bind(to: "127.0.0.1", on: 0).wait()
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer({ $0.pipeline.add(handler: countingHandler) }).bind(to: "127.0.0.1", on: 0).wait()
 
         defer {
             _ = serverChannel.close()

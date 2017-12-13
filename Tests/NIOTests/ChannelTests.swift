@@ -76,15 +76,15 @@ public class ChannelTests: XCTestCase {
         var serverAcceptedChannel: Channel? = nil
         let serverLifecycleHandler = ChannelLifecycleHandler()
         let serverChannel = try ServerBootstrap(group: group)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer { channel in
                 serverAcceptedChannel = channel
                 return channel.pipeline.add(handler: serverLifecycleHandler)
-            })).bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(to: "127.0.0.1", on: 0).wait()
 
         let clientLifecycleHandler = ChannelLifecycleHandler()
         let clientChannel = try ClientBootstrap(group: group)
-            .handler(handler: clientLifecycleHandler)
+            .channelInitializer({ (channel: Channel) in channel.pipeline.add(handler: clientLifecycleHandler) })
             .connect(to: serverChannel.localAddress!).wait()
 
         var buffer = clientChannel.allocator.buffer(capacity: 1)
@@ -110,7 +110,7 @@ public class ChannelTests: XCTestCase {
         }
 
         let serverChannel = try ServerBootstrap(group: group)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .bind(to: "127.0.0.1", on: 0).wait()
 
         let clientChannel = try ClientBootstrap(group: group)
@@ -136,7 +136,7 @@ public class ChannelTests: XCTestCase {
         }
 
         let serverChannel = try ServerBootstrap(group: group)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .bind(to: "127.0.0.1", on: 0).wait()
 
         let clientChannel = try ClientBootstrap(group: group)
@@ -172,11 +172,11 @@ public class ChannelTests: XCTestCase {
 
         let childChannelPromise: EventLoopPromise<Channel> = group.next().newPromise()
         let serverChannel = try ServerBootstrap(group: group)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer { channel in
                 childChannelPromise.succeed(result: channel)
                 return channel.eventLoop.newSucceedFuture(result: ())
-            })).bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(to: "127.0.0.1", on: 0).wait()
 
         let clientChannel = try ClientBootstrap(group: group)
             .connect(to: serverChannel.localAddress!).wait()

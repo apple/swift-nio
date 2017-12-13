@@ -326,20 +326,20 @@ default:
 let group = MultiThreadedEventLoopGroup(numThreads: 1)
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
-    .option(option: ChannelOptions.Backlog, value: 256)
-    .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+    .serverChannelOption(ChannelOptions.Backlog, value: 256)
+    .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
     // Set the handlers that are applied to the accepted Channels
-    .handler(childHandler: ChannelInitializer(initChannel: { channel in
+    .childChannelInitializer { channel in
         return channel.pipeline.addHTTPServerHandlers().then {
             return channel.pipeline.add(handler: HTTPHandler(htdocsPath: htdocs))
         }
-    }))
+    }
 
     // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels
-    .option(childOption: ChannelOptions.Socket(IPPROTO_TCP, TCP_NODELAY), childValue: 1)
-    .option(childOption: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), childValue: 1)
-    .option(childOption: ChannelOptions.MaxMessagesPerRead, childValue: 1)
+    .childChannelOption(ChannelOptions.Socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+    .childChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+    .childChannelOption(ChannelOptions.MaxMessagesPerRead, value: 1)
 
 defer {
     try! group.syncShutdownGracefully()

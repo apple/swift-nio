@@ -336,26 +336,26 @@ class HTTPServerClientTest : XCTestCase {
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try ServerBootstrap(group: group)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             
             // Set the handlers that are appled to the accepted Channels
-            .handler(childHandler: ChannelInitializer(initChannel: { channel in
-                // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
+            .childChannelInitializer { channel in
+                // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                 channel.pipeline.addHTTPServerHandlers().then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            })).bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(to: "127.0.0.1", on: 0).wait()
         
         defer {
             _ = serverChannel.close()
         }
         
         let clientChannel = try ClientBootstrap(group: group)
-            .handler(handler: ChannelInitializer(initChannel: { channel in
+            .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().then {
                     channel.pipeline.add(handler: accumulation)
                 }
-            }))
+            }
             .connect(to: serverChannel.localAddress!)
             .wait()
         
@@ -394,26 +394,26 @@ class HTTPServerClientTest : XCTestCase {
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try ServerBootstrap(group: group)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             
             // Set the handlers that are appled to the accepted Channels
-            .handler(childHandler: ChannelInitializer(initChannel: { channel in
-                // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
+            .childChannelInitializer { channel in
+                // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                 channel.pipeline.addHTTPServerHandlers().then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            })).bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(to: "127.0.0.1", on: 0).wait()
         
         defer {
             _ = serverChannel.close()
         }
         
         let clientChannel = try ClientBootstrap(group: group)
-            .handler(handler: ChannelInitializer(initChannel: { channel in
+            .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().then {
                     channel.pipeline.add(handler: accumulation)
                 }
-            }))
+            }
             .connect(to: serverChannel.localAddress!)
             .wait()
         
@@ -455,23 +455,23 @@ class HTTPServerClientTest : XCTestCase {
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try ServerBootstrap(group: group)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer { channel in
                 channel.pipeline.addHTTPServerHandlers().then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            })).bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(to: "127.0.0.1", on: 0).wait()
 
         defer {
             _ = serverChannel.close()
         }
 
         let clientChannel = try ClientBootstrap(group: group)
-            .handler(handler: ChannelInitializer(initChannel: { channel in
+            .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().then {
                     channel.pipeline.add(handler: accumulation)
                 }
-            }))
+            }
             .connect(to: serverChannel.localAddress!)
             .wait()
 
@@ -512,22 +512,22 @@ class HTTPServerClientTest : XCTestCase {
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try ServerBootstrap(group: group)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
             // Set the handlers that are appled to the accepted Channels
-            .handler(childHandler: ChannelInitializer(initChannel: { channel in
-                // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
+            .childChannelInitializer { channel in
+                // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                 channel.pipeline.addHTTPServerHandlers().then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            })).bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(to: "127.0.0.1", on: 0).wait()
 
         defer {
             _ = serverChannel.close()
         }
 
         let clientChannel = try ClientBootstrap(group: group)
-            .handler(handler: accumulation)
+            .channelInitializer({ $0.pipeline.add(handler: accumulation) })
             .connect(to: serverChannel.localAddress!)
             .wait()
 
@@ -557,22 +557,22 @@ class HTTPServerClientTest : XCTestCase {
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(.byteBuffer)
         let serverChannel = try ServerBootstrap(group: group)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer { channel in
                 channel.pipeline.addHTTPServerHandlers().then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            })).bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(to: "127.0.0.1", on: 0).wait()
         defer {
             _ = serverChannel.close()
         }
 
         let clientChannel = try ClientBootstrap(group: group)
-            .handler(handler: ChannelInitializer(initChannel: { channel in
+            .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().then {
                     channel.pipeline.add(handler: accumulation)
                 }
-            }))
+            }
             .connect(to: serverChannel.localAddress!)
             .wait()
 
@@ -602,22 +602,22 @@ class HTTPServerClientTest : XCTestCase {
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(.byteBuffer)
         let serverChannel = try ServerBootstrap(group: group)
-            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer { channel in
                 channel.pipeline.addHTTPServerHandlers().then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            })).bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(to: "127.0.0.1", on: 0).wait()
         defer {
             _ = serverChannel.close()
         }
 
         let clientChannel = try ClientBootstrap(group: group)
-            .handler(handler: ChannelInitializer(initChannel: { channel in
+            .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().then {
                     channel.pipeline.add(handler: accumulation)
                 }
-            }))
+            }
             .connect(to: serverChannel.localAddress!)
             .wait()
 

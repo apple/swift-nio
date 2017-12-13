@@ -12,85 +12,132 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// A `ServerBootstrap` is an easy way to bootstrap a `ServerChannel` when creating network servers.
 public final class ServerBootstrap {
     
     private let group: EventLoopGroup
     private let childGroup: EventLoopGroup
-    private var handler: ChannelHandler?
-    private var childHandler: ChannelHandler?
-    private var options = ChannelOptionStorage()
-    private var childOptions = ChannelOptionStorage()
+    private var serverChannelInit: ((Channel) -> EventLoopFuture<()>)?
+    private var childChannelInit: ((Channel) -> EventLoopFuture<()>)?
+    private var serverChannelOptions = ChannelOptionStorage()
+    private var childChannelOptions = ChannelOptionStorage()
 
+    /// Create a `ServerBootstrap` for the `EventLoopGroup` `group`.
+    ///
+    /// - parameters:
+    ///     - group: The `EventLoopGroup` to use for the `ServerChannel`.
     public convenience init(group: EventLoopGroup) {
         self.init(group: group, childGroup: group)
     }
-    
+
+    /// Create a `ServerBootstrap`.
+    ///
+    /// - parameters:
+    ///     - group: The `EventLoopGroup` to use for the `bind` of the `ServerSocketChannel`.
+    ///     - childGroup: The `EventLoopGroup` to run the accepted `SocketChannel`s on.
     public init(group: EventLoopGroup, childGroup: EventLoopGroup) {
         self.group = group
         self.childGroup = childGroup
     }
     
-    public func handler(handler: ChannelHandler) -> Self {
-        self.handler = handler
+    /// Initialize the `ServerSocketChannel` with `initializer`. The most common task in initializer is to add
+    /// `ChannelHandler`s to the `ChannelPipeline`.
+    ///
+    /// - note: To set the initializer for the accepted `SocketChannel`s, look at `ServerBootstrap.childChannelInitializer`.
+    ///
+    /// - parameters:
+    ///     - initializer: A closure that initializes the provided `Channel`.
+    public func serverChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+        self.serverChannelInit = initializer
         return self
     }
     
-    public func handler(childHandler: ChannelHandler) -> Self {
-        self.childHandler = childHandler
+    /// Initialize the accepted `SocketChannel`s with `initializer`. The most common task in initializer is to add
+    /// `ChannelHandler`s to the `ChannelPipeline`.
+    ///
+    /// - parameters:
+    ///     - initializer: A closure that initializes the provided `Channel`.
+    public func childChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+        self.childChannelInit = initializer
         return self
     }
     
-    public func option<T: ChannelOption>(option: T, value: T.OptionType) -> Self {
-        options.put(key: option, value: value)
+    /// Specifies a `ChannelOption` to be applied to the `ServerSocketChannel`.
+    ///
+    /// - note: To specify options for the accepted `SocketChannel`s, look at `ServerBootstrap.childChannelOption`.
+    ///
+    /// - parameters:
+    ///     - option: The option to be applied.
+    ///     - value: The value for the option.
+    public func serverChannelOption<T: ChannelOption>(_ option: T, value: T.OptionType) -> Self {
+        serverChannelOptions.put(key: option, value: value)
         return self
     }
     
-    public func option<T: ChannelOption>(childOption: T, childValue: T.OptionType) -> Self {
-        childOptions.put(key: childOption, value: childValue)
+    /// Specifies a `ChannelOption` to be applied to the accepted `SocketChannel`s.
+    ///
+    /// - parameters:
+    ///     - option: The option to be applied.
+    ///     - value: The value for the option.
+    public func childChannelOption<T: ChannelOption>(_ option: T, value: T.OptionType) -> Self {
+        childChannelOptions.put(key: option, value: value)
         return self
     }
     
+    /// Bind the `ServerSocketChannel` to `host` and `port`.
+    ///
+    /// - parameters:
+    ///     - host: The host to bind on.
+    ///     - port: The port to bind on.
     public func bind(to host: String, on port: Int32) -> EventLoopFuture<Channel> {
         let evGroup = group
         do {
             let address = try SocketAddress.newAddressResolving(host: host, port: port)
-            return bind0(evGroup: evGroup, to: address)
+            return bind0(eventLoopGroup: evGroup, to: address)
         } catch let err {
             return evGroup.next().newFailedFuture(error: err)
         }
     }
 
+    /// Bind the `ServerSocketChannel` to `address`.
+    ///
+    /// - parameters:
+    ///     - address: The `SocketAddress` to bind on.
     public func bind(to address: SocketAddress) -> EventLoopFuture<Channel> {
-        return bind0(evGroup: group, to: address)
+        return bind0(eventLoopGroup: group, to: address)
     }
-    
+
+    /// Bind the `ServerSocketChannel` to a UNIX Domain Socket.
+    ///
+    /// - parameters:
+    ///     - path: The path of the UNIX Domain Socket to bind on. `path` must not exist, it will be created by the system.
     public func bind(unixDomainSocket path: String) -> EventLoopFuture<Channel> {
         let evGroup = group
         do {
             let address = try SocketAddress.unixDomainSocketAddress(path: path)
-            return bind0(evGroup: evGroup, to: address)
+            return bind0(eventLoopGroup: evGroup, to: address)
         } catch let err {
             return evGroup.next().newFailedFuture(error: err)
         }
     }
 
-    private func bind0(evGroup: EventLoopGroup, to address: SocketAddress) -> EventLoopFuture<Channel> {
-        let chEvGroup = childGroup
-        let opts = options
-        let eventLoop = evGroup.next()
-        let h = handler
-        let chHandler = childHandler
-        let chOptions = childOptions
+    private func bind0(eventLoopGroup: EventLoopGroup, to address: SocketAddress) -> EventLoopFuture<Channel> {
+        let childEventLoopGroup = self.childGroup
+        let serverChannelOptions = self.serverChannelOptions
+        let eventLoop = eventLoopGroup.next()
+        let serverChannelInit = self.serverChannelInit
+        let childChannelInit = self.childChannelInit
+        let childChannelOptions = self.childChannelOptions
         
         let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
         do {
             let serverChannel = try ServerSocketChannel(eventLoop: eventLoop as! SelectableEventLoop,
-                                                        group: chEvGroup,
+                                                        group: childEventLoopGroup,
                                                         protocolFamily: address.protocolFamily)
             
             func finishServerSetup() {
                 do {
-                    try opts.applyAll(channel: serverChannel)
+                    try serverChannelOptions.applyAll(channel: serverChannel)
                     let f = serverChannel.register().then(callback: { (_) -> EventLoopFuture<()> in serverChannel.bind(to: address) })
                     f.whenComplete(callback: { v in
                         switch v {
@@ -106,7 +153,8 @@ public final class ServerBootstrap {
             }
 
             func addAcceptHandlerAndFinishServerSetup() {
-                let f = serverChannel.pipeline.add(handler: AcceptHandler(childHandler: chHandler, childOptions: chOptions))
+                let f = serverChannel.pipeline.add(handler: AcceptHandler(childChannelInitializer: childChannelInit,
+                                                                          childChannelOptions: childChannelOptions))
                 f.whenComplete(callback: { v in
                     switch v {
                     case .failure(let err):
@@ -117,9 +165,8 @@ public final class ServerBootstrap {
                 })
             }
 
-            if let serverHandler = h {
-                let future = serverChannel.pipeline.add(handler: serverHandler)
-                future.whenComplete(callback: { v in
+            if let serverChannelInit = serverChannelInit {
+                serverChannelInit(serverChannel).whenComplete(callback: { v in
                     switch v {
                     case .failure(let err):
                         promise.fail(error: err)
@@ -140,22 +187,21 @@ public final class ServerBootstrap {
     private class AcceptHandler : ChannelInboundHandler {
         public typealias InboundIn = SocketChannel
         
-        private let childHandler: ChannelHandler?
-        private let childOptions: ChannelOptionStorage
+        private let childChannelInit: ((Channel) -> EventLoopFuture<()>)?
+        private let childChannelOptions: ChannelOptionStorage
         
-        init(childHandler: ChannelHandler?, childOptions: ChannelOptionStorage) {
-            self.childHandler = childHandler
-            self.childOptions = childOptions
+        init(childChannelInitializer: ((Channel) -> EventLoopFuture<()>)?, childChannelOptions: ChannelOptionStorage) {
+            self.childChannelInit = childChannelInitializer
+            self.childChannelOptions = childChannelOptions
         }
         
         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             let accepted = self.unwrapInboundIn(data)
             do {
-                try self.childOptions.applyAll(channel: accepted)
+                try self.childChannelOptions.applyAll(channel: accepted)
 
-                if let handler = childHandler {
-                    let f = accepted.pipeline.add(handler: handler)
-                    f.whenComplete(callback: { v in
+                if let childChannelInit = childChannelInit {
+                    childChannelInit(accepted).whenComplete(callback: { v in
                         switch v {
                         case .failure(let err):
                             self.closeAndFire(ctx: ctx, accepted: accepted, err: err)
@@ -190,51 +236,53 @@ public final class ServerBootstrap {
     }
 }
 
+/// A `ClientBootstrap` is an easy way to bootstrap a `SocketChannel` when creating network clients.
 public final class ClientBootstrap {
     
     private let group: EventLoopGroup
-    private var handler: ChannelHandler?
-    private var options = ChannelOptionStorage()
+    private var channelInitializer: ((Channel) -> EventLoopFuture<()>)?
+    private var channelOptions = ChannelOptionStorage()
 
+    /// Create a `ClientBootstrap` on the `EventLoopGroup` `group`.
+    ///
+    /// - parameters:
+    ///     - group: The `EventLoopGroup` to use.
     public init(group: EventLoopGroup) {
         self.group = group
     }
     
-    public func handler(handler: ChannelHandler) -> Self {
-        self.handler = handler
+    /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
+    /// `ChannelHandler`s to the `ChannelPipeline`.
+    ///
+    /// - parameters:
+    ///     - handler: A closure that initializes the provided `Channel`.
+    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+        self.channelInitializer = handler
         return self
     }
     
+    /// Specifies a `ChannelOption` to be applied to the `SocketChannel`.
+    ///
+    /// - parameters:
+    ///     - option: The option to be applied.
+    ///     - value: The value for the option.
     public func option<T: ChannelOption>(option: T, value: T.OptionType) -> Self {
-        options.put(key: option, value: value)
+        channelOptions.put(key: option, value: value)
         return self
     }
-    
-    public func bind(protocolFamily: Int32, to host: String, on port: Int32) -> EventLoopFuture<Channel> {
-        let evGroup = group
 
-        do {
-            let address = try SocketAddress.newAddressResolving(host: host, port: port)
-            return execute(evGroup: evGroup, protocolFamily: protocolFamily) { channel in
-                return channel.bind(to: address)
-            }
-        } catch let err {
-            return evGroup.next().newFailedFuture(error: err)
-        }
-    }
-    
-    public func bind(to address: SocketAddress) -> EventLoopFuture<Channel> {
-        return execute(evGroup: group, protocolFamily: address.protocolFamily) { channel in
-            return channel.bind(to: address)
-        }
-    }
-    
+    /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
+    ///
+    /// - parameters:
+    ///     - host: The host to connect to.
+    ///     - port: The port to connect to.
+    /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(to host: String, on port: Int32) -> EventLoopFuture<Channel> {
         let evGroup = group
         
         do {
             let address = try SocketAddress.newAddressResolving(host: host, port: port)
-            return execute(evGroup: group, protocolFamily: address.protocolFamily) { channel in
+            return execute(eventLoopGroup: group, protocolFamily: address.protocolFamily) { channel in
                 return channel.connect(to: address)
             }
         } catch let err {
@@ -242,12 +290,22 @@ public final class ClientBootstrap {
         }
     }
     
+    /// Specify the `address` to connect to for the TCP `Channel` that will be established.
+    ///
+    /// - parameters:
+    ///     - address: The address to connect to.
+    /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(to address: SocketAddress) -> EventLoopFuture<Channel> {
-        return execute(evGroup: group, protocolFamily: address.protocolFamily) { channel in
+        return execute(eventLoopGroup: group, protocolFamily: address.protocolFamily) { channel in
             return channel.connect(to: address)
         }
     }
 
+    /// Specify the `unixDomainSocket` path to connect to for the UDS `Channel` that will be established.
+    ///
+    /// - parameters:
+    ///     - address: The address to connect to.
+    /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(to unixDomainSocket: String) -> EventLoopFuture<Channel> {
         do {
             let address = try SocketAddress.unixDomainSocketAddress(path: unixDomainSocket)
@@ -257,12 +315,12 @@ public final class ClientBootstrap {
         }
     }
 
-    private func execute(evGroup: EventLoopGroup,
+    private func execute(eventLoopGroup: EventLoopGroup,
                          protocolFamily: Int32,
-                         fn: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
-        let eventLoop = evGroup.next()
-        let h = handler
-        let opts = options
+                         _ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
+        let eventLoop = eventLoopGroup.next()
+        let channelInitializer = self.channelInitializer
+        let channelOptions = self.channelOptions
         
         let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
         do {
@@ -270,9 +328,9 @@ public final class ClientBootstrap {
             
             func finishClientSetup() {
                 do {
-                    try opts.applyAll(channel: channel)
+                    try channelOptions.applyAll(channel: channel)
                     let f = channel.register().then  { (_) -> EventLoopFuture<Void> in
-                        fn(channel)
+                        body(channel)
                     }
                     f.whenComplete(callback: { v in
                         switch v {
@@ -287,9 +345,8 @@ public final class ClientBootstrap {
                 }
             }
             
-            if let clientHandler = h {
-                let future = channel.pipeline.add(handler: clientHandler)
-                future.whenComplete(callback: { v in
+            if let channelInitializer = channelInitializer {
+                channelInitializer(channel).whenComplete(callback: { v in
                     switch v {
                     case .failure(let err):
                         promise.fail(error: err)

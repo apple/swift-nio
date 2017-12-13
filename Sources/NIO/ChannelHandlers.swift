@@ -77,34 +77,6 @@ public class BackPressureHandler: ChannelInboundHandler, _ChannelOutboundHandler
     }
 }
 
-public class ChannelInitializer: _ChannelInboundHandler {
-    private let initChannel: (Channel) -> (EventLoopFuture<Void>)
-    
-    public init(initChannel: @escaping (Channel) -> (EventLoopFuture<Void>)) {
-        self.initChannel = initChannel
-    }
-
-    public func channelRegistered(ctx: ChannelHandlerContext) throws {
-        defer {
-            let _ = ctx.pipeline?.remove(handler: self)
-        }
-        
-        if let ch = ctx.channel {
-            let f = initChannel(ch)
-            f.whenComplete(callback: { v in
-                switch v {
-                case .failure(let err):
-                    ctx.fireErrorCaught(error: err)
-                case .success(_):
-                    ctx.fireChannelRegistered()
-                }
-            })
-        } else {
-            ctx.fireChannelRegistered()
-        }
-    }
-}
-
 /// Triggers an IdleStateEvent when a Channel has not performed read, write, or both operation for a while.
 public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
     public typealias InboundIn = NIOAny

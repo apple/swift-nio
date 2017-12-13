@@ -105,8 +105,7 @@ i5PCcPYi39q101UIxV/WokS0mqHx/XuTYTwhWYd/C49OnM8MLZOUJd8w0VvS0ItY
 
 private func makeTemporaryFile() -> String {
     let template = "/tmp/niotestXXXXXXX"
-    var templateBytes = Array(template.utf8)
-    templateBytes.append(0)
+    var templateBytes = template.utf8 + [0]
     let templateBytesCount = templateBytes.count
     let fd = templateBytes.withUnsafeMutableBufferPointer { ptr in
         ptr.baseAddress!.withMemoryRebound(to: Int8.self, capacity: templateBytesCount) { (ptr: UnsafeMutablePointer<Int8>) in

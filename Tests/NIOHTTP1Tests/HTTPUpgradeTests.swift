@@ -29,13 +29,13 @@ private extension ChannelPipeline {
 
 private func serverHTTPChannel(group: EventLoopGroup, handlers: [ChannelHandler]) -> Channel {
     return try! ServerBootstrap(group: group)
-        .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-        .handler(childHandler: ChannelInitializer(initChannel: { channel in
+        .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+        .childChannelInitializer { channel in
             channel.pipeline.addHTTPServerHandlers().then {
                 let futureResults = handlers.map { channel.pipeline.add(handler: $0) }
                 return EventLoopFuture<Void>.andAll(futureResults, eventLoop: channel.eventLoop)
             }
-        })).bind(to: "127.0.0.1", on: 0).wait()
+        }.bind(to: "127.0.0.1", on: 0).wait()
 }
 
 private func connectedClientChannel(group: EventLoopGroup, serverAddress: SocketAddress) -> Channel {

@@ -215,8 +215,8 @@ internal func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, andHandlers: 
 
 internal func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, preHandlers: [ChannelHandler], postHandlers: [ChannelHandler], onGroup: EventLoopGroup) throws -> Channel {
     return try ServerBootstrap(group: onGroup)
-        .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-        .handler(childHandler: ChannelInitializer(initChannel: { channel in
+        .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+        .childChannelInitializer { channel in
             let results = preHandlers.map { channel.pipeline.add(handler: $0) }
             return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next()).then {
                 return channel.pipeline.add(handler: try! OpenSSLServerHandler(context: withContext)).then(callback: { v2 in
@@ -224,7 +224,7 @@ internal func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, preHandlers: 
                     return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next())
                 })
             }
-        })).bind(to: "127.0.0.1", on: 0).wait()
+        }.bind(to: "127.0.0.1", on: 0).wait()
 }
 
 internal func clientTLSChannel(withContext: NIOOpenSSL.SSLContext,
@@ -234,7 +234,7 @@ internal func clientTLSChannel(withContext: NIOOpenSSL.SSLContext,
                               connectingTo: SocketAddress,
                               serverHostname: String? = nil) throws -> Channel {
     return try ClientBootstrap(group: onGroup)
-        .handler(handler: ChannelInitializer(initChannel: { channel in
+        .channelInitializer { channel in
             let results = preHandlers.map { channel.pipeline.add(handler: $0) }
             return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next()).then(callback: { v2 in
                 return channel.pipeline.add(handler: try! OpenSSLClientHandler(context: withContext, serverHostname: serverHostname)).then(callback: { v2 in
@@ -242,7 +242,7 @@ internal func clientTLSChannel(withContext: NIOOpenSSL.SSLContext,
                     return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next())
                 })
             })
-        })).connect(to: connectingTo).wait()
+        }.connect(to: connectingTo).wait()
 }
 
 class OpenSSLIntegrationTest: XCTestCase {
@@ -601,7 +601,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         let readPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let promiseOnReadHandler = PromiseOnReadHandler(promise: readPromise)
         let clientChannel = try ClientBootstrap(group: group)
-            .handler(handler: promiseOnReadHandler)
+            .channelInitializer({ $0.pipeline.add(handler: promiseOnReadHandler) })
             .connect(to: serverChannel.localAddress!).wait()
         defer {
             _ = try! clientChannel.close().wait()

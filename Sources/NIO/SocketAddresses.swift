@@ -100,8 +100,7 @@ public enum SocketAddress: CustomStringConvertible {
             throw SocketAddressError.unixDomainSocketPathTooLong
         }
 
-        var pathBytes = Array(path.utf8)
-        pathBytes.append(0)
+        let pathBytes = path.utf8 + [0]
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)

@@ -47,22 +47,22 @@ private final class EchoHandler: ChannelInboundHandler {
 let group = MultiThreadedEventLoopGroup(numThreads: 1)
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
-    .option(option: ChannelOptions.Backlog, value: 256)
-    .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+    .serverChannelOption(ChannelOptions.Backlog, value: 256)
+    .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
     // Set the handlers that are appled to the accepted Channels
-    .handler(childHandler: ChannelInitializer(initChannel: { channel in
-        // Ensure we not read faster then we can write by adding the BackPressureHandler into the pipeline.
+    .childChannelInitializer { channel in
+        // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
         return channel.pipeline.add(handler: BackPressureHandler()).then(callback: { v in
             return channel.pipeline.add(handler: EchoHandler())
         })
-    }))
+    }
 
     // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels
-    .option(childOption: ChannelOptions.Socket(IPPROTO_TCP, TCP_NODELAY), childValue: 1)
-    .option(childOption: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), childValue: 1)
-    .option(childOption: ChannelOptions.MaxMessagesPerRead, childValue: 16)
-    .option(childOption: ChannelOptions.RecvAllocator, childValue: FixedSizeRecvByteBufferAllocator(capacity: 8192))
+    .childChannelOption(ChannelOptions.Socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+    .childChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+    .childChannelOption(ChannelOptions.MaxMessagesPerRead, value: 16)
+    .childChannelOption(ChannelOptions.RecvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8192))
 defer {
     try! group.syncShutdownGracefully()
 }

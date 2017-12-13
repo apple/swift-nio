@@ -58,15 +58,15 @@ class ChannelPipelineTest: XCTestCase {
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
         
-        _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<Int, ByteBuffer>({ data in
+        _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<Int, ByteBuffer> { data in
             XCTAssertEqual(1, data)
             return buf
-        })).wait()
+        }).wait()
         
-        _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<String, Int>({ data in
+        _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<String, Int> { data in
             XCTAssertEqual("msg", data)
             return 1
-        })).wait()
+        }).wait()
         
         
         _ = channel.write(data: NIOAny("msg"))
@@ -87,9 +87,9 @@ class ChannelPipelineTest: XCTestCase {
         let sa = SocketAddress(IPv4Address: ipv4SocketAddress, host: "foobar.com")
         
         _ = try channel.pipeline.add(handler: NoBindAllowed()).wait()
-        _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<ByteBuffer, ByteBuffer>({ data in
+        _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<ByteBuffer, ByteBuffer> { data in
             return data
-        })).wait()
+        }).wait()
         
         _ = try channel.connect(to: sa).wait()
         _ = try channel.close().wait()
