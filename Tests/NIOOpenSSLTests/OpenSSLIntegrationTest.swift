@@ -927,7 +927,7 @@ class OpenSSLIntegrationTest: XCTestCase {
         // writes are succeeded in order. To do that, we want to add a WriteDelayHandler to
         // prevent the EmbeddedChannel succeeding the early writes.
         let writeDelayer = WriteDelayHandler()
-        clientChannel.pipeline.add(handler: writeDelayer, first: true)
+        try clientChannel.pipeline.add(handler: writeDelayer, first: true).wait()
         var writeCount = 0
         let emptyBuffer = clientChannel.allocator.buffer(capacity: 16)
         var buffer = clientChannel.allocator.buffer(capacity: 16)
