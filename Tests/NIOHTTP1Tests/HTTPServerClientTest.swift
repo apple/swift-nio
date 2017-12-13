@@ -225,6 +225,31 @@ class HTTPServerClientTest : XCTestCase {
                             assertSuccess(r)
                         }
                     }
+                case "/head":
+                    var head = HTTPResponseHead(version: req.version, status: .ok)
+                    head.headers.add(name: "Connection", value: "close")
+                    head.headers.add(name: "Content-Length", value: "5000")
+                    ctx.write(data: self.wrapOutboundOut(.head(head))).whenComplete { r in
+                        assertSuccess(r)
+                    }
+                    ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
+                        assertSuccess(r)
+                        ctx.close().whenComplete { r in
+                            assertSuccess(r)
+                        }
+                    }
+                case "/204":
+                    var head = HTTPResponseHead(version: req.version, status: .noContent)
+                    head.headers.add(name: "Connection", value: "keep-alive")
+                    ctx.write(data: self.wrapOutboundOut(.head(head))).whenComplete { r in
+                        assertSuccess(r)
+                    }
+                    ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
+                        assertSuccess(r)
+                        ctx.close().whenComplete { r in
+                            assertSuccess(r)
+                        }
+                    }
                 default:
                     XCTFail("received request to unknown URI \(req.uri)")
                 }
@@ -253,7 +278,7 @@ class HTTPServerClientTest : XCTestCase {
     private class HTTPClientResponsePartAssertHandler : ArrayAccumulationHandler<HTTPClientResponsePart> {
         public init(_ expectedVersion: HTTPVersion, _ expectedStatus: HTTPResponseStatus, _ expectedHeaders: HTTPHeaders, _ expectedBody: String?, _ expectedTrailers: HTTPHeaders? = nil) {
             super.init { parts in
-                XCTAssertTrue(parts.count >= 3, "parts \(parts.count)")
+                XCTAssertTrue(parts.count >= 2, "parts \(parts.count)")
                 if case .head(let h) = parts[0] {
                     XCTAssertEqual(expectedVersion, h.version)
                     XCTAssertEqual(expectedStatus, h.status)
@@ -319,8 +344,8 @@ class HTTPServerClientTest : XCTestCase {
         
         let clientChannel = try ClientBootstrap(group: group)
             .handler(handler: ChannelInitializer(initChannel: { channel in
-                channel.pipeline.add(handler: HTTPResponseDecoder()).then {
-                    channel.pipeline.add(handler: HTTPRequestEncoder()).then {
+                channel.pipeline.add(handler: HTTPRequestEncoder()).then {
+                    channel.pipeline.add(handler: HTTPResponseDecoder()).then {
                         channel.pipeline.add(handler: accumulation)
                     }
                 }
@@ -381,8 +406,8 @@ class HTTPServerClientTest : XCTestCase {
         
         let clientChannel = try ClientBootstrap(group: group)
             .handler(handler: ChannelInitializer(initChannel: { channel in
-                channel.pipeline.add(handler: HTTPResponseDecoder()).then {
-                    channel.pipeline.add(handler: HTTPRequestEncoder()).then {
+                channel.pipeline.add(handler: HTTPRequestEncoder()).then {
+                    channel.pipeline.add(handler: HTTPResponseDecoder()).then {
                         channel.pipeline.add(handler: accumulation)
                     }
                 }
@@ -443,8 +468,8 @@ class HTTPServerClientTest : XCTestCase {
 
         let clientChannel = try ClientBootstrap(group: group)
             .handler(handler: ChannelInitializer(initChannel: { channel in
-                channel.pipeline.add(handler: HTTPResponseDecoder()).then {
-                    channel.pipeline.add(handler: HTTPRequestEncoder()).then {
+                channel.pipeline.add(handler: HTTPRequestEncoder()).then {
+                    channel.pipeline.add(handler: HTTPResponseDecoder()).then {
                         channel.pipeline.add(handler: accumulation)
                     }
                 }
@@ -518,6 +543,105 @@ class HTTPServerClientTest : XCTestCase {
         buffer.write(staticString: "GET /massive-response HTTP/1.1\r\nHost: nio.net\r\n\r\n")
 
         try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
+        accumulation.syncWaitForCompletion()
+    }
+
+    func testHead() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        var expectedHeaders = HTTPHeaders()
+        expectedHeaders.add(name: "content-length", value: "5000")
+        expectedHeaders.add(name: "connection", value: "close")
+
+        let accumulation = HTTPClientResponsePartAssertHandler(HTTPVersion(major: 1, minor: 1), .ok, expectedHeaders, "")
+
+        let numBytes = 16 * 1024
+        let httpHandler = SimpleHTTPServer(.byteBuffer)
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+                channel.pipeline.add(handler: HTTPRequestDecoder()).then {
+                    channel.pipeline.add(handler: HTTPResponseEncoder()).then {
+                        channel.pipeline.add(handler: httpHandler)
+                    }
+                }
+            })).bind(to: "127.0.0.1", on: 0).wait()
+        defer {
+            _ = serverChannel.close()
+        }
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .handler(handler: ChannelInitializer(initChannel: { channel in
+                channel.pipeline.add(handler: HTTPRequestEncoder()).then {
+                    channel.pipeline.add(handler: HTTPResponseDecoder()).then {
+                        channel.pipeline.add(handler: accumulation)
+                    }
+                }
+            }))
+            .connect(to: serverChannel.localAddress!)
+            .wait()
+
+        defer {
+            _ = clientChannel.close()
+        }
+
+        var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .HEAD, uri: "/head")
+        head.headers.add(name: "Host", value: "apple.com")
+        try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.head(head))).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.end(nil))).wait()
+
+        accumulation.syncWaitForCompletion()
+    }
+
+    func test204() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        var expectedHeaders = HTTPHeaders()
+        expectedHeaders.add(name: "connection", value: "keep-alive")
+
+        let accumulation = HTTPClientResponsePartAssertHandler(HTTPVersion(major: 1, minor: 1), .noContent, expectedHeaders, "")
+
+        let numBytes = 16 * 1024
+        let httpHandler = SimpleHTTPServer(.byteBuffer)
+        let serverChannel = try ServerBootstrap(group: group)
+            .option(option: ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .handler(childHandler: ChannelInitializer(initChannel: { channel in
+                channel.pipeline.add(handler: HTTPRequestDecoder()).then {
+                    channel.pipeline.add(handler: HTTPResponseEncoder()).then {
+                        channel.pipeline.add(handler: httpHandler)
+                    }
+                }
+            })).bind(to: "127.0.0.1", on: 0).wait()
+        defer {
+            _ = serverChannel.close()
+        }
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .handler(handler: ChannelInitializer(initChannel: { channel in
+                channel.pipeline.add(handler: HTTPRequestEncoder()).then {
+                    channel.pipeline.add(handler: HTTPResponseDecoder()).then {
+                        channel.pipeline.add(handler: accumulation)
+                    }
+                }
+            }))
+            .connect(to: serverChannel.localAddress!)
+            .wait()
+
+        defer {
+            _ = clientChannel.close()
+        }
+
+        var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/204")
+        head.headers.add(name: "Host", value: "apple.com")
+        try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.head(head))).wait()
+        try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.end(nil))).wait()
+
         accumulation.syncWaitForCompletion()
     }
 }

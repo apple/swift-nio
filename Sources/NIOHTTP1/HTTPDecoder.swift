@@ -15,14 +15,6 @@
 import NIO
 import CNIOHTTPParser
 
-/// A `ChannelInboundHandler` used to decode HTTP requests. See the documentation
-/// on `HTTPDecoder` for more.
-public typealias HTTPRequestDecoder = HTTPDecoder<HTTPServerRequestPart>
-
-/// A `ChannelInboundHandler` used to decode HTTP responses. See the documentation
-/// on `HTTPDecoder` for more.
-public typealias HTTPResponseDecoder = HTTPDecoder<HTTPClientResponsePart>
-
 private struct HTTPParserState {
     var dataAwaitingState: DataAwaitingState = .messageBegin
     var currentHeaders: HTTPHeaders?
@@ -115,17 +107,49 @@ private struct HTTPParserState {
 private protocol AnyHTTPDecoder: class {
     var state: HTTPParserState { get set }
     var pendingCallouts: [() -> Void] { get set }
+    func popRequestMethod() -> HTTPMethod?
 }
 
-extension HTTPDecoder where HTTPMessageT == HTTPClientResponsePart {
+/// A `ChannelInboundHandler` used to decode HTTP requests. See the documentation
+/// on `HTTPDecoder` for more.
+public final class HTTPRequestDecoder: HTTPDecoder<HTTPServerRequestPart> {
     public convenience init() {
-        self.init(type: HTTPMessageT.self)
+        self.init(type: HTTPServerRequestPart.self)
     }
 }
 
-extension HTTPDecoder where HTTPMessageT == HTTPServerRequestPart {
+/// A `ChannelInboundHandler` used to decode HTTP responses. See the documentation
+/// on `HTTPDecoder` for more.
+public final class HTTPResponseDecoder: HTTPDecoder<HTTPClientResponsePart>, ChannelOutboundHandler {
+    public typealias OutboundIn = HTTPClientRequestPart
+    public typealias OutboundOut = HTTPClientRequestPart
+
+    /// A FIFO buffer used to store the HTTP request verbs we've seen, to ensure
+    /// we handle HTTP HEAD responses correctly.
+    ///
+    /// Because we have to handle pipelining, this is a FIFO buffer instead of a single
+    /// state variable. However, most users will never pipeline, so we initialize the buffer
+    /// to a base size of 1 to avoid allocating too much memory in the average case.
+    private var methods: CircularBuffer<HTTPMethod> = CircularBuffer(initialRingCapacity: 1)
+
+    /// The method of the request the next response will be responding to.
+    fileprivate override func popRequestMethod() -> HTTPMethod? {
+        return methods.removeFirst()
+    }
+
     public convenience init() {
-        self.init(type: HTTPMessageT.self)
+        self.init(type: HTTPClientResponsePart.self)
+    }
+
+    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        switch unwrapOutboundIn(data) {
+        case .head(let head):
+            methods.append(head.method)
+        default:
+            break
+        }
+
+        ctx.write(data: data, promise: promise)
     }
 }
 
@@ -136,7 +160,7 @@ extension HTTPDecoder where HTTPMessageT == HTTPServerRequestPart {
 /// either the form of `HTTPClientResponsePart` or `HTTPServerRequestPart`: that is,
 /// it produces messages that correspond to the semantic units of HTTP produced by
 /// the remote peer.
-public final class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
+public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = HTTPMessageT
     
@@ -146,10 +170,15 @@ public final class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecod
     fileprivate var pendingCallouts: [() -> Void] = []
     fileprivate var state = HTTPParserState()
     
-    private init(type: HTTPMessageT.Type) {
+    fileprivate init(type: HTTPMessageT.Type) {
         /* this is a private init, the public versions only allow HTTPClientResponsePart and HTTPServerRequestPart */
         assert(HTTPMessageT.self == HTTPClientResponsePart.self || HTTPMessageT.self == HTTPServerRequestPart.self)
     }
+
+    /// The most recent method seen by request handlers.
+    ///
+    /// Naturally, in the base case this returns nil, as servers never issue requests!
+    fileprivate func popRequestMethod() -> HTTPMethod? { return nil }
     
     private func newRequestHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPRequestHead {
         let method = HTTPMethod.from(httpParserMethod: http_method(rawValue: parser.pointee.method))
@@ -200,15 +229,28 @@ public final class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecod
                 handler.pendingCallouts.append {
                     ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPServerRequestPart.head(head)))
                 }
+                return 0
             case let handler as HTTPResponseDecoder:
                 let head = handler.newResponseHead(parser)
                 handler.pendingCallouts.append {
                     ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPClientResponsePart.head(head)))
                 }
+
+                // http_parser doesn't correctly handle responses to HEAD requests. We have to do something
+                // annoyingly opaque here, and in those cases return 1 instead of 0. This forces http_parser
+                // to not expect a request body.
+                //
+                // See also: https://github.com/nodejs/http-parser/issues/251. Note that despite the text in
+                // that issue, http_parser *does* seem to handle the case of 204 and friends: it's just HEAD
+                // that doesn't work.
+                //
+                // Note that this issue is the *entire* reason this must be a duplex: we need to know what the
+                // request verb is that we're seeing a response for.
+                let method = handler.popRequestMethod()
+                return method == .HEAD ? 1 : 0
             default:
                 fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
             }
-            return 0
         }
 
         settings.on_body = { parser, data, len in

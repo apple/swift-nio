@@ -34,6 +34,8 @@ extension HTTPServerClientTest {
                 ("testSimpleGetTrailersFileRegion", testSimpleGetTrailersFileRegion),
                 ("testMassiveResponseByteBuffer", testMassiveResponseByteBuffer),
                 ("testMassiveResponseFileRegion", testMassiveResponseFileRegion),
+                ("testHead", testHead),
+                ("test204", test204),
            ]
    }
 }
