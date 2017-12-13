@@ -657,6 +657,16 @@ public enum ChannelPipelineError : Error {
     case notFound
 }
 
+/// Every `ChannelHandler` has -- when added to a `ChannelPipeline` -- a corresponding `ChannelHandlerContext` which is
+/// the way `ChannelHandler`s can interact with other `ChannelHandler`s in the pipeline.
+///
+/// Most `ChannelHandler`s need to send events through the `ChannelPipeline` which they do by calling the respective
+/// method on their `ChannelHandlerContext`. In fact all the `ChannelHandler` default implementations just forward
+/// the event using the `ChannelHandlerContext`.
+///
+/// Many events are instrumental for a `ChannelHandler`'s life-cycle and it is therefore very important to send them
+/// at the right point in time. Often, the right behaviour is to react to an event and then forward it to the next
+/// `ChannelHandler`.
 public final class ChannelHandlerContext : ChannelInvoker {
     
     // visible for ChannelPipeline to modify
@@ -695,60 +705,82 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
+    /// Send a `channelRegistered` event to the next (inbound) `ChannelHandler` in the `ChannelPipeline`.
+    ///
+    /// - note: For correct operation it is very important to forward any `channelRegistered` event using this method at the right point in time, that is usually when received.
     public func fireChannelRegistered() {
         if let inboundNext = inboundNext {
             inboundNext.invokeChannelRegistered()
         }
     }
-    
+
+    /// Send a `channelUnregistered` event to the next (inbound) `ChannelHandler` in the `ChannelPipeline`.
+    ///
+    /// - note: For correct operation it is very important to forward any `channelUnregistered` event using this method at the right point in time, that is usually when received.
     public func fireChannelUnregistered() {
         if let inboundNext = inboundNext {
             inboundNext.invokeChannelUnregistered()
         }
     }
     
+    /// Send a `channelActive` event to the next (inbound) `ChannelHandler` in the `ChannelPipeline`.
+    ///
+    /// - note: For correct operation it is very important to forward any `channelActive` event using this method at the right point in time, that is often when received.
     public func fireChannelActive() {
         if let inboundNext = inboundNext {
             inboundNext.invokeChannelActive()
         }
     }
-    
+
+    /// Send a `channelInactive` event to the next (inbound) `ChannelHandler` in the `ChannelPipeline`.
+    ///
+    /// - note: For correct operation it is very important to forward any `channelInactive` event using this method at the right point in time, that is often when received.
     public func fireChannelInactive() {
         if let inboundNext = inboundNext {
             inboundNext.invokeChannelInactive()
         }
     }
     
+    /// Send data to the next inbound `ChannelHandler`. The data should be of type `ChannelInboundHandler.InboundOut`.
     public func fireChannelRead(data: NIOAny) {
         if let inboundNext = inboundNext {
             inboundNext.invokeChannelRead(data: data)
         }
     }
     
+    /// Signal to the next `ChannelHandler` that a read burst has finished.
     public func fireChannelReadComplete() {
         if let inboundNext = inboundNext {
             inboundNext.invokeChannelReadComplete()
         }
     }
     
+    /// Send a `writabilityChanged` event to the next (inbound) `ChannelHandler` in the `ChannelPipeline`.
+    ///
+    /// - note: For correct operation it is very important to forward any `writabilityChanged` event using this method at the right point in time, that is usually when received.
     public func fireChannelWritabilityChanged() {
         if let inboundNext = inboundNext {
             inboundNext.invokeChannelWritabilityChanged()
         }
     }
     
+    /// Send an error to the next inbound `ChannelHandler`.
     public func fireErrorCaught(error: Error) {
         if let inboundNext = inboundNext {
             inboundNext.invokeErrorCaught(error: error)
         }
     }
     
+    /// Send a user event to the next inbound `ChannelHandler`.
     public func fireUserInboundEventTriggered(event: Any) {
         if let inboundNext = inboundNext {
             inboundNext.invokeUserInboundEventTriggered(event: event)
         }
     }
     
+    /// Send a `register` event to the next (outbound) `ChannelHandler` in the `ChannelPipeline`.
+    ///
+    /// - note: For correct operation it is very important to forward any `register` event using this method at the right point in time, that is usually when received.
     public func register(promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeRegister(promise: promise)
@@ -757,6 +789,12 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
+    /// Send a `bind` event to the next outbound `ChannelHandler` in the `ChannelPipeline`.
+    /// When the `bind` event reaches the `HeadChannelHandler` a `ServerSocketChannel` will be bound.
+    ///
+    /// - parameters:
+    ///     - address: The address to bind to.
+    ///     - promise: The promise fulfilled when the socket is bound or failed if it cannot be bound.
     public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeBind(to: address, promise: promise)
@@ -765,6 +803,12 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
+    /// Send a `connect` event to the next outbound `ChannelHandler` in the `ChannelPipeline`.
+    /// When the `connect` event reaches the `HeadChannelHandler` a `SocketChannel` will be connected.
+    ///
+    /// - parameters:
+    ///     - address: The address to connect to.
+    ///     - promise: The promise fulfilled when the socket is connected or failed if it cannot be connected.
     public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeConnect(to: address, promise: promise)
@@ -773,6 +817,13 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
 
+    /// Send a `write` event to the next outbound `ChannelHandler` in the `ChannelPipeline`.
+    /// When the `write` event reaches the `HeadChannelHandler` the data will be enqueued to be written on the next
+    /// `flush` event.
+    ///
+    /// - parameters:
+    ///     - data: The data to write, should be of type `ChannelOutboundHandler.OutboundOut`.
+    ///     - promise: The promise fulfilled when the data has been written or failed if it cannot be written.
     public func write(data: NIOAny, promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeWrite(data: data, promise: promise)
@@ -781,6 +832,12 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
 
+    /// Send a `flush` event to the next outbound `ChannelHandler` in the `ChannelPipeline`.
+    /// When the `flush` event reaches the `HeadChannelHandler` the data previously enqueued will be attempted to be
+    /// written to the socket.
+    ///
+    /// - parameters:
+    ///     - promise: The promise fulfilled when the previously written data been flushed or failed if it cannot be flushed.
     public func flush(promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeFlush(promise: promise)
@@ -789,6 +846,13 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
+    /// Send a `write` event followed by a `flush` event to the next outbound `ChannelHandler` in the `ChannelPipeline`.
+    /// When the `write` event reaches the `HeadChannelHandler` the data will be enqueued to be written when the `flush`
+    /// also reaches the `HeadChannelHandler`.
+    ///
+    /// - parameters:
+    ///     - data: The data to write, should be of type `ChannelOutboundHandler.OutboundOut`.
+    ///     - promise: The promise fulfilled when the previously written data been written and flushed or if that failed.
     public func writeAndFlush(data: NIOAny, promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeWriteAndFlush(data: data, promise: promise)
@@ -797,6 +861,13 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
+    /// Send a `read` event to the next outbound `ChannelHandler` in the `ChannelPipeline`.
+    /// When the `read` event reaches the `HeadChannelHandler` the interest to read data will be signalled to the
+    /// `Selector`. This will subsequently -- when data becomes readable -- cause `channelRead` events containing the
+    /// data being sent through the `ChannelPipeline`.
+    ///
+    /// - parameters:
+    ///     - promise: The promise fulfilled when data has been read or failed if it that failed.
     public func read(promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeRead(promise: promise)
@@ -804,7 +875,12 @@ public final class ChannelHandlerContext : ChannelInvoker {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
         }
     }
-    
+
+    /// Send a `close` event to the next outbound `ChannelHandler` in the `ChannelPipeline`.
+    /// When the `close` event reaches the `HeadChannelHandler` the socket will be closed.
+    ///
+    /// - parameters:
+    ///     - promise: The promise fulfilled when the `Channel` has been closed or failed if it the closing failed.
     public func close(promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeClose(promise: promise)
@@ -813,6 +889,11 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
     
+    /// Send a user event to the next outbound `ChannelHandler` in the `ChannelPipeline`.
+    ///
+    /// - parameters:
+    ///     - event: The user event to send.
+    ///     - promise: The promise fulfilled when the user event has been sent or failed if it couldn't be sent.
     public func triggerUserOutboundEvent(event: Any, promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
             outboundNext.invokeTriggerUserOutboundEvent(event: event, promise: promise)
