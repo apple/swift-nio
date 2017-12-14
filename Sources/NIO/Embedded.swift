@@ -22,8 +22,7 @@ public class EmbeddedEventLoop : EventLoop {
     }
     var isRunning: Bool = false
 
-    // Would be better to have this as a Queue
-    var tasks: [() -> ()] = Array()
+    var tasks = CircularBuffer<() -> ()>(initialRingCapacity: 2)
     
     public func newPromise<T>() -> EventLoopPromise<T> {
         return EventLoopPromise<T>(eventLoop: self, checkForPossibleDeadlock: false)
@@ -61,9 +60,10 @@ public class EmbeddedEventLoop : EventLoop {
     func run() throws {
         queue.sync {
             isRunning = true
+            
+            // Execute all tasks that are currently enqueued.
             while !tasks.isEmpty {
-                tasks[0]()
-                tasks = Array(tasks.dropFirst(1)) // TODO: Seriously, get a queue
+                tasks.removeFirst()()
             }
         }
     }
