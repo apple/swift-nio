@@ -17,16 +17,18 @@ function start_server() {
     local curl_port=80
 
     maybe_host=""
+    maybe_nio_host=""
     if [[ "${2:-uds}" == "tcp" ]]; then
         type=""
         port="0"
         tok_type=""
         maybe_host="localhost"
+        maybe_nio_host="$(host -4 -t a "$maybe_host" | tr ' ' '\n' | tail -1)"
     fi
 
     mkdir "$tmp/htdocs"
     swift build
-    "$(swift build --show-bin-path)/NIOHTTP1Server" $maybe_host "$port" "$tmp/htdocs" &
+    "$(swift build --show-bin-path)/NIOHTTP1Server" $maybe_nio_host "$port" "$tmp/htdocs" &
     tmp_server_pid=$!
     if [[ -z "$type" ]]; then
         # TCP mode, need to wait until we found a port that we can curl
@@ -36,7 +38,7 @@ function start_server() {
             port=$(server_lsof "$tmp_server_pid" | grep -Eo 'TCP .*:[0-9]+ ' | grep -Eo '[0-9]{4,5} ' | tr -d ' ' || true)
             echo "port = '$port'"
             curl_port="$port"
-            if curl "http://localhost:$curl_port/dynamic/pid"; then
+            if curl --ipv4 "http://$maybe_host:$curl_port/dynamic/pid"; then
                 worked=true
                 break
             else
@@ -58,7 +60,7 @@ function start_server() {
     echo "local token_open_fds" >> "$token"
     echo "token_open_fds='$(server_lsof "$tmp_server_pid" | wc -l)'" >> "$token"
     server_lsof "$tmp_server_pid"
-    do_curl "$token" "http://localhost:$curl_port/dynamic/pid"
+    do_curl "$token" "http://$maybe_host:$curl_port/dynamic/pid"
 }
 
 function get_htdocs() {
@@ -110,7 +112,7 @@ function do_curl() {
     source "$1"
     shift
     if [[ -z "$token_type" ]]; then
-        curl -v "$@"
+        curl -v --ipv4 "$@"
     else
         curl $token_type "$token_port" -v "$@"
     fi
