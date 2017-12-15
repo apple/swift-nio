@@ -134,8 +134,7 @@ class HTTPResponseCompressorTest: XCTestCase {
 
     private func clientParsingChannel() -> EmbeddedChannel {
         let channel = EmbeddedChannel()
-        try! channel.pipeline.add(handler: HTTPRequestEncoder()).wait()
-        try! channel.pipeline.add(handler: HTTPResponseDecoder()).wait()
+        try! channel.pipeline.addHTTPClientHandlers().wait()
         return channel
     }
 
