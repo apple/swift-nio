@@ -75,6 +75,7 @@ extension ByteBufferTest {
                 ("testChangeCapacityToSameCapacityRetainsCapacityAndPointers", testChangeCapacityToSameCapacityRetainsCapacityAndPointers),
                 ("testSlicesThatAreOutOfBands", testSlicesThatAreOutOfBands),
                 ("testMutableBytesCoW", testMutableBytesCoW),
+                ("testWritableBytesTriggersCoW", testWritableBytesTriggersCoW),
                 ("testBufferWithZeroBytes", testBufferWithZeroBytes),
                 ("testPastEnd", testPastEnd),
                 ("testReadDataNotEnoughAvailable", testReadDataNotEnoughAvailable),

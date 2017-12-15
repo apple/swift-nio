@@ -47,6 +47,7 @@ import XCTest
          testCase(FileRegionTest.allTests),
          testCase(HTTPHeadersTest.allTests),
          testCase(HTTPRequestEncoderTests.allTests),
+         testCase(HTTPResponseCompressorTest.allTests),
          testCase(HTTPResponseEncoderTests.allTests),
          testCase(HTTPServerClientTest.allTests),
          testCase(HTTPTest.allTests),

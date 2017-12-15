@@ -371,11 +371,15 @@ public struct ByteBuffer {
     /// - parameters:
     ///     - fn: The closure that will accept the yielded bytes and return the number of bytes written.
     /// - returns: The number of bytes written.
+    public mutating func withUnsafeMutableWritableBytes<T>(_ fn: (UnsafeMutableRawBufferPointer) throws -> T) rethrows -> T {
+        self.copyStorageAndRebaseIfNeeded()
+        return try fn(UnsafeMutableRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._writerIndex)),
+                                                    count: self.writableBytes))
+    }
+
     @discardableResult
     public mutating func writeWithUnsafeMutableBytes(_ fn: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
-        self.copyStorageAndRebaseIfNeeded()
-        let bytesWritten = try fn(UnsafeMutableRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._writerIndex)),
-                                                                count: self.writableBytes))
+        let bytesWritten = try withUnsafeMutableWritableBytes(fn)
         self.moveWriterIndex(to: self._writerIndex + toIndex(bytesWritten))
         return bytesWritten
     }

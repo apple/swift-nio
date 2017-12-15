@@ -607,6 +607,51 @@ class ByteBufferTest: XCTestCase {
         }
     }
 
+    func testWritableBytesTriggersCoW() throws {
+        let cap = buf.capacity
+        var otherBuf = buf
+        XCTAssertEqual(otherBuf, buf)
+
+        // Write to both buffers.
+        let firstResult = buf!.withUnsafeMutableWritableBytes { (ptr: UnsafeMutableRawBufferPointer) -> Bool in
+            XCTAssertEqual(cap, ptr.count)
+            memset(ptr.baseAddress!, 0, ptr.count)
+            return false
+        }
+        let secondResult = otherBuf!.withUnsafeMutableWritableBytes { (ptr: UnsafeMutableRawBufferPointer) -> Bool in
+            XCTAssertEqual(cap, ptr.count)
+            let intPtr = ptr.baseAddress!.bindMemory(to: UInt8.self, capacity: ptr.count)
+            for i in 0..<ptr.count {
+                intPtr[i] = UInt8(truncatingIfNeeded: i)
+            }
+            return true
+        }
+        XCTAssertFalse(firstResult)
+        XCTAssertTrue(secondResult)
+        XCTAssertEqual(cap, otherBuf!.capacity)
+        XCTAssertEqual(buf!.readableBytes, 0)
+        XCTAssertEqual(otherBuf!.readableBytes, 0)
+
+        // Move both writer indices forwards by the amount of data we wrote.
+        buf!.moveWriterIndex(forwardBy: cap)
+        otherBuf!.moveWriterIndex(forwardBy: cap)
+
+        // These should now be unequal. Check their bytes to be sure.
+        XCTAssertNotEqual(buf, otherBuf)
+        buf!.withUnsafeReadableBytes { ptr in
+            XCTAssertEqual(cap, ptr.count)
+            for i in 0..<cap {
+                XCTAssertEqual(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)[i], 0)
+            }
+        }
+        otherBuf!.withUnsafeReadableBytes { ptr in
+            XCTAssertEqual(cap, ptr.count)
+            for i in 0..<cap {
+                XCTAssertEqual(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)[i], UInt8(truncatingIfNeeded: i))
+            }
+        }
+    }
+
     func testBufferWithZeroBytes() throws {
         var buf = allocator.buffer(capacity: 0)
         XCTAssertEqual(0, buf.capacity)
