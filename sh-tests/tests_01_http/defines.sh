@@ -36,7 +36,7 @@ function start_server() {
             port=$(server_lsof "$tmp_server_pid" | grep -Eo 'TCP .*:[0-9]+ ' | grep -Eo '[0-9]{4,5} ' | tr -d ' ' || true)
             echo "port = '$port'"
             curl_port="$port"
-            if curl "http://localhost:$curl_port/dynamic/pid" > /dev/null 2>&1; then
+            if curl "http://localhost:$curl_port/dynamic/pid"; then
                 worked=true
                 break
             else
