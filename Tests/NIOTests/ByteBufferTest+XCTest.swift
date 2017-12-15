@@ -102,6 +102,7 @@ extension ByteBufferTest {
                 ("testSetStringBeyondCapacity", testSetStringBeyondCapacity),
                 ("testGetStringBeyondCapacity", testGetStringBeyondCapacity),
                 ("testAllocationOfReallyBigByteBuffer", testAllocationOfReallyBigByteBuffer),
+                ("testWritableBytesAccountsForSlicing", testWritableBytesAccountsForSlicing),
            ]
    }
 }

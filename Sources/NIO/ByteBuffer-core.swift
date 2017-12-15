@@ -317,7 +317,7 @@ public struct ByteBuffer {
 
     /// The number of bytes writable until `ByteBuffer` will need to grow its underlying storage which will likely
     /// trigger a copy of the bytes.
-    public var writableBytes: Int { return Int(self._storage.capacity - self._writerIndex) }
+    public var writableBytes: Int { return Int(toCapacity(self._slice.count) - self._writerIndex) }
 
     /// The number of bytes readable (`readableBytes` = `writerIndex` - `readerIndex`).
     public var readableBytes: Int { return Int(self._writerIndex - self._readerIndex) }

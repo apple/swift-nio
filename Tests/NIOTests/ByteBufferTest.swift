@@ -1011,6 +1011,17 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(AllocationExpectationState.reallocDone, testAllocationOfReallyBigByteBuffer_state)
         XCTAssertEqual(buf.capacity, Int(UInt32.max))
     }
+
+    func testWritableBytesAccountsForSlicing() throws {
+        buf.clear()
+        buf.changeCapacity(to: 32)
+        XCTAssertEqual(buf.capacity, 32)
+        XCTAssertEqual(buf.writableBytes, 32)
+
+        let newBuf = buf.slice(at: buf.writerIndex, length: 8)!
+        XCTAssertEqual(newBuf.capacity, 8)
+        XCTAssertEqual(newBuf.writableBytes, 0)
+    }
 }
 
 private enum AllocationExpectationState: Int {
