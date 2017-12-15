@@ -32,7 +32,7 @@ extension ByteBuffer {
             return nil
         }
 
-        let value: T = self.integer(at: self.readerIndex, endianness: endianness)! /* must work as we have enough bytes */
+        let value: T = self.getInteger(at: self.readerIndex, endianness: endianness)! /* must work as we have enough bytes */
         self.moveReaderIndex(forwardBy: MemoryLayout<T>.size)
         return value
     }
@@ -43,7 +43,7 @@ extension ByteBuffer {
     ///     - index: The starting index of the bytes for the integer into the `ByteBuffer`.
     ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if the bytes of interest aren't contained in the `ByteBuffer`.
-    public func integer<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big) -> T? {
+    public func getInteger<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big) -> T? {
         precondition(index >= 0, "index must not be negative")
         return self.withVeryUnsafeBytes { ptr in
             guard index <= ptr.count - MemoryLayout<T>.size else {

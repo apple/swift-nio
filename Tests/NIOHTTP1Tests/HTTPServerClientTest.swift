@@ -118,7 +118,7 @@ class HTTPServerClientTest : XCTestCase {
                 #endif
                 files.append(filePath)
                 
-                let content = buffer.data(at: 0, length: buffer.readableBytes)!
+                let content = buffer.getData(at: 0, length: buffer.readableBytes)!
                 try! content.write(to: URL(fileURLWithPath: filePath))
                 let region = try! FileRegion(file: filePath, readerIndex: 0, endIndex: buffer.readableBytes)
                 return .body(.fileRegion(region))

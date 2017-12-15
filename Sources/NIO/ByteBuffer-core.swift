@@ -96,17 +96,17 @@ private func toIndex(_ value: Int) -> Index {
 ///
 /// For every supported type `ByteBuffer` usually contains two methods for random access:
 ///
-///  1. `<type>(at: Int, length: Int)` where `<type>` is for example `string`, `Data`, `bytes` (for `[UInt8]`)
+///  1. `get<type>(at: Int, length: Int)` where `<type>` is for example `string`, `Data`, `bytes` (for `[UInt8]`)
 ///  2. `set(<type>: Type, at: Int)`
 ///
 /// Example:
 ///
 ///     var buf = ...
 ///     buf.set(string: "Hello World", at: 0)
-///     let helloWorld = buf.string(at: 0, length: 11)
+///     let helloWorld = buf.getString(at: 0, length: 11)
 ///
 ///     buf.set(integer: 17 as Int, at: 11)
-///     let seventeen: Int = buf.integer(at: 11)
+///     let seventeen: Int = buf.getInteger(at: 11)
 ///
 /// If needed, `ByteBuffer` will automatically resize its storage to accomodate your `set` request.
 ///
@@ -147,8 +147,14 @@ private func toIndex(_ value: Int) -> Index {
 ///     let dataBytesLength = UInt32(dataBytes.count)
 ///     buf.write(integer: dataBytesLength) /* the header */
 ///     buf.write(bytes: dataBytes) /* the data */
-///     let bufDataBytesOnly = buf.slice(at: 4, length: dataBytes.count)
+///     let bufDataBytesOnly = buf.getSlice(at: 4, length: dataBytes.count)
 ///     /* `bufDataByteOnly` and `buf` will share their storage */
+///
+/// ### Important usage notes
+/// Each method that is prefixed with `get` is considered "unsafe" as it allows the user to read uninitialized memory if the `index` or `index + length` points outside of the previous written
+/// range of the `ByteBuffer`. Because of this it's strongly advised to prefer the usage of methods that start with the `read` prefix and only use the `get` prefixed methods if there is a strong reason
+/// for doing so. In any case, if you use the `get` prefixed methods you are responsible for ensuring that you do not reach into uninitialized memory by taking the `readableBytes` and `readerIndex` into
+/// account, and ensuring that you have previously written into the area covered by the `index itself.
 public struct ByteBuffer {
     private typealias Slice = Range<Index>
     private typealias Allocator = ByteBufferAllocator
@@ -437,7 +443,7 @@ public struct ByteBuffer {
     /// - parameters:
     ///     - index: The index the requested slice starts at.
     ///     - length: The length of the requested slice.
-    public func slice(at index: Int, length: Int) -> ByteBuffer? {
+    public func getSlice(at index: Int, length: Int) -> ByteBuffer? {
         precondition(index >= 0, "index must not be negative")
         precondition(length >= 0, "length must not be negative")
         guard index <= self.capacity - length else {

@@ -244,7 +244,7 @@ class HTTPResponseCompressorTest: XCTestCase {
 
         var bodyChunks = [ByteBuffer]()
         for index in stride(from: 0, to: bodyBuffer.readableBytes, by: 2) {
-            bodyChunks.append(bodyBuffer.slice(at: index, length: 2)!)
+            bodyChunks.append(bodyBuffer.getSlice(at: index, length: 2)!)
         }
 
         let data = try compressResponse(head: response,
@@ -281,7 +281,7 @@ class HTTPResponseCompressorTest: XCTestCase {
 
         var bodyChunks = [ByteBuffer]()
         for index in stride(from: 0, to: bodyBuffer.readableBytes, by: 2) {
-            bodyChunks.append(bodyBuffer.slice(at: index, length: 2)!)
+            bodyChunks.append(bodyBuffer.getSlice(at: index, length: 2)!)
         }
 
         let data = try compressResponse(head: response,
@@ -318,7 +318,7 @@ class HTTPResponseCompressorTest: XCTestCase {
 
         var bodyChunks = [ByteBuffer]()
         for index in stride(from: 0, to: bodyBuffer.readableBytes, by: 2) {
-            bodyChunks.append(bodyBuffer.slice(at: index, length: 2)!)
+            bodyChunks.append(bodyBuffer.getSlice(at: index, length: 2)!)
         }
 
         let data = try compressResponse(head: response,

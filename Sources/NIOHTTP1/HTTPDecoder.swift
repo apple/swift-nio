@@ -307,7 +307,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             // Calculate the index of the data in the cumulationBuffer so we can slice out the ByteBuffer without doing any memory copy
             let index = handler.state.calculateIndex(data: data!, length: len)
             
-            let slice = handler.state.cumulationBuffer!.slice(at: index, length: len)!
+            let slice = handler.state.cumulationBuffer!.getSlice(at: index, length: len)!
             handler.pendingCallouts.append {
                 switch handler {
                 case let handler as HTTPRequestDecoder:

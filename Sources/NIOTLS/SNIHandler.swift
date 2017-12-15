@@ -153,7 +153,7 @@ public class SniHandler: ByteToMessageDecoder {
         //
         // From this point onwards if we don't have enough data to satisfy a read, this is an error and
         // we will fall back to let the upper layers handle it.
-        tempBuffer = tempBuffer.slice(at: tempBuffer.readerIndex, length: Int(contentLength))!
+        tempBuffer = tempBuffer.getSlice(at: tempBuffer.readerIndex, length: Int(contentLength))!
 
         // Now parse the handshake header. If the length of the handshake message is not exactly the
         // length of this record, something has gone wrong and we should give up.
@@ -321,7 +321,7 @@ public class SniHandler: ByteToMessageDecoder {
             // We've found the server name extension. It's possible a malicious client could attempt a confused
             // deputy attack by giving us contradictory lengths, so we again want to trim the bytebuffer down
             // so that we never read past the advertised length of this extension.
-            buffer = buffer.slice(at: buffer.readerIndex, length: Int(extensionLength))!
+            buffer = buffer.getSlice(at: buffer.readerIndex, length: Int(extensionLength))!
             return try parseServerNameExtension(buffer: &buffer)
         }
         return nil
@@ -366,7 +366,7 @@ public class SniHandler: ByteToMessageDecoder {
 
         // We are never looking for another extension, so this is now all that we care about in the
         // world. Slice our way down to just that.
-        buffer = buffer.slice(at: buffer.readerIndex, length: Int(nameBufferLength))!
+        buffer = buffer.getSlice(at: buffer.readerIndex, length: Int(nameBufferLength))!
         while buffer.readableBytes > 0 {
             let nameType: UInt8 = try buffer.readIntegerIfPossible()
 
@@ -379,7 +379,7 @@ public class SniHandler: ByteToMessageDecoder {
                 continue
             }
 
-            guard let hostname = buffer.string(at: buffer.readerIndex, length: Int(nameLength), encoding: .ascii) else {
+            guard let hostname = buffer.getString(at: buffer.readerIndex, length: Int(nameLength), encoding: .ascii) else {
                 throw InternalSniErrors.invalidRecord
             }
             return hostname

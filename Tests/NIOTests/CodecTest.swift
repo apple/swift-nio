@@ -60,7 +60,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         channel.pipeline.fireChannelRead(data: NIOAny(buffer))
         XCTAssertNil(channel.readInbound())
         
-        channel.pipeline.fireChannelRead(data: NIOAny(buffer.slice(at: writerIndex - 1, length: 1)!))
+        channel.pipeline.fireChannelRead(data: NIOAny(buffer.getSlice(at: writerIndex - 1, length: 1)!))
         
         var buffer2 = channel.allocator.buffer(capacity: 32)
         buffer2.write(integer: Int32(2))

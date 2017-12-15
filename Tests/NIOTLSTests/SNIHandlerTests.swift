@@ -299,7 +299,7 @@ class SniHandlerTest: XCTestCase {
         try loop.run()
 
         let writtenBuffer: ByteBuffer = channel.readInbound()!
-        let writtenData = writtenBuffer.data(at: writtenBuffer.readerIndex, length: writtenBuffer.readableBytes)
+        let writtenData = writtenBuffer.getData(at: writtenBuffer.readerIndex, length: writtenBuffer.readableBytes)
         let expectedData = Data(base64Encoded: clientHello, options: .ignoreUnknownCharacters)!
         XCTAssertEqual(writtenData, expectedData)
 
@@ -339,7 +339,7 @@ class SniHandlerTest: XCTestCase {
         try loop.run()
 
         let writtenBuffer: ByteBuffer = channel.readInbound()!
-        let writtenData = writtenBuffer.data(at: writtenBuffer.readerIndex, length: writtenBuffer.readableBytes)
+        let writtenData = writtenBuffer.getData(at: writtenBuffer.readerIndex, length: writtenBuffer.readableBytes)
         let expectedData = Data(base64Encoded: clientHello, options: .ignoreUnknownCharacters)!
         XCTAssertEqual(writtenData, expectedData)
 
