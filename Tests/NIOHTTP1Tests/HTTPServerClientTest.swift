@@ -93,6 +93,9 @@ class HTTPServerClientTest : XCTestCase {
         private let mode: SendMode
         private let fileManager = FileManager.default
         private var files: [String] = Array()
+        private var seenEnd: Bool = false
+        private var sentEnd: Bool = false
+        private var closed: Bool = false
         
         init(_ mode: SendMode) {
             self.mode = mode
@@ -145,9 +148,8 @@ class HTTPServerClientTest : XCTestCase {
                     ctx.write(data: self.wrapOutboundOut(self.outboundBody(b)), promise: nil)
                     ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
                         assertSuccess(r)
-                        ctx.close().whenComplete { r in
-                            assertSuccess(r)
-                        }
+                        self.sentEnd = true
+                        self.maybeClose(ctx: ctx)
                     }
                 case "/count-to-ten":
                     var head = HTTPResponseHead(version: req.version, status: .ok)
@@ -167,9 +169,8 @@ class HTTPServerClientTest : XCTestCase {
                     }
                     ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
                         assertSuccess(r)
-                        ctx.close().whenComplete { r in
-                            assertSuccess(r)
-                        }
+                        self.sentEnd = true
+                        self.maybeClose(ctx: ctx)
                     }
                 case "/trailers":
                     var head = HTTPResponseHead(version: req.version, status: .ok)
@@ -194,9 +195,8 @@ class HTTPServerClientTest : XCTestCase {
                     trailers.add(name: "X-Should-Trail", value: "sure")
                     ctx.write(data: self.wrapOutboundOut(.end(trailers))).whenComplete { r in
                         assertSuccess(r)
-                        ctx.close().whenComplete { r in
-                            assertSuccess(r)
-                        }
+                        self.sentEnd = true
+                        self.maybeClose(ctx: ctx)
                     }
 
                 case "/massive-response":
@@ -221,9 +221,8 @@ class HTTPServerClientTest : XCTestCase {
                     }
                     ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
                         assertSuccess(r)
-                        ctx.close().whenComplete { r in
-                            assertSuccess(r)
-                        }
+                        self.sentEnd = true
+                        self.maybeClose(ctx: ctx)
                     }
                 case "/head":
                     var head = HTTPResponseHead(version: req.version, status: .ok)
@@ -234,9 +233,8 @@ class HTTPServerClientTest : XCTestCase {
                     }
                     ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
                         assertSuccess(r)
-                        ctx.close().whenComplete { r in
-                            assertSuccess(r)
-                        }
+                        self.sentEnd = true
+                        self.maybeClose(ctx: ctx)
                     }
                 case "/204":
                     var head = HTTPResponseHead(version: req.version, status: .noContent)
@@ -246,15 +244,15 @@ class HTTPServerClientTest : XCTestCase {
                     }
                     ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
                         assertSuccess(r)
-                        ctx.close().whenComplete { r in
-                            assertSuccess(r)
-                        }
+                        self.sentEnd = true
+                        self.maybeClose(ctx: ctx)
                     }
                 default:
                     XCTFail("received request to unknown URI \(req.uri)")
                 }
             case .end(let trailers):
                 XCTAssertNil(trailers)
+                seenEnd = true
             default:
                 XCTFail("wrong")
             }
@@ -263,6 +261,18 @@ class HTTPServerClientTest : XCTestCase {
         public func channelReadComplete(ctx: ChannelHandlerContext) {
             ctx.flush().whenComplete {
                 assertSuccess($0)
+                self.maybeClose(ctx: ctx)
+            }
+        }
+
+        // We should only close the connection when the remote peer has sent the entire request
+        // and we have sent our entire response.
+        private func maybeClose(ctx: ChannelHandlerContext) {
+            if sentEnd && seenEnd && !closed {
+                closed = true
+                ctx.close().whenComplete { r in
+                    assertSuccess(r)
+                }
             }
         }
     }
