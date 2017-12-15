@@ -990,6 +990,24 @@ public class ChannelTests: XCTestCase {
             XCTAssertEqual(WriteResult.writtenCompletely, result)
             XCTAssertTrue(flushPromise.futureResult.fulfilled)
         }
+    }
 
+    func testPendingWritesIsHappyWhenSendfileReturnsWouldBlockButWroteFully() {
+        let el = EmbeddedEventLoop()
+        withPendingWritesManager { pwm in
+            let ps: [EventLoopPromise<()>] = (0..<1).map { _ in el.newPromise() }
+
+            _ = pwm.add(data: .fileRegion(FileRegion(descriptor: -1, readerIndex: 0, endIndex: 8192)), promise: ps[0])
+            pwm.markFlushCheckpoint(promise: nil)
+
+            let result = assertExpectedWritability(pendingWritesManager: pwm,
+                                                   promises: ps,
+                                                   expectedSingleWritabilities: nil,
+                                                   expectedVectorWritabilities: nil,
+                                                   expectedFileWritabilities: [(0, 8192)],
+                                                   returns: [.wouldBlock(8192)],
+                                                   promiseStates: [[true]])
+            XCTAssertEqual(.writtenCompletely, result)
+        }
     }
 }

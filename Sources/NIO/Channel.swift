@@ -272,7 +272,13 @@ private struct PendingWritesState {
                 case .byteBuffer(let buffer):
                     fatalError("write with .wouldBlock(\(n)) but a ByteBuffer (\(buffer)) was written")
                 case .fileRegion(let file):
-                    assert(file.readableBytes > 0, "write with .wouldBlock(\(n)) but sendfile wrote fully on \(file)")
+                    if file.readableBytes == 0 {
+                        /* this is odd, sendfile wrote everything but notionally failed with EWOULDBLOCK. This happens on Darwin. */
+                        if let promise = self.fullyWrittenFirst() {
+                            promises.append(promise)
+                        }
+                        return (fulfillPromises, .writtenCompletely)
+                    }
                 }
             }
             /* we don't update here as we get non-zero only if sendfile was used and we don't track bytes to be sent as `FileRegion` */

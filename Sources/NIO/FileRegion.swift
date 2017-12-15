@@ -93,6 +93,12 @@ public final class FileRegion {
     }
 }
 
+extension FileRegion: CustomStringConvertible {
+    public var description: String {
+        return "FileRegion(descriptor: \(self.descriptor), readerIndex: \(self.readerIndex), endIndex: \(self.endIndex), open: \(self.open))"
+    }
+}
+
 extension FileRegion {
     /// Create a new `FileRegion`.
     ///
