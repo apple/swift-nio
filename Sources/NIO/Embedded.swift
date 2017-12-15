@@ -14,10 +14,12 @@
 
 import Dispatch
 
-class EmbeddedEventLoop : EventLoop {
+public class EmbeddedEventLoop : EventLoop {
 
     let queue = DispatchQueue(label: "embeddedEventLoopQueue", qos: .utility)
-    var inEventLoop: Bool = true
+    public var inEventLoop: Bool {
+        return true
+    }
     var isRunning: Bool = false
 
     // Would be better to have this as a Queue
@@ -35,7 +37,7 @@ class EmbeddedEventLoop : EventLoop {
         return EventLoopFuture<T>(eventLoop: self, checkForPossibleDeadlock: false, result: result)
     }
     
-    func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
+    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = newPromise()
         promise.fail(error: EventLoopError.unsupportedOperation)
         return Scheduled(promise: promise, cancellationTask: {
@@ -46,7 +48,7 @@ class EmbeddedEventLoop : EventLoop {
     // We're not really running a loop here. Tasks aren't run until run() is called,
     // at which point we run everything that's been submitted. Anything newly submitted
     // either gets on that train if it's still moving or
-    func execute(task: @escaping () -> ()) {
+    public func execute(task: @escaping () -> ()) {
         queue.sync {
             if isRunning && tasks.isEmpty {
                 task()
@@ -70,7 +72,7 @@ class EmbeddedEventLoop : EventLoop {
         // Nothing to do here
     }
 
-    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+    public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
         queue.async {
             callback(nil)
         }
