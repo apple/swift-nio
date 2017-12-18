@@ -125,7 +125,7 @@ class HTTPServerClientTest : XCTestCase {
             }
         }
         
-        public func handleRemoved(ctx: ChannelHandlerContext) {
+        public func handlerRemoved(ctx: ChannelHandlerContext) {
             for f in files {
                 _ = try? fileManager.removeItem(atPath: f)
             }
