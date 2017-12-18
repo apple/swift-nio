@@ -312,8 +312,8 @@ internal final class SelectableEventLoop : EventLoop {
     }
     
     deinit {
-        _iovecs.deallocate(capacity: Socket.writevLimitIOVectors)
-        _storageRefs.deallocate(capacity: Socket.writevLimitIOVectors)
+        _iovecs.deallocate()
+        _storageRefs.deallocate()
     }
     
     /// Register the given `SelectableChannel` with this `SelectableEventLoop`. After this point all I/O for the `SelectableChannel` will be processed by this `SelectableEventLoop` until it

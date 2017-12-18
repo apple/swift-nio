@@ -21,6 +21,19 @@ let sysMalloc = malloc
 let sysRealloc = realloc
 let sysFree = free
 
+#if !swift(>=4.1)
+    public extension UnsafeMutableRawPointer {
+        public func copyMemory(from src: UnsafeRawPointer, byteCount: Int) {
+            self.copyBytes(from: src, count: byteCount)
+        }
+    }
+    public extension UnsafeMutableRawBufferPointer {
+        public func copyMemory(from src: UnsafeRawBufferPointer) {
+            self.copyBytes(from: src)
+        }
+    }
+#endif
+
 /// The preferred allocator for `ByteBuffer` values. The allocation strategy is opaque but is currently libc's
 /// `malloc`, `realloc` and `free`.
 public struct ByteBufferAllocator {
@@ -32,11 +45,11 @@ public struct ByteBufferAllocator {
         self.init(hookedMalloc: { sysMalloc($0) },
                   hookedRealloc: { sysRealloc($0, $1) },
                   hookedFree: { sysFree($0) },
-                  hookedMemcpy: { $0.copyBytes(from: $1, count: $2) })
+                  hookedMemcpy: { $0.copyMemory(from: $1, byteCount: $2) })
     }
 
-    internal init(hookedMalloc: @escaping @convention(c) (Int) -> UnsafeMutableRawPointer!,
-                  hookedRealloc: @escaping @convention(c) (UnsafeMutableRawPointer, Int) -> UnsafeMutableRawPointer!,
+    internal init(hookedMalloc: @escaping @convention(c) (Int) -> UnsafeMutableRawPointer,
+                  hookedRealloc: @escaping @convention(c) (UnsafeMutableRawPointer, Int) -> UnsafeMutableRawPointer,
                   hookedFree: @escaping @convention(c) (UnsafeMutableRawPointer) -> Void,
                   hookedMemcpy: @escaping @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, Int) -> Void) {
         assert(MemoryLayout<ByteBuffer>.size <= 3 * MemoryLayout<Int>.size,
@@ -55,8 +68,8 @@ public struct ByteBufferAllocator {
         return ByteBuffer(allocator: self, startingCapacity: capacity)
     }
 
-    internal let malloc: @convention(c) (Int) -> UnsafeMutableRawPointer!
-    internal let realloc: @convention(c) (UnsafeMutableRawPointer, Int) -> UnsafeMutableRawPointer!
+    internal let malloc: @convention(c) (Int) -> UnsafeMutableRawPointer
+    internal let realloc: @convention(c) (UnsafeMutableRawPointer, Int) -> UnsafeMutableRawPointer
     internal let free: @convention(c) (UnsafeMutableRawPointer) -> Void
     internal let memcpy: @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, Int) -> Void
 
@@ -184,7 +197,7 @@ public struct ByteBuffer {
 
         private static func allocateAndPrepareRawMemory(bytes: Capacity, allocator: Allocator) -> UnsafeMutableRawPointer {
             let bytes = Int(bytes)
-            let ptr = allocator.malloc(bytes)!
+            let ptr = allocator.malloc(bytes)
             /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
             ptr.bindMemory(to: UInt8.self, capacity: bytes)
             return ptr
@@ -201,7 +214,7 @@ public struct ByteBuffer {
         }
         
         public func reallocStorage(capacity: Capacity) {
-            let ptr = self.allocator.realloc(self.bytes, Int(capacity))!
+            let ptr = self.allocator.realloc(self.bytes, Int(capacity))
             /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
             ptr.bindMemory(to: UInt8.self, capacity: Int(capacity))
             self.bytes = ptr
@@ -469,8 +482,8 @@ public struct ByteBuffer {
 
         if isKnownUniquelyReferenced(&self._storage) {
             self._storage.bytes.advanced(by: Int(self._slice.lowerBound))
-                .copyBytes(from: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
-                           count: self.readableBytes)
+                .copyMemory(from: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
+                            byteCount: self.readableBytes)
             let indexShift = self._readerIndex
             self.moveReaderIndex(to: 0)
             self.moveWriterIndex(to: self._writerIndex - indexShift)

@@ -23,8 +23,9 @@ class EchoServerClientTest : XCTestCase {
         let template = "/tmp/.NIOTests-UDS-container-dir_XXXXXX"
         var templateBytes = Array(template.utf8)
         templateBytes.append(0)
+        let templateBytesCount = templateBytes.count
         templateBytes.withUnsafeMutableBufferPointer { ptr in
-            ptr.baseAddress!.withMemoryRebound(to: Int8.self, capacity: templateBytes.count) { (ptr: UnsafeMutablePointer<Int8>) in
+            ptr.baseAddress!.withMemoryRebound(to: Int8.self, capacity: templateBytesCount) { (ptr: UnsafeMutablePointer<Int8>) in
                 let ret = mkdtemp(ptr)
                 XCTAssertNotNil(ret)
             }

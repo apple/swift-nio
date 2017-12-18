@@ -159,8 +159,8 @@ class BaseSocket : Selectable {
         var length = socklen_t(MemoryLayout<T>.size)
         var val = UnsafeMutablePointer<T>.allocate(capacity: 1)
         defer {
-            val.deinitialize()
-            val.deallocate(capacity: 1)
+            val.deinitialize(count: 1)
+            val.deallocate()
         }
         
         try Posix.getsockopt(socket: self.descriptor, level: level, optionName: name, optionValue: val, optionLen: &length)

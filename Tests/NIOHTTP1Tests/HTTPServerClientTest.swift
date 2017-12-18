@@ -204,7 +204,7 @@ class HTTPServerClientTest : XCTestCase {
                     buf.writeWithUnsafeMutableBytes { targetPtr in
                         return HTTPServerClientTest.massiveResponseBytes.withUnsafeBytes { srcPtr in
                             precondition(targetPtr.count >= srcPtr.count)
-                            targetPtr.copyBytes(from: srcPtr)
+                            targetPtr.copyMemory(from: srcPtr)
                             return srcPtr.count
                         }
                     }

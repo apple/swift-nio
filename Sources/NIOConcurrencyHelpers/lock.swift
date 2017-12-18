@@ -18,6 +18,15 @@ import Darwin
 import Glibc
 #endif
 
+#if !swift(>=4.1)
+    public extension UnsafeMutablePointer {
+        public func deallocate() {
+            /* this is a bit dodgy as we always pass 1 but it's okay as Swift 4.0 would also always deallocate the whole chunk */
+            self.deallocate(capacity: 1)
+        }
+    }
+#endif
+
 /// A threading lock based on `libpthread` instead of `libdispatch`.
 ///
 /// This object provides a lock on top of a single `pthread_mutex_t`. This kind
@@ -33,7 +42,7 @@ public final class Lock {
     }
 
     deinit {
-        mutex.deallocate(capacity: 1)
+        mutex.deallocate()
     }
 
     /// Acquire the lock.
@@ -98,7 +107,7 @@ public final class ConditionLock<T: Equatable> {
     }
 
     deinit {
-        self.cond.deallocate(capacity: 1)
+        self.cond.deallocate()
     }
 
     /// Acquire the lock, regardless of the value of the state variable.

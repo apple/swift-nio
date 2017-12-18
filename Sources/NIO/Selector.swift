@@ -49,8 +49,8 @@ final class Selector<R: Registration> {
     }
     
     private static func deallocateEventsArray(events: UnsafeMutablePointer<EventType>, capacity: Int) {
-        events.deinitialize()
-        events.deallocate(capacity: capacity)
+        events.deinitialize(count: capacity)
+        events.deallocate()
     }
     
     private func growEventArrayIfNeeded(ready: Int) {

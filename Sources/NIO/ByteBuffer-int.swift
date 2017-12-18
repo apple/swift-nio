@@ -51,8 +51,8 @@ extension ByteBuffer {
             }
             var value: T = 0
             withUnsafeMutableBytes(of: &value) { valuePtr in
-                valuePtr.copyBytes(from: UnsafeRawBufferPointer(start: ptr.baseAddress!.advanced(by: index),
-                                                                count: MemoryLayout<T>.size))
+                valuePtr.copyMemory(from: UnsafeRawBufferPointer(start: ptr.baseAddress!.advanced(by: index),
+                                                                 count: MemoryLayout<T>.size))
             }
             return toEndianness(value: value, endianness: endianness)
         }

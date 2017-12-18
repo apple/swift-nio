@@ -27,9 +27,14 @@ private let ASCII_CAPITAL_A: UInt8 = 65
 private let ASCII_CAPITAL_Z: UInt8 = 90
 private let ASCII_CASE_DISTANCE: UInt8 = 32
 
+#if swift(>=4.1)
+    typealias SliceType = Slice
+#else
+    typealias SliceType = RandomAccessSlice
+#endif
 /// We need these extra methods defining equality.
-private extension RandomAccessSlice where Base == UnsafeBufferPointer<UInt8> {
-    static func ==(lhs: RandomAccessSlice<Base>, rhs: RandomAccessSlice<Base>) -> Bool {
+private extension SliceType where Base == UnsafeBufferPointer<UInt8> {
+    static func ==(lhs: SliceType<Base>, rhs: SliceType<Base>) -> Bool {
         guard lhs.count == rhs.count else {
             return false
         }
@@ -39,13 +44,13 @@ private extension RandomAccessSlice where Base == UnsafeBufferPointer<UInt8> {
                       lhs.count) == 0
     }
 
-    static func ==(lhs: RandomAccessSlice<Base>, rhs: [UInt8]) -> Bool {
+    static func ==(lhs: SliceType<Base>, rhs: [UInt8]) -> Bool {
         return rhs.withUnsafeBufferPointer {
             return lhs == $0[...]
         }
     }
 
-    static func !=(lhs: RandomAccessSlice<Base>, rhs: [UInt8]) -> Bool {
+    static func !=(lhs: SliceType<Base>, rhs: [UInt8]) -> Bool {
         return !(lhs == rhs)
     }
 }
@@ -258,8 +263,8 @@ private func matchIpAddress(socketAddress: SocketAddress, certificateIP: OpenSSL
     }
 }
 
-private func wildcardLabelMatch(wildcard: RandomAccessSlice<UnsafeBufferPointer<UInt8>>,
-                                target: RandomAccessSlice<UnsafeBufferPointer<UInt8>>) -> Bool {
+private func wildcardLabelMatch(wildcard: SliceType<UnsafeBufferPointer<UInt8>>,
+                                target: SliceType<UnsafeBufferPointer<UInt8>>) -> Bool {
     // The wildcard can appear more-or-less anywhere in the first label. The wildcard
     // character itself can match any number of characters, though it must match at least
     // one.

@@ -61,7 +61,7 @@ final class Socket : BaseSocket {
         var addr = addr
         return try withUnsafePointer(to: &addr) { ptr in
             try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                try Posix.connect(descriptor: self.descriptor, addr: ptr, size: MemoryLayout.size(ofValue: addr))
+                try Posix.connect(descriptor: self.descriptor, addr: ptr, size: MemoryLayout<T>.size)
             }
         }
     }
