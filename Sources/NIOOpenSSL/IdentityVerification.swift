@@ -184,8 +184,8 @@ private func matchHostname(serverHostname: UnsafeBufferPointer<UInt8>?, dnsName:
     // we should refuse to match it. Additionally, the server-provided name must not contain embedded NULL
     // bytes. Our own hostname will have passed through our own code to be lowercased, so we just have
     // an assertion here to catch programming errors in debug code.
-    assert(ourHostname.lazy.filter { ($0 > 127) }.count == 0)
-    if (certHostname.lazy.filter { ($0 > 127) || ($0 == 0) }.count) > 0 {
+    assert(ourHostname.lazy.filter { (c: UInt8) -> Bool in c > 127 }.count == 0)
+    if (certHostname.lazy.filter { (c: UInt8) -> Bool in (c > 127) || (c == 0) }.count) > 0 {
         return false  // No match
     }
 
