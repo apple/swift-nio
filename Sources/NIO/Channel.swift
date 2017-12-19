@@ -1336,7 +1336,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             return
         }
         if interested == interestedEvent || interestedEvent == .none {
-            // we not need to update and so cause a syscall if we already are registered with the correct event
+            // we don't need to update and so cause a syscall if we already are registered with the correct event
             return
         }
         interestedEvent = interested

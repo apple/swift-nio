@@ -399,7 +399,7 @@ public final class ChannelPipeline : ChannelInvoker {
             remove0(ctx: ctx, promise:  eventLoop.newPromise())
         }
         
-        // We need to set the next reference to nil to ensure we not leak memory due a cycle-reference.
+        // We need to set the next reference to nil to ensure we don't leak memory due a cycle-reference.
         destroyReferences(inboundChain!)
         destroyReferences(outboundChain!)
         
@@ -407,7 +407,7 @@ public final class ChannelPipeline : ChannelInvoker {
     }
     
     private func destroyReferences(_ ctx: ChannelHandlerContext) {
-        // We need to set the next reference to nil to ensure we not leak memory due a cycle-reference.
+        // We need to set the next reference to nil to ensure we don't leak memory due a cycle-reference.
         ctx.inboundNext = nil
         ctx.outboundNext = nil
         ctx.pipeline = nil
