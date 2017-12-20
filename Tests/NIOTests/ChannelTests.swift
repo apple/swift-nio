@@ -76,7 +76,7 @@ public class ChannelTests: XCTestCase {
         var serverAcceptedChannel: Channel? = nil
         let serverLifecycleHandler = ChannelLifecycleHandler()
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 serverAcceptedChannel = channel
                 return channel.pipeline.add(handler: serverLifecycleHandler)
@@ -110,7 +110,7 @@ public class ChannelTests: XCTestCase {
         }
 
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .bind(to: "127.0.0.1", on: 0).wait()
 
         let clientChannel = try ClientBootstrap(group: group)
@@ -136,7 +136,7 @@ public class ChannelTests: XCTestCase {
         }
 
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .bind(to: "127.0.0.1", on: 0).wait()
 
         let clientChannel = try ClientBootstrap(group: group)
@@ -172,7 +172,7 @@ public class ChannelTests: XCTestCase {
 
         let childChannelPromise: EventLoopPromise<Channel> = group.next().newPromise()
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 childChannelPromise.succeed(result: channel)
                 return channel.eventLoop.newSucceedFuture(result: ())

@@ -12,11 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// An configuration option that can be set on a `Channel` to configure different behaviour.
 public protocol ChannelOption {
     associatedtype AssociatedValueType
     associatedtype OptionType
     
+    /// The value of the `ChannelOption`.
     var value: AssociatedValueType { get }
+    
+    /// The type of the `ChannelOption`
     var type: OptionType.Type { get }
 }
 
@@ -41,6 +45,9 @@ public typealias SocketOptionName = Int32
     public typealias SocketOptionValue = Int32
 #endif
 
+/// `SocketOption` allows to specify configuration settings that are directly applied to the underlying socket file descriptor.
+///
+/// Valid options are typically found in the various man pages like `man 4 tcp`.
 public enum SocketOption: ChannelOption {
     public typealias AssociatedValueType = (SocketOptionLevel, SocketOptionName)
 
@@ -48,6 +55,11 @@ public enum SocketOption: ChannelOption {
     
     case const(AssociatedValueType)
     
+    /// Create a new `SocketOption`.
+    ///
+    /// - parameters:
+    ///       - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
+    ///       - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
     public init(level: SocketOptionLevel, name: SocketOptionName) {
         self = .const((level, name))
     }
@@ -60,6 +72,7 @@ public enum SocketOption: ChannelOption {
     }
 }
 
+/// `AllocatorOption` allows to specify the `ByteBufferAllocator` to use.
 public enum AllocatorOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = ByteBufferAllocator
@@ -67,6 +80,7 @@ public enum AllocatorOption: ChannelOption {
     case const(())
 }
 
+/// `RecvAllocatorOption` allows to specify the `RecvByteBufferAllocator` to use.
 public enum RecvAllocatorOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = RecvByteBufferAllocator
@@ -74,6 +88,8 @@ public enum RecvAllocatorOption: ChannelOption {
     case const(())
 }
 
+/// `AutoReadOption` allows to configure if a `Channel` should automatically call `Channel.read` again once all data was read from the transport or
+/// if the user is responsible to call `Channel.read` manually.
 public enum AutoReadOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = Bool
@@ -81,6 +97,8 @@ public enum AutoReadOption: ChannelOption {
     case const(())
 }
 
+/// `WriteSpinOption` allows to configure the number of write calls to do before consider the `Channel` as non-writable and give up until it
+/// becomes writable again.
 public enum WriteSpinOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = UInt
@@ -88,6 +106,8 @@ public enum WriteSpinOption: ChannelOption {
     case const(())
 }
 
+/// `MaxMessagesPerReadOption` allows to configure the maximum number of read calls to the underlying transport are performed before wait again until
+/// there is more to read and be notified.
 public enum MaxMessagesPerReadOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = UInt
@@ -95,6 +115,7 @@ public enum MaxMessagesPerReadOption: ChannelOption {
     case const(())
 }
 
+/// `BacklogOption` allows to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
 public enum BacklogOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = Int32
@@ -102,8 +123,15 @@ public enum BacklogOption: ChannelOption {
     case const(())
 }
 
+/// The watermark used to detect once `Channel.writable` returns `true` or `false`.
 public typealias WriteBufferWaterMark = Range<Int>
 
+/// `WriteBufferWaterMarkOption` allows to configure when a `Channel` should be marked as writable or not. Once the amount of bytes queued in a
+/// `Channel`s outbound buffer is larger then the upper value of the `WriteBufferWaterMark` the channel will be marked as non-writable and so
+/// `Channel.isWritable` will return `false`. Once we were able to write some data out of the outbound buffer and the amount of bytes queued
+/// falls under the lower value of `WriteBufferWaterMark` the `Channel` will become writable again. Once this happens  `Channel.writable` will return
+/// `true` again. These writability changes are also propagated through the `ChannelPipeline` via the `ChannelPipeline.fireChannelWritabilityChanged`
+/// method and so its possible to act on this in a `ChannelInboundHandler` implementation.
 public enum WriteBufferWaterMarkOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = WriteBufferWaterMark
@@ -111,13 +139,29 @@ public enum WriteBufferWaterMarkOption: ChannelOption {
     case const(())
 }
 
+/// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
 public struct ChannelOptions {
-    public static let Socket = { (level: SocketOptionLevel, name: SocketOptionName) -> SocketOption in .const((level, name)) }
-    public static let Allocator = AllocatorOption.const(())
-    public static let RecvAllocator = RecvAllocatorOption.const(())
-    public static let AutoRead = AutoReadOption.const(())
-    public static let MaxMessagesPerRead = MaxMessagesPerReadOption.const(())
-    public static let Backlog = BacklogOption.const(())
-    public static let WriteSpin = WriteSpinOption.const(())
-    public static let WriteBufferWaterMark = WriteBufferWaterMarkOption.const(())
+    /// - seealso: `SocketOption`.
+    public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> SocketOption in .const((level, name)) }
+
+    /// - seealso: `AllocatorOption`.
+    public static let allocator = AllocatorOption.const(())
+
+    /// - seealso: `RecvAllocatorOption`.
+    public static let recvAllocator = RecvAllocatorOption.const(())
+
+    /// - seealso: `AutoReadOption`.
+    public static let autoRead = AutoReadOption.const(())
+    
+    /// - seealso: `MaxMessagesPerReadOption`.
+    public static let maxMessagesPerRead = MaxMessagesPerReadOption.const(())
+    
+    /// - seealso: `BacklogOption`.
+    public static let backlog = BacklogOption.const(())
+    
+    /// - seealso: `WriteSpinOption`.
+    public static let writeSpin = WriteSpinOption.const(())
+    
+    /// - seealso: `WriteBufferWaterMarkOption`.
+    public static let writeBufferWaterMark = WriteBufferWaterMarkOption.const(())
 }

@@ -103,7 +103,7 @@ public protocol ChannelOutboundInvoker {
     
     /// Signal that we want to read from the `Channel` once there is data ready.
     ///
-    /// If `ChannelOptions.AutoRead` is set for a `Channel` (which is the default) this method is automatically invoked by the transport implementation,
+    /// If `ChannelOptions.autoRead` is set for a `Channel` (which is the default) this method is automatically invoked by the transport implementation,
     /// otherwise it's the user's responsibility to call this method manually once new data should be read and processed.
     ///
     /// - returns: the future which will be notified once the operation completes.
@@ -111,7 +111,7 @@ public protocol ChannelOutboundInvoker {
     
     /// Signal that we want to read from the `Channel` once there is data ready.
     ///
-    /// If `ChannelOptions.AutoRead` is set for a `Channel` (which is the default) this method is automatically invoked by the transport implementation,
+    /// If `ChannelOptions.autoRead` is set for a `Channel` (which is the default) this method is automatically invoked by the transport implementation,
     /// otherwise it's the user's responsibility to call this method manually once new data should be read and processed.
     ///
     /// - parameters:

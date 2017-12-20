@@ -215,7 +215,7 @@ internal func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, andHandlers: 
 
 internal func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, preHandlers: [ChannelHandler], postHandlers: [ChannelHandler], onGroup: EventLoopGroup) throws -> Channel {
     return try ServerBootstrap(group: onGroup)
-        .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+        .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
         .childChannelInitializer { channel in
             let results = preHandlers.map { channel.pipeline.add(handler: $0) }
             return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next()).then {

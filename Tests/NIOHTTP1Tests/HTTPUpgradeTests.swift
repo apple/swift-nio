@@ -29,7 +29,7 @@ private extension ChannelPipeline {
 
 private func serverHTTPChannel(group: EventLoopGroup, handlers: [ChannelHandler]) -> Channel {
     return try! ServerBootstrap(group: group)
-        .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+        .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
         .childChannelInitializer { channel in
             channel.pipeline.addHTTPServerHandlers().then {
                 let futureResults = handlers.map { channel.pipeline.add(handler: $0) }

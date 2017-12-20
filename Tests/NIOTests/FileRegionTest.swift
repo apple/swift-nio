@@ -49,7 +49,7 @@ class FileRegionTest : XCTestCase {
         let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().newPromise())
 
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer({ $0.pipeline.add(handler: countingHandler) }).bind(to: "127.0.0.1", on: 0).wait()
         
         defer {
@@ -84,7 +84,7 @@ class FileRegionTest : XCTestCase {
         let countingHandler = ByteCountingHandler(numBytes: 0, promise: group.next().newPromise())
 
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer({ $0.pipeline.add(handler: countingHandler) }).bind(to: "127.0.0.1", on: 0).wait()
 
         defer {
@@ -162,7 +162,7 @@ class FileRegionTest : XCTestCase {
         let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().newPromise())
 
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer({ $0.pipeline.add(handler: countingHandler) }).bind(to: "127.0.0.1", on: 0).wait()
 
         defer {

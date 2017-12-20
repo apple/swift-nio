@@ -43,7 +43,7 @@ class EchoServerClientTest : XCTestCase {
         let numBytes = 16 * 1024
         let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().newPromise())
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
@@ -79,7 +79,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 return channel.pipeline.add(handler: WriteALotHandler())
             }.bind(to: "127.0.0.1", on: 0).wait()
@@ -119,7 +119,7 @@ class EchoServerClientTest : XCTestCase {
         let numBytes = 16 * 1024
         let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().newPromise())
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
@@ -162,7 +162,7 @@ class EchoServerClientTest : XCTestCase {
         let numBytes = 16 * 1024
         let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().newPromise())
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
@@ -199,7 +199,7 @@ class EchoServerClientTest : XCTestCase {
 
         let handler = ChannelActiveHandler()
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .bind(to: "127.0.0.1", on: 0).wait()
         
         defer {
@@ -224,7 +224,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 return channel.pipeline.add(handler: EchoServer())
             }.bind(to: "127.0.0.1", on: 0).wait()
@@ -459,7 +459,7 @@ class EchoServerClientTest : XCTestCase {
                                                                    channelInactivePromise: inactivePromise)
 
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
@@ -493,7 +493,7 @@ class EchoServerClientTest : XCTestCase {
         let bytesReceivedPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let byteCountingHandler = ByteCountingHandler(numBytes: writingBytes.utf8.count, promise: bytesReceivedPromise)
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                 return channel.pipeline.add(handler: byteCountingHandler)
@@ -538,7 +538,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 return channel.pipeline.add(handler: EchoServer())
             }.bind(to: "127.0.0.1", on: 0).wait()
@@ -572,7 +572,7 @@ class EchoServerClientTest : XCTestCase {
 
         let stringToWrite = "hello"
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 return channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite))
             }.bind(to: "127.0.0.1", on: 0).wait()
@@ -602,7 +602,7 @@ class EchoServerClientTest : XCTestCase {
 
         dpGroup.enter()
         let serverChannel = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 return channel.pipeline.add(handler: EchoAndEchoAgainAfterSomeTimeServer(time: .seconds(1), secondWriteDoneHandler: {
                     dpGroup.leave()

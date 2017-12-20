@@ -124,7 +124,7 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
             // We didn't deliver data. If this channel has got autoread turned off then we should
             // call read again, because otherwise the user will never see any result from their
             // read call.
-            let autoRead = try! ctx.channel!.getOption(option: ChannelOptions.AutoRead)
+            let autoRead = try! ctx.channel!.getOption(option: ChannelOptions.autoRead)
             if !autoRead {
                 ctx.read(promise: nil)
             }

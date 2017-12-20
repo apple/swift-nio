@@ -47,8 +47,8 @@ private final class EchoHandler: ChannelInboundHandler {
 let group = MultiThreadedEventLoopGroup(numThreads: 1)
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
-    .serverChannelOption(ChannelOptions.Backlog, value: 256)
-    .serverChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+    .serverChannelOption(ChannelOptions.backlog, value: 256)
+    .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
     // Set the handlers that are appled to the accepted Channels
     .childChannelInitializer { channel in
@@ -59,10 +59,10 @@ let bootstrap = ServerBootstrap(group: group)
     }
 
     // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels
-    .childChannelOption(ChannelOptions.Socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
-    .childChannelOption(ChannelOptions.Socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-    .childChannelOption(ChannelOptions.MaxMessagesPerRead, value: 16)
-    .childChannelOption(ChannelOptions.RecvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8192))
+    .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+    .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+    .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
+    .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8192))
 defer {
     try! group.syncShutdownGracefully()
 }
