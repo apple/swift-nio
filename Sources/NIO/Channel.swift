@@ -667,19 +667,22 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
 
     override fileprivate func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
         assert(eventLoop.inEventLoop)
-        if option is BacklogOption {
+        switch option {
+        case _ as BacklogOption:
             backlog = value as! Int32
-        } else {
+        default:
             try super.setOption0(option: option, value: value)
         }
     }
 
     override fileprivate func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
         assert(eventLoop.inEventLoop)
-        if option is BacklogOption {
+        switch option {
+        case _ as BacklogOption:
             return backlog as! T.OptionType
+        default:
+            return try super.getOption0(option: option)
         }
-        return try super.getOption0(option: option)
     }
 
     override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
@@ -963,14 +966,15 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     fileprivate func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
         assert(eventLoop.inEventLoop)
 
-        if option is SocketOption {
+        switch option {
+        case _ as SocketOption:
             let (level, name) = option.value as! (SocketOptionLevel, SocketOptionName)
             try socket.setOption(level: Int32(level), name: name, value: value)
-        } else if option is AllocatorOption {
+        case _ as AllocatorOption:
             bufferAllocator = value as! ByteBufferAllocator
-        } else if option is RecvAllocatorOption {
+        case _ as RecvAllocatorOption:
             recvAllocator = value as! RecvByteBufferAllocator
-        } else if option is AutoReadOption {
+        case _ as AutoReadOption:
             let auto = value as! Bool
             autoRead = auto
             if auto {
@@ -978,13 +982,13 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             } else {
                 pauseRead0()
             }
-        } else if option is MaxMessagesPerReadOption {
+        case _ as MaxMessagesPerReadOption:
             maxMessagesPerRead = value as! UInt
-        } else if option is WriteSpinOption {
+        case _ as WriteSpinOption:
             pendingWrites.writeSpinCount = value as! UInt
-        } else if option is WriteBufferWaterMark {
+        case _ as WriteBufferWaterMarkOption:
             pendingWrites.waterMark = value as! WriteBufferWaterMark
-        } else {
+        default:
             fatalError("option \(option) not supported")
         }
     }
@@ -1000,29 +1004,25 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     fileprivate func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
         assert(eventLoop.inEventLoop)
 
-        if option is SocketOption {
+        switch option {
+        case _ as SocketOption:
             let (level, name) = option.value as! (SocketOptionLevel, SocketOptionName)
             return try socket.getOption(level: Int32(level), name: name)
-        }
-        if option is AllocatorOption {
+        case _ as AllocatorOption:
             return bufferAllocator as! T.OptionType
-        }
-        if option is RecvAllocatorOption {
+        case _ as RecvAllocatorOption:
             return recvAllocator as! T.OptionType
-        }
-        if option is AutoReadOption {
+        case _ as AutoReadOption:
             return autoRead as! T.OptionType
-        }
-        if option is MaxMessagesPerReadOption {
+        case _ as MaxMessagesPerReadOption:
             return maxMessagesPerRead as! T.OptionType
-        }
-        if option is WriteSpinOption {
+        case _ as WriteSpinOption:
             return pendingWrites.writeSpinCount as! T.OptionType
-        }
-        if option is WriteBufferWaterMarkOption {
+        case _ as WriteBufferWaterMarkOption:
             return pendingWrites.waterMark as! T.OptionType
+        default:
+            fatalError("option \(option) not supported")
         }
-        fatalError("option \(option) not supported")
     }
 
     public final var localAddress: SocketAddress? {
