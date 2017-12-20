@@ -139,6 +139,15 @@ public enum WriteBufferWaterMarkOption: ChannelOption {
     case const(())
 }
 
+/// `ConnectTimeoutOption` allows to configure the `TimeAmount` after which a connect will fail if it was not established in the meantime.
+public enum ConnectTimeoutOption: ChannelOption {
+    public typealias AssociatedValueType = ()
+    public typealias OptionType = TimeAmount
+    
+    case const(())
+}
+
+
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
 public struct ChannelOptions {
     /// - seealso: `SocketOption`.
@@ -164,4 +173,7 @@ public struct ChannelOptions {
     
     /// - seealso: `WriteBufferWaterMarkOption`.
     public static let writeBufferWaterMark = WriteBufferWaterMarkOption.const(())
+    
+    /// - seealso: `ConnectTimeoutOption`.
+    public static let connectTimeout = ConnectTimeoutOption.const(())
 }

@@ -1010,4 +1010,25 @@ public class ChannelTests: XCTestCase {
             XCTAssertEqual(.writtenCompletely, result)
         }
     }
+
+    func testConnectTimeout() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+       
+        do {
+            // This must throw as 198.51.100.254 is reserved for documentation only
+            _ = try ClientBootstrap(group: group)
+                .channelOption(option: ChannelOptions.connectTimeout, value: .milliseconds(10))
+                .connect(to: SocketAddress.newAddressResolving(host: "198.51.100.254", port: 65535)).wait()
+            XCTFail()
+        } catch let err as ChannelError {
+            if case .connectTimeout(_) = err {
+                // expected, sadly there is no "if not case"
+            } else {
+                XCTFail()
+            }
+        }
+    }
 }

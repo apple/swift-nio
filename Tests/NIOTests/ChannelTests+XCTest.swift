@@ -46,6 +46,7 @@ extension ChannelTests {
                 ("testPendingWritesCloseDuringVectorWrite", testPendingWritesCloseDuringVectorWrite),
                 ("testPendingWritesMoreThanWritevIOVectorLimit", testPendingWritesMoreThanWritevIOVectorLimit),
                 ("testPendingWritesIsHappyWhenSendfileReturnsWouldBlockButWroteFully", testPendingWritesIsHappyWhenSendfileReturnsWouldBlockButWroteFully),
+                ("testConnectTimeout", testConnectTimeout),
            ]
    }
 }
