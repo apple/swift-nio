@@ -266,7 +266,7 @@ public final class ClientBootstrap {
     /// - parameters:
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
-    public func option<T: ChannelOption>(option: T, value: T.OptionType) -> Self {
+    public func channelOption<T: ChannelOption>(option: T, value: T.OptionType) -> Self {
         channelOptions.put(key: option, value: value)
         return self
     }
