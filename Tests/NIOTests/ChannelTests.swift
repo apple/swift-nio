@@ -1020,7 +1020,7 @@ public class ChannelTests: XCTestCase {
         do {
             // This must throw as 198.51.100.254 is reserved for documentation only
             _ = try ClientBootstrap(group: group)
-                .channelOption(option: ChannelOptions.connectTimeout, value: .milliseconds(10))
+                .channelOption(ChannelOptions.connectTimeout, value: .milliseconds(10))
                 .connect(to: SocketAddress.newAddressResolving(host: "198.51.100.254", port: 65535)).wait()
             XCTFail()
         } catch let err as ChannelError {
