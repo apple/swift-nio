@@ -952,6 +952,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public var interestedEvent: IOEvent = .none
 
     public final var closed: Bool {
+        assert(eventLoop.inEventLoop)
         return pendingWrites.closed
     }
 
@@ -1084,6 +1085,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     final func readIfNeeded0() {
+        assert(eventLoop.inEventLoop)
         if autoRead {
             pipeline.read0(promise: nil)
         }
@@ -1115,6 +1117,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
     
     private func registerForWritable() {
+        assert(eventLoop.inEventLoop)
+
         switch interestedEvent {
         case .read:
             safeReregister(interested: .all)
@@ -1126,6 +1130,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     private func unregisterForWritable() {
+        assert(eventLoop.inEventLoop)
+
         switch interestedEvent {
         case .all:
             safeReregister(interested: .read)
@@ -1154,7 +1160,6 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
     public final func read0(promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
-
      
         if closed {
             promise?.fail(error:ChannelError.ioOnClosedChannel)
@@ -1177,6 +1182,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     private func registerForReadable() {
+        assert(eventLoop.inEventLoop)
+
         switch interestedEvent {
         case .write:
             safeReregister(interested: .all)
@@ -1188,6 +1195,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     private func unregisterForReadable() {
+        assert(eventLoop.inEventLoop)
+
         switch interestedEvent {
         case .read:
             safeReregister(interested: .none)
@@ -1273,6 +1282,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     private func finishConnect() {
+        assert(eventLoop.inEventLoop)
+
         if let connectPromise = pendingConnect {
             pendingConnect = nil
             do {
@@ -1377,6 +1388,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     private func safeReregister(interested: IOEvent) {
+        assert(eventLoop.inEventLoop)
         if closed {
             interestedEvent = .none
             return
@@ -1395,6 +1407,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     private func safeRegister(interested: IOEvent) -> Bool {
+        assert(eventLoop.inEventLoop)
+
         if closed {
             interestedEvent = .none
             return false
