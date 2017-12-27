@@ -37,6 +37,7 @@ extension EchoServerClientTest {
                 ("testWriteOnConnect", testWriteOnConnect),
                 ("testWriteOnAccept", testWriteOnAccept),
                 ("testWriteAfterChannelIsDead", testWriteAfterChannelIsDead),
+                ("testPendingReadProcessedAfterWriteError", testPendingReadProcessedAfterWriteError),
            ]
    }
 }

@@ -635,4 +635,99 @@ class EchoServerClientTest : XCTestCase {
 
         try! group.syncShutdownGracefully()
     }
+    
+    func testPendingReadProcessedAfterWriteError() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let dpGroup = DispatchGroup()
+        
+        dpGroup.enter()
+        
+        let str = "hi there"
+
+        let countingHandler = ByteCountingHandler(numBytes: str.utf8.count * 4, promise: group.next().newPromise())
+
+        class WriteHandler : ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            
+            private var writeFailed = false
+            
+            func channelActive(ctx: ChannelHandlerContext) {
+                var buffer = ctx.channel!.allocator.buffer(capacity: 4)
+                buffer.write(string: "test")
+                writeUntilFailed(ctx, buffer)
+            }
+            
+            private func writeUntilFailed(_ ctx: ChannelHandlerContext, _ buffer: ByteBuffer) {
+                ctx.writeAndFlush(data: NIOAny(buffer)).whenSuccess { _ in
+                    ctx.eventLoop.execute {
+                        self.writeUntilFailed(ctx, buffer)
+                    }
+                }
+            }
+        }
+        
+        class WriteWhenActiveHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            let str: String
+            let dpGroup: DispatchGroup
+            
+            init(_ str: String, _ dpGroup: DispatchGroup) {
+                self.str = str
+                self.dpGroup = dpGroup
+            }
+            
+            func channelActive(ctx: ChannelHandlerContext) {
+                ctx.fireChannelActive()
+                var buffer = ctx.channel!.allocator.buffer(capacity: str.utf8.count)
+                buffer.write(string: str)
+                
+                // write it four times and then close the connect.
+                ctx.writeAndFlush(data: NIOAny(buffer)).then{ _ in
+                    ctx.writeAndFlush(data: NIOAny(buffer)).then{ _ in
+                        ctx.writeAndFlush(data: NIOAny(buffer)).then{ _ in
+                            ctx.writeAndFlush(data: NIOAny(buffer)).then{ _ in
+                                ctx.close()
+                            }
+                        }
+                    }
+                }.whenComplete{ _ in
+                    self.dpGroup.leave()
+                }
+            }
+        }
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelOption(ChannelOptions.socket(SocketOptionLevel(IPPROTO_TCP), TCP_NODELAY), value: 1)
+            .childChannelInitializer { channel in
+                return channel.pipeline.add(handler: WriteWhenActiveHandler(str, dpGroup))
+            }.bind(to: "127.0.0.1", on: 0).wait()
+        
+        defer {
+            _ = serverChannel.close()
+        }
+        
+        let clientChannel = try ClientBootstrap(group: group)
+            // We will only start reading once we wrote all data on the accepted channel.
+            //.channelOption(ChannelOptions.autoRead, value: false)
+            .channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 2))
+            .channelInitializer{ channel in
+                return channel.pipeline.add(handler: WriteHandler()).then{ _ in
+                    return channel.pipeline.add(handler: countingHandler)
+                }
+            }.connect(to: serverChannel.localAddress!).wait()
+        defer {
+            _ = clientChannel.close()
+        }
+        dpGroup.wait()
+    
+        var completeBuffer = clientChannel.allocator.buffer(capacity: str.utf8.count * 4)
+        completeBuffer.write(string: str)
+        completeBuffer.write(string: str)
+        completeBuffer.write(string: str)
+        completeBuffer.write(string: str)
+
+        try countingHandler.assertReceived(buffer: completeBuffer)
+
+        try! group.syncShutdownGracefully()
+    }
 }

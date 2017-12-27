@@ -573,12 +573,13 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         self.parent = parent
     }
 
-    override fileprivate func readFromSocket() throws {
+    override fileprivate func readFromSocket() throws -> ReadResult {
         // Just allocate one time for the while read loop. This is fine as ByteBuffer is a struct and uses COW.
         var buffer = recvAllocator.buffer(allocator: allocator)
+        var result = ReadResult.none
         for i in 1...maxMessagesPerRead {
             if closed {
-                return
+                return result
             }
             switch try buffer.withMutableWritePointer(body: self.socket.read(pointer:size:)) {
             case .processed(let bytesRead):
@@ -597,15 +598,17 @@ final class SocketChannel: BaseSocketChannel<Socket> {
                         // Reset reader and writerIndex and so allow to have the buffer filled again
                         buffer.clear()
                     }
+                    result = .some
                 } else {
                     // end-of-file
                     throw ChannelError.eof
                 }
             case .wouldBlock(let bytesRead):
                 assert(bytesRead == 0)
-                return
+                return result
             }
         }
+        return result
     }
 
     override fileprivate func writeToSocket(pendingWrites: PendingWritesManager) throws -> WriteResult {
@@ -746,14 +749,15 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         throw ChannelError.operationUnsupported
     }
 
-    override fileprivate func readFromSocket() throws {
+    override fileprivate func readFromSocket() throws -> ReadResult {
+        var result = ReadResult.none
         for _ in 1...maxMessagesPerRead {
             if closed {
-                return
+                return result
             }
             if let accepted =  try self.socket.accept() {
                 readPending = false
-
+                result = .some
                 do {
                     let chan = try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop, parent: self)
                     pipeline.fireChannelRead0(data: NIOAny(chan))
@@ -762,9 +766,10 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
                     throw err
                 }
             } else {
-                return
+                break
             }
         }
+        return result
     }
 
     override fileprivate func writeToSocket(pendingWrites: PendingWritesManager) throws -> WriteResult {
@@ -941,6 +946,9 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
     public final var _unsafe: ChannelCore { return self }
 
+    // Guard against re-entrance of flushNow() method.
+    private var inFlushNow: Bool = false
+
     // Visible to access from EventLoop directly
     let socket: T
     public var interestedEvent: IOEvent = .none
@@ -1078,11 +1086,16 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    final func readIfNeeded0() {
+    /// Triggers a `ChannelPipeline.read()` if `autoRead` is enabled.`
+    ///
+    /// - returns: `true` if `readPending` is `true`, `false` otherwise.
+    @discardableResult final func readIfNeeded0() -> Bool {
         assert(eventLoop.inEventLoop)
-        if autoRead {
+
+        if !readPending && autoRead {
             pipeline.read0(promise: nil)
         }
+        return readPending
     }
 
     // Methods invoked from the HeadHandler of the ChannelPipeline
@@ -1360,11 +1373,26 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    fileprivate func readFromSocket() throws {
+    /// Read data from the underlying socket and dispatch it to the `ChannelPipeline`
+    ///
+    /// - returns: `true` if any data was read, `false` otherwise.
+    @discardableResult fileprivate func readFromSocket() throws -> ReadResult {
         fatalError("this must be overridden by sub class")
     }
+    
+    fileprivate enum ReadResult {
+        /// Nothing was read by the read operation.
+        case none
+        
+        /// Some data was read by the read operation.
+        case some
+    }
 
-
+    /// Write data from the underlying socket.
+    ///
+    /// - parameters:
+    ///     - pendingWrites: `PendingWritesManager` that holds all the pending writes that may be ready to be written to the underlying socket.
+    /// - returns: `true` if any data was read, `false` otherwise.
     fileprivate func writeToSocket(pendingWrites: PendingWritesManager) throws -> WriteResult {
         fatalError("this must be overridden by sub class")
     }
@@ -1417,8 +1445,20 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             return false
         }
     }
-
+    
     private func flushNow() -> Bool {
+        // Guard against re-entry as data that will be put into `pendingWrites` will just be picked up by
+        // `writeToSocket`.
+        guard !inFlushNow else {
+            return true
+        }
+        
+        defer {
+            inFlushNow = false
+        }
+
+        inFlushNow = true
+        
         while !closed {
             do {
                 switch try self.writeToSocket(pendingWrites: pendingWrites) {
@@ -1435,6 +1475,16 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
                     return true
                 }
             } catch let err {
+                // If there is a write error we should try drain the inbound before closing the socket as there may be some data pending.
+                // We ignore any error that is thrown as we will use the original err to close the channel and notify the user.
+                if readIfNeeded0() {
+                    
+                    // We need to continue reading until there is nothing more to be read from the socket as we will not have another chance to drain it.
+                    while let read = try? readFromSocket(), read == .some {
+                        pipeline.fireChannelReadComplete()
+                    }
+                }
+                
                 close0(error: err, promise: nil)
 
                 // we handled all writes

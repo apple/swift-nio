@@ -130,9 +130,17 @@ internal enum Posix {
     public static func socket(domain: Int32, type: Int32, `protocol`: Int32) throws -> Int32 {
         return try wrapSyscall({
             #if os(Linux)
+                /* no SO_NOSIGPIPE on Linux :( */
+                let _ = unsafeBitCast(Glibc.signal(SIGPIPE, SIG_IGN) as sighandler_t?, to: Int.self)
+                
                 return Int32(Glibc.socket(domain, type, `protocol`))
             #else
-                return Int32(Darwin.socket(domain, type, `protocol`))
+                let fd = Darwin.socket(domain, type, `protocol`)
+                if fd != -1 {
+                    _ = try? Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
+                }
+                
+                return Int32(fd)
             #endif
         })
     }
@@ -164,9 +172,6 @@ internal enum Posix {
     public static func listen(descriptor: Int32, backlog: Int32) throws {
         _ = try wrapSyscall({ () -> Int32 in
             #if os(Linux)
-                /* no SO_NOSIGPIPE on Linux :( */
-                let _ = unsafeBitCast(Glibc.signal(SIGPIPE, SIG_IGN) as sighandler_t?, to: Int.self)
-                
                 return Glibc.listen(descriptor, backlog)
             #else
                 return Darwin.listen(descriptor, backlog)
@@ -202,6 +207,7 @@ internal enum Posix {
     public static func connect(descriptor: Int32, addr: UnsafePointer<sockaddr>, size: Int) throws -> Bool {
         do {
             _ = try wrapSyscall({ () -> Int in
+                
                 #if os(Linux)
                     return Int(Glibc.connect(descriptor, addr, socklen_t(size)))
                 #else
