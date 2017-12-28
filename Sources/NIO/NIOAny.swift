@@ -136,25 +136,27 @@ public struct NIOAny {
     }
     
     func forceAs<T>(type: T.Type = T.self) -> T {
-        if T.self == ByteBuffer.self {
+        switch T.self {
+        case let t where t == ByteBuffer.self:
             return self.forceAsByteBuffer() as! T
-        } else if T.self == FileRegion.self {
+        case let t where t == FileRegion.self:
             return self.forceAsFileRegion() as! T
-        } else if T.self == IOData.self {
+        case let t where t == IOData.self:
             return self.forceAsIOData() as! T
-        } else {
+        default:
             return self.forceAsOther(type: type)
         }
     }
     
     func tryAs<T>(type: T.Type = T.self) -> T? {
-        if T.self == ByteBuffer.self {
+        switch T.self {
+        case let t where t == ByteBuffer.self:
             return self.tryAsByteBuffer() as! T?
-        } else if T.self == FileRegion.self {
+        case let t where t == FileRegion.self:
             return self.tryAsFileRegion() as! T?
-        } else if T.self == IOData.self {
+        case let t where t == IOData.self:
             return self.tryAsIOData() as! T?
-        } else {
+        default:
             return self.tryAsOther(type: type)
         }
     }
