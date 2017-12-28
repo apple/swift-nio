@@ -478,12 +478,12 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
 
-    public func close(promise: EventLoopPromise<Void>?) {
+    public func close(mode: CloseMode = .all, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
-            close0(promise: promise)
+            close0(mode: mode, promise: promise)
         } else {
             eventLoop.execute {
-                self.close0(promise: promise)
+                self.close0(mode: mode, promise: promise)
             }
         }
     }
@@ -578,9 +578,9 @@ public final class ChannelPipeline : ChannelInvoker {
         return self.head?.inboundNext
     }
     
-    func close0(promise: EventLoopPromise<Void>?) {
+    func close0(mode: CloseMode, promise: EventLoopPromise<Void>?) {
         if let firstOutboundCtx = firstOutboundCtx {
-            firstOutboundCtx.invokeClose(promise: promise)
+            firstOutboundCtx.invokeClose(mode: mode, promise: promise)
         } else {
             promise?.fail(error: ChannelError.alreadyClosed)
         }
@@ -768,9 +768,9 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
         }
     }
     
-    func close(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+    func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         if let channel = ctx.channel {
-            channel._unsafe.close0(error: ChannelError.alreadyClosed, promise: promise)
+            channel._unsafe.close0(error: mode.error, mode: mode, promise: promise)
         } else {
             promise?.fail(error: ChannelError.alreadyClosed)
         }
@@ -789,6 +789,20 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
             channel._unsafe.triggerUserOutboundEvent0(event: event, promise: promise)
         } else {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
+    }
+    
+}
+
+private extension CloseMode {
+    var error: ChannelError {
+        switch self {
+        case .all:
+            return ChannelError.alreadyClosed
+        case .output:
+            return ChannelError.outputClosed
+        case .input:
+            return ChannelError.inputClosed
         }
     }
 }
@@ -1070,10 +1084,11 @@ public final class ChannelHandlerContext : ChannelInvoker {
     /// When the `close` event reaches the `HeadChannelHandler` the socket will be closed.
     ///
     /// - parameters:
+    ///     - mode: The `CloseMode` to use.
     ///     - promise: The promise fulfilled when the `Channel` has been closed or failed if it the closing failed.
-    public func close(promise: EventLoopPromise<Void>?) {
+    public func close(mode: CloseMode = .all, promise: EventLoopPromise<Void>?) {
         if let outboundNext = outboundNext {
-            outboundNext.invokeClose(promise: promise)
+            outboundNext.invokeClose(mode: mode, promise: promise)
         } else {
             promise?.fail(error: ChannelError.alreadyClosed)
         }
@@ -1256,11 +1271,11 @@ public final class ChannelHandlerContext : ChannelInvoker {
         self.outboundHandler.read(ctx: self, promise: promise)
     }
     
-    fileprivate func invokeClose(promise: EventLoopPromise<Void>?) {
+    fileprivate func invokeClose(mode: CloseMode, promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
         assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
-        self.outboundHandler.close(ctx: self, promise: promise)
+        self.outboundHandler.close(ctx: self, mode: mode, promise: promise)
     }
     
     fileprivate func invokeTriggerUserOutboundEvent(event: Any, promise: EventLoopPromise<Void>?) {

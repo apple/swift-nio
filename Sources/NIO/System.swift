@@ -76,6 +76,23 @@ internal func wrapSyscall<T: FixedWidthInteger>(_ fn: () throws -> T, where func
     }
 }
 
+enum Shutdown {
+    case RD
+    case WR
+    case RDWR
+    
+    fileprivate var cValue: CInt {
+        switch self {
+        case .RD:
+            return CInt(SHUT_RD)
+        case .WR:
+            return CInt(SHUT_WR)
+        case .RDWR:
+            return CInt(SHUT_RDWR)
+        }
+    }
+}
+
 internal enum Posix {
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     static let SOCK_STREAM: CInt = CInt(Darwin.SOCK_STREAM)
@@ -91,7 +108,18 @@ internal enum Posix {
         fatalError("unsupported OS")
     }
 #endif
-
+    
+    @inline(never)
+    public static func shutdown(descriptor: Int32, how: Shutdown) throws {
+        _ = try wrapSyscall({ () -> Int in
+            #if os(Linux)
+                return Int(Glibc.shutdown(descriptor, how.cValue))
+            #else
+                return Int(Darwin.shutdown(descriptor, how.cValue))
+            #endif
+        })
+    }
+    
     @inline(never)
     public static func close(descriptor: Int32) throws {
         _ = try wrapSyscall({ () -> Int in

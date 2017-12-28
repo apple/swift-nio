@@ -111,40 +111,6 @@ class FileRegionTest : XCTestCase {
         try futures.forEach { try $0.wait() }
     }
 
-    private final class ByteCountingHandler : ChannelInboundHandler {
-        typealias InboundIn = ByteBuffer
-        
-        private let numBytes: Int
-        private let promise: EventLoopPromise<ByteBuffer>
-        private var buffer: ByteBuffer!
-        
-        init(numBytes: Int, promise: EventLoopPromise<ByteBuffer>) {
-            self.numBytes = numBytes
-            self.promise = promise
-        }
-        
-        func handlerAdded(ctx: ChannelHandlerContext) {
-            buffer = ctx.channel!.allocator.buffer(capacity: numBytes)
-            if self.numBytes == 0 {
-                self.promise.succeed(result: buffer)
-            }
-        }
-        
-        func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-            var currentBuffer = self.unwrapInboundIn(data)
-            buffer.write(buffer: &currentBuffer)
-            
-            if buffer.readableBytes == numBytes {
-                promise.succeed(result: buffer)
-            }
-        }
-        
-        func assertReceived(buffer: ByteBuffer) throws {
-            let received = try promise.futureResult.wait()
-            XCTAssertEqual(buffer, received)
-        }
-    }
-
     func testOutstandingFileRegionsWork() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {

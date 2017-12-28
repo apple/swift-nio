@@ -462,8 +462,11 @@ private struct PendingWritesState {
     }
 
     /// Fail all the outstanding writes. This is useful if for example the `Channel` is closed.
-    func failAll(error: Error) {
-        self.closed = true
+    func failAll(error: Error, close: Bool) {
+        if close {
+            assert(!self.closed)
+            self.closed = true
+        }
 
         self.state.failAll(error: error)()
 
@@ -527,6 +530,9 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
     private var connectTimeout = TimeAmount.seconds(10)
     private var connectTimeoutScheduled: Scheduled<Void>?
+    private var allowRemoteHalfClosure: Bool = false
+    private var inputShutdown: Bool = false
+    private var outputShutdown: Bool = false
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
         let socket = try Socket(protocolFamily: protocolFamily)
@@ -544,6 +550,8 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         switch option {
         case _ as ConnectTimeoutOption:
             connectTimeout = value as! TimeAmount
+        case _ as AllowRemoteHalfClosureOption:
+            allowRemoteHalfClosure = value as! Bool
         default:
             try super.setOption0(option: option, value: value)
         }
@@ -554,6 +562,8 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         switch option {
         case _ as ConnectTimeoutOption:
             return connectTimeout as! T.OptionType
+        case _ as AllowRemoteHalfClosureOption:
+            return allowRemoteHalfClosure as! T.OptionType
         default:
             return try super.getOption0(option: option)
         }
@@ -578,7 +588,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         var buffer = recvAllocator.buffer(allocator: allocator)
         var result = ReadResult.none
         for i in 1...maxMessagesPerRead {
-            if closed {
+            if closed || inputShutdown {
                 return result
             }
             switch try buffer.withMutableWritePointer(body: self.socket.read(pointer:size:)) {
@@ -600,6 +610,12 @@ final class SocketChannel: BaseSocketChannel<Socket> {
                     }
                     result = .some
                 } else {
+                    if inputShutdown {
+                        // We received a EOF because we called shutdown on the fd by ourself, unregister from the Selector and return
+                        readPending = false
+                        unregisterForReadable()
+                        return result
+                    }
                     // end-of-file
                     throw ChannelError.eof
                 }
@@ -659,7 +675,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         connectTimeoutScheduled = eventLoop.scheduleTask(in: timeout) { () -> (Void) in
             if self.pendingConnect != nil {
                 // The connection was still not established, close the Channel which will also fail the pending promise.
-                self.close0(error: ChannelError.connectTimeout(timeout), promise: nil)
+                self.close0(error: ChannelError.connectTimeout(timeout), mode: .all, promise: nil)
             }
         }
         return false
@@ -675,13 +691,76 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         becomeActive0()
     }
     
-    override func close0(error: Error, promise: EventLoopPromise<Void>?) {
-        if let timeout = connectTimeoutScheduled {
-            connectTimeoutScheduled = nil
-            timeout.cancel()
+    override func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        do {
+            switch mode {
+            case .output:
+                if outputShutdown {
+                    promise?.fail(error: ChannelError.outputClosed)
+                    return
+                }
+                try socket.shutdown(how: .WR)
+                outputShutdown = true
+                // Fail all pending writes and so ensure all pending promises are notified
+                pendingWrites.failAll(error: error, close: false)
+                unregisterForWritable()
+                promise?.succeed(result: ())
+                
+                pipeline.fireUserInboundEventTriggered(event: ChannelEvent.outputClosed)
+
+            case .input:
+                if inputShutdown {
+                    promise?.fail(error: ChannelError.inputClosed)
+                    return
+                }
+                switch error {
+                case ChannelError.eof:
+                    // No need to explicit call socket.shutdown(...) as we received an EOF and the call would only cause
+                    // ENOTCON
+                    break
+                default:
+                    try socket.shutdown(how: .RD)
+                }
+                inputShutdown = true
+                unregisterForReadable()
+                promise?.succeed(result: ())
+                
+                pipeline.fireUserInboundEventTriggered(event: ChannelEvent.inputClosed)
+            case .all:
+                if let timeout = connectTimeoutScheduled {
+                    connectTimeoutScheduled = nil
+                    timeout.cancel()
+                }
+                super.close0(error: error, mode: mode, promise: promise)
+            }
+        } catch let err {
+            promise?.fail(error: err)
         }
-        super.close0(error: error, promise: promise)
     }
+    
+    @discardableResult override func readIfNeeded0() -> Bool {
+        if inputShutdown {
+            return false
+        }
+        return super.readIfNeeded0()
+    }
+    
+    override public func read0(promise: EventLoopPromise<Void>?) {
+        if inputShutdown {
+            promise?.fail(error: ChannelError.inputClosed)
+            return
+        }
+        super.read0(promise: promise)
+    }
+    
+    override public func write0(data: IOData, promise: EventLoopPromise<Void>?) {
+        if outputShutdown {
+            promise?.fail(error: ChannelError.outputClosed)
+            return
+        }
+        super.write0(data: data, promise: promise)
+    }
+    
 }
 
 /// A `Channel` for a server socket.
@@ -773,7 +852,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
     }
 
     override fileprivate func writeToSocket(pendingWrites: PendingWritesManager) throws -> WriteResult {
-        pendingWrites.failAll(error: ChannelError.operationUnsupported)
+        pendingWrites.failAll(error: ChannelError.operationUnsupported, close: false)
         return .writtenCompletely
     }
 
@@ -805,7 +884,7 @@ public protocol ChannelCore : class {
     func write0(data: IOData, promise: EventLoopPromise<Void>?)
     func flush0(promise: EventLoopPromise<Void>?)
     func read0(promise: EventLoopPromise<Void>?)
-    func close0(error: Error, promise: EventLoopPromise<Void>?)
+    func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?)
     func triggerUserOutboundEvent0(event: Any, promise: EventLoopPromise<Void>?)
     func channelRead0(data: NIOAny)
     func errorCaught0(error: Error)
@@ -920,8 +999,8 @@ extension Channel {
         pipeline.read(promise: promise)
     }
 
-    public func close(promise: EventLoopPromise<Void>?) {
-        pipeline.close(promise: promise)
+    public func close(mode: CloseMode = .all, promise: EventLoopPromise<Void>?) {
+        pipeline.close(mode: mode, promise: promise)
     }
 
     public func register(promise: EventLoopPromise<Void>?) {
@@ -953,12 +1032,13 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     let socket: T
     public var interestedEvent: IOEvent = .none
 
+    /// `true` if the whole `Channel` is closed and so no more IO operation can be done.
     public final var closed: Bool {
         assert(eventLoop.inEventLoop)
         return pendingWrites.closed
     }
 
-    private let pendingWrites: PendingWritesManager
+    fileprivate let pendingWrites: PendingWritesManager
     fileprivate var readPending = false
     private var neverRegistered = true
     fileprivate var pendingConnect: EventLoopPromise<Void>?
@@ -1089,7 +1169,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     /// Triggers a `ChannelPipeline.read()` if `autoRead` is enabled.`
     ///
     /// - returns: `true` if `readPending` is `true`, `false` otherwise.
-    @discardableResult final func readIfNeeded0() -> Bool {
+    @discardableResult func readIfNeeded0() -> Bool {
         assert(eventLoop.inEventLoop)
 
         if !readPending && autoRead {
@@ -1136,9 +1216,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    private func unregisterForWritable() {
+    fileprivate func unregisterForWritable() {
         assert(eventLoop.inEventLoop)
-
         switch interestedEvent {
         case .all:
             safeReregister(interested: .read)
@@ -1165,7 +1244,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public final func read0(promise: EventLoopPromise<Void>?) {
+    public func read0(promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
      
         if closed {
@@ -1201,7 +1280,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    private func unregisterForReadable() {
+    fileprivate func unregisterForReadable() {
         assert(eventLoop.inEventLoop)
 
         switch interestedEvent {
@@ -1214,7 +1293,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public func close0(error: Error, promise: EventLoopPromise<Void>?) {
+    public func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
         if closed {
@@ -1222,6 +1301,11 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             return
         }
 
+        guard mode == .all else {
+            promise?.fail(error: ChannelError.operationUnsupported)
+            return
+        }
+      
         interestedEvent = .none
         do {
             try selectableEventLoop.deregister(channel: self)
@@ -1237,7 +1321,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
 
         // Fail all pending writes and so ensure all pending promises are notified
-        self.pendingWrites.failAll(error: error)
+        self.pendingWrites.failAll(error: error, close: true)
 
         becomeInactive0()
 
@@ -1323,25 +1407,30 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         do {
             try readFromSocket()
         } catch let err {
-            if let channelErr = err as? ChannelError {
-                // EOF is not really an error that should be forwarded to the user
-                if channelErr != ChannelError.eof {
-                    pipeline.fireErrorCaught0(error: err)
-                }
+            // ChannelError.eof is not something we want to fire through the pipeline as it just means the remote
+            // per closed / shutdown the connection.
+            if let channelErr = err as? ChannelError, channelErr != ChannelError.eof {
+                pipeline.fireErrorCaught0(error: err)
+            } else if try! getOption(option: ChannelOptions.allowRemoteHalfClosure) {
+                // If we want to allow half closure we will just mark the input side of the Channel
+                // as closed.
+                pipeline.fireChannelReadComplete0()
+                close0(error: err, mode: .input, promise: nil)
+                readPending = false
+                return
             } else {
                 pipeline.fireErrorCaught0(error: err)
             }
-
+            
             // Call before triggering the close of the Channel.
             pipeline.fireChannelReadComplete0()
-            close0(error: err, promise: nil)
-
+            close0(error: err, mode: .all, promise: nil)
             return
         }
         pipeline.fireChannelReadComplete0()
         readIfNeeded0()
     }
-
+    
     fileprivate func connectSocket(to address: SocketAddress) throws -> Bool {
         fatalError("this must be overridden by sub class")
     }
@@ -1424,7 +1513,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             try selectableEventLoop.reregister(channel: self)
         } catch let err {
             pipeline.fireErrorCaught0(error: err)
-            close0(error: err, promise: nil)
+            close0(error: err, mode: .all, promise: nil)
         }
     }
 
@@ -1441,7 +1530,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             return true
         } catch let err {
             pipeline.fireErrorCaught0(error: err)
-            close0(error: err, promise: nil)
+            close0(error: err, mode: .all, promise: nil)
             return false
         }
     }
@@ -1485,7 +1574,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
                     }
                 }
                 
-                close0(error: err, promise: nil)
+                close0(error: err, mode: .all, promise: nil)
 
                 // we handled all writes
                 return true
@@ -1537,6 +1626,12 @@ public enum ChannelError: Error {
     
     /// Close was called on a channel that is already closed.
     case alreadyClosed
+
+    /// Output-side of the channel is closed.
+    case outputClosed
+
+    /// Input-side of the channel is closed.
+    case inputClosed
     
     /// A read operation reached end-of-file. This usually means the remote peer closed the socket but it's still
     /// open locally.
@@ -1556,11 +1651,23 @@ extension ChannelError: Equatable {
             return true
         case (.alreadyClosed, .alreadyClosed):
             return true
+        case (.outputClosed, .outputClosed):
+            return true
+        case (.inputClosed, .inputClosed):
+            return true
         case (.eof, .eof):
             return true
         default:
             return false
         }
     }
+}
+
+/// An `Channel` related event that is passed through the `ChannelPipeline` to notify the user.
+public enum ChannelEvent: Equatable {
+    /// `ChannelOptions.allowRemoteHalfClosure` is `true` and input portion of the `Channel` was closed.
+    case inputClosed
+    /// Output portion of the `Channel` was closed.
+    case outputClosed
 }
 

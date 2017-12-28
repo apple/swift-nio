@@ -116,4 +116,11 @@ final class Socket : BaseSocket {
         return try LinuxSocket.sendmmsg(sockfd: self.descriptor, msgvec: msgs.baseAddress!, vlen: CUnsignedInt(msgs.count), flags: 0)
     }
     #endif
+    
+    func shutdown(how: Shutdown) throws {
+        guard self.open else {
+            throw IOError(errnoCode: EBADF, reason: "can't shutdown socket as it's not open anymore.")
+        }
+        try Posix.shutdown(descriptor: self.descriptor, how: how)
+    }
 }

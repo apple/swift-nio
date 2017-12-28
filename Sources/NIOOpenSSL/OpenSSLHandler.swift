@@ -140,7 +140,13 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
         doUnbufferWrites(ctx: ctx)
     }
     
-    public func close(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+    public func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        guard mode == .all else {
+            // TODO: Support also other modes ?
+            promise?.fail(error: ChannelError.operationUnsupported)
+            return
+        }
+        
         switch state {
         case .closing:
             // We're in the process of TLS shutdown, so let's let that happen. However,

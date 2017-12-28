@@ -121,15 +121,18 @@ public protocol ChannelOutboundInvoker {
 
     /// Close the `Channel` and so the connection if one exists.
     ///
+    /// - parameters:
+    ///       - mode: the `CloseMode` that is used
     /// - returns: the future which will be notified once the operation completes.
-    func close() -> EventLoopFuture<Void>
+    func close(mode: CloseMode) -> EventLoopFuture<Void>
     
     /// Close the `Channel` and so the connection if one exists.
     ///
     /// - parameters:
+    ///       - mode: the `CloseMode` that is used
     ///       - promise: the `EventLoopPromise` that will be notified once the operation completes,
     ///                  or `nil` if not interested in the outcome of the operation.
-    func close(promise: EventLoopPromise<Void>?)
+    func close(mode: CloseMode, promise: EventLoopPromise<Void>?)
     
     /// Trigger a custom user outbound event which will flow through the `ChannelPipeline`.
     ///
@@ -192,9 +195,9 @@ extension ChannelOutboundInvoker {
         return promise.futureResult
     }
     
-    public func close() -> EventLoopFuture<Void> {
+    public func close(mode: CloseMode = .all) -> EventLoopFuture<Void> {
         let promise = newPromise()
-        close(promise: promise)
+        close(mode: mode, promise: promise)
         return promise.futureResult
     }
     
@@ -267,3 +270,17 @@ public protocol ChannelInboundInvoker {
 
 /// A protocol that signals that outbound and inbound events are triggered by this invoker.
 public protocol ChannelInvoker : ChannelOutboundInvoker, ChannelInboundInvoker { }
+
+/// Specify what kind of close operation is requested.
+public enum CloseMode {
+    /// Close the output (writing) side of the `Channel` without closing the actual file descriptor.
+    /// This is an optional mode which means it may not be supported by all `Channel` implementations.
+    case output
+    
+    /// Close the input (reading) side of the `Channel` without closing the actual file descriptor.
+    /// This is an optional mode which means it may not be supported by all `Channel` implementations.
+    case input
+    
+    /// Close the whole `Channel (file descriptor).
+    case all
+}

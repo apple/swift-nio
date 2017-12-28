@@ -173,7 +173,7 @@ class EmbeddedChannelCore : ChannelCore {
     var outboundBuffer: [IOData] = []
     var inboundBuffer: [NIOAny] = []
     
-    func close0(error: Error, promise: EventLoopPromise<Void>?) {
+    func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         if closed {
             promise?.fail(error: ChannelError.alreadyClosed)
             return

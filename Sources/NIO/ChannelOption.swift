@@ -147,6 +147,17 @@ public enum ConnectTimeoutOption: ChannelOption {
     case const(())
 }
 
+/// `AllowRemoteHalfClosureOption` allows users to configure whether the `Channel` will close itself when its remote
+/// peer shuts down its send stream, or whether it will remain open. If set to `false` (the default), the `Channel`
+/// will be closed automatically if the remote peer shuts down its send stream. If set to true, the `Channel` will
+/// not be closed: instead, a `ChannelEvent.inboundClosed` user event will be sent on the `ChannelPipeline`,
+/// and no more data will be received.
+public enum AllowRemoteHalfClosureOption: ChannelOption {
+    public typealias AssociatedValueType = ()
+    public typealias OptionType = Bool
+    
+    case const(())
+}
 
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
 public struct ChannelOptions {
@@ -176,4 +187,7 @@ public struct ChannelOptions {
     
     /// - seealso: `ConnectTimeoutOption`.
     public static let connectTimeout = ConnectTimeoutOption.const(())
+    
+    /// - seealso: `AllowRemoteHalfClosureOption`.
+    public static let allowRemoteHalfClosure = AllowRemoteHalfClosureOption.const(())
 }
