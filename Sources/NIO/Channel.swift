@@ -152,6 +152,40 @@ extension Channel {
     }
 }
 
+
+/// Provides special extension to make writing data to the `Channel` easier by removing the need to wrap data in `NIOAny` manually.
+public extension Channel {
+    
+    /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
+    ///
+    /// - seealso: `ChannelOutboundInvoker.write`.
+    public func write<T>(_ any: T) -> EventLoopFuture<Void> {
+        return self.write(data: NIOAny(any))
+    }
+    
+    /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
+    ///
+    /// - seealso: `ChannelOutboundInvoker.write`.
+    public func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+        self.write(data: NIOAny(any), promise: promise)
+    }
+    
+    /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
+    ///
+    /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
+    public func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
+        return self.writeAndFlush(data: NIOAny(any))
+    }
+    
+    
+    /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
+    ///
+    /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
+    public func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+        self.writeAndFlush(data: NIOAny(any), promise: promise)
+    }
+}
+
 /// An error that can occur on `Channel` operations.
 public enum ChannelError: Error {
     /// Tried to connect on a `Channel` that is already connecting.

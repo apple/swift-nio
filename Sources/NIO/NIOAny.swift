@@ -68,6 +68,7 @@ public struct NIOAny {
             case let value as AddressedEnvelope<ByteBuffer>:
                 self = .bufferEnvelope(value)
             default:
+                assert(!(value is NIOAny))
                 self = .other(value)
             }
         }
