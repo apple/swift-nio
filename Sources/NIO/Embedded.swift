@@ -84,15 +84,16 @@ class EmbeddedChannelCore : ChannelCore {
     var isActive: Bool = false
 
     
-    var eventLoop: EventLoop = EmbeddedEventLoop()
+    var eventLoop: EventLoop
     var closePromise: EventLoopPromise<Void>
     var error: Error?
     
     private unowned let pipeline: ChannelPipeline
 
-    init(pipeline: ChannelPipeline) {
+    init(pipeline: ChannelPipeline, eventLoop: EventLoop) {
         closePromise = eventLoop.newPromise()
         self.pipeline = pipeline
+        self.eventLoop = eventLoop
     }
     
     deinit {
@@ -182,7 +183,7 @@ public class EmbeddedChannel : Channel {
     public var isActive: Bool { return channelcore.isActive }
     public var closeFuture: EventLoopFuture<Void> { return channelcore.closePromise.futureResult }
 
-    private lazy var channelcore: EmbeddedChannelCore = EmbeddedChannelCore(pipeline: self._pipeline)
+    private lazy var channelcore: EmbeddedChannelCore = EmbeddedChannelCore(pipeline: self._pipeline, eventLoop: self.eventLoop)
 
     public var _unsafe: ChannelCore {
         return channelcore

@@ -33,6 +33,7 @@ extension EmbeddedChannelTest {
                 ("testCloseMultipleTimesThrows", testCloseMultipleTimesThrows),
                 ("testCloseOnInactiveIsOk", testCloseOnInactiveIsOk),
                 ("testEmbeddedLifecycle", testEmbeddedLifecycle),
+                ("testEmbeddedChannelAndPipelineAndChannelCoreShareTheEventLoop", testEmbeddedChannelAndPipelineAndChannelCoreShareTheEventLoop),
            ]
    }
 }

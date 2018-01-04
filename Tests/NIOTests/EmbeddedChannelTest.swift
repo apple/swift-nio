@@ -132,4 +132,11 @@ class EmbeddedChannelTest: XCTestCase {
             ctx.close(promise: nil)
         }
     }
+
+    func testEmbeddedChannelAndPipelineAndChannelCoreShareTheEventLoop() {
+        let channel = EmbeddedChannel()
+        let pipelineEventLoop = channel.pipeline.eventLoop
+        XCTAssert(pipelineEventLoop === channel.eventLoop)
+        XCTAssert(pipelineEventLoop === (channel._unsafe as! EmbeddedChannelCore).eventLoop)
+    }
 }
