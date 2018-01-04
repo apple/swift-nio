@@ -330,7 +330,7 @@ class SniHandlerTest: XCTestCase {
         // The callback should have fired, but the handler should not have
         // sent on any data and should still be in the pipeline.
         XCTAssertTrue(called)
-        XCTAssertNil(channel.readInbound())
+        XCTAssertNil(channel.readInbound() as ByteBuffer?)
         try channel.pipeline.assertContains(handler: handler)
 
         // Now we're going to complete the promise and run the loop. This should cause the complete
@@ -338,12 +338,17 @@ class SniHandlerTest: XCTestCase {
         continuePromise.succeed(result: ())
         try loop.run()
 
-        let writtenBuffer: ByteBuffer = channel.readInbound()!
-        let writtenData = writtenBuffer.getData(at: writtenBuffer.readerIndex, length: writtenBuffer.readableBytes)
-        let expectedData = Data(base64Encoded: clientHello, options: .ignoreUnknownCharacters)!
-        XCTAssertEqual(writtenData, expectedData)
+        let writtenBuffer: ByteBuffer? = channel.readInbound()
+        if let writtenBuffer = writtenBuffer {
+            let writtenData = writtenBuffer.getData(at: writtenBuffer.readerIndex, length: writtenBuffer.readableBytes)
+            let expectedData = Data(base64Encoded: clientHello, options: .ignoreUnknownCharacters)!
+            XCTAssertEqual(writtenData, expectedData)
+        } else {
+            XCTFail("no inbound data available")
+        }
 
         try channel.pipeline.assertDoesNotContain(handler: handler)
+        XCTAssertFalse(try channel.finish())
     }
 
     func testLibre227NoSniDripFeed() throws {
