@@ -585,7 +585,7 @@ internal final class SelectableEventLoop : EventLoop {
 
 
 /// Provides an endless stream of `EventLoop`s to use.
-public protocol EventLoopGroup {
+public protocol EventLoopGroup: class {
     /// Returns the next `EventLoop` to use.
     func next() -> EventLoop
 
