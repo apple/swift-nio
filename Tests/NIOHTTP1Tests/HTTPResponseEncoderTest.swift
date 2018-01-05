@@ -26,13 +26,13 @@ class HTTPResponseEncoderTests: XCTestCase {
     private func sendResponse(withStatus status: HTTPResponseStatus, andHeaders headers: HTTPHeaders) -> ByteBuffer {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertFalse(try! channel.finish())
+            XCTAssertEqual(.some(false), try? channel.finish())
         }
 
-        try! channel.pipeline.add(handler: HTTPResponseEncoder()).wait()
+        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseEncoder()).wait())
         var switchingResponse = HTTPResponseHead(version: HTTPVersion(major: 1, minor:1), status: status)
         switchingResponse.headers = headers
-        try! channel.writeOutbound(data: HTTPServerResponsePart.head(switchingResponse))
+        XCTAssertNoThrow(try channel.writeOutbound(data: HTTPServerResponsePart.head(switchingResponse)))
         if case .some(.byteBuffer(let buffer)) = channel.readOutbound() {
             return buffer
         } else {
@@ -95,14 +95,14 @@ class HTTPResponseEncoderTests: XCTestCase {
     func testNoChunkedEncodingForHTTP10() throws {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertFalse(try! channel.finish())
+            XCTAssertEqual(.some(false), try? channel.finish())
         }
 
-        try! channel.pipeline.add(handler: HTTPResponseEncoder()).wait()
+        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseEncoder()).wait())
 
         // This response contains neither Transfer-Encoding: chunked or Content-Length.
         let response = HTTPResponseHead(version: HTTPVersion(major: 1, minor:0), status: .ok)
-        try! channel.writeOutbound(data: HTTPServerResponsePart.head(response))
+        XCTAssertNoThrow(try channel.writeOutbound(data: HTTPServerResponsePart.head(response)))
         let writtenData: IOData = channel.readOutbound()!
 
         switch writtenData{

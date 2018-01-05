@@ -65,7 +65,7 @@ class TLSConfigurationTest: XCTestCase {
 
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let eventHandler = ErrorCatcher<NIOOpenSSLError>()
@@ -141,7 +141,7 @@ class TLSConfigurationTest: XCTestCase {
 
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let eventHandler = EventRecorderHandler<TLSUserEvent>()

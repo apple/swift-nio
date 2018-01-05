@@ -134,7 +134,7 @@ class HTTPResponseCompressorTest: XCTestCase {
 
     private func clientParsingChannel() -> EmbeddedChannel {
         let channel = EmbeddedChannel()
-        try! channel.pipeline.addHTTPClientHandlers().wait()
+        XCTAssertNoThrow(try channel.pipeline.addHTTPClientHandlers().wait())
         return channel
     }
 
@@ -332,17 +332,17 @@ class HTTPResponseCompressorTest: XCTestCase {
         XCTAssertEqual(uncompressedBody, bodyBuffer)
     }
 
-    private func compressionChannel() -> EmbeddedChannel {
+    private func compressionChannel() throws -> EmbeddedChannel {
         let channel = EmbeddedChannel()
-        try! channel.pipeline.add(handler: HTTPResponseEncoder()).wait()
-        try! channel.pipeline.add(handler: HTTPResponseCompressor()).wait()
+        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseCompressor()).wait())
         return channel
     }
 
     func testCanCompressSimpleBodies() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         try sendRequest(acceptEncoding: "deflate", channel: channel)
@@ -350,9 +350,9 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testCanCompressSimpleBodiesGzip() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         try sendRequest(acceptEncoding: "gzip", channel: channel)
@@ -360,9 +360,9 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testCanCompressDeflateWithAwkwardFlushes() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         try sendRequest(acceptEncoding: "deflate", channel: channel)
@@ -370,9 +370,9 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testCanCompressGzipWithAwkwardFlushes() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         try sendRequest(acceptEncoding: "gzip", channel: channel)
@@ -380,9 +380,9 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testDoesNotCompressWithoutAcceptEncodingHeader() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         try sendRequest(acceptEncoding: nil, channel: channel)
@@ -390,9 +390,9 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testHandlesPipelinedRequestsProperly() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         // Three requests: one for deflate, one for gzip, one for nothing.
@@ -406,9 +406,9 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testHandlesBasicQValues() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         try sendRequest(acceptEncoding: "gzip, deflate;q=0.5", channel: channel)
@@ -416,9 +416,9 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testAlwaysPrefersHighestQValue() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         try sendRequest(acceptEncoding: "deflate;q=0.5, gzip;q=0.8, *;q=0.3", channel: channel)
@@ -426,9 +426,9 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testAsteriskMeansGzip() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         try sendRequest(acceptEncoding: "*", channel: channel)
@@ -436,9 +436,9 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testIgnoresUnknownAlgorithms() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         try sendRequest(acceptEncoding: "br", channel: channel)
@@ -446,9 +446,9 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testNonNumericQValuePreventsChoice() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         try sendRequest(acceptEncoding: "deflate;q=fish=fish, gzip;q=0.3", channel: channel)
@@ -456,9 +456,9 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testNaNQValuePreventsChoice() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         try sendRequest(acceptEncoding: "deflate;q=NaN, gzip;q=0.3", channel: channel)
@@ -466,9 +466,9 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testInfinityQValuePreventsChoice() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         try sendRequest(acceptEncoding: "deflate;q=Inf, gzip;q=0.3", channel: channel)
@@ -476,9 +476,9 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testNegativeInfinityQValuePreventsChoice() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         try sendRequest(acceptEncoding: "deflate;q=-Inf, gzip;q=0.3", channel: channel)
@@ -486,9 +486,9 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testOutOfRangeQValuePreventsChoice() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         defer {
-            try! channel.close().wait()
+            XCTAssertNoThrow(try channel.close().wait())
         }
 
         try sendRequest(acceptEncoding: "deflate;q=2.2, gzip;q=0.3", channel: channel)
@@ -496,7 +496,7 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testRemovingHandlerFailsPendingWrites() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         try sendRequest(acceptEncoding: "gzip", channel: channel)
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
         let writePromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
@@ -522,7 +522,7 @@ class HTTPResponseCompressorTest: XCTestCase {
     }
 
     func testDoesNotBufferWritesNoAlgorithm() throws {
-        let channel = compressionChannel()
+        let channel = try compressionChannel()
         try sendRequest(acceptEncoding: nil, channel: channel)
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
         let writePromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()

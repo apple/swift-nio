@@ -35,7 +35,7 @@ class FileRegionTest : XCTestCase {
     func testWriteFileRegion() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
         
         let numBytes = 16 * 1024
@@ -78,7 +78,7 @@ class FileRegionTest : XCTestCase {
     func testWriteEmptyFileRegionDoesNotHang() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let countingHandler = ByteCountingHandler(numBytes: 0, promise: group.next().newPromise())
@@ -148,7 +148,7 @@ class FileRegionTest : XCTestCase {
     func testOutstandingFileRegionsWork() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let numBytes = 16 * 1024
@@ -183,7 +183,7 @@ class FileRegionTest : XCTestCase {
         try content.write(toFile: filePath, atomically: false, encoding: .ascii)
         do {
             () = try clientChannel.writeAndFlush(data: NIOAny(FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count))).then(callback: { _ in
-                let frFuture = try! clientChannel.write(data: NIOAny(FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count)))
+                let frFuture = try clientChannel.write(data: NIOAny(FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count)))
                 var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
                 buffer.write(bytes: bytes)
                 let bbFuture = clientChannel.write(data: NIOAny(buffer))

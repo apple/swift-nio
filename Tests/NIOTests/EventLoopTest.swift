@@ -23,7 +23,7 @@ public class EventLoopTest : XCTestCase {
         let amount: TimeAmount = .seconds(1)
         let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! eventLoopGroup.syncShutdownGracefully()
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
         let value = try eventLoopGroup.next().scheduleTask(in: amount) {
             return true
@@ -38,7 +38,7 @@ public class EventLoopTest : XCTestCase {
         let longAmount: TimeAmount = .seconds(1)
         let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! eventLoopGroup.syncShutdownGracefully()
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
 
         // First, we create a server and client channel, but don't connect them.
@@ -71,7 +71,7 @@ public class EventLoopTest : XCTestCase {
     public func testScheduleCancelled() throws {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! eventLoopGroup.syncShutdownGracefully()
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
         let ran = Atomic<Bool>(value: false)
         let scheduled = eventLoopGroup.next().scheduleTask(in: .seconds(2)) {

@@ -26,10 +26,10 @@ class HTTPRequestEncoderTests: XCTestCase {
     private func sendRequest(withMethod method: HTTPMethod, andHeaders headers: HTTPHeaders) throws -> ByteBuffer {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertFalse(try! channel.finish())
+            XCTAssertEqual(.some(false), try? channel.finish())
         }
         
-        try! channel.pipeline.add(handler: HTTPRequestEncoder()).wait()
+        try channel.pipeline.add(handler: HTTPRequestEncoder()).wait()
         var request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:1), method: method, uri: "/uri")
         request.headers = headers
         try channel.writeOutbound(data: HTTPClientRequestPart.head(request))
@@ -60,14 +60,14 @@ class HTTPRequestEncoderTests: XCTestCase {
     func testNoChunkedEncodingForHTTP10() throws {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertFalse(try! channel.finish())
+            XCTAssertEqual(.some(false), try? channel.finish())
         }
         
-        try! channel.pipeline.add(handler: HTTPRequestEncoder()).wait()
+        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestEncoder()).wait())
         
         // This request contains neither Transfer-Encoding: chunked or Content-Length.
         let request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:0), method: .GET, uri: "/uri")
-        try! channel.writeOutbound(data: HTTPClientRequestPart.head(request))
+        XCTAssertNoThrow(try channel.writeOutbound(data: HTTPClientRequestPart.head(request)))
         let writtenData: IOData = channel.readOutbound()!
         
         switch writtenData {
@@ -82,19 +82,19 @@ class HTTPRequestEncoderTests: XCTestCase {
     func testBody() throws {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertFalse(try! channel.finish())
+            XCTAssertEqual(.some(false), try? channel.finish())
         }
         
-        try! channel.pipeline.add(handler: HTTPRequestEncoder()).wait()
+        try channel.pipeline.add(handler: HTTPRequestEncoder()).wait()
         var request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:1), method: .POST, uri: "/uri")
         request.headers.add(name: "content-length", value: "4")
         
         var buf = channel.allocator.buffer(capacity: 4)
         buf.write(staticString: "test")
     
-        try! channel.writeOutbound(data: HTTPClientRequestPart.head(request))
-        try! channel.writeOutbound(data: HTTPClientRequestPart.body(.byteBuffer(buf)))
-        try! channel.writeOutbound(data: HTTPClientRequestPart.end(nil))
+        XCTAssertNoThrow(try channel.writeOutbound(data: HTTPClientRequestPart.head(request)))
+        XCTAssertNoThrow(try channel.writeOutbound(data: HTTPClientRequestPart.body(.byteBuffer(buf))))
+        XCTAssertNoThrow(try channel.writeOutbound(data: HTTPClientRequestPart.end(nil)))
 
         assertOutboundContainsOnly(channel, "POST /uri HTTP/1.1\r\ncontent-length: 4\r\n\r\n")
         assertOutboundContainsOnly(channel, "test")

@@ -37,7 +37,7 @@ class EchoServerClientTest : XCTestCase {
     func testEcho() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let numBytes = 16 * 1024
@@ -75,7 +75,7 @@ class EchoServerClientTest : XCTestCase {
     func testLotsOfUnflushedWrites() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let serverChannel = try ServerBootstrap(group: group)
@@ -85,7 +85,7 @@ class EchoServerClientTest : XCTestCase {
             }.bind(to: "127.0.0.1", on: 0).wait()
 
         defer {
-            _ = try! serverChannel.close().wait()
+            XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
         let promise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
@@ -108,12 +108,12 @@ class EchoServerClientTest : XCTestCase {
     func testEchoUnixDomainSocket() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let udsTempDir = buildTempDir()
         defer {
-            try! FileManager.default.removeItem(atPath: udsTempDir)
+            XCTAssertNoThrow(try FileManager.default.removeItem(atPath: udsTempDir))
         }
 
         let numBytes = 16 * 1024
@@ -151,12 +151,12 @@ class EchoServerClientTest : XCTestCase {
     func testConnectUnixDomainSocket() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let udsTempDir = buildTempDir()
         defer {
-            try! FileManager.default.removeItem(atPath: udsTempDir)
+            XCTAssertNoThrow(try FileManager.default.removeItem(atPath: udsTempDir))
         }
 
         let numBytes = 16 * 1024
@@ -194,7 +194,7 @@ class EchoServerClientTest : XCTestCase {
     func testChannelActiveOnConnect() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let handler = ChannelActiveHandler()
@@ -220,7 +220,7 @@ class EchoServerClientTest : XCTestCase {
     func testWriteThenRead() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let serverChannel = try ServerBootstrap(group: group)
@@ -450,7 +450,7 @@ class EchoServerClientTest : XCTestCase {
 
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
             defer {
-                try! group.syncShutdownGracefully()
+                XCTAssertNoThrow(try group.syncShutdownGracefully())
             }
 
         let inactivePromise = group.next().newPromise() as EventLoopPromise<()>
@@ -468,7 +468,7 @@ class EchoServerClientTest : XCTestCase {
             }.bind(to: "127.0.0.1", on: 0).wait()
 
         defer {
-            _ = try! serverChannel.close().wait()
+            XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
         let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
@@ -486,7 +486,7 @@ class EchoServerClientTest : XCTestCase {
     func testFlushOnEmpty() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let writingBytes = "hello"
@@ -500,7 +500,7 @@ class EchoServerClientTest : XCTestCase {
             }.bind(to: "127.0.0.1", on: 0).wait()
 
         defer {
-            _ = try! serverChannel.close().wait()
+            XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
         let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
@@ -534,7 +534,7 @@ class EchoServerClientTest : XCTestCase {
     func testWriteOnConnect() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let serverChannel = try ServerBootstrap(group: group)
@@ -544,7 +544,7 @@ class EchoServerClientTest : XCTestCase {
             }.bind(to: "127.0.0.1", on: 0).wait()
 
         defer {
-            _ = try! serverChannel.close().wait()
+            XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
         let stringToWrite = "hello"
@@ -567,7 +567,7 @@ class EchoServerClientTest : XCTestCase {
     func testWriteOnAccept() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let stringToWrite = "hello"
@@ -578,7 +578,7 @@ class EchoServerClientTest : XCTestCase {
             }.bind(to: "127.0.0.1", on: 0).wait()
 
         defer {
-            _ = try! serverChannel.close().wait()
+            XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
         let promise: EventLoopPromise<ByteBuffer> = group.next().newPromise()

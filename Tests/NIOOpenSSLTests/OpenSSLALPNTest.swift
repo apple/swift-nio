@@ -42,7 +42,7 @@ class OpenSSLALPNTest: XCTestCase {
                                           clientContext: NIOOpenSSL.SSLContext) throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let completionPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
@@ -52,7 +52,7 @@ class OpenSSLALPNTest: XCTestCase {
                                                  andHandlers: [serverHandler, PromiseOnReadHandler(promise: completionPromise)],
                                                  onGroup: group)
         defer {
-            _ = try! serverChannel.close().wait()
+            XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
         let clientChannel = try clientTLSChannel(withContext: clientContext,
@@ -61,7 +61,7 @@ class OpenSSLALPNTest: XCTestCase {
                                                  onGroup: group,
                                                  connectingTo: serverChannel.localAddress!)
         defer {
-            _ = try! clientChannel.close().wait()
+            XCTAssertNoThrow(try clientChannel.close().wait())
         }
 
         var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
