@@ -12,6 +12,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// Triple of
+///
+///  - the `KeyPath` to the head of the linked list
+///  - the `KeyPath` to the `next` pointer
+///  - the `KeyPath` to the `prev` pointer
+private typealias ChannelPipelineListKeyPathTriple = (ReferenceWritableKeyPath<ChannelPipeline, ChannelHandlerContext?>,
+    /*                                             */ ReferenceWritableKeyPath<ChannelHandlerContext, ChannelHandlerContext?>,
+    /*                                             */ ReferenceWritableKeyPath<ChannelHandlerContext, ChannelHandlerContext?>)
+/* global cache of all the possible key path triples */
+private var linkedListKeyPaths: [[ChannelPipelineListKeyPathTriple]] = {
+    (0..<8).map { x in
+        return (x & 1 != 0, x & 2 != 0, x & 4 != 0)
+    }.map { x in
+        ChannelPipeline.keyPaths(fromHead: x.0, includeInbound: x.1, includeOutbound: x.2)
+    }
+}()
+
 /// "A list of `ChannelHandler`s that handle or intercept inbound events and outbound operations of a
 /// `Channel`. `ChannelPipeline` implements an advanced form of the Intercepting Filter pattern
 /// to give a user full control over how an event is handled and how the `ChannelHandler`s in a pipeline
@@ -134,9 +151,8 @@
 ///
 /// A `ChannelHandler` can be added or removed at any time because a `ChannelPipeline` is thread safe.
 public final class ChannelPipeline : ChannelInvoker {
-    private var outboundChain: ChannelHandlerContext?
-    private var inboundChain: ChannelHandlerContext?
-    private var contexts: [ChannelHandlerContext] = []
+    private var head: ChannelHandlerContext?
+    private var tail: ChannelHandlerContext?
     
     private var idx: Int = 0
     private var destroyed: Bool = false
@@ -168,6 +184,22 @@ public final class ChannelPipeline : ChannelInvoker {
         return promise.futureResult
     }
 
+    fileprivate static func keyPaths(fromHead: Bool, includeInbound: Bool, includeOutbound: Bool) -> [ChannelPipelineListKeyPathTriple] {
+        let inboundFromHead: ChannelPipelineListKeyPathTriple = (\ChannelPipeline.head, \ChannelHandlerContext.inboundNext, \ChannelHandlerContext.inboundPrev)
+        let outboundFromHead: ChannelPipelineListKeyPathTriple = (\ChannelPipeline.head, \ChannelHandlerContext.outboundPrev, \ChannelHandlerContext.outboundNext)
+        let inboundFromTail: ChannelPipelineListKeyPathTriple = (\ChannelPipeline.tail, \ChannelHandlerContext.inboundPrev, \ChannelHandlerContext.inboundNext)
+        let outboundFromTail: ChannelPipelineListKeyPathTriple = (\ChannelPipeline.tail, \ChannelHandlerContext.outboundNext, \ChannelHandlerContext.outboundPrev)
+        let selector: CountableRange<Int> = (includeInbound ? 0 : 1)..<(includeOutbound ? 2 : 1)
+
+        return Array([fromHead ? inboundFromHead : inboundFromTail,
+                      fromHead ? outboundFromHead : outboundFromTail][selector])
+    }
+
+    private func keyPaths(fromHead: Bool, includeInbound: Bool, includeOutbound: Bool) -> [ChannelPipelineListKeyPathTriple] {
+            /* use the globally cached version of the keypath triples */
+            return linkedListKeyPaths[(fromHead ? 1 : 0) << 0 | (includeInbound ? 1 : 0) << 1 | (includeOutbound ? 1 : 0) << 2]
+    }
+
     /// Add the handler to the `ChannelPipeline`. This operation must only be called when within the `EventLoop` thread.
     private func add0(name: String?, handler: ChannelHandler, first: Bool, promise: EventLoopPromise<Void>) {
         assert(eventLoop.inEventLoop)
@@ -178,69 +210,23 @@ public final class ChannelPipeline : ChannelInvoker {
         }
         
         let ctx = ChannelHandlerContext(name: name ?? nextName(), handler: handler, pipeline: self)
-        if first {
-            ctx.inboundNext = inboundChain
-            if handler is _ChannelInboundHandler {
-                inboundChain = ctx
-            }
-
-            if handler is _ChannelOutboundHandler {
-                var c = outboundChain
-
-                if c!.handler === HeadChannelHandler.sharedInstance {
-                    ctx.outboundNext = outboundChain
-                    outboundChain = ctx
-                } else {
-                    repeat {
-                        let c2 = c!.outboundNext
-                        if c2!.handler === HeadChannelHandler.sharedInstance {
-                            ctx.outboundNext = c2
-                            c!.outboundNext = ctx
-                            break
-                        }
-                        c = c2
-                    } while true
-                }
-            } else {
-                ctx.outboundNext = outboundChain
-            }
-
-            contexts.insert(ctx, at: 0)
-        } else {
-            if handler is _ChannelInboundHandler {
-                var c = inboundChain
-                
-                if c!.handler === TailChannelHandler.sharedInstance {
-                    ctx.inboundNext = inboundChain
-                    inboundChain = ctx
-                } else {
-                    repeat {
-                        let c2 = c!.inboundNext
-                        if c2!.handler === TailChannelHandler.sharedInstance {
-                            ctx.inboundNext = c2
-                            c!.inboundNext = ctx
-                            break
-                        }
-                        c = c2
-                    } while true
-                }
-            } else {
-                ctx.inboundNext = inboundChain
-            }
+        ctx.outboundNext = tail
+        let keyPaths = self.keyPaths(fromHead: first, includeInbound: handler is _ChannelInboundHandler, includeOutbound: handler is _ChannelOutboundHandler)
+        for (headKP, nextKP, prevKP) in keyPaths {
+            let head: ChannelHandlerContext = self[keyPath: headKP]!
+            let next: ChannelHandlerContext = head[keyPath: nextKP]!
             
-            ctx.outboundNext = outboundChain
-            if handler is _ChannelOutboundHandler {
-                outboundChain = ctx
-            }
-
-            contexts.append(ctx)
+            ctx[keyPath: prevKP] = head
+            ctx[keyPath: nextKP] = next
+            head[keyPath: nextKP] = ctx
+            next[keyPath: prevKP] = ctx
         }
         
         do {
             try ctx.invokeHandlerAdded()
             promise.succeed(result: ())
         } catch let err {
-            removeFromStorage(context: ctx)
+            remove0(ctx: ctx, promise: nil)
 
             promise.fail(error: err)
         }
@@ -252,7 +238,13 @@ public final class ChannelPipeline : ChannelInvoker {
     ///     - handler: the `ChannelHandler` to remove.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
     public func remove(handler: ChannelHandler) -> EventLoopFuture<Bool> {
-        return remove0({ $0.handler === handler })
+        let promise: EventLoopPromise<Bool> = self.eventLoop.newPromise()
+        context0({
+            return $0.handler === handler
+        }).then { ctx in
+            self.remove0(ctx: ctx, promise: promise)
+        }.cascadeFailure(promise: promise)
+        return promise.futureResult
     }
     
     /// Remove a `ChannelHandler` from the `ChannelPipeline`.
@@ -261,7 +253,11 @@ public final class ChannelPipeline : ChannelInvoker {
     ///     - name: the name that was used to add the `ChannelHandler` to the `ChannelPipeline` before.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
     public func remove(name: String) -> EventLoopFuture<Bool> {
-        return remove0({ $0.name == name })
+        let promise: EventLoopPromise<Bool> = self.eventLoop.newPromise()
+        context0({ $0.name == name }).then { ctx in
+            self.remove0(ctx: ctx, promise: promise)
+        }.cascadeFailure(promise: promise)
+        return promise.futureResult
     }
     
     /// Remove a `ChannelHandler` from the `ChannelPipeline`.
@@ -270,7 +266,15 @@ public final class ChannelPipeline : ChannelInvoker {
     ///     - ctx: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
     public func remove(ctx: ChannelHandlerContext) -> EventLoopFuture<Bool> {
-        return remove0({ $0 === ctx })
+        let promise: EventLoopPromise<Bool> = self.eventLoop.newPromise()
+        if self.eventLoop.inEventLoop {
+            remove0(ctx: ctx, promise: promise)
+        } else {
+            self.eventLoop.execute {
+                self.remove0(ctx: ctx, promise: promise)
+            }
+        }
+        return promise.futureResult
     }
     
     /// Returns the `ChannelHandlerContext` that belongs to a `ChannelHandler`.
@@ -296,11 +300,22 @@ public final class ChannelPipeline : ChannelInvoker {
         let promise: EventLoopPromise<ChannelHandlerContext> = eventLoop.newPromise()
         
         func _context0() {
-            guard let ctx = contexts.first(where: fn) else {
-                promise.fail(error: ChannelPipelineError.notFound)
-                return
+            let keyPaths = self.keyPaths(fromHead: true, includeInbound: true, includeOutbound: true)
+            for (head, next, _) in keyPaths {
+                var curCtx: ChannelHandlerContext? = self[keyPath: head]
+                while true {
+                    if let ctx = curCtx {
+                        if fn(ctx) {
+                            promise.succeed(result: ctx)
+                            return
+                        }
+                        curCtx = ctx[keyPath: next]
+                    } else {
+                        break
+                    }
+                }
             }
-            promise.succeed(result: ctx)
+            promise.fail(error: ChannelPipelineError.notFound)
         }
         if eventLoop.inEventLoop {
             _context0()
@@ -313,72 +328,35 @@ public final class ChannelPipeline : ChannelInvoker {
     }
     
     /// Remove a `ChannelHandlerContext` from the `ChannelPipeline`. Must only be called from within the `EventLoop`.
-    private func remove0(_ fn: @escaping ((ChannelHandlerContext) -> Bool)) -> EventLoopFuture<Bool> {
-        let promise: EventLoopPromise<Bool> = eventLoop.newPromise()
-        if eventLoop.inEventLoop {
-            remove0(ctx: contexts.first(where: fn), promise: promise)
-        } else {
-            eventLoop.execute {
-                self.remove0(ctx: self.contexts.first(where: fn), promise: promise)
+    private func remove0(ctx: ChannelHandlerContext, promise: EventLoopPromise<Bool>?) {
+        assert(self.eventLoop.inEventLoop)
+        
+        ctx.pipeline = nil
+
+        let keyPaths = self.keyPaths(fromHead: true, includeInbound: true, includeOutbound: true)
+        // Update the linked list structure
+        for (_, next, prev) in keyPaths {
+            let nextCtx = ctx[keyPath: next]
+            let prevCtx = ctx[keyPath: prev]
+            if let prevCtx = prevCtx {
+                prevCtx[keyPath: next] = nextCtx
             }
-        }
-        return promise.futureResult
-    }
-    
-    /// Remove a `ChannelHandlerContext` from the internal storage.
-    private func removeFromStorage(context: ChannelHandlerContext) {
-        // Update the linked-list structure after removal
-        if inboundChain === context {
-            inboundChain = context.inboundNext
-        } else {
-            var ic = inboundChain
-            while let i = ic {
-                if i.inboundNext === context {
-                    i.inboundNext = context.inboundNext
-                    break
-                }
-                ic = i.inboundNext
+            if let nextCtx = nextCtx {
+                nextCtx[keyPath: prev] = prevCtx
             }
         }
         
-        if outboundChain === context {
-            outboundChain = context.outboundNext
-        } else {
-            var oc = outboundChain
-            while let o = oc {
-                if o.outboundNext === context {
-                    o.outboundNext = context.outboundNext
-                    break
-                }
-                oc = o.outboundNext
-            }
-        }
-        
-        let index = contexts.index(where: { $0 === context})!
-        contexts.remove(at: index)
-        
-        // Was removed so destroy references
-        destroyReferences(context)
-  
-        assert(inboundChain != nil)
-        assert(outboundChain != nil)
-    }
-    
-    private func remove0(ctx: ChannelHandlerContext?, promise: EventLoopPromise<Bool>) {
-        assert(eventLoop.inEventLoop)
-        
-        guard let context = ctx else {
-            promise.succeed(result: false)
-            return
-        }
-        defer {
-            removeFromStorage(context: context)
-        }
         do {
-            try context.invokeHandlerRemoved()
-            promise.succeed(result: true)
+            try ctx.invokeHandlerRemoved()
+            promise?.succeed(result: true)
         } catch let err {
-            promise.fail(error: err)
+            promise?.fail(error: err)
+        }
+
+        // We need to keep the current node alive until after the callout in case the user uses the context.
+        for (_, next, prev) in keyPaths {
+            ctx[keyPath: next] = nil
+            ctx[keyPath: prev] = nil
         }
     }
     
@@ -395,22 +373,18 @@ public final class ChannelPipeline : ChannelInvoker {
     func removeHandlers() {
         assert(eventLoop.inEventLoop)
         
-        while let ctx = contexts.first {
-            remove0(ctx: ctx, promise:  eventLoop.newPromise())
+        for (headKP, nextKP, _) in self.keyPaths(fromHead: true, includeInbound: true, includeOutbound: true) {
+            if let head = self[keyPath: headKP] {
+                while let ctx = head[keyPath: nextKP] {
+                    remove0(ctx: ctx, promise: nil)
+                }
+                remove0(ctx: self[keyPath: headKP]!, promise: nil)
+            }
         }
-        
-        // We need to set the next reference to nil to ensure we don't leak memory due a cycle-reference.
-        destroyReferences(inboundChain!)
-        destroyReferences(outboundChain!)
+        self.head = nil
+        self.tail = nil
         
         destroyed = true
-    }
-    
-    private func destroyReferences(_ ctx: ChannelHandlerContext) {
-        // We need to set the next reference to nil to ensure we don't leak memory due a cycle-reference.
-        ctx.inboundNext = nil
-        ctx.outboundNext = nil
-        ctx.pipeline = nil
     }
     
     // Just delegate to the head and tail context
@@ -596,84 +570,138 @@ public final class ChannelPipeline : ChannelInvoker {
     
     // These methods are expected to only be called from within the EventLoop
     
-    private var firstOutboundCtx: ChannelHandlerContext {
-        return outboundChain!
+    private var firstOutboundCtx: ChannelHandlerContext? {
+        return self.tail?.outboundNext
     }
     
-    private var firstInboundCtx: ChannelHandlerContext {
-        return inboundChain!
+    private var firstInboundCtx: ChannelHandlerContext? {
+        return self.head?.inboundNext
     }
     
     func close0(promise: EventLoopPromise<Void>?) {
-        firstOutboundCtx.invokeClose(promise: promise)
+        if let firstOutboundCtx = firstOutboundCtx {
+            firstOutboundCtx.invokeClose(promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.alreadyClosed)
+        }
     }
     
     func flush0(promise: EventLoopPromise<Void>?) {
-        firstOutboundCtx.invokeFlush(promise: promise)
+        if let firstOutboundCtx = firstOutboundCtx {
+            firstOutboundCtx.invokeFlush(promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
     
     func read0(promise: EventLoopPromise<Void>?) {
-        firstOutboundCtx.invokeRead(promise: promise)
+        if let firstOutboundCtx = firstOutboundCtx {
+            firstOutboundCtx.invokeRead(promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
     
     func write0(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        firstOutboundCtx.invokeWrite(data: data, promise: promise)
+        if let firstOutboundCtx = firstOutboundCtx {
+            firstOutboundCtx.invokeWrite(data: data, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
     
     func writeAndFlush0(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        firstOutboundCtx.invokeWriteAndFlush(data: data, promise: promise)
+        if let firstOutboundCtx = firstOutboundCtx {
+            firstOutboundCtx.invokeWriteAndFlush(data: data, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
     
     func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        firstOutboundCtx.invokeBind(to: address, promise: promise)
+        if let firstOutboundCtx = firstOutboundCtx {
+            firstOutboundCtx.invokeBind(to: address, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
     
     func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        firstOutboundCtx.invokeConnect(to: address, promise: promise)
+        if let firstOutboundCtx = firstOutboundCtx {
+            firstOutboundCtx.invokeConnect(to: address, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
     
     func register0(promise: EventLoopPromise<Void>?) {
-        firstOutboundCtx.invokeRegister(promise: promise)
+        if let firstOutboundCtx = firstOutboundCtx {
+            firstOutboundCtx.invokeRegister(promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
     
     func triggerUserOutboundEvent0(event: Any, promise: EventLoopPromise<Void>?) {
-        firstOutboundCtx.invokeTriggerUserOutboundEvent(event: event, promise: promise)
+        if let firstOutboundCtx = firstOutboundCtx {
+            firstOutboundCtx.invokeTriggerUserOutboundEvent(event: event, promise: promise)
+        } else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+        }
     }
     
     func fireChannelRegistered0() {
-        firstInboundCtx.invokeChannelRegistered()
+        if let firstInboundCtx = firstInboundCtx {
+            firstInboundCtx.invokeChannelRegistered()
+        }
     }
     
     func fireChannelUnregistered0() {
-        firstInboundCtx.invokeChannelUnregistered()
+        if let firstInboundCtx = firstInboundCtx {
+            firstInboundCtx.invokeChannelUnregistered()
+        }
     }
     
     func fireChannelInactive0() {
-        firstInboundCtx.invokeChannelInactive()
+        if let firstInboundCtx = firstInboundCtx {
+            firstInboundCtx.invokeChannelInactive()
+        }
     }
     
     func fireChannelActive0() {
-        firstInboundCtx.invokeChannelActive()
+        if let firstInboundCtx = firstInboundCtx {
+            firstInboundCtx.invokeChannelActive()
+        }
     }
     
     func fireChannelRead0(data: NIOAny) {
-        firstInboundCtx.invokeChannelRead(data: data)
+        if let firstInboundCtx = firstInboundCtx {
+            firstInboundCtx.invokeChannelRead(data: data)
+        }
     }
     
     func fireChannelReadComplete0() {
-        firstInboundCtx.invokeChannelReadComplete()
+        if let firstInboundCtx = firstInboundCtx {
+            firstInboundCtx.invokeChannelReadComplete()
+        }
     }
     
     func fireChannelWritabilityChanged0() {
-        firstInboundCtx.invokeChannelWritabilityChanged()
+        if let firstInboundCtx = firstInboundCtx {
+            firstInboundCtx.invokeChannelWritabilityChanged()
+        }
     }
     
     func fireUserInboundEventTriggered0(event: Any) {
-        firstInboundCtx.invokeUserInboundEventTriggered(event: event)
+        if let firstInboundCtx = firstInboundCtx {
+            firstInboundCtx.invokeUserInboundEventTriggered(event: event)
+        }
     }
     
     func fireErrorCaught0(error: Error) {
-        firstInboundCtx.invokeErrorCaught(error: error)
+        if let firstInboundCtx = firstInboundCtx {
+            firstInboundCtx.invokeErrorCaught(error: error)
+        }
     }
     
     private var inEventLoop : Bool {
@@ -684,10 +712,12 @@ public final class ChannelPipeline : ChannelInvoker {
     init (channel: Channel) {
         self.channel = channel
         
-        outboundChain = ChannelHandlerContext(name: "head", handler: HeadChannelHandler.sharedInstance, pipeline: self)
-        inboundChain = ChannelHandlerContext(name: "tail", handler: TailChannelHandler.sharedInstance, pipeline: self)
-        outboundChain!.inboundNext = inboundChain
-        inboundChain!.outboundNext = outboundChain
+        self.head = ChannelHandlerContext(name: "head", handler: HeadChannelHandler.sharedInstance, pipeline: self)
+        self.tail = ChannelHandlerContext(name: "tail", handler: TailChannelHandler.sharedInstance, pipeline: self)
+        self.head!.inboundNext = self.tail!
+        self.tail!.inboundPrev = self.head
+        self.tail!.outboundNext = self.head!
+        self.head!.outboundPrev = self.tail
     }
 }
 
@@ -764,7 +794,7 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
 }
 
 /// Special `ChannelInboundHandler` which will consume all inbound events.
-private final class TailChannelHandler : _ChannelInboundHandler {
+private final class TailChannelHandler : _ChannelInboundHandler, _ChannelOutboundHandler {
     
     static let sharedInstance = TailChannelHandler()
     
@@ -829,8 +859,10 @@ public final class ChannelHandlerContext : ChannelInvoker {
     
     // visible for ChannelPipeline to modify
     fileprivate var outboundNext: ChannelHandlerContext?
+    fileprivate var outboundPrev: ChannelHandlerContext?
     
     fileprivate var inboundNext: ChannelHandlerContext?
+    fileprivate var inboundPrev: ChannelHandlerContext?
     
     public fileprivate(set) var pipeline: ChannelPipeline?
     
@@ -1043,7 +1075,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         if let outboundNext = outboundNext {
             outboundNext.invokeClose(promise: promise)
         } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(error: ChannelError.alreadyClosed)
         }
     }
     
@@ -1254,3 +1286,23 @@ public final class ChannelHandlerContext : ChannelInvoker {
     }
 }
 
+extension ChannelPipeline: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        var desc = "ChannelPipeline:\n"
+        desc    += "    INBOUND\n"
+        var (head, next, _) = self.keyPaths(fromHead: true, includeInbound: true, includeOutbound: false).first!
+        var node = self[keyPath: head]
+        while let ctx = node {
+            desc += "        \(ctx.name)\n"
+            node = ctx[keyPath: next]
+        }
+        desc    += "    OUTBOUND\n"
+        (head, next, _) = self.keyPaths(fromHead: true, includeInbound: false, includeOutbound: true).first!
+        node = self[keyPath: head]
+        while let ctx = node {
+            desc += "        \(ctx.name)\n"
+            node = ctx[keyPath: next]
+        }
+        return desc
+    }
+}

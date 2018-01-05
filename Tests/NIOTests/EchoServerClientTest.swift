@@ -495,6 +495,11 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
+                // When we've received all the bytes we know the connection is up. Remove the handler.
+                _ = bytesReceivedPromise.futureResult.then { _ in
+                    channel.pipeline.remove(handler: byteCountingHandler)
+                }
+
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                 return channel.pipeline.add(handler: byteCountingHandler)
             }.bind(to: "127.0.0.1", on: 0).wait()
@@ -513,10 +518,8 @@ class EchoServerClientTest : XCTestCase {
         bytesToWrite.write(string: writingBytes)
         clientChannel.writeAndFlush(data: NIOAny(bytesToWrite), promise: nil)
 
-        // When we've received all the bytes we know the connection is up. Remove the handler.
-        _ = try bytesReceivedPromise.futureResult.then { _ in
-            clientChannel.pipeline.remove(handler: byteCountingHandler)
-        }.wait()
+        // When we've received all the bytes we know the connection is up.
+        _ = try bytesReceivedPromise.futureResult.wait()
 
         // Now, with an empty write pipeline, we want to flush. This should complete immediately and without error.
         let flushFuture = clientChannel.flush()
@@ -630,6 +633,6 @@ class EchoServerClientTest : XCTestCase {
 
         dpGroup.wait() /* make sure we stick around until the second write has happened */
 
-        try group.syncShutdownGracefully()
+        try! group.syncShutdownGracefully()
     }
 }

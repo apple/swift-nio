@@ -29,6 +29,9 @@ extension ChannelPipelineTest {
                 ("testAddAfterClose", testAddAfterClose),
                 ("testOutboundOrdering", testOutboundOrdering),
                 ("testConnectingDoesntCallBind", testConnectingDoesntCallBind),
+                ("testFiringChannelReadsInHandlerRemovedWorks", testFiringChannelReadsInHandlerRemovedWorks),
+                ("testEmptyPipelineWorks", testEmptyPipelineWorks),
+                ("testWriteAfterClose", testWriteAfterClose),
            ]
    }
 }

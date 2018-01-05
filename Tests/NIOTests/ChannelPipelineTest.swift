@@ -68,7 +68,6 @@ class ChannelPipelineTest: XCTestCase {
             return 1
         }).wait()
         
-        
         _ = channel.write(data: NIOAny("msg"))
         _ = try channel.flush().wait()
         if let data = channel.readOutbound() {
@@ -77,7 +76,6 @@ class ChannelPipelineTest: XCTestCase {
             XCTFail("couldn't read from channel")
         }
         XCTAssertNil(channel.readOutbound())
-        
     }
     
     func testConnectingDoesntCallBind() throws {
@@ -126,6 +124,51 @@ class ChannelPipelineTest: XCTestCase {
         
         public func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
             promise!.fail(error: TestFailureError.CalledBind)
+        }
+    }
+
+    private final class FireChannelReadOnRemoveHandler: ChannelInboundHandler {
+        typealias InboundIn = Never
+        typealias InboundOut = Int
+
+        public func handlerRemoved(ctx: ChannelHandlerContext) {
+            ctx.fireChannelRead(data: self.wrapInboundOut(1))
+        }
+    }
+
+    func testFiringChannelReadsInHandlerRemovedWorks() throws {
+        let channel = EmbeddedChannel()
+
+        let h = FireChannelReadOnRemoveHandler()
+        _ = try channel.pipeline.add(handler: h).then { _ in
+            channel.pipeline.remove(handler: h)
+        }.wait()
+
+        XCTAssertEqual(Optional<Int>.some(1), channel.readInbound())
+        XCTAssertFalse(try channel.finish())
+    }
+
+    func testEmptyPipelineWorks() throws {
+        let channel = EmbeddedChannel()
+        try channel.writeInbound(data: 2)
+        XCTAssertEqual(Optional<Int>.some(2), channel.readInbound())
+        XCTAssertFalse(try channel.finish())
+    }
+
+    func testWriteAfterClose() throws {
+
+        let channel = EmbeddedChannel()
+        _ = try channel.close().wait()
+        let loop = channel.eventLoop as! EmbeddedEventLoop
+        try loop.run()
+
+        XCTAssertTrue(loop.inEventLoop)
+        do {
+            try channel.writeOutbound(data: FileRegion(descriptor: -1, readerIndex: 0, endIndex: 0))
+            try loop.run()
+            XCTFail("we ran but an error should have been thrown")
+        } catch let err as ChannelError {
+            XCTAssertEqual(err, .ioOnClosedChannel)
         }
     }
 }

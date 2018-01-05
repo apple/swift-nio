@@ -17,7 +17,7 @@ public protocol ByteToMessageDecoder : ChannelInboundHandler where InboundIn == 
 
     var cumulationBuffer: ByteBuffer? { get set }
     func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> Bool
-    func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer)throws  -> Bool
+    func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws  -> Bool
     func decoderRemoved(ctx: ChannelHandlerContext) throws
     func decoderAdded(ctx: ChannelHandlerContext) throws
 }
@@ -82,10 +82,9 @@ extension ByteToMessageDecoder {
     }
     
     public func decoderRemoved(ctx: ChannelHandlerContext) throws {
-        
     }
+
     public func decoderAdded(ctx: ChannelHandlerContext) throws {
-        
     }
 }
 
