@@ -203,12 +203,20 @@ public struct ByteBuffer {
             return ptr
         }
 
-        public func duplicate(slice: Slice, capacity: Capacity) -> _Storage {
-            assert(slice.count <= capacity)
+        public func allocateStorage() -> _Storage {
+            return self.allocateStorage(capacity: self.capacity)
+        }
+
+        private func allocateStorage(capacity: Capacity) -> _Storage {
             let newCapacity = capacity == 0 ? 0 : capacity.nextPowerOf2ClampedToMax()
-            let new = _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity, allocator: self.allocator),
-                               capacity: newCapacity,
-                               allocator: self.allocator)
+            return _Storage(bytesNoCopy: _Storage.allocateAndPrepareRawMemory(bytes: newCapacity, allocator: self.allocator),
+                            capacity: newCapacity,
+                            allocator: self.allocator)
+        }
+
+        public func reallocSlice(_ slice: Slice, capacity: Capacity) -> _Storage {
+            assert(slice.count <= capacity)
+            let new = self.allocateStorage(capacity: capacity)
             self.allocator.memcpy(new.bytes, self.bytes.advanced(by: Int(slice.lowerBound)), slice.count)
             return new
         }
@@ -248,7 +256,7 @@ public struct ByteBuffer {
         let indexRebaseAmount = resetIndices ? self._readerIndex : 0
         let storageRebaseAmount = self._slice.lowerBound + indexRebaseAmount
         let newSlice = Range(storageRebaseAmount ..< min(storageRebaseAmount + toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity))
-        self._storage = self._storage.duplicate(slice: newSlice, capacity: capacity)
+        self._storage = self._storage.reallocSlice(newSlice, capacity: capacity)
         self.moveReaderIndex(to: self._readerIndex - indexRebaseAmount)
         self.moveWriterIndex(to: self._writerIndex - indexRebaseAmount)
         self._slice = self._storage.fullSlice
@@ -503,6 +511,20 @@ public struct ByteBuffer {
     /// newly allocated `ByteBuffer`.
     public var writerIndex: Int {
         return Int(self._writerIndex)
+    }
+
+    /// Set both reader index and writer index to `0`. This will reset the state of this `ByteBuffer` to the state
+    /// of a freshly allocated one, if possible without allocations. This is the cheapest way to recycle a `ByteBuffer`
+    /// for a new use-case.
+    ///
+    /// - note: This method will allocate if the underlying storage is referenced by another `ByteBuffer`. Even if an
+    ///         allocation is necessary this will be cheaper as the copy of the storage is elided.
+    public mutating func clear() {
+        if !isKnownUniquelyReferenced(&self._storage) {
+            self._storage = self._storage.allocateStorage()
+        }
+        self.moveWriterIndex(to: 0)
+        self.moveReaderIndex(to: 0)
     }
 }
 

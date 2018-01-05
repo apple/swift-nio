@@ -1067,6 +1067,52 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(newBuf.capacity, 8)
         XCTAssertEqual(newBuf.writableBytes, 0)
     }
+
+    func testClearDupesStorageIfTheresTwoBuffersSharingStorage() throws {
+        let alloc = ByteBufferAllocator()
+        var buf1 = alloc.buffer(capacity: 16)
+        let buf2 = buf1
+
+        var buf1PtrVal: UInt = 1
+        var buf2PtrVal: UInt = 2
+
+        buf1.withUnsafeReadableBytes { ptr in
+            buf1PtrVal = UInt(bitPattern: ptr.baseAddress!)
+        }
+        buf2.withUnsafeReadableBytes { ptr in
+            buf2PtrVal = UInt(bitPattern: ptr.baseAddress!)
+        }
+        XCTAssertEqual(buf1PtrVal, buf2PtrVal)
+
+        buf1.clear()
+
+        buf1.withUnsafeReadableBytes { ptr in
+            buf1PtrVal = UInt(bitPattern: ptr.baseAddress!)
+        }
+        buf2.withUnsafeReadableBytes { ptr in
+            buf2PtrVal = UInt(bitPattern: ptr.baseAddress!)
+        }
+        XCTAssertNotEqual(buf1PtrVal, buf2PtrVal)
+    }
+
+    func testClearDoesNotDupeStorageIfTheresOnlyOneBuffer() throws {
+        let alloc = ByteBufferAllocator()
+        var buf = alloc.buffer(capacity: 16)
+
+        var bufPtrValPre: UInt = 1
+        var bufPtrValPost: UInt = 2
+
+        buf.withUnsafeReadableBytes { ptr in
+            bufPtrValPre = UInt(bitPattern: ptr.baseAddress!)
+        }
+
+        buf.clear()
+
+        buf.withUnsafeReadableBytes { ptr in
+            bufPtrValPost = UInt(bitPattern: ptr.baseAddress!)
+        }
+        XCTAssertEqual(bufPtrValPre, bufPtrValPost)
+    }
 }
 
 private enum AllocationExpectationState: Int {

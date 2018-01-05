@@ -284,13 +284,4 @@ extension ByteBuffer {
         self.moveReaderIndex(forwardBy: length)
         return buffer
     }
-
-
-    /// Set both reader index and writer index to `0`. This will reset the state of this `ByteBuffer` to the state
-    /// of a freshly allocated one without doing any allocations. This is the cheapest way to recycle a `ByteBuffer`
-    /// for a new use-case.
-    public mutating func clear() {
-        self.moveWriterIndex(to: 0)
-        self.moveReaderIndex(to: 0)
-    }
 }
