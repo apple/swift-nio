@@ -70,6 +70,16 @@ internal class ArrayAccumulationHandler<T>: ChannelInboundHandler {
 
 class HTTPServerClientTest : XCTestCase {
     
+    private func syncCloseAcceptingAlreadyClosed(channel: Channel) throws {
+        do {
+            try channel.close().wait()
+        } catch ChannelError.alreadyClosed {
+            /* we're happy with this one */
+        } catch let e {
+            throw e
+        }
+    }
+
     /* needs to be something reasonably large and odd so it has good odds producing incomplete writes even on the loopback interface */
     private static let massiveResponseLength = 5 * 1024 * 1024 + 7
     private static let massiveResponseBytes: [UInt8] = {
@@ -119,7 +129,7 @@ class HTTPServerClientTest : XCTestCase {
                 files.append(filePath)
                 
                 let content = buffer.getData(at: 0, length: buffer.readableBytes)!
-                try! content.write(to: URL(fileURLWithPath: filePath))
+                XCTAssertNoThrow(try content.write(to: URL(fileURLWithPath: filePath)))
                 let region = try! FileRegion(file: filePath, readerIndex: 0, endIndex: buffer.readableBytes)
                 return .body(.fileRegion(region))
             }
@@ -285,10 +295,13 @@ class HTTPServerClientTest : XCTestCase {
         try testSimpleGet(.fileRegion)
     }
     
-    private class HTTPClientResponsePartAssertHandler : ArrayAccumulationHandler<HTTPClientResponsePart> {
+    private class HTTPClientResponsePartAssertHandler: ArrayAccumulationHandler<HTTPClientResponsePart> {
         public init(_ expectedVersion: HTTPVersion, _ expectedStatus: HTTPResponseStatus, _ expectedHeaders: HTTPHeaders, _ expectedBody: String?, _ expectedTrailers: HTTPHeaders? = nil) {
             super.init { parts in
-                XCTAssertTrue(parts.count >= 2, "parts \(parts.count)")
+                guard parts.count >= 2 else {
+                    XCTFail("only \(parts.count) parts")
+                    return
+                }
                 if case .head(let h) = parts[0] {
                     XCTAssertEqual(expectedVersion, h.version)
                     XCTAssertEqual(expectedStatus, h.status)
@@ -324,7 +337,7 @@ class HTTPServerClientTest : XCTestCase {
     private func testSimpleGet(_ mode: SendMode) throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         var expectedHeaders = HTTPHeaders()
@@ -347,7 +360,7 @@ class HTTPServerClientTest : XCTestCase {
             }.bind(to: "127.0.0.1", on: 0).wait()
         
         defer {
-            _ = serverChannel.close()
+            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
         }
         
         let clientChannel = try ClientBootstrap(group: group)
@@ -360,12 +373,12 @@ class HTTPServerClientTest : XCTestCase {
             .wait()
         
         defer {
-            _ = clientChannel.close()
+            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: clientChannel))
         }
         
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/helloworld")
         head.headers.add(name: "Host", value: "apple.com")
-        try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.head(head))).wait()
+        clientChannel.write(data: NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
         try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.end(nil))).wait()
 
         accumulation.syncWaitForCompletion()
@@ -382,7 +395,7 @@ class HTTPServerClientTest : XCTestCase {
     private func testSimpleGetChunkedEncoding(_ mode: SendMode) throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
         
         var expectedHeaders = HTTPHeaders()
@@ -405,7 +418,7 @@ class HTTPServerClientTest : XCTestCase {
             }.bind(to: "127.0.0.1", on: 0).wait()
         
         defer {
-            _ = serverChannel.close()
+            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
         }
         
         let clientChannel = try ClientBootstrap(group: group)
@@ -418,12 +431,12 @@ class HTTPServerClientTest : XCTestCase {
             .wait()
         
         defer {
-            _ = clientChannel.close()
+            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: clientChannel))
         }
         
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/count-to-ten")
         head.headers.add(name: "Host", value: "apple.com")
-        try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.head(head))).wait()
+        clientChannel.write(data: NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
         try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.end(nil))).wait()
         accumulation.syncWaitForCompletion()
     }
@@ -439,7 +452,7 @@ class HTTPServerClientTest : XCTestCase {
     private func testSimpleGetTrailers(_ mode: SendMode) throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         var expectedHeaders = HTTPHeaders()
@@ -463,7 +476,7 @@ class HTTPServerClientTest : XCTestCase {
             }.bind(to: "127.0.0.1", on: 0).wait()
 
         defer {
-            _ = serverChannel.close()
+            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
         }
 
         let clientChannel = try ClientBootstrap(group: group)
@@ -476,12 +489,12 @@ class HTTPServerClientTest : XCTestCase {
             .wait()
 
         defer {
-            _ = clientChannel.close()
+            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: clientChannel))
         }
 
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/trailers")
         head.headers.add(name: "Host", value: "apple.com")
-        try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.head(head))).wait()
+        clientChannel.write(data: NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
         try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.end(nil))).wait()
         
         accumulation.syncWaitForCompletion()
@@ -498,7 +511,7 @@ class HTTPServerClientTest : XCTestCase {
     func testMassiveResponse(_ mode: SendMode) throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         let accumulation = ArrayAccumulationHandler<ByteBuffer> { bbs in
@@ -523,7 +536,7 @@ class HTTPServerClientTest : XCTestCase {
             }.bind(to: "127.0.0.1", on: 0).wait()
 
         defer {
-            _ = serverChannel.close()
+            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
         }
 
         let clientChannel = try ClientBootstrap(group: group)
@@ -532,7 +545,7 @@ class HTTPServerClientTest : XCTestCase {
             .wait()
 
         defer {
-            _ = clientChannel.close()
+            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: clientChannel))
         }
 
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
@@ -545,7 +558,7 @@ class HTTPServerClientTest : XCTestCase {
     func testHead() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         var expectedHeaders = HTTPHeaders()
@@ -564,7 +577,7 @@ class HTTPServerClientTest : XCTestCase {
                 }
             }.bind(to: "127.0.0.1", on: 0).wait()
         defer {
-            _ = serverChannel.close()
+            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
         }
 
         let clientChannel = try ClientBootstrap(group: group)
@@ -577,12 +590,12 @@ class HTTPServerClientTest : XCTestCase {
             .wait()
 
         defer {
-            _ = clientChannel.close()
+            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: clientChannel))
         }
 
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .HEAD, uri: "/head")
         head.headers.add(name: "Host", value: "apple.com")
-        try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.head(head))).wait()
+        clientChannel.write(data: NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
         try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.end(nil))).wait()
 
         accumulation.syncWaitForCompletion()
@@ -591,7 +604,7 @@ class HTTPServerClientTest : XCTestCase {
     func test204() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
         var expectedHeaders = HTTPHeaders()
@@ -609,7 +622,7 @@ class HTTPServerClientTest : XCTestCase {
                 }
             }.bind(to: "127.0.0.1", on: 0).wait()
         defer {
-            _ = serverChannel.close()
+            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
         }
 
         let clientChannel = try ClientBootstrap(group: group)
@@ -622,12 +635,12 @@ class HTTPServerClientTest : XCTestCase {
             .wait()
 
         defer {
-            _ = clientChannel.close()
+            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: clientChannel))
         }
 
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/204")
         head.headers.add(name: "Host", value: "apple.com")
-        try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.head(head))).wait()
+        clientChannel.write(data: NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
         try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.end(nil))).wait()
 
         accumulation.syncWaitForCompletion()

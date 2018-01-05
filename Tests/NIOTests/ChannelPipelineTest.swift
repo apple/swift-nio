@@ -33,8 +33,8 @@ class ChannelPipelineTest: XCTestCase {
         do {
             try channel.pipeline.add(handler: handler).wait()
             XCTFail()
-        } catch let err as ChannelPipelineError {
-            XCTAssertEqual(err, .alreadyClosed)
+        } catch let err as ChannelError {
+            XCTAssertEqual(err, .ioOnClosedChannel)
         }
     }
     

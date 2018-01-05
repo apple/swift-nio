@@ -173,7 +173,7 @@ public final class ChannelPipeline : ChannelInvoker {
         assert(eventLoop.inEventLoop)
 
         if destroyed {
-            promise.fail(error: ChannelPipelineError.alreadyClosed)
+            promise.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
         
@@ -811,8 +811,6 @@ private final class TailChannelHandler : _ChannelInboundHandler {
 public enum ChannelPipelineError : Error {
     /// `ChannelHandler` was already removed.
     case alreadyRemoved
-    /// `Channel` (that belonged to the `ChannelPipeline`) was already closed and so may be already destroyed.
-    case alreadyClosed
     /// `ChannelHandler` was not found.
     case notFound
 }
