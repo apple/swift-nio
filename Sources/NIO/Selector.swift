@@ -24,6 +24,15 @@ private enum SelectorLifecycleState {
     case closed
 }
 
+private extension timespec {
+    init(timeAmount amount: TimeAmount) {
+        let nsecPerSec: Int = 1_000_000_000
+        let ns = amount.nanoseconds
+        self.tv_sec = ns / nsecPerSec
+        self.tv_nsec = ns - self.tv_sec * nsecPerSec
+    }
+}
+
 /* this is deliberately not thread-safe, only the wakeup() function may be called unprotectedly */
 final class Selector<R: Registration> {
     private var lifecycleState: SelectorLifecycleState
@@ -142,7 +151,7 @@ final class Selector<R: Registration> {
         case .now:
             return timespec(tv_sec: 0, tv_nsec: 0)
         case .blockUntilTimeout(let nanoseconds):
-            return toTimerspec(nanoseconds)
+            return timespec(timeAmount: nanoseconds)
         }
     }
 
@@ -308,9 +317,9 @@ final class Selector<R: Registration> {
         switch strategy {
         case .now:
             ready = Int(try Epoll.epoll_wait(epfd: self.fd, events: events, maxevents: Int32(eventsCapacity), timeout: 0))
-        case .blockUntilTimeout(let nanoseconds):
+        case .blockUntilTimeout(let timeAmount):
             var ts = itimerspec()
-            ts.it_value = toTimerspec(nanoseconds)
+            ts.it_value = timespec(timeAmount: timeAmount)
             try TimerFd.timerfd_settime(fd: timerfd, flags: 0, newValue: &ts, oldValue: nil)
             fallthrough
         case .block:
@@ -374,12 +383,6 @@ final class Selector<R: Registration> {
 #endif
     }
 
-    private func toTimerspec(_ nanoseconds: UInt64) -> timespec {
-        let delaySeconds = nanoseconds / 1000000000
-        let delayNanoSeconds = nanoseconds - delaySeconds * 1000000000
-        return timespec(tv_sec: Int(delaySeconds), tv_nsec: Int(delayNanoSeconds))
-    }
-    
     public func close() throws {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't close selector as it's \(self.lifecycleState).")
@@ -463,7 +466,7 @@ internal extension Selector where R == NIORegistration {
 
 enum SelectorStrategy {
     case block
-    case blockUntilTimeout(nanoseconds: UInt64)
+    case blockUntilTimeout(TimeAmount)
     case now
 }
 

@@ -15,6 +15,8 @@
 //
 //
 
+import struct Dispatch.DispatchTime
+
 /**
  ChannelHandler implementation which enforces back-pressure by stopping to read from the remote peer when it cannot write back fast enough.
  It will start reading again once pending data was written.
@@ -98,8 +100,8 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
     public let allTimeout: TimeAmount?
 
     private var reading = false
-    private var lastReadTime: TimeAmount?
-    private var lastWriteCompleteTime: TimeAmount?
+    private var lastReadTime: DispatchTime = DispatchTime(uptimeNanoseconds: 0)
+    private var lastWriteCompleteTime: DispatchTime = DispatchTime(uptimeNanoseconds: 0)
     private var scheduledReaderTask: Scheduled<Void>?
     private var scheduledWriterTask: Scheduled<Void>?
     private var scheduledAllTask: Scheduled<Void>?
@@ -133,7 +135,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
     
     public func channelReadComplete(ctx: ChannelHandlerContext) {
         if (readTimeout != nil  || allTimeout != nil) && reading {
-            lastReadTime = TimeAmount.now()
+            lastReadTime = DispatchTime.now()
             reading = false
         }
         ctx.fireChannelReadComplete()
@@ -147,7 +149,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
         
         let writePromise = promise ?? ctx.eventLoop.newPromise()
         writePromise.futureResult.whenComplete { _ in
-            self.lastWriteCompleteTime = TimeAmount.now()
+            self.lastWriteCompleteTime = DispatchTime.now()
         }
         ctx.write(data: data, promise: writePromise)
     }
@@ -170,7 +172,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
                 return
             }
 
-            let diff = TimeAmount.now().nanoseconds - (self.lastReadTime?.nanoseconds ?? 0)
+            let diff = Int(DispatchTime.now().uptimeNanoseconds) - Int(self.lastReadTime.uptimeNanoseconds)
             if diff >= timeout.nanoseconds {
                 // Reader is idle - set a new timeout and trigger an event through the pipeline
                 self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newReadTimeoutTask(ctx, timeout))
@@ -189,8 +191,8 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
                 return
             }
             
-            let lastWriteTime = self.lastWriteCompleteTime?.nanoseconds ?? 0
-            let diff = TimeAmount.now().nanoseconds - lastWriteTime
+            let lastWriteTime = self.lastWriteCompleteTime
+            let diff = DispatchTime.now().uptimeNanoseconds - lastWriteTime.uptimeNanoseconds
             
             if diff >= timeout.nanoseconds {
                 // Writer is idle - set a new timeout and notify the callback.
@@ -199,7 +201,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
                 ctx.fireUserInboundEventTriggered(event: IdleStateEvent.write)
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledWriterTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(timeout.nanoseconds - diff), self.newWriteTimeoutTask(ctx, timeout))
+                self.scheduledWriterTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(Int(timeout.nanoseconds) - Int(diff)), self.newWriteTimeoutTask(ctx, timeout))
             }
         }
     }
@@ -214,10 +216,10 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
                 self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newAllTimeoutTask(ctx, timeout))
                 return
             }
-            let lastRead = self.lastReadTime?.nanoseconds ?? 0
-            let lastWrite = self.lastWriteCompleteTime?.nanoseconds ?? 0
+            let lastRead = self.lastReadTime
+            let lastWrite = self.lastWriteCompleteTime
             
-            let diff = TimeAmount.now().nanoseconds - (lastRead > lastWrite ? lastRead : lastWrite)
+            let diff = Int(DispatchTime.now().uptimeNanoseconds) - Int((lastRead > lastWrite ? lastRead : lastWrite).uptimeNanoseconds)
             if diff >= timeout.nanoseconds {
                 // Reader is idle - set a new timeout and trigger an event through the pipeline
                 self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newAllTimeoutTask(ctx, timeout))
@@ -225,7 +227,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
                 ctx.fireUserInboundEventTriggered(event: IdleStateEvent.all)
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(timeout.nanoseconds - diff), self.newAllTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(Int(timeout.nanoseconds) - diff), self.newAllTimeoutTask(ctx, timeout))
             }
         }
     }
@@ -238,7 +240,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
     }
     
     private func initIdleTasks(_ ctx: ChannelHandlerContext) {
-        let now = TimeAmount.now()
+        let now = DispatchTime.now()
         lastReadTime = now
         lastWriteCompleteTime = now
         scheduledReaderTask = schedule(ctx, readTimeout, newReadTimeoutTask)

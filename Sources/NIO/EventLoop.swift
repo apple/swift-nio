@@ -118,12 +118,14 @@ public protocol EventLoop: EventLoopGroup {
     func newSucceedFuture<T>(result: T) -> EventLoopFuture<T>
 }
 
-/// Represent an amount of time since the start of the system.
+/// Represents a time _interval_.
+///
+/// - note: `TimeAmount` should not be used to represent a point in time.
 public struct TimeAmount {
     /// The nanoseconds representation of the `TimeAmount`.
-    public let nanoseconds: UInt64
+    public let nanoseconds: Int
 
-    private init(_ nanoseconds: UInt64) {
+    private init(_ nanoseconds: Int) {
         self.nanoseconds = nanoseconds
     }
     
@@ -132,7 +134,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of nanoseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func nanoseconds(_ amount: UInt64) -> TimeAmount {
+    public static func nanoseconds(_ amount: Int) -> TimeAmount {
         return TimeAmount(amount)
     }
     
@@ -141,7 +143,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of microseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func microseconds(_ amount: UInt64) -> TimeAmount {
+    public static func microseconds(_ amount: Int) -> TimeAmount {
         return TimeAmount(amount * 1000)
     }
 
@@ -151,7 +153,7 @@ public struct TimeAmount {
     ///     - amount: the amount of milliseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
     public static func milliseconds(_ amount: Int) -> TimeAmount {
-        return TimeAmount(UInt64(amount) * 1000 * 1000)
+        return TimeAmount(amount * 1000 * 1000)
     }
     
     /// Creates a new `TimeAmount` for the given amount of seconds.
@@ -160,7 +162,7 @@ public struct TimeAmount {
     ///     - amount: the amount of seconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
     public static func seconds(_ amount: Int) -> TimeAmount {
-        return TimeAmount(UInt64(amount) * 1000 * 1000 * 1000)
+        return TimeAmount(amount * 1000 * 1000 * 1000)
     }
     
     /// Creates a new `TimeAmount` for the given amount of minutes.
@@ -169,7 +171,7 @@ public struct TimeAmount {
     ///     - amount: the amount of minutes this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
     public static func minutes(_ amount: Int) -> TimeAmount {
-        return TimeAmount(UInt64(amount) * 1000 * 1000 * 1000 * 60)
+        return TimeAmount(amount * 1000 * 1000 * 1000 * 60)
     }
 
     /// Creates a new `TimeAmount` for the given amount of hours.
@@ -178,14 +180,7 @@ public struct TimeAmount {
     ///     - amount: the amount of hours this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
     public static func hours(_ amount: Int) -> TimeAmount {
-        return TimeAmount(UInt64(amount) * 1000 * 1000 * 1000 * 60 * 60)
-    }
-    
-    /// Creates a new `TimeAmount` represent the current point in time.
-    ///
-    /// - returns: the `TimeAmount` for the current time.
-    public static func now() -> TimeAmount {
-        return nanoseconds(DispatchTime.now().uptimeNanoseconds)
+        return TimeAmount(amount * 1000 * 1000 * 1000 * 60 * 60)
     }
 }
 
@@ -432,13 +427,13 @@ internal final class SelectableEventLoop : EventLoop {
             return .block
         }
         
-        let nanos: UInt64 = sched.readyIn(DispatchTime.now())
+        let nextReady = sched.readyIn(DispatchTime.now())
 
-        if nanos == 0 {
+        if nextReady <= .nanoseconds(0) {
             // Something is ready to be processed just do a non-blocking select of events.
             return .now
         } else {
-            return .blockUntilTimeout(nanoseconds: nanos)
+            return .blockUntilTimeout(nextReady)
         }
     }
     
@@ -488,7 +483,7 @@ internal final class SelectableEventLoop : EventLoop {
                 let now = DispatchTime.now()
                 
                 // Make a copy of the tasks so we can execute these while not holding the lock anymore
-                while let task = scheduledTasks.peek(), task.readyIn(now) == 0 {
+                while let task = scheduledTasks.peek(), task.readyIn(now) <= .nanoseconds(0) {
                     tasksCopy.append(task.task)
 
                     let _ = scheduledTasks.pop()
@@ -712,19 +707,19 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
 private final class ScheduledTask {
     let task: () -> ()
     private let failFn: (Error) ->()
-    private let readyTime: UInt64
+    private let readyTime: Int
     
     init(_ task: @escaping () -> (), _ failFn: @escaping (Error) -> (), _ time: TimeAmount) {
         self.task = task
         self.failFn = failFn
-        self.readyTime = time.nanoseconds + DispatchTime.now().uptimeNanoseconds
+        self.readyTime = time.nanoseconds + Int(DispatchTime.now().uptimeNanoseconds)
     }
     
-    func readyIn(_ t: DispatchTime) -> UInt64 {
+    func readyIn(_ t: DispatchTime) -> TimeAmount {
         if readyTime < t.uptimeNanoseconds {
-            return 0
+            return .nanoseconds(0)
         }
-        return readyTime - t.uptimeNanoseconds
+        return .nanoseconds(readyTime - Int(t.uptimeNanoseconds))
     }
     
     func fail(error: Error) {
