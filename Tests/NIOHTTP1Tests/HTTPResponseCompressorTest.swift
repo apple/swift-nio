@@ -89,7 +89,7 @@ private extension z_stream {
 
     private static func decompress(compressedBytes: inout ByteBuffer, outputBuffer: inout ByteBuffer, windowSize: Int32) {
         compressedBytes.withUnsafeMutableReadableUInt8Bytes { inputPointer in
-            outputBuffer.withUnsafeMutableWriteableUInt8Bytes { outputPointer in
+            let forwardAmount = outputBuffer.withUnsafeMutableWriteableUInt8Bytes { outputPointer -> Int in
                 var stream = z_stream()
 
                 // zlib requires we initialize next_in, avail_in, zalloc, zfree and opaque before calling inflateInit2.
@@ -111,8 +111,9 @@ private extension z_stream {
                 rc = inflateEnd(&stream)
                 XCTAssertEqual(rc, Z_OK)
 
-                outputBuffer.moveWriterIndex(forwardBy: outputPointer.count - Int(stream.avail_out))
+                return outputPointer.count - Int(stream.avail_out)
             }
+            outputBuffer.moveWriterIndex(forwardBy: forwardAmount)
         }
     }
 }

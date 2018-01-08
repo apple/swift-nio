@@ -25,7 +25,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         return n*(n+1)/2
     }
 
-    func testLargeContentedAtomicSum() {
+    func testLargeContendedAtomicSum() {
         let noAsyncs: UInt64 = 64
         let noCounts: UInt64 = 200_000
 

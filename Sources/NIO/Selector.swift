@@ -28,8 +28,8 @@ private extension timespec {
     init(timeAmount amount: TimeAmount) {
         let nsecPerSec: Int = 1_000_000_000
         let ns = amount.nanoseconds
-        self.tv_sec = ns / nsecPerSec
-        self.tv_nsec = ns - self.tv_sec * nsecPerSec
+        let sec = ns / nsecPerSec
+        self = timespec(tv_sec: sec, tv_nsec: ns - sec * nsecPerSec)
     }
 }
 

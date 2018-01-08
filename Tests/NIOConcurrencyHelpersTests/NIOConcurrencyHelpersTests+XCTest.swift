@@ -26,7 +26,7 @@ extension NIOConcurrencyHelpersTests {
 
    static var allTests : [(String, (NIOConcurrencyHelpersTests) -> () throws -> Void)] {
       return [
-                ("testLargeContentedAtomicSum", testLargeContentedAtomicSum),
+                ("testLargeContendedAtomicSum", testLargeContendedAtomicSum),
                 ("testCompareAndExchangeBool", testCompareAndExchangeBool),
                 ("testAllOperationsBool", testAllOperationsBool),
                 ("testCompareAndExchangeUInts", testCompareAndExchangeUInts),
