@@ -42,6 +42,7 @@ import XCTest
          testCase(ClientSNITests.allTests),
          testCase(EchoServerClientTest.allTests),
          testCase(EmbeddedChannelTest.allTests),
+         testCase(EmbeddedEventLoopTest.allTests),
          testCase(EventLoopFutureTest.allTests),
          testCase(EventLoopTest.allTests),
          testCase(FileRegionTest.allTests),

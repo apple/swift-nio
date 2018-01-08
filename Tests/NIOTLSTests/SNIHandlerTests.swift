@@ -281,7 +281,7 @@ class SniHandlerTest: XCTestCase {
         while buffer.readableBytes > 0 {
             let writeableData = buffer.readSlice(length: 1)!
             try channel.writeInbound(data: writeableData)
-            try loop.run()
+            loop.run()
 
             XCTAssertNil(channel.readInbound())
             try channel.pipeline.assertContains(handler: handler)
@@ -296,7 +296,7 @@ class SniHandlerTest: XCTestCase {
         // Now we're going to complete the promise and run the loop. This should cause the complete
         // ClientHello to be sent on, and the SniHandler to be removed from the pipeline.
         continuePromise.succeed(result: ())
-        try loop.run()
+        loop.run()
 
         let writtenBuffer: ByteBuffer = channel.readInbound()!
         let writtenData = writtenBuffer.getData(at: writtenBuffer.readerIndex, length: writtenBuffer.readableBytes)
@@ -325,7 +325,7 @@ class SniHandlerTest: XCTestCase {
 
         // Ok, let's go.
         try channel.writeInbound(data: buffer)
-        try loop.run()
+        loop.run()
 
         // The callback should have fired, but the handler should not have
         // sent on any data and should still be in the pipeline.
@@ -336,7 +336,7 @@ class SniHandlerTest: XCTestCase {
         // Now we're going to complete the promise and run the loop. This should cause the complete
         // ClientHello to be sent on, and the SniHandler to be removed from the pipeline.
         continuePromise.succeed(result: ())
-        try loop.run()
+        loop.run()
 
         let writtenBuffer: ByteBuffer? = channel.readInbound()
         if let writtenBuffer = writtenBuffer {

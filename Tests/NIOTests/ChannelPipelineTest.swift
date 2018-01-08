@@ -160,12 +160,12 @@ class ChannelPipelineTest: XCTestCase {
         let channel = EmbeddedChannel()
         _ = try channel.close().wait()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        try loop.run()
+        loop.run()
 
         XCTAssertTrue(loop.inEventLoop)
         do {
             try channel.writeOutbound(data: FileRegion(descriptor: -1, readerIndex: 0, endIndex: 0))
-            try loop.run()
+            loop.run()
             XCTFail("we ran but an error should have been thrown")
         } catch let err as ChannelError {
             XCTAssertEqual(err, .ioOnClosedChannel)

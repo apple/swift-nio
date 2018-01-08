@@ -16,11 +16,9 @@ import Dispatch
 
 public class EmbeddedEventLoop : EventLoop {
 
-    let queue = DispatchQueue(label: "embeddedEventLoopQueue", qos: .utility)
     public var inEventLoop: Bool {
         return true
     }
-    var isRunning: Bool = false
 
     var tasks = CircularBuffer<() -> ()>(initialRingCapacity: 2)
     
@@ -46,25 +44,15 @@ public class EmbeddedEventLoop : EventLoop {
     
     // We're not really running a loop here. Tasks aren't run until run() is called,
     // at which point we run everything that's been submitted. Anything newly submitted
-    // either gets on that train if it's still moving or
+    // either gets on that train if it's still moving or waits until the next call to run().
     public func execute(task: @escaping () -> ()) {
-        queue.sync {
-            if isRunning && tasks.isEmpty {
-                task()
-            } else {
-                tasks.append(task)
-            }
-        }
+        tasks.append(task)
     }
 
-    func run() throws {
-        queue.sync {
-            isRunning = true
-            
-            // Execute all tasks that are currently enqueued.
-            while !tasks.isEmpty {
-                tasks.removeFirst()()
-            }
+    func run() {
+        // Execute all tasks that are currently enqueued.
+        while !tasks.isEmpty {
+            tasks.removeFirst()()
         }
     }
 
@@ -73,9 +61,14 @@ public class EmbeddedEventLoop : EventLoop {
     }
 
     public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
-        queue.async {
+        run()
+        queue.sync {
             callback(nil)
         }
+    }
+
+    deinit {
+        precondition(tasks.isEmpty, "Embedded event loop freed with unexecuted tasks!")
     }
 }
 
