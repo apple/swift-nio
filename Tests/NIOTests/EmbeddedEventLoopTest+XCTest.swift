@@ -31,6 +31,14 @@ extension EmbeddedEventLoopTest {
                 ("testExecuteWillRunTasksAddedRecursively", testExecuteWillRunTasksAddedRecursively),
                 ("testTasksSubmittedAfterRunDontRun", testTasksSubmittedAfterRunDontRun),
                 ("testShutdownGracefullyRunsTasks", testShutdownGracefullyRunsTasks),
+                ("testCanControlTime", testCanControlTime),
+                ("testCanScheduleMultipleTasks", testCanScheduleMultipleTasks),
+                ("testExecutedTasksFromScheduledOnesAreRun", testExecutedTasksFromScheduledOnesAreRun),
+                ("testScheduledTasksFromScheduledTasksProperlySchedule", testScheduledTasksFromScheduledTasksProperlySchedule),
+                ("testScheduledTasksFromExecutedTasks", testScheduledTasksFromExecutedTasks),
+                ("testCancellingScheduledTasks", testCancellingScheduledTasks),
+                ("testScheduledTasksFuturesFire", testScheduledTasksFuturesFire),
+                ("testScheduledTasksFuturesError", testScheduledTasksFuturesError),
            ]
    }
 }

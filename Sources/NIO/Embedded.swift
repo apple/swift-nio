@@ -13,8 +13,46 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import NIOPriorityQueue
 
-public class EmbeddedEventLoop : EventLoop {
+private final class EmbeddedScheduledTask {
+    let task: () -> ()
+    let readyTime: UInt64
+
+    init(readyTime: UInt64, task: @escaping () -> ()) {
+        self.readyTime = readyTime
+        self.task = task
+    }
+}
+
+extension EmbeddedScheduledTask: Comparable {
+    public static func < (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
+        return lhs.readyTime < rhs.readyTime
+    }
+    public static func == (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
+        return lhs === rhs
+    }
+}
+
+/// An `EventLoop` that is embedded in the current running context with no external
+/// control.
+///
+/// Unlike more complex `EventLoop`s, such as `SelectableEventLoop`, the `EmbeddedEventLoop`
+/// has no proper eventing mechanism. Instead, reads and writes are fully controlled by the
+/// entity that instantiates the `EmbeddedEventLoop`. This property makes `EmbeddedEventLoop`
+/// of limited use for many application purposes, but highly valuable for testing and other
+/// kinds of mocking.
+///
+/// - warning: Unlike `SelectableEventLoop`, `EmbeddedEventLoop` **is not thread-safe**. This
+///     is becuase it is intended to be run in the thread that instantiated it. Users are
+///     responsible for ensuring they never call into the `EmbeddedEventLoop` in an
+///     unsynchronized fashion.
+public class EmbeddedEventLoop: EventLoop {
+
+    /// The current "time" for this event loop. This is an amount in nanoseconds.
+    private var now: UInt64 = 0
+
+    private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>(ascending: true)
 
     public var inEventLoop: Bool {
         return true
@@ -36,10 +74,20 @@ public class EmbeddedEventLoop : EventLoop {
     
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = newPromise()
-        promise.fail(error: EventLoopError.unsupportedOperation)
-        return Scheduled(promise: promise, cancellationTask: {
-            // Nothing to do as we fail the promise before
+        let readyTime = now + UInt64(`in`.nanoseconds)
+        let task = EmbeddedScheduledTask(readyTime: readyTime) {
+            do {
+                promise.succeed(result: try task())
+            } catch let err {
+                promise.fail(error: err)
+            }
+        }
+
+        let scheduled = Scheduled(promise: promise, cancellationTask: {
+            self.scheduledTasks.remove(task)
         })
+        scheduledTasks.push(task)
+        return scheduled
     }
     
     // We're not really running a loop here. Tasks aren't run until run() is called,
@@ -49,11 +97,38 @@ public class EmbeddedEventLoop : EventLoop {
         tasks.append(task)
     }
 
-    func run() {
+    public func run() {
         // Execute all tasks that are currently enqueued.
         while !tasks.isEmpty {
             tasks.removeFirst()()
         }
+    }
+
+    /// Runs the event loop and moves "time" forward by the given amount, running any scheduled
+    /// tasks that need to be run.
+    public func advanceTime(by: TimeAmount) {
+        let newTime = self.now + UInt64(by.nanoseconds)
+
+        // First, run the event loop to dispatch any current work.
+        self.run()
+
+        while let nextTask = self.scheduledTasks.peek() {
+            guard nextTask.readyTime <= newTime else {
+                break
+            }
+
+            // Set the time correctly before we call into user code, then
+            // call in. Once we've done that, spin the event loop in case any
+            // work was scheduled by the delayed task.
+            _ = self.scheduledTasks.pop()
+            self.now = nextTask.readyTime
+            nextTask.task()
+
+            self.run()
+        }
+
+        // Finally ensure we got the time right.
+        self.now = newTime
     }
 
     func close() throws {
@@ -69,6 +144,7 @@ public class EmbeddedEventLoop : EventLoop {
 
     deinit {
         precondition(tasks.isEmpty, "Embedded event loop freed with unexecuted tasks!")
+        precondition(scheduledTasks.isEmpty, "Embedded event loop freed with unexecuted scheduled tasks!")
     }
 }
 

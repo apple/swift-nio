@@ -15,6 +15,8 @@
 @testable import NIO
 import XCTest
 
+private class EmbeddedTestError: Error { }
+
 public class EmbeddedEventLoopTest: XCTestCase {
     func testExecuteDoesNotImmediatelyRunTasks() throws {
         var callbackRan = false
@@ -84,5 +86,144 @@ public class EmbeddedEventLoopTest: XCTestCase {
         XCTAssertFalse(callbackRan)
         XCTAssertNoThrow(try loop.syncShutdownGracefully())
         XCTAssertTrue(callbackRan)
+    }
+
+    func testCanControlTime() throws {
+        var callbackCount = 0
+        let loop = EmbeddedEventLoop()
+        _ = loop.scheduleTask(in: .nanoseconds(5)) {
+            callbackCount += 1
+        }
+
+        XCTAssertEqual(callbackCount, 0)
+        loop.advanceTime(by: .nanoseconds(4))
+        XCTAssertEqual(callbackCount, 0)
+        loop.advanceTime(by: .nanoseconds(1))
+        XCTAssertEqual(callbackCount, 1)
+        loop.advanceTime(by: .nanoseconds(1))
+        XCTAssertEqual(callbackCount, 1)
+        loop.advanceTime(by: .hours(1))
+        XCTAssertEqual(callbackCount, 1)
+    }
+
+    func testCanScheduleMultipleTasks() throws {
+        var sentinel = 0
+        let loop = EmbeddedEventLoop()
+        for index in 1...10 {
+            _ = loop.scheduleTask(in: .nanoseconds(index)) {
+                sentinel = index
+            }
+        }
+
+        for val in 1...10 {
+            XCTAssertEqual(sentinel, val - 1)
+            loop.advanceTime(by: .nanoseconds(1))
+            XCTAssertEqual(sentinel, val)
+        }
+    }
+
+    func testExecutedTasksFromScheduledOnesAreRun() throws {
+        var sentinel = 0
+        let loop = EmbeddedEventLoop()
+        _ = loop.scheduleTask(in: .nanoseconds(5)) {
+            sentinel = 1
+            loop.execute {
+                sentinel = 2
+            }
+        }
+
+        loop.advanceTime(by: .nanoseconds(4))
+        XCTAssertEqual(sentinel, 0)
+        loop.advanceTime(by: .nanoseconds(1))
+        XCTAssertEqual(sentinel, 2)
+    }
+
+    func testScheduledTasksFromScheduledTasksProperlySchedule() throws {
+        var sentinel = 0
+        let loop = EmbeddedEventLoop()
+        _ = loop.scheduleTask(in: .nanoseconds(5)) {
+            sentinel = 1
+            _ = loop.scheduleTask(in: .nanoseconds(3)) {
+                sentinel = 2
+            }
+            _ = loop.scheduleTask(in: .nanoseconds(5)) {
+                sentinel = 3
+            }
+        }
+
+        loop.advanceTime(by: .nanoseconds(4))
+        XCTAssertEqual(sentinel, 0)
+        loop.advanceTime(by: .nanoseconds(1))
+        XCTAssertEqual(sentinel, 1)
+        loop.advanceTime(by: .nanoseconds(2))
+        XCTAssertEqual(sentinel, 1)
+        loop.advanceTime(by: .nanoseconds(1))
+        XCTAssertEqual(sentinel, 2)
+        loop.advanceTime(by: .nanoseconds(1))
+        XCTAssertEqual(sentinel, 2)
+        loop.advanceTime(by: .nanoseconds(1))
+        XCTAssertEqual(sentinel, 3)
+    }
+
+    func testScheduledTasksFromExecutedTasks() throws {
+        var sentinel = 0
+        let loop = EmbeddedEventLoop()
+        loop.execute {
+            XCTAssertEqual(sentinel, 0)
+            _ = loop.scheduleTask(in: .nanoseconds(5)) {
+                XCTAssertEqual(sentinel, 1)
+                sentinel = 2
+            }
+            loop.execute { sentinel = 1 }
+        }
+
+        loop.advanceTime(by: .nanoseconds(5))
+        XCTAssertEqual(sentinel, 2)
+    }
+
+    func testCancellingScheduledTasks() throws {
+        let loop = EmbeddedEventLoop()
+        let task = loop.scheduleTask(in: .nanoseconds(10), { XCTFail("Cancelled task ran") })
+        _ = loop.scheduleTask(in: .nanoseconds(5)) {
+            task.cancel()
+        }
+
+        loop.advanceTime(by: .nanoseconds(20))
+    }
+
+    func testScheduledTasksFuturesFire() throws {
+        var fired = false
+        let loop = EmbeddedEventLoop()
+        let task = loop.scheduleTask(in: .nanoseconds(5)) { return true }
+        task.futureResult.whenSuccess { fired = $0 }
+
+        loop.advanceTime(by: .nanoseconds(4))
+        XCTAssertFalse(fired)
+        loop.advanceTime(by: .nanoseconds(1))
+        XCTAssertTrue(fired)
+    }
+
+    func testScheduledTasksFuturesError() throws {
+        var err: EmbeddedTestError? = nil
+        var fired = false
+        let loop = EmbeddedEventLoop()
+        let task = loop.scheduleTask(in: .nanoseconds(5)) {
+            err = EmbeddedTestError()
+            throw err!
+        }
+        task.futureResult.whenComplete { result in
+            fired = true
+            switch result {
+            case .success:
+                XCTFail("Scheduled future completed")
+            case .failure(let caughtErr):
+                XCTAssertTrue(err === caughtErr as? EmbeddedTestError)
+            }
+        }
+
+        loop.advanceTime(by: .nanoseconds(4))
+        XCTAssertFalse(fired)
+        loop.advanceTime(by: .nanoseconds(1))
+        XCTAssertTrue(fired)
     }
 }
