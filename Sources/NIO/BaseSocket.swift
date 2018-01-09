@@ -11,13 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if os(Linux)
-    import Glibc
-    let sysSOCK_STREAM = SOCK_STREAM.rawValue
-#else
-    import Darwin
-    let sysSOCK_STREAM = SOCK_STREAM
-#endif
+
 
 protocol Registration {
     var interested: IOEvent { get set }
@@ -100,7 +94,9 @@ class BaseSocket : Selectable {
         }
     }
     static func newSocket(protocolFamily: Int32) throws -> Int32 {
-        let sock = try Posix.socket(domain: protocolFamily, type: Int32(sysSOCK_STREAM), protocol: 0)
+        let sock = try Posix.socket(domain: protocolFamily,
+                                    type: Posix.SOCK_STREAM,
+                                    protocol: 0)
         
         if protocolFamily == AF_INET6 {
             var zero: Int32 = 0

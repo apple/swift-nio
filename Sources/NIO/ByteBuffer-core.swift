@@ -12,11 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(tvOS) || os(iOS)
-    import Darwin
-#else
-    import Glibc
-#endif
 let sysMalloc = malloc
 let sysRealloc = realloc
 let sysFree = free

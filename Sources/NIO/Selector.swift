@@ -12,12 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(Linux)
-import Glibc
-#else
-import Darwin
-#endif
-
 private enum SelectorLifecycleState {
     case open
     case closing

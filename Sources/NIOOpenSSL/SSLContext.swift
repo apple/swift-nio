@@ -12,11 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-    import Darwin
-#elseif os(Linux)
-    import Glibc
-#endif
 import NIO
 import CNIOOpenSSL
 

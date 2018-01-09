@@ -14,12 +14,6 @@
 
 import CNIOOpenSSL
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-    import Darwin
-#else
-    import Glibc
-#endif
-
 private let callbackLock: UnsafeMutablePointer<pthread_mutex_t> =  {
     var ptr = UnsafeMutablePointer<pthread_mutex_t>.allocate(capacity: 1)
     let err = pthread_mutex_init(ptr, nil)

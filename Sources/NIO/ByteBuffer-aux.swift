@@ -12,12 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(tvOS) || os(iOS)
-    import Darwin
-#else
-    import Glibc
-#endif
-
 extension ByteBuffer {
 
     // MARK: Bytes ([UInt8]) APIs

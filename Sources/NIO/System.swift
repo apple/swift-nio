@@ -17,11 +17,16 @@
 //
 //  Created by Norman Maurer on 11/10/17.
 //
-#if os(Linux)
+
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+@_exported import Darwin.C
+#elseif os(Linux)
+@_exported import Glibc
 import CNIOLinux
-import Glibc
+#elseif os(FreeBSD) || os(Android)
+@_exported import Glibc
 #else
-import Darwin
+let badOS = { fatalError("unsupported OS") }()
 #endif
 
 private func isBlacklistedErrno(_ code: Int32) -> Bool {
@@ -75,7 +80,21 @@ private func wrapSyscall<T: FixedWidthInteger>(_ fn: () throws -> T, where funct
 }
 
 internal enum Posix {
-    
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    static let SOCK_STREAM: CInt = CInt(Darwin.SOCK_STREAM)
+    static let UIO_MAXIOV: Int = 1024
+#elseif os(Linux) || os(FreeBSD) || os(Android)
+    static let SOCK_STREAM: CInt = CInt(Glibc.SOCK_STREAM.rawValue)
+    static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)
+#else
+    static var SOCK_STREAM: CInt {
+        fatalError("unsupported OS")
+    }
+    static var UIO_MAXIOV: Int {
+        fatalError("unsupported OS")
+    }
+#endif
+
     @inline(never)
     public static func close(descriptor: Int32) throws {
         _ = try wrapSyscall({ () -> Int in

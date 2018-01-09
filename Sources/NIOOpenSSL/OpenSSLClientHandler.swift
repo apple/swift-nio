@@ -11,11 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if os(macOS) || os(tvOS) || os(iOS)
-    import Darwin
-#else
-    import Glibc
-#endif
+
 import NIO
 
 private extension String {

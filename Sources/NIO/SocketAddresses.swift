@@ -12,12 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-    import Darwin
-#elseif os(Linux)
-    import Glibc
-#endif
-
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
 public enum SocketAddressError: Error {
     /// The host is unknown (could not be resolved).

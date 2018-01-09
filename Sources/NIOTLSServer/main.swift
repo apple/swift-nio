@@ -15,15 +15,10 @@
 import struct Foundation.URL
 import NIO
 import NIOOpenSSL
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-    import Darwin
-#elseif os(Linux)
-    import Glibc
-#endif
 
 private final class EchoHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
-    
+
     func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         let _ = ctx.writeAndFlush(data: data)
     }
@@ -37,14 +32,14 @@ let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .serverChannelOption(ChannelOptions.backlog, value: 256)
     .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-    
+
     // Set the handlers that are applied to the accepted channels.
     .childChannelInitializer { channel in
         return channel.pipeline.add(handler: try! OpenSSLServerHandler(context: sslContext)).then(callback: { v2 in
             return channel.pipeline.add(handler: EchoHandler())
         })
     }
-    
+
     // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels
     .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)

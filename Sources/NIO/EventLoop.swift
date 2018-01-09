@@ -16,11 +16,6 @@ import NIOConcurrencyHelpers
 import Dispatch
 import class Foundation.Thread
 import NIOPriorityQueue
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-    import Darwin
-#else
-    import Glibc
-#endif
 
 /// Returned once a task was scheduled on the `EventLoop` for later execution.
 ///

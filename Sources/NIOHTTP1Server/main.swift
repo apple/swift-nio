@@ -17,11 +17,9 @@ import class Foundation.FileManager
 import class Foundation.NSData
 import struct Foundation.Data
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-import Darwin
 import class Foundation.NSFileManager
 import struct Foundation.NSFileManager.FileAttributeKey
 #else
-import Glibc
 import class Foundation.FileManager
 import struct Foundation.FileAttributeKey
 #endif

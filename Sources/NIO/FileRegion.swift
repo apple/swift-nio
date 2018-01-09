@@ -12,12 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-    import Darwin
-#elseif os(Linux)
-    import Glibc
-#endif
-
 /// A `FileRegion` represent a readable portion of a file which will be transferred.
 ///
 /// Usually a `FileRegion` will allow the underlying transport to use `sendfile` to transfer its content and so allows transferring

@@ -13,11 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOOpenSSL
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-    import Darwin
-#elseif os(Linux)
-    import Glibc
-#endif
 
 /// Wraps a single error from OpenSSL.
 public struct OpenSSLInternalError: Equatable, CustomStringConvertible {

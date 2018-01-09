@@ -12,13 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-import Darwin
-#elseif os(Linux)
-import Glibc
-#endif
-
-
 // TODO: Handle AF_INET6 as well
 final class ServerSocket: BaseSocket {
     public class func bootstrap(protocolFamily: Int32, host: String, port: Int32) throws -> ServerSocket {

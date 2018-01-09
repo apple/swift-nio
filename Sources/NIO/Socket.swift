@@ -12,12 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(Linux)
-import Glibc
-#else
-import Darwin
-#endif
-
 public typealias IOVector = iovec
 
 // TODO: scattering support
@@ -25,15 +19,8 @@ final class Socket : BaseSocket {
     static var writevLimitBytes: Int {
         return Int(Int32.max)
     }
-    static var writevLimitIOVectors: Int {
-// UIO_MAXIOV is only exported on linux atm
-#if os(Linux)
-        return Int(UIO_MAXIOV)
-#else
-        return 1024
-#endif
-    }
-    
+    static let writevLimitIOVectors: Int = Posix.UIO_MAXIOV
+
     init(protocolFamily: Int32) throws {
         let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily)
         super.init(descriptor: sock)
@@ -43,7 +30,7 @@ final class Socket : BaseSocket {
         super.init(descriptor: descriptor)
     }
     
-    func connect(to address: SocketAddress) throws  -> Bool {
+    func connect(to address: SocketAddress) throws -> Bool {
         switch address {
         case .v4(address: let addr, _):
             return try connectSocket(addr: addr)

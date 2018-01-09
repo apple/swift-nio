@@ -11,11 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if os(Linux)
-import Glibc
-#else
-import Darwin
-#endif
 
 /// An `Error` for an IO operation.
 public struct IOError: Swift.Error {

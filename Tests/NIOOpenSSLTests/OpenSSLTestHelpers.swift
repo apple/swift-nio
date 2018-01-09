@@ -14,11 +14,6 @@
 
 import Foundation
 import CNIOOpenSSL
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-    import Darwin
-#elseif os(Linux)
-    import Glibc
-#endif
 import NIOOpenSSL
 
 let samplePemCert = """

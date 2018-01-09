@@ -14,12 +14,6 @@
 
 import NIOConcurrencyHelpers
 
-#if os(Linux)
-import Glibc
-#else
-import Darwin
-#endif
-
 private typealias PendingWrite = (data: IOData, promise: EventLoopPromise<Void>?)
 
 private func doPendingWriteVectorOperation(pending: PendingWritesState,

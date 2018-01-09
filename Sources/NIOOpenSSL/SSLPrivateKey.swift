@@ -12,11 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(tvOS) || os(iOS)
-    import Darwin
-#else
-    import Glibc
-#endif
 import CNIOOpenSSL
 
 /// A reference to an OpenSSL private key object in the form of an `EVP_PKEY *`.
