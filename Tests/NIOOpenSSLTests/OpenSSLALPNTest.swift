@@ -48,17 +48,17 @@ class OpenSSLALPNTest: XCTestCase {
         let completionPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let serverHandler = EventRecorderHandler<TLSUserEvent>()
 
-        let serverChannel = try serverTLSChannel(withContext: serverContext,
-                                                 andHandlers: [serverHandler, PromiseOnReadHandler(promise: completionPromise)],
-                                                 onGroup: group)
+        let serverChannel = try serverTLSChannel(context: serverContext,
+                                                 handlers: [serverHandler, PromiseOnReadHandler(promise: completionPromise)],
+                                                 group: group)
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let clientChannel = try clientTLSChannel(withContext: clientContext,
+        let clientChannel = try clientTLSChannel(context: clientContext,
                                                  preHandlers: [],
                                                  postHandlers: [],
-                                                 onGroup: group,
+                                                 group: group,
                                                  connectingTo: serverChannel.localAddress!)
         defer {
             XCTAssertNoThrow(try clientChannel.close().wait())

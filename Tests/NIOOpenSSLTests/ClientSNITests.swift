@@ -50,15 +50,15 @@ class ClientSNITests: XCTestCase {
             sniPromise.succeed(result: $0)
             return group.next().newSucceedFuture(result: ())
         }
-        let serverChannel = try serverTLSChannel(withContext: ctx, preHandlers: [sniHandler], postHandlers: [], onGroup: group)
+        let serverChannel = try serverTLSChannel(context: ctx, preHandlers: [sniHandler], postHandlers: [], group: group)
         defer {
             _ = try? serverChannel.close().wait()
         }
 
-        let clientChannel = try clientTLSChannel(withContext: ctx,
+        let clientChannel = try clientTLSChannel(context: ctx,
                                                  preHandlers: [],
                                                  postHandlers: [],
-                                                 onGroup: group,
+                                                 group: group,
                                                  connectingTo: serverChannel.localAddress!,
                                                  serverHostname: sniField)
         defer {

@@ -19,6 +19,19 @@ import CNIOOpenSSL
 import NIOTLS
 import class Foundation.Process
 
+public func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T, defaultValue: T? = nil, file: StaticString = #file, line: UInt = #line) throws -> T {
+    do {
+        return try body()
+    } catch {
+        XCTFail("unexpected error \(error) thrown", file: file, line: line)
+        if let defaultValue = defaultValue {
+            return defaultValue
+        } else {
+            throw error
+        }
+    }
+}
+
 private func interactInMemory(clientChannel: EmbeddedChannel, serverChannel: EmbeddedChannel) throws {
     var workToDo = true
     while workToDo {
@@ -209,40 +222,51 @@ private class WriteDelayHandler: ChannelOutboundHandler {
     }
 }
 
-internal func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, andHandlers: [ChannelHandler], onGroup: EventLoopGroup) throws -> Channel {
-    return try serverTLSChannel(withContext: withContext, preHandlers: [], postHandlers: andHandlers, onGroup: onGroup)
+internal func serverTLSChannel(context: NIOOpenSSL.SSLContext,
+                               handlers: [ChannelHandler],
+                               group: EventLoopGroup,
+                               file: StaticString = #file,
+                               line: UInt = #line) throws -> Channel {
+    return try assertNoThrowWithValue(serverTLSChannel(context: context, preHandlers: [], postHandlers: handlers, group: group), file: file, line: line)
 }
 
-internal func serverTLSChannel(withContext: NIOOpenSSL.SSLContext, preHandlers: [ChannelHandler], postHandlers: [ChannelHandler], onGroup: EventLoopGroup) throws -> Channel {
-    return try ServerBootstrap(group: onGroup)
+internal func serverTLSChannel(context: NIOOpenSSL.SSLContext,
+                               preHandlers: [ChannelHandler],
+                               postHandlers: [ChannelHandler],
+                               group: EventLoopGroup,
+                               file: StaticString = #file,
+                               line: UInt = #line) throws -> Channel {
+    return try assertNoThrowWithValue(ServerBootstrap(group: group)
         .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
         .childChannelInitializer { channel in
             let results = preHandlers.map { channel.pipeline.add(handler: $0) }
-            return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next()).then {
-                return channel.pipeline.add(handler: try OpenSSLServerHandler(context: withContext)).then(callback: { v2 in
+            return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? group.next()).then {
+                return channel.pipeline.add(handler: try OpenSSLServerHandler(context: context)).then(callback: { v2 in
                     let results = postHandlers.map { channel.pipeline.add(handler: $0) }
-                    return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next())
+                    return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? group.next())
                 })
             }
-        }.bind(to: "127.0.0.1", on: 0).wait()
+        }.bind(to: "127.0.0.1", on: 0).wait(), file: file, line: line)
 }
 
-internal func clientTLSChannel(withContext: NIOOpenSSL.SSLContext,
-                              preHandlers: [ChannelHandler],
-                              postHandlers: [ChannelHandler],
-                              onGroup: EventLoopGroup,
-                              connectingTo: SocketAddress,
-                              serverHostname: String? = nil) throws -> Channel {
-    return try ClientBootstrap(group: onGroup)
+internal func clientTLSChannel(context: NIOOpenSSL.SSLContext,
+                               preHandlers: [ChannelHandler],
+                               postHandlers: [ChannelHandler],
+                               group: EventLoopGroup,
+                               connectingTo: SocketAddress,
+                               serverHostname: String? = nil,
+                               file: StaticString = #file,
+                               line: UInt = #line) throws -> Channel {
+    return try assertNoThrowWithValue(ClientBootstrap(group: group)
         .channelInitializer { channel in
             let results = preHandlers.map { channel.pipeline.add(handler: $0) }
-            return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next()).then(callback: { v2 in
-                return channel.pipeline.add(handler: try OpenSSLClientHandler(context: withContext, serverHostname: serverHostname)).then(callback: { v2 in
+            return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? group.next()).then(callback: { v2 in
+                return channel.pipeline.add(handler: try OpenSSLClientHandler(context: context, serverHostname: serverHostname)).then(callback: { v2 in
                     let results = postHandlers.map { channel.pipeline.add(handler: $0) }
-                    return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? onGroup.next())
+                    return EventLoopFuture<Void>.andAll(results, eventLoop: results.first?.eventLoop ?? group.next())
                 })
             })
-        }.connect(to: connectingTo).wait()
+        }.connect(to: connectingTo).wait(), file: file, line: line)
 }
 
 class OpenSSLIntegrationTest: XCTestCase {
@@ -256,17 +280,16 @@ class OpenSSLIntegrationTest: XCTestCase {
         OpenSSLIntegrationTest.key = key
     }
     
-    private func configuredSSLContext() throws -> NIOOpenSSL.SSLContext {
+    private func configuredSSLContext(file: StaticString = #file, line: UInt = #line) throws -> NIOOpenSSL.SSLContext {
         let config = TLSConfiguration.forServer(certificateChain: [.certificate(OpenSSLIntegrationTest.cert)],
                                                 privateKey: .privateKey(OpenSSLIntegrationTest.key),
                                                 trustRoots: .certificates([OpenSSLIntegrationTest.cert]))
-        let ctx = try SSLContext(configuration: config)
-        return ctx
+        return try assertNoThrowWithValue(SSLContext(configuration: config), file: file, line: line)
     }
 
-    private func configuredClientContext() throws -> NIOOpenSSL.SSLContext {
+    private func configuredClientContext(file: StaticString = #file, line: UInt = #line) throws -> NIOOpenSSL.SSLContext {
         let config = TLSConfiguration.forClient(trustRoots: .certificates([OpenSSLIntegrationTest.cert]))
-        return try SSLContext(configuration: config)
+        return try assertNoThrowWithValue(SSLContext(configuration: config), file: file, line: line)
     }
 
     func withTrustBundleInFile<T>(fn: (String) throws -> T) rethrows -> T {
@@ -294,15 +317,15 @@ class OpenSSLIntegrationTest: XCTestCase {
         
         let completionPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
 
-        let serverChannel = try serverTLSChannel(withContext: ctx, andHandlers: [SimpleEchoServer()], onGroup: group)
+        let serverChannel: Channel = try serverTLSChannel(context: ctx, handlers: [SimpleEchoServer()], group: group)
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
         
-        let clientChannel = try clientTLSChannel(withContext: ctx,
+        let clientChannel = try clientTLSChannel(context: ctx,
                                                  preHandlers: [],
                                                  postHandlers: [PromiseOnReadHandler(promise: completionPromise)],
-                                                 onGroup: group,
+                                                 group: group,
                                                  connectingTo: serverChannel.localAddress!)
         defer {
             XCTAssertNoThrow(try clientChannel.close().wait())
@@ -326,17 +349,17 @@ class OpenSSLIntegrationTest: XCTestCase {
 
         let readComplete: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let serverHandler: EventRecorderHandler<TLSUserEvent> = EventRecorderHandler()
-        let serverChannel = try serverTLSChannel(withContext: ctx,
-                                                 andHandlers: [serverHandler, PromiseOnReadHandler(promise: readComplete)],
-                                                 onGroup: group)
+        let serverChannel = try serverTLSChannel(context: ctx,
+                                                 handlers: [serverHandler, PromiseOnReadHandler(promise: readComplete)],
+                                                 group: group)
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let clientChannel = try clientTLSChannel(withContext: ctx,
+        let clientChannel = try clientTLSChannel(context: ctx,
                                                  preHandlers: [],
                                                  postHandlers: [SimpleEchoServer()],
-                                                 onGroup: group,
+                                                 group: group,
                                                  connectingTo: serverChannel.localAddress!)
         defer {
             XCTAssertNoThrow(try clientChannel.close().wait())
@@ -373,14 +396,14 @@ class OpenSSLIntegrationTest: XCTestCase {
 
         let readComplete: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let serverHandler: EventRecorderHandler<TLSUserEvent> = EventRecorderHandler()
-        let serverChannel = try serverTLSChannel(withContext: ctx,
-                                                 andHandlers: [serverHandler, PromiseOnReadHandler(promise: readComplete)],
-                                                 onGroup: group)
+        let serverChannel = try serverTLSChannel(context: ctx,
+                                                 handlers: [serverHandler, PromiseOnReadHandler(promise: readComplete)],
+                                                 group: group)
 
-        let clientChannel = try clientTLSChannel(withContext: ctx,
+        let clientChannel = try clientTLSChannel(context: ctx,
                                                  preHandlers: [],
                                                  postHandlers: [SimpleEchoServer()],
-                                                 onGroup: group,
+                                                 group: group,
                                                  connectingTo: serverChannel.localAddress!)
 
         var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
@@ -419,17 +442,17 @@ class OpenSSLIntegrationTest: XCTestCase {
 
         let completionPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
 
-        let serverChannel = try serverTLSChannel(withContext: ctx, andHandlers: [SimpleEchoServer()], onGroup: group)
+        let serverChannel = try serverTLSChannel(context: ctx, handlers: [SimpleEchoServer()], group: group)
         defer {
             if !serverClosed {
                 XCTAssertNoThrow(try serverChannel.close().wait())
             }
         }
 
-        let clientChannel = try clientTLSChannel(withContext: ctx,
+        let clientChannel = try clientTLSChannel(context: ctx,
                                                  preHandlers: [],
                                                  postHandlers: [PromiseOnReadHandler(promise: completionPromise)],
-                                                 onGroup: group,
+                                                 group: group,
                                                  connectingTo: serverChannel.localAddress!)
         defer {
             XCTAssertNoThrow(try clientChannel.close().wait())
@@ -473,17 +496,17 @@ class OpenSSLIntegrationTest: XCTestCase {
         }
 
         let recorderHandler = EventRecorderHandler<TLSUserEvent>()
-        let serverChannel = try serverTLSChannel(withContext: ctx, andHandlers: [SimpleEchoServer()], onGroup: group)
+        let serverChannel = try serverTLSChannel(context: ctx, handlers: [SimpleEchoServer()], group: group)
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
         let writeCounter = WriteCountingHandler()
         let readPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
-        let clientChannel = try clientTLSChannel(withContext: ctx,
+        let clientChannel = try clientTLSChannel(context: ctx,
                                                  preHandlers: [writeCounter],
                                                  postHandlers: [PromiseOnReadHandler(promise: readPromise)],
-                                                 onGroup: group,
+                                                 group: group,
                                                  connectingTo: serverChannel.localAddress!)
         defer {
             XCTAssertNoThrow(try clientChannel.close().wait())
@@ -518,15 +541,15 @@ class OpenSSLIntegrationTest: XCTestCase {
         }
 
         let recorderHandler = EventRecorderHandler<TLSUserEvent>()
-        let serverChannel = try serverTLSChannel(withContext: ctx, andHandlers: [SimpleEchoServer()], onGroup: group)
+        let serverChannel = try serverTLSChannel(context: ctx, handlers: [SimpleEchoServer()], group: group)
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let clientChannel = try clientTLSChannel(withContext: ctx,
+        let clientChannel = try clientTLSChannel(context: ctx,
                                                  preHandlers: [],
                                                  postHandlers: [],
-                                                 onGroup: group,
+                                                 group: group,
                                                  connectingTo: serverChannel.localAddress!)
         defer {
             XCTAssertNoThrow(try clientChannel.close().wait())
@@ -590,9 +613,9 @@ class OpenSSLIntegrationTest: XCTestCase {
 
         let recorderHandler: EventRecorderHandler<TLSUserEvent> = EventRecorderHandler()
         let channelActiveWaiter = ChannelActiveWaiter(promise: group.next().newPromise())
-        let serverChannel = try serverTLSChannel(withContext: ctx,
-                                                 andHandlers: [recorderHandler, SimpleEchoServer(), channelActiveWaiter],
-                                                 onGroup: group)
+        let serverChannel = try serverTLSChannel(context: ctx,
+                                                 handlers: [recorderHandler, SimpleEchoServer(), channelActiveWaiter],
+                                                 group: group)
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
@@ -638,18 +661,18 @@ class OpenSSLIntegrationTest: XCTestCase {
             try? group.syncShutdownGracefully()
         }
 
-        let serverChannel = try serverTLSChannel(withContext: serverCtx,
-                                                 andHandlers: [],
-                                                 onGroup: group)
+        let serverChannel = try serverTLSChannel(context: serverCtx,
+                                                 handlers: [],
+                                                 group: group)
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
         let errorHandler = ErrorCatcher<NIOOpenSSLError>()
-        let clientChannel = try clientTLSChannel(withContext: clientCtx,
+        let clientChannel = try clientTLSChannel(context: clientCtx,
                                                  preHandlers: [],
                                                  postHandlers: [errorHandler],
-                                                 onGroup: group,
+                                                 group: group,
                                                  connectingTo: serverChannel.localAddress!)
 
         var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
@@ -680,18 +703,18 @@ class OpenSSLIntegrationTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let serverChannel = try serverTLSChannel(withContext: serverCtx,
-                                                 andHandlers: [],
-                                                 onGroup: group)
+        let serverChannel = try serverTLSChannel(context: serverCtx,
+                                                 handlers: [],
+                                                 group: group)
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
         let eventHandler = EventRecorderHandler<TLSUserEvent>()
-        let clientChannel = try clientTLSChannel(withContext: clientCtx,
+        let clientChannel = try clientTLSChannel(context: clientCtx,
                                                  preHandlers: [],
                                                  postHandlers: [eventHandler],
-                                                 onGroup: group,
+                                                 group: group,
                                                  connectingTo: serverChannel.localAddress!,
                                                  serverHostname: "localhost")
 
@@ -750,7 +773,7 @@ class OpenSSLIntegrationTest: XCTestCase {
                                               certificateChain: [.certificate(OpenSSLIntegrationTest.cert)],
                                               privateKey: .privateKey(OpenSSLIntegrationTest.key))
         }
-        let clientCtx = try SSLContext(configuration: config)
+        let clientCtx = try assertNoThrowWithValue(SSLContext(configuration: config))
 
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
@@ -758,15 +781,15 @@ class OpenSSLIntegrationTest: XCTestCase {
         }
 
         let completionPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
-        let serverChannel = try serverTLSChannel(withContext: serverCtx, andHandlers: [SimpleEchoServer()], onGroup: group)
+        let serverChannel: Channel = try serverTLSChannel(context: serverCtx, handlers: [SimpleEchoServer()], group: group)
         defer {
             _ = try? serverChannel.close().wait()
         }
 
-        let clientChannel = try clientTLSChannel(withContext: clientCtx,
+        let clientChannel = try clientTLSChannel(context: clientCtx,
                                                  preHandlers: [],
                                                  postHandlers: [PromiseOnReadHandler(promise: completionPromise)],
-                                                 onGroup: group,
+                                                 group: group,
                                                  connectingTo: serverChannel.localAddress!)
         defer {
             _ = try? clientChannel.close().wait()
@@ -786,25 +809,25 @@ class OpenSSLIntegrationTest: XCTestCase {
                                                       trustRoots: .file("/tmp"),
                                                       certificateChain: [.certificate(OpenSSLIntegrationTest.cert)],
                                                       privateKey: .privateKey(OpenSSLIntegrationTest.key))
-        let clientCtx = try SSLContext(configuration: clientConfig)
+        let clientCtx = try assertNoThrowWithValue(SSLContext(configuration: clientConfig))
 
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let serverChannel = try serverTLSChannel(withContext: serverCtx,
-                                                 andHandlers: [],
-                                                 onGroup: group)
+        let serverChannel = try serverTLSChannel(context: serverCtx,
+                                                 handlers: [],
+                                                 group: group)
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
         let errorHandler = ErrorCatcher<NIOOpenSSLError>()
-        let clientChannel = try clientTLSChannel(withContext: clientCtx,
+        let clientChannel = try clientTLSChannel(context: clientCtx,
                                                  preHandlers: [],
                                                  postHandlers: [errorHandler],
-                                                 onGroup: group,
+                                                 group: group,
                                                  connectingTo: serverChannel.localAddress!)
 
         var originalBuffer = clientChannel.allocator.buffer(capacity: 5)
@@ -878,17 +901,17 @@ class OpenSSLIntegrationTest: XCTestCase {
 
         let completionPromise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
 
-        let serverChannel = try serverTLSChannel(withContext: ctx,
-                                                 andHandlers: [PromiseOnReadHandler(promise: completionPromise)],
-                                                 onGroup: group)
+        let serverChannel = try serverTLSChannel(context: ctx,
+                                                 handlers: [PromiseOnReadHandler(promise: completionPromise)],
+                                                 group: group)
         defer {
             _ = try? serverChannel.close().wait()
         }
 
-        let clientChannel = try clientTLSChannel(withContext: ctx,
+        let clientChannel = try clientTLSChannel(context: ctx,
                                                  preHandlers: [],
                                                  postHandlers: [],
-                                                 onGroup: group,
+                                                 group: group,
                                                  connectingTo: serverChannel.localAddress!)
         defer {
             _ = try? clientChannel.close().wait()

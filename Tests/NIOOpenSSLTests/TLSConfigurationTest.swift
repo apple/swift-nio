@@ -69,8 +69,8 @@ class TLSConfigurationTest: XCTestCase {
         }
 
         let eventHandler = ErrorCatcher<NIOOpenSSLError>()
-        let serverChannel = try serverTLSChannel(withContext: serverContext, andHandlers: [], onGroup: group)
-        let clientChannel = try clientTLSChannel(withContext: clientContext, preHandlers:[], postHandlers: [eventHandler], onGroup: group, connectingTo: serverChannel.localAddress!)
+        let serverChannel = try serverTLSChannel(context: serverContext, handlers: [], group: group)
+        let clientChannel = try clientTLSChannel(context: clientContext, preHandlers:[], postHandlers: [eventHandler], group: group, connectingTo: serverChannel.localAddress!)
 
         // We expect the channel to be closed fairly swiftly as the handshake should fail.
         clientChannel.closeFuture.whenComplete { _ in
@@ -145,8 +145,8 @@ class TLSConfigurationTest: XCTestCase {
         }
 
         let eventHandler = EventRecorderHandler<TLSUserEvent>()
-        let serverChannel = try serverTLSChannel(withContext: serverContext, andHandlers: [], onGroup: group)
-        let clientChannel = try clientTLSChannel(withContext: clientContext, preHandlers: [], postHandlers: [eventHandler], onGroup: group, connectingTo: serverChannel.localAddress!, serverHostname: "localhost")
+        let serverChannel = try serverTLSChannel(context: serverContext, handlers: [], group: group)
+        let clientChannel = try clientTLSChannel(context: clientContext, preHandlers: [], postHandlers: [eventHandler], group: group, connectingTo: serverChannel.localAddress!, serverHostname: "localhost")
 
         // Wait for a successful flush: that indicates the channel is up.
         var buf = clientChannel.allocator.buffer(capacity: 5)
