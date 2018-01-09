@@ -48,7 +48,7 @@ private struct HTTPParserState {
 
     mutating func readCurrentString() -> String {
         let (index, length) = self.slice!
-        let string = self.cumulationBuffer!.string(at: index, length: length)!
+        let string = self.cumulationBuffer!.getString(at: index, length: length)!
         self.slice = nil
         return string
     }

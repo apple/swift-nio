@@ -17,7 +17,7 @@ import XCTest
 
 private extension ByteBuffer {
     func assertContainsOnly(_ string: String) {
-        let innerData = self.string(at: self.readerIndex, length: self.readableBytes)!
+        let innerData = self.getString(at: self.readerIndex, length: self.readableBytes)!
         XCTAssertEqual(innerData, string)
     }
 }
@@ -107,7 +107,7 @@ class HTTPResponseEncoderTests: XCTestCase {
 
         switch writtenData{
         case .byteBuffer(let b):
-            let writtenResponse = b.string(at: b.readerIndex, length: b.readableBytes)!
+            let writtenResponse = b.getString(at: b.readerIndex, length: b.readableBytes)!
             XCTAssertEqual(writtenResponse, "HTTP/1.0 200 OK\r\n\r\n")
         case .fileRegion:
             XCTFail("Unexpected file region")

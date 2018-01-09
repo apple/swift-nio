@@ -28,7 +28,7 @@ extension ByteBuffer {
     ///     - index: The starting index of the bytes of interest into the `ByteBuffer`.
     ///     - length: The number of bytes of interest.
     /// - returns: A `[UInt8]` value containing the bytes of interest or `nil` if the `ByteBuffer` doesn't contain those bytes.
-    public func bytes(at index: Int, length: Int) -> [UInt8]? {
+    public func getBytes(at index: Int, length: Int) -> [UInt8]? {
         precondition(index >= 0, "index must not be negative")
         precondition(length >= 0, "length must not be negative")
         guard index <= self.capacity - length else {
@@ -55,7 +55,7 @@ extension ByteBuffer {
         defer {
             self.moveReaderIndex(forwardBy: length)
         }
-        return self.bytes(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
+        return self.getBytes(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
     }
 
     // MARK: StaticString APIs
@@ -117,7 +117,7 @@ extension ByteBuffer {
     ///     - index: The starting index into `ByteBuffer` containing the string of interest.
     ///     - length: The number of bytes making up the string.
     /// - returns: A `String` value deserialized from this `ByteBuffer` or `nil` if the requested bytes aren't contained in this `ByteBuffer`.
-    public func string(at index: Int, length: Int) -> String? {
+    public func getString(at index: Int, length: Int) -> String? {
         precondition(index >= 0, "index must not be negative")
         precondition(length >= 0, "length must not be negative")
         return withVeryUnsafeBytes { pointer in
@@ -142,7 +142,7 @@ extension ByteBuffer {
         defer {
             self.moveReaderIndex(forwardBy: length)
         }
-        return self.string(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
+        return self.getString(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
     }
 
     // MARK: Other APIs

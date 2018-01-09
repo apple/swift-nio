@@ -102,7 +102,7 @@ class EchoServerClientTest : XCTestCase {
 
         let bytes = try promise.futureResult.wait()
         let expected = String(decoding: Array(repeating: "X".utf8.first!, count: 10000), as: UTF8.self)
-        XCTAssertEqual(expected, bytes.string(at: bytes.readerIndex, length: bytes.readableBytes))
+        XCTAssertEqual(expected, bytes.getString(at: bytes.readerIndex, length: bytes.readableBytes))
     }
 
     func testEchoUnixDomainSocket() throws {
@@ -564,7 +564,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         let bytes = try promise.futureResult.wait()
-        XCTAssertEqual(bytes.string(at: bytes.readerIndex, length: bytes.readableBytes), stringToWrite)
+        XCTAssertEqual(bytes.getString(at: bytes.readerIndex, length: bytes.readableBytes), stringToWrite)
     }
 
     func testWriteOnAccept() throws {
@@ -596,7 +596,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         let bytes = try promise.futureResult.wait()
-        XCTAssertEqual(bytes.string(at: bytes.readerIndex, length: bytes.readableBytes), stringToWrite)
+        XCTAssertEqual(bytes.getString(at: bytes.readerIndex, length: bytes.readableBytes), stringToWrite)
     }
 
     func testWriteAfterChannelIsDead() throws {

@@ -63,7 +63,7 @@ class HTTPHeadersTest : XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 1024)
         headers.write(buffer: &buffer)
 
-        let writtenBytes = buffer.string(at: buffer.readerIndex, length: buffer.readableBytes)!
+        let writtenBytes = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes)!
         XCTAssertTrue(writtenBytes.contains("user-agent: 1\r\n"))
         XCTAssertTrue(writtenBytes.contains("host: 2\r\n"))
         XCTAssertTrue(writtenBytes.contains("x-something: 3,4\r\n"))

@@ -262,7 +262,7 @@ class HTTPUpgradeTestCase: XCTestCase {
 
         let completePromise: EventLoopPromise<Void> = group.next().newPromise()
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
-            let resultString = buffers.map { $0.string(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
+            let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["x-upgrade-complete: true", "upgrade: myproto", "connection: upgrade"])
@@ -367,7 +367,7 @@ class HTTPUpgradeTestCase: XCTestCase {
 
         let completePromise: EventLoopPromise<Void> = group.next().newPromise()
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
-            let resultString = buffers.map { $0.string(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
+            let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["x-upgrade-complete: true", "upgrade: myproto", "connection: upgrade"])
@@ -411,7 +411,7 @@ class HTTPUpgradeTestCase: XCTestCase {
 
         let completePromise: EventLoopPromise<Void> = group.next().newPromise()
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
-            let resultString = buffers.map { $0.string(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
+            let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["x-upgrade-complete: true", "upgrade: myproto", "connection: upgrade"])
@@ -472,7 +472,7 @@ class HTTPUpgradeTestCase: XCTestCase {
 
         let completePromise: EventLoopPromise<Void> = group.next().newPromise()
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
-            let resultString = buffers.map { $0.string(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
+            let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["x-upgrade-complete: true", "upgrade: myproto", "connection: upgrade"])

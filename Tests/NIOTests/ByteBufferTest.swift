@@ -135,7 +135,7 @@ class ByteBufferTest: XCTestCase {
     
     func testString() {
         let written = buf.write(string: "Hello")!
-        let string = buf.string(at: 0, length: written)
+        let string = buf.getString(at: 0, length: written)
         XCTAssertEqual("Hello", string)
     }
     
@@ -811,25 +811,25 @@ class ByteBufferTest: XCTestCase {
             buf.set(string: "x", at: i)
         }
         XCTAssertEqual(capacity, buf.capacity, "buffer capacity needlessly changed from \(capacity) to \(buf.capacity)")
-        XCTAssertNil(buf.string(at: 0, length: capacity+1))
+        XCTAssertNil(buf.getString(at: 0, length: capacity+1))
     }
 
     func testSetGetBytesAllFine() throws {
         buf.set(bytes: [1, 2, 3, 4], at: 0)
-        XCTAssertEqual([1, 2, 3, 4], buf.bytes(at: 0, length: 4) ?? [])
+        XCTAssertEqual([1, 2, 3, 4], buf.getBytes(at: 0, length: 4) ?? [])
 
         let capacity = buf.capacity
         for i in 0..<buf.capacity {
             buf.set(bytes: [0xFF], at: i)
         }
         XCTAssertEqual(capacity, buf.capacity, "buffer capacity needlessly changed from \(capacity) to \(buf.capacity)")
-        XCTAssertEqual(Array(repeating: 0xFF, count: capacity), buf.bytes(at: 0, length: capacity)!)
+        XCTAssertEqual(Array(repeating: 0xFF, count: capacity), buf.getBytes(at: 0, length: capacity)!)
 
     }
 
     func testGetBytesTooLong() throws {
-        XCTAssertNil(buf.bytes(at: 0, length: buf.capacity+1))
-        XCTAssertNil(buf.bytes(at: buf.capacity, length: 1))
+        XCTAssertNil(buf.getBytes(at: 0, length: buf.capacity+1))
+        XCTAssertNil(buf.getBytes(at: buf.capacity, length: 1))
     }
 
     func testReadWriteBytesOkay() throws {
@@ -938,10 +938,10 @@ class ByteBufferTest: XCTestCase {
         testIndexOrLengthFunc({ buf.readBytes(length: $0) })
         testIndexOrLengthFunc({ buf.readData(length: $0) })
 
-        testIndexAndLengthFunc(buf.bytes)
+        testIndexAndLengthFunc(buf.getBytes)
         testIndexAndLengthFunc(buf.getData)
         testIndexAndLengthFunc(buf.getSlice)
-        testIndexAndLengthFunc(buf.string)
+        testIndexAndLengthFunc(buf.getString)
     }
 
     func testWriteForContiguousCollections() throws {
@@ -1024,7 +1024,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertLessThan(buf.capacity, 200)
 
         buf.set(string: "HW", at: 201)
-        let s = buf.string(at: 201, length: 2)!
+        let s = buf.getString(at: 201, length: 2)!
         XCTAssertEqual("HW", s)
         XCTAssertGreaterThanOrEqual(buf.capacity, 202)
     }
@@ -1034,7 +1034,7 @@ class ByteBufferTest: XCTestCase {
         buf.changeCapacity(to: 32)
         XCTAssertLessThan(buf.capacity, 200)
 
-        let i: String? = buf.string(at: 201, length: 1)
+        let i: String? = buf.getString(at: 201, length: 1)
         XCTAssertNil(i)
     }
 
