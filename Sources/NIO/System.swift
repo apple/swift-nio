@@ -219,12 +219,23 @@ internal enum Posix {
     }
     
     @inline(never)
-    public static func open(file: UnsafePointer<CChar>, oFlag: Int32) throws -> Int {
+    public static func open(file: UnsafePointer<CChar>, oFlag: Int32, mode: mode_t) throws -> CInt {
         return try wrapSyscall({
             #if os(Linux)
-                return Int(Glibc.open(file, oFlag))
+                return Glibc.open(file, oFlag, mode)
             #else
-                return Int(Darwin.open(file, oFlag))
+                return Darwin.open(file, oFlag, mode)
+            #endif
+        })
+    }
+
+    @inline(never)
+    public static func open(file: UnsafePointer<CChar>, oFlag: Int32) throws -> CInt {
+        return try wrapSyscall({
+            #if os(Linux)
+                return Glibc.open(file, oFlag)
+            #else
+                return Darwin.open(file, oFlag)
             #endif
         })
     }

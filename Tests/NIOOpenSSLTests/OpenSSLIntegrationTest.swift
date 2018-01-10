@@ -292,10 +292,13 @@ class OpenSSLIntegrationTest: XCTestCase {
         return try assertNoThrowWithValue(SSLContext(configuration: config), file: file, line: line)
     }
 
-    func withTrustBundleInFile<T>(fn: (String) throws -> T) rethrows -> T {
-        let fileName = "/tmp/niocacerts.pem"
-        let tempFile: Int32 = fileName.withCString { ptr in
-            return open(ptr, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0o644)
+    func withTrustBundleInFile<T>(tempFile fileName: inout String?, fn: (String) throws -> T) throws -> T {
+        fileName = makeTemporaryFile()
+        guard let fileName = fileName else {
+            fatalError("couldn't make temp file")
+        }
+        let tempFile = try fileName.withCString { ptr in
+            return try Posix.open(file: ptr, oFlag: O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, mode: 0o644)
         }
         precondition(tempFile > 1, String(cString: strerror(errno)))
         let fileBio = BIO_new_fp(fdopen(tempFile, "w+"), BIO_CLOSE)
@@ -766,12 +769,16 @@ class OpenSSLIntegrationTest: XCTestCase {
     }
 
     func testTrustStoreOnDisk() throws {
+        var tempFile: String? = nil
         let serverCtx = try configuredSSLContext()
-        let config = withTrustBundleInFile {
+        let config = try withTrustBundleInFile(tempFile: &tempFile) {
             return TLSConfiguration.forClient(certificateVerification: .noHostnameVerification,
                                               trustRoots: .file($0),
                                               certificateChain: [.certificate(OpenSSLIntegrationTest.cert)],
                                               privateKey: .privateKey(OpenSSLIntegrationTest.key))
+        }
+        defer {
+            precondition(.some(0) == tempFile.map { unlink($0) }, "couldn't remove temp file \(tempFile.debugDescription)")
         }
         let clientCtx = try assertNoThrowWithValue(SSLContext(configuration: config))
 

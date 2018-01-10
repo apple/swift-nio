@@ -103,7 +103,7 @@ i5PCcPYi39q101UIxV/WokS0mqHx/XuTYTwhWYd/C49OnM8MLZOUJd8w0VvS0ItY
 -----END CERTIFICATE-----
 """
 
-private func makeTemporaryFile() -> String {
+func makeTemporaryFile() -> String {
     let template = "/tmp/niotestXXXXXXX"
     var templateBytes = template.utf8 + [0]
     let templateBytesCount = templateBytes.count
