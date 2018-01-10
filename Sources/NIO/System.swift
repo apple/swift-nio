@@ -20,14 +20,12 @@
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 @_exported import Darwin.C
-#elseif os(Linux)
-@_exported import Glibc
-import CNIOLinux
-#elseif os(FreeBSD) || os(Android)
+#elseif os(Linux) || os(FreeBSD) || os(Android)
 @_exported import Glibc
 #else
 let badOS = { fatalError("unsupported OS") }()
 #endif
+import CNIOLinux
 
 private func isBlacklistedErrno(_ code: Int32) -> Bool {
     switch code {
