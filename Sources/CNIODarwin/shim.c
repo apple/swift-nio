@@ -27,7 +27,7 @@ int CNIODarwin_sendmmsg(int sockfd, CNIODarwin_mmsghdr *msgvec, unsigned int vle
     }
 
     for (unsigned int i = 0; i < vlen; i++) {
-        ssize_t sendAmount = sendmsg(sockfd, &(msgvec->msg_hdr), flags);
+        ssize_t sendAmount = sendmsg(sockfd, &(msgvec[i].msg_hdr), flags);
         if (sendAmount < 0 && i == 0) {
             // Error on the first send, return the error.
             return -1;

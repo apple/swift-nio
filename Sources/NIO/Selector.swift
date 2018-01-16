@@ -494,6 +494,8 @@ internal extension Selector where R == NIORegistration {
                 return chan.close()
             case .socketChannel(let chan, _):
                 return chan.close()
+            case .datagramChannel(let chan, _):
+                return chan.close()
             }
         }
 

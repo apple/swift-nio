@@ -225,6 +225,7 @@ extension EventLoop {
 enum NIORegistration: Registration {
     case serverSocketChannel(ServerSocketChannel, IOEvent)
     case socketChannel(SocketChannel, IOEvent)
+    case datagramChannel(DatagramChannel, IOEvent)
 
     /// The `IOEvent` in which this `NIORegistration` is interested in.
     var interested: IOEvent {
@@ -234,6 +235,8 @@ enum NIORegistration: Registration {
                 self = .serverSocketChannel(c, newValue)
             case .socketChannel(let c, _):
                 self = .socketChannel(c, newValue)
+            case .datagramChannel(let c, _):
+                self = .datagramChannel(c, newValue)
             }
         }
         get {
@@ -241,6 +244,8 @@ enum NIORegistration: Registration {
             case .serverSocketChannel(_, let i):
                 return i
             case .socketChannel(_, let i):
+                return i
+            case .datagramChannel(_, let i):
                 return i
             }
         }
@@ -487,6 +492,8 @@ internal final class SelectableEventLoop : EventLoop {
                     case .serverSocketChannel(let chan, _):
                         self.handleEvent(ev.io, channel: chan)
                     case .socketChannel(let chan, _):
+                        self.handleEvent(ev.io, channel: chan)
+                    case .datagramChannel(let chan, _):
                         self.handleEvent(ev.io, channel: chan)
                     }
                 }

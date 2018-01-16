@@ -290,7 +290,7 @@ internal enum Posix {
             sysSendTo(descriptor, pointer, size, 0, destinationPtr, destinationSize)
         }
     }
-    
+
     @inline(never)
     public static func read(descriptor: CInt, pointer: UnsafeMutablePointer<UInt8>, size: size_t) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
@@ -304,7 +304,7 @@ internal enum Posix {
             sysRecvFrom(descriptor, pointer, len, 0, addr, addrlen)
         }
     }
-    
+
     @discardableResult
     @inline(never)
     public static func lseek(descriptor: CInt, offset: off_t, whence: CInt) throws -> off_t {

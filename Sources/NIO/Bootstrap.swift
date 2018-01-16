@@ -427,6 +427,137 @@ public final class ClientBootstrap {
     }
 }
 
+/// A `DatagramBootstrap` is an easy way to bootstrap a `DatagramChannel` when creating datagram clients
+/// and servers.
+///
+/// Example:
+///
+///     let group = MultiThreadedEventLoopGroup(numThreads: 1)
+///     let bootstrap = DatagramBootstrap(group: group)
+///         // Enable SO_REUSEADDR.
+///         .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+///         .channelInitializer { channel in
+///             channel.pipeline.add(handler: MyChannelHandler())
+///         }
+///     defer {
+///         try! group.syncShutdownGracefully()
+///     }
+///     let channel = try! bootstrap.bind(host: "127.0.0.1", port: 53).wait()
+///     /* the Channel is now ready to send/receive datagrams */
+///
+///     try channel.closeFuture.wait()  // Wait until the channel un-binds.
+///
+public final class DatagramBootstrap {
+
+    private let group: EventLoopGroup
+    private var channelInitializer: ((Channel) -> EventLoopFuture<()>)?
+    private var channelOptions = ChannelOptionStorage()
+
+    /// Create a `DatagramBootstrap` on the `EventLoopGroup` `group`.
+    ///
+    /// - parameters:
+    ///     - group: The `EventLoopGroup` to use.
+    public init(group: EventLoopGroup) {
+        self.group = group
+    }
+
+    /// Initialize the connected `DatagramChannel` with `initializer`. The most common task in initializer is to add
+    /// `ChannelHandler`s to the `ChannelPipeline`.
+    ///
+    /// - parameters:
+    ///     - handler: A closure that initializes the provided `Channel`.
+    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+        self.channelInitializer = handler
+        return self
+    }
+
+    /// Specifies a `ChannelOption` to be applied to the `DatagramChannel`.
+    ///
+    /// - parameters:
+    ///     - option: The option to be applied.
+    ///     - value: The value for the option.
+    public func channelOption<T: ChannelOption>(_ option: T, value: T.OptionType) -> Self {
+        channelOptions.put(key: option, value: value)
+        return self
+    }
+
+    /// Bind the `DatagramChannel` to `host` and `port`.
+    ///
+    /// - parameters:
+    ///     - host: The host to bind on.
+    ///     - port: The port to bind on.
+    public func bind(host: String, port: Int) -> EventLoopFuture<Channel> {
+        let evGroup = group
+        do {
+            let address = try SocketAddress.newAddressResolving(host: host, port: port)
+            return bind0(eventLoopGroup: evGroup, to: address)
+        } catch let err {
+            return evGroup.next().newFailedFuture(error: err)
+        }
+    }
+
+    /// Bind the `DatagramChannel` to `address`.
+    ///
+    /// - parameters:
+    ///     - address: The `SocketAddress` to bind on.
+    public func bind(to address: SocketAddress) -> EventLoopFuture<Channel> {
+        return bind0(eventLoopGroup: group, to: address)
+    }
+
+    /// Bind the `DatagramChannel` to a UNIX Domain Socket.
+    ///
+    /// - parameters:
+    ///     - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. `path` must not exist, it will be created by the system.
+    public func bind(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
+        let evGroup = group
+        do {
+            let address = try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
+            return bind0(eventLoopGroup: evGroup, to: address)
+        } catch let err {
+            return evGroup.next().newFailedFuture(error: err)
+        }
+    }
+
+    private func bind0(eventLoopGroup: EventLoopGroup, to address: SocketAddress) -> EventLoopFuture<Channel> {
+        let eventLoop = eventLoopGroup.next()
+        let channelInitializer = self.channelInitializer
+        let channelOptions = self.channelOptions
+
+        let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
+        do {
+            let channel = try DatagramChannel(eventLoop: eventLoop as! SelectableEventLoop,
+                                                    protocolFamily: address.protocolFamily)
+
+            func finishClientSetup() {
+                channelOptions.applyAll(channel: channel).then {
+                    channel.register()
+                }.then {
+                    channel.bind(to: address)
+                }.map {
+                    channel
+                }.cascade(promise: promise)
+            }
+
+            if let channelInitializer = channelInitializer {
+                channelInitializer(channel).whenComplete { v in
+                    switch v {
+                    case .failure(let err):
+                        promise.fail(error: err)
+                    case .success(_):
+                        finishClientSetup()
+                    }
+                }
+            } else {
+                finishClientSetup()
+            }
+        } catch let err {
+            promise.fail(error: err)
+        }
+
+        return promise.futureResult
+    }
+}
+
 fileprivate struct ChannelOptionStorage {
     private var storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
     
