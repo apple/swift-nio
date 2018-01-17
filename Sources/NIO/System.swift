@@ -25,7 +25,6 @@
 #else
 let badOS = { fatalError("unsupported OS") }()
 #endif
-import CNIOLinux
 
 private func isBlacklistedErrno(_ code: Int32) -> Bool {
     switch code {
@@ -40,7 +39,7 @@ private func isBlacklistedErrno(_ code: Int32) -> Bool {
 
 /* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
 @inline(__always)
-private func wrapSyscallMayBlock<T: FixedWidthInteger>(_ fn: () throws -> T , where function: StaticString = #function) throws -> IOResult<T> {
+internal func wrapSyscallMayBlock<T: FixedWidthInteger>(_ fn: () throws -> T , where function: StaticString = #function) throws -> IOResult<T> {
     while true {
         let res = try fn()
         if res == -1 {
@@ -62,7 +61,7 @@ private func wrapSyscallMayBlock<T: FixedWidthInteger>(_ fn: () throws -> T , wh
 
 /* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
 @inline(__always)
-private func wrapSyscall<T: FixedWidthInteger>(_ fn: () throws -> T, where function: StaticString = #function) throws -> T {
+internal func wrapSyscall<T: FixedWidthInteger>(_ fn: () throws -> T, where function: StaticString = #function) throws -> T {
     while true {
         let res = try fn()
         if res == -1 {
@@ -303,89 +302,10 @@ internal enum Posix {
             throw err
         }
     }
+
 }
 
-#if os(Linux)
-internal enum TimerFd {
-    public static let TFD_CLOEXEC = CNIOLinux.TFD_CLOEXEC
-    public static let TFD_NONBLOCK = CNIOLinux.TFD_NONBLOCK
-    
-    @inline(never)
-    public static func timerfd_settime(fd: Int32, flags: Int32, newValue: UnsafePointer<itimerspec>, oldValue: UnsafeMutablePointer<itimerspec>?) throws  {
-        _ = try wrapSyscall({
-           CNIOLinux.timerfd_settime(fd, flags, newValue, oldValue)
-        })
-    }
-    
-    @inline(never)
-    public static func timerfd_create(clockId: Int32, flags: Int32) throws -> Int32 {
-        return try wrapSyscall({
-            CNIOLinux.timerfd_create(clockId, flags)
-        })
-    }
-}
-
-internal enum EventFd {
-    public static let EFD_CLOEXEC = CNIOLinux.EFD_CLOEXEC
-    public static let EFD_NONBLOCK = CNIOLinux.EFD_NONBLOCK
-    public typealias eventfd_t = CNIOLinux.eventfd_t
-    
-    @inline(never)
-    public static func eventfd_write(fd: Int32, value: UInt64) throws -> Int32 {
-        return try wrapSyscall({
-            CNIOLinux.eventfd_write(fd, value)
-        })
-    }
-    
-    @inline(never)
-    public static func eventfd_read(fd: Int32, value: UnsafeMutablePointer<UInt64>) throws -> Int32 {
-        return try wrapSyscall({
-            CNIOLinux.eventfd_read(fd, value)
-        })
-    }
-    
-    @inline(never)
-    public static func eventfd(initval: Int32, flags: Int32) throws -> Int32 {
-        return try wrapSyscall({
-            CNIOLinux.eventfd(0, Int32(EFD_CLOEXEC | EFD_NONBLOCK))
-        })
-    }
-}
-
-internal enum Epoll {
-    public typealias epoll_event = CNIOLinux.epoll_event
-    public static let EPOLL_CTL_ADD = CNIOLinux.EPOLL_CTL_ADD
-    public static let EPOLL_CTL_MOD = CNIOLinux.EPOLL_CTL_MOD
-    public static let EPOLL_CTL_DEL = CNIOLinux.EPOLL_CTL_DEL
-    public static let EPOLLIN = CNIOLinux.EPOLLIN
-    public static let EPOLLOUT = CNIOLinux.EPOLLOUT
-    public static let EPOLLERR = CNIOLinux.EPOLLERR
-    public static let EPOLLRDHUP = CNIOLinux.EPOLLRDHUP
-    public static let EPOLLET = CNIOLinux.EPOLLET
-
-    @inline(never)
-    public static func epoll_create(size: Int32) throws -> Int32 {
-        return try wrapSyscall({
-            CNIOLinux.epoll_create(size)
-        })
-    }
-    
-    @inline(never)
-    public static func epoll_ctl(epfd: Int32, op: Int32, fd: Int32, event: UnsafeMutablePointer<epoll_event>) throws -> Int32 {
-        return try wrapSyscall({
-            CNIOLinux.epoll_ctl(epfd, op, fd, event)
-        })
-    }
-    
-    @inline(never)
-    public static func epoll_wait(epfd: Int32, events: UnsafeMutablePointer<epoll_event>, maxevents: Int32, timeout: Int32) throws -> Int32 {
-        return try wrapSyscall({
-            return CNIOLinux.epoll_wait(epfd, events, maxevents, timeout)
-        })
-    }
-}
-    
-#else
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 internal enum KQueue {
 
     // TODO: Figure out how to specify a typealias to the kevent struct without run into trouble with the swift compiler
