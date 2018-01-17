@@ -11,6 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+#ifdef __linux__
+
 #define _GNU_SOURCE
 #include <c_nio_linux.h>
 
@@ -27,3 +29,5 @@ int CNIOLinux_recvmmsg(int sockfd, CNIOLinux_mmsghdr *msgvec, unsigned int vlen,
     // don't think the compiler is inclined to blow anything up here.
     return recvmmsg(sockfd, (struct mmsghdr *)msgvec, vlen, flags, timeout);
 }
+
+#endif
