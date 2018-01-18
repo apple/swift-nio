@@ -257,11 +257,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
-        do {
+        executeAndComplete(promise) {
             try socket.bind(to: address)
-            promise?.succeed(result: ())
-        } catch let err {
-            promise?.fail(error: err)
         }
     }
 
@@ -391,11 +388,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             pipeline.fireErrorCaught0(error: err)
         }
 
-        do {
+        executeAndComplete(promise) {
             try socket.close()
-            promise?.succeed(result: ())
-        } catch let err {
-            promise?.fail(error: err)
         }
 
         // Fail all pending writes and so ensure all pending promises are notified
@@ -456,11 +450,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
         if let connectPromise = pendingConnect {
             pendingConnect = nil
-            do {
+            executeAndComplete(connectPromise) {
                 try finishConnectSocket()
-                connectPromise.succeed(result: ())
-            } catch let error {
-                connectPromise.fail(error: error)
             }
         }
     }
@@ -980,14 +971,21 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
 
     override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
-        do {
+        let p: EventLoopPromise<Void> = eventLoop.newPromise()
+        p.futureResult.whenComplete { v in
+            switch v {
+            case .failure(let e):
+                promise?.fail(error: e)
+            case .success(let res):
+                // Its important to call the methods before we actual notify the original promise for ordering reasons.
+                self.becomeActive0()
+                self.readIfNeeded0()
+                promise?.succeed(result: res)
+            }
+        }
+        executeAndComplete(promise) {
             try socket.bind(to: address)
             try self.socket.listen(backlog: backlog)
-            promise?.succeed(result: ())
-            becomeActive0()
-            readIfNeeded0()
-        } catch let err {
-            promise?.fail(error: err)
         }
     }
 
