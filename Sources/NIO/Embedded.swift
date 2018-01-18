@@ -323,14 +323,14 @@ public class EmbeddedChannel : Channel {
         return (buffer.removeFirst().forceAs(type: T.self))
     }
     
-    init() {
+    public init() {
         _pipeline = ChannelPipeline(channel: self)
         
         // we should just register it directly and this will never throw.
         _ = try? register().wait()
     }
     
-    init(handler: ChannelHandler) throws {
+    public init(handler: ChannelHandler) throws {
         _pipeline = ChannelPipeline(channel: self)
         try _pipeline.add(handler: handler).wait()
         
