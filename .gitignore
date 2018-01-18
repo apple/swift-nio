@@ -4,4 +4,4 @@
 /*.xcodeproj
 Package.pins
 *.pem
-docs/NIO*
+/docs
