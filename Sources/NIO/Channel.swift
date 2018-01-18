@@ -591,6 +591,9 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             if closed || inputShutdown {
                 return result
             }
+            // Reset reader and writerIndex and so allow to have the buffer filled again. This is better here than at
+            // the end of the loop to not do an allocation when the loop exits.
+            buffer.clear()
             switch try buffer.withMutableWritePointer(body: self.socket.read(pointer:size:)) {
             case .processed(let bytesRead):
                 if bytesRead > 0 {
@@ -604,9 +607,6 @@ final class SocketChannel: BaseSocketChannel<Socket> {
                         // if the ByteBuffer may grow on the next allocation due we used all the writable bytes we should allocate a new `ByteBuffer` to allow ramping up how much data
                         // we are able to read on the next read operation.
                         buffer = recvAllocator.buffer(allocator: allocator)
-                    } else {
-                        // Reset reader and writerIndex and so allow to have the buffer filled again
-                        buffer.clear()
                     }
                     result = .some
                 } else {
