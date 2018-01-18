@@ -20,6 +20,8 @@ public enum SocketAddressError: Error {
     case unsupported
     /// The requested UDS path is too long.
     case unixDomainSocketPathTooLong
+    /// Unable to parse a given IP string
+    case failedToParseIPString(String)
 }
 
 /// Represent a socket address to which we may want to connect or bind.
@@ -107,6 +109,38 @@ public enum SocketAddress: CustomStringConvertible {
         }
 
         return .unixDomainSocket(address: addr)
+    }
+
+    /// Create a new `SocketAddress` for an IP address in string form.
+    ///
+    /// - parameters:
+    ///     - string: The IP address, in string form.
+    ///     - port: The target port.
+    /// - returns: the `SocketAddress` corresponding to this string and port combination.
+    /// - throws: may throw `SocketAddressError.failedToParseIPString` if the IP address cannot be parsed.
+    public static func ipAddress(string: String, port: UInt16) throws -> SocketAddress {
+        var ipv4Addr = in_addr()
+        var ipv6Addr = in6_addr()
+
+        return try string.withCString {
+            if inet_pton(AF_INET, $0, &ipv4Addr) == 1 {
+                var addr = sockaddr_in()
+                addr.sin_family = sa_family_t(AF_INET)
+                addr.sin_port = port
+                addr.sin_addr = ipv4Addr
+                return .v4(address: addr, host: "")
+            } else if inet_pton(AF_INET6, $0, &ipv6Addr) == 1 {
+                var addr = sockaddr_in6()
+                addr.sin6_family = sa_family_t(AF_INET6)
+                addr.sin6_port = port
+                addr.sin6_flowinfo = 0
+                addr.sin6_addr = ipv6Addr
+                addr.sin6_scope_id = 0
+                return .v6(address: addr, host: "")
+            } else {
+                throw SocketAddressError.failedToParseIPString(string)
+            }
+        }
     }
 
     /// Creates a new `SocketAddress` for the given host (which will be resolved) and port.

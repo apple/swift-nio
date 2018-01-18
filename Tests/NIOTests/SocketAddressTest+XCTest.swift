@@ -27,6 +27,9 @@ extension SocketAddressTest {
    static var allTests : [(String, (SocketAddressTest) -> () throws -> Void)] {
       return [
                 ("testDescriptionWorks", testDescriptionWorks),
+                ("testCanCreateIPv4AddressFromString", testCanCreateIPv4AddressFromString),
+                ("testCanCreateIPv6AddressFromString", testCanCreateIPv6AddressFromString),
+                ("testRejectsNonIPStrings", testRejectsNonIPStrings),
            ]
    }
 }
