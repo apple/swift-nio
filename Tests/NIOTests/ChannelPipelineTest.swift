@@ -171,4 +171,114 @@ class ChannelPipelineTest: XCTestCase {
             XCTAssertEqual(err, .ioOnClosedChannel)
         }
     }
+
+    func testOutboundNextForInboundOnlyIsCorrect() throws {
+        /// This handler always add its number to the inbound `[Int]` array
+        final class MarkingInboundHandler: ChannelInboundHandler {
+            typealias InboundIn = [Int]
+            typealias InboundOut = [Int]
+
+            private let no: Int
+
+            init(number: Int) {
+                self.no = number
+            }
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                let data = self.unwrapInboundIn(data)
+                ctx.fireChannelRead(data: self.wrapInboundOut(data + [self.no]))
+            }
+        }
+
+        /// This handler always add its number to the outbound `[Int]` array
+        final class MarkingOutboundHandler: ChannelOutboundHandler {
+            typealias OutboundIn = [Int]
+            typealias OutboundOut = [Int]
+
+            private let no: Int
+
+            init(number: Int) {
+                self.no = number
+            }
+
+            func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                let data = self.unwrapOutboundIn(data)
+                ctx.write(data: self.wrapOutboundOut(data + [self.no]), promise: promise)
+            }
+        }
+
+        /// This handler multiplies the inbound `[Int]` it receives by `-1` and writes it to the next outbound handler.
+        final class WriteOnReadHandler: ChannelInboundHandler {
+            typealias InboundIn = [Int]
+            typealias InboundOut = [Int]
+            typealias OutboundOut = [Int]
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                let data = self.unwrapInboundIn(data)
+                ctx.write(data: self.wrapOutboundOut(data.map { $0 * -1 }), promise: nil)
+                ctx.fireChannelRead(data: self.wrapInboundOut(data))
+            }
+        }
+
+        /// This handler just prints out the outbound received `[Int]` as a `ByteBuffer`.
+        final class PrintOutboundAsByteBufferHandler: ChannelOutboundHandler {
+            typealias OutboundIn = [Int]
+            typealias OutboundOut = ByteBuffer
+
+            func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                let data = self.unwrapOutboundIn(data)
+                var buf = ctx.channel!.allocator.buffer(capacity: 123)
+                buf.write(string: String(describing: data))
+                ctx.write(data: self.wrapOutboundOut(buf), promise: promise)
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        let loop = channel.eventLoop as! EmbeddedEventLoop
+        loop.run()
+
+        try channel.pipeline.add(handler: PrintOutboundAsByteBufferHandler()).wait()
+        try channel.pipeline.add(handler: MarkingInboundHandler(number: 2)).wait()
+        try channel.pipeline.add(handler: WriteOnReadHandler()).wait()
+        try channel.pipeline.add(handler: MarkingOutboundHandler(number: 4)).wait()
+        try channel.pipeline.add(handler: WriteOnReadHandler()).wait()
+        try channel.pipeline.add(handler: MarkingInboundHandler(number: 6)).wait()
+        try channel.pipeline.add(handler: WriteOnReadHandler()).wait()
+
+        try channel.writeInbound(data: [])
+        loop.run()
+        XCTAssertEqual([2, 6], channel.readInbound()!)
+
+        /* the first thing, we should receive is `[-2]` as it shouldn't hit any `MarkingOutboundHandler`s (`4`) */
+        var outbound = channel.readOutbound()
+        switch outbound {
+        case .some(.byteBuffer(var buf)):
+            XCTAssertEqual("[-2]", buf.readString(length: buf.readableBytes))
+        default:
+            XCTFail("wrong contents: \(outbound.debugDescription)")
+        }
+
+        /* the next thing we should receive is `[-2, 4]` as the first `WriteOnReadHandler` (receiving `[2]`) is behind the `MarkingOutboundHandler` (`4`) */
+        outbound = channel.readOutbound()
+        switch outbound {
+        case .some(.byteBuffer(var buf)):
+            XCTAssertEqual("[-2, 4]", buf.readString(length: buf.readableBytes))
+        default:
+            XCTFail("wrong contents: \(outbound.debugDescription)")
+        }
+
+        /* and finally, we're waiting for `[-2, -6, 4]` as the second `WriteOnReadHandler`s (receiving `[2, 4]`) is behind the `MarkingOutboundHandler` (`4`) */
+        outbound = channel.readOutbound()
+        switch outbound {
+        case .some(.byteBuffer(var buf)):
+            XCTAssertEqual("[-2, -6, 4]", buf.readString(length: buf.readableBytes))
+        default:
+            XCTFail("wrong contents: \(outbound.debugDescription)")
+        }
+
+        XCTAssertNil(channel.readInbound())
+        XCTAssertNil(channel.readOutbound())
+
+        XCTAssertFalse(try channel.finish())
+    }
 }

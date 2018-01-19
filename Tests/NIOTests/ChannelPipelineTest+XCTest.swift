@@ -32,6 +32,7 @@ extension ChannelPipelineTest {
                 ("testFiringChannelReadsInHandlerRemovedWorks", testFiringChannelReadsInHandlerRemovedWorks),
                 ("testEmptyPipelineWorks", testEmptyPipelineWorks),
                 ("testWriteAfterClose", testWriteAfterClose),
+                ("testOutboundNextForInboundOnlyIsCorrect", testOutboundNextForInboundOnlyIsCorrect),
            ]
    }
 }
