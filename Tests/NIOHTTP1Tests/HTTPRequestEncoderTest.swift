@@ -44,6 +44,21 @@ class HTTPRequestEncoderTests: XCTestCase {
         let writtenData = try sendRequest(withMethod: .HEAD, andHeaders: HTTPHeaders())
         writtenData.assertContainsOnly("HEAD /uri HTTP/1.1\r\n\r\n")
     }
+
+    func testNoAutoHeadersForGET() throws {
+        let writtenData = try sendRequest(withMethod: .GET, andHeaders: HTTPHeaders())
+        writtenData.assertContainsOnly("GET /uri HTTP/1.1\r\n\r\n")
+    }
+
+    func testGETContentHeadersLeftAlone() throws {
+        var headers = HTTPHeaders([("content-length", "17")])
+        var writtenData = try sendRequest(withMethod: .GET, andHeaders: headers)
+        writtenData.assertContainsOnly("GET /uri HTTP/1.1\r\ncontent-length: 17\r\n\r\n")
+
+        headers = HTTPHeaders([("transfer-encoding", "chunked")])
+        writtenData = try sendRequest(withMethod: .GET, andHeaders: headers)
+        writtenData.assertContainsOnly("GET /uri HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
+    }
    
     func testNoContentLengthHeadersForHEAD() throws {
         let headers = HTTPHeaders([("content-length", "0")])

@@ -358,6 +358,12 @@ extension HTTPHeaders : Equatable {
 }
 
 public enum HTTPMethod: Equatable {
+    public enum HasBody {
+        case yes
+        case no
+        case unlikely
+    }
+    
     public static func ==(lhs: HTTPMethod, rhs: HTTPMethod) -> Bool {
         switch (lhs, rhs){
         case (.GET, .GET):
@@ -469,13 +475,16 @@ public enum HTTPMethod: Equatable {
     case RAW(value: String)
 
     /// Whether requests with this verb may have a request body.
-    public var mayHaveRequestBody: Bool {
-        // TODO: Add more
+    public var hasRequestBody: HasBody {
         switch self {
-        case .HEAD:
-            return false
+        case .HEAD, .DELETE, .TRACE:
+            return .no
+        case .POST, .PUT, .CONNECT, .PATCH:
+            return .yes
+        case .GET, .OPTIONS:
+            fallthrough
         default:
-            return true
+            return .unlikely
         }
     }
 }

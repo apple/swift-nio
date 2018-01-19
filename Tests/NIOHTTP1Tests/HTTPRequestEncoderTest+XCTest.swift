@@ -27,6 +27,8 @@ extension HTTPRequestEncoderTests {
    static var allTests : [(String, (HTTPRequestEncoderTests) -> () throws -> Void)] {
       return [
                 ("testNoAutoHeadersForHEAD", testNoAutoHeadersForHEAD),
+                ("testNoAutoHeadersForGET", testNoAutoHeadersForGET),
+                ("testGETContentHeadersLeftAlone", testGETContentHeadersLeftAlone),
                 ("testNoContentLengthHeadersForHEAD", testNoContentLengthHeadersForHEAD),
                 ("testNoTransferEncodingHeadersForHEAD", testNoTransferEncodingHeadersForHEAD),
                 ("testNoChunkedEncodingForHTTP10", testNoChunkedEncodingForHTTP10),
