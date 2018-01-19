@@ -29,7 +29,6 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
     public typealias OutboundOut = ByteBuffer
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
-    public typealias InboundUserEventOut = TLSUserEvent
 
     private enum ConnectionState {
         case idle
@@ -199,7 +198,7 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
             
             // TODO(cory): This event should probably fire out of the OpenSSL info callback.
             let negotiatedProtocol = connection.getAlpnProtocol()
-            ctx.fireUserInboundEventTriggered(event: wrapInboundUserEventOut(TLSUserEvent.handshakeCompleted(negotiatedProtocol: negotiatedProtocol)))
+            ctx.fireUserInboundEventTriggered(event: TLSUserEvent.handshakeCompleted(negotiatedProtocol: negotiatedProtocol))
             
             // We need to unbuffer any pending writes. We will have pending writes if the user attempted to write
             // before we completed the handshake.
@@ -236,7 +235,7 @@ public class OpenSSLHandler : ChannelInboundHandler, ChannelOutboundHandler {
             writeDataToNetwork(ctx: ctx, promise: nil)
 
             // TODO(cory): This should probably fire out of the OpenSSL info callback.
-            ctx.fireUserInboundEventTriggered(event: wrapInboundUserEventOut(TLSUserEvent.shutdownCompleted))
+            ctx.fireUserInboundEventTriggered(event: TLSUserEvent.shutdownCompleted)
             channelClose(ctx: ctx)
         case .failed(let err):
             // TODO(cory): This should probably fire out of the OpenSSL info callback.

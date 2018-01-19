@@ -26,7 +26,6 @@ extension TypeAssistedChannelHandlerTest {
 
    static var allTests : [(String, (TypeAssistedChannelHandlerTest) -> () throws -> Void)] {
       return [
-                ("testOptionalInboundIn", testOptionalInboundIn),
                 ("testCanDefineBothInboundAndOutbound", testCanDefineBothInboundAndOutbound),
            ]
    }

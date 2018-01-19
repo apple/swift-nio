@@ -70,7 +70,6 @@ public enum ALPNResult: Equatable {
 public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler {
     public typealias InboundIn = Any
     public typealias InboundOut = Any
-    public typealias InboundUserEventIn = TLSUserEvent
 
     private let completionHandler: (ALPNResult) -> EventLoopFuture<Void>
     private var waitingForUser: Bool
@@ -88,7 +87,7 @@ public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler {
     }
 
     public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
-        guard let tlsEvent = tryUnwrapInboundUserEventIn(event) else {
+        guard let tlsEvent = event as? TLSUserEvent else {
             ctx.fireUserInboundEventTriggered(event: event)
             return
         }

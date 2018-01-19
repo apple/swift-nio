@@ -54,7 +54,6 @@ private func interactInMemory(clientChannel: EmbeddedChannel, serverChannel: Emb
 private final class SimpleEchoServer: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
-    public typealias InboundUserEventIn = TLSUserEvent
     
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         ctx.write(data: data, promise: nil)
@@ -70,7 +69,6 @@ private final class SimpleEchoServer: ChannelInboundHandler {
 internal final class PromiseOnReadHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
-    public typealias InboundUserEventIn = TLSUserEvent
     
     private let promise: EventLoopPromise<ByteBuffer>
     private var data: NIOAny? = nil
@@ -104,7 +102,6 @@ private final class WriteCountingHandler: ChannelOutboundHandler {
 
 public final class EventRecorderHandler<UserEventType>: ChannelInboundHandler where UserEventType: Equatable {
     public typealias InboundIn = ByteBuffer
-    public typealias InboundUserEventIn = UserEventType
 
     public enum RecordedEvents: Equatable {
         case Registered
@@ -175,7 +172,7 @@ public final class EventRecorderHandler<UserEventType>: ChannelInboundHandler wh
     }
 
     public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
-        guard let ourEvent = tryUnwrapInboundUserEventIn(event) else {
+        guard let ourEvent = event as? UserEventType else {
             ctx.fireUserInboundEventTriggered(event: event)
             return
         }

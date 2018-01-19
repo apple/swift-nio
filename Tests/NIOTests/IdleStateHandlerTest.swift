@@ -42,7 +42,6 @@ class IdleStateHandlerTest : XCTestCase {
         class TestWriteHandler: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
             typealias OutboundOut = ByteBuffer
-            typealias InboundUserEventIn = IdleStateHandler.IdleStateEvent
             
             private var read = false
             private let writeToChannel: Bool
@@ -62,7 +61,7 @@ class IdleStateHandlerTest : XCTestCase {
                     XCTAssertTrue(self.read)
                 }
 
-                XCTAssertTrue(assertEventFn(self.unwrapInboundUserEventIn(event)))
+                XCTAssertTrue(assertEventFn(event as! IdleStateHandler.IdleStateEvent))
                 ctx.close(promise: nil)
             }
             

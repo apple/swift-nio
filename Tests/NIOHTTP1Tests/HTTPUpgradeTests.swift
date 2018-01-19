@@ -143,11 +143,10 @@ private class SuccessfulUpgrader: HTTPProtocolUpgrader {
 
 private class UserEventSaver<EventType>: ChannelInboundHandler {
     public typealias InboundIn = Any
-    public typealias InboundUserEventIn = EventType
     public var events: [EventType] = []
 
     public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
-        events.append(unwrapInboundUserEventIn(event))
+        events.append(event as! EventType)
         ctx.fireUserInboundEventTriggered(event: event)
     }
 }

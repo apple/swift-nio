@@ -118,8 +118,8 @@ public final class HTTPRequestEncoder : ChannelOutboundHandler {
     public init () { }
     
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch self.tryUnwrapOutboundIn(data) {
-        case .some(.head(var request)):
+        switch self.unwrapOutboundIn(data) {
+        case .head(var request):
             sanitizeTransportHeaders(mayHaveBody: request.method.mayHaveRequestBody, headers: &request.headers, version: request.version)
 
             self.isChunked = isChunkedPart(request.headers)
@@ -132,12 +132,10 @@ public final class HTTPRequestEncoder : ChannelOutboundHandler {
                 request.version.write(buffer: &buffer)
                 buffer.write(staticString: "\r\n")
             }, ctx: ctx, headers: request.headers, promise: promise)
-        case .some(.body(let bodyPart)):
+        case .body(let bodyPart):
             writeChunk(wrapOutboundOut: self.wrapOutboundOut, ctx: ctx, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
-        case .some(.end(let trailers)):
+        case .end(let trailers):
             writeTrailers(wrapOutboundOut: self.wrapOutboundOut, ctx: ctx, isChunked: self.isChunked, trailers: trailers, promise: promise)
-        case .none:
-            ctx.write(data: data, promise: promise)
         }
     }
 }
@@ -155,8 +153,8 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
     public init () { }
 
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch self.tryUnwrapOutboundIn(data) {
-        case .some(.head(var response)):
+        switch self.unwrapOutboundIn(data) {
+        case .head(var response):
             sanitizeTransportHeaders(mayHaveBody: response.status.mayHaveResponseBody, headers: &response.headers, version: response.version)
             
             self.isChunked = isChunkedPart(response.headers)
@@ -166,12 +164,10 @@ public final class HTTPResponseEncoder : ChannelOutboundHandler {
                 response.status.write(buffer: &buffer)
                 buffer.write(staticString: "\r\n")
             }, ctx: ctx, headers: response.headers, promise: promise)
-        case .some(.body(let bodyPart)):
+        case .body(let bodyPart):
             writeChunk(wrapOutboundOut: self.wrapOutboundOut, ctx: ctx, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
-        case .some(.end(let trailers)):
+        case .end(let trailers):
             writeTrailers(wrapOutboundOut: self.wrapOutboundOut, ctx: ctx, isChunked: self.isChunked, trailers: trailers, promise: promise)
-        case .none:
-            ctx.write(data: data, promise: promise)
         }
     }
 }
