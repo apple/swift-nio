@@ -13,6 +13,15 @@ if [[ $CI == true ]]; then
   # to test locally:
   # docker run -v `pwd`:/code -w /code -e CI=true ubuntu:14.04 /bin/bash /code/generate_docs.sh
 
+  # setup ruby
+  gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+  \curl -sSL https://get.rvm.io | bash -s stable
+  source $HOME/.rvm/scripts/rvm
+  rvm requirements
+  rvm install 2.4
+  # setup jazzy
+  gem install jazzy --no-ri --no-rdoc
+
   # setup swift
   rm -rf "$HOME/.swiftenv"
   git clone https://github.com/kylef/swiftenv.git "$HOME/.swiftenv"
@@ -20,26 +29,21 @@ if [[ $CI == true ]]; then
   export PATH="$SWIFTENV_ROOT/bin:$HOME/scripts:$PATH"
   eval "$(swiftenv init -)"
   swiftenv install $swift_version
-
   # set path swift libs
-  export LINUX_SOURCEKIT_LIB_PATH="/root/.swiftenv/versions/$swift_version/usr/lib"
+  export LINUX_SOURCEKIT_LIB_PATH="$SWIFTENV_ROOT/versions/$swift_version/usr/lib"
 
-  # setup ruby
-  gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
-  \curl -sSL https://get.rvm.io | bash -s stable
-  source /etc/profile.d/rvm.sh
-  rvm requirements
-  rvm install 2.4
-  # setup jazzy
-  gem install jazzy --no-ri --no-rdoc
-
-  # setup source kitten
+  # setup source-kitten
   source_kitten_source_path=~/.SourceKitten
   source_kitten_path="$source_kitten_source_path/.build/x86_64-unknown-linux/debug"
-
   git clone https://github.com/jpsim/SourceKitten.git "$source_kitten_source_path"
   rm -rf "$source_kitten_source_path/.swift-version"
-  cd "$source_kitten_source_path" && swift build && cd -
+  cd "$source_kitten_source_path" && swift build && cd "$my_path"
+
+  # build swift-nio if required
+  if [[ ! -d "$my_path/.build/x86_64-unknown-linux" ]]; then
+    swift build
+  fi
+
   # generate
   for module in "${modules[@]}"; do
     if [[ ! -f "$my_path/$module.json" ]]; then
@@ -59,11 +63,6 @@ if ! command -v jazzy > /dev/null; then
 fi
 
 cd "$my_path"
-
-# build swift-nio if required
-if [[ ! -d "$my_path/.build/x86_64-unknown-linux" ]]; then
-  swift build
-fi
 
 [[ -d docs/$version ]] || mkdir -p docs/$version
 [[ -d swift-nio.xcodeproj ]] || swift package generate-xcodeproj
@@ -96,8 +95,7 @@ done
 
 # push to github pages
 if [[ $CI == true ]]; then
-  BRANCH_NAME=$(git symbolic-ref -q HEAD)
-  BRANCH_NAME=${BRANCH_NAME##refs/heads/}
+  BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
   GIT_AUTHOR=$(git --no-pager show -s --format='%an <%ae>' HEAD)
   git fetch origin +gh-pages:gh-pages
   git checkout gh-pages
