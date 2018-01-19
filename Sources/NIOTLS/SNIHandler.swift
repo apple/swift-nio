@@ -143,7 +143,7 @@ public class SniHandler: ByteToMessageDecoder {
 
         // First, parse the header.
         let contentLength = try parseRecordHeader(buffer: &tempBuffer)
-        guard buffer.readableBytes >= contentLength else {
+        guard tempBuffer.readableBytes >= contentLength else {
             throw InternalSniErrors.recordIncomplete
         }
 

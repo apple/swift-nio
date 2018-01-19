@@ -221,12 +221,9 @@ ABAAEQAjAAAADQAmACQGAQYCBgPv7wUBBQIFAwQBBAIEA+7u
 7e0DAQMCAwMCAQICAgM=
 """
 
-private let quiteTruncatedPacket = """
-FgMBACsBAAAneDI3AwNyvld+G6aaYHyOf2Q6A5P7pFYdY9oW
-q6U/lEvy1/7zGQ==
-"""
-
 private let ludicrouslyTruncatedPacket = "FgMBAAEB"
+
+private let fuzzingInputOne = "FgMAAAQAAgo="
 
 internal extension ChannelPipeline {
     func contains(handler: ChannelHandler) throws -> Bool {
@@ -351,6 +348,28 @@ class SniHandlerTest: XCTestCase {
         XCTAssertFalse(try channel.finish())
     }
 
+    func assertIncompleteInput(clientHello: String) throws {
+        let buffer = bufferForBase64String(string: clientHello)
+        let channel = EmbeddedChannel()
+        let loop = channel.eventLoop as! EmbeddedEventLoop
+
+        let handler = SniHandler { result in
+            XCTFail("Handler was called")
+            return loop.newSucceedFuture(result: ())
+        }
+
+        try channel.pipeline.add(handler: handler).wait()
+
+        // Ok, let's go.
+        try channel.writeInbound(data: buffer)
+        loop.run()
+
+        // The callback should not have fired, the handler should still be in the pipeline,
+        // and no data should have been written.
+        XCTAssertNil(channel.readInbound() as ByteBuffer?)
+        try channel.pipeline.assertContains(handler: handler)
+    }
+
     func testLibre227NoSniDripFeed() throws {
         try dripFeedHello(clientHello: libressl227HelloNoSni, expectedResult: .fallback)
     }
@@ -459,11 +478,11 @@ class SniHandlerTest: XCTestCase {
         try blastHello(clientHello: invalidNameExtensionLength, expectedResult: .fallback)
     }
 
-    func testQuiteTruncatedPacket() throws {
-        try blastHello(clientHello: quiteTruncatedPacket, expectedResult: .fallback)
-    }
-
     func testLudicrouslyTruncatedPacket() throws {
         try blastHello(clientHello: ludicrouslyTruncatedPacket, expectedResult: .fallback)
+    }
+
+    func testFuzzingInputOne() throws {
+        try assertIncompleteInput(clientHello: fuzzingInputOne)
     }
 }

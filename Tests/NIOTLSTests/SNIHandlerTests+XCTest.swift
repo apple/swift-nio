@@ -53,8 +53,8 @@ extension SniHandlerTest {
                 ("testIgnoresUnknownNameType", testIgnoresUnknownNameType),
                 ("testIgnoresInvalidNameLength", testIgnoresInvalidNameLength),
                 ("testIgnoresInvalidNameExtensionLength", testIgnoresInvalidNameExtensionLength),
-                ("testQuiteTruncatedPacket", testQuiteTruncatedPacket),
                 ("testLudicrouslyTruncatedPacket", testLudicrouslyTruncatedPacket),
+                ("testFuzzingInputOne", testFuzzingInputOne),
            ]
    }
 }
