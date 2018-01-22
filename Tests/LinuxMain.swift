@@ -69,5 +69,6 @@ import XCTest
          testCase(SystemTest.allTests),
          testCase(TLSConfigurationTest.allTests),
          testCase(TypeAssistedChannelHandlerTest.allTests),
+         testCase(UtilitiesTest.allTests),
     ])
 #endif

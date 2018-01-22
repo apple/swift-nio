@@ -18,6 +18,7 @@
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/timerfd.h>
+#include <sys/sysinfo.h>
 #include <sys/socket.h>
 
 // Some explanation is required here.
