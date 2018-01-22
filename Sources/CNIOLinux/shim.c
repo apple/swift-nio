@@ -16,7 +16,8 @@
 #define _GNU_SOURCE
 #include <c_nio_linux.h>
 
-_Static_assert(sizeof(CNIOLinux_mmsghdr) == sizeof(struct mmsghdr));
+_Static_assert(sizeof(CNIOLinux_mmsghdr) == sizeof(struct mmsghdr),
+               "sizes of CNIOLinux_mmsghdr and struct mmsghdr differ");
 
 int CNIOLinux_sendmmsg(int sockfd, CNIOLinux_mmsghdr *msgvec, unsigned int vlen, int flags) {
     // This is technically undefined behaviour, but it's basically fine because these types are the same size, and we
