@@ -40,12 +40,12 @@ final class Socket : BaseSocket {
     
     func connect(to address: SocketAddress) throws -> Bool {
         switch address {
-        case .v4(address: let addr, _):
-            return try connectSocket(addr: addr)
-        case .v6(address: let addr, _):
-            return try connectSocket(addr: addr)
-        case .unixDomainSocket(address: let addr):
-            return try connectSocket(addr: addr)
+        case .v4(let addr):
+            return try connectSocket(addr: addr.address)
+        case .v6(let addr):
+            return try connectSocket(addr: addr.address)
+        case .unixDomainSocket(let addr):
+            return try connectSocket(addr: addr.address)
         }
     }
     

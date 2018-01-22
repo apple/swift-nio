@@ -242,11 +242,11 @@ private func matchHostname(serverHostname: UnsafeBufferPointer<UInt8>?, dnsName:
 private func matchIpAddress(socketAddress: SocketAddress, certificateIP: OpenSSLCertificate.IPAddress) -> Bool {
     // These match if the two underlying IP address structures match.
     switch (socketAddress, certificateIP) {
-    case (.v4(let sockaddr, _), .ipv4(var addr2)):
-        var addr1 = sockaddr.sin_addr
+    case (.v4(let address), .ipv4(var addr2)):
+        var addr1 = address.address.sin_addr
         return memcmp(&addr1, &addr2, MemoryLayout<in_addr>.size) == 0
-    case (.v6(let sockaddr, _), .ipv6(var addr2)):
-        var addr1 = sockaddr.sin6_addr
+    case (.v6(let address), .ipv6(var addr2)):
+        var addr1 = address.address.sin6_addr
         return memcmp(&addr1, &addr2, MemoryLayout<in6_addr>.size) == 0
     default:
         // Different protocol families, no match.

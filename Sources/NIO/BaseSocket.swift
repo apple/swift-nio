@@ -85,7 +85,7 @@ class BaseSocket : Selectable {
                     })
                 case AF_UNIX:
                     return address.withMemoryRebound(to: sockaddr_un.self, capacity: 1) { uds in
-                        return SocketAddress.unixDomainSocket(address: uds.pointee)
+                        return SocketAddress(unixDomainSocket: uds.pointee)
                     }
                 default:
                     fatalError("address family \(address.pointee.sa_family) not supported")
@@ -173,11 +173,14 @@ class BaseSocket : Selectable {
         }
 
         switch address {
-        case .v4(address: var addr, _):
+        case .v4(let address):
+            var addr = address.address
             try addr.withSockAddr(doBind)
-        case .v6(address: var addr, _):
+        case .v6(let address):
+            var addr = address.address
             try addr.withSockAddr(doBind)
-        case .unixDomainSocket(address: var addr):
+        case .unixDomainSocket(let address):
+            var addr = address.address
             try addr.withSockAddr(doBind)
         }
     }

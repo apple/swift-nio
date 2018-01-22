@@ -27,7 +27,9 @@ class SocketAddressTest: XCTestCase {
         let sa = try SocketAddress.ipAddress(string: "127.0.0.1", port: 80)
         let expectedAddress: [UInt8] = [0x7F, 0x00, 0x00, 0x01]
         switch sa {
-        case .v4(var addr, let host):
+        case .v4(let address):
+            var addr = address.address
+            let host = address.host
             XCTAssertEqual(host, "")
             XCTAssertEqual(addr.sin_family, sa_family_t(AF_INET))
             XCTAssertEqual(addr.sin_port, 80)
@@ -46,7 +48,9 @@ class SocketAddressTest: XCTestCase {
         let sa = try SocketAddress.ipAddress(string: "fe80::5", port: 443)
         let expectedAddress: [UInt8] = [0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]
         switch sa {
-        case .v6(var addr, let host):
+        case .v6(let address):
+            var addr = address.address
+            let host = address.host
             XCTAssertEqual(host, "")
             XCTAssertEqual(addr.sin6_family, sa_family_t(AF_INET6))
             XCTAssertEqual(addr.sin6_port, 443)
