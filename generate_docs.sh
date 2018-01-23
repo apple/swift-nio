@@ -68,12 +68,23 @@ cd "$my_path"
 [[ -d swift-nio.xcodeproj ]] || swift package generate-xcodeproj
 
 # run jazzy
+module_switcher="docs/$version/README.md"
 jazzy_args=(--clean
-            --readme docs/$version/README.md
             --author 'SwiftNIO Team'
+            --readme "$module_switcher"
             --author_url https://github.com/apple/nio
             --github_url https://github.com/apple/nio
             --xcodebuild-arguments -scheme,swift-nio-Package)
+cat > "$module_switcher" <<EOF
+# SwiftNIO Docs
+
+SwiftNIO contains multiple modules:
+
+EOF
+
+for module in "${modules[@]}"; do
+  echo " - [$module](../$module/index.html)" >> "$module_switcher"
+done
 
 for module in "${modules[@]}"; do
   args=("${jazzy_args[@]}"  --output "docs/$version/$module" --module "$module")
@@ -81,16 +92,6 @@ for module in "${modules[@]}"; do
     args+=(--sourcekitten-sourcefile $module.json)
   fi
   jazzy "${args[@]}"
-done
-
-# create index
-cat >> "docs/$version/index.html" <<EOF
-<b>SwiftNIO Docs</b>
-<br>
-<ul>SwiftNIO contains multiple modules:
-EOF
-for module in "${modules[@]}"; do
-  echo "<li><a href="$module/index.html">$module</a>" >> "docs/$version/index.html"
 done
 
 # push to github pages
@@ -102,7 +103,7 @@ if [[ $CI == true ]]; then
   rm -rf docs/current
   cp -r docs/$version docs/current
   git add docs
-  echo '<html><head><meta http-equiv="refresh" content="0; url=docs/current" /></head></html>' > index.html
+  echo '<html><head><meta http-equiv="refresh" content="0; url=docs/current/NIO/index.html" /></head></html>' > index.html
   git add index.html
   git commit --author="$GIT_AUTHOR" -m "publish $version docs"
   git push origin gh-pages
