@@ -71,15 +71,6 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         case some
     }
 
-    /// Write data from the underlying socket.
-    ///
-    /// - parameters:
-    ///     - pendingWrites: `PendingWritesManager` that holds all the pending writes that may be ready to be written to the underlying socket.
-    /// - returns: `true` if any data was read, `false` otherwise.
-    fileprivate func writeToSocket(pendingWrites: PendingWritesManager) throws -> WriteResult {
-        fatalError("this must be overridden by sub class")
-    }
-
     /// Begin connection of the underlying socket.
     ///
     /// - parameters:
@@ -738,7 +729,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         return result
     }
 
-    override fileprivate func writeToSocket(pendingWrites: PendingWritesManager) throws -> WriteResult {
+    private func writeToSocket(pendingWrites: PendingWritesManager) throws -> WriteResult {
         repeat {
             let result = try pendingWrites.triggerAppropriateWriteOperation(singleWriteOperation: { ptr in
                 guard ptr.count > 0 else {
@@ -1023,11 +1014,6 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
             }
         }
         return result
-    }
-
-    override fileprivate func writeToSocket(pendingWrites: PendingWritesManager) throws -> WriteResult {
-        pendingWrites.failAll(error: ChannelError.operationUnsupported, close: false)
-        return .writtenCompletely
     }
 
     override fileprivate func cancelWritesOnClose(error: Error) {
