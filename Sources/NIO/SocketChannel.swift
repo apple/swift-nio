@@ -30,12 +30,95 @@ private extension ByteBuffer {
     }
 }
 
+/// The base class for all socket-based channels in NIO.
+///
+/// There are many types of specialised socket-based channel in NIO. Each of these
+/// has different logic regarding how exactly they read from and write to the network.
+/// However, they share a great deal of common logic around the managing of their
+/// file descriptors.
+///
+/// For this reason, `BaseSocketChannel` exists to provide a common core implementation of
+/// the `SelectableChannel` protocol. It uses a number of private functions to provide hooks
+/// for subclasses to implement the specific logic to handle their writes and reads.
 class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     typealias SelectableType = T
 
+    // MARK: Methods to override in subclasses.
+
+    /// `true` if the whole `Channel` is closed and so no more IO operation can be done.
+    public var closed: Bool {
+        assert(eventLoop.inEventLoop)
+        return _closed
+    }
+
+    /// Provides the registration for this selector. Must be implemented by subclasses.
     func registrationFor(interested: IOEvent) -> NIORegistration {
         fatalError("must override")
     }
+
+    /// Read data from the underlying socket and dispatch it to the `ChannelPipeline`
+    ///
+    /// - returns: `true` if any data was read, `false` otherwise.
+    @discardableResult fileprivate func readFromSocket() throws -> ReadResult {
+        fatalError("this must be overridden by sub class")
+    }
+
+    fileprivate enum ReadResult {
+        /// Nothing was read by the read operation.
+        case none
+
+        /// Some data was read by the read operation.
+        case some
+    }
+
+    /// Write data from the underlying socket.
+    ///
+    /// - parameters:
+    ///     - pendingWrites: `PendingWritesManager` that holds all the pending writes that may be ready to be written to the underlying socket.
+    /// - returns: `true` if any data was read, `false` otherwise.
+    fileprivate func writeToSocket(pendingWrites: PendingWritesManager) throws -> WriteResult {
+        fatalError("this must be overridden by sub class")
+    }
+
+    /// Begin connection of the underlying socket.
+    ///
+    /// - parameters:
+    ///     - to: The `SocketAddress` to connect to.
+    /// - returns: `true` if the socket connected synchronously, `false` otherwise.
+    fileprivate func connectSocket(to address: SocketAddress) throws -> Bool {
+        fatalError("this must be overridden by sub class")
+    }
+
+    /// Make any state changes needed to complete the connection process.
+    fileprivate func finishConnectSocket() throws {
+        fatalError("this must be overridden by sub class")
+    }
+
+    /// Buffer a write in preparation for a flush.
+    fileprivate func bufferPendingWrite(data: IOData, promise: EventLoopPromise<Void>?) {
+        fatalError("this must be overridden by sub class")
+    }
+
+    /// Mark a flush point. This is called when flush is received, and instructs
+    /// the implementation to record the flush.
+    fileprivate func markFlushPoint(promise: EventLoopPromise<Void>?) {
+        fatalError("this must be overridden by sub class")
+    }
+
+    /// Called when closing, to instruct the specific implementation to discard all pending
+    /// writes.
+    fileprivate func cancelWritesOnClose(error: Error) {
+        fatalError("this must be overridden by sub class")
+    }
+
+    /// Flush data to the underlying socket.
+    ///
+    /// - returns: `true` if there is no further data to write.
+    fileprivate func flushNow() -> Bool {
+        fatalError("this must be overridden by sub class")
+    }
+
+    // MARK: Common base socket logic.
 
     var selectable: T {
         return self.socket
@@ -43,25 +126,16 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
     public final var _unsafe: ChannelCore { return self }
 
-    // Guard against re-entrance of flushNow() method.
-    private var inFlushNow: Bool = false
-
     // Visible to access from EventLoop directly
     let socket: T
     public var interestedEvent: IOEvent = .none
 
-    /// `true` if the whole `Channel` is closed and so no more IO operation can be done.
-    public final var closed: Bool {
-        assert(eventLoop.inEventLoop)
-        return pendingWrites.closed
-    }
-
-    fileprivate let pendingWrites: PendingWritesManager
     fileprivate var readPending = false
     private var neverRegistered = true
     fileprivate var pendingConnect: EventLoopPromise<Void>?
     private let closePromise: EventLoopPromise<Void>
     private var active: Atomic<Bool> = Atomic(value: false)
+    private var _closed: Bool = false
     public var isActive: Bool {
         return active.load()
     }
@@ -78,8 +152,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         return selectableEventLoop
     }
 
-    public final var isWritable: Bool {
-        return pendingWrites.isWritable
+    public var isWritable: Bool {
+        return true
     }
 
     public final var allocator: ByteBufferAllocator {
@@ -131,10 +205,6 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             }
         case _ as MaxMessagesPerReadOption:
             maxMessagesPerRead = value as! UInt
-        case _ as WriteSpinOption:
-            pendingWrites.writeSpinCount = value as! UInt
-        case _ as WriteBufferWaterMarkOption:
-            pendingWrites.waterMark = value as! WriteBufferWaterMark
         default:
             fatalError("option \(option) not supported")
         }
@@ -163,10 +233,6 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             return autoRead as! T.OptionType
         case _ as MaxMessagesPerReadOption:
             return maxMessagesPerRead as! T.OptionType
-        case _ as WriteSpinOption:
-            return pendingWrites.writeSpinCount as! T.OptionType
-        case _ as WriteBufferWaterMarkOption:
-            return pendingWrites.waterMark as! T.OptionType
         default:
             fatalError("option \(option) not supported")
         }
@@ -208,7 +274,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public func write0(data: IOData, promise: EventLoopPromise<Void>?) {
+    public final func write0(data: IOData, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
         if closed {
@@ -216,9 +282,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
-        if !self.pendingWrites.add(data: data, promise: promise) {
-            pipeline.fireChannelWritabilityChanged0()
-        }
+        bufferPendingWrite(data: data, promise: promise)
     }
 
     private func registerForWritable() {
@@ -253,9 +317,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
-        // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
-        // are actually written once writable() is called.
-        self.pendingWrites.markFlushCheckpoint(promise: promise)
+
+        self.markFlushPoint(promise: promise)
 
         if !isWritePending() && !flushNow() && !closed {
             registerForWritable()
@@ -339,7 +402,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
 
         // Fail all pending writes and so ensure all pending promises are notified
-        self.pendingWrites.failAll(error: error, close: true)
+        self._closed = true
+        self.cancelWritesOnClose(error: error)
 
         becomeInactive0()
 
@@ -449,14 +513,6 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         readIfNeeded0()
     }
 
-    fileprivate func connectSocket(to address: SocketAddress) throws -> Bool {
-        fatalError("this must be overridden by sub class")
-    }
-
-    fileprivate func finishConnectSocket() throws {
-        fatalError("this must be overridden by sub class")
-    }
-
     public final func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
@@ -478,30 +534,6 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         } catch let error {
             promise?.fail(error: error)
         }
-    }
-
-    /// Read data from the underlying socket and dispatch it to the `ChannelPipeline`
-    ///
-    /// - returns: `true` if any data was read, `false` otherwise.
-    @discardableResult fileprivate func readFromSocket() throws -> ReadResult {
-        fatalError("this must be overridden by sub class")
-    }
-
-    fileprivate enum ReadResult {
-        /// Nothing was read by the read operation.
-        case none
-
-        /// Some data was read by the read operation.
-        case some
-    }
-
-    /// Write data from the underlying socket.
-    ///
-    /// - parameters:
-    ///     - pendingWrites: `PendingWritesManager` that holds all the pending writes that may be ready to be written to the underlying socket.
-    /// - returns: `true` if any data was read, `false` otherwise.
-    fileprivate func writeToSocket(pendingWrites: PendingWritesManager) throws -> WriteResult {
-        fatalError("this must be overridden by sub class")
     }
 
     public func channelRead0(data: NIOAny) {
@@ -553,54 +585,6 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    private func flushNow() -> Bool {
-        // Guard against re-entry as data that will be put into `pendingWrites` will just be picked up by
-        // `writeToSocket`.
-        guard !inFlushNow else {
-            return true
-        }
-
-        defer {
-            inFlushNow = false
-        }
-
-        inFlushNow = true
-
-        while !closed {
-            do {
-                switch try self.writeToSocket(pendingWrites: pendingWrites) {
-                case .writtenPartially:
-                    // Could not write the next buffer(s) completely
-                    return false
-                case .wouldBlock:
-                    return false
-                case .writtenCompletely:
-                    return true
-                case .closed:
-                    return true
-                case .nothingToBeWritten:
-                    return true
-                }
-            } catch let err {
-                // If there is a write error we should try drain the inbound before closing the socket as there may be some data pending.
-                // We ignore any error that is thrown as we will use the original err to close the channel and notify the user.
-                if readIfNeeded0() {
-
-                    // We need to continue reading until there is nothing more to be read from the socket as we will not have another chance to drain it.
-                    while let read = try? readFromSocket(), read == .some {
-                        pipeline.fireChannelReadComplete()
-                    }
-                }
-
-                close0(error: err, mode: .all, promise: nil)
-
-                // we handled all writes
-                return true
-            }
-        }
-        return true
-    }
-
     fileprivate func becomeActive0() {
         assert(eventLoop.inEventLoop)
         active.store(true)
@@ -617,14 +601,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         self.socket = socket
         self.selectableEventLoop = eventLoop
         self.closePromise = eventLoop.newPromise()
-        self.pendingWrites = PendingWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
         active.store(false)
         self._pipeline = ChannelPipeline(channel: self)
-    }
-
-    deinit {
-        // We should never have any pending writes left as otherwise we may leak callbacks
-        assert(pendingWrites.isEmpty)
     }
 }
 
@@ -639,6 +617,19 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     private var inputShutdown: Bool = false
     private var outputShutdown: Bool = false
 
+    // Guard against re-entrance of flushNow() method.
+    private var inFlushNow: Bool = false
+    private let pendingWrites: PendingWritesManager
+
+    override public var isWritable: Bool {
+        return pendingWrites.isWritable
+    }
+
+    override public var closed: Bool {
+        assert(eventLoop.inEventLoop)
+        return pendingWrites.closed
+    }
+
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
         let socket = try Socket(protocolFamily: protocolFamily)
         do {
@@ -647,7 +638,13 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             let _ = try? socket.close()
             throw err
         }
+        self.pendingWrites = PendingWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
         try super.init(socket: socket, eventLoop: eventLoop)
+    }
+
+    deinit {
+        // We should never have any pending writes left as otherwise we may leak callbacks
+        assert(pendingWrites.isEmpty)
     }
 
     override fileprivate func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
@@ -657,6 +654,10 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             connectTimeout = value as! TimeAmount
         case _ as AllowRemoteHalfClosureOption:
             allowRemoteHalfClosure = value as! Bool
+        case _ as WriteSpinOption:
+            pendingWrites.writeSpinCount = value as! UInt
+        case _ as WriteBufferWaterMarkOption:
+            pendingWrites.waterMark = value as! WriteBufferWaterMark
         default:
             try super.setOption0(option: option, value: value)
         }
@@ -669,6 +670,10 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             return connectTimeout as! T.OptionType
         case _ as AllowRemoteHalfClosureOption:
             return allowRemoteHalfClosure as! T.OptionType
+        case _ as WriteSpinOption:
+            return pendingWrites.writeSpinCount as! T.OptionType
+        case _ as WriteBufferWaterMarkOption:
+            return pendingWrites.waterMark as! T.OptionType
         default:
             return try super.getOption0(option: option)
         }
@@ -680,6 +685,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
     fileprivate override init(socket: Socket, eventLoop: SelectableEventLoop) throws {
         try socket.setNonBlocking()
+        self.pendingWrites = PendingWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
         try super.init(socket: socket, eventLoop: eventLoop)
     }
 
@@ -843,6 +849,16 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         }
     }
 
+    override func markFlushPoint(promise: EventLoopPromise<Void>?) {
+        // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
+        // are actually written once writable() is called.
+        self.pendingWrites.markFlushCheckpoint(promise: promise)
+    }
+
+    override func cancelWritesOnClose(error: Error) {
+        self.pendingWrites.failAll(error: error, close: true)
+    }
+
     @discardableResult override func readIfNeeded0() -> Bool {
         if inputShutdown {
             return false
@@ -858,14 +874,64 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         super.read0(promise: promise)
     }
 
-    override public func write0(data: IOData, promise: EventLoopPromise<Void>?) {
+    override fileprivate func bufferPendingWrite(data: IOData, promise: EventLoopPromise<Void>?) {
         if outputShutdown {
             promise?.fail(error: ChannelError.outputClosed)
             return
         }
-        super.write0(data: data, promise: promise)
+
+        if !self.pendingWrites.add(data: data, promise: promise) {
+            pipeline.fireChannelWritabilityChanged0()
+        }
     }
 
+    override fileprivate func flushNow() -> Bool {
+        // Guard against re-entry as data that will be put into `pendingWrites` will just be picked up by
+        // `writeToSocket`.
+        guard !inFlushNow else {
+            return true
+        }
+
+        defer {
+            inFlushNow = false
+        }
+
+        inFlushNow = true
+
+        while !closed {
+            do {
+                switch try self.writeToSocket(pendingWrites: pendingWrites) {
+                case .writtenPartially:
+                    // Could not write the next buffer(s) completely
+                    return false
+                case .wouldBlock:
+                    return false
+                case .writtenCompletely:
+                    return true
+                case .closed:
+                    return true
+                case .nothingToBeWritten:
+                    return true
+                }
+            } catch let err {
+                // If there is a write error we should try drain the inbound before closing the socket as there may be some data pending.
+                // We ignore any error that is thrown as we will use the original err to close the channel and notify the user.
+                if readIfNeeded0() {
+
+                    // We need to continue reading until there is nothing more to be read from the socket as we will not have another chance to drain it.
+                    while let read = try? readFromSocket(), read == .some {
+                        pipeline.fireChannelReadComplete()
+                    }
+                }
+
+                close0(error: err, mode: .all, promise: nil)
+
+                // we handled all writes
+                return true
+            }
+        }
+        return true
+    }
 }
 
 /// A `Channel` for a server socket.
@@ -875,6 +941,9 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
 
     private var backlog: Int32 = 128
     private let group: EventLoopGroup
+
+    /// The server socket channel is never writable.
+    override public var isWritable: Bool { return false }
 
     init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: Int32) throws {
         let serverSocket = try ServerSocket(protocolFamily: protocolFamily)
@@ -959,6 +1028,11 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
     override fileprivate func writeToSocket(pendingWrites: PendingWritesManager) throws -> WriteResult {
         pendingWrites.failAll(error: ChannelError.operationUnsupported, close: false)
         return .writtenCompletely
+    }
+
+    override fileprivate func cancelWritesOnClose(error: Error) {
+        // No writes to cancel.
+        return
     }
 
     override public func channelRead0(data: NIOAny) {
