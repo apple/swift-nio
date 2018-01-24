@@ -140,8 +140,8 @@ public struct EventLoopPromise<T> {
     /**
      Public initializer
      */
-    init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool) {
-        futureResult = EventLoopFuture<T>(eventLoop: eventLoop, checkForPossibleDeadlock: checkForPossibleDeadlock)
+    init(eventLoop: EventLoop, file: StaticString, line: UInt) {
+        futureResult = EventLoopFuture<T>(eventLoop: eventLoop, file: file, line: line)
     }
     
     /**
@@ -260,7 +260,6 @@ public final class EventLoopFuture<T> {
         }
     }
     fileprivate let _fulfilled: Atomic<Bool>
-    fileprivate let checkForPossibleDeadlock: Bool
     public let eventLoop: EventLoop
     
     internal var fulfilled: Bool {
@@ -271,30 +270,42 @@ public final class EventLoopFuture<T> {
     /// These callbacks may give values to other EventLoopFutures; if that happens, they return any callbacks from those EventLoopFutures so that we can run the entire chain from the top without recursing.
     fileprivate var callbacks: CallbackList = CallbackList()
 
-    private init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool, value: EventLoopFutureValue<T>?, file: StaticString = #file, line: Int = #line) {
+    private init(eventLoop: EventLoop, value: EventLoopFutureValue<T>?, file: StaticString, line: UInt) {
         self.eventLoop = eventLoop
-        self.checkForPossibleDeadlock = checkForPossibleDeadlock
         self.value = value
         self._fulfilled = Atomic(value: value != nil)
+
+        if _isDebugAssertConfiguration() {
+            if let me = eventLoop as? SelectableEventLoop {
+                me.promiseCreationStoreAdd(future: self, file: file, line: line)
+            }
+        }
     }
 
 
-    fileprivate convenience init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool, file: StaticString = #file, line: Int = #line) {
-        self.init(eventLoop: eventLoop, checkForPossibleDeadlock: checkForPossibleDeadlock, value: nil, file: file, line: line)
+    fileprivate convenience init(eventLoop: EventLoop, file: StaticString, line: UInt) {
+        self.init(eventLoop: eventLoop, value: nil, file: file, line: line)
     }
     
     /// A EventLoopFuture<T> that has already succeeded
-    convenience init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool, result: T, file: StaticString = #file, line: Int = #line) {
-        self.init(eventLoop: eventLoop, checkForPossibleDeadlock: checkForPossibleDeadlock, value: .success(result), file: file, line: line)
+    convenience init(eventLoop: EventLoop, result: T, file: StaticString, line: UInt) {
+        self.init(eventLoop: eventLoop, value: .success(result), file: file, line: line)
     }
     
     /// A EventLoopFuture<T> that has already failed
-    convenience init(eventLoop: EventLoop, checkForPossibleDeadlock: Bool, error: Error, file: StaticString = #file, line: Int = #line) {
-        self.init(eventLoop: eventLoop, checkForPossibleDeadlock: checkForPossibleDeadlock, value: .failure(error), file: file, line: line)
+    convenience init(eventLoop: EventLoop, error: Error, file: StaticString, line: UInt) {
+        self.init(eventLoop: eventLoop, value: .failure(error), file: file, line: line)
     }
     
     deinit {
-        precondition(fulfilled, "leaking an unfulfilled EventLoopPromise")
+        if _isDebugAssertConfiguration(), let eventLoop = self.eventLoop as? SelectableEventLoop {
+            let creation = eventLoop.promiseCreationStoreRemove(future: self)
+            if !fulfilled {
+                fatalError("leaking promise created at \(creation)", file: creation.file, line: creation.line)
+            }
+        } else {
+            precondition(fulfilled, "leaking an unfulfilled Promise")
+        }
     }
 }
 
@@ -330,8 +341,8 @@ extension EventLoopFuture {
      - returns: A future that will receive the eventual value
      */
     
-    public func then<U>(callback: @escaping (T) throws -> EventLoopFuture<U>) -> EventLoopFuture<U> {
-        let next = EventLoopPromise<U>(eventLoop: eventLoop, checkForPossibleDeadlock: checkForPossibleDeadlock)
+    public func then<U>(file: StaticString = #file, line: UInt = #line, callback: @escaping (T) throws -> EventLoopFuture<U>) -> EventLoopFuture<U> {
+        let next = EventLoopPromise<U>(eventLoop: eventLoop, file: file, line: line)
         _whenComplete {
             switch self.value! {
             case .success(let t):
@@ -373,8 +384,8 @@ extension EventLoopFuture {
      Generally, a simple closure provided to `then()` should never block.  If you need to do something time-consuming, your closure can schedule the operation on another queue and return another `EventLoopFuture<>` object instead.  See `then(queue:callback:)` for a convenient way to do this.
      */
     
-    public func then<U>(callback: @escaping (T) throws -> (U)) -> EventLoopFuture<U> {
-        return then { return EventLoopFuture<U>(eventLoop: self.eventLoop, checkForPossibleDeadlock: self.checkForPossibleDeadlock, result: try callback($0)) }
+    public func then<U>(file: StaticString = #file, line: UInt = #line, callback: @escaping (T) throws -> (U)) -> EventLoopFuture<U> {
+        return then { return EventLoopFuture<U>(eventLoop: self.eventLoop, result: try callback($0), file: file, line: line) }
     }
 
     
@@ -395,8 +406,8 @@ extension EventLoopFuture {
      
      This supports the same overloads as `then()`, including allowing the callback to return a `EventLoopFuture<T>`.
      */
-    public func thenIfError(callback: @escaping (Error) throws -> EventLoopFuture<T>) -> EventLoopFuture<T> {
-        let next = EventLoopPromise<T>(eventLoop: eventLoop, checkForPossibleDeadlock: checkForPossibleDeadlock)
+    public func thenIfError(file: StaticString = #file, line: UInt = #line, callback: @escaping (Error) throws -> EventLoopFuture<T>) -> EventLoopFuture<T> {
+        let next = EventLoopPromise<T>(eventLoop: eventLoop, file: file, line: line)
         _whenComplete {
             switch self.value! {
             case .success(let t):
@@ -415,8 +426,8 @@ extension EventLoopFuture {
         return next.futureResult
     }
     
-    public func thenIfError(callback: @escaping (Error) throws -> T) -> EventLoopFuture<T> {
-        return thenIfError { return EventLoopFuture<T>(eventLoop: self.eventLoop, checkForPossibleDeadlock: self.checkForPossibleDeadlock, result: try callback($0)) }
+    public func thenIfError(file: StaticString = #file, line: UInt = #line, callback: @escaping (Error) throws -> T) -> EventLoopFuture<T> {
+        return thenIfError { return EventLoopFuture<T>(eventLoop: self.eventLoop, result: try callback($0), file: file, line: line) }
     }
 
     
@@ -487,9 +498,9 @@ extension EventLoopFuture {
      * provided EventLoopFuture both succeed.  It then provides the pair
      * of results.  If either one fails, the combined EventLoopFuture will fail.
      */
-    public func and<U>(_ other: EventLoopFuture<U>) -> EventLoopFuture<(T,U)> {
+    public func and<U>(_ other: EventLoopFuture<U>, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<(T,U)> {
         let andlock = Lock()
-        let promise = EventLoopPromise<(T,U)>(eventLoop: eventLoop, checkForPossibleDeadlock: checkForPossibleDeadlock)
+        let promise = EventLoopPromise<(T,U)>(eventLoop: eventLoop, file: file, line: line)
         var tvalue: T?
         var uvalue: U?
         
@@ -535,8 +546,8 @@ extension EventLoopFuture {
      * This is just syntactic sugar for
      *    future.and(Future<U>(result: result))
      */
-    public func and<U>(result: U) -> EventLoopFuture<(T,U)> {
-        return and(EventLoopFuture<U>(eventLoop: self.eventLoop, checkForPossibleDeadlock: self.checkForPossibleDeadlock, result:result))
+    public func and<U>(result: U, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<(T,U)> {
+        return and(EventLoopFuture<U>(eventLoop: self.eventLoop, result:result, file: file, line: line))
     }
 }
 
@@ -562,7 +573,7 @@ extension EventLoopFuture {
 
 extension EventLoopFuture {
     public func wait() throws -> T {
-        if self.checkForPossibleDeadlock {
+        if !(self.eventLoop is EmbeddedEventLoop) {
             precondition(!eventLoop.inEventLoop, "wait() must not be called when on the EventLoop")
         }
         

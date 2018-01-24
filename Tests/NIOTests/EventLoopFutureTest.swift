@@ -22,13 +22,13 @@ enum EventLoopFutureTestError : Error {
 class EventLoopFutureTest : XCTestCase {
     func testFutureFulfilledIfHasResult() throws {
         let eventLoop = EmbeddedEventLoop()
-        let f = EventLoopFuture(eventLoop: eventLoop, checkForPossibleDeadlock: true, result: 5)
+        let f = EventLoopFuture(eventLoop: eventLoop, result: 5, file: #file, line: #line)
         XCTAssertTrue(f.fulfilled)
     }
 
     func testFutureFulfilledIfHasError() throws {
         let eventLoop = EmbeddedEventLoop()
-        let f = EventLoopFuture<Void>(eventLoop: eventLoop, checkForPossibleDeadlock: true, error: EventLoopFutureTestError.example)
+        let f = EventLoopFuture<Void>(eventLoop: eventLoop, error: EventLoopFutureTestError.example, file: #file, line: #line)
         XCTAssertTrue(f.fulfilled)
     }
 

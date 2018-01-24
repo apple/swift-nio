@@ -48,7 +48,6 @@ extension EmbeddedScheduledTask: Comparable {
 ///     responsible for ensuring they never call into the `EmbeddedEventLoop` in an
 ///     unsynchronized fashion.
 public class EmbeddedEventLoop: EventLoop {
-
     /// The current "time" for this event loop. This is an amount in nanoseconds.
     private var now: UInt64 = 0
 
@@ -59,18 +58,6 @@ public class EmbeddedEventLoop: EventLoop {
     }
 
     var tasks = CircularBuffer<() -> ()>(initialRingCapacity: 2)
-    
-    public func newPromise<T>() -> EventLoopPromise<T> {
-        return EventLoopPromise<T>(eventLoop: self, checkForPossibleDeadlock: false)
-    }
-    
-    public func newFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
-        return EventLoopFuture<T>(eventLoop: self, checkForPossibleDeadlock: false, error: error)
-    }
-    
-    public func newSucceedFuture<T>(result: T) -> EventLoopFuture<T> {
-        return EventLoopFuture<T>(eventLoop: self, checkForPossibleDeadlock: false, result: result)
-    }
     
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = newPromise()

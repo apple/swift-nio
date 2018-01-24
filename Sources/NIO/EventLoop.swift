@@ -94,23 +94,6 @@ public protocol EventLoop: EventLoopGroup {
     
     /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T>
-    
-    /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `Thread`.
-    func newPromise<T>() -> EventLoopPromise<T>
-    
-    /// Creates and returns a new `EventLoopFuture` that is already marked as failed. Notifications will be done using this `EventLoop` as execution `Thread`.
-    ///
-    /// - parameters:
-    ///     - error: the `Error` that is used by the `EventLoopFuture`.
-    /// - returns: a failed `EventLoopFuture`.
-    func newFailedFuture<T>(error: Error) -> EventLoopFuture<T>
-    
-    /// Creates and returns a new `EventLoopFuture` that is already marked as success. Notifications will be done using this `EventLoop` as execution `Thread`.
-    ///
-    /// - parameters:
-    ///     - result: the value that is used by the `EventLoopFuture`.
-    /// - returns: a failed `EventLoopFuture`.
-    func newSucceedFuture<T>(result: T) -> EventLoopFuture<T>
 }
 
 /// Represents a time _interval_.
@@ -190,7 +173,7 @@ extension TimeAmount: Comparable {
 
 extension EventLoop {
     public func submit<T>(task: @escaping () throws-> (T)) -> EventLoopFuture<T> {
-        let promise: EventLoopPromise<T> = newPromise()
+        let promise: EventLoopPromise<T> = newPromise(file: #file, line: #line)
 
         execute(task: {() -> () in
             do {
@@ -203,16 +186,27 @@ extension EventLoop {
         return promise.futureResult
     }
 
-    public func newPromise<T>() -> EventLoopPromise<T> {
-        return EventLoopPromise<T>(eventLoop: self, checkForPossibleDeadlock: true)
+    /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `Thread`.
+    public func newPromise<T>(file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<T> {
+        return EventLoopPromise<T>(eventLoop: self, file: file, line: line)
     }
 
+    /// Creates and returns a new `EventLoopFuture` that is already marked as failed. Notifications will be done using this `EventLoop` as execution `Thread`.
+    ///
+    /// - parameters:
+    ///     - error: the `Error` that is used by the `EventLoopFuture`.
+    /// - returns: a failed `EventLoopFuture`.
     public func newFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
-        return EventLoopFuture<T>(eventLoop: self, checkForPossibleDeadlock: true, error: error)
+        return EventLoopFuture<T>(eventLoop: self, error: error, file: "n/a", line: 0)
     }
 
+    /// Creates and returns a new `EventLoopFuture` that is already marked as success. Notifications will be done using this `EventLoop` as execution `Thread`.
+    ///
+    /// - parameters:
+    ///     - result: the value that is used by the `EventLoopFuture`.
+    /// - returns: a failed `EventLoopFuture`.
     public func newSucceedFuture<T>(result: T) -> EventLoopFuture<T> {
-        return EventLoopFuture<T>(eventLoop: self, checkForPossibleDeadlock: true, result: result)
+        return EventLoopFuture<T>(eventLoop: self, result: result, file: "n/a", line: 0)
     }
     
     public func next() -> EventLoop {
@@ -292,6 +286,23 @@ internal final class SelectableEventLoop : EventLoop {
     let storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
     
     /// Creates a new `SelectableEventLoop` instance that is tied to the given `pthread_t`.
+
+    private let promiseCreationStoreLock = Lock()
+    private var _promiseCreationStore: [ObjectIdentifier: (file: StaticString, line: UInt)] = [:]
+    internal func promiseCreationStoreAdd<T>(future: EventLoopFuture<T>, file: StaticString, line: UInt) {
+        precondition(_isDebugAssertConfiguration())
+        self.promiseCreationStoreLock.withLock {
+            self._promiseCreationStore[ObjectIdentifier(future)] = (file: file, line: line)
+        }
+    }
+
+    internal func promiseCreationStoreRemove<T>(future: EventLoopFuture<T>) -> (file: StaticString, line: UInt) {
+        precondition(_isDebugAssertConfiguration())
+        return self.promiseCreationStoreLock.withLock {
+            self._promiseCreationStore[ObjectIdentifier(future)]!
+        }
+    }
+
     public init(thread: pthread_t) throws {
         self.selector = try NIO.Selector()
         self.thread = thread
