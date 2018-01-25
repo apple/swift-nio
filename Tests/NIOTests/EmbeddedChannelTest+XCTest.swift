@@ -34,6 +34,7 @@ extension EmbeddedChannelTest {
                 ("testCloseOnInactiveIsOk", testCloseOnInactiveIsOk),
                 ("testEmbeddedLifecycle", testEmbeddedLifecycle),
                 ("testEmbeddedChannelAndPipelineAndChannelCoreShareTheEventLoop", testEmbeddedChannelAndPipelineAndChannelCoreShareTheEventLoop),
+                ("testSendingIncorrectDataOnEmbeddedChannel", testSendingIncorrectDataOnEmbeddedChannel),
            ]
    }
 }

@@ -265,7 +265,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public final func write0(data: IOData, promise: EventLoopPromise<Void>?) {
+    public final func write0(data: NIOAny, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
         if closed {
@@ -273,6 +273,12 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
+
+        guard let data = data.tryAsIOData() else {
+            promise?.fail(error: ChannelError.writeDataUnsupported)
+            return
+        }
+
         bufferPendingWrite(data: data, promise: promise)
     }
 

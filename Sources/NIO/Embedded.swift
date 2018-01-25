@@ -195,7 +195,12 @@ class EmbeddedChannelCore : ChannelCore {
         promise?.succeed(result: ())
     }
 
-    func write0(data: IOData, promise: EventLoopPromise<Void>?) {
+    func write0(data: NIOAny, promise: EventLoopPromise<Void>?) {
+        guard let data = data.tryAsIOData() else {
+            promise?.fail(error: ChannelError.writeDataUnsupported)
+            return
+        }
+
         addToBuffer(buffer: &outboundBuffer, data: data)
         promise?.succeed(result: ())
     }

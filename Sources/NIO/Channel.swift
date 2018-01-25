@@ -21,7 +21,7 @@ public protocol ChannelCore : class {
     func register0(promise: EventLoopPromise<Void>?)
     func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?)
     func connect0(to: SocketAddress, promise: EventLoopPromise<Void>?)
-    func write0(data: IOData, promise: EventLoopPromise<Void>?)
+    func write0(data: NIOAny, promise: EventLoopPromise<Void>?)
     func flush0(promise: EventLoopPromise<Void>?)
     func read0(promise: EventLoopPromise<Void>?)
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?)
@@ -178,6 +178,10 @@ public enum ChannelError: Error {
     /// A read operation reached end-of-file. This usually means the remote peer closed the socket but it's still
     /// open locally.
     case eof
+
+    /// A `Channel` `write` was made with a data type not supported by the channel type: e.g. an `AddressedEnvelope`
+    /// for a stream channel.
+    case writeDataUnsupported
 }
 
 extension ChannelError: Equatable {

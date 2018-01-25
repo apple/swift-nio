@@ -708,7 +708,7 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
 
     func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         if let channel = ctx.channel {
-            channel._unsafe.write0(data: data.forceAsIOData(), promise: promise)
+            channel._unsafe.write0(data: data, promise: promise)
         } else {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
         }

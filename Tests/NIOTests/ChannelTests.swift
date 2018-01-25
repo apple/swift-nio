@@ -1221,4 +1221,27 @@ public class ChannelTests: XCTestCase {
             XCTAssertEqual(outputShutdown, outputShutdownEventReceived)
         }
     }
+
+    func testRejectsInvalidData() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .bind(to: "127.0.0.1", on: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+
+        do {
+            try clientChannel.writeAndFlush(data: NIOAny(5)).wait()
+            XCTFail("Did not throw")
+        } catch ChannelError.writeDataUnsupported {
+            // All good
+        } catch {
+            XCTFail("Got \(error)")
+        }
+    }
 }

@@ -139,4 +139,17 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssert(pipelineEventLoop === channel.eventLoop)
         XCTAssert(pipelineEventLoop === (channel._unsafe as! EmbeddedChannelCore).eventLoop)
     }
+
+    func testSendingIncorrectDataOnEmbeddedChannel() {
+        let channel = EmbeddedChannel()
+
+        do {
+            try channel.write(data: NIOAny(5)).wait()
+            XCTFail("Did not throw")
+        } catch ChannelError.writeDataUnsupported {
+            // All good
+        } catch {
+            XCTFail("Got \(error)")
+        }
+    }
 }

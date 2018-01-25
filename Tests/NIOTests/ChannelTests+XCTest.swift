@@ -50,6 +50,7 @@ extension ChannelTests {
                 ("testCloseOutput", testCloseOutput),
                 ("testCloseInput", testCloseInput),
                 ("testHalfClosure", testHalfClosure),
+                ("testRejectsInvalidData", testRejectsInvalidData),
            ]
    }
 }
