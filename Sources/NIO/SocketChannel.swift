@@ -983,7 +983,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
                 promise?.succeed(result: res)
             }
         }
-        executeAndComplete(promise) {
+        executeAndComplete(p) {
             try socket.bind(to: address)
             try self.socket.listen(backlog: backlog)
         }
