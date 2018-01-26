@@ -25,7 +25,6 @@ import XCTest
 #if os(Linux) || os(FreeBSD)
    @testable import NIOConcurrencyHelpersTests
    @testable import NIOHTTP1Tests
-   @testable import NIOOpenSSLTests
    @testable import NIOPriorityQueueTests
    @testable import NIOTLSTests
    @testable import NIOTests
@@ -39,7 +38,6 @@ import XCTest
          testCase(ChannelPipelineTest.allTests),
          testCase(ChannelTests.allTests),
          testCase(CircularBufferTests.allTests),
-         testCase(ClientSNITests.allTests),
          testCase(EchoServerClientTest.allTests),
          testCase(EmbeddedChannelTest.allTests),
          testCase(EmbeddedEventLoopTest.allTests),
@@ -54,20 +52,14 @@ import XCTest
          testCase(HTTPTest.allTests),
          testCase(HTTPUpgradeTestCase.allTests),
          testCase(HeapTests.allTests),
-         testCase(IdentityVerificationTest.allTests),
          testCase(IdleStateHandlerTest.allTests),
          testCase(MarkedCircularBufferTests.allTests),
          testCase(MessageToByteEncoderTest.allTests),
-         testCase(OpenSSLALPNTest.allTests),
-         testCase(OpenSSLIntegrationTest.allTests),
          testCase(PriorityQueueTest.allTests),
-         testCase(SSLCertificateTest.allTests),
-         testCase(SSLPrivateKeyTest.allTests),
          testCase(SniHandlerTest.allTests),
          testCase(SocketAddressTest.allTests),
          testCase(NIOConcurrencyHelpersTests.allTests),
          testCase(SystemTest.allTests),
-         testCase(TLSConfigurationTest.allTests),
          testCase(TypeAssistedChannelHandlerTest.allTests),
          testCase(UtilitiesTest.allTests),
     ])
