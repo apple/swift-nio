@@ -51,15 +51,15 @@ if [[ $CI == true ]]; then
     fi
   done
 elif [[ "$(uname -s)" != Darwin ]]; then
-    echo >&2 "Sorry, at this point in time documentation can only be generated on macOS."
-    exit 1
+  echo >&2 "Sorry, at this point in time documentation can only be generated on macOS."
+  exit 1
 fi
 
 if ! command -v jazzy > /dev/null; then
-    echo >&2 "ERROR: jazzy not installed, install with"
-    echo >&2
-    echo >&2 "  gem install jazzy"
-    exit 1
+  echo >&2 "ERROR: jazzy not installed, install with"
+  echo >&2
+  echo >&2 "  gem install jazzy"
+  exit 1
 fi
 
 cd "$my_path"
@@ -105,7 +105,12 @@ if [[ $CI == true ]]; then
   git add docs
   echo '<html><head><meta http-equiv="refresh" content="0; url=docs/current/NIO/index.html" /></head></html>' > index.html
   git add index.html
-  git commit --author="$GIT_AUTHOR" -m "publish $version docs"
-  git push origin gh-pages
+  changes=$(git diff-index --name-only HEAD)
+  if [[ -n "$changes" ]]; then
+    git commit --author="$GIT_AUTHOR" -m "publish $version docs"
+    git push origin gh-pages
+  else
+    echo "no changes detected"
+  fi
   git checkout -f $BRANCH_NAME
 fi
