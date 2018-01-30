@@ -210,7 +210,7 @@ public final class ChannelPipeline : ChannelInvoker {
         let promise: EventLoopPromise<Bool> = self.eventLoop.newPromise()
         context0({
             return $0.handler === handler
-        }).then { ctx in
+        }).map { ctx in
             self.remove0(ctx: ctx, promise: promise)
         }.cascadeFailure(promise: promise)
         return promise.futureResult
@@ -223,7 +223,7 @@ public final class ChannelPipeline : ChannelInvoker {
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
     public func remove(name: String) -> EventLoopFuture<Bool> {
         let promise: EventLoopPromise<Bool> = self.eventLoop.newPromise()
-        context0({ $0.name == name }).then { ctx in
+        context0({ $0.name == name }).map { ctx in
             self.remove0(ctx: ctx, promise: promise)
         }.cascadeFailure(promise: promise)
         return promise.futureResult

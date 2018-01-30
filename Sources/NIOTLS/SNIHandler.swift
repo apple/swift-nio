@@ -402,7 +402,7 @@ public class SniHandler: ByteToMessageDecoder {
     private func sniComplete(result: SniResult, ctx: ChannelHandlerContext) {
         waitingForUser = true
         _ = completionHandler(result).then {
-            ctx.pipeline?.remove(handler: self)
+            ctx.pipeline!.remove(handler: self)
         }
     }
 }

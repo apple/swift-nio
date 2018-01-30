@@ -384,7 +384,7 @@ extension EventLoopFuture {
      Generally, a simple closure provided to `then()` should never block.  If you need to do something time-consuming, your closure can schedule the operation on another queue and return another `EventLoopFuture<>` object instead.  See `then(queue:callback:)` for a convenient way to do this.
      */
     
-    public func then<U>(file: StaticString = #file, line: UInt = #line, callback: @escaping (T) throws -> (U)) -> EventLoopFuture<U> {
+    public func map<U>(file: StaticString = #file, line: UInt = #line, callback: @escaping (T) throws -> (U)) -> EventLoopFuture<U> {
         return then { return EventLoopFuture<U>(eventLoop: self.eventLoop, result: try callback($0), file: file, line: line) }
     }
 
@@ -426,7 +426,7 @@ extension EventLoopFuture {
         return next.futureResult
     }
     
-    public func thenIfError(file: StaticString = #file, line: UInt = #line, callback: @escaping (Error) throws -> T) -> EventLoopFuture<T> {
+    public func mapIfError(file: StaticString = #file, line: UInt = #line, callback: @escaping (Error) throws -> T) -> EventLoopFuture<T> {
         return thenIfError { return EventLoopFuture<T>(eventLoop: self.eventLoop, result: try callback($0), file: file, line: line) }
     }
 
@@ -605,7 +605,7 @@ extension EventLoopFuture {
             return p0.futureResult
         }
 
-        let fn: EventLoopFuture<Void> = futures.reduce(p0.futureResult, { (f1: EventLoopFuture<Void>, f2: EventLoopFuture<Void>) in f1.and(f2).then(callback: { _ in return () }) })
+        let fn: EventLoopFuture<Void> = futures.reduce(p0.futureResult, { (f1: EventLoopFuture<Void>, f2: EventLoopFuture<Void>) in f1.and(f2).map(callback: { _ in return () }) })
         p0.succeed(result: ())
         return fn
     }
