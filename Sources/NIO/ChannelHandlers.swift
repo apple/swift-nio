@@ -56,7 +56,7 @@ public class BackPressureHandler: ChannelInboundHandler, _ChannelOutboundHandler
     }
     
     public func channelWritabilityChanged(ctx: ChannelHandlerContext) {
-        self.writable = ctx.channel!.isWritable
+        self.writable = ctx.channel.isWritable
         if writable {
             mayRead(ctx: ctx)
         } else {
@@ -113,7 +113,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
     }
     
     public func handlerAdded(ctx: ChannelHandlerContext) {
-        if let channel = ctx.channel, channel.isActive {
+        if ctx.channel.isActive {
             initIdleTasks(ctx)
         }
     }
@@ -155,7 +155,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
     }
     
     private func shouldReschedule(_ ctx: ChannelHandlerContext) -> Bool {
-        if let channel = ctx.channel, channel.isActive {
+        if ctx.channel.isActive {
             return true
         }
         return false

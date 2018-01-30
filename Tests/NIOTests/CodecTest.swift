@@ -67,7 +67,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         buffer2.write(integer: Int32(3))
         channel.pipeline.fireChannelRead(data: NIOAny(buffer2))
         
-        try channel.close().wait()
+        XCTAssertNoThrow(try channel.finish())
         
         XCTAssertEqual(Int32(1), channel.readInbound())
         XCTAssertEqual(Int32(2), channel.readInbound())
@@ -77,6 +77,9 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
     func testDecoderPropagatesChannelInactive() throws {
         let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
         let inactivePromiser = ChannelInactivePromiser(channel: channel)
         _ = try channel.pipeline.add(handler: ByteToInt32Decoder()).wait()
         _ = try channel.pipeline.add(handler: inactivePromiser).wait()
@@ -105,7 +108,7 @@ public class MessageToByteEncoderTest: XCTestCase {
         }
         
         public func allocateOutBuffer(ctx: ChannelHandlerContext, data: Int32) throws -> ByteBuffer {
-            return ctx.channel!.allocator.buffer(capacity: MemoryLayout<Int32>.size)
+            return ctx.channel.allocator.buffer(capacity: MemoryLayout<Int32>.size)
         }
     }
     
@@ -141,6 +144,7 @@ public class MessageToByteEncoderTest: XCTestCase {
             XCTFail("couldn't read ByteBuffer from channel")
         }
         
-        try channel.close().wait()
+        XCTAssertFalse(try channel.finish())
+
     }
 }

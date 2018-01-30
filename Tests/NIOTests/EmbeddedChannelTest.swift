@@ -66,7 +66,7 @@ class EmbeddedChannelTest: XCTestCase {
 
     func testCloseMultipleTimesThrows() throws {
         let channel = EmbeddedChannel()
-        _ = try channel.close().wait()
+        XCTAssertFalse(try channel.finish())
 
         // Close a second time. This must fail.
         do {
@@ -81,7 +81,7 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
         let inactiveHandler = CloseInChannelInactiveHandler()
         _ = try channel.pipeline.add(handler: inactiveHandler).wait()
-        _ = try channel.close().wait()
+        XCTAssertFalse(try channel.finish())
 
         // channelInactive should fire only once.
         XCTAssertEqual(inactiveHandler.inactiveNotifications, 1)
@@ -100,7 +100,7 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertEqual(handler.currentState, .active)
         XCTAssertTrue(channel.isActive)
 
-        _ = try channel.close().wait()
+        XCTAssertFalse(try channel.finish())
         XCTAssertEqual(handler.currentState, .unregistered)
         XCTAssertFalse(channel.isActive)
     }
@@ -138,6 +138,7 @@ class EmbeddedChannelTest: XCTestCase {
         let pipelineEventLoop = channel.pipeline.eventLoop
         XCTAssert(pipelineEventLoop === channel.eventLoop)
         XCTAssert(pipelineEventLoop === (channel._unsafe as! EmbeddedChannelCore).eventLoop)
+        XCTAssertFalse(try channel.finish())
     }
 
     func testSendingIncorrectDataOnEmbeddedChannel() {
@@ -151,5 +152,7 @@ class EmbeddedChannelTest: XCTestCase {
         } catch {
             XCTFail("Got \(error)")
         }
+
+        XCTAssertFalse(try channel.finish())
     }
 }

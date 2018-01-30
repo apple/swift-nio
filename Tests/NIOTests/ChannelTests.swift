@@ -35,7 +35,7 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
 
     public func channelRegistered(ctx: ChannelHandlerContext) {
         XCTAssertEqual(currentState, .unregistered)
-        XCTAssertFalse(ctx.channel!.isActive)
+        XCTAssertFalse(ctx.channel.isActive)
         currentState = .inactive
         stateHistory.append(.inactive)
         ctx.fireChannelRegistered()
@@ -43,7 +43,7 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
 
     public func channelActive(ctx: ChannelHandlerContext) {
         XCTAssertEqual(currentState, .inactive)
-        XCTAssertTrue(ctx.channel!.isActive)
+        XCTAssertTrue(ctx.channel.isActive)
         currentState = .active
         stateHistory.append(.active)
         ctx.fireChannelActive()
@@ -51,7 +51,7 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
 
     public func channelInactive(ctx: ChannelHandlerContext) {
         XCTAssertEqual(currentState, .active)
-        XCTAssertFalse(ctx.channel!.isActive)
+        XCTAssertFalse(ctx.channel.isActive)
         currentState = .inactive
         stateHistory.append(.inactive)
         ctx.fireChannelInactive()
@@ -59,7 +59,7 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
 
     public func channelUnregistered(ctx: ChannelHandlerContext) {
         XCTAssertEqual(currentState, .inactive)
-        XCTAssertFalse(ctx.channel!.isActive)
+        XCTAssertFalse(ctx.channel.isActive)
         currentState = .unregistered
         stateHistory.append(.unregistered)
         ctx.fireChannelUnregistered()
@@ -1150,7 +1150,7 @@ public class ChannelTests: XCTestCase {
     func testHalfClosure() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
-            try! group.syncShutdownGracefully()
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
         
         let server = try ServerSocket(protocolFamily: PF_INET)

@@ -33,6 +33,7 @@ extension ChannelPipelineTest {
                 ("testEmptyPipelineWorks", testEmptyPipelineWorks),
                 ("testWriteAfterClose", testWriteAfterClose),
                 ("testOutboundNextForInboundOnlyIsCorrect", testOutboundNextForInboundOnlyIsCorrect),
+                ("testChannelInfrastructureIsNotLeaked", testChannelInfrastructureIsNotLeaked),
            ]
    }
 }

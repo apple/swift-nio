@@ -58,7 +58,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             URL: \(self.infoSavedRequestHead!.uri)\r
             body length: \(self.infoSavedBodyBytes)\r
             headers: \(self.infoSavedRequestHead!.headers)\r
-            client: \(ctx.channel!.remoteAddress?.description ?? "zombie")\r
+            client: \(ctx.channel.remoteAddress?.description ?? "zombie")\r
             IO: SwiftNIO Electric Boogaloo™️\r\n
             """
             self.buffer.clear()
@@ -110,7 +110,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             ()
         case .end(_):
             let _ = ctx.eventLoop.scheduleTask(in: delay) { () -> Void in
-                var buf = ctx.channel!.allocator.buffer(capacity: string.utf8.count)
+                var buf = ctx.channel.allocator.buffer(capacity: string.utf8.count)
                 buf.write(string: string)
                 ctx.writeAndFlush(data: self.wrapOutboundOut(.body(.byteBuffer(buf))), promise: nil)
                 var trailers: HTTPHeaders? = nil
@@ -194,7 +194,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         case "/dynamic/count-to-ten":
             return { self.handleMultipleWrites(ctx: $0, request: $1, strings: (1...10).map { "\($0)\r\n" }, delay: .milliseconds(100)) }
         case "/dynamic/client-ip":
-            return { ctx, req in self.handleJustWrite(ctx: ctx, request: req, string: "\(ctx.channel!.remoteAddress.debugDescription)") }
+            return { ctx, req in self.handleJustWrite(ctx: ctx, request: req, string: "\(ctx.channel.remoteAddress.debugDescription)") }
         default:
             return { ctx, req in self.handleJustWrite(ctx: ctx, request: req, statusCode: .notFound, string: "not found") }
         }
@@ -281,7 +281,7 @@ private final class HTTPHandler: ChannelInboundHandler {
     }
 
     func handlerAdded(ctx: ChannelHandlerContext) throws {
-        self.buffer = ctx.channel!.allocator.buffer(capacity: 12)
+        self.buffer = ctx.channel.allocator.buffer(capacity: 12)
         self.buffer.write(staticString: "Hello World!")
     }
 }

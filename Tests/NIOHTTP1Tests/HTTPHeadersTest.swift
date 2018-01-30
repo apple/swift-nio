@@ -69,6 +69,8 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertTrue(writtenBytes.contains("x-something: 3,4\r\n"))
         XCTAssertTrue(writtenBytes.contains("set-cookie: foo=bar\r\n"))
         XCTAssertTrue(writtenBytes.contains("set-cookie: buz=cux\r\n"))
+
+        XCTAssertFalse(try channel.finish())
     }
 
     func testRevealHeadersSeparately() {

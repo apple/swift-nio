@@ -143,7 +143,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
                 self.upgradeCompletionHandler(ctx)
                 upgrader.upgrade(ctx: ctx, upgradeRequest: request)
                 ctx.fireUserInboundEventTriggered(event: HTTPUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request))
-                let _ = ctx.pipeline!.remove(ctx: ctx)
+                let _ = ctx.pipeline.remove(ctx: ctx)
             }
 
             return true
@@ -162,7 +162,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     /// Called when we know we're not upgrading. Passes the data on and then removes this object from the pipeline.
     private func notUpgrading(ctx: ChannelHandlerContext, data: NIOAny) {
         ctx.fireChannelRead(data: data)
-        let _ = ctx.pipeline!.remove(ctx: ctx)
+        let _ = ctx.pipeline.remove(ctx: ctx)
     }
 
     /// Builds the initial mandatory HTTP headers for HTTP ugprade responses.

@@ -77,7 +77,7 @@ public final class HTTPResponseCompressor: ChannelInboundHandler, ChannelOutboun
     }
 
     public func handlerAdded(ctx: ChannelHandlerContext) {
-        pendingResponse = PartialHTTPResponse(bodyBuffer: ctx.channel!.allocator.buffer(capacity: initialByteBufferCapacity))
+        pendingResponse = PartialHTTPResponse(bodyBuffer: ctx.channel.allocator.buffer(capacity: initialByteBufferCapacity))
         pendingWritePromise = ctx.eventLoop.newPromise()
     }
 
@@ -212,7 +212,7 @@ public final class HTTPResponseCompressor: ChannelInboundHandler, ChannelOutboun
     ///
     /// Called either when a HTTP end message is received or our flush() method is called.
     private func emitPendingWrites(ctx: ChannelHandlerContext) {
-        let writesToEmit = pendingResponse.flush(compressor: &stream, allocator: ctx.channel!.allocator)
+        let writesToEmit = pendingResponse.flush(compressor: &stream, allocator: ctx.channel.allocator)
         var pendingPromise = pendingWritePromise
 
         if let writeHead = writesToEmit.0 {

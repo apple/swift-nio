@@ -241,6 +241,9 @@ class EmbeddedChannelCore : ChannelCore {
 }
 
 public class EmbeddedChannel : Channel {
+    deinit {
+        assert(self.pipeline.destroyed, "leaked an open EmbeddedChannel, maybe forgot to call channel.finish()?")
+    }
     public var isActive: Bool { return channelcore.isActive }
     public var closeFuture: EventLoopFuture<Void> { return channelcore.closePromise.futureResult }
 
@@ -260,6 +263,7 @@ public class EmbeddedChannel : Channel {
     
     public func finish() throws -> Bool {
         try close().wait()
+        (self.eventLoop as! EmbeddedEventLoop).run()
         try throwIfErrorCaught()
         return !channelcore.outboundBuffer.isEmpty || !channelcore.inboundBuffer.isEmpty
     }

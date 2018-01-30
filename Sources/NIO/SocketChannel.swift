@@ -257,6 +257,11 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
+        guard !self.closed else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            return
+        }
+
         executeAndComplete(promise) {
             try socket.bind(to: address)
         }
@@ -419,6 +424,11 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public final func register0(promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
+        guard !self.closed else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            return
+        }
+
         // Was not registered yet so do it now.
         if safeRegister(interested: .read) {
             neverRegistered = false
@@ -503,6 +513,11 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
     public final func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
+
+        guard !self.closed else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            return
+        }
 
         guard pendingConnect == nil else {
             promise?.fail(error: ChannelError.connectPending)
@@ -591,6 +606,10 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         self.closePromise = eventLoop.newPromise()
         active.store(false)
         self._pipeline = ChannelPipeline(channel: self)
+    }
+
+    deinit {
+        assert(self._closed, "leak of open Channel")
     }
 }
 
@@ -971,6 +990,12 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
 
     override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
+
+        guard !self.closed else {
+            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            return
+        }
+
         let p: EventLoopPromise<Void> = eventLoop.newPromise()
         p.futureResult.whenComplete { v in
             switch v {

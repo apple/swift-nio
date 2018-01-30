@@ -138,7 +138,7 @@ public final class ChannelPipeline : ChannelInvoker {
     private var tail: ChannelHandlerContext?
 
     private var idx: Int = 0
-    private var destroyed: Bool = false
+    internal private(set) var destroyed: Bool = false
 
     /// The `EventLoop` that is used by the underlying `Channel`.
     public var eventLoop: EventLoop {
@@ -292,8 +292,6 @@ public final class ChannelPipeline : ChannelInvoker {
     /// Remove a `ChannelHandlerContext` from the `ChannelPipeline`. Must only be called from within the `EventLoop`.
     private func remove0(ctx: ChannelHandlerContext, promise: EventLoopPromise<Bool>?) {
         assert(self.eventLoop.inEventLoop)
-
-        ctx.pipeline = nil
 
         let nextCtx = ctx.next
         let prevCtx = ctx.prev
@@ -683,67 +681,35 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
     private init() { }
 
     func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
-        if let channel = ctx.channel {
-            channel._unsafe.register0(promise: promise)
-        } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
-        }
+        ctx.channel._unsafe.register0(promise: promise)
     }
 
     func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        if let channel = ctx.channel {
-            channel._unsafe.bind0(to: address, promise: promise)
-        } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
-        }
+        ctx.channel._unsafe.bind0(to: address, promise: promise)
     }
 
     func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        if let channel = ctx.channel {
-            channel._unsafe.connect0(to: address, promise: promise)
-        } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
-        }
+        ctx.channel._unsafe.connect0(to: address, promise: promise)
     }
 
     func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        if let channel = ctx.channel {
-            channel._unsafe.write0(data: data, promise: promise)
-        } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
-        }
+        ctx.channel._unsafe.write0(data: data, promise: promise)
     }
 
     func flush(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
-        if let channel = ctx.channel {
-            channel._unsafe.flush0(promise: promise)
-        } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
-        }
+        ctx.channel._unsafe.flush0(promise: promise)
     }
 
     func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-        if let channel = ctx.channel {
-            channel._unsafe.close0(error: mode.error, mode: mode, promise: promise)
-        } else {
-            promise?.fail(error: ChannelError.alreadyClosed)
-        }
+        ctx.channel._unsafe.close0(error: mode.error, mode: mode, promise: promise)
     }
 
     func read(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
-        if let channel = ctx.channel {
-            channel._unsafe.read0(promise: promise)
-        } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
-        }
+        ctx.channel._unsafe.read0(promise: promise)
     }
 
     func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
-        if let channel = ctx.channel {
-            channel._unsafe.triggerUserOutboundEvent0(event: event, promise: promise)
-        } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
-        }
+        ctx.channel._unsafe.triggerUserOutboundEvent0(event: event, promise: promise)
     }
     
 }
@@ -797,11 +763,11 @@ private final class TailChannelHandler : _ChannelInboundHandler, _ChannelOutboun
     }
 
     func errorCaught(ctx: ChannelHandlerContext, error: Error) {
-        ctx.channel!._unsafe.errorCaught0(error: error)
+        ctx.channel._unsafe.errorCaught0(error: error)
     }
 
     func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        ctx.channel!._unsafe.channelRead0(data: data)
+        ctx.channel._unsafe.channelRead0(data: data)
     }
 }
 
@@ -828,10 +794,10 @@ public final class ChannelHandlerContext : ChannelInvoker {
     fileprivate var next: ChannelHandlerContext?
     fileprivate var prev: ChannelHandlerContext?
 
-    public fileprivate(set) var pipeline: ChannelPipeline?
+    public let pipeline: ChannelPipeline
 
-    public var channel: Channel? {
-        return pipeline?.channel
+    public var channel: Channel {
+        return pipeline.channel
     }
     
     public var handler: ChannelHandler {

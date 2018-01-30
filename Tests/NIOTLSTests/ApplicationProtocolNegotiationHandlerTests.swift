@@ -51,6 +51,8 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         // The channel handler should still be in the pipeline.
         try channel.pipeline.assertContains(handler: handler)
+
+        XCTAssertFalse(try channel.finish())
     }
 
     private func negotiateTest(event: TLSUserEvent, expectedResult: ALPNResult) throws {
@@ -82,6 +84,8 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         // Now the handler should have removed itself from the pipeline.
         try channel.pipeline.assertDoesNotContain(handler: handler)
+
+        XCTAssertFalse(try channel.finish())
     }
 
     func testCallbackReflectsNotificationResult() throws {
@@ -106,6 +110,8 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         // The data we write should not be buffered.
         try channel.writeInbound(data: "hello")
         XCTAssertEqual(channel.readInbound()!, "hello")
+
+        XCTAssertFalse(try channel.finish())
     }
 
     func testBufferingWhileWaitingForFuture() throws {
@@ -135,6 +141,8 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         XCTAssertEqual(channel.readInbound()!, "writes")
         XCTAssertEqual(channel.readInbound()!, "are")
         XCTAssertEqual(channel.readInbound()!, "buffered")
+
+        XCTAssertFalse(try channel.finish())
     }
 
     func testNothingBufferedDoesNotFireReadCompleted() throws {
@@ -160,6 +168,8 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         // readComplete should not be fired.
         continuePromise.succeed(result: ())
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 0)
+
+        XCTAssertFalse(try channel.finish())
     }
 
     func testUnbufferingFiresReadCompleted() throws {
@@ -189,5 +199,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         XCTAssertEqual(channel.readInbound()!, "a write")
 
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 2)
+
+        XCTAssertFalse(try channel.finish())
     }
 }

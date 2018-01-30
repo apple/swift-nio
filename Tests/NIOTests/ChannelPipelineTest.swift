@@ -76,6 +76,8 @@ class ChannelPipelineTest: XCTestCase {
             XCTFail("couldn't read from channel")
         }
         XCTAssertNil(channel.readOutbound())
+
+        XCTAssertFalse(try channel.finish())
     }
     
     func testConnectingDoesntCallBind() throws {
@@ -90,9 +92,9 @@ class ChannelPipelineTest: XCTestCase {
         }).wait()
         
         _ = try channel.connect(to: sa).wait()
-        _ = try channel.close().wait()
-        
-        return
+        defer {
+            XCTAssertFalse(try channel.finish())
+        }
     }
     
     private final class TestChannelOutboundHandler<In, Out>: ChannelOutboundHandler {
@@ -227,7 +229,7 @@ class ChannelPipelineTest: XCTestCase {
 
             func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
                 let data = self.unwrapOutboundIn(data)
-                var buf = ctx.channel!.allocator.buffer(capacity: 123)
+                var buf = ctx.channel.allocator.buffer(capacity: 123)
                 buf.write(string: String(describing: data))
                 ctx.write(data: self.wrapOutboundOut(buf), promise: promise)
             }
@@ -280,5 +282,67 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNil(channel.readOutbound())
 
         XCTAssertFalse(try channel.finish())
+    }
+
+    func testChannelInfrastructureIsNotLeaked() throws {
+        class SomeHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+
+            let fn: (ChannelHandlerContext) -> Void
+
+            init(_ fn: @escaping (ChannelHandlerContext) -> Void) {
+                self.fn = fn
+            }
+
+            func handlerAdded(ctx: ChannelHandlerContext) {
+                self.fn(ctx)
+            }
+        }
+        try {
+            let channel = EmbeddedChannel()
+            let loop = channel.eventLoop as! EmbeddedEventLoop
+
+            weak var weakHandler1: ChannelHandler?
+            weak var weakHandler2: ChannelHandler?
+            weak var weakHandlerContext1: ChannelHandlerContext?
+            weak var weakHandlerContext2: ChannelHandlerContext?
+
+            () /* needed because Swift's grammar is so ambiguous that you can't remove this :\ */
+
+            try {
+                let handler1 = SomeHandler { ctx in
+                    weakHandlerContext1 = ctx
+                }
+                weakHandler1 = handler1
+                let handler2 = SomeHandler { ctx in
+                    weakHandlerContext2 = ctx
+                }
+                weakHandler2 = handler2
+                XCTAssertNoThrow(try channel.pipeline.add(handler: handler1).then { _  in
+                    channel.pipeline.add(handler: handler2)
+                    }.wait())
+            }()
+
+            XCTAssertNotNil(weakHandler1)
+            XCTAssertNotNil(weakHandler2)
+            XCTAssertNotNil(weakHandlerContext1)
+            XCTAssertNotNil(weakHandlerContext2)
+
+            XCTAssertNoThrow(try channel.pipeline.remove(handler: weakHandler1!).wait())
+
+            XCTAssertNil(weakHandler1)
+            XCTAssertNotNil(weakHandler2)
+            XCTAssertNil(weakHandlerContext1)
+            XCTAssertNotNil(weakHandlerContext2)
+
+            XCTAssertFalse(try channel.finish())
+
+            XCTAssertNil(weakHandler1)
+            XCTAssertNil(weakHandler2)
+            XCTAssertNil(weakHandlerContext1)
+            XCTAssertNil(weakHandlerContext2)
+
+            XCTAssertNoThrow(try loop.syncShutdownGracefully())
+        }()
     }
 }

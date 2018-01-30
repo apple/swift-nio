@@ -67,7 +67,7 @@ class IdleStateHandlerTest : XCTestCase {
             
             public func channelActive(ctx: ChannelHandlerContext) {
                 if writeToChannel {
-                    var buffer = ctx.channel!.allocator.buffer(capacity: 4)
+                    var buffer = ctx.channel.allocator.buffer(capacity: 4)
                     buffer.write(staticString: "test")
                     ctx.writeAndFlush(data: self.wrapOutboundOut(buffer), promise: nil)
                 }

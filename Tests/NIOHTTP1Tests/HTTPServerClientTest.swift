@@ -152,7 +152,7 @@ class HTTPServerClientTest : XCTestCase {
                     head.headers.add(name: "Connection", value: "close")
                     let r = HTTPServerResponsePart.head(head)
                     ctx.write(data: self.wrapOutboundOut(r), promise: nil)
-                    var b = ctx.channel!.allocator.buffer(capacity: replyString.count)
+                    var b = ctx.channel.allocator.buffer(capacity: replyString.count)
                     b.write(string: replyString)
                     
                     ctx.write(data: self.wrapOutboundOut(self.outboundBody(b)), promise: nil)
@@ -168,7 +168,7 @@ class HTTPServerClientTest : XCTestCase {
                     ctx.write(data: self.wrapOutboundOut(r)).whenComplete { r in
                         assertSuccess(r)
                     }
-                    var b = ctx.channel!.allocator.buffer(capacity: 1024)
+                    var b = ctx.channel.allocator.buffer(capacity: 1024)
                     for i in 1...10 {
                         b.clear()
                         b.write(string: "\(i)")
@@ -190,7 +190,7 @@ class HTTPServerClientTest : XCTestCase {
                     ctx.write(data: self.wrapOutboundOut(r)).whenComplete { r in
                         assertSuccess(r)
                     }
-                    var b = ctx.channel!.allocator.buffer(capacity: 1024)
+                    var b = ctx.channel.allocator.buffer(capacity: 1024)
                     for i in 1...10 {
                         b.clear()
                         b.write(string: "\(i)")
@@ -210,7 +210,7 @@ class HTTPServerClientTest : XCTestCase {
                     }
 
                 case "/massive-response":
-                    var buf = ctx.channel!.allocator.buffer(capacity: HTTPServerClientTest.massiveResponseLength)
+                    var buf = ctx.channel.allocator.buffer(capacity: HTTPServerClientTest.massiveResponseLength)
                     buf.writeWithUnsafeMutableBytes { targetPtr in
                         return HTTPServerClientTest.massiveResponseBytes.withUnsafeBytes { srcPtr in
                             precondition(targetPtr.count >= srcPtr.count)

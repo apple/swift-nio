@@ -28,7 +28,7 @@ extension ByteToMessageDecoder {
         var buffer = self.unwrapInboundIn(data)
         
         if var cum = cumulationBuffer {
-            var buf = ctx.channel!.allocator.buffer(capacity: cum.readableBytes + buffer.readableBytes)
+            var buf = ctx.channel.allocator.buffer(capacity: cum.readableBytes + buffer.readableBytes)
             buf.write(buffer: &cum)
             buf.write(buffer: &buffer)
             cumulationBuffer = buf
@@ -106,6 +106,6 @@ extension MessageToByteEncoder {
     }
     
     public func allocateOutBuffer(ctx: ChannelHandlerContext, data: OutboundIn) throws -> ByteBuffer {
-        return ctx.channel!.allocator.buffer(capacity: 256)
+        return ctx.channel.allocator.buffer(capacity: 256)
     }
 }

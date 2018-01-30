@@ -301,6 +301,8 @@ class SniHandlerTest: XCTestCase {
         XCTAssertEqual(writtenData, expectedData)
 
         try channel.pipeline.assertDoesNotContain(handler: handler)
+
+        XCTAssertFalse(try channel.finish())
     }
 
     /// Blasts the client hello in as a single string. This is not expected to reveal bugs
@@ -368,6 +370,8 @@ class SniHandlerTest: XCTestCase {
         // and no data should have been written.
         XCTAssertNil(channel.readInbound() as ByteBuffer?)
         try channel.pipeline.assertContains(handler: handler)
+
+        XCTAssertNoThrow(try channel.finish())
     }
 
     func testLibre227NoSniDripFeed() throws {

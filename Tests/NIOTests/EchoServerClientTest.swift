@@ -258,7 +258,7 @@ class EchoServerClientTest : XCTestCase {
         private var promise: EventLoopPromise<Void>! = nil
         
         func handlerAdded(ctx: ChannelHandlerContext) {
-            promise = ctx.channel!.eventLoop.newPromise()
+            promise = ctx.channel.eventLoop.newPromise()
         }
         
         func channelActive(ctx: ChannelHandlerContext) {
@@ -407,7 +407,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         func channelActive(ctx: ChannelHandlerContext) {
-            var dataToWrite = ctx.channel!.allocator.buffer(capacity: toWrite.utf8.count)
+            var dataToWrite = ctx.channel.allocator.buffer(capacity: toWrite.utf8.count)
             dataToWrite.write(string: toWrite)
             ctx.writeAndFlush(data: NIOAny(dataToWrite), promise: nil)
             ctx.fireChannelActive()
@@ -600,7 +600,7 @@ class EchoServerClientTest : XCTestCase {
 
         dpGroup.wait() /* make sure we stick around until the second write has happened */
 
-        try! group.syncShutdownGracefully()
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
     }
     
     func testPendingReadProcessedAfterWriteError() throws {
@@ -619,7 +619,7 @@ class EchoServerClientTest : XCTestCase {
             private var writeFailed = false
             
             func channelActive(ctx: ChannelHandlerContext) {
-                var buffer = ctx.channel!.allocator.buffer(capacity: 4)
+                var buffer = ctx.channel.allocator.buffer(capacity: 4)
                 buffer.write(string: "test")
                 writeUntilFailed(ctx, buffer)
             }
@@ -645,7 +645,7 @@ class EchoServerClientTest : XCTestCase {
             
             func channelActive(ctx: ChannelHandlerContext) {
                 ctx.fireChannelActive()
-                var buffer = ctx.channel!.allocator.buffer(capacity: str.utf8.count)
+                var buffer = ctx.channel.allocator.buffer(capacity: str.utf8.count)
                 buffer.write(string: str)
                 
                 // write it four times and then close the connect.
@@ -695,6 +695,6 @@ class EchoServerClientTest : XCTestCase {
 
         try countingHandler.assertReceived(buffer: completeBuffer)
 
-        try! group.syncShutdownGracefully()
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
     }
 }

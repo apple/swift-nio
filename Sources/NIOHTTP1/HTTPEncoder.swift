@@ -36,7 +36,7 @@ private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandler
     
     /* we don't want to copy the chunk unnecessarily and therefore call write an annoyingly large number of times */
     if isChunked {
-        var buffer = ctx.channel!.allocator.buffer(capacity: 32)
+        var buffer = ctx.channel.allocator.buffer(capacity: 32)
         let len = String(readableBytes, radix: 16)
         buffer.write(string: len)
         buffer.write(staticString: "\r\n")
@@ -57,18 +57,18 @@ private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHand
     case (true, let p):
         var buffer: ByteBuffer
         if let trailers = trailers {
-            buffer = ctx.channel!.allocator.buffer(capacity: 256)
+            buffer = ctx.channel.allocator.buffer(capacity: 256)
             buffer.write(staticString: "0\r\n")
             trailers.write(buffer: &buffer)  // Includes trailing CRLF.
         } else {
-            buffer = ctx.channel!.allocator.buffer(capacity: 8)
+            buffer = ctx.channel.allocator.buffer(capacity: 8)
             buffer.write(staticString: "0\r\n\r\n")
         }
         ctx.write(data: wrapOutboundOut(.byteBuffer(buffer)), promise: p)
     case (false, .some(let p)):
         // Not chunked so we have nothing to write. However, we don't want to satisfy this promise out-of-order
         // so we issue a zero-length write down the chain.
-        let buf = ctx.channel!.allocator.buffer(capacity: 0)
+        let buf = ctx.channel.allocator.buffer(capacity: 0)
         ctx.write(data: wrapOutboundOut(.byteBuffer(buf)), promise: p)
     case (false, .none):
         break
@@ -77,7 +77,7 @@ private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHand
 
 private func writeHead(wrapOutboundOut: (IOData) -> NIOAny, writeStartLine: (inout ByteBuffer) -> (), ctx: ChannelHandlerContext, headers: HTTPHeaders, promise: EventLoopPromise<Void>?) {
     
-    var buffer = ctx.channel!.allocator.buffer(capacity: 256)
+    var buffer = ctx.channel.allocator.buffer(capacity: 256)
     writeStartLine(&buffer)
     headers.write(buffer: &buffer)
     ctx.write(data: wrapOutboundOut(.byteBuffer(buffer)), promise: promise)

@@ -75,9 +75,12 @@ class HTTPTest: XCTestCase {
             var step = 0
             var index = 0
             let channel = EmbeddedChannel()
+            defer {
+                XCTAssertNoThrow(try channel.finish())
+            }
             try channel.pipeline.add(handler: HTTPRequestDecoder()).wait()
-            var bodyData: Data? = nil
-            var allBodyDatas: [Data] = []
+            var bodyData: [UInt8]? = nil
+            var allBodyDatas: [[UInt8]] = []
             try channel.pipeline.add(handler: TestChannelInboundHandler { reqPart in
                 switch reqPart {
                 case .head(var req):
@@ -88,9 +91,9 @@ class HTTPTest: XCTestCase {
                     step += 1
                 case .body(var buffer):
                     if bodyData == nil {
-                        bodyData = buffer.readData(length: buffer.readableBytes)!
+                        bodyData = buffer.readBytes(length: buffer.readableBytes)!
                     } else {
-                        bodyData!.append(buffer.readData(length: buffer.readableBytes)!)
+                        bodyData!.append(contentsOf: buffer.readBytes(length: buffer.readableBytes)!)
                     }
                 case .end(let receivedTrailers):
                     XCTAssertEqual(trailers, receivedTrailers)
@@ -117,9 +120,9 @@ class HTTPTest: XCTestCase {
                 for bodyData in allBodyDatas {
                     XCTAssertEqual(firstBodyData, bodyData)
                 }
-                return String(bytes: firstBodyData, encoding: .utf8)!
+                return String(decoding: firstBodyData, as: UTF8.self)
             } else {
-                XCTAssertEqual([], allBodyDatas)
+                XCTAssertEqual(0, allBodyDatas.count, "left with \(allBodyDatas)")
                 return nil
             }
         }
