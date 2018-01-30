@@ -54,6 +54,7 @@ public struct NIOAny {
     
     enum _NIOAny {
         case ioData(IOData)
+        case bufferEnvelope(AddressedEnvelope<ByteBuffer>)
         case other(Any)
         
         init<T>(_ value: T) {
@@ -64,6 +65,8 @@ public struct NIOAny {
                 self = .ioData(.fileRegion(value))
             case let value as IOData:
                 self = .ioData(value)
+            case let value as AddressedEnvelope<ByteBuffer>:
+                self = .bufferEnvelope(value)
             default:
                 self = .other(value)
             }
@@ -118,6 +121,22 @@ public struct NIOAny {
             fatalError("tried to decode as type \(FileRegion.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
         }
     }
+
+    func tryAsByteEnvelope() -> AddressedEnvelope<ByteBuffer>? {
+        if case .bufferEnvelope(let e) = self.storage {
+            return e
+        } else {
+            return nil
+        }
+    }
+
+    func forceAsByteEnvelope() -> AddressedEnvelope<ByteBuffer> {
+        if let e = tryAsByteEnvelope() {
+            return e
+        } else {
+            fatalError("tried to decode as type \(AddressedEnvelope<ByteBuffer>.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
+        }
+    }
     
     func tryAsOther<T>(type: T.Type = T.self) -> T? {
         if case .other(let any) = self.storage {
@@ -143,6 +162,8 @@ public struct NIOAny {
             return self.forceAsFileRegion() as! T
         case let t where t == IOData.self:
             return self.forceAsIOData() as! T
+        case let t where t == AddressedEnvelope<ByteBuffer>.self:
+            return self.forceAsByteEnvelope() as! T
         default:
             return self.forceAsOther(type: type)
         }
@@ -156,6 +177,8 @@ public struct NIOAny {
             return self.tryAsFileRegion() as! T?
         case let t where t == IOData.self:
             return self.tryAsIOData() as! T?
+        case let t where t == AddressedEnvelope<ByteBuffer>.self:
+            return self.tryAsByteEnvelope() as! T?
         default:
             return self.tryAsOther(type: type)
         }
@@ -167,6 +190,8 @@ public struct NIOAny {
             return bb
         case .ioData(.fileRegion(let f)):
             return f
+        case .bufferEnvelope(let e):
+            return e
         case .other(let o):
             return o
         }
