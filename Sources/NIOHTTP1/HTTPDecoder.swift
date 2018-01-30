@@ -244,16 +244,16 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     
     public func decoderAdded(ctx: ChannelHandlerContext) throws {
         if HTTPMessageT.self == HTTPServerRequestPart.self {
-            http_parser_init(&parser, HTTP_REQUEST)
+            c_nio_http_parser_init(&parser, HTTP_REQUEST)
         } else if HTTPMessageT.self == HTTPClientResponsePart.self {
-            http_parser_init(&parser, HTTP_RESPONSE)
+            c_nio_http_parser_init(&parser, HTTP_RESPONSE)
         } else {
             fatalError("the impossible happened: MsgT neither HTTPClientRequestPart nor HTTPClientResponsePart but \(HTTPMessageT.self)")
         }
 
         parser.data = Unmanaged.passUnretained(ctx).toOpaque()
 
-        http_parser_settings_init(&settings)
+        c_nio_http_parser_settings_init(&settings)
 
         settings.on_message_begin = { parser in
             let handler = evacuateHTTPDecoder(parser)
@@ -412,7 +412,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             state.baseAddress = pointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
             
             let result = state.baseAddress!.withMemoryRebound(to: Int8.self, capacity: pointer.count, { p in
-                http_parser_execute(&parser, &settings, p.advanced(by: buffer.readerIndex), buffer.readableBytes)
+                c_nio_http_parser_execute(&parser, &settings, p.advanced(by: buffer.readerIndex), buffer.readableBytes)
             })
             
             state.baseAddress = nil
