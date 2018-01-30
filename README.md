@@ -5,6 +5,9 @@ for rapid development of maintainable high performance protocol servers & client
 
 It's like [Netty](https://netty.io) but in Swift.
 
+## Documentation
+
+ - [API documentation](https://apple.github.io/swift-nio/docs/current/NIO/index.html)
 
 
 ## Compile, Test and Run
