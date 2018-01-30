@@ -28,19 +28,21 @@ private func darwinCoreCount() -> Int {
 }
 #endif
 
-/// A utility function that returns an estimate of the number of *logical* cores
-/// on the system.
-///
-/// This value can be used to help provide an estimate of how many threads to use with
-/// the `MultiThreadedEventLoopGroup`. The exact ratio between this number and the number
-/// of threads to use is a matter for the programmer, and can be determined based on the
-/// specific execution behaviour of the program.
-///
-/// - returns: The logical core count on the system.
-public func systemCoreCount() -> Int {
-    #if os(Linux)
-    return linuxCoreCount()
-    #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-    return darwinCoreCount()
-    #endif
+public enum System {
+    /// A utility function that returns an estimate of the number of *logical* cores
+    /// on the system.
+    ///
+    /// This value can be used to help provide an estimate of how many threads to use with
+    /// the `MultiThreadedEventLoopGroup`. The exact ratio between this number and the number
+    /// of threads to use is a matter for the programmer, and can be determined based on the
+    /// specific execution behaviour of the program.
+    ///
+    /// - returns: The logical core count on the system.
+    public static func coreCount() -> Int {
+        #if os(Linux)
+        return linuxCoreCount()
+        #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        return darwinCoreCount()
+        #endif
+    }
 }

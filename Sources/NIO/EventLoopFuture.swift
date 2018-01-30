@@ -309,8 +309,10 @@ public final class EventLoopFuture<T> {
     }
 }
 
-public func ==<T>(lhs: EventLoopFuture<T>, rhs: EventLoopFuture<T>) -> Bool {
-    return lhs === rhs
+extension EventLoopFuture: Equatable {
+    public static func ==(lhs: EventLoopFuture, rhs: EventLoopFuture) -> Bool {
+        return lhs === rhs
+    }
 }
 
 /**

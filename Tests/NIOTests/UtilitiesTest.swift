@@ -17,6 +17,6 @@ import XCTest
 
 class UtilitiesTest: XCTestCase {
     func testCoreCountWorks() {
-        XCTAssertGreaterThan(systemCoreCount(), 0)
+        XCTAssertGreaterThan(System.coreCount(), 0)
     }
 }
