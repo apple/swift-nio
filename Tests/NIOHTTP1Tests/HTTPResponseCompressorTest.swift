@@ -54,6 +54,7 @@ private class PromiseOrderer {
 }
 
 private extension ByteBuffer {
+    @discardableResult
     mutating func withUnsafeMutableReadableUInt8Bytes<T>(fn: (UnsafeMutableBufferPointer<UInt8>) throws -> T) rethrows -> T {
         return try self.withUnsafeMutableReadableBytes { (ptr: UnsafeMutableRawBufferPointer) -> T in
             let baseInputPointer = ptr.baseAddress?.assumingMemoryBound(to: UInt8.self)
@@ -62,8 +63,9 @@ private extension ByteBuffer {
         }
     }
 
-    mutating func withUnsafeMutableWriteableUInt8Bytes<T>(fn: (UnsafeMutableBufferPointer<UInt8>) throws -> T) rethrows -> T {
-        return try self.withUnsafeMutableWritableBytes { (ptr: UnsafeMutableRawBufferPointer) -> T in
+    @discardableResult
+    mutating func writeWithUnsafeMutableUInt8Bytes(fn: (UnsafeMutableBufferPointer<UInt8>) throws -> Int) rethrows -> Int {
+        return try self.writeWithUnsafeMutableBytes { (ptr: UnsafeMutableRawBufferPointer) -> Int in
             let baseInputPointer = ptr.baseAddress?.assumingMemoryBound(to: UInt8.self)
             let inputBufferPointer = UnsafeMutableBufferPointer(start: baseInputPointer, count: ptr.count)
             return try fn(inputBufferPointer)
@@ -89,7 +91,7 @@ private extension z_stream {
 
     private static func decompress(compressedBytes: inout ByteBuffer, outputBuffer: inout ByteBuffer, windowSize: Int32) {
         compressedBytes.withUnsafeMutableReadableUInt8Bytes { inputPointer in
-            let forwardAmount = outputBuffer.withUnsafeMutableWriteableUInt8Bytes { outputPointer -> Int in
+            outputBuffer.writeWithUnsafeMutableUInt8Bytes { outputPointer -> Int in
                 var stream = z_stream()
 
                 // zlib requires we initialize next_in, avail_in, zalloc, zfree and opaque before calling inflateInit2.
@@ -113,7 +115,6 @@ private extension z_stream {
 
                 return outputPointer.count - Int(stream.avail_out)
             }
-            outputBuffer.moveWriterIndex(forwardBy: forwardAmount)
         }
     }
 }

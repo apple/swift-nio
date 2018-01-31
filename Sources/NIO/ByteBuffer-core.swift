@@ -385,8 +385,9 @@ public struct ByteBuffer {
     }
 
     /// Yields the bytes currently `writable` (`capacity` - `writerIndex`). Before reading those bytes you must first
-    /// write to them otherwise you will trigger undefined behaviour. The writer index will be advanced by the number
-    /// of bytes returned by the closure.
+    /// write to them otherwise you will trigger undefined behaviour. The writer index will remain unchanged.
+    ///
+    /// - note: In almost all cases you should use `writeWithUnsafeMutableBytes` which will move the write pointer instead of this method
     ///
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
