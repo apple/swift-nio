@@ -117,6 +117,22 @@ public enum SocketAddress: CustomStringConvertible {
         }
     }
 
+    /// Calls the given function with a pointer to a `sockaddr` structure and the associated size
+    /// of that structure.
+    public func withSockAddr<T>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> T) rethrows -> T {
+        switch self {
+        case .v4(let addr):
+            var address = addr.address
+            return try address.withSockAddr(fn)
+        case .v6(let addr):
+            var address = addr.address
+            return try address.withSockAddr(fn)
+        case .unixDomainSocket(let addr):
+            var address = addr.address
+            return try address.withSockAddr(fn)
+        }
+    }
+
     /// Creates a new IPV4 `SocketAddress`.
     ///
     /// - parameters:

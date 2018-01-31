@@ -12,18 +12,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 protocol Registration {
     var interested: IOEvent { get set }
 }
 
 protocol SockAddrProtocol {
     mutating func withSockAddr<R>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R
+    mutating func withMutableSockAddr<R>(_ fn: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R
 }
+
 extension sockaddr_in: SockAddrProtocol {
     mutating func withSockAddr<R>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
         var me = self
         return try withUnsafeBytes(of: &me) { p in
+            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
+
+    mutating func withMutableSockAddr<R>(_ fn: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        var me = self
+        return try withUnsafeMutableBytes(of: &me) { p in
             try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
@@ -36,6 +44,13 @@ extension sockaddr_in6: SockAddrProtocol {
             try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
+
+    mutating func withMutableSockAddr<R>(_ fn: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        var me = self
+        return try withUnsafeMutableBytes(of: &me) { p in
+            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
 }
 
 extension sockaddr_un: SockAddrProtocol {
@@ -43,6 +58,66 @@ extension sockaddr_un: SockAddrProtocol {
         var me = self
         return try withUnsafeBytes(of: &me) { p in
             try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
+
+    mutating func withMutableSockAddr<R>(_ fn: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        var me = self
+        return try withUnsafeMutableBytes(of: &me) { p in
+            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
+}
+
+extension sockaddr_storage: SockAddrProtocol {
+    mutating func withSockAddr<R>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        var me = self
+        return try withUnsafeBytes(of: &me) { p in
+            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
+
+    mutating func withMutableSockAddr<R>(_ fn: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+        var me = self
+        return try withUnsafeMutableBytes(of: &me) { p in
+            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
+}
+
+// sockaddr_storage is basically just a boring data structure that we can
+// convert to being something sensible. These functions copy the data as
+// needed.
+//
+// Annoyingly, these functions are mutating. This is required to work around
+// https://bugs.swift.org/browse/SR-2749 on Ubuntu 14.04: basically, we need to
+// avoid getting the Swift compiler to copy the sockaddr_storage for any reason:
+// only our rebinding copy here is allowed.
+extension sockaddr_storage {
+    mutating func convert() -> sockaddr_in {
+        precondition(self.ss_family == AF_INET)
+        return withUnsafePointer(to: &self) {
+            $0.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
+                $0.pointee
+            }
+        }
+    }
+
+    mutating func convert() -> sockaddr_in6 {
+        precondition(self.ss_family == AF_INET6)
+        return withUnsafePointer(to: &self) {
+            $0.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
+                $0.pointee
+            }
+        }
+    }
+
+    mutating func convert() -> sockaddr_un {
+        precondition(self.ss_family == AF_UNIX)
+        return withUnsafePointer(to: &self) {
+            $0.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
+                $0.pointee
+            }
         }
     }
 }
