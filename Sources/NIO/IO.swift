@@ -21,7 +21,6 @@ public struct IOError: Swift.Error {
     /// The `errno` that was set for the operation.
     public let errnoCode: Int32
 
-    // TODO: Fix me to lazy create
     /// The actual reason (in an human-readable form) for this `IOError`.
     public let reason: FailureDescription
     
