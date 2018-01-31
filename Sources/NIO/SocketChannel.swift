@@ -626,7 +626,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
     // Guard against re-entrance of flushNow() method.
     private var inFlushNow: Bool = false
-    private let pendingWrites: PendingWritesManager
+    private let pendingWrites: PendingStreamWritesManager
 
     override public var isWritable: Bool {
         return pendingWrites.isWritable
@@ -645,7 +645,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             let _ = try? socket.close()
             throw err
         }
-        self.pendingWrites = PendingWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
+        self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
         try super.init(socket: socket, eventLoop: eventLoop)
     }
 
@@ -692,7 +692,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
     fileprivate override init(socket: Socket, eventLoop: SelectableEventLoop) throws {
         try socket.setNonBlocking()
-        self.pendingWrites = PendingWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
+        self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
         try super.init(socket: socket, eventLoop: eventLoop)
     }
 
@@ -745,7 +745,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         return result
     }
 
-    private func writeToSocket(pendingWrites: PendingWritesManager) throws -> WriteResult {
+    private func writeToSocket(pendingWrites: PendingStreamWritesManager) throws -> WriteResult {
         repeat {
             let result = try pendingWrites.triggerAppropriateWriteOperation(singleWriteOperation: { ptr in
                 guard ptr.count > 0 else {

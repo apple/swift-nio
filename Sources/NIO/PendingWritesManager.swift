@@ -13,9 +13,13 @@
 //===----------------------------------------------------------------------===//
 import NIOConcurrencyHelpers
 
-private typealias PendingWrite = (data: IOData, promise: EventLoopPromise<Void>?)
+private struct PendingStreamWrite {
+    var data: IOData
+    var promise: EventLoopPromise<Void>?
+}
 
-private func doPendingWriteVectorOperation(pending: PendingWritesState,
+/// Does the setup required to issue a writev.
+private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
                                            iovecs: UnsafeMutableBufferPointer<IOVector>,
                                            storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
                                            _ fn: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> IOResult<Int> {
@@ -77,7 +81,7 @@ private func doPendingWriteVectorOperation(pending: PendingWritesState,
     case closed
 }
 
-/// This holds the states of the currently pending writes. The core is a `MarkedCircularBuffer` which holds all the
+/// This holds the states of the currently pending stream writes. The core is a `MarkedCircularBuffer` which holds all the
 /// writes and a mark up until the point the data is flushed.
 ///
 /// The most important operations on this object are:
@@ -85,8 +89,8 @@ private func doPendingWriteVectorOperation(pending: PendingWritesState,
 ///  - `markFlushCheckpoint` which sets a flush mark on the current position of the `MarkedCircularBuffer`. All the items before the checkpoint will be written eventually.
 ///  - `didWrite` when a number of bytes have been written.
 ///  - `failAll` if for some reason all outstanding writes need to be discarded and the corresponding `EventLoopPromise` needs to be failed.
-private struct PendingWritesState {
-    private var pendingWrites = MarkedCircularBuffer<PendingWrite>(initialRingCapacity: 16)
+private struct PendingStreamWritesState {
+    private var pendingWrites = MarkedCircularBuffer<PendingStreamWrite>(initialRingCapacity: 16)
     private var chunks: Int = 0
     public private(set) var bytes: Int = 0
 
@@ -106,14 +110,14 @@ private struct PendingWritesState {
     ///
     private mutating func fullyWrittenFirst() -> EventLoopPromise<()>? {
         self.chunks -= 1
-        let (data, promise) = self.pendingWrites.removeFirst()
-        switch data {
+        let first = self.pendingWrites.removeFirst()
+        switch first.data {
         case .byteBuffer(let buffer):
             self.subtractOutstanding(bytes: buffer.readableBytes)
         case .fileRegion(_):
             () /* not accounting for file region sizes */
         }
-        return promise
+        return first.promise
     }
 
     /// Indicates that the first outstanding object (a `ByteBuffer`) has been partially written.
@@ -126,12 +130,11 @@ private struct PendingWritesState {
         var buffer = buffer
         buffer.moveReaderIndex(forwardBy: bytes)
         self.subtractOutstanding(bytes: bytes)
-        self.pendingWrites[0] = (.byteBuffer(buffer), self.pendingWrites[0].promise)
+        self.pendingWrites[0].data = .byteBuffer(buffer)
     }
 
     /// Initialise a new, empty `PendingWritesState`.
-    public init() {
-    }
+    public init() { }
 
     /// Check if there are no outstanding writes.
     public var isEmpty: Bool {
@@ -147,10 +150,10 @@ private struct PendingWritesState {
     }
 
     /// Add a new write and optionally the corresponding promise to the list of outstanding writes.
-    public mutating func append(data: IOData, promise: EventLoopPromise<()>?) {
-        self.pendingWrites.append((data: data, promise: promise))
+    public mutating func append(_ chunk: PendingStreamWrite) {
+        self.pendingWrites.append(chunk)
         self.chunks += 1
-        switch data {
+        switch chunk.data {
         case .byteBuffer(let buffer):
             self.bytes += buffer.readableBytes
         case .fileRegion(_):
@@ -159,7 +162,7 @@ private struct PendingWritesState {
     }
 
     /// Get the outstanding write at `index`.
-    public subscript(index: Int) -> PendingWrite {
+    public subscript(index: Int) -> PendingStreamWrite {
         return self.pendingWrites[index]
     }
 
@@ -304,11 +307,11 @@ private struct PendingWritesState {
     }
 }
 
-/// This class manages the writing of pending writes. The state is held in a `PendingWritesState` value. The most
-/// important purpose of this object is to call `write`, `writev` or `sendfile` depending on the currently pending
-/// writes.
-/* private but tests */ final class PendingWritesManager {
-    private var state = PendingWritesState()
+/// This class manages the writing of pending writes to stream sockets. The state is held in a `PendingWritesState`
+/// value. The most important purpose of this object is to call `write`, `writev` or `sendfile` depending on the
+/// currently pending writes.
+final class PendingStreamWritesManager {
+    private var state = PendingStreamWritesState()
     private var iovecs: UnsafeMutableBufferPointer<IOVector>
     private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
 
@@ -350,7 +353,7 @@ private struct PendingWritesState {
     /// - result: If the `Channel` is still writable after adding the write of `data`.
     func add(data: IOData, promise: EventLoopPromise<Void>?) -> Bool {
         assert(!closed)
-        self.state.append(data: data, promise: promise)
+        self.state.append(.init(data: data, promise: promise))
 
         if self.state.bytes > waterMark.upperBound && writable.compareAndExchange(expected: true, desired: false) {
             // Returns false to signal the Channel became non-writable and we need to notify the user
