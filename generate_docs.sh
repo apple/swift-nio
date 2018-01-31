@@ -103,7 +103,7 @@ if [[ $CI == true ]]; then
   git checkout gh-pages
   rm -rf docs/current
   cp -r docs/$version docs/current
-  git add docs
+  git add --all docs
   echo '<html><head><meta http-equiv="refresh" content="0; url=docs/current/NIO/index.html" /></head></html>' > index.html
   git add index.html
   changes=$(git diff-index --name-only HEAD)
