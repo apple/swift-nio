@@ -34,6 +34,10 @@ extension SocketAddressTest {
                 ("testWithMutableAddressAllowsMutationWithoutPersistence", testWithMutableAddressAllowsMutationWithoutPersistence),
                 ("testConvertingStorage", testConvertingStorage),
                 ("testComparingSockaddrs", testComparingSockaddrs),
+                ("testEqualSocketAddresses", testEqualSocketAddresses),
+                ("testUnequalAddressesOnPort", testUnequalAddressesOnPort),
+                ("testUnequalOnAddress", testUnequalOnAddress),
+                ("testUnequalAcrossFamilies", testUnequalAcrossFamilies),
            ]
    }
 }

@@ -259,4 +259,51 @@ class SocketAddressTest: XCTestCase {
             }
         }
     }
+
+    func testEqualSocketAddresses() throws {
+        let first = try SocketAddress.ipAddress(string: "::1", port: 80)
+        let second = try SocketAddress.ipAddress(string: "00:00::1", port: 80)
+        let third = try SocketAddress.ipAddress(string: "127.0.0.1", port: 443)
+        let fourth = try SocketAddress.ipAddress(string: "127.0.0.1", port: 443)
+        let fifth = try SocketAddress.unixDomainSocketAddress(path: "/var/tmp")
+        let sixth = try SocketAddress.unixDomainSocketAddress(path: "/var/tmp")
+
+        XCTAssertEqual(first, second)
+        XCTAssertEqual(third, fourth)
+        XCTAssertEqual(fifth, sixth)
+    }
+
+    func testUnequalAddressesOnPort() throws {
+        let first = try SocketAddress.ipAddress(string: "::1", port: 80)
+        let second = try SocketAddress.ipAddress(string: "::1", port: 443)
+        let third = try SocketAddress.ipAddress(string: "127.0.0.1", port: 80)
+        let fourth = try SocketAddress.ipAddress(string: "127.0.0.1", port: 443)
+
+        XCTAssertNotEqual(first, second)
+        XCTAssertNotEqual(third, fourth)
+    }
+
+    func testUnequalOnAddress() throws {
+        let first = try SocketAddress.ipAddress(string: "::1", port: 80)
+        let second = try SocketAddress.ipAddress(string: "::2", port: 80)
+        let third = try SocketAddress.ipAddress(string: "127.0.0.1", port: 443)
+        let fourth = try SocketAddress.ipAddress(string: "127.0.0.2", port: 443)
+        let fifth = try SocketAddress.unixDomainSocketAddress(path: "/var/tmp")
+        let sixth = try SocketAddress.unixDomainSocketAddress(path: "/var/tmq")
+
+        XCTAssertNotEqual(first, second)
+        XCTAssertNotEqual(third, fourth)
+        XCTAssertNotEqual(fifth, sixth)
+    }
+
+    func testUnequalAcrossFamilies() throws {
+        let first = try SocketAddress.ipAddress(string: "::1", port: 80)
+        let second = try SocketAddress.ipAddress(string: "127.0.0.1", port: 80)
+        let third = try SocketAddress.unixDomainSocketAddress(path: "/var/tmp")
+
+        XCTAssertNotEqual(first, second)
+        XCTAssertNotEqual(second, third)
+        // By the transitive property first != third, but let's protect against me being an idiot
+        XCTAssertNotEqual(third, first)
+    }
 }

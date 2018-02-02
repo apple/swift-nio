@@ -258,3 +258,37 @@ public enum SocketAddress: CustomStringConvertible {
     }
 }
 
+/// We define an extension on `SocketAddress` that gives it an elementwise equatable conformance, using
+/// only the elements defined on the structure in their man pages (excluding lengths).
+extension SocketAddress: Equatable {
+    public static func ==(lhs: SocketAddress, rhs: SocketAddress) -> Bool {
+        switch (lhs, rhs) {
+        case (.v4(let addr1), .v4(let addr2)):
+            return addr1.address.sin_family == addr2.address.sin_family &&
+                   addr1.address.sin_port == addr2.address.sin_port &&
+                   addr1.address.sin_addr.s_addr == addr2.address.sin_addr.s_addr
+        case (.v6(let addr1), .v6(let addr2)):
+            guard addr1.address.sin6_family == addr2.address.sin6_family &&
+                  addr1.address.sin6_port == addr2.address.sin6_port &&
+                  addr1.address.sin6_flowinfo == addr2.address.sin6_flowinfo &&
+                  addr1.address.sin6_scope_id == addr2.address.sin6_scope_id else {
+                    return false
+            }
+
+            var s6addr1 = addr1.address.sin6_addr
+            var s6addr2 = addr2.address.sin6_addr
+            return memcmp(&s6addr1, &s6addr2, MemoryLayout.size(ofValue: s6addr1)) == 0
+        case (.unixDomainSocket(let addr1), .unixDomainSocket(let addr2)):
+            guard addr1.address.sun_family == addr2.address.sun_family else {
+                return false
+            }
+
+            var sunpath1 = addr1.address.sun_path
+            var sunpath2 = addr2.address.sun_path
+            return memcmp(&sunpath1, &sunpath2, MemoryLayout.size(ofValue: sunpath1)) == 0
+        default:
+            return false
+        }
+    }
+}
+
