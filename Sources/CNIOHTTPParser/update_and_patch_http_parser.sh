@@ -49,3 +49,5 @@ test 0 -eq $num_non_nio || {
 
 rm -rf "$tmp"
 done
+
+mv "$here/c_nio_http_parser.h" "$here/include/c_nio_http_parser.h"
