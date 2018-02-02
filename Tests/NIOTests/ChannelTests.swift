@@ -1011,7 +1011,7 @@ public class ChannelTests: XCTestCase {
         }
     }
 
-    func testConnectTimeout() throws {
+    func testSpecificConnectTimeout() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -1021,6 +1021,27 @@ public class ChannelTests: XCTestCase {
             // This must throw as 198.51.100.254 is reserved for documentation only
             _ = try ClientBootstrap(group: group)
                 .channelOption(ChannelOptions.connectTimeout, value: .milliseconds(10))
+                .connect(to: SocketAddress.newAddressResolving(host: "198.51.100.254", port: 65535)).wait()
+            XCTFail()
+        } catch let err as ChannelError {
+            if case .connectTimeout(_) = err {
+                // expected, sadly there is no "if not case"
+            } else {
+                XCTFail()
+            }
+        }
+    }
+
+    func testGeneralConnectTimeout() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        do {
+            // This must throw as 198.51.100.254 is reserved for documentation only
+            _ = try ClientBootstrap(group: group)
+                .connectTimeout(.milliseconds(10))
                 .connect(to: SocketAddress.newAddressResolving(host: "198.51.100.254", port: 65535)).wait()
             XCTFail()
         } catch let err as ChannelError {

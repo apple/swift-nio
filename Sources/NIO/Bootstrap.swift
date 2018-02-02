@@ -242,6 +242,7 @@ public final class ClientBootstrap {
     private let group: EventLoopGroup
     private var channelInitializer: ((Channel) -> EventLoopFuture<()>)?
     private var channelOptions = ChannelOptionStorage()
+    private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
 
     /// Create a `ClientBootstrap` on the `EventLoopGroup` `group`.
     ///
@@ -271,23 +272,31 @@ public final class ClientBootstrap {
         return self
     }
 
+    /// Specifies a timeout to apply to a connection attempt.
+    //
+    /// - parameters:
+    ///     - timeout: The timeout that will apply to the connection attempt.
+    public func connectTimeout(_ timeout: TimeAmount) -> Self {
+        self.connectTimeout = timeout
+        return self
+    }
+
     /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
     ///
     /// - parameters:
     ///     - host: The host to connect to.
     ///     - port: The port to connect to.
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
-    public func connect(to host: String, on port: Int32) -> EventLoopFuture<Channel> {
-        let evGroup = group
-        
-        do {
-            let address = try SocketAddress.newAddressResolving(host: host, port: port)
-            return execute(eventLoopGroup: group, protocolFamily: address.protocolFamily) { channel in
-                return channel.connect(to: address)
-            }
-        } catch let err {
-            return evGroup.next().newFailedFuture(error: err)
+    public func connect(to host: String, on port: Int) -> EventLoopFuture<Channel> {
+        let loop = self.group.next()
+        let connector = HappyEyeballsConnector(resolver: GetaddrinfoResolver(loop: loop),
+                                               loop: self.group.next(),
+                                               host: host,
+                                               port: port,
+                                               connectTimeout: self.connectTimeout) { eventLoop, protocolFamily in
+            return self.execute(eventLoop: eventLoop, protocolFamily: protocolFamily) { $0.eventLoop.newSucceedFuture(result: ()) }
         }
+        return connector.resolveAndConnect()
     }
     
     /// Specify the `address` to connect to for the TCP `Channel` that will be established.
@@ -296,8 +305,16 @@ public final class ClientBootstrap {
     ///     - address: The address to connect to.
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(to address: SocketAddress) -> EventLoopFuture<Channel> {
-        return execute(eventLoopGroup: group, protocolFamily: address.protocolFamily) { channel in
-            return channel.connect(to: address)
+        return execute(eventLoop: group.next(), protocolFamily: address.protocolFamily) { channel in
+            let connectPromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
+            channel.connect(to: address, promise: connectPromise)
+            let cancelTask = channel.eventLoop.scheduleTask(in: self.connectTimeout) {
+                connectPromise.fail(error: ChannelError.connectTimeout(self.connectTimeout))
+                _ = channel.close()
+            }
+
+            connectPromise.futureResult.whenComplete { _ in cancelTask.cancel() }
+            return connectPromise.futureResult
         }
     }
 
@@ -315,17 +332,16 @@ public final class ClientBootstrap {
         }
     }
 
-    private func execute(eventLoopGroup: EventLoopGroup,
+    private func execute(eventLoop: EventLoop,
                          protocolFamily: Int32,
                          _ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
-        let eventLoop = eventLoopGroup.next()
         let channelInitializer = self.channelInitializer
         let channelOptions = self.channelOptions
-        
+
         let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
         do {
             let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: protocolFamily)
-            
+
             func finishClientSetup() {
                 do {
                     try channelOptions.applyAll(channel: channel)
@@ -344,7 +360,7 @@ public final class ClientBootstrap {
                     promise.fail(error: err)
                 }
             }
-            
+
             if let channelInitializer = channelInitializer {
                 channelInitializer(channel).whenComplete(callback: { v in
                     switch v {
@@ -360,7 +376,7 @@ public final class ClientBootstrap {
         } catch let err {
             promise.fail(error: err)
         }
-        
+
         return promise.futureResult
     }
 }

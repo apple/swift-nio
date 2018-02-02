@@ -618,7 +618,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 /// - note: All operations on `SocketChannel` are thread-safe.
 final class SocketChannel: BaseSocketChannel<Socket> {
 
-    private var connectTimeout = TimeAmount.seconds(10)
+    private var connectTimeout: TimeAmount? = nil
     private var connectTimeoutScheduled: Scheduled<Void>?
     private var allowRemoteHalfClosure: Bool = false
     private var inputShutdown: Bool = false
@@ -658,7 +658,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         assert(eventLoop.inEventLoop)
         switch option {
         case _ as ConnectTimeoutOption:
-            connectTimeout = value as! TimeAmount
+            connectTimeout = value as? TimeAmount
         case _ as AllowRemoteHalfClosureOption:
             allowRemoteHalfClosure = value as! Bool
         case _ as WriteSpinOption:
@@ -789,13 +789,15 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         if try self.socket.connect(to: address) {
             return true
         }
-        let timeout = connectTimeout
-        connectTimeoutScheduled = eventLoop.scheduleTask(in: timeout) { () -> (Void) in
-            if self.pendingConnect != nil {
-                // The connection was still not established, close the Channel which will also fail the pending promise.
-                self.close0(error: ChannelError.connectTimeout(timeout), mode: .all, promise: nil)
+        if let timeout = connectTimeout {
+            connectTimeoutScheduled = eventLoop.scheduleTask(in: timeout) { () -> (Void) in
+                if self.pendingConnect != nil {
+                    // The connection was still not established, close the Channel which will also fail the pending promise.
+                    self.close0(error: ChannelError.connectTimeout(timeout), mode: .all, promise: nil)
+                }
             }
         }
+
         return false
     }
 

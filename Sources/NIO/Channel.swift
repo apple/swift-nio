@@ -160,6 +160,9 @@ public enum ChannelError: Error {
     /// Connect operation timed out
     case connectTimeout(TimeAmount)
 
+    /// Connect operation failed
+    case connectFailed(NIOConnectionError)
+
     /// Unsupported operation triggered on a `Channel`. For example `connect` on a `ServerSocketChannel`.
     case operationUnsupported
     

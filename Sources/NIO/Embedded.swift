@@ -58,6 +58,8 @@ public class EmbeddedEventLoop: EventLoop {
     }
 
     var tasks = CircularBuffer<() -> ()>(initialRingCapacity: 2)
+
+    public init() { }
     
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = newPromise()
@@ -144,7 +146,7 @@ class EmbeddedChannelCore : ChannelCore {
     var closePromise: EventLoopPromise<Void>
     var error: Error?
     
-    private unowned let pipeline: ChannelPipeline
+    private let pipeline: ChannelPipeline
 
     init(pipeline: ChannelPipeline, eventLoop: EventLoop) {
         closePromise = eventLoop.newPromise()
@@ -153,6 +155,7 @@ class EmbeddedChannelCore : ChannelCore {
     }
     
     deinit {
+        assert(self.pipeline.destroyed, "leaked an open EmbeddedChannel, maybe forgot to call channel.finish()?")
         closed = true
         closePromise.succeed(result: ())
     }
@@ -241,9 +244,7 @@ class EmbeddedChannelCore : ChannelCore {
 }
 
 public class EmbeddedChannel : Channel {
-    deinit {
-        assert(self.pipeline.destroyed, "leaked an open EmbeddedChannel, maybe forgot to call channel.finish()?")
-    }
+
     public var isActive: Bool { return channelcore.isActive }
     public var closeFuture: EventLoopFuture<Void> { return channelcore.closePromise.futureResult }
 
@@ -319,17 +320,15 @@ public class EmbeddedChannel : Channel {
         return (buffer.removeFirst().forceAs(type: T.self))
     }
     
-    public init() {
-        _pipeline = ChannelPipeline(channel: self)
-        
-        // we should just register it directly and this will never throw.
-        _ = try? register().wait()
-    }
-    
-    public init(handler: ChannelHandler) throws {
-        _pipeline = ChannelPipeline(channel: self)
+    public convenience init(handler: ChannelHandler, loop: EmbeddedEventLoop = EmbeddedEventLoop()) throws {
+        self.init(loop: loop)
         try _pipeline.add(handler: handler).wait()
-        
+    }
+
+    public init(loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
+        self.eventLoop = loop
+        self._pipeline = ChannelPipeline(channel: self)
+
         // we should just register it directly and this will never throw.
         _ = try? register().wait()
     }
