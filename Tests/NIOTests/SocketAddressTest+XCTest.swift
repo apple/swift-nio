@@ -38,6 +38,7 @@ extension SocketAddressTest {
                 ("testUnequalAddressesOnPort", testUnequalAddressesOnPort),
                 ("testUnequalOnAddress", testUnequalOnAddress),
                 ("testUnequalAcrossFamilies", testUnequalAcrossFamilies),
+                ("testPortAccessor", testPortAccessor),
            ]
    }
 }

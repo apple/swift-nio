@@ -306,4 +306,10 @@ class SocketAddressTest: XCTestCase {
         // By the transitive property first != third, but let's protect against me being an idiot
         XCTAssertNotEqual(third, first)
     }
+
+    func testPortAccessor() throws {
+        XCTAssertEqual(try SocketAddress.ipAddress(string: "127.0.0.1", port: 80).port, 80)
+        XCTAssertEqual(try SocketAddress.ipAddress(string: "::1", port: 80).port, 80)
+        XCTAssertEqual(try SocketAddress.unixDomainSocketAddress(path: "/definitely/a/path").port, nil)
+    }
 }

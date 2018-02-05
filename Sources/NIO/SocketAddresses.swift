@@ -117,6 +117,18 @@ public enum SocketAddress: CustomStringConvertible {
         }
     }
 
+    /// Get the port associated with the address, if defined.
+    public var port: UInt16? {
+        switch self {
+        case .v4(let addr):
+            return UInt16(addr.address.sin_port)
+        case .v6(let addr):
+            return UInt16(addr.address.sin6_port)
+        case .unixDomainSocket:
+            return nil
+        }
+    }
+
     /// Calls the given function with a pointer to a `sockaddr` structure and the associated size
     /// of that structure.
     public func withSockAddr<T>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> T) rethrows -> T {
