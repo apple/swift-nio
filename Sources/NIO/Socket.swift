@@ -56,7 +56,7 @@ final class Socket : BaseSocket {
         var addr = addr
         return try withUnsafePointer(to: &addr) { ptr in
             try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                try Posix.connect(descriptor: self.descriptor, addr: ptr, size: MemoryLayout<T>.size)
+                try Posix.connect(descriptor: self.descriptor, addr: ptr, size: socklen_t(MemoryLayout<T>.size))
             }
         }
     }
@@ -114,7 +114,7 @@ final class Socket : BaseSocket {
             throw IOError(errnoCode: EBADF, reason: "can't write to socket as it's not open anymore.")
         }
       
-        return try Posix.sendfile(descriptor: self.descriptor, fd: fd, offset: offset, count: count)
+        return try Posix.sendfile(descriptor: self.descriptor, fd: fd, offset: off_t(offset), count: count)
     }
 
     #if os(Linux)

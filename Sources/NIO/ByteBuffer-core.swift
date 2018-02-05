@@ -386,7 +386,7 @@ public struct ByteBuffer {
                                                     count: self.readableBytes))
     }
 
-    /// Yields the bytes currently `writable` (`capacity` - `writerIndex`). Before reading those bytes you must first
+    /// Yields the bytes currently writable (`bytesWritable` = `capacity` - `writerIndex`). Before reading those bytes you must first
     /// write to them otherwise you will trigger undefined behaviour. The writer index will remain unchanged.
     ///
     /// - note: In almost all cases you should use `writeWithUnsafeMutableBytes` which will move the write pointer instead of this method

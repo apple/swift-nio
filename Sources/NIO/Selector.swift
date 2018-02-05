@@ -27,10 +27,21 @@ private extension timespec {
     }
 }
 
+private extension Optional {
+    func withUnsafeOptionalPointer<T>(_ fn: (UnsafePointer<Wrapped>?) throws -> T) rethrows -> T {
+        if var this = self {
+            return try withUnsafePointer(to: &this) { x in
+                try fn(x)
+            }
+        } else {
+            return try fn(nil)
+        }
+    }
+}
+
 ///  A `Selector` allows a user to register different `Selectable` sources to an underlying OS selector, and for that selector to notify them once IO is ready for them to process.
 ///
 /// This implementation offers an consistent API over epoll (for linux) and kqueue (for Darwin, BSD).
-
 /* this is deliberately not thread-safe, only the wakeup() function may be called unprotectedly */
 final class Selector<R: Registration> {
     private var lifecycleState: SelectorLifecycleState
@@ -154,7 +165,7 @@ final class Selector<R: Registration> {
 
     private func keventChangeSetOnly(event: UnsafePointer<kevent>?, numEvents: Int32) throws {
         do {
-            _ = try KQueue.kevent0(kq: self.fd, changelist: event, nchanges: numEvents, eventlist: nil, nevents: 0, timeout: nil)
+            _ = try KQueue.kevent(kq: self.fd, changelist: event, nchanges: numEvents, eventlist: nil, nevents: 0, timeout: nil)
         } catch let err as IOError {
             if err.errnoCode == EINTR {
                 // See https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
@@ -370,12 +381,8 @@ final class Selector<R: Registration> {
         growEventArrayIfNeeded(ready: ready)
 #else
         let timespec = toKQueueTimeSpec(strategy: strategy)
-
-        let ready: Int
-        if var ts = timespec {
-            ready = Int(try KQueue.kevent0(kq: self.fd, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: &ts))
-        } else {
-            ready = Int(try KQueue.kevent0(kq: self.fd, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: nil))
+        let ready = try timespec.withUnsafeOptionalPointer { ts in
+            Int(try KQueue.kevent(kq: self.fd, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: ts))
         }
     
         for i in 0..<ready {
@@ -428,7 +435,7 @@ final class Selector<R: Registration> {
     func wakeup() throws {
 
 #if os(Linux)
-        /* this is fine as we're abusing ARC to close `self.eventfd`) */
+        /* this is fine as we're abusing ARC to close `self.eventfd` */
         _ = try EventFd.eventfd_write(fd: self.eventfd, value: 1)
 #else
         var event = kevent()

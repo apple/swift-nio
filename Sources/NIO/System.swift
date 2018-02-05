@@ -20,6 +20,7 @@
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 @_exported import Darwin.C
+private let sysKevent = kevent
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 @_exported import Glibc
 #else
@@ -30,15 +31,15 @@ let badOS = { fatalError("unsupported OS") }()
 private let sysClose = close
 private let sysShutdown = shutdown
 private let sysBind = bind
-private let sysFcntl: (Int32, Int32, Int32) -> Int32 = fcntl
+private let sysFcntl: (CInt, CInt, CInt) -> CInt = fcntl
 private let sysSocket = socket
 private let sysSetsockopt = setsockopt
 private let sysGetsockopt = getsockopt
 private let sysListen = listen
 private let sysAccept = accept
 private let sysConnect = connect
-private let sysOpen: (UnsafePointer<CChar>, Int32) -> Int32 = open
-private let sysOpenWithMode: (UnsafePointer<CChar>, Int32, mode_t) -> Int32 = open
+private let sysOpen: (UnsafePointer<CChar>, CInt) -> CInt = open
+private let sysOpenWithMode: (UnsafePointer<CChar>, CInt, mode_t) -> CInt = open
 private let sysWrite = write
 private let sysWritev = writev
 private let sysRead = read
@@ -136,21 +137,21 @@ internal enum Posix {
     
     
     @inline(never)
-    public static func shutdown(descriptor: Int32, how: Shutdown) throws {
+    public static func shutdown(descriptor: CInt, how: Shutdown) throws {
         _ = try wrapSyscall {
             sysShutdown(descriptor, how.cValue)
         }
     }
     
     @inline(never)
-    public static func close(descriptor: Int32) throws {
+    public static func close(descriptor: CInt) throws {
         _ = try wrapSyscall {
             sysClose(descriptor)
         }
     }
     
     @inline(never)
-    public static func bind(descriptor: Int32, ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
+    public static func bind(descriptor: CInt, ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
          _ = try wrapSyscall {
             sysBind(descriptor, ptr, socklen_t(bytes))
         }
@@ -158,16 +159,16 @@ internal enum Posix {
     
     @inline(never)
     // TODO: Allow varargs
-    public static func fcntl(descriptor: Int32, command: Int32, value: Int32) throws {
+    public static func fcntl(descriptor: CInt, command: CInt, value: CInt) throws {
         _ = try wrapSyscall {
             sysFcntl(descriptor, command, value)
         }
     }
     
     @inline(never)
-    public static func socket(domain: Int32, type: Int32, `protocol`: Int32) throws -> Int32 {
+    public static func socket(domain: CInt, type: CInt, `protocol`: CInt) throws -> CInt {
         return try wrapSyscall {
-            let fd = Int32(sysSocket(domain, type, `protocol`))
+            let fd = sysSocket(domain, type, `protocol`)
 
             #if os(Linux)
                 /* no SO_NOSIGPIPE on Linux :( */
@@ -182,7 +183,7 @@ internal enum Posix {
     }
     
     @inline(never)
-    public static func setsockopt(socket: Int32, level: Int32, optionName: Int32,
+    public static func setsockopt(socket: CInt, level: CInt, optionName: CInt,
                                   optionValue: UnsafeRawPointer, optionLen: socklen_t) throws {
         _ = try wrapSyscall {
             sysSetsockopt(socket, level, optionName, optionValue, optionLen)
@@ -190,7 +191,7 @@ internal enum Posix {
     }
     
     @inline(never)
-    public static func getsockopt(socket: Int32, level: Int32, optionName: Int32,
+    public static func getsockopt(socket: CInt, level: CInt, optionName: CInt,
                                   optionValue: UnsafeMutableRawPointer, optionLen: UnsafeMutablePointer<socklen_t>) throws {
          _ = try wrapSyscall {
             sysGetsockopt(socket, level, optionName, optionValue, optionLen)
@@ -198,15 +199,15 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func listen(descriptor: Int32, backlog: Int32) throws {
+    public static func listen(descriptor: CInt, backlog: CInt) throws {
         _ = try wrapSyscall {
             sysListen(descriptor, backlog)
         }
     }
     
     @inline(never)
-    public static func accept(descriptor: Int32, addr: UnsafeMutablePointer<sockaddr>, len: UnsafeMutablePointer<socklen_t>) throws -> Int32? {
-        let result: IOResult<Int> = try wrapSyscallMayBlock {
+    public static func accept(descriptor: CInt, addr: UnsafeMutablePointer<sockaddr>, len: UnsafeMutablePointer<socklen_t>) throws -> CInt? {
+        let result: IOResult<CInt> = try wrapSyscallMayBlock {
             let fd = sysAccept(descriptor, addr, len)
 
             #if !os(Linux)
@@ -215,22 +216,22 @@ internal enum Posix {
                     _ = try? Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
                 }
             #endif
-            return Int(fd)
+            return fd
         }
         
         switch result {
         case .processed(let fd):
-            return Int32(fd)
+            return fd
         default:
             return nil
         }
     }
     
     @inline(never)
-    public static func connect(descriptor: Int32, addr: UnsafePointer<sockaddr>, size: Int) throws -> Bool {
+    public static func connect(descriptor: CInt, addr: UnsafePointer<sockaddr>, size: socklen_t) throws -> Bool {
         do {
             _ = try wrapSyscall {
-                sysConnect(descriptor, addr, socklen_t(size))
+                sysConnect(descriptor, addr, size)
             }
             return true
         } catch let err as IOError {
@@ -242,35 +243,35 @@ internal enum Posix {
     }
     
     @inline(never)
-    public static func open(file: UnsafePointer<CChar>, oFlag: Int32, mode: mode_t) throws -> CInt {
+    public static func open(file: UnsafePointer<CChar>, oFlag: CInt, mode: mode_t) throws -> CInt {
         return try wrapSyscall {
             sysOpenWithMode(file, oFlag, mode)
         }
     }
 
     @inline(never)
-    public static func open(file: UnsafePointer<CChar>, oFlag: Int32) throws -> CInt {
+    public static func open(file: UnsafePointer<CChar>, oFlag: CInt) throws -> CInt {
         return try wrapSyscall {
             sysOpen(file, oFlag)
         }
     }
     
     @inline(never)
-    public static func write(descriptor: Int32, pointer: UnsafePointer<UInt8>, size: Int) throws -> IOResult<Int> {
+    public static func write(descriptor: CInt, pointer: UnsafePointer<UInt8>, size: Int) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
             sysWrite(descriptor, pointer, size)
         }
     }
     
     @inline(never)
-    public static func writev(descriptor: Int32, iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
+    public static func writev(descriptor: CInt, iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
-            sysWritev(descriptor, iovecs.baseAddress!, Int32(iovecs.count))
+            sysWritev(descriptor, iovecs.baseAddress!, CInt(iovecs.count))
         }
     }
 
     @inline(never)
-    public static func sendto(descriptor: CInt, pointer: UnsafePointer<UInt8>, size: Int,
+    public static func sendto(descriptor: CInt, pointer: UnsafePointer<UInt8>, size: size_t,
                               destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
             sysSendTo(descriptor, pointer, size, 0, destinationPtr, destinationSize)
@@ -278,14 +279,14 @@ internal enum Posix {
     }
     
     @inline(never)
-    public static func read(descriptor: Int32, pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> IOResult<Int> {
+    public static func read(descriptor: CInt, pointer: UnsafeMutablePointer<UInt8>, size: size_t) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
-            Int(sysRead(descriptor, pointer, size))
+            sysRead(descriptor, pointer, size)
         }
     }
 
     @inline(never)
-    public static func recvfrom(descriptor: CInt, pointer: UnsafeMutablePointer<UInt8>, len: Int, addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) throws -> IOResult<Int> {
+    public static func recvfrom(descriptor: CInt, pointer: UnsafeMutablePointer<UInt8>, len: size_t, addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) throws -> IOResult<ssize_t> {
         return try wrapSyscallMayBlock {
             sysRecvFrom(descriptor, pointer, len, 0, addr, addrlen)
         }
@@ -301,18 +302,18 @@ internal enum Posix {
 
     // Its not really posix but exists on Linux and MacOS / BSD so just put it here for now to keep it simple
     @inline(never)
-    public static func sendfile(descriptor: Int32, fd: Int32, offset: Int, count: Int) throws -> IOResult<Int> {
-        var written: Int = 0
+    public static func sendfile(descriptor: CInt, fd: CInt, offset: off_t, count: size_t) throws -> IOResult<Int> {
+        var written: off_t = 0
         do {
-            _ = try wrapSyscall { () -> Int in
+            _ = try wrapSyscall { () -> ssize_t in
                 #if os(macOS)
                     var w: off_t = off_t(count)
-                    let result = Int(Darwin.sendfile(fd, descriptor, off_t(offset), &w, nil, 0))
-                    written = Int(w)
-                    return result
+                    let result: CInt = Darwin.sendfile(fd, descriptor, offset, &w, nil, 0)
+                    written = w
+                    return ssize_t(result)
                 #else
                     var off: off_t = offset
-                    let result = Glibc.sendfile(descriptor, fd, &off, count)
+                    let result: ssize_t = Glibc.sendfile(descriptor, fd, &off, count)
                     if result >= 0 {
                         written = result
                     } else {
@@ -321,10 +322,10 @@ internal enum Posix {
                     return result
                 #endif
             }
-            return .processed(written)
+            return .processed(Int(written))
         } catch let err as IOError {
             if err.errnoCode == EAGAIN {
-                return .wouldBlock(written)
+                return .wouldBlock(Int(written))
             }
             throw err
         }
@@ -338,16 +339,16 @@ internal enum KQueue {
     // TODO: Figure out how to specify a typealias to the kevent struct without run into trouble with the swift compiler
 
     @inline(never)
-    public static func kqueue() throws -> Int32 {
+    public static func kqueue() throws -> CInt {
         return try wrapSyscall {
             Darwin.kqueue()
         }
     }
     
     @inline(never)
-    public static func kevent0(kq: Int32, changelist: UnsafePointer<kevent>?, nchanges: Int32, eventlist: UnsafeMutablePointer<kevent>?, nevents: Int32, timeout: UnsafePointer<Darwin.timespec>?) throws -> Int32 {
+    public static func kevent(kq: CInt, changelist: UnsafePointer<kevent>?, nchanges: CInt, eventlist: UnsafeMutablePointer<kevent>?, nevents: CInt, timeout: UnsafePointer<Darwin.timespec>?) throws -> CInt {
         return try wrapSyscall {
-            return kevent(kq, changelist, nchanges, eventlist, nevents, timeout)
+            return sysKevent(kq, changelist, nchanges, eventlist, nevents, timeout)
         }
     }
 }
