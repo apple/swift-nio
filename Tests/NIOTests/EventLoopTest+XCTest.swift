@@ -31,6 +31,9 @@ extension EventLoopTest {
                 ("testScheduleCancelled", testScheduleCancelled),
                 ("testMultipleShutdown", testMultipleShutdown),
                 ("testShuttingDownFailsRegistration", testShuttingDownFailsRegistration),
+                ("testEventLoopThreads", testEventLoopThreads),
+                ("testEventLoopPinned", testEventLoopPinned),
+                ("testEventLoopPinnedCPUIdsConstructor", testEventLoopPinnedCPUIdsConstructor),
            ]
    }
 }

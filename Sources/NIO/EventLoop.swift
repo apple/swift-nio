@@ -628,13 +628,16 @@ extension EventLoopGroup {
     }
 }
 
+/// Called per `Thread` that is created for an EventLoop to do custom initialization of the `Thread` before the actual `EventLoop` is run on it.
+typealias ThreadInitializer = (Thread) -> Void
+
 /// An `EventLoopGroup` which will create multiple `EventLoop`s, each tied to its own `Thread`.
 final public class MultiThreadedEventLoopGroup : EventLoopGroup {
     
     private let index = Atomic<Int>(value: 0)
     private let eventLoops: [SelectableEventLoop]
 
-    private static func setupThreadAndEventLoop(name: String) -> SelectableEventLoop {
+    private static func setupThreadAndEventLoop(name: String, initializer: @escaping ThreadInitializer)  -> SelectableEventLoop {
         let lock = Lock()
         /* the `loopUpAndRunningGroup` is done by the calling thread when the EventLoop has been created and was written to `_loop` */
         let loopUpAndRunningGroup = DispatchGroup()
@@ -645,6 +648,8 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
         if #available(OSX 10.12, *) {
             loopUpAndRunningGroup.enter()
             Thread.spawnAndRun(name: name) { t in
+                initializer(t)
+                
                 do {
                     /* we try! this as this must work (just setting up kqueue/epoll) or else there's not much we can do here */
                     let l = try! SelectableEventLoop(thread: t)
@@ -664,10 +669,26 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
         }
     }
 
-    public init(numThreads: Int) {
-        self.eventLoops = (0..<numThreads).map { threadNo in
+    /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numThreads`.
+    ///
+    /// - arguments:
+    ///     - numThreads: The number of `Threads` to use.
+    public convenience init(numThreads: Int) {
+        let initializers: [ThreadInitializer] = Array(repeatElement({ _ in }, count: numThreads))
+        self.init(threadInitializers: initializers)
+    }
+    
+    /// Creates a `MultiThreadedEventLoopGroup` instance which uses the given `ThreadInitializer`s. One `Thread` per `ThreadInitializer` is created and used.
+    ///
+    /// - arguments:
+    ///     - threadInitializers: The `ThreadInitializer`s to use.
+    internal init(threadInitializers: [ThreadInitializer]) {
+        var idx = 0
+        self.eventLoops = threadInitializers.map { initializer in
             // Maximum name length on linux is 16 by default.
-            MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name: "NIO-ELT-#\(threadNo)")
+            let ev = MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name: "NIO-ELT-#\(idx)", initializer: initializer)
+            idx += 1
+            return ev
         }
     }
     

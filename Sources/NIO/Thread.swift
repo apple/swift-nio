@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+
 private typealias ThreadBoxValue = (body: (Thread) -> Void, name: String?)
 private typealias ThreadBox = Box<ThreadBoxValue>
 
@@ -101,6 +102,11 @@ final class Thread {
     /// Returns `true` if the calling thread is the same as this one.
     var isCurrent: Bool {
         return pthread_equal(pthread, pthread_self()) != 0
+    }
+    
+    /// Returns the current running `Thread`.
+    static var current: Thread {
+        return Thread(pthread: pthread_self())
     }
 }
 

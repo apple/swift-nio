@@ -20,6 +20,8 @@
 #include <sys/timerfd.h>
 #include <sys/sysinfo.h>
 #include <sys/socket.h>
+#include <sched.h>
+
 
 // Some explanation is required here.
 //
@@ -48,5 +50,13 @@ int CNIOLinux_recvmmsg(int sockfd, CNIOLinux_mmsghdr *msgvec, unsigned int vlen,
 
 int CNIOLinux_pthread_setname_np(pthread_t thread, const char *name);
 int CNIOLinux_pthread_getname_np(pthread_t thread, char *name, size_t len);
+
+// Thread affinity stuff.
+int CNIOLinux_pthread_setaffinity_np(pthread_t thread, size_t cpusetsize, const cpu_set_t *cpuset);
+int CNIOLinux_pthread_getaffinity_np(pthread_t thread, size_t cpusetsize, cpu_set_t *cpuset);
+void CNIOLinux_CPU_SET(int cpu, cpu_set_t *set);
+void CNIOLinux_CPU_ZERO(cpu_set_t *set);
+int CNIOLinux_CPU_ISSET(int cpu, cpu_set_t *set);
+int CNIOLinux_CPU_SETSIZE();
 #endif
 #endif

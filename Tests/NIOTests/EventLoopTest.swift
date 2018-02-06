@@ -187,4 +187,45 @@ public class EventLoopTest : XCTestCase {
         }
         XCTAssertNoThrow(try loopCloseFut.wait())
     }
+
+    public func testEventLoopThreads() throws {
+        var counter = 0
+        let fn: ThreadInitializer = { t in
+            counter += 1
+        }
+        let threads: [ThreadInitializer] = [fn, fn]
+        
+        let group = MultiThreadedEventLoopGroup(threadInitializers: threads)
+       
+        XCTAssertEqual(2, counter)
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
+    }
+    
+    public func testEventLoopPinned() throws {
+        #if os(Linux)
+            let fn: ThreadInitializer = { t in
+                let set = LinuxCPUSet(0)
+                t.affinity = set
+                XCTAssertEqual(set, t.affinity)
+            }
+            let threads: [ThreadInitializer] = [fn, fn]
+        
+            let group = MultiThreadedEventLoopGroup(threadInitializers: threads)
+        
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        #endif
+    }
+    
+    public func testEventLoopPinnedCPUIdsConstructor() throws {
+        #if os(Linux)
+            let group = MultiThreadedEventLoopGroup(pinnedCPUIds: [0])
+            let eventLoop = group.next()
+            let set = try eventLoop.submit {
+                return NIO.Thread.current.affinity
+            }.wait()
+
+            XCTAssertEqual(LinuxCPUSet(0), set)
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        #endif
+    }
 }

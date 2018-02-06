@@ -16,6 +16,8 @@
 #define _GNU_SOURCE
 #include <c_nio_linux.h>
 #include <pthread.h>
+#include <sched.h>
+
 
 _Static_assert(sizeof(CNIOLinux_mmsghdr) == sizeof(struct mmsghdr),
                "sizes of CNIOLinux_mmsghdr and struct mmsghdr differ");
@@ -38,5 +40,28 @@ int CNIOLinux_pthread_setname_np(pthread_t thread, const char *name) {
 
 int CNIOLinux_pthread_getname_np(pthread_t thread, char *name, size_t len) {
     return pthread_getname_np(thread, name, len);
+}
+
+int CNIOLinux_pthread_setaffinity_np(pthread_t thread, size_t cpusetsize, const cpu_set_t *cpuset) {
+    return pthread_setaffinity_np(thread, cpusetsize, cpuset);
+}
+int CNIOLinux_pthread_getaffinity_np(pthread_t thread, size_t cpusetsize, cpu_set_t *cpuset) {
+    return pthread_getaffinity_np(thread, cpusetsize, cpuset);
+}
+
+void CNIOLinux_CPU_SET(int cpu, cpu_set_t *set) {
+    CPU_SET(cpu, set);
+}
+
+void CNIOLinux_CPU_ZERO(cpu_set_t *set) {
+    CPU_ZERO(set);
+}
+
+int CNIOLinux_CPU_ISSET(int cpu, cpu_set_t *set) {
+    return CPU_ISSET(cpu, set);
+}
+
+int CNIOLinux_CPU_SETSIZE() {
+    return CPU_SETSIZE;
 }
 #endif
