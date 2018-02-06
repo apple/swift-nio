@@ -666,7 +666,7 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
     }
     
     public func next() -> EventLoop {
-        return eventLoops[(index.add(1) % eventLoops.count).abs()]
+        return eventLoops[abs(index.add(1) % eventLoops.count)]
     }
     
     internal func unsafeClose() throws {
@@ -743,16 +743,6 @@ extension ScheduledTask : Comparable {
     }
     public static func == (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs === rhs
-    }
-}
-
-extension Int {
-    /// Returns the the absolute value of the `Int`.
-    public func abs() -> Int {
-        if self >= 0 {
-            return self
-        }
-        return -self
     }
 }
 
