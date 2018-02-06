@@ -15,6 +15,7 @@
 
 #define _GNU_SOURCE
 #include <c_nio_linux.h>
+#include <pthread.h>
 
 _Static_assert(sizeof(CNIOLinux_mmsghdr) == sizeof(struct mmsghdr),
                "sizes of CNIOLinux_mmsghdr and struct mmsghdr differ");
@@ -31,4 +32,11 @@ int CNIOLinux_recvmmsg(int sockfd, CNIOLinux_mmsghdr *msgvec, unsigned int vlen,
     return recvmmsg(sockfd, (struct mmsghdr *)msgvec, vlen, flags, timeout);
 }
 
+int CNIOLinux_pthread_setname_np(pthread_t thread, const char *name) {
+    return pthread_setname_np(thread, name);
+}
+
+int CNIOLinux_pthread_getname_np(pthread_t thread, char *name, size_t len) {
+    return pthread_getname_np(thread, name, len);
+}
 #endif

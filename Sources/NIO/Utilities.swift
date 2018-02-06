@@ -28,6 +28,12 @@ private func darwinCoreCount() -> Int {
 }
 #endif
 
+/// Allows to "box" another value.
+final class Box<T> {
+    let value: T
+    init(_ value: T) { self.value = value }
+}
+
 public enum System {
     /// A utility function that returns an estimate of the number of *logical* cores
     /// on the system.

@@ -26,13 +26,7 @@ public enum SocketAddressError: Error {
 
 /// Represent a socket address to which we may want to connect or bind.
 public enum SocketAddress: CustomStringConvertible {
-    /// A class for creating an immutable box for a structure. Used here to avoid
-    /// carrying around a massive sockaddr_un in the enum.
-    private final class Box<T> {
-        fileprivate let value: T
-        fileprivate init(_ value: T) { self.value = value }
-    }
-
+    
     /// A single IPv4 address for `SocketAddress`.
     public struct IPv4Address {
         private let _storage: Box<(address: sockaddr_in, host: String)>

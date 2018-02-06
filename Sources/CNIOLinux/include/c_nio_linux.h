@@ -46,5 +46,7 @@ typedef struct {
 int CNIOLinux_sendmmsg(int sockfd, CNIOLinux_mmsghdr *msgvec, unsigned int vlen, int flags);
 int CNIOLinux_recvmmsg(int sockfd, CNIOLinux_mmsghdr *msgvec, unsigned int vlen, int flags, struct timespec *timeout);
 
+int CNIOLinux_pthread_setname_np(pthread_t thread, const char *name);
+int CNIOLinux_pthread_getname_np(pthread_t thread, char *name, size_t len);
 #endif
 #endif

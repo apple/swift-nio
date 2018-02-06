@@ -14,7 +14,6 @@
 
 import NIOConcurrencyHelpers
 import Dispatch
-import class Foundation.Thread
 import NIOPriorityQueue
 
 /// Returned once a task was scheduled on the `EventLoop` for later execution.
@@ -274,7 +273,7 @@ private enum EventLoopLifecycleState {
 /// is guaranteed to never change!
 internal final class SelectableEventLoop : EventLoop {
     private let selector: NIO.Selector<NIORegistration>
-    private let thread: pthread_t
+    private let thread: Thread
     private var scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
     private let tasksLock = Lock()
     private var lifecycleState: EventLoopLifecycleState = .open
@@ -303,7 +302,7 @@ internal final class SelectableEventLoop : EventLoop {
         }
     }
 
-    public init(thread: pthread_t) throws {
+    public init(thread: Thread) throws {
         self.selector = try NIO.Selector()
         self.thread = thread
         self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
@@ -342,7 +341,7 @@ internal final class SelectableEventLoop : EventLoop {
     }
     
     public var inEventLoop: Bool {
-        return pthread_equal(pthread_self(), thread) != 0
+        return thread.isCurrent
     }
 
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
@@ -639,10 +638,10 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
 
         if #available(OSX 10.12, *) {
             loopUpAndRunningGroup.enter()
-            let thread = Thread {
+            Thread.spawnAndRun(name: name) { t in
                 do {
                     /* we try! this as this must work (just setting up kqueue/epoll) or else there's not much we can do here */
-                    let l = try! SelectableEventLoop(thread: pthread_self())
+                    let l = try! SelectableEventLoop(thread: t)
                     lock.withLock {
                         _loop = l
                     }
@@ -652,8 +651,6 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
                     fatalError("unexpected error while executing EventLoop \(err)")
                 }
             }
-            thread.start()
-            thread.name = name
             loopUpAndRunningGroup.wait()
             return lock.withLock { _loop }
         } else {
@@ -663,7 +660,8 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
 
     public init(numThreads: Int) {
         self.eventLoops = (0..<numThreads).map { threadNo in
-            MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name: "SwiftNIO event loop thread #\(threadNo)")
+            // Maximum name length on linux is 16 by default.
+            MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name: "NIO-ELT-#\(threadNo)")
         }
     }
     
