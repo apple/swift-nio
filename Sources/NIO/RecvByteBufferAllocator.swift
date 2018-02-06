@@ -12,15 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-//
-//  RecvByteBufferAllocator.swift
-//  nio
-//
-//  Created by Norman Maurer on 11.06.17.
-//
-//
-
-/// Allocates `ByteBuffer` to by used to read bytes from a `Channel` and record the number of the actual bytes that were used.
+/// Allocates `ByteBuffer`s to be used to read bytes from a `Channel` and records the number of the actual bytes that were used.
 public protocol RecvByteBufferAllocator {
     /// Allocates a new `ByteBuffer` that will be used to read bytes from a `Channel`.
     func buffer(allocator: ByteBufferAllocator) -> ByteBuffer
@@ -34,9 +26,8 @@ public protocol RecvByteBufferAllocator {
 }
 
 
-/*
- `RecvByteBufferAllocator` which will always return a `ByteBuffer` with the same fixed size no matter what was recorded.
- */
+
+/// `RecvByteBufferAllocator` which will always return a `ByteBuffer` with the same fixed size no matter what was recorded.
 public struct FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
     public let capacity: Int
     
@@ -55,9 +46,7 @@ public struct FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
     }
 }
 
-/*
- `RecvByteBufferAllocator` which will gracefully increment or decrement the buffer size on the feedback that was recorded.
- */
+/// `RecvByteBufferAllocator` which will gracefully increment or decrement the buffer size on the feedback that was recorded.
 public struct AdaptiveRecvByteBufferAllocator : RecvByteBufferAllocator {
     
     private static let indexIncrement = 4
