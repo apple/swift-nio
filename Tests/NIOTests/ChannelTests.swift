@@ -1198,6 +1198,16 @@ public class ChannelTests: XCTestCase {
         }
         
         try accepted.shutdown(how: .WR)
+        do {
+            while true {
+                try channel.read().wait()
+                // error hasn't arrived yet, let's try again...
+            }
+        } catch let e as ChannelError where e == .inputClosed {
+            // OK
+        } catch {
+            XCTFail("unexpected error \(error)")
+        }
         
         var buffer = channel.allocator.buffer(capacity: 12)
         buffer.write(string: "1234")
