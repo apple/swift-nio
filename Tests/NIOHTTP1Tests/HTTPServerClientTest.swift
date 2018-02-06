@@ -111,10 +111,10 @@ class HTTPServerClientTest : XCTestCase {
             self.mode = mode
         }
         
-        private func outboundBody(_  buffer: ByteBuffer) -> HTTPServerResponsePart {
+        private func outboundBody(_  buffer: ByteBuffer) -> (body: HTTPServerResponsePart, destructor: () -> Void) {
             switch mode {
             case .byteBuffer:
-                return .body(.byteBuffer(buffer))
+                return (.body(.byteBuffer(buffer)), { () in })
             case .fileRegion:
                 let filePath: String
                 #if os(Linux)
@@ -131,7 +131,7 @@ class HTTPServerClientTest : XCTestCase {
                 let content = buffer.getData(at: 0, length: buffer.readableBytes)!
                 XCTAssertNoThrow(try content.write(to: URL(fileURLWithPath: filePath)))
                 let region = try! FileRegion(file: filePath, readerIndex: 0, endIndex: buffer.readableBytes)
-                return .body(.fileRegion(region))
+                return (.body(.fileRegion(region)), { try! region.close() })
             }
         }
         
@@ -155,7 +155,10 @@ class HTTPServerClientTest : XCTestCase {
                     var b = ctx.channel.allocator.buffer(capacity: replyString.count)
                     b.write(string: replyString)
                     
-                    ctx.write(data: self.wrapOutboundOut(self.outboundBody(b)), promise: nil)
+                    let outbound = self.outboundBody(b)
+                    ctx.write(data: self.wrapOutboundOut(outbound.body)).whenComplete { _ in
+                        outbound.destructor()
+                    }
                     ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
                         assertSuccess(r)
                         self.sentEnd = true
@@ -173,7 +176,9 @@ class HTTPServerClientTest : XCTestCase {
                         b.clear()
                         b.write(string: "\(i)")
                         
-                        ctx.write(data: self.wrapOutboundOut(self.outboundBody(b))).whenComplete { r in
+                        let outbound = self.outboundBody(b)
+                        ctx.write(data: self.wrapOutboundOut(outbound.body)).whenComplete { r in
+                            outbound.destructor()
                             assertSuccess(r)
                         }
                     }
@@ -195,7 +200,9 @@ class HTTPServerClientTest : XCTestCase {
                         b.clear()
                         b.write(string: "\(i)")
                         
-                        ctx.write(data: self.wrapOutboundOut(self.outboundBody(b))).whenComplete { r in
+                        let outbound = self.outboundBody(b)
+                        ctx.write(data: self.wrapOutboundOut(outbound.body)).whenComplete { r in
+                            outbound.destructor()
                             assertSuccess(r)
                         }
                     }
@@ -226,7 +233,9 @@ class HTTPServerClientTest : XCTestCase {
                     ctx.write(data: self.wrapOutboundOut(r)).whenComplete { r in
                         assertSuccess(r)
                     }
-                    ctx.writeAndFlush(data: self.wrapOutboundOut(self.outboundBody(buf))).whenComplete { r in
+                    let outbound = self.outboundBody(buf)
+                    ctx.writeAndFlush(data: self.wrapOutboundOut(outbound.body)).whenComplete { r in
+                        outbound.destructor()
                         assertSuccess(r)
                     }
                     ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
