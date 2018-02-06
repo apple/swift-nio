@@ -28,7 +28,7 @@ extension IOData: Equatable {
         case (.byteBuffer(let lhs), .byteBuffer(let rhs)):
             return lhs == rhs
         case (.fileRegion(let lhs), .fileRegion(let rhs)):
-            return lhs === rhs
+            return lhs == rhs
         default:
             return false
         }
@@ -44,6 +44,28 @@ extension IOData {
             return buf.readableBytes
         case .fileRegion(let region):
             return region.readableBytes
+        }
+    }
+
+    /// Move the readerIndex forward by `offset`.
+    public mutating func moveReaderIndex(forwardBy: Int) {
+        switch self {
+        case .byteBuffer(var buffer):
+            buffer.moveReaderIndex(forwardBy: forwardBy)
+            self = .byteBuffer(buffer)
+        case .fileRegion(var fileRegion):
+            fileRegion.moveReaderIndex(forwardBy: forwardBy)
+            self = .fileRegion(fileRegion)
+        }
+    }
+
+    /// Returns if the `IOData` object is in fact a `FileRegion`.
+    public var isFileRegion: Bool {
+        switch self {
+        case .fileRegion:
+            return true
+        default:
+            return false
         }
     }
 }

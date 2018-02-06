@@ -41,8 +41,8 @@ class NonBlockingFileIOTest: XCTestCase {
 
     func testBasicFileIOWorks() throws {
         let content = "hello"
-        try withTemporaryFile(content: content) { (fd, _) -> Void in
-            let fr = FileRegion(descriptor: fd, readerIndex: 0, endIndex: 5)
+        try withTemporaryFile(content: content) { (fileHandle, _) -> Void in
+            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 0, endIndex: 5)
             var buf = try self.fileIO.read(fileRegion: fr,
                                            allocator: self.allocator,
                                            eventLoop: self.eventLoop).wait()
@@ -53,8 +53,8 @@ class NonBlockingFileIOTest: XCTestCase {
 
     func testOffsetWorks() throws {
         let content = "hello"
-        try withTemporaryFile(content: content) { (fd, path) -> Void in
-            let fr = FileRegion(descriptor: fd, readerIndex: 3, endIndex: 5)
+        try withTemporaryFile(content: content) { (fileHandle, _) -> Void in
+            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 3, endIndex: 5)
             var buf = try self.fileIO.read(fileRegion: fr,
                                            allocator: self.allocator,
                                            eventLoop: self.eventLoop).wait()
@@ -65,8 +65,8 @@ class NonBlockingFileIOTest: XCTestCase {
 
     func testOffsetBeyondEOF() throws {
         let content = "hello"
-        try withTemporaryFile(content: content) { (fd, path) -> Void in
-            let fr = FileRegion(descriptor: fd, readerIndex: 3000, endIndex: 3001)
+        try withTemporaryFile(content: content) { (fileHandle, _) -> Void in
+            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 3000, endIndex: 3001)
             var buf = try self.fileIO.read(fileRegion: fr,
                                            allocator: self.allocator,
                                            eventLoop: self.eventLoop).wait()
@@ -76,8 +76,8 @@ class NonBlockingFileIOTest: XCTestCase {
     }
 
     func testEmptyReadWorks() throws {
-        try withTemporaryFile { (fd, path) -> Void in
-            let fr = FileRegion(descriptor: fd, readerIndex: 0, endIndex: 0)
+        try withTemporaryFile { (fileHandle, _) -> Void in
+            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 0, endIndex: 0)
             let buf = try self.fileIO.read(fileRegion: fr,
                                            allocator: self.allocator,
                                            eventLoop: self.eventLoop).wait()
@@ -87,8 +87,8 @@ class NonBlockingFileIOTest: XCTestCase {
 
     func testReadingShortWorks() throws {
         let content = "hello"
-        try withTemporaryFile(content: "hello") { (fd, path) -> Void in
-            let fr = FileRegion(descriptor: fd, readerIndex: 0, endIndex: 10)
+        try withTemporaryFile(content: "hello") { (fileHandle, _) -> Void in
+            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 0, endIndex: 10)
             var buf = try self.fileIO.read(fileRegion: fr,
                                            allocator: self.allocator,
                                            eventLoop: self.eventLoop).wait()
@@ -99,23 +99,26 @@ class NonBlockingFileIOTest: XCTestCase {
 
     func testDoesNotBlockTheThreadOrEventLoop() throws {
         var innerError: Error? = nil
-        try withPipe { readFD, writeFD in
-            let bufferFuture = self.fileIO.read(descriptor: readFD,
+        try withPipe { readFH, writeFH in
+            let bufferFuture = self.fileIO.read(fileHandle: readFH,
                                                 byteCount: 10,
                                                 allocator: self.allocator,
                                                 eventLoop: self.eventLoop)
+
             do {
                 try self.eventLoop.submit {
-                    _ = try Posix.write(descriptor: writeFD, pointer: "X", size: 1)
-                    _ = try Posix.close(descriptor: writeFD)
-                    }.wait()
+                    try writeFH.withDescriptor { writeFD in
+                        _ = try Posix.write(descriptor: writeFD, pointer: "X", size: 1)
+                    }
+                    try writeFH.close()
+                }.wait()
                 var buf = try bufferFuture.wait()
                 XCTAssertEqual(1, buf.readableBytes)
                 XCTAssertEqual("X", buf.readString(length: buf.readableBytes))
             } catch {
                 innerError = error
             }
-            return [readFD]
+            return [readFH]
         }
         XCTAssertNil(innerError)
     }
@@ -125,9 +128,9 @@ class NonBlockingFileIOTest: XCTestCase {
             XCTAssertNil(err)
         }
 
-        try withPipe { readFD, writeFD in
+        try withPipe { readFH, writeFH in
             do {
-                _ = try self.fileIO.read(descriptor: readFD,
+                _ = try self.fileIO.read(fileHandle: readFH,
                                          byteCount: 1,
                                          allocator: self.allocator,
                                          eventLoop: self.eventLoop).wait()
@@ -137,7 +140,7 @@ class NonBlockingFileIOTest: XCTestCase {
             } catch {
                 XCTFail("unexpected error \(error)")
             }
-            return [readFD, writeFD]
+            return [readFH, writeFH]
         }
     }
 
@@ -145,8 +148,8 @@ class NonBlockingFileIOTest: XCTestCase {
         let content = "hello"
         let contentBytes = Array(content.utf8)
         var numCalls = 0
-        try withTemporaryFile(content: content) { (fd, path) -> Void in
-            let fr = FileRegion(descriptor: fd, readerIndex: 0, endIndex: 5)
+        try withTemporaryFile(content: content) { (fileHandle, path) -> Void in
+            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 0, endIndex: 5)
             try self.fileIO.readChunked(fileRegion: fr,
                                         chunkSize: 1,
                                         allocator: self.allocator,
@@ -167,8 +170,8 @@ class NonBlockingFileIOTest: XCTestCase {
         let content = "hello"
         let contentBytes = Array(content.utf8)
         var numCalls = 0
-        withTemporaryFile(content: content) { (fd, path) -> Void in
-            let fr = FileRegion(descriptor: fd, readerIndex: 0, endIndex: 5)
+        withTemporaryFile(content: content) { (fileHandle, path) -> Void in
+            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 0, endIndex: 5)
             do {
                 try self.fileIO.readChunked(fileRegion: fr,
                                             chunkSize: 1,
@@ -193,12 +196,12 @@ class NonBlockingFileIOTest: XCTestCase {
 
     func testFailedIO() throws {
         enum DummyError: Error { case dummy }
-        let unconnectedSockFD = socket(AF_UNIX, Posix.SOCK_STREAM, 0)
+        let unconnectedSockFH = FileHandle(descriptor: socket(AF_UNIX, Posix.SOCK_STREAM, 0))
         defer {
-            XCTAssertNoThrow(try Posix.close(descriptor: unconnectedSockFD))
+            XCTAssertNoThrow(try unconnectedSockFH.close())
         }
         do {
-            try self.fileIO.readChunked(descriptor: unconnectedSockFD,
+            try self.fileIO.readChunked(fileHandle: unconnectedSockFH,
                                         byteCount: 5,
                                         chunkSize: 1,
                                         allocator: self.allocator,
@@ -222,8 +225,8 @@ class NonBlockingFileIOTest: XCTestCase {
         let content = String(repeatElement("X", count: 20*1024))
         var numCalls = 0
         let expectedByte = content.utf8.first!
-        try withTemporaryFile(content: content) { (fd, path) -> Void in
-            let fr = FileRegion(descriptor: fd, readerIndex: 0, endIndex: content.utf8.count)
+        try withTemporaryFile(content: content) { (fileHandle, path) -> Void in
+            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 0, endIndex: content.utf8.count)
             try self.fileIO.readChunked(fileRegion: fr,
                                         chunkSize: 1,
                                         allocator: self.allocator,
@@ -242,8 +245,8 @@ class NonBlockingFileIOTest: XCTestCase {
     func testReadingDifferentChunkSize() throws {
         let content = "0123456789"
         var numCalls = 0
-        try withTemporaryFile(content: content) { (fd, path) -> Void in
-            let fr = FileRegion(descriptor: fd, readerIndex: 0, endIndex: content.utf8.count)
+        try withTemporaryFile(content: content) { (fileHandle, path) -> Void in
+            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 0, endIndex: content.utf8.count)
             try self.fileIO.readChunked(fileRegion: fr,
                                         chunkSize: 2,
                                         allocator: self.allocator,
@@ -261,8 +264,8 @@ class NonBlockingFileIOTest: XCTestCase {
 
     func testReadDoesNotReadShort() throws {
         var innerError: Error? = nil
-        try withPipe { readFD, writeFD in
-            let bufferFuture = self.fileIO.read(descriptor: readFD,
+        try withPipe { readFH, writeFH in
+            let bufferFuture = self.fileIO.read(fileHandle: readFH,
                                                 byteCount: 10,
                                                 allocator: self.allocator,
                                                 eventLoop: self.eventLoop)
@@ -270,10 +273,12 @@ class NonBlockingFileIOTest: XCTestCase {
                 for i in 0..<10 {
                     // this construction will cause 'read' to repeatedly return with 1 byte read
                     try self.eventLoop.scheduleTask(in: .milliseconds(50)) {
-                        _ = try Posix.write(descriptor: writeFD, pointer: "\(i)", size: 1)
+                        try writeFH.withDescriptor { writeFD in
+                            _ = try Posix.write(descriptor: writeFD, pointer: "\(i)", size: 1)
+                        }
                     }.futureResult.wait()
                 }
-                _ = try Posix.close(descriptor: writeFD)
+                try writeFH.close()
 
                 var buf = try bufferFuture.wait()
                 XCTAssertEqual(10, buf.readableBytes)
@@ -281,7 +286,7 @@ class NonBlockingFileIOTest: XCTestCase {
             } catch {
                 innerError = error
             }
-            return [readFD]
+            return [readFH]
         }
         XCTAssertNil(innerError)
     }
@@ -291,8 +296,8 @@ class NonBlockingFileIOTest: XCTestCase {
         var allBytesActual = ""
         let allBytesExpected = String(content.dropFirst(7).dropLast(7))
         var numCalls = 0
-        try withTemporaryFile(content: content) { (fd, path) -> Void in
-            let fr = FileRegion(descriptor: fd, readerIndex: 7, endIndex: 12)
+        try withTemporaryFile(content: content) { (fileHandle, path) -> Void in
+            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 7, endIndex: 12)
             try self.fileIO.readChunked(fileRegion: fr,
                                         chunkSize: 3,
                                         allocator: self.allocator,
@@ -310,9 +315,9 @@ class NonBlockingFileIOTest: XCTestCase {
 
     func testChunkedReadDoesNotReadShort() throws {
         var innerError: Error? = nil
-        try withPipe { readFD, writeFD in
+        try withPipe { readFH, writeFH in
             var allBytes = ""
-            let f = self.fileIO.readChunked(descriptor: readFD,
+            let f = self.fileIO.readChunked(fileHandle: readFH,
                                             byteCount: 10,
                                             chunkSize: 3,
                                             allocator: self.allocator,
@@ -331,17 +336,19 @@ class NonBlockingFileIOTest: XCTestCase {
                 for i in 0..<10 {
                     // this construction will cause 'read' to repeatedly return with 1 byte read
                     try self.eventLoop.scheduleTask(in: .milliseconds(50)) {
-                        _ = try Posix.write(descriptor: writeFD, pointer: "\(i)", size: 1)
-                        }.futureResult.wait()
+                        try writeFH.withDescriptor { writeFD in
+                            _ = try Posix.write(descriptor: writeFD, pointer: "\(i)", size: 1)
+                        }
+                    }.futureResult.wait()
                 }
-                _ = try Posix.close(descriptor: writeFD)
+                try writeFH.close()
 
                 try f.wait()
                 XCTAssertEqual("0123456789", allBytes)
             } catch {
                 innerError = error
             }
-            return [readFD]
+            return [readFH]
         }
         XCTAssertNil(innerError)
     }
@@ -349,8 +356,8 @@ class NonBlockingFileIOTest: XCTestCase {
     func testChunkSizeMoreThanTotal() throws {
         let content = "0123456789"
         var numCalls = 0
-        try withTemporaryFile(content: content) { (fd, path) -> Void in
-            let fr = FileRegion(descriptor: fd, readerIndex: 0, endIndex: 5)
+        try withTemporaryFile(content: content) { (fileHandle, path) -> Void in
+            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 0, endIndex: 5)
             try self.fileIO.readChunked(fileRegion: fr,
                                         chunkSize: 10,
                                         allocator: self.allocator,
@@ -367,9 +374,11 @@ class NonBlockingFileIOTest: XCTestCase {
     }
 
     func testFileRegionReadFromPipeFails() throws {
-        try withPipe { readFD, writeFD in
-            _ = try! Posix.write(descriptor: writeFD, pointer: "ABC", size: 3)
-            let fr = FileRegion(descriptor: readFD, readerIndex: 1, endIndex: 2)
+        try withPipe { readFH, writeFH in
+            try! writeFH.withDescriptor { writeFD in
+                _ = try! Posix.write(descriptor: writeFD, pointer: "ABC", size: 3)
+            }
+            let fr = FileRegion(fileHandle: readFH, readerIndex: 1, endIndex: 2)
             do {
                 try self.fileIO.readChunked(fileRegion: fr,
                                             chunkSize: 10,
@@ -384,29 +393,31 @@ class NonBlockingFileIOTest: XCTestCase {
             } catch {
                 XCTFail("wrong error \(error) caught")
             }
-            return [readFD, writeFD]
+            return [readFH, writeFH]
         }
     }
 
     func testReadFromNonBlockingPipeFails() throws {
-        try withPipe { readFD, writeFD in
+        try withPipe { readFH, writeFH in
             do {
-                try Posix.fcntl(descriptor: readFD, command: F_SETFL, value: O_NONBLOCK)
-                try self.fileIO.readChunked(descriptor: readFD,
+                try readFH.withDescriptor { readFD in
+                    try Posix.fcntl(descriptor: readFD, command: F_SETFL, value: O_NONBLOCK)
+                }
+                try self.fileIO.readChunked(fileHandle: readFH,
                                             byteCount: 10,
                                             chunkSize: 10,
                                             allocator: self.allocator,
                                             eventLoop: self.eventLoop) { buf in
                                                 XCTFail("this shouldn't have been called")
                                                 return self.eventLoop.newSucceededFuture(result: ())
-                    }.wait()
+                }.wait()
                 XCTFail("succeeded and shouldn't have")
             } catch let e as NonBlockingFileIO.Error where e == NonBlockingFileIO.Error.descriptorSetToNonBlocking {
                 // OK
             } catch {
                 XCTFail("wrong error \(error) caught")
             }
-            return [readFD, writeFD]
+            return [readFH, writeFH]
         }
     }
 
@@ -419,12 +430,8 @@ class NonBlockingFileIOTest: XCTestCase {
     func testSeekPointerIsSetToFront() throws {
         let content = "0123456789"
         var numCalls = 0
-        try withTemporaryFile(content: content) { (fd, path) -> Void in
-            let region = try FileRegion(file: path)
-            defer {
-                try! region.close()
-            }
-            try self.fileIO.readChunked(descriptor: region.descriptor,
+        try withTemporaryFile(content: content) { (fileHandle, path) -> Void in
+            try self.fileIO.readChunked(fileHandle: fileHandle,
                                         byteCount: content.utf8.count,
                                         chunkSize: 9,
                                         allocator: self.allocator,

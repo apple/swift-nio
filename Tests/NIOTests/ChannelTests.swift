@@ -704,9 +704,18 @@ public class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<()>] = (0..<2).map { _ in el.newPromise() }
 
-            _ = pwm.add(data: .fileRegion(FileRegion(descriptor: -1, readerIndex: 12, endIndex: 14)), promise: ps[0])
+            let fh1 = FileHandle(descriptor: -1)
+            let fh2 = FileHandle(descriptor: -2)
+            let fr1 = FileRegion(fileHandle: fh1, readerIndex: 12, endIndex: 14)
+            let fr2 = FileRegion(fileHandle: fh2, readerIndex: 0, endIndex: 2)
+            defer {
+                // fake descriptors, so shouldn't be closed.
+                XCTAssertNoThrow(try fh1.takeDescriptorOwnership())
+                XCTAssertNoThrow(try fh2.takeDescriptorOwnership())
+            }
+            _ = pwm.add(data: .fileRegion(fr1), promise: ps[0])
             pwm.markFlushCheckpoint(promise: nil)
-            _ = pwm.add(data: .fileRegion(FileRegion(descriptor: -2, readerIndex: 0, endIndex: 2)), promise: ps[1])
+            _ = pwm.add(data: .fileRegion(fr2), promise: ps[1])
 
             var result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                    promises: ps,
@@ -744,7 +753,13 @@ public class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<()>] = (0..<1).map { _ in el.newPromise() }
 
-            _ = pwm.add(data: .fileRegion(FileRegion(descriptor: -1, readerIndex: 99, endIndex: 99)), promise: ps[0])
+            let fh = FileHandle(descriptor: -1)
+            let fr = FileRegion(fileHandle: fh, readerIndex: 99, endIndex: 99)
+            defer {
+                // fake descriptor, so shouldn't be closed.
+                XCTAssertNoThrow(try fh.takeDescriptorOwnership())
+            }
+            _ = pwm.add(data: .fileRegion(fr), promise: ps[0])
             pwm.markFlushCheckpoint(promise: nil)
 
             let result = try assertExpectedWritability(pendingWritesManager: pwm,
@@ -767,11 +782,21 @@ public class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<()>] = (0..<5).map { _ in el.newPromise() }
 
+            let fh1 = FileHandle(descriptor: -1)
+            let fh2 = FileHandle(descriptor: -1)
+            let fr1 = FileRegion(fileHandle: fh1, readerIndex: 99, endIndex: 99)
+            let fr2 = FileRegion(fileHandle: fh1, readerIndex: 0, endIndex: 10)
+            defer {
+                // fake descriptors, so shouldn't be closed.
+                XCTAssertNoThrow(try fh1.takeDescriptorOwnership())
+                XCTAssertNoThrow(try fh2.takeDescriptorOwnership())
+            }
+
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
-            _ = pwm.add(data: .fileRegion(FileRegion(descriptor: -1, readerIndex: 99, endIndex: 99)), promise: ps[2])
+            _ = pwm.add(data: .fileRegion(fr1), promise: ps[2])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[3])
-            _ = pwm.add(data: .fileRegion(FileRegion(descriptor: -1, readerIndex: 0, endIndex: 10)), promise: ps[4])
+            _ = pwm.add(data: .fileRegion(fr2), promise: ps[4])
 
             pwm.markFlushCheckpoint(promise: nil)
 
@@ -838,6 +863,16 @@ public class ChannelTests: XCTestCase {
 
             pwm.markFlushCheckpoint(promise: ps[0])
 
+            let fh1 = FileHandle(descriptor: -1)
+            let fh2 = FileHandle(descriptor: -1)
+            let fr1 = FileRegion(fileHandle: fh1, readerIndex: 99, endIndex: 99)
+            let fr2 = FileRegion(fileHandle: fh2, readerIndex: 0, endIndex: 10)
+            defer {
+                // fake descriptors, so shouldn't be closed.
+                XCTAssertNoThrow(try fh1.takeDescriptorOwnership())
+                XCTAssertNoThrow(try fh2.takeDescriptorOwnership())
+            }
+
             /* let's start with no writes and just a promise */
             var result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                    promises: ps,
@@ -850,46 +885,99 @@ public class ChannelTests: XCTestCase {
             /* let's add a few writes but still without any promises */
             _ = pwm.add(data: .byteBuffer(buffer), promise: nil)
             _ = pwm.add(data: .byteBuffer(buffer), promise: nil)
-            _ = pwm.add(data: .fileRegion(FileRegion(descriptor: -1, readerIndex: 99, endIndex: 99)), promise: nil)
+            _ = pwm.add(data: .fileRegion(fr1), promise: nil)
             _ = pwm.add(data: .byteBuffer(buffer), promise: nil)
-            _ = pwm.add(data: .fileRegion(FileRegion(descriptor: -1, readerIndex: 0, endIndex: 10)), promise: nil)
+            _ = pwm.add(data: .fileRegion(fr2), promise: nil)
 
             pwm.markFlushCheckpoint(promise: ps[1])
 
             result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: nil,
-                                               expectedVectorWritabilities: [[4, 4]],
-                                               expectedFileWritabilities: nil,
-                                               returns: [.processed(8)],
-                                               promiseStates: [[true, false]])
+                                                   promises: ps,
+                                                   expectedSingleWritabilities: nil,
+                                                   expectedVectorWritabilities: [[4, 4]],
+                                                   expectedFileWritabilities: nil,
+                                                   returns: [.processed(8)],
+                                                   promiseStates: [[true, false]])
             XCTAssertEqual(WriteResult.writtenCompletely, result)
             result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: nil,
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: [(99, 99)],
-                                               returns: [.processed(0)],
-                                               promiseStates: [[true, false]])
+                                                   promises: ps,
+                                                   expectedSingleWritabilities: nil,
+                                                   expectedVectorWritabilities: nil,
+                                                   expectedFileWritabilities: [(99, 99)],
+                                                   returns: [.processed(0)],
+                                                   promiseStates: [[true, false]])
             XCTAssertEqual(WriteResult.writtenCompletely, result)
             result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: [4],
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: nil,
-                                               returns: [.processed(4)],
-                                               promiseStates: [[true, false]])
+                                                   promises: ps,
+                                                   expectedSingleWritabilities: [4],
+                                                   expectedVectorWritabilities: nil,
+                                                   expectedFileWritabilities: nil,
+                                                   returns: [.processed(4)],
+                                                   promiseStates: [[true, false]])
             XCTAssertEqual(WriteResult.writtenCompletely, result)
             result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: nil,
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: [(0, 10)],
-                                               returns: [.processed(10)],
-                                               promiseStates: [[true, true]])
+                                                   promises: ps,
+                                                   expectedSingleWritabilities: nil,
+                                                   expectedVectorWritabilities: nil,
+                                                   expectedFileWritabilities: [(0, 10)],
+                                                   returns: [.processed(10)],
+                                                   promiseStates: [[true, true]])
             XCTAssertEqual(WriteResult.writtenCompletely, result)
         }
     }
+
+    func testTwoFlushedNonEmptyWritesFollowedByUnflushedEmpty() throws {
+        let el = EmbeddedEventLoop()
+        let alloc = ByteBufferAllocator()
+        var buffer = alloc.buffer(capacity: 12)
+        let emptyBuffer = buffer
+        _ = buffer.write(string: "1234")
+
+        try withPendingStreamWritesManager { pwm in
+            let ps: [EventLoopPromise<()>] = (0..<6).map { _ in el.newPromise() }
+
+            pwm.markFlushCheckpoint(promise: ps[0])
+
+            /* let's start with no writes and just a promise */
+            var result = try assertExpectedWritability(pendingWritesManager: pwm,
+                                                       promises: ps,
+                                                       expectedSingleWritabilities: nil,
+                                                       expectedVectorWritabilities: nil,
+                                                       expectedFileWritabilities: nil,
+                                                       returns: [],
+                                                       promiseStates: [[true, false]])
+
+            /* let's add a few writes but still without any promises */
+            _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
+            _ = pwm.add(data: .byteBuffer(buffer), promise: ps[2])
+
+            pwm.markFlushCheckpoint(promise: ps[3])
+
+            _ = pwm.add(data: .byteBuffer(emptyBuffer), promise: ps[4])
+
+
+            result = try assertExpectedWritability(pendingWritesManager: pwm,
+                                                   promises: ps,
+                                                   expectedSingleWritabilities: nil,
+                                                   expectedVectorWritabilities: [[4, 4]],
+                                                   expectedFileWritabilities: nil,
+                                                   returns: [.processed(8)],
+                                                   promiseStates: [[true, true, true, true, false, false]])
+            XCTAssertEqual(WriteResult.writtenCompletely, result)
+
+            pwm.markFlushCheckpoint(promise: ps[5])
+
+            result = try assertExpectedWritability(pendingWritesManager: pwm,
+                                                   promises: ps,
+                                                   expectedSingleWritabilities: [0],
+                                                   expectedVectorWritabilities: nil,
+                                                   expectedFileWritabilities: nil,
+                                                   returns: [.processed(0)],
+                                                   promiseStates: [[true, true, true, true, true, true]])
+            XCTAssertEqual(WriteResult.writtenCompletely, result)
+        }
+    }
+
 
     func testPendingWritesWorksWithManyEmptyWrites() throws {
         let el = EmbeddedEventLoop()
@@ -997,7 +1085,14 @@ public class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<()>] = (0..<1).map { _ in el.newPromise() }
 
-            _ = pwm.add(data: .fileRegion(FileRegion(descriptor: -1, readerIndex: 0, endIndex: 8192)), promise: ps[0])
+            let fh = FileHandle(descriptor: -1)
+            let fr = FileRegion(fileHandle: fh, readerIndex: 0, endIndex: 8192)
+            defer {
+                // fake descriptor, so shouldn't be closed.
+                XCTAssertNoThrow(try fh.takeDescriptorOwnership())
+            }
+
+            _ = pwm.add(data: .fileRegion(fr), promise: ps[0])
             pwm.markFlushCheckpoint(promise: nil)
 
             let result = try assertExpectedWritability(pendingWritesManager: pwm,

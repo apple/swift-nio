@@ -42,6 +42,7 @@ extension ChannelTests {
                 ("testPendingWritesEmptyFileRegion", testPendingWritesEmptyFileRegion),
                 ("testPendingWritesInterleavedBuffersAndFiles", testPendingWritesInterleavedBuffersAndFiles),
                 ("testPendingWritesFlushPromiseWorksWithoutWritePromises", testPendingWritesFlushPromiseWorksWithoutWritePromises),
+                ("testTwoFlushedNonEmptyWritesFollowedByUnflushedEmpty", testTwoFlushedNonEmptyWritesFollowedByUnflushedEmpty),
                 ("testPendingWritesWorksWithManyEmptyWrites", testPendingWritesWorksWithManyEmptyWrites),
                 ("testPendingWritesCloseDuringVectorWrite", testPendingWritesCloseDuringVectorWrite),
                 ("testPendingWritesMoreThanWritevIOVectorLimit", testPendingWritesMoreThanWritevIOVectorLimit),

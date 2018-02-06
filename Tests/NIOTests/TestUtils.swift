@@ -15,21 +15,24 @@
 @testable import NIO
 import XCTest
 
-func withPipe(_ fn: (CInt, CInt) -> [CInt]) throws {
+func withPipe(_ fn: (NIO.FileHandle, NIO.FileHandle) -> [NIO.FileHandle]) throws {
     var fds: [Int32] = [-1, -1]
     fds.withUnsafeMutableBufferPointer { ptr in
         XCTAssertEqual(0, pipe(ptr.baseAddress!))
     }
-    let toClose = fn(fds[0], fds[1])
-    try toClose.forEach { fd in
-        XCTAssertNoThrow(try Posix.close(descriptor: fd))
+    let readFH = FileHandle(descriptor: fds[0])
+    let writeFH = FileHandle(descriptor: fds[1])
+    let toClose = fn(readFH, writeFH)
+    try toClose.forEach { fh in
+        XCTAssertNoThrow(try fh.close())
     }
 }
 
-func withTemporaryFile<T>(content: String? = nil, _ fn: (CInt, String) throws -> T) rethrows -> T {
+func withTemporaryFile<T>(content: String? = nil, _ fn: (NIO.FileHandle, String) throws -> T) rethrows -> T {
     let (fd, path) = openTemporaryFile()
+    let fileHandle = FileHandle(descriptor: fd)
     defer {
-        XCTAssertNoThrow(try Posix.close(descriptor: fd))
+        XCTAssertNoThrow(try fileHandle.close())
         XCTAssertEqual(0, unlink(path))
     }
     if let content = content {
@@ -50,7 +53,7 @@ func withTemporaryFile<T>(content: String? = nil, _ fn: (CInt, String) throws ->
             XCTAssertEqual(0, lseek(fd, 0, SEEK_SET))
         }
     }
-    return try fn(fd, path)
+    return try fn(fileHandle, path)
 }
 
 func openTemporaryFile() -> (CInt, String) {

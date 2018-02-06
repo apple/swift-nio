@@ -177,16 +177,19 @@ public struct NonBlockingFileIO {
     ///   - allocator: A `ByteBufferAllocator` used to allocate space for the chunks.
     ///   - eventLoop: The `EventLoop` to call `chunkHandler` on.
     ///   - chunkHandler: Called for every chunk read. The next chunk will be read upon successful completion of the returned `EventLoopFuture`. If the returned `EventLoopFuture` fails, the overall operation is aborted.
-    /// - returns: An `EventLoopFuture` which is the result of the overall operation. If either the reading of `descriptor` or `chunkHandler` fails, the `EventLoopFuture` will fail too. If the reading of `descriptor` as well as `chunkHandler` always succeeded, the `EventLoopFuture` will succeed too.
+    /// - returns: An `EventLoopFuture` which is the result of the overall operation. If either the reading of `fileHandle` or `chunkHandler` fails, the `EventLoopFuture` will fail too. If the reading of `fileHandle` as well as `chunkHandler` always succeeded, the `EventLoopFuture` will succeed too.
     public func readChunked(fileRegion: FileRegion,
                             chunkSize: Int = NonBlockingFileIO.defaultChunkSize,
                             allocator: ByteBufferAllocator,
                             eventLoop: EventLoop,
                             chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<()>) -> EventLoopFuture<()> {
         do {
-            _ = try Posix.lseek(descriptor: fileRegion.descriptor, offset: off_t(fileRegion.readerIndex), whence: SEEK_SET)
-            return self.readChunked(descriptor: fileRegion.descriptor,
-                                    byteCount: fileRegion.readableBytes,
+            let readableBytes = fileRegion.readableBytes
+            try fileRegion.fileHandle.withDescriptor { descriptor in
+                _ = try Posix.lseek(descriptor: descriptor, offset: off_t(fileRegion.readerIndex), whence: SEEK_SET)
+            }
+            return self.readChunked(fileHandle: fileRegion.fileHandle,
+                                    byteCount: readableBytes,
                                     chunkSize: chunkSize,
                                     allocator: allocator,
                                     eventLoop: eventLoop,
@@ -196,7 +199,7 @@ public struct NonBlockingFileIO {
         }
     }
 
-    /// Read `byteCount` bytes in chunks of `chunkSize` bytes from `descriptor` in `NonBlockingFileIO`'s private thread
+    /// Read `byteCount` bytes in chunks of `chunkSize` bytes from `fileHandle` in `NonBlockingFileIO`'s private thread
     /// pool which is separate from any `EventLoop` thread.
     ///
     /// `chunkHandler` will be called on `eventLoop` for every chunk that was read. Assuming `byteCount` is greater than
@@ -206,17 +209,17 @@ public struct NonBlockingFileIO {
     ///
     /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` suceeds.
     ///
-    /// - note: `readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)` should be preferred as it uses `FileRegion` object instead of raw file descriptors.
+    /// - note: `readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)` should be preferred as it uses `FileRegion` object instead of raw `FileHandle`s.
     ///
     /// - parameters:
-    ///   - descriptor: The file descriptor to read.
-    ///   - byteCount: The number of bytes to read from `descriptor`.
+    ///   - fileHandle: The `FileHandle` to read from.
+    ///   - byteCount: The number of bytes to read from `fileHandle`.
     ///   - chunkSize: The size of the individual chunks to deliver.
     ///   - allocator: A `ByteBufferAllocator` used to allocate space for the chunks.
     ///   - eventLoop: The `EventLoop` to call `chunkHandler` on.
     ///   - chunkHandler: Called for every chunk read. The next chunk will be read upon successful completion of the returned `EventLoopFuture`. If the returned `EventLoopFuture` fails, the overall operation is aborted.
-    /// - returns: An `EventLoopFuture` which is the result of the overall operation. If either the reading of `descriptor` or `chunkHandler` fails, the `EventLoopFuture` will fail too. If the reading of `descriptor` as well as `chunkHandler` always succeeded, the `EventLoopFuture` will succeed too.
-    public func readChunked(descriptor fd: CInt,
+    /// - returns: An `EventLoopFuture` which is the result of the overall operation. If either the reading of `fileHandle` or `chunkHandler` fails, the `EventLoopFuture` will fail too. If the reading of `fileHandle` as well as `chunkHandler` always succeeded, the `EventLoopFuture` will succeed too.
+    public func readChunked(fileHandle: FileHandle,
                             byteCount: Int,
                             chunkSize: Int = NonBlockingFileIO.defaultChunkSize,
                             allocator: ByteBufferAllocator,
@@ -229,7 +232,7 @@ public struct NonBlockingFileIO {
             if remainingReads > 1 || (remainingReads == 1 && lastReadSize > 0) {
                 let readSize = remainingReads > 1 ? chunkSize : lastReadSize
                 assert(readSize > 0)
-                return self.read(descriptor: fd, byteCount: readSize, allocator: allocator, eventLoop: eventLoop).then { buffer in
+                return self.read(fileHandle: fileHandle, byteCount: readSize, allocator: allocator, eventLoop: eventLoop).then { buffer in
                     return chunkHandler(buffer).then { () -> EventLoopFuture<()> in
                         assert(eventLoop.inEventLoop)
                         return _read(remainingReads: remainingReads - 1)
@@ -258,9 +261,12 @@ public struct NonBlockingFileIO {
     /// - returns: An `EventLoopFuture` which delivers a `ByteBuffer` if the read was successful or a failure on error.
     public func read(fileRegion: FileRegion, allocator: ByteBufferAllocator, eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
         do {
-            _ = try Posix.lseek(descriptor: fileRegion.descriptor, offset: off_t(fileRegion.readerIndex), whence: SEEK_SET)
-            return self.read(descriptor: fileRegion.descriptor,
-                             byteCount: fileRegion.readableBytes,
+            let readableBytes = fileRegion.readableBytes
+            try fileRegion.fileHandle.withDescriptor { descriptor in
+                _ = try Posix.lseek(descriptor: descriptor, offset: off_t(fileRegion.readerIndex), whence: SEEK_SET)
+            }
+            return self.read(fileHandle: fileRegion.fileHandle,
+                             byteCount: readableBytes,
                              allocator: allocator,
                              eventLoop: eventLoop)
         } catch {
@@ -268,21 +274,21 @@ public struct NonBlockingFileIO {
         }
     }
 
-    /// Read `byteCount` bytes from `descriptor` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
+    /// Read `byteCount` bytes from `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
     ///
     /// The returned `ByteBuffer` will not have less than `byteCount` bytes unless we hit end-of-file in which
     /// case the `ByteBuffer` will contain the bytes available to read.
     ///
     /// - note: Only use this function for small enough `byteCount`s as it will need to allocate enough memory to hold `byteCount` bytes.
-    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses `FileRegion` object instead of raw file descriptors.
+    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses `FileRegion` object instead of raw `FileHandle`s.
     ///
     /// - parameters:
-    ///   - descriptor: The file descriptor to read.
-    ///   - byteCount: The number of bytes to read from `descriptor`.
+    ///   - fileHandle: The `FileHandle` to read.
+    ///   - byteCount: The number of bytes to read from `fileHandle`.
     ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned `ByteBuffer`.
     ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
     /// - returns: An `EventLoopFuture` which delivers a `ByteBuffer` if the read was successful or a failure on error.
-    public func read(descriptor: CInt, byteCount: Int, allocator: ByteBufferAllocator, eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
+    public func read(fileHandle: FileHandle, byteCount: Int, allocator: ByteBufferAllocator, eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
         guard byteCount > 0 else {
             return eventLoop.newSucceededFuture(result: allocator.buffer(capacity: 0))
         }
@@ -299,9 +305,11 @@ public struct NonBlockingFileIO {
             while bytesRead < byteCount {
                 do {
                     let n = try buf.writeWithUnsafeMutableBytes { ptr in
-                        let res = try Posix.read(descriptor: descriptor,
-                                                 pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self),
-                                                 size: byteCount - bytesRead)
+                        let res = try fileHandle.withDescriptor { descriptor in
+                            try Posix.read(descriptor: descriptor,
+                                                     pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self),
+                                                     size: byteCount - bytesRead)
+                        }
                         switch res {
                         case .processed(let n):
                             assert(n >= 0, "read claims to have read a negative number of bytes \(n)")

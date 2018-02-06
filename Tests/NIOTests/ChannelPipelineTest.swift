@@ -166,7 +166,13 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertTrue(loop.inEventLoop)
         do {
-            try channel.writeOutbound(FileRegion(descriptor: -1, readerIndex: 0, endIndex: 0))
+            let handle = FileHandle(descriptor: -1)
+            let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 0)
+            defer {
+                // fake descriptor, so shouldn't be closed.
+                XCTAssertNoThrow(try handle.takeDescriptorOwnership())
+            }
+            try channel.writeOutbound(fr)
             loop.run()
             XCTFail("we ran but an error should have been thrown")
         } catch let err as ChannelError {

@@ -130,8 +130,11 @@ class HTTPServerClientTest : XCTestCase {
                 
                 let content = buffer.getData(at: 0, length: buffer.readableBytes)!
                 XCTAssertNoThrow(try content.write(to: URL(fileURLWithPath: filePath)))
-                let region = try! FileRegion(file: filePath, readerIndex: 0, endIndex: buffer.readableBytes)
-                return (.body(.fileRegion(region)), { try! region.close() })
+                let fh = try! FileHandle(path: filePath)
+                let region = FileRegion(fileHandle: fh,
+                                             readerIndex: 0,
+                                             endIndex: buffer.readableBytes)
+                return (.body(.fileRegion(region)), { try! fh.close() })
             }
         }
         

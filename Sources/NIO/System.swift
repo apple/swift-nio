@@ -49,6 +49,7 @@ private let sysRead = read
 private let sysLseek = lseek
 private let sysRecvFrom = recvfrom
 private let sysSendTo = sendto
+private let sysDup = dup
 
 #if os(Linux)
 private let sysSendMmsg = CNIOLinux_sendmmsg
@@ -309,6 +310,14 @@ internal enum Posix {
     public static func lseek(descriptor: CInt, offset: off_t, whence: CInt) throws -> off_t {
         return try wrapSyscall {
             sysLseek(descriptor, offset, whence)
+        }
+    }
+
+    @discardableResult
+    @inline(never)
+    public static func dup(descriptor: CInt) throws -> CInt {
+        return try wrapSyscall {
+            sysDup(descriptor)
         }
     }
 

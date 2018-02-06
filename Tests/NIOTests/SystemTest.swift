@@ -26,7 +26,9 @@ class SystemTest: XCTestCase {
             var randomBytes: UInt8 = 42
             do {
                 _ = try withUnsafePointer(to: &randomBytes) { ptr in
-                    try Posix.setsockopt(socket: readFD, level: -1, optionName: -1, optionValue: ptr, optionLen: 0)
+                    try readFD.withDescriptor { readFD in
+                        try Posix.setsockopt(socket: readFD, level: -1, optionName: -1, optionValue: ptr, optionLen: 0)
+                    }
                 }
                 XCTFail("success even though the call was invalid")
             } catch let e as IOError {

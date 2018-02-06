@@ -48,13 +48,13 @@ class FileRegionTest : XCTestCase {
         }
 
         try withTemporaryFile { _, filePath in
-            let fr = try FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count)
+            let handle = try FileHandle(path: filePath)
+            let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: bytes.count)
             defer {
-                XCTAssertNoThrow(try fr.close())
+                XCTAssertNoThrow(try handle.close())
             }
             try content.write(toFile: filePath, atomically: false, encoding: .ascii)
             try clientChannel.writeAndFlush(NIOAny(fr)).wait()
-            
             var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
             buffer.write(bytes: bytes)
             try countingHandler.assertReceived(buffer: buffer)
@@ -84,9 +84,10 @@ class FileRegionTest : XCTestCase {
         }
 
         try withTemporaryFile { _, filePath in
-            let fr = try FileRegion(file: filePath, readerIndex: 0, endIndex: 0)
+            let handle = try FileHandle(path: filePath)
+            let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 0)
             defer {
-                XCTAssertNoThrow(try fr.close())
+                XCTAssertNoThrow(try handle.close())
             }
             try "".write(toFile: filePath, atomically: false, encoding: .ascii)
 
@@ -130,11 +131,13 @@ class FileRegionTest : XCTestCase {
         }
 
         try withTemporaryFile { fd, filePath in
-            let fr1 = try FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count)
-            let fr2 = try FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count)
+            let fh1 = try FileHandle(path: filePath)
+            let fh2 = try FileHandle(path: filePath)
+            let fr1 = FileRegion(fileHandle: fh1, readerIndex: 0, endIndex: bytes.count)
+            let fr2 = FileRegion(fileHandle: fh2, readerIndex: 0, endIndex: bytes.count)
             defer {
-                XCTAssertNoThrow(try fr1.close())
-                XCTAssertNoThrow(try fr2.close())
+                XCTAssertNoThrow(try fh1.close())
+                XCTAssertNoThrow(try fh2.close())
             }
             try content.write(toFile: filePath, atomically: false, encoding: .ascii)
             do {
@@ -162,9 +165,10 @@ class FileRegionTest : XCTestCase {
 
     func testWholeFileFileRegion() throws {
         try withTemporaryFile(content: "hello") { fd, path in
-            let region = try FileRegion(file: path)
+            let handle = try FileHandle(path: path)
+            let region = try FileRegion(fileHandle: handle)
             defer {
-                XCTAssertNoThrow(try region.close())
+                XCTAssertNoThrow(try handle.close())
             }
             XCTAssertEqual(0, region.readerIndex)
             XCTAssertEqual(5, region.readableBytes)
@@ -173,14 +177,40 @@ class FileRegionTest : XCTestCase {
     }
 
     func testWholeEmptyFileFileRegion() throws {
-        try withTemporaryFile(content: "") { fd, path in
-            let region = try FileRegion(file: path)
+        try withTemporaryFile(content: "") { _, path in
+            let handle = try FileHandle(path: path)
+            let region = try FileRegion(fileHandle: handle)
             defer {
-                XCTAssertNoThrow(try region.close())
+                XCTAssertNoThrow(try handle.close())
             }
             XCTAssertEqual(0, region.readerIndex)
             XCTAssertEqual(0, region.readableBytes)
             XCTAssertEqual(0, region.endIndex)
+        }
+    }
+
+    func testFileRegionDuplicatesShareSeekPointer() throws {
+        try withTemporaryFile(content: "0123456789") { fh1, path in
+            let fr1 = FileRegion(fileHandle: fh1, readerIndex: 0, endIndex: 10)
+            let fh2 = try fh1.duplicate()
+
+            var fr1Bytes: [UInt8] = Array(repeating: 0, count: 5)
+            var fr2Bytes = fr1Bytes
+            try fh1.withDescriptor { fd in
+                let r = try Posix.read(descriptor: fd, pointer: &fr1Bytes, size: 5)
+                XCTAssertEqual(r, IOResult<Int>.processed(5))
+            }
+            try fh2.withDescriptor { fd in
+                let r = try Posix.read(descriptor: fd, pointer: &fr2Bytes, size: 5)
+                XCTAssertEqual(r, IOResult<Int>.processed(5))
+            }
+            XCTAssertEqual(Array("01234".utf8), fr1Bytes)
+            XCTAssertEqual(Array("56789".utf8), fr2Bytes)
+
+            defer {
+                // fr2's underlying fd must be closed by us.
+                XCTAssertNoThrow(try fh2.close())
+            }
         }
     }
 }

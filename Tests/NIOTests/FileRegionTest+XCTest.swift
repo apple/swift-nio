@@ -31,6 +31,7 @@ extension FileRegionTest {
                 ("testOutstandingFileRegionsWork", testOutstandingFileRegionsWork),
                 ("testWholeFileFileRegion", testWholeFileFileRegion),
                 ("testWholeEmptyFileFileRegion", testWholeEmptyFileFileRegion),
+                ("testFileRegionDuplicatesShareSeekPointer", testFileRegionDuplicatesShareSeekPointer),
            ]
    }
 }

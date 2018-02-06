@@ -219,7 +219,8 @@ private final class HTTPHandler: ChannelInboundHandler {
             }
             let path = self.htdocsPath + "/" + path
             do {
-                let region = try FileRegion(file: path)
+                let file = try FileHandle(path: path)
+                let region = try FileRegion(fileHandle: file)
                 var response = HTTPResponseHead(version: request.version, status: .ok)
 
                 response.headers.add(name: "Content-Length", value: "\(region.endIndex)")
@@ -251,7 +252,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                                 return ctx.close()
                             }
                         }.whenComplete { res in
-                            _ = try? region.close()
+                            _ = try? file.close()
                         }
                 case .sendfile:
                     ctx.write(self.wrapOutboundOut(.head(response))).then { _ in
@@ -261,7 +262,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                     }.thenIfError { _ in
                         ctx.close()
                     }.whenComplete { _ in
-                        _ = try? region.close()
+                        _ = try? file.close()
                     }
                 }
             } catch {
