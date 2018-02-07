@@ -15,7 +15,7 @@ for f in $(seq 20); do
     kill -CONT "$server_pid"
     kill -WINCH "$server_pid"
 
-    do_curl "$token" "http://foobar.com/some_file.txt" > "$tmp/out.txt" &
+    do_curl "$token" "http://foobar.com/fileio/some_file.txt" > "$tmp/out.txt" &
     curl_pid=$!
     for g in $(seq 20); do
         kill -URG "$server_pid"

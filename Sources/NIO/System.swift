@@ -306,6 +306,18 @@ internal enum Posix {
         })
     }
     
+    @discardableResult
+    @inline(never)
+    public static func lseek(descriptor: CInt, offset: off_t, whence: CInt) throws -> off_t {
+        return try wrapSyscall({ () -> off_t in
+            #if os(Linux)
+                return Glibc.lseek(descriptor, offset, whence)
+            #else
+                return Darwin.lseek(descriptor, offset, whence)
+            #endif
+        })
+    }
+
     // Its not really posix but exists on Linux and MacOS / BSD so just put it here for now to keep it simple
     @inline(never)
     public static func sendfile(descriptor: Int32, fd: Int32, offset: Int, count: Int) throws -> IOResult<Int> {

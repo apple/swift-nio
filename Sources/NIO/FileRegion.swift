@@ -101,7 +101,18 @@ extension FileRegion {
     ///     - readerIndex: the index (offset) on which the reading will start.
     ///     - endIndex: the index which represents the end of the readable portion.
     public convenience init(file: String, readerIndex: Int, endIndex: Int) throws {
-        let fd = try Posix.open(file: file, oFlag: O_RDONLY)
+        let fd = try Posix.open(file: file, oFlag: O_RDONLY | O_CLOEXEC)
         self.init(descriptor: Int32(fd), readerIndex: readerIndex, endIndex: endIndex)
+    }
+
+    /// Create a new `FileRegion` forming a complete file.
+    ///
+    /// - parameters:
+    ///     - file: the name of the file to open. The ownership of the file descriptor is transferred to this `FileRegion` and so it will be closed once `close` is called.
+    public convenience init(file: String) throws {
+        let fd = try Posix.open(file: file, oFlag: O_RDONLY | O_CLOEXEC)
+        let eof = try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_END)
+        try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
+        self.init(descriptor: Int32(fd), readerIndex: 0, endIndex: Int(eof))
     }
 }

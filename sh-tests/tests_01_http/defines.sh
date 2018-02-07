@@ -75,7 +75,7 @@ function get_socket() {
 
 function stop_server() {
     source "$1"
-    sleep 0.05 # just to make sure all the fds could be closed
+    sleep 0.5 # just to make sure all the fds could be closed
     if command -v lsof > /dev/null 2> /dev/null; then
         server_lsof "$token_pid"
         local open_fds

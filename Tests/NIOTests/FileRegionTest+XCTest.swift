@@ -29,6 +29,8 @@ extension FileRegionTest {
                 ("testWriteFileRegion", testWriteFileRegion),
                 ("testWriteEmptyFileRegionDoesNotHang", testWriteEmptyFileRegionDoesNotHang),
                 ("testOutstandingFileRegionsWork", testOutstandingFileRegionsWork),
+                ("testWholeFileFileRegion", testWholeFileFileRegion),
+                ("testWholeEmptyFileFileRegion", testWholeEmptyFileFileRegion),
            ]
    }
 }

@@ -31,6 +31,8 @@ let sysFree = free
 
 /// The preferred allocator for `ByteBuffer` values. The allocation strategy is opaque but is currently libc's
 /// `malloc`, `realloc` and `free`.
+///
+/// - note: `ByteBufferAllocator` is thread-safe.
 public struct ByteBufferAllocator {
     
     /// Create a fresh `ByteBufferAllocator`. In the future the allocator might use for example allocation pools and

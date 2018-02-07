@@ -13,19 +13,23 @@
 //===----------------------------------------------------------------------===//
 import NIO
 import NIOHTTP1
-import class Foundation.FileManager
-import class Foundation.NSData
-import struct Foundation.Data
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-import class Foundation.NSFileManager
-import struct Foundation.NSFileManager.FileAttributeKey
-#else
-import class Foundation.FileManager
-import struct Foundation.FileAttributeKey
-#endif
-import class Foundation.NSNumber
+import class Foundation.NSNull /* dummy just to get Foundation to link */
+
+extension String {
+    func chopPrefix(_ prefix: String) -> String? {
+        if self.hasPrefix(prefix) {
+            return String(self[self.index(self.startIndex, offsetBy: prefix.count)...])
+        } else {
+            return nil
+        }
+    }
+}
 
 private final class HTTPHandler: ChannelInboundHandler {
+    private enum FileIOMethod {
+        case sendfile
+        case nonblockingFileIO
+    }
     public typealias InboundIn = HTTPServerRequestPart
     public typealias OutboundOut = HTTPServerResponsePart
 
@@ -40,9 +44,11 @@ private final class HTTPHandler: ChannelInboundHandler {
 
     private var handler: ((ChannelHandlerContext, HTTPServerRequestPart) -> Void)? = nil
     private var handlerFuture: EventLoopFuture<()>?
+    private let fileIO: NonBlockingFileIO
 
-    public init(htdocsPath: String) {
+    public init(fileIO: NonBlockingFileIO, htdocsPath: String) {
         self.htdocsPath = htdocsPath
+        self.fileIO = fileIO
     }
 
     func handleInfo(ctx: ChannelHandlerContext, request: HTTPServerRequestPart) {
@@ -200,7 +206,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         }
     }
 
-    func handleFile(ctx: ChannelHandlerContext, request: HTTPServerRequestPart) {
+    private func handleFile(ctx: ChannelHandlerContext, request: HTTPServerRequestPart, ioMethod: FileIOMethod, path: String) {
         self.buffer.clear()
 
         switch request {
@@ -211,25 +217,79 @@ private final class HTTPHandler: ChannelInboundHandler {
                 ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)), promise: nil)
                 return
             }
-            let path = self.htdocsPath + "/" + request.uri
+            let path = self.htdocsPath + "/" + path
             do {
-                let attrs = try FileManager.default.attributesOfItem(atPath: path)
-                let fileSize = (attrs[FileAttributeKey.size] as! NSNumber).intValue
-                let region = try FileRegion(file: path, readerIndex: 0, endIndex: fileSize)
+                let region = try FileRegion(file: path)
                 var response = HTTPResponseHead(version: request.version, status: .ok)
 
-                response.headers.add(name: "Content-Length", value: "\(fileSize)")
+                response.headers.add(name: "Content-Length", value: "\(region.endIndex)")
                 response.headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
-                ctx.write(data: self.wrapOutboundOut(.head(response)), promise: nil)
-                ctx.writeAndFlush(data: self.wrapOutboundOut(.body(.fileRegion(region)))).whenComplete { _ in
-                    _ = try? region.close()
+
+                switch ioMethod {
+                case .nonblockingFileIO:
+                    var responseStarted = false
+                    self.fileIO.readChunked(fileRegion: region,
+                                            chunkSize: 32 * 1024,
+                                            allocator: ctx.channel.allocator,
+                                            eventLoop: ctx.eventLoop) { buffer in
+                                                if !responseStarted {
+                                                    responseStarted = true
+                                                    ctx.write(data: self.wrapOutboundOut(.head(response)), promise: nil)
+                                                }
+                                                return ctx.writeAndFlush(data: self.wrapOutboundOut(.body(.byteBuffer(buffer))))
+                        }.then { _ in
+                            ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)))
+                        }.thenIfError { error in
+                            if !responseStarted {
+                                let response = HTTPResponseHead(version: request.version, status: .ok)
+                                ctx.write(data: self.wrapOutboundOut(.head(response)), promise: nil)
+                                var buffer = ctx.channel.allocator.buffer(capacity: 100)
+                                buffer.write(string: "fail: \(error.localizedDescription)")
+                                ctx.write(data: self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+                                return ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)))
+                            } else {
+                                return ctx.close()
+                            }
+                        }.whenComplete { res in
+                            _ = try? region.close()
+                        }
+                case .sendfile:
+                    ctx.write(data: self.wrapOutboundOut(.head(response))).then { _ in
+                        ctx.writeAndFlush(data: self.wrapOutboundOut(.body(.fileRegion(region))))
+                    } .then { _ in
+                        ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)))
+                    }.thenIfError { _ in
+                        ctx.close()
+                    }.whenComplete { _ in
+                        _ = try? region.close()
+                    }
                 }
             } catch {
-                let response = HTTPResponseHead(version: request.version, status: .internalServerError)
-                ctx.writeAndFlush(data: self.wrapOutboundOut(.head(response)), promise: nil)
+                var body = ctx.channel.allocator.buffer(capacity: 128)
+                let response = { () -> HTTPResponseHead in
+                    switch error {
+                    case let e as IOError where e.errnoCode == ENOENT:
+                        body.write(staticString: "IOError (not found)\r\n")
+                        return HTTPResponseHead(version: request.version, status: .notFound)
+                    case let e as IOError:
+                        body.write(staticString: "IOError (other)\r\n")
+                        body.write(string: e.description)
+                        body.write(staticString: "\r\n")
+                        return HTTPResponseHead(version: request.version, status: .notFound)
+                    default:
+                        body.write(string: "\(type(of: error)) error\r\n")
+                        return HTTPResponseHead(version: request.version, status: .internalServerError)
+                    }
+                }()
+                body.write(string: error.localizedDescription)
+                body.write(staticString: "\r\n")
+                ctx.write(data: self.wrapOutboundOut(.head(response)), promise: nil)
+                ctx.write(data: self.wrapOutboundOut(.body(.byteBuffer(body))), promise: nil)
+                ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)), promise: nil)
+                ctx.channel.close(promise: nil)
             }
         case .end(_):
-            ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)), promise: nil)
+            ()
         default:
             fatalError("oh noes: \(request)")
         }
@@ -250,8 +310,12 @@ private final class HTTPHandler: ChannelInboundHandler {
                 self.handler = self.dynamicHandler(request: request)
                 self.handler!(ctx, reqPart)
                 return
-            } else if request.uri != "" && request.uri != "/" {
-                self.handler = self.handleFile
+            } else if let path = request.uri.chopPrefix("/sendfile/") {
+                self.handler = { self.handleFile(ctx: $0, request: $1, ioMethod: .sendfile, path: path) }
+                self.handler!(ctx, reqPart)
+                return
+            } else if let path = request.uri.chopPrefix("/fileio/") {
+                self.handler = { self.handleFile(ctx: $0, request: $1, ioMethod: .nonblockingFileIO, path: path) }
                 self.handler!(ctx, reqPart)
                 return
             }
@@ -322,6 +386,7 @@ default:
 }
 
 let group = MultiThreadedEventLoopGroup(numThreads: 1)
+let fileIO = NonBlockingFileIO(numberOfThreads: 6)
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .serverChannelOption(ChannelOptions.backlog, value: 256)
@@ -329,8 +394,8 @@ let bootstrap = ServerBootstrap(group: group)
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
-        return channel.pipeline.addHTTPServerHandlers().then {
-            return channel.pipeline.add(handler: HTTPHandler(htdocsPath: htdocs))
+        return channel.pipeline.addHTTPServerHandlers().then { _ in
+            return channel.pipeline.add(handler: HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
         }
     }
 
@@ -340,6 +405,7 @@ let bootstrap = ServerBootstrap(group: group)
     .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
 
 defer {
+    try! fileIO.syncShutdownGracefully()
     try! group.syncShutdownGracefully()
 }
 

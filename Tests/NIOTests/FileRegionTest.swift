@@ -168,4 +168,28 @@ class FileRegionTest : XCTestCase {
         buffer.write(bytes: bytes)
         try countingHandler.assertReceived(buffer: buffer)
     }
+
+    func testWholeFileFileRegion() throws {
+        try withTemporaryFile(content: "hello") { fd, path in
+            let region = try FileRegion(file: path)
+            defer {
+                XCTAssertNoThrow(try region.close())
+            }
+            XCTAssertEqual(0, region.readerIndex)
+            XCTAssertEqual(5, region.readableBytes)
+            XCTAssertEqual(5, region.endIndex)
+        }
+    }
+
+    func testWholeEmptyFileFileRegion() throws {
+        try withTemporaryFile(content: "") { fd, path in
+            let region = try FileRegion(file: path)
+            defer {
+                XCTAssertNoThrow(try region.close())
+            }
+            XCTAssertEqual(0, region.readerIndex)
+            XCTAssertEqual(0, region.readableBytes)
+            XCTAssertEqual(0, region.endIndex)
+        }
+    }
 }
