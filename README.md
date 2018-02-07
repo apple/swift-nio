@@ -14,9 +14,9 @@ It's like [Netty](https://netty.io) but in Swift.
 
 For both Linux and macOS
 
-    ./swiftw build
-    ./swiftw test
-    ./swiftw run NIOEchoServer
+    swift build
+    swift test
+    swift run NIOEchoServer
 
 and from some other terminal
 
@@ -69,8 +69,8 @@ $ docker run -it -v `pwd`:/code -w /code swift-nio bash
 
 ```
 # do your thing
-$ ./swiftw build
-$ ./swiftw test
+$ swift build
+$ swift test
 ```
 
 ### Testing on Linux
