@@ -333,8 +333,9 @@ public class EmbeddedChannel : Channel {
         _ = try? register().wait()
     }
 
-    public func setOption<T>(option: T, value: T.OptionType) throws where T : ChannelOption {
+    public func setOption<T>(option: T, value: T.OptionType) -> EventLoopFuture<Void> where T : ChannelOption {
         // No options supported
+        fatalError("no options supported")
     }
 
     public func getOption<T>(option: T) throws -> T.OptionType where T : ChannelOption {

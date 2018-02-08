@@ -136,20 +136,13 @@ public final class ServerBootstrap {
                                                         protocolFamily: address.protocolFamily)
             
             func finishServerSetup() {
-                do {
-                    try serverChannelOptions.applyAll(channel: serverChannel)
-                    let f = serverChannel.register().then(callback: { (_) -> EventLoopFuture<()> in serverChannel.bind(to: address) })
-                    f.whenComplete(callback: { v in
-                        switch v {
-                        case .failure(let err):
-                            promise.fail(error: err)
-                        case .success(_):
-                            promise.succeed(result: serverChannel)
-                        }
-                    })
-                } catch let err {
-                    promise.fail(error: err)
-                }
+                serverChannelOptions.applyAll(channel: serverChannel).then {
+                    serverChannel.register()
+                }.then {
+                    serverChannel.bind(to: address)
+                }.map {
+                    serverChannel
+                }.cascade(promise: promise)
             }
 
             func addAcceptHandlerAndFinishServerSetup() {
@@ -197,30 +190,35 @@ public final class ServerBootstrap {
         
         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             let accepted = self.unwrapInboundIn(data)
-            do {
-                try self.childChannelOptions.applyAll(channel: accepted)
-
-                if let childChannelInit = childChannelInit {
-                    childChannelInit(accepted).whenComplete(callback: { v in
-                        switch v {
-                        case .failure(let err):
-                            self.closeAndFire(ctx: ctx, accepted: accepted, err: err)
-                        case .success(_):
-                            if ctx.eventLoop.inEventLoop {
-                                ctx.fireChannelRead(data: data)
-                            } else {
-                                ctx.eventLoop.execute {
-                                    ctx.fireChannelRead(data: data)
+            self.childChannelOptions.applyAll(channel: accepted).whenComplete(callback: { v in
+                // We must return to the server channel.
+                ctx.channel.eventLoop.execute {
+                    switch v {
+                    case .failure(let err):
+                        self.closeAndFire(ctx: ctx, accepted: accepted, err: err)
+    
+                    case .success(_):
+                        if let childChannelInit = self.childChannelInit {
+                            childChannelInit(accepted).whenComplete(callback: { v in
+                                switch v {
+                                case .failure(let err):
+                                    self.closeAndFire(ctx: ctx, accepted: accepted, err: err)
+                                case .success(_):
+                                    if ctx.eventLoop.inEventLoop {
+                                        ctx.fireChannelRead(data: data)
+                                    } else {
+                                        ctx.eventLoop.execute {
+                                            ctx.fireChannelRead(data: data)
+                                        }
+                                    }
                                 }
-                            }
+                            })
+                        } else {
+                            ctx.fireChannelRead(data: data)
                         }
-                    })
-                } else {
-                    ctx.fireChannelRead(data: data)
-                }
-            } catch let err {
-                closeAndFire(ctx: ctx, accepted: accepted, err: err)
-            }
+                    }
+               }
+            })
         }
         
         private func closeAndFire(ctx: ChannelHandlerContext, accepted: SocketChannel, err: Error) {
@@ -343,22 +341,13 @@ public final class ClientBootstrap {
             let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: protocolFamily)
 
             func finishClientSetup() {
-                do {
-                    try channelOptions.applyAll(channel: channel)
-                    let f = channel.register().then  { (_) -> EventLoopFuture<Void> in
-                        body(channel)
-                    }
-                    f.whenComplete(callback: { v in
-                        switch v {
-                        case .failure(let err):
-                            promise.fail(error: err)
-                        case .success(_):
-                            promise.succeed(result: channel)
-                        }
-                    })
-                } catch let err {
-                    promise.fail(error: err)
-                }
+                channelOptions.applyAll(channel: channel).then {
+                    channel.register()
+                }.then {
+                    body(channel)
+                }.map {
+                    channel
+                }.cascade(promise: promise)
             }
 
             if let channelInitializer = channelInitializer {
@@ -382,13 +371,13 @@ public final class ClientBootstrap {
 }
 
 fileprivate struct ChannelOptionStorage {
-    private var storage: [(Any, (Any, (Channel) -> (Any, Any) throws -> Void))] = []
+    private var storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
     
     mutating func put<K: ChannelOption>(key: K,
                              value newValue: K.OptionType) {
-        func applier(_ t: Channel) -> (Any, Any) throws -> Void {
+        func applier(_ t: Channel) -> (Any, Any) -> EventLoopFuture<Void> {
             return { (x, y) in
-                try t.setOption(option: x as! K, value: y as! K.OptionType)
+                return t.setOption(option: x as! K, value: y as! K.OptionType)
             }
         }
         var hasSet = false
@@ -406,9 +395,28 @@ fileprivate struct ChannelOptionStorage {
         }
     }
   
-    func applyAll(channel: Channel) throws {
-        for (type, value) in self.storage {
-            try value.1(channel)(type, value.0)
+    func applyAll(channel: Channel) -> EventLoopFuture<Void> {
+        let applyPromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
+        var it = self.storage.makeIterator()
+
+        func applyNext() {
+            guard let (key, (value, applier)) = it.next() else {
+                // If we reached the end, everything is applied.
+                applyPromise.succeed(result: ())
+                return
+            }
+
+            applier(channel)(key, value).whenComplete(callback: { v in
+                switch v {
+                case .failure(let err):
+                    applyPromise.fail(error: err)
+                case .success(_):
+                    applyNext()
+                }
+            })
         }
+        applyNext()
+
+        return applyPromise.futureResult
     }
 }

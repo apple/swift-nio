@@ -61,7 +61,7 @@ public protocol Channel : class, ChannelOutboundInvoker {
     var parent: Channel? { get }
 
     /// Set `option` to `value` on this `Channel`.
-    func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws
+    func setOption<T: ChannelOption>(option: T, value: T.OptionType) -> EventLoopFuture<Void>
     
     /// Get the value of `option` for this `Channel`.
     func getOption<T: ChannelOption>(option: T) throws -> T.OptionType

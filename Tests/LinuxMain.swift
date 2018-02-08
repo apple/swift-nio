@@ -61,6 +61,7 @@ import XCTest
          testCase(PriorityQueueTest.allTests),
          testCase(SniHandlerTest.allTests),
          testCase(SocketAddressTest.allTests),
+         testCase(SocketChannelTest.allTests),
          testCase(NIOConcurrencyHelpersTests.allTests),
          testCase(SystemTest.allTests),
          testCase(TypeAssistedChannelHandlerTest.allTests),

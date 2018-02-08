@@ -167,11 +167,13 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
     private var _pipeline: ChannelPipeline!
 
-    public final func setOption<T: ChannelOption>(option: T, value: T.OptionType) throws {
+    public final func setOption<T: ChannelOption>(option: T, value: T.OptionType) -> EventLoopFuture<Void> {
         if eventLoop.inEventLoop {
-            try setOption0(option: option, value: value)
+            let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+            executeAndComplete(promise) { try setOption0(option: option, value: value) }
+            return promise.futureResult
         } else {
-            let _ = try eventLoop.submit { try self.setOption0(option: option, value: value)}.wait()
+            return eventLoop.submit { try self.setOption0(option: option, value: value) }
         }
     }
 
