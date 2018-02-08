@@ -154,19 +154,20 @@ public class EventLoopTest : XCTestCase {
                 XCTFail("Unexpected error on close: \(error)")
             }
         }
+        let loop = group.next() as! SelectableEventLoop
 
         // We're going to create and register a channel, but not actually attempt to do anything with it.
         let wedgeHandler = WedgeOpenHandler()
-        let channel = try SocketChannel(eventLoop: group.next() as! SelectableEventLoop, protocolFamily: AF_INET)
+        let channel = try SocketChannel(eventLoop: loop, protocolFamily: AF_INET)
         try channel.pipeline.add(handler: wedgeHandler).then {
             channel.register()
         }.wait()
 
         // Now we're going to start closing the event loop. This should not immediately succeed.
-        let loopCloseFut = (group.next() as! SelectableEventLoop).closeGently()
+        let loopCloseFut = loop.closeGently()
 
         // Now we're going to attempt to register a new channel. This should immediately fail.
-        let newChannel = try SocketChannel(eventLoop: group.next() as! SelectableEventLoop, protocolFamily: AF_INET)
+        let newChannel = try SocketChannel(eventLoop: loop, protocolFamily: AF_INET)
 
         do {
             try newChannel.register().wait()
@@ -181,7 +182,9 @@ public class EventLoopTest : XCTestCase {
         XCTAssertFalse(loopCloseFut.fulfilled)
 
         // Now let it close.
-        wedgeHandler.closePromise!.succeed(result: ())
+        loop.execute {
+            wedgeHandler.closePromise!.succeed(result: ())
+        }
         XCTAssertNoThrow(try loopCloseFut.wait())
     }
 }

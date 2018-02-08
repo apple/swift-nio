@@ -576,7 +576,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
         if closed {
             interestedEvent = .none
-            throw ChannelError.alreadyClosed
+            throw ChannelError.ioOnClosedChannel
         }
         interestedEvent = interested
         do {
