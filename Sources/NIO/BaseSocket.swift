@@ -167,9 +167,9 @@ class BaseSocket : Selectable {
             })
         }
     }
-    static func newSocket(protocolFamily: Int32) throws -> Int32 {
+    static func newSocket(protocolFamily: Int32, type: CInt) throws -> Int32 {
         let sock = try Posix.socket(domain: protocolFamily,
-                                    type: Posix.SOCK_STREAM,
+                                    type: type,
                                     protocol: 0)
         
         if protocolFamily == AF_INET6 {

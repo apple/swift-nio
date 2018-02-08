@@ -635,7 +635,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
-        let socket = try Socket(protocolFamily: protocolFamily)
+        let socket = try Socket(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM)
         do {
             try socket.setNonBlocking()
         } catch let err {

@@ -21,7 +21,7 @@ final class ServerSocket: BaseSocket {
     }
     
     init(protocolFamily: Int32) throws {
-        let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily)
+        let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM)
         super.init(descriptor: sock)
     }
     

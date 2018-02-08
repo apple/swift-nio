@@ -43,6 +43,8 @@ private let sysWrite = write
 private let sysWritev = writev
 private let sysRead = read
 private let sysLseek = lseek
+private let sysRecvFrom = recvfrom
+private let sysSendTo = sendto
 
 private func isBlacklistedErrno(_ code: Int32) -> Bool {
     switch code {
@@ -114,12 +116,17 @@ enum Shutdown {
 internal enum Posix {
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     static let SOCK_STREAM: CInt = CInt(Darwin.SOCK_STREAM)
+    static let SOCK_DGRAM: CInt = CInt(Darwin.SOCK_DGRAM)
     static let UIO_MAXIOV: Int = 1024
 #elseif os(Linux) || os(FreeBSD) || os(Android)
     static let SOCK_STREAM: CInt = CInt(Glibc.SOCK_STREAM.rawValue)
+    static let SOCK_DGRAM : CInt = CInt(Glibc.SOCK_DGRAM.rawValue)
     static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)
 #else
     static var SOCK_STREAM: CInt {
+        fatalError("unsupported OS")
+    }
+    static var SOCK_DGRAM: CInt {
         fatalError("unsupported OS")
     }
     static var UIO_MAXIOV: Int {
@@ -261,11 +268,26 @@ internal enum Posix {
             sysWritev(descriptor, iovecs.baseAddress!, Int32(iovecs.count))
         }
     }
+
+    @inline(never)
+    public static func sendto(descriptor: CInt, pointer: UnsafePointer<UInt8>, size: Int,
+                              destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
+        return try wrapSyscallMayBlock {
+            sysSendTo(descriptor, pointer, size, 0, destinationPtr, destinationSize)
+        }
+    }
     
     @inline(never)
     public static func read(descriptor: Int32, pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
             Int(sysRead(descriptor, pointer, size))
+        }
+    }
+
+    @inline(never)
+    public static func recvfrom(descriptor: CInt, pointer: UnsafeMutablePointer<UInt8>, len: Int, addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) throws -> IOResult<Int> {
+        return try wrapSyscallMayBlock {
+            sysRecvFrom(descriptor, pointer, len, 0, addr, addrlen)
         }
     }
     

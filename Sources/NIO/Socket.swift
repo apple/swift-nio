@@ -29,8 +29,8 @@ final class Socket : BaseSocket {
     }
     static let writevLimitIOVectors: Int = Posix.UIO_MAXIOV
 
-    init(protocolFamily: Int32) throws {
-        let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily)
+    init(protocolFamily: CInt, type: CInt) throws {
+        let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily, type: type)
         super.init(descriptor: sock)
     }
     
@@ -82,6 +82,14 @@ final class Socket : BaseSocket {
 
         return try Posix.writev(descriptor: self.descriptor, iovecs: iovecs)
     }
+
+    func sendto(pointer: UnsafePointer<UInt8>, size: Int, destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
+        guard self.open else {
+            throw IOError(errnoCode: EBADF, reason: "can't sendto to socket as it's not open anymore.")
+        }
+
+        return try Posix.sendto(descriptor: self.descriptor, pointer: UnsafeMutablePointer(mutating: pointer), size: size, destinationPtr: destinationPtr, destinationSize: destinationSize)
+    }
     
     func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> IOResult<Int> {
         guard self.open else {
@@ -89,6 +97,16 @@ final class Socket : BaseSocket {
         }
 
         return try Posix.read(descriptor: self.descriptor, pointer: pointer, size: size)
+    }
+
+    func recvfrom(pointer: UnsafeMutablePointer<UInt8>, size: Int, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
+        guard self.open else {
+            throw IOError(errnoCode: EBADF, reason: "can't recvfrom socket as it's not open anymore")
+        }
+
+        return try storage.withMutableSockAddr { (storagePtr, _) in
+            try Posix.recvfrom(descriptor: self.descriptor, pointer: pointer, len: size, addr: storagePtr, addrlen: &storageLen)
+        }
     }
     
     func sendFile(fd: Int32, offset: Int, count: Int) throws -> IOResult<Int> {
