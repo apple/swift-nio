@@ -30,6 +30,7 @@ extension EventLoopTest {
                 ("testScheduleWithDelay", testScheduleWithDelay),
                 ("testScheduleCancelled", testScheduleCancelled),
                 ("testMultipleShutdown", testMultipleShutdown),
+                ("testShuttingDownFailsRegistration", testShuttingDownFailsRegistration),
            ]
    }
 }

@@ -430,12 +430,13 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
 
         // Was not registered yet so do it now.
-        if safeRegister(interested: .read) {
+        do {
+            try self.safeRegister(interested: .read)
             neverRegistered = false
             promise?.succeed(result: ())
             pipeline.fireChannelRegistered0()
-        } else {
-            promise?.succeed(result: ())
+        } catch {
+            promise?.fail(error: error)
         }
     }
 
@@ -570,21 +571,20 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    private func safeRegister(interested: IOEvent) -> Bool {
+    private func safeRegister(interested: IOEvent) throws {
         assert(eventLoop.inEventLoop)
 
         if closed {
             interestedEvent = .none
-            return false
+            throw ChannelError.alreadyClosed
         }
         interestedEvent = interested
         do {
             try selectableEventLoop.register(channel: self)
-            return true
         } catch let err {
             pipeline.fireErrorCaught0(error: err)
             close0(error: err, mode: .all, promise: nil)
-            return false
+            throw err
         }
     }
 

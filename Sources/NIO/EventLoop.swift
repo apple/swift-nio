@@ -320,6 +320,12 @@ internal final class SelectableEventLoop : EventLoop {
     /// is deregistered by calling `deregister`.
     public func register<C: SelectableChannel>(channel: C) throws {
         assert(inEventLoop)
+
+        // Don't allow registration when we're closed.
+        guard self.lifecycleState == .open else {
+            throw EventLoopError.shutdown
+        }
+
         try selector.register(selectable: channel.selectable, interested: channel.interestedEvent, makeRegistration: channel.registrationFor(interested:))
     }
 
@@ -546,7 +552,7 @@ internal final class SelectableEventLoop : EventLoop {
     public func closeGently() -> EventLoopFuture<Void> {
         func closeGently0() -> EventLoopFuture<Void> {
             guard self.lifecycleState == .open else {
-                return self.newFailedFuture(error: ChannelError.alreadyClosed)
+                return self.newFailedFuture(error: EventLoopError.shutdown)
             }
             self.lifecycleState = .closing
             return self.selector.closeGently(eventLoop: self)

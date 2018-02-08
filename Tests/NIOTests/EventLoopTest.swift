@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import XCTest
-import NIO
+@testable import NIO
 import Dispatch
 import NIOConcurrencyHelpers
 
@@ -118,5 +118,70 @@ public class EventLoopTest : XCTestCase {
 
         // We should now shut down gracefully.
         try group.syncShutdownGracefully()
+    }
+
+    public func testShuttingDownFailsRegistration() throws {
+        // This test catches a regression where the selectable event loop would allow a socket registration while
+        // it was nominally "shutting down". To do this, we take advantage of the fact that the event loop attempts
+        // to cleanly shut down all the channels before it actually closes. We add a custom channel that we can use
+        // to wedge the event loop in the "shutting down" state, ensuring that we have plenty of time to attempt the
+        // registration.
+        class WedgeOpenHandler: ChannelOutboundHandler {
+            typealias OutboundIn = Any
+            typealias OutboundOut = Any
+
+            var closePromise: EventLoopPromise<Void>? = nil
+
+            func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+                guard self.closePromise == nil else {
+                    XCTFail("Attempted to create duplicate close promise")
+                    return
+                }
+                self.closePromise = ctx.eventLoop.newPromise()
+                self.closePromise!.futureResult.whenSuccess {
+                    ctx.close(mode: mode, promise: promise)
+                }
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            do {
+                try group.syncShutdownGracefully()
+            } catch EventLoopError.shutdown {
+                // Fine, that's expected if the test completed.
+            } catch {
+                XCTFail("Unexpected error on close: \(error)")
+            }
+        }
+
+        // We're going to create and register a channel, but not actually attempt to do anything with it.
+        let wedgeHandler = WedgeOpenHandler()
+        let channel = try SocketChannel(eventLoop: group.next() as! SelectableEventLoop, protocolFamily: AF_INET)
+        try channel.pipeline.add(handler: wedgeHandler).then {
+            channel.register()
+        }.wait()
+
+        // Now we're going to start closing the event loop. This should not immediately succeed.
+        let loopCloseFut = (group.next() as! SelectableEventLoop).closeGently()
+
+        // Now we're going to attempt to register a new channel. This should immediately fail.
+        let newChannel = try SocketChannel(eventLoop: group.next() as! SelectableEventLoop, protocolFamily: AF_INET)
+
+        do {
+            try newChannel.register().wait()
+            XCTFail("Register did not throw")
+        } catch EventLoopError.shutdown {
+            // All good
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        // Confirm that the loop still hasn't closed.
+        XCTAssertFalse(loopCloseFut.fulfilled)
+
+        // Now let it close.
+        wedgeHandler.closePromise!.succeed(result: ())
+        XCTAssertNoThrow(try loopCloseFut.wait())
     }
 }
