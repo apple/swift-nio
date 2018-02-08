@@ -31,7 +31,7 @@ private extension Array where Element == Channel {
     func finishAll() {
         self.forEach {
             do {
-                try($0 as! EmbeddedChannel).finish()
+                _ = try($0 as! EmbeddedChannel).finish()
             } catch ChannelError.alreadyClosed {
                 return
             } catch {
