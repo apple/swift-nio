@@ -20,4 +20,9 @@
 public struct AddressedEnvelope<DataType> {
     public var remoteAddress: SocketAddress
     public var data: DataType
+
+    public init(remoteAddress: SocketAddress, data: DataType) {
+        self.remoteAddress = remoteAddress
+        self.data = data
+    }
 }
