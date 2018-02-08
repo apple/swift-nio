@@ -64,6 +64,7 @@ import XCTest
          testCase(SocketChannelTest.allTests),
          testCase(NIOConcurrencyHelpersTests.allTests),
          testCase(SystemTest.allTests),
+         testCase(ThreadTest.allTests),
          testCase(TypeAssistedChannelHandlerTest.allTests),
          testCase(UtilitiesTest.allTests),
     ])
