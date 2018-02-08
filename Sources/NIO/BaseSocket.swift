@@ -78,8 +78,7 @@ extension sockaddr_storage: SockAddrProtocol {
     }
 
     mutating func withMutableSockAddr<R>(_ fn: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        var me = self
-        return try withUnsafeMutableBytes(of: &me) { p in
+        return try withUnsafeMutableBytes(of: &self) { p in
             try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }

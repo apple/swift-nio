@@ -39,6 +39,7 @@ extension SocketAddressTest {
                 ("testUnequalOnAddress", testUnequalOnAddress),
                 ("testUnequalAcrossFamilies", testUnequalAcrossFamilies),
                 ("testPortAccessor", testPortAccessor),
+                ("testCanMutateSockaddrStorage", testCanMutateSockaddrStorage),
            ]
    }
 }

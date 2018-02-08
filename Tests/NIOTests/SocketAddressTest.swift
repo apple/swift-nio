@@ -312,4 +312,13 @@ class SocketAddressTest: XCTestCase {
         XCTAssertEqual(try SocketAddress.ipAddress(string: "::1", port: 80).port, 80)
         XCTAssertEqual(try SocketAddress.unixDomainSocketAddress(path: "/definitely/a/path").port, nil)
     }
+
+    func testCanMutateSockaddrStorage() throws {
+        var storage = sockaddr_storage()
+        XCTAssertEqual(storage.ss_family, 0)
+        storage.withMutableSockAddr { (addr, _) in
+            addr.pointee.sa_family = sa_family_t(AF_UNIX)
+        }
+        XCTAssertEqual(storage.ss_family, sa_family_t(AF_UNIX))
+    }
 }
