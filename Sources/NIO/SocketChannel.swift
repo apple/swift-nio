@@ -86,7 +86,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     /// Buffer a write in preparation for a flush.
-    fileprivate func bufferPendingWrite(data: IOData, promise: EventLoopPromise<Void>?) {
+    fileprivate func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         fatalError("this must be overridden by sub class")
     }
 
@@ -273,11 +273,6 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         if closed {
             // Channel was already closed, fail the promise and not even queue it.
             promise?.fail(error: ChannelError.ioOnClosedChannel)
-            return
-        }
-
-        guard let data = data.tryAsIOData() else {
-            promise?.fail(error: ChannelError.writeDataUnsupported)
             return
         }
 
@@ -883,9 +878,14 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         super.read0(promise: promise)
     }
 
-    override fileprivate func bufferPendingWrite(data: IOData, promise: EventLoopPromise<Void>?) {
+    override fileprivate func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         if outputShutdown {
             promise?.fail(error: ChannelError.outputClosed)
+            return
+        }
+
+        guard let data = data.tryAsIOData() else {
+            promise?.fail(error: ChannelError.writeDataUnsupported)
             return
         }
 
