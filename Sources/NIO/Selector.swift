@@ -27,6 +27,10 @@ private extension timespec {
     }
 }
 
+///  A `Selector` allows a user to register different `Selectable` sources to an underlying OS selector, and for that selector to notify them once IO is ready for them to process.
+///
+/// This implementation offers an consistent API over epoll (for linux) and kqueue (for Darwin, BSD).
+
 /* this is deliberately not thread-safe, only the wakeup() function may be called unprotectedly */
 final class Selector<R: Registration> {
     private var lifecycleState: SelectorLifecycleState
@@ -242,6 +246,12 @@ final class Selector<R: Registration> {
     }
 #endif
 
+    /// Register `Selectable` on the `Selector`.
+    ///
+    /// - parameters:
+    ///     - selectable: The `Selectable` to register.
+    ///     - interested: The `IOEvent`s in which we are interested and want to be notified about.
+    ///     - makeRegistration: Creates the registration data for the given `IOEvent`.
     func register<S: Selectable>(selectable: S, interested: IOEvent = .read, makeRegistration: (IOEvent) -> R) throws {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't register on selector as it's \(self.lifecycleState).")
@@ -261,6 +271,11 @@ final class Selector<R: Registration> {
         registrations[Int(selectable.descriptor)] = makeRegistration(interested)
     }
 
+    /// Re-register `Selectable`, must be registered via `register` before.
+    ///
+    /// - parameters:
+    ///     - selectable: The `Selectable` to re-register.
+    ///     - interested: The `IOEvent`s in which we are interested and want to be notified about.
     func reregister<S: Selectable>(selectable: S, interested: IOEvent) throws {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't re-register on selector as it's \(self.lifecycleState).")
@@ -281,7 +296,13 @@ final class Selector<R: Registration> {
         reg.interested = interested
         registrations[Int(selectable.descriptor)] = reg
     }
-
+    
+    /// Deregister `Selectable`, must be registered via `register` before.
+    ///
+    /// After the `Selectable is deregistered no `IOEvent`s will be produced anymore for the `Selectable`.
+    ///
+    /// - parameters:
+    ///     - selectable: The `Selectable` to deregister.
     func deregister<S: Selectable>(selectable: S) throws {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't deregister from selector as it's \(self.lifecycleState).")
@@ -300,7 +321,12 @@ final class Selector<R: Registration> {
 #endif
     }
 
-     func whenReady(strategy: SelectorStrategy, _ fn: (SelectorEvent<R>) throws -> Void) throws -> Void {
+    /// Apply the given `SelectorStrategy` and execute `fn` once it's complete (which may produce `SelectorEvent`s to handle).
+    ///
+    /// - parameters:
+    ///     - strategy: The `SelectorStrategy` to apply
+    ///     - fn: The function to execute for each `SelectorEvent` that was produced.
+    func whenReady(strategy: SelectorStrategy, _ fn: (SelectorEvent<R>) throws -> Void) throws -> Void {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't call whenReady for selector as it's \(self.lifecycleState).")
         }
@@ -377,6 +403,9 @@ final class Selector<R: Registration> {
 #endif
     }
 
+    /// Close the `Selector`.
+    ///
+    /// After closing the `Selector` it's no longer possible to use it.
     public func close() throws {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't close selector as it's \(self.lifecycleState).")
@@ -415,10 +444,17 @@ final class Selector<R: Registration> {
     }
 }
 
+/// An event that is triggered once the `Selector` was able to select something.
 struct SelectorEvent<R> {
     public let registration: R
     public let io: IOEvent
     
+    /// Create new instance
+    ///
+    /// - parameters:
+    ///     - readable: `true` if readable.
+    ///     - writable: `true` if writable
+    ///     - registration: The registration that belongs to the event.
     init(readable: Bool, writable: Bool, registration: R) {
         if readable {
             io = writable ? .all : .read
@@ -432,6 +468,7 @@ struct SelectorEvent<R> {
 }
 
 internal extension Selector where R == NIORegistration {
+    /// Gently close the `Selector` after all registered `Channel`s are closed.
     internal func closeGently(eventLoop: EventLoop) -> EventLoopFuture<Void> {
         let p0: EventLoopPromise<Void> = eventLoop.newPromise()
         guard self.lifecycleState == .open else {
@@ -458,15 +495,29 @@ internal extension Selector where R == NIORegistration {
     }
 }
 
+/// The strategy used for the `Selector`.
 enum SelectorStrategy {
+    /// Block until there is some IO ready to be processed or the `Selector` is explictly woken up.
     case block
+
+    /// Block until there is some IO ready to be processed, the `Selector` is explictly woken up or the given `TimeAmount` elapsed.
     case blockUntilTimeout(TimeAmount)
+    
+    /// Try to select all ready IO at this point in time without blocking at all.
     case now
 }
 
+/// The IO for which we want to be notified.
 public enum IOEvent {
+    /// Something is ready to be read.
     case read
+    
+    /// Its possible to write some data again.
     case write
+    
+    /// Combination of `read` and `write`.
     case all
+    
+    /// Not interested in any event.
     case none
 }
