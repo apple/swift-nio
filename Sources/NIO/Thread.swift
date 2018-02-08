@@ -90,11 +90,12 @@ final class Thread {
 
             fn(Thread(pthread: pt))
             return nil
-        }, Unmanaged.passRetained(box).toOpaque());
+        }, Unmanaged.passRetained(box).toOpaque())
         
-        guard res == 0 else {
-            fatalError("Unable to create thread: \(res)")
-        }
+        precondition(res == 0, "Unable to create thread: \(res)")
+
+        let detachError = pthread_detach((pt as pthread_t?)!)
+        precondition(detachError == 0, "pthread_detach failed with error \(detachError)")
     }
     
     /// Returns `true` if the calling thread is the same as this one.
