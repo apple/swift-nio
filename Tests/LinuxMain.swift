@@ -38,6 +38,7 @@ import XCTest
          testCase(ChannelPipelineTest.allTests),
          testCase(ChannelTests.allTests),
          testCase(CircularBufferTests.allTests),
+         testCase(CompositeErrorTests.allTests),
          testCase(EchoServerClientTest.allTests),
          testCase(EmbeddedChannelTest.allTests),
          testCase(EmbeddedEventLoopTest.allTests),
