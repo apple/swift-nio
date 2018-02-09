@@ -41,14 +41,3 @@ services:
         volumes:
             - ..:/code
         working_dir: /code
-
-    tls:
-        depends_on:
-            - swift-nio
-        image: swift-nio:latest
-        ports:
-            - "4433:4433"
-        command: swift run NIOTLSServer 0.0.0.0 4433
-        volumes:
-            - ..:/code
-        working_dir: /code

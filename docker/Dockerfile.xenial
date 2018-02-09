@@ -30,6 +30,4 @@ RUN set -ex ; \
     tar xzpf swift-${version}-RELEASE-ubuntu16.04.tar.gz --strip-components 1 -C / ; \
     rm swift-${version}-RELEASE-ubuntu16.04.tar.gz
 
-COPY ["gen-cert.sh", "/scripts/gen-cert.sh"]
-
 VOLUME /code
