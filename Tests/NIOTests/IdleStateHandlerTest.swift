@@ -77,9 +77,9 @@ class IdleStateHandlerTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: handler).then(callback: { f in
+                channel.pipeline.add(handler: handler).then { f in
                     channel.pipeline.add(handler: TestWriteHandler(writeToChannel, assertEventFn))
-                })
+                }
             }.bind(to: "127.0.0.1", on: 0).wait()
         
         defer {

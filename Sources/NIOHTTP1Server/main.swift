@@ -333,9 +333,9 @@ private final class HTTPHandler: ChannelInboundHandler {
             if keepAlive {
                 ctx.write(data: self.wrapOutboundOut(HTTPServerResponsePart.end(nil)), promise: nil)
             } else {
-                ctx.write(data: self.wrapOutboundOut(HTTPServerResponsePart.end(nil))).whenComplete(callback: { _ in
+                ctx.write(data: self.wrapOutboundOut(HTTPServerResponsePart.end(nil))).whenComplete { _ in
                     ctx.close(promise: nil)
-                })
+                }
             }
         }
     }

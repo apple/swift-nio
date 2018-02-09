@@ -86,13 +86,13 @@
 ///
 /// ```
 /// ChannelPipeline p = ...;
-/// let future = p.add(name: "1", handler: InboundHandlerA()).then(callback: { _ in
+/// let future = p.add(name: "1", handler: InboundHandlerA()).then { _ in
 ///   return p.add(name: "2", handler: InboundHandlerB())
-/// }).then(callback: { _ in
+/// }.then { _ in
 ///   return p.add(name: "3", handler: OutboundHandlerA())
-/// }).then(callback: { _ in
+/// }.then { _ in
 ///   p.add(name: "4", handler: OutboundHandlerB())
-/// }).then(callback: { _ in
+/// }.then { _ in
 ///   p.add(name: "5", handler: InboundOutboundHandlerX())
 /// }
 /// // Handle the future as well ....
@@ -1214,8 +1214,8 @@ public final class ChannelHandlerContext : ChannelInvoker {
                 outboundHandler.write(ctx: self, data: data, promise: writePromise)
                 outboundHandler.flush(ctx: self, promise: flushPromise)
 
-                writePromise.futureResult.whenComplete(callback: callback)
-                flushPromise.futureResult.whenComplete(callback: callback)
+                writePromise.futureResult.whenComplete(callback)
+                flushPromise.futureResult.whenComplete(callback)
             } else {
                 outboundHandler.write(ctx: self, data: data, promise: nil)
                 outboundHandler.flush(ctx: self, promise: nil)

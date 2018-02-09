@@ -459,8 +459,8 @@ internal class HappyEyeballsConnector {
         // The two queries SHOULD be made as soon after one another as possible,
         // with the AAAA query made first and immediately followed by the A
         // query.
-        resolver.initiateAAAAQuery(host: host, port: port).whenComplete(callback: aaaaLookupComplete)
-        resolver.initiateAQuery(host: host, port: port).whenComplete(callback: aLookupComplete)
+        resolver.initiateAAAAQuery(host: host, port: port).whenComplete(aaaaLookupComplete)
+        resolver.initiateAQuery(host: host, port: port).whenComplete(aLookupComplete)
     }
 
     /// Called when the A query has completed before the AAAA query.

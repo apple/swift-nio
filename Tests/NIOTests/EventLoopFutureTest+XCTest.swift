@@ -31,6 +31,10 @@ extension EventLoopFutureTest {
                 ("testAndAllWithAllSuccesses", testAndAllWithAllSuccesses),
                 ("testAndAllWithAllFailures", testAndAllWithAllFailures),
                 ("testAndAllWithOneFailure", testAndAllWithOneFailure),
+                ("testThenThrowingWhichDoesNotThrow", testThenThrowingWhichDoesNotThrow),
+                ("testThenThrowingWhichDoesThrow", testThenThrowingWhichDoesThrow),
+                ("testThenIfErrorThrowingWhichDoesNotThrow", testThenIfErrorThrowingWhichDoesNotThrow),
+                ("testThenIfErrorThrowingWhichDoesThrow", testThenIfErrorThrowingWhichDoesThrow),
            ]
    }
 }

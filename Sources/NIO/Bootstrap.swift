@@ -148,25 +148,25 @@ public final class ServerBootstrap {
             func addAcceptHandlerAndFinishServerSetup() {
                 let f = serverChannel.pipeline.add(handler: AcceptHandler(childChannelInitializer: childChannelInit,
                                                                           childChannelOptions: childChannelOptions))
-                f.whenComplete(callback: { v in
+                f.whenComplete { v in
                     switch v {
                     case .failure(let err):
                         promise.fail(error: err)
                     case .success(_):
                         finishServerSetup()
                     }
-                })
+                }
             }
 
             if let serverChannelInit = serverChannelInit {
-                serverChannelInit(serverChannel).whenComplete(callback: { v in
+                serverChannelInit(serverChannel).whenComplete { v in
                     switch v {
                     case .failure(let err):
                         promise.fail(error: err)
                     case .success(_):
                         addAcceptHandlerAndFinishServerSetup()
                     }
-                })
+                }
             } else {
                 addAcceptHandlerAndFinishServerSetup()
             }
@@ -190,7 +190,7 @@ public final class ServerBootstrap {
         
         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             let accepted = self.unwrapInboundIn(data)
-            self.childChannelOptions.applyAll(channel: accepted).whenComplete(callback: { v in
+            self.childChannelOptions.applyAll(channel: accepted).whenComplete { v in
                 // We must return to the server channel.
                 ctx.channel.eventLoop.execute {
                     switch v {
@@ -199,7 +199,7 @@ public final class ServerBootstrap {
     
                     case .success(_):
                         if let childChannelInit = self.childChannelInit {
-                            childChannelInit(accepted).whenComplete(callback: { v in
+                            childChannelInit(accepted).whenComplete { v in
                                 switch v {
                                 case .failure(let err):
                                     self.closeAndFire(ctx: ctx, accepted: accepted, err: err)
@@ -212,13 +212,13 @@ public final class ServerBootstrap {
                                         }
                                     }
                                 }
-                            })
+                            }
                         } else {
                             ctx.fireChannelRead(data: data)
                         }
                     }
                }
-            })
+            }
         }
         
         private func closeAndFire(ctx: ChannelHandlerContext, accepted: SocketChannel, err: Error) {
@@ -351,14 +351,14 @@ public final class ClientBootstrap {
             }
 
             if let channelInitializer = channelInitializer {
-                channelInitializer(channel).whenComplete(callback: { v in
+                channelInitializer(channel).whenComplete { v in
                     switch v {
                     case .failure(let err):
                         promise.fail(error: err)
                     case .success(_):
                         finishClientSetup()
                     }
-                })
+                }
             } else {
                 finishClientSetup()
             }
@@ -406,14 +406,14 @@ fileprivate struct ChannelOptionStorage {
                 return
             }
 
-            applier(channel)(key, value).whenComplete(callback: { v in
+            applier(channel)(key, value).whenComplete { v in
                 switch v {
                 case .failure(let err):
                     applyPromise.fail(error: err)
                 case .success(_):
                     applyNext()
                 }
-            })
+            }
         }
         applyNext()
 

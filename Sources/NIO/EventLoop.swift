@@ -26,14 +26,14 @@ public struct Scheduled<T> {
     
     init(promise: EventLoopPromise<T>, cancellationTask: @escaping () -> ()) {
         self.promise = promise
-        promise.futureResult.whenFailure(callback: { error in
+        promise.futureResult.whenFailure { error in
             guard let err = error as? EventLoopError else {
                 return
             }
             if err == .cancelled {
                 cancellationTask()
             }
-        })
+        }
         self.cancellationTask = cancellationTask
     }
     

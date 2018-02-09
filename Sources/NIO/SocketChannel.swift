@@ -1059,7 +1059,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
 
         let ch = data.forceAsOther() as SocketChannel
         let f = ch.register()
-        f.whenComplete(callback: { v in
+        f.whenComplete { v in
             switch v {
             case .failure(_):
                 ch.close(promise: nil)
@@ -1067,6 +1067,6 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
                 ch.becomeActive0()
                 ch.readIfNeeded0()
             }
-        })
+        }
     }
 }

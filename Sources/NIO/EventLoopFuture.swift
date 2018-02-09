@@ -44,7 +44,8 @@ private struct CallbackList: ExpressibleByArrayLiteral {
             }
         }
     }
-    mutating func append(callback: @escaping () -> CallbackList) {
+
+    mutating func append(_ callback: @escaping () -> CallbackList) {
         if self.firstCallback == nil {
             self.firstCallback = callback
         } else {
@@ -342,19 +343,14 @@ extension EventLoopFuture {
      - parameter callback: Function that will receive the value of this EventLoopFuture and return a new EventLoopFuture
      - returns: A future that will receive the eventual value
      */
-    
-    public func then<U>(file: StaticString = #file, line: UInt = #line, callback: @escaping (T) throws -> EventLoopFuture<U>) -> EventLoopFuture<U> {
+    public func then<U>(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (T) -> EventLoopFuture<U>) -> EventLoopFuture<U> {
         let next = EventLoopPromise<U>(eventLoop: eventLoop, file: file, line: line)
         _whenComplete {
             switch self.value! {
             case .success(let t):
-                do {
-                    let futureU = try callback(t)
-                    return futureU._addCallback {
-                        return next._setValue(value: futureU.value!)
-                    }
-                } catch let error {
-                    return next._setValue(value: .failure(error))
+                let futureU = callback(t)
+                return futureU._addCallback {
+                    return next._setValue(value: futureU.value!)
                 }
             case .failure(let error):
                 return next._setValue(value: .failure(error))
@@ -363,6 +359,27 @@ extension EventLoopFuture {
         return next.futureResult
     }
     
+    public func thenThrowing<U>(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (T) throws -> U) -> EventLoopFuture<U> {
+        return self.then(file: file, line: line) { (value: T) -> EventLoopFuture<U> in
+            do {
+                return EventLoopFuture<U>(eventLoop: self.eventLoop, result: try callback(value), file: file, line: line)
+            } catch {
+                return EventLoopFuture<U>(eventLoop: self.eventLoop, error: error, file: file, line: line)
+            }
+        }
+    }
+
+    public func thenIfErrorThrowing(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) throws -> T) -> EventLoopFuture<T> {
+        return self.thenIfError(file: file, line: line) { value in
+            do {
+                return EventLoopFuture(eventLoop: self.eventLoop, result: try callback(value), file: file, line: line)
+            } catch {
+                return EventLoopFuture(eventLoop: self.eventLoop, error: error, file: file, line: line)
+            }
+        }
+    }
+
+
     /** Chainable transformation.
      
      ```
@@ -386,8 +403,8 @@ extension EventLoopFuture {
      Generally, a simple closure provided to `then()` should never block.  If you need to do something time-consuming, your closure can schedule the operation on another queue and return another `EventLoopFuture<>` object instead.  See `then(queue:callback:)` for a convenient way to do this.
      */
     
-    public func map<U>(file: StaticString = #file, line: UInt = #line, callback: @escaping (T) throws -> (U)) -> EventLoopFuture<U> {
-        return then { return EventLoopFuture<U>(eventLoop: self.eventLoop, result: try callback($0), file: file, line: line) }
+    public func map<U>(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (T) -> (U)) -> EventLoopFuture<U> {
+        return then { return EventLoopFuture<U>(eventLoop: self.eventLoop, result: callback($0), file: file, line: line) }
     }
 
     
@@ -408,53 +425,49 @@ extension EventLoopFuture {
      
      This supports the same overloads as `then()`, including allowing the callback to return a `EventLoopFuture<T>`.
      */
-    public func thenIfError(file: StaticString = #file, line: UInt = #line, callback: @escaping (Error) throws -> EventLoopFuture<T>) -> EventLoopFuture<T> {
+    public func thenIfError(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) -> EventLoopFuture<T>) -> EventLoopFuture<T> {
         let next = EventLoopPromise<T>(eventLoop: eventLoop, file: file, line: line)
         _whenComplete {
             switch self.value! {
             case .success(let t):
                 return next._setValue(value: .success(t))
             case .failure(let e):
-                do {
-                    let t = try callback(e)
-                    return t._addCallback {
-                        return next._setValue(value: t.value!)
-                    }
-                } catch let error {
-                    return next._setValue(value: .failure(error))
+                let t = callback(e)
+                return t._addCallback {
+                    return next._setValue(value: t.value!)
                 }
             }
         }
         return next.futureResult
     }
     
-    public func mapIfError(file: StaticString = #file, line: UInt = #line, callback: @escaping (Error) throws -> T) -> EventLoopFuture<T> {
-        return thenIfError { return EventLoopFuture<T>(eventLoop: self.eventLoop, result: try callback($0), file: file, line: line) }
+    public func mapIfError(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) -> T) -> EventLoopFuture<T> {
+        return thenIfError { return EventLoopFuture<T>(eventLoop: self.eventLoop, result: callback($0), file: file, line: line) }
     }
 
     
     /// Add a callback.  If there's already a value, invoke it and return the resulting list of new callback functions.
-    fileprivate func _addCallback(callback: @escaping () -> CallbackList) -> CallbackList {
+    fileprivate func _addCallback(_ callback: @escaping () -> CallbackList) -> CallbackList {
         assert(eventLoop.inEventLoop)
         if value == nil {
-            callbacks.append(callback: callback)
+            callbacks.append(callback)
             return CallbackList()
         }
         return callback()
     }
     
     /// Add a callback.  If there's already a value, run as much of the chain as we can.
-    fileprivate func _whenComplete(callback: @escaping () -> CallbackList) {
+    fileprivate func _whenComplete(_ callback: @escaping () -> CallbackList) {
         if eventLoop.inEventLoop {
-            _addCallback(callback: callback)._run()
+            _addCallback(callback)._run()
         } else {
             eventLoop.execute {
-                self._addCallback(callback: callback)._run()
+                self._addCallback(callback)._run()
             }
         }
     }
     
-    public func whenSuccess(callback: @escaping (T) -> ()) {
+    public func whenSuccess(_ callback: @escaping (T) -> ()) {
         _whenComplete {
             if case .success(let t) = self.value! {
                 callback(t)
@@ -463,7 +476,7 @@ extension EventLoopFuture {
         }
     }
     
-    public func whenFailure(callback: @escaping (Error) -> ()) {
+    public func whenFailure(_ callback: @escaping (Error) -> ()) {
         _whenComplete {
             if case .failure(let e) = self.value! {
                 callback(e)
@@ -472,7 +485,7 @@ extension EventLoopFuture {
         }
     }
     
-    public func whenComplete(callback: @escaping (EventLoopFutureValue<T>) -> ()) {
+    public func whenComplete(_ callback: @escaping (EventLoopFutureValue<T>) -> ()) {
         _whenComplete {
             callback(self.value!)
             return CallbackList()
@@ -556,20 +569,20 @@ extension EventLoopFuture {
 extension EventLoopFuture {
     
     public func cascade(promise: EventLoopPromise<T>) {
-        whenComplete(callback: { v in
+        whenComplete { v in
             switch v {
             case .failure(let err):
                 promise.fail(error: err)
             case .success(let value):
                 promise.succeed(result: value)
             }
-        })
+        }
     }
     
     public func cascadeFailure<U>(promise: EventLoopPromise<U>) {
-        self.whenFailure(callback: { err in
+        self.whenFailure { err in
             promise.fail(error: err)
-        })
+        }
     }
 }
 
@@ -607,7 +620,7 @@ extension EventLoopFuture {
             return p0.futureResult
         }
 
-        let fn: EventLoopFuture<Void> = futures.reduce(p0.futureResult, { (f1: EventLoopFuture<Void>, f2: EventLoopFuture<Void>) in f1.and(f2).map(callback: { _ in return () }) })
+        let fn: EventLoopFuture<Void> = futures.reduce(p0.futureResult, { (f1: EventLoopFuture<Void>, f2: EventLoopFuture<Void>) in f1.and(f2).map({ _ in return () }) })
         p0.succeed(result: ())
         return fn
     }

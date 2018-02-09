@@ -81,4 +81,90 @@ class EventLoopFutureTest : XCTestCase {
             XCTFail("error of wrong type \(e)")
         }
     }
+
+    func testThenThrowingWhichDoesNotThrow() {
+        let eventLoop = EmbeddedEventLoop()
+        var ran = false
+        let p: EventLoopPromise<String> = eventLoop.newPromise()
+        p.futureResult.map {
+            $0.count
+        }.thenThrowing {
+            1 + $0
+        }.whenSuccess {
+            ran = true
+            XCTAssertEqual($0, 6)
+        }
+        p.succeed(result: "hello")
+        XCTAssertTrue(ran)
+    }
+
+    func testThenThrowingWhichDoesThrow() {
+        enum DummyError: Error, Equatable {
+            case dummyError
+        }
+        let eventLoop = EmbeddedEventLoop()
+        var ran = false
+        let p: EventLoopPromise<String> = eventLoop.newPromise()
+        p.futureResult.map {
+            $0.count
+        }.thenThrowing { (x: Int) throws -> Int in
+            XCTAssertEqual(5, x)
+            throw DummyError.dummyError
+        }.map { (x: Int) -> Int in
+            XCTFail("shouldn't have been called")
+            return x
+        }.whenFailure {
+            ran = true
+            XCTAssertEqual(.some(DummyError.dummyError), $0 as? DummyError)
+        }
+        p.succeed(result: "hello")
+        XCTAssertTrue(ran)
+    }
+
+    func testThenIfErrorThrowingWhichDoesNotThrow() {
+        enum DummyError: Error, Equatable {
+            case dummyError
+        }
+        let eventLoop = EmbeddedEventLoop()
+        var ran = false
+        let p: EventLoopPromise<String> = eventLoop.newPromise()
+        p.futureResult.map {
+            $0.count
+        }.thenIfErrorThrowing {
+            XCTAssertEqual(.some(DummyError.dummyError), $0 as? DummyError)
+            return 5
+        }.thenIfErrorThrowing { _ in
+            XCTFail("shouldn't have been called")
+            return 5
+        }.whenSuccess {
+            ran = true
+            XCTAssertEqual($0, 5)
+        }
+        p.fail(error: DummyError.dummyError)
+        XCTAssertTrue(ran)
+    }
+
+    func testThenIfErrorThrowingWhichDoesThrow() {
+        enum DummyError: Error, Equatable {
+            case dummyError1
+            case dummyError2
+        }
+        let eventLoop = EmbeddedEventLoop()
+        var ran = false
+        let p: EventLoopPromise<String> = eventLoop.newPromise()
+        p.futureResult.map {
+            $0.count
+        }.thenIfErrorThrowing { (x: Error) throws -> Int in
+            XCTAssertEqual(.some(DummyError.dummyError1), x as? DummyError)
+            throw DummyError.dummyError2
+        }.map { (x: Int) -> Int in
+            XCTFail("shouldn't have been called")
+            return x
+        }.whenFailure {
+            ran = true
+            XCTAssertEqual(.some(DummyError.dummyError2), $0 as? DummyError)
+        }
+        p.fail(error: DummyError.dummyError1)
+        XCTAssertTrue(ran)
+    }
 }
