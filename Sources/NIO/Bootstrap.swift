@@ -190,9 +190,10 @@ public final class ServerBootstrap {
         
         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             let accepted = self.unwrapInboundIn(data)
+            let eventLoop = ctx.channel.eventLoop
             self.childChannelOptions.applyAll(channel: accepted).whenComplete { v in
                 // We must return to the server channel.
-                ctx.channel.eventLoop.execute {
+                eventLoop.execute {
                     switch v {
                     case .failure(let err):
                         self.closeAndFire(ctx: ctx, accepted: accepted, err: err)

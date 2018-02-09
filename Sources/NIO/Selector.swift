@@ -43,7 +43,6 @@ final class Selector<R: Registration> {
     private typealias EventType = kevent
     #endif
 
-
     private let fd: Int32
     private var eventsCapacity = 64
     private var events: UnsafeMutablePointer<EventType>
@@ -441,6 +440,12 @@ final class Selector<R: Registration> {
         event.flags = 0
         try keventChangeSetOnly(event: &event, numEvents: 1)
 #endif
+    }
+}
+
+extension Selector: CustomStringConvertible {
+    var description: String {
+        return "Selector { descriptor = \(self.fd) }"
     }
 }
 

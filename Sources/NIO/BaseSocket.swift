@@ -121,7 +121,7 @@ extension sockaddr_storage {
     }
 }
 
-class BaseSocket : Selectable {
+class BaseSocket: Selectable {
     public let descriptor: Int32
     public private(set) var open: Bool
     

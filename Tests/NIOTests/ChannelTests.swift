@@ -1275,4 +1275,68 @@ public class ChannelTests: XCTestCase {
             XCTFail("Got \(error)")
         }
     }
+
+    func testWeDontCrashIfChannelReleasesBeforePipeline() throws {
+        final class StuffHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+
+            let promise: EventLoopPromise<ChannelPipeline>
+
+            init(promise: EventLoopPromise<ChannelPipeline>) {
+                self.promise = promise
+            }
+
+            func channelRegistered(ctx: ChannelHandlerContext) {
+                self.promise.succeed(result: ctx.channel.pipeline)
+            }
+        }
+        weak var weakClientChannel: Channel? = nil
+        weak var weakServerChannel: Channel? = nil
+        weak var weakServerChildChannel: Channel? = nil
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let promise: EventLoopPromise<ChannelPipeline> = group.next().newPromise()
+
+        try {
+            let serverChildChannelPromise: EventLoopPromise<Channel> = group.next().newPromise()
+            let serverChannel = try ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+                .childChannelInitializer { channel in
+                    serverChildChannelPromise.succeed(result: channel)
+                    channel.close(promise: nil)
+                    return channel.eventLoop.newSucceedFuture(result: ())
+                }
+                .bind(to: "127.0.0.1", on: 0).wait()
+
+            let clientChannel = try ClientBootstrap(group: group)
+                .channelInitializer {
+                    $0.pipeline.add(handler: StuffHandler(promise: promise))
+                }
+                .connect(to: serverChannel.localAddress!).wait()
+            weakClientChannel = clientChannel
+            weakServerChannel = serverChannel
+            weakServerChildChannel = try serverChildChannelPromise.futureResult.wait()
+            _ = try? clientChannel.close().wait()
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        }()
+        let pipeline = try promise.futureResult.wait()
+        do {
+            try pipeline.eventLoop.submit { () -> Channel in
+                XCTAssertTrue(pipeline.channel is DeadChannel)
+                return pipeline.channel
+            }.wait().write(data: NIOAny(())).wait()
+            XCTFail("shouldn't have been reached")
+        } catch let e as ChannelError where e == .ioOnClosedChannel {
+            // OK
+        } catch {
+            XCTFail("wrong error \(error) received")
+        }
+        XCTAssertNil(weakClientChannel, "weakClientChannel not nil, looks like we leaked it!")
+        XCTAssertNil(weakServerChannel, "weakServerChannel not nil, looks like we leaked it!")
+        XCTAssertNil(weakServerChildChannel, "weakServerChildChannel not nil, looks like we leaked it!")
+    }
 }

@@ -141,12 +141,18 @@ public final class ChannelPipeline : ChannelInvoker {
     internal private(set) var destroyed: Bool = false
 
     /// The `EventLoop` that is used by the underlying `Channel`.
-    public var eventLoop: EventLoop {
-        return channel.eventLoop
-    }
+    public let eventLoop: EventLoop
 
     /// The `Channel` that this `ChannelPipeline` belongs to.
-    public unowned let channel: Channel
+    ///
+    /// - warning: This is unsafe as it's only valid if the `Channel` is still open
+    private unowned let _channel: Channel
+
+    /// The `Channel` that this `ChannelPipeline` belongs to.
+    internal var channel: Channel {
+        assert(self.eventLoop.inEventLoop)
+        return !self.destroyed ? self._channel : DeadChannel(pipeline: self)
+    }
 
     /// Add a `ChannelHandler` to the `ChannelPipeline`.
     ///
@@ -662,7 +668,8 @@ public final class ChannelPipeline : ChannelInvoker {
 
     // Only executed from Channel
     init (channel: Channel) {
-        self.channel = channel
+        self._channel = channel
+        self.eventLoop = channel.eventLoop
 
         self.head = ChannelHandlerContext(name: "head", handler: HeadChannelHandler.sharedInstance, pipeline: self)
         self.tail = ChannelHandlerContext(name: "tail", handler: TailChannelHandler.sharedInstance, pipeline: self)
@@ -797,7 +804,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
     public let pipeline: ChannelPipeline
 
     public var channel: Channel {
-        return pipeline.channel
+        return self.pipeline.channel
     }
     
     public var handler: ChannelHandler {
@@ -1276,7 +1283,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
 
 extension ChannelPipeline: CustomDebugStringConvertible {
     public var debugDescription: String {
-        var desc = "ChannelPipeline:\n"
+        var desc = "ChannelPipeline (\(ObjectIdentifier(self))):\n"
         var node = self.head
         while let ctx = node {
             let inboundStr = ctx.handler is _ChannelInboundHandler ? "I" : ""

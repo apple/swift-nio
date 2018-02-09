@@ -589,6 +589,14 @@ internal final class SelectableEventLoop : EventLoop {
     }
 }
 
+extension SelectableEventLoop: CustomStringConvertible {
+    var description: String {
+        return self.tasksLock.withLock {
+            return "SelectableEventLoop { selector = \(self.selector), scheduledTasks = \(self.scheduledTasks.description) }"
+        }
+    }
+}
+
 
 /// Provides an endless stream of `EventLoop`s to use.
 public protocol EventLoopGroup: class {

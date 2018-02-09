@@ -1070,3 +1070,15 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         }
     }
 }
+
+extension SocketChannel: CustomStringConvertible {
+    var description: String {
+        return "SocketChannel { descriptor = \(self.selectable.descriptor), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
+    }
+}
+
+extension ServerSocketChannel: CustomStringConvertible {
+    var description: String {
+        return "ServerSocketChannel { descriptor = \(self.selectable.descriptor), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
+    }
+}

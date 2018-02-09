@@ -52,6 +52,7 @@ extension ChannelTests {
                 ("testCloseInput", testCloseInput),
                 ("testHalfClosure", testHalfClosure),
                 ("testRejectsInvalidData", testRejectsInvalidData),
+                ("testWeDontCrashIfChannelReleasesBeforePipeline", testWeDontCrashIfChannelReleasesBeforePipeline),
            ]
    }
 }

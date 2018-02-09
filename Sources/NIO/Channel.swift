@@ -219,4 +219,3 @@ public enum ChannelEvent: Equatable {
     /// Output portion of the `Channel` was closed.
     case outputClosed
 }
-
