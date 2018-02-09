@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: Handle AF_INET6 as well
 final class ServerSocket: BaseSocket {
     public class func bootstrap(protocolFamily: Int32, host: String, port: Int32) throws -> ServerSocket {
         let socket = try ServerSocket(protocolFamily: protocolFamily)
