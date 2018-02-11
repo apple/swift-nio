@@ -27,7 +27,7 @@ import CNIOLinux
         init(cpuIds: Set<Int>) {
             precondition(!cpuIds.isEmpty)
             cpuIds.forEach{ v in
-                precondition(v >= 0 && v < System.coreCount())
+                precondition(v >= 0 && v < System.coreCount)
             }
             self.cpuIds = cpuIds
         }

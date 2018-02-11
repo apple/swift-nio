@@ -44,7 +44,7 @@ public enum System {
     /// specific execution behaviour of the program.
     ///
     /// - returns: The logical core count on the system.
-    public static func coreCount() -> Int {
+    public static var coreCount: Int {
         #if os(Linux)
         return linuxCoreCount()
         #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
