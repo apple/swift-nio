@@ -486,16 +486,16 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             try readFromSocket()
         } catch let err {
             // ChannelError.eof is not something we want to fire through the pipeline as it just means the remote
-            // per closed / shutdown the connection.
-            if let channelErr = err as? ChannelError, channelErr != ChannelError.eof {
-                pipeline.fireErrorCaught0(error: err)
-            } else if try! getOption(option: ChannelOptions.allowRemoteHalfClosure) {
-                // If we want to allow half closure we will just mark the input side of the Channel
-                // as closed.
-                pipeline.fireChannelReadComplete0()
-                close0(error: err, mode: .input, promise: nil)
-                readPending = false
-                return
+            // peer closed / shutdown the connection.
+            if let channelErr = err as? ChannelError, channelErr == ChannelError.eof {
+                if try! getOption(option: ChannelOptions.allowRemoteHalfClosure) {
+                    // If we want to allow half closure we will just mark the input side of the Channel
+                    // as closed.
+                    pipeline.fireChannelReadComplete0()
+                    close0(error: err, mode: .input, promise: nil)
+                    readPending = false
+                    return
+                }
             } else {
                 pipeline.fireErrorCaught0(error: err)
             }
@@ -503,6 +503,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             // Call before triggering the close of the Channel.
             pipeline.fireChannelReadComplete0()
             close0(error: err, mode: .all, promise: nil)
+    
             return
         }
         pipeline.fireChannelReadComplete0()

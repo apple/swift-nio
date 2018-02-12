@@ -697,4 +697,50 @@ class EchoServerClientTest : XCTestCase {
 
         XCTAssertNoThrow(try group.syncShutdownGracefully())
     }
+    
+    func testChannelErrorEOFNotFiredThroughPipeline() throws {
+        
+        class ErrorHandler : ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            private let promise: EventLoopPromise<Void>
+            
+            init(_ promise: EventLoopPromise<Void>) {
+                self.promise = promise
+            }
+            
+            public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+                if let err = error as? ChannelError {
+                    XCTAssertNotEqual(ChannelError.eof, err)
+                }
+            }
+            
+            public func channelInactive(ctx: ChannelHandlerContext) {
+                self.promise.succeed(result: ())
+            }
+        }
+        
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        
+        let promise: EventLoopPromise<Void> = group.next().newPromise()
+        
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer { channel in
+                channel.pipeline.add(handler: ErrorHandler(promise))
+            }.bind(to: "127.0.0.1", on: 0).wait()
+        
+        defer {
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        }
+        
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+        XCTAssertNoThrow(try clientChannel.close().wait())
+        
+        XCTAssertNoThrow(try promise.futureResult.wait())
+    }
 }
