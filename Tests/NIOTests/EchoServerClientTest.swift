@@ -731,7 +731,7 @@ class EchoServerClientTest : XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.add(handler: ErrorHandler(promise))
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
         
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
