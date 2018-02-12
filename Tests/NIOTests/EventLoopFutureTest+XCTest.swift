@@ -35,6 +35,7 @@ extension EventLoopFutureTest {
                 ("testThenThrowingWhichDoesThrow", testThenThrowingWhichDoesThrow),
                 ("testThenIfErrorThrowingWhichDoesNotThrow", testThenIfErrorThrowingWhichDoesNotThrow),
                 ("testThenIfErrorThrowingWhichDoesThrow", testThenIfErrorThrowingWhichDoesThrow),
+                ("testOrderOfFutureCompletion", testOrderOfFutureCompletion),
            ]
    }
 }

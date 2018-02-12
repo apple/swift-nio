@@ -404,7 +404,12 @@ extension EventLoopFuture {
      */
     
     public func map<U>(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (T) -> (U)) -> EventLoopFuture<U> {
-        return then { return EventLoopFuture<U>(eventLoop: self.eventLoop, result: callback($0), file: file, line: line) }
+        if U.self == T.self && U.self == Void.self {
+            whenSuccess(callback as! (T) -> ())
+            return self as! EventLoopFuture<U>
+        } else {
+            return then { return EventLoopFuture<U>(eventLoop: self.eventLoop, result: callback($0), file: file, line: line) }
+        }
     }
 
     

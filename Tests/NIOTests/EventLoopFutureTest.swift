@@ -167,4 +167,23 @@ class EventLoopFutureTest : XCTestCase {
         p.fail(error: DummyError.dummyError1)
         XCTAssertTrue(ran)
     }
+
+    func testOrderOfFutureCompletion() throws {
+        let eventLoop = EmbeddedEventLoop()
+        var state = 0
+        let p: EventLoopPromise<()> = EventLoopPromise(eventLoop: eventLoop, file: #file, line: #line)
+        p.futureResult.map {
+            XCTAssertEqual(state, 0)
+            state += 1
+        }.map {
+            XCTAssertEqual(state, 1)
+            state += 1
+        }.whenSuccess {
+            XCTAssertEqual(state, 2)
+            state += 1
+        }
+        p.succeed(result: ())
+        XCTAssertTrue(p.futureResult.fulfilled)
+        XCTAssertEqual(state, 3)
+    }
 }
