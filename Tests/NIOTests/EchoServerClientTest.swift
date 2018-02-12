@@ -125,7 +125,7 @@ class EchoServerClientTest : XCTestCase {
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                 return channel.pipeline.add(handler: countingHandler)
-            }.bind(unixDomainSocket: udsTempDir + "/server.sock").wait()
+            }.bind(to: udsTempDir + "/server.sock").wait()
 
         defer {
             _ = serverChannel.close()
@@ -168,7 +168,7 @@ class EchoServerClientTest : XCTestCase {
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                 return channel.pipeline.add(handler: countingHandler)
-            }.bind(unixDomainSocket: udsTempDir + "/server.sock").wait()
+            }.bind(to: udsTempDir + "/server.sock").wait()
 
         defer {
             _ = serverChannel.close()

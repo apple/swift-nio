@@ -110,8 +110,8 @@ public final class ServerBootstrap {
     /// Bind the `ServerSocketChannel` to a UNIX Domain Socket.
     ///
     /// - parameters:
-    ///     - path: The path of the UNIX Domain Socket to bind on. `path` must not exist, it will be created by the system.
-    public func bind(unixDomainSocket path: String) -> EventLoopFuture<Channel> {
+    ///     - path: The `unixDomainSocket` path to bind on. `path` must not exist, it will be created by the system.
+    public func bind(to path: String) -> EventLoopFuture<Channel> {
         let evGroup = group
         do {
             let address = try SocketAddress.unixDomainSocketAddress(path: path)
@@ -320,11 +320,11 @@ public final class ClientBootstrap {
     /// Specify the `unixDomainSocket` path to connect to for the UDS `Channel` that will be established.
     ///
     /// - parameters:
-    ///     - address: The address to connect to.
+    ///     - path: The `unixDomainSocket` path to connect to.
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
-    public func connect(to unixDomainSocket: String) -> EventLoopFuture<Channel> {
+    public func connect(to path: String) -> EventLoopFuture<Channel> {
         do {
-            let address = try SocketAddress.unixDomainSocketAddress(path: unixDomainSocket)
+            let address = try SocketAddress.unixDomainSocketAddress(path: path)
             return connect(to: address)
         } catch {
             return group.next().newFailedFuture(error: error)

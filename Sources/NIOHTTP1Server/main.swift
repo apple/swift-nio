@@ -416,7 +416,7 @@ let channel = try { () -> Channel in
     case .ip(let host, let port):
         return try bootstrap.bind(to: host, on: port).wait()
     case .unixDomainSocket(let path):
-        return try bootstrap.bind(unixDomainSocket: path).wait()
+        return try bootstrap.bind(to: path).wait()
     }
     }()
 
