@@ -17,21 +17,6 @@ import XCTest
 
 class FileRegionTest : XCTestCase {
     
-    private func temporaryFilePath() -> String {
-        let fileManager = FileManager.default
-        let filePath: String
-        #if os(Linux)
-            filePath = "/tmp/\(UUID().uuidString)"
-        #else
-            if #available(OSX 10.12, *) {
-                filePath = "\(fileManager.temporaryDirectory.path)/\(UUID().uuidString)"
-            } else {
-                filePath = "/tmp/\(UUID().uuidString)"
-            }
-        #endif
-        return filePath
-    }
-
     func testWriteFileRegion() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
@@ -61,18 +46,19 @@ class FileRegionTest : XCTestCase {
         defer {
             _ = clientChannel.close()
         }
-       
-        let fileManager = FileManager.default
-        let filePath = self.temporaryFilePath()
-        defer {
-            _ = try? FileManager.default.removeItem(atPath: filePath)
-        }
-        try content.write(toFile: filePath, atomically: false, encoding: .ascii)
-        try clientChannel.writeAndFlush(data: NIOAny(FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count))).wait()
+
+        try withTemporaryFile { _, filePath in
+            let fr = try FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count)
+            defer {
+                XCTAssertNoThrow(try fr.close())
+            }
+            try content.write(toFile: filePath, atomically: false, encoding: .ascii)
+            try clientChannel.writeAndFlush(data: NIOAny(fr)).wait()
             
-        var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
-        buffer.write(bytes: bytes)
-        try countingHandler.assertReceived(buffer: buffer)
+            var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
+            buffer.write(bytes: bytes)
+            try countingHandler.assertReceived(buffer: buffer)
+        }
     }
 
     func testWriteEmptyFileRegionDoesNotHang() throws {
@@ -97,18 +83,20 @@ class FileRegionTest : XCTestCase {
             _ = clientChannel.close()
         }
 
-        let filePath = self.temporaryFilePath()
-        defer {
-            _ = try? FileManager.default.removeItem(atPath: filePath)
-        }
-        try "".write(toFile: filePath, atomically: false, encoding: .ascii)
+        try withTemporaryFile { _, filePath in
+            let fr = try FileRegion(file: filePath, readerIndex: 0, endIndex: 0)
+            defer {
+                XCTAssertNoThrow(try fr.close())
+            }
+            try "".write(toFile: filePath, atomically: false, encoding: .ascii)
 
-        var futures: [EventLoopFuture<()>] = []
-        for _ in 0..<10 {
-            futures.append(try clientChannel.write(data: NIOAny(FileRegion(file: filePath, readerIndex: 0, endIndex: 0))))
+            var futures: [EventLoopFuture<()>] = []
+            for _ in 0..<10 {
+                futures.append(clientChannel.write(data: NIOAny(fr)))
+            }
+            try clientChannel.writeAndFlush(data: NIOAny(fr)).wait()
+            try futures.forEach { try $0.wait() }
         }
-        try clientChannel.writeAndFlush(data: NIOAny(FileRegion(file: filePath, readerIndex: 0, endIndex: 0))).wait()
-        try futures.forEach { try $0.wait() }
     }
 
     func testOutstandingFileRegionsWork() throws {
@@ -141,34 +129,35 @@ class FileRegionTest : XCTestCase {
             _ = clientChannel.close()
         }
 
-        let fileManager = FileManager.default
-        let filePath = self.temporaryFilePath()
-        defer {
-            _ = try? FileManager.default.removeItem(atPath: filePath)
-        }
-        try content.write(toFile: filePath, atomically: false, encoding: .ascii)
-        do {
-            () = try clientChannel.writeAndFlush(data: NIOAny(FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count))).thenThrowing {
-                try FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count)
-            }.then { (fileRegion: FileRegion) -> EventLoopFuture<()> in
-                let frFuture = clientChannel.write(data: NIOAny(fileRegion))
-                var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
-                buffer.write(bytes: bytes)
-                let bbFuture = clientChannel.write(data: NIOAny(buffer))
-                clientChannel.close(promise: nil)
-                clientChannel.flush(promise: nil)
-                return frFuture.then { bbFuture }
-            }.wait()
-            XCTFail("no error happened even though we closed before flush")
-        } catch let e as ChannelError {
-            XCTAssertEqual(ChannelError.alreadyClosed, e)
-        } catch let e {
-            XCTFail("unexpected error \(e)")
-        }
+        try withTemporaryFile { fd, filePath in
+            let fr1 = try FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count)
+            let fr2 = try FileRegion(file: filePath, readerIndex: 0, endIndex: bytes.count)
+            defer {
+                XCTAssertNoThrow(try fr1.close())
+                XCTAssertNoThrow(try fr2.close())
+            }
+            try content.write(toFile: filePath, atomically: false, encoding: .ascii)
+            do {
+                () = try clientChannel.writeAndFlush(data: NIOAny(fr1)).then {
+                    let frFuture = clientChannel.write(data: NIOAny(fr2))
+                    var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
+                    buffer.write(bytes: bytes)
+                    let bbFuture = clientChannel.write(data: NIOAny(buffer))
+                    clientChannel.close(promise: nil)
+                    clientChannel.flush(promise: nil)
+                    return frFuture.then { bbFuture }
+                }.wait()
+                XCTFail("no error happened even though we closed before flush")
+            } catch let e as ChannelError {
+                XCTAssertEqual(ChannelError.alreadyClosed, e)
+            } catch let e {
+                XCTFail("unexpected error \(e)")
+            }
 
-        var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
-        buffer.write(bytes: bytes)
-        try countingHandler.assertReceived(buffer: buffer)
+            var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
+            buffer.write(bytes: bytes)
+            try countingHandler.assertReceived(buffer: buffer)
+        }
     }
 
     func testWholeFileFileRegion() throws {
