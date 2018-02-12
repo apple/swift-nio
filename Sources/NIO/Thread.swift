@@ -38,7 +38,7 @@ private func sys_pthread_setname_np(_ p: pthread_t, _ pointer: UnsafePointer<Int
 final class Thread {
     
     /// The pthread_t used by this instance.
-    let pthread: pthread_t
+    private let pthread: pthread_t
     
     /// Create a new instance
     ///
@@ -46,6 +46,17 @@ final class Thread {
     ///     - pthread: The `pthread_t` that is wrapped and used by the `Thread`.
     private init(pthread: pthread_t) {
         self.pthread = pthread
+    }
+    
+    /// Execute the given fn with the `pthread_t` that is used by this `Thread` as argument.
+    ///
+    /// - warning: Do not escape `pthread_t` from the closure for later use.
+    ///
+    /// - parameters:
+    ///     - fn: The closure that will accept the `pthread_t`.
+    /// - returns: The value returned by `fn`.
+    func withUnsafePthread<T>(_ fn: (pthread_t) throws -> T) rethrows -> T {
+        return try fn(self.pthread)
     }
     
     /// Get current name of the `Thread` or `nil` if not set.
