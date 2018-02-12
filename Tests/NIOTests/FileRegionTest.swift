@@ -35,7 +35,7 @@ class FileRegionTest : XCTestCase {
 
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .childChannelInitializer({ $0.pipeline.add(handler: countingHandler) }).bind(to: "127.0.0.1", on: 0).wait()
+            .childChannelInitializer({ $0.pipeline.add(handler: countingHandler) }).bind(host: "127.0.0.1", port: 0).wait()
         
         defer {
             _ = serverChannel.close()
@@ -71,7 +71,7 @@ class FileRegionTest : XCTestCase {
 
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .childChannelInitializer({ $0.pipeline.add(handler: countingHandler) }).bind(to: "127.0.0.1", on: 0).wait()
+            .childChannelInitializer({ $0.pipeline.add(handler: countingHandler) }).bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
             _ = serverChannel.close()
@@ -117,7 +117,7 @@ class FileRegionTest : XCTestCase {
 
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .childChannelInitializer({ $0.pipeline.add(handler: countingHandler) }).bind(to: "127.0.0.1", on: 0).wait()
+            .childChannelInitializer({ $0.pipeline.add(handler: countingHandler) }).bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
             _ = serverChannel.close()

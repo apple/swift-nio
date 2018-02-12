@@ -414,9 +414,9 @@ print("htdocs = \(htdocs)")
 let channel = try { () -> Channel in
     switch bindTarget {
     case .ip(let host, let port):
-        return try bootstrap.bind(to: host, on: port).wait()
+        return try bootstrap.bind(host: host, port: port).wait()
     case .unixDomainSocket(let path):
-        return try bootstrap.bind(to: path).wait()
+        return try bootstrap.bind(unixDomainSocketPath: path).wait()
     }
     }()
 

@@ -49,7 +49,7 @@ class EchoServerClientTest : XCTestCase {
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                 return channel.pipeline.add(handler: countingHandler)
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
             _ = serverChannel.close()
@@ -82,7 +82,7 @@ class EchoServerClientTest : XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 return channel.pipeline.add(handler: WriteALotHandler())
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
@@ -125,7 +125,7 @@ class EchoServerClientTest : XCTestCase {
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                 return channel.pipeline.add(handler: countingHandler)
-            }.bind(to: udsTempDir + "/server.sock").wait()
+            }.bind(unixDomainSocketPath: udsTempDir + "/server.sock").wait()
 
         defer {
             _ = serverChannel.close()
@@ -168,13 +168,13 @@ class EchoServerClientTest : XCTestCase {
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                 return channel.pipeline.add(handler: countingHandler)
-            }.bind(to: udsTempDir + "/server.sock").wait()
+            }.bind(unixDomainSocketPath: udsTempDir + "/server.sock").wait()
 
         defer {
             _ = serverChannel.close()
         }
 
-        let clientChannel = try ClientBootstrap(group: group).connect(to: udsTempDir + "/server.sock").wait()
+        let clientChannel = try ClientBootstrap(group: group).connect(unixDomainSocketPath: udsTempDir + "/server.sock").wait()
 
         defer {
             _ = clientChannel.close()
@@ -200,7 +200,7 @@ class EchoServerClientTest : XCTestCase {
         let handler = ChannelActiveHandler()
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .bind(to: "127.0.0.1", on: 0).wait()
+            .bind(host: "127.0.0.1", port: 0).wait()
         
         defer {
             _ = serverChannel.close()
@@ -227,7 +227,7 @@ class EchoServerClientTest : XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 return channel.pipeline.add(handler: EchoServer())
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
             _ = serverChannel.close()
@@ -432,7 +432,7 @@ class EchoServerClientTest : XCTestCase {
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                 return channel.pipeline.add(handler: handler)
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
@@ -469,7 +469,7 @@ class EchoServerClientTest : XCTestCase {
 
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                 return channel.pipeline.add(handler: byteCountingHandler)
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
@@ -511,7 +511,7 @@ class EchoServerClientTest : XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 return channel.pipeline.add(handler: EchoServer())
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
@@ -545,7 +545,7 @@ class EchoServerClientTest : XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 return channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite))
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
@@ -577,7 +577,7 @@ class EchoServerClientTest : XCTestCase {
                 return channel.pipeline.add(handler: EchoAndEchoAgainAfterSomeTimeServer(time: .seconds(1), secondWriteDoneHandler: {
                     dpGroup.leave()
                 }))
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
             _ = serverChannel.close()
@@ -667,7 +667,7 @@ class EchoServerClientTest : XCTestCase {
             .childChannelOption(ChannelOptions.socket(SocketOptionLevel(IPPROTO_TCP), TCP_NODELAY), value: 1)
             .childChannelInitializer { channel in
                 return channel.pipeline.add(handler: WriteWhenActiveHandler(str, dpGroup))
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
         
         defer {
             _ = serverChannel.close()

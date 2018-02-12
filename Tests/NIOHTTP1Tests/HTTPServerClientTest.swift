@@ -366,7 +366,7 @@ class HTTPServerClientTest : XCTestCase {
                 channel.pipeline.addHTTPServerHandlers().then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
         
         defer {
             XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
@@ -424,7 +424,7 @@ class HTTPServerClientTest : XCTestCase {
                 channel.pipeline.addHTTPServerHandlers().then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
         
         defer {
             XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
@@ -482,7 +482,7 @@ class HTTPServerClientTest : XCTestCase {
                 channel.pipeline.addHTTPServerHandlers().then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
             XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
@@ -542,7 +542,7 @@ class HTTPServerClientTest : XCTestCase {
                 channel.pipeline.addHTTPServerHandlers().then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
             XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
@@ -584,7 +584,7 @@ class HTTPServerClientTest : XCTestCase {
                 channel.pipeline.addHTTPServerHandlers().then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
         defer {
             XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
         }
@@ -629,7 +629,7 @@ class HTTPServerClientTest : XCTestCase {
                 channel.pipeline.addHTTPServerHandlers().then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
         defer {
             XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
         }

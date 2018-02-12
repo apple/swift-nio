@@ -44,7 +44,7 @@ public class EventLoopTest : XCTestCase {
         // First, we create a server and client channel, but don't connect them.
         let serverChannel = try ServerBootstrap(group: eventLoopGroup)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .bind(to: "127.0.0.1", on: 0).wait()
+            .bind(host: "127.0.0.1", port: 0).wait()
         let clientBootstrap = ClientBootstrap(group: eventLoopGroup)
 
         // Now, schedule two tasks: one that takes a while, one that doesn't.
@@ -101,7 +101,7 @@ public class EventLoopTest : XCTestCase {
         // Create a server channel.
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .bind(to: "127.0.0.1", on: 0).wait()
+            .bind(host: "127.0.0.1", port: 0).wait()
 
         // We now want to connect to it. To try to slow this stuff down, we're going to use a multiple of the number
         // of event loops.

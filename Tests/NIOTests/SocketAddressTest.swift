@@ -20,12 +20,12 @@ class SocketAddressTest: XCTestCase {
     func testDescriptionWorks() throws {
         var ipv4SocketAddress = sockaddr_in()
         ipv4SocketAddress.sin_port = (12345 as UInt16).bigEndian
-        let sa = SocketAddress(IPv4Address: ipv4SocketAddress, host: "foobar.com")
+        let sa = SocketAddress(ipv4SocketAddress, host: "foobar.com")
         XCTAssertEqual("[IPv4]foobar.com:12345", sa.description)
     }
 
     func testCanCreateIPv4AddressFromString() throws {
-        let sa = try SocketAddress.ipAddress(string: "127.0.0.1", port: 80)
+        let sa = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
         let expectedAddress: [UInt8] = [0x7F, 0x00, 0x00, 0x01]
         switch sa {
         case .v4(let address):
@@ -46,7 +46,7 @@ class SocketAddressTest: XCTestCase {
     }
 
     func testCanCreateIPv6AddressFromString() throws {
-        let sa = try SocketAddress.ipAddress(string: "fe80::5", port: 443)
+        let sa = try SocketAddress(ipAddress: "fe80::5", port: 443)
         let expectedAddress: [UInt8] = [0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]
         switch sa {
         case .v6(let address):
@@ -70,7 +70,7 @@ class SocketAddressTest: XCTestCase {
 
     func testRejectsNonIPStrings() throws {
         do {
-            _ = try SocketAddress.ipAddress(string: "definitelynotanip", port: 800)
+            _ = try SocketAddress(ipAddress: "definitelynotanip", port: 800)
         } catch SocketAddressError.failedToParseIPString(let str) {
             XCTAssertEqual(str, "definitelynotanip")
         } catch {
@@ -79,9 +79,9 @@ class SocketAddressTest: XCTestCase {
     }
 
     func testWithMutableAddressCopiesFaithfully() throws {
-        let first = try SocketAddress.ipAddress(string: "127.0.0.1", port: 80)
-        let second = try SocketAddress.ipAddress(string: "::1", port: 80)
-        let third = try SocketAddress.unixDomainSocketAddress(path: "/definitely/a/path")
+        let first = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
+        let second = try SocketAddress(ipAddress: "::1", port: 80)
+        let third = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
 
         guard case .v4(let firstAddress) = first else {
             XCTFail("Unable to extract IPv4 address")
@@ -119,9 +119,9 @@ class SocketAddressTest: XCTestCase {
     }
 
     func testWithMutableAddressAllowsMutationWithoutPersistence() throws {
-        let first = try SocketAddress.ipAddress(string: "127.0.0.1", port: 80)
-        let second = try SocketAddress.ipAddress(string: "::1", port: 80)
-        let third = try SocketAddress.unixDomainSocketAddress(path: "/definitely/a/path")
+        let first = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
+        let second = try SocketAddress(ipAddress: "::1", port: 80)
+        let third = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
 
         guard case .v4(let firstAddress) = first else {
             XCTFail("Unable to extract IPv4 address")
@@ -169,9 +169,9 @@ class SocketAddressTest: XCTestCase {
     }
 
     func testConvertingStorage() throws {
-        let first = try SocketAddress.ipAddress(string: "127.0.0.1", port: 80)
-        let second = try SocketAddress.ipAddress(string: "::1", port: 80)
-        let third = try SocketAddress.unixDomainSocketAddress(path: "/definitely/a/path")
+        let first = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
+        let second = try SocketAddress(ipAddress: "::1", port: 80)
+        let third = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
 
         guard case .v4(let firstAddress) = first else {
             XCTFail("Unable to extract IPv4 address")
@@ -216,9 +216,9 @@ class SocketAddressTest: XCTestCase {
     }
 
     func testComparingSockaddrs() throws {
-        let first = try SocketAddress.ipAddress(string: "127.0.0.1", port: 80)
-        let second = try SocketAddress.ipAddress(string: "::1", port: 80)
-        let third = try SocketAddress.unixDomainSocketAddress(path: "/definitely/a/path")
+        let first = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
+        let second = try SocketAddress(ipAddress: "::1", port: 80)
+        let third = try SocketAddress(unixDomainSocketPath: "/definitely/a/path")
 
         guard case .v4(let firstAddress) = first else {
             XCTFail("Unable to extract IPv4 address")
@@ -261,12 +261,12 @@ class SocketAddressTest: XCTestCase {
     }
 
     func testEqualSocketAddresses() throws {
-        let first = try SocketAddress.ipAddress(string: "::1", port: 80)
-        let second = try SocketAddress.ipAddress(string: "00:00::1", port: 80)
-        let third = try SocketAddress.ipAddress(string: "127.0.0.1", port: 443)
-        let fourth = try SocketAddress.ipAddress(string: "127.0.0.1", port: 443)
-        let fifth = try SocketAddress.unixDomainSocketAddress(path: "/var/tmp")
-        let sixth = try SocketAddress.unixDomainSocketAddress(path: "/var/tmp")
+        let first = try SocketAddress(ipAddress: "::1", port: 80)
+        let second = try SocketAddress(ipAddress: "00:00::1", port: 80)
+        let third = try SocketAddress(ipAddress: "127.0.0.1", port: 443)
+        let fourth = try SocketAddress(ipAddress: "127.0.0.1", port: 443)
+        let fifth = try SocketAddress(unixDomainSocketPath: "/var/tmp")
+        let sixth = try SocketAddress(unixDomainSocketPath: "/var/tmp")
 
         XCTAssertEqual(first, second)
         XCTAssertEqual(third, fourth)
@@ -274,22 +274,22 @@ class SocketAddressTest: XCTestCase {
     }
 
     func testUnequalAddressesOnPort() throws {
-        let first = try SocketAddress.ipAddress(string: "::1", port: 80)
-        let second = try SocketAddress.ipAddress(string: "::1", port: 443)
-        let third = try SocketAddress.ipAddress(string: "127.0.0.1", port: 80)
-        let fourth = try SocketAddress.ipAddress(string: "127.0.0.1", port: 443)
+        let first = try SocketAddress(ipAddress: "::1", port: 80)
+        let second = try SocketAddress(ipAddress: "::1", port: 443)
+        let third = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
+        let fourth = try SocketAddress(ipAddress: "127.0.0.1", port: 443)
 
         XCTAssertNotEqual(first, second)
         XCTAssertNotEqual(third, fourth)
     }
 
     func testUnequalOnAddress() throws {
-        let first = try SocketAddress.ipAddress(string: "::1", port: 80)
-        let second = try SocketAddress.ipAddress(string: "::2", port: 80)
-        let third = try SocketAddress.ipAddress(string: "127.0.0.1", port: 443)
-        let fourth = try SocketAddress.ipAddress(string: "127.0.0.2", port: 443)
-        let fifth = try SocketAddress.unixDomainSocketAddress(path: "/var/tmp")
-        let sixth = try SocketAddress.unixDomainSocketAddress(path: "/var/tmq")
+        let first = try SocketAddress(ipAddress: "::1", port: 80)
+        let second = try SocketAddress(ipAddress: "::2", port: 80)
+        let third = try SocketAddress(ipAddress: "127.0.0.1", port: 443)
+        let fourth = try SocketAddress(ipAddress: "127.0.0.2", port: 443)
+        let fifth = try SocketAddress(unixDomainSocketPath: "/var/tmp")
+        let sixth = try SocketAddress(unixDomainSocketPath: "/var/tmq")
 
         XCTAssertNotEqual(first, second)
         XCTAssertNotEqual(third, fourth)
@@ -297,9 +297,9 @@ class SocketAddressTest: XCTestCase {
     }
 
     func testUnequalAcrossFamilies() throws {
-        let first = try SocketAddress.ipAddress(string: "::1", port: 80)
-        let second = try SocketAddress.ipAddress(string: "127.0.0.1", port: 80)
-        let third = try SocketAddress.unixDomainSocketAddress(path: "/var/tmp")
+        let first = try SocketAddress(ipAddress: "::1", port: 80)
+        let second = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
+        let third = try SocketAddress(unixDomainSocketPath: "/var/tmp")
 
         XCTAssertNotEqual(first, second)
         XCTAssertNotEqual(second, third)
@@ -308,9 +308,9 @@ class SocketAddressTest: XCTestCase {
     }
 
     func testPortAccessor() throws {
-        XCTAssertEqual(try SocketAddress.ipAddress(string: "127.0.0.1", port: 80).port, 80)
-        XCTAssertEqual(try SocketAddress.ipAddress(string: "::1", port: 80).port, 80)
-        XCTAssertEqual(try SocketAddress.unixDomainSocketAddress(path: "/definitely/a/path").port, nil)
+        XCTAssertEqual(try SocketAddress(ipAddress: "127.0.0.1", port: 80).port, 80)
+        XCTAssertEqual(try SocketAddress(ipAddress: "::1", port: 80).port, 80)
+        XCTAssertEqual(try SocketAddress(unixDomainSocketPath: "/definitely/a/path").port, nil)
     }
 
     func testCanMutateSockaddrStorage() throws {

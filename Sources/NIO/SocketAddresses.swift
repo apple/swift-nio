@@ -139,21 +139,21 @@ public enum SocketAddress: CustomStringConvertible {
         }
     }
 
-    /// Creates a new IPV4 `SocketAddress`.
+    /// Creates a new IPv4 `SocketAddress`.
     ///
     /// - parameters:
     ///       - addr: the `sockaddr_in` that holds the ipaddress and port.
     ///       - host: the hostname that resolved to the ipaddress.
-    public init(IPv4Address addr: sockaddr_in, host: String) {
+    public init(_ addr: sockaddr_in, host: String) {
         self = .v4(.init(address: addr, host: host))
     }
 
-    /// Creates a new IPV6 `SocketAddress`.
+    /// Creates a new IPv6 `SocketAddress`.
     ///
     /// - parameters:
     ///       - addr: the `sockaddr_in` that holds the ipaddress and port.
     ///       - host: the hostname that resolved to the ipaddress.
-    public init(IPv6Address addr: sockaddr_in6, host: String) {
+    public init(_ addr: sockaddr_in6, host: String) {
         self = .v6(.init(address: addr, host: host))
     }
 
@@ -161,7 +161,7 @@ public enum SocketAddress: CustomStringConvertible {
     ///
     /// - parameters:
     ///       - addr: the `sockaddr_un` that holds the socket path.
-    public init(unixDomainSocket addr: sockaddr_un) {
+    public init(_ addr: sockaddr_un) {
         self = .unixDomainSocket(.init(address: addr))
     }
 
@@ -171,12 +171,12 @@ public enum SocketAddress: CustomStringConvertible {
     ///     - path: the path to use for the `SocketAddress`.
     /// - returns: the `SocketAddress` for the given path.
     /// - throws: may throw `SocketAddressError.unixDomainSocketPathTooLong` if the path is too long.
-    public static func unixDomainSocketAddress(path: String) throws -> SocketAddress {
-        guard path.utf8.count <= 103 else {
+    public init(unixDomainSocketPath: String) throws {
+        guard unixDomainSocketPath.utf8.count <= 103 else {
             throw SocketAddressError.unixDomainSocketPathTooLong
         }
 
-        let pathBytes = path.utf8 + [0]
+        let pathBytes = unixDomainSocketPath.utf8 + [0]
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
@@ -188,7 +188,7 @@ public enum SocketAddress: CustomStringConvertible {
             }
         }
 
-        return .unixDomainSocket(.init(address: addr))
+        self = .unixDomainSocket(.init(address: addr))
     }
 
     /// Create a new `SocketAddress` for an IP address in string form.
@@ -198,11 +198,11 @@ public enum SocketAddress: CustomStringConvertible {
     ///     - port: The target port.
     /// - returns: the `SocketAddress` corresponding to this string and port combination.
     /// - throws: may throw `SocketAddressError.failedToParseIPString` if the IP address cannot be parsed.
-    public static func ipAddress(string: String, port: UInt16) throws -> SocketAddress {
+    public init(ipAddress: String, port: UInt16) throws {
         var ipv4Addr = in_addr()
         var ipv6Addr = in6_addr()
 
-        return try string.withCString {
+        self = try ipAddress.withCString {
             if inet_pton(AF_INET, $0, &ipv4Addr) == 1 {
                 var addr = sockaddr_in()
                 addr.sin_family = sa_family_t(AF_INET)
@@ -218,7 +218,7 @@ public enum SocketAddress: CustomStringConvertible {
                 addr.sin6_scope_id = 0
                 return .v6(.init(address: addr, host: ""))
             } else {
-                throw SocketAddressError.failedToParseIPString(string)
+                throw SocketAddressError.failedToParseIPString(ipAddress)
             }
         }
     }

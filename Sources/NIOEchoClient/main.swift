@@ -70,15 +70,15 @@ let arg1 = arguments.dropFirst().first
 let arg2 = arguments.dropFirst().dropFirst().first
 
 let defaultHost = "::1"
-let defaultPort: Int32 = 9999
+let defaultPort: Int = 9999
 
 enum ConnectTo {
-    case ip(host: String, port: Int32)
+    case ip(host: String, port: Int)
     case unixDomainSocket(path: String)
 }
 
 let connectTarget: ConnectTo
-switch (arg1, arg1.flatMap { Int32($0) }, arg2.flatMap { Int32($0) }) {
+switch (arg1, arg1.flatMap { Int($0) }, arg2.flatMap { Int($0) }) {
 case (.some(let h), _ , .some(let p)):
     /* we got two arguments, let's interpret that as host and port */
     connectTarget = .ip(host: h, port: p)
@@ -95,9 +95,9 @@ default:
 let channel = try { () -> Channel in
     switch connectTarget {
     case .ip(let host, let port):
-        return try bootstrap.connect(to: host, on: Int(port)).wait()
+        return try bootstrap.connect(host: host, port: port).wait()
     case .unixDomainSocket(let path):
-        return try bootstrap.connect(to: path).wait()
+        return try bootstrap.connect(unixDomainSocketPath: path).wait()
     }
 }()
 

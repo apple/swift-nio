@@ -89,7 +89,7 @@ public final class ServerBootstrap {
     /// - parameters:
     ///     - host: The host to bind on.
     ///     - port: The port to bind on.
-    public func bind(to host: String, on port: Int) -> EventLoopFuture<Channel> {
+    public func bind(host: String, port: Int) -> EventLoopFuture<Channel> {
         let evGroup = group
         do {
             let address = try SocketAddress.newAddressResolving(host: host, port: port)
@@ -110,11 +110,11 @@ public final class ServerBootstrap {
     /// Bind the `ServerSocketChannel` to a UNIX Domain Socket.
     ///
     /// - parameters:
-    ///     - path: The `unixDomainSocket` path to bind on. `path` must not exist, it will be created by the system.
-    public func bind(to path: String) -> EventLoopFuture<Channel> {
+    ///     - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
+    public func bind(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
         let evGroup = group
         do {
-            let address = try SocketAddress.unixDomainSocketAddress(path: path)
+            let address = try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
             return bind0(eventLoopGroup: evGroup, to: address)
         } catch let err {
             return evGroup.next().newFailedFuture(error: err)
@@ -286,7 +286,7 @@ public final class ClientBootstrap {
     ///     - host: The host to connect to.
     ///     - port: The port to connect to.
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
-    public func connect(to host: String, on port: Int) -> EventLoopFuture<Channel> {
+    public func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
         let loop = self.group.next()
         let connector = HappyEyeballsConnector(resolver: GetaddrinfoResolver(loop: loop),
                                                loop: self.group.next(),
@@ -320,11 +320,11 @@ public final class ClientBootstrap {
     /// Specify the `unixDomainSocket` path to connect to for the UDS `Channel` that will be established.
     ///
     /// - parameters:
-    ///     - path: The `unixDomainSocket` path to connect to.
+    ///     - unixDomainSocketPath: The _Unix domain socket_ path to connect to.
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
-    public func connect(to path: String) -> EventLoopFuture<Channel> {
+    public func connect(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
         do {
-            let address = try SocketAddress.unixDomainSocketAddress(path: path)
+            let address = try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
             return connect(to: address)
         } catch {
             return group.next().newFailedFuture(error: error)

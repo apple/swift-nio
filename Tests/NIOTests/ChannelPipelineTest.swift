@@ -84,7 +84,7 @@ class ChannelPipelineTest: XCTestCase {
         let channel = EmbeddedChannel()
         var ipv4SocketAddress = sockaddr_in()
         ipv4SocketAddress.sin_port = (12345 as UInt16).bigEndian
-        let sa = SocketAddress(IPv4Address: ipv4SocketAddress, host: "foobar.com")
+        let sa = SocketAddress(ipv4SocketAddress, host: "foobar.com")
         
         _ = try channel.pipeline.add(handler: NoBindAllowed()).wait()
         _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<ByteBuffer, ByteBuffer> { data in

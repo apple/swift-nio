@@ -96,7 +96,7 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertEqual(handler.currentState, .unregistered)
         XCTAssertFalse(channel.isActive)
 
-        _ = try channel.connect(to: try SocketAddress.unixDomainSocketAddress(path: "/fake")).wait()
+        _ = try channel.connect(to: try SocketAddress(unixDomainSocketPath: "/fake")).wait()
         XCTAssertEqual(handler.currentState, .active)
         XCTAssertTrue(channel.isActive)
 

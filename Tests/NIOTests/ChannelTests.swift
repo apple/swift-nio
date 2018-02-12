@@ -80,7 +80,7 @@ public class ChannelTests: XCTestCase {
             .childChannelInitializer { channel in
                 serverAcceptedChannel = channel
                 return channel.pipeline.add(handler: serverLifecycleHandler)
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
 
         let clientLifecycleHandler = ChannelLifecycleHandler()
         let clientChannel = try ClientBootstrap(group: group)
@@ -111,7 +111,7 @@ public class ChannelTests: XCTestCase {
 
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .bind(to: "127.0.0.1", on: 0).wait()
+            .bind(host: "127.0.0.1", port: 0).wait()
 
         let clientChannel = try ClientBootstrap(group: group)
             .connect(to: serverChannel.localAddress!).wait()
@@ -137,7 +137,7 @@ public class ChannelTests: XCTestCase {
 
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .bind(to: "127.0.0.1", on: 0).wait()
+            .bind(host: "127.0.0.1", port: 0).wait()
 
         let clientChannel = try ClientBootstrap(group: group)
             .connect(to: serverChannel.localAddress!).wait()
@@ -176,7 +176,7 @@ public class ChannelTests: XCTestCase {
             .childChannelInitializer { channel in
                 childChannelPromise.succeed(result: channel)
                 return channel.eventLoop.newSucceedFuture(result: ())
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
 
         let clientChannel = try ClientBootstrap(group: group)
             .connect(to: serverChannel.localAddress!).wait()
@@ -1261,7 +1261,7 @@ public class ChannelTests: XCTestCase {
 
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .bind(to: "127.0.0.1", on: 0).wait()
+            .bind(host: "127.0.0.1", port: 0).wait()
 
         let clientChannel = try ClientBootstrap(group: group)
             .connect(to: serverChannel.localAddress!).wait()
@@ -1310,7 +1310,7 @@ public class ChannelTests: XCTestCase {
                     channel.close(promise: nil)
                     return channel.eventLoop.newSucceedFuture(result: ())
                 }
-                .bind(to: "127.0.0.1", on: 0).wait()
+                .bind(host: "127.0.0.1", port: 0).wait()
 
             let clientChannel = try ClientBootstrap(group: group)
                 .channelInitializer {

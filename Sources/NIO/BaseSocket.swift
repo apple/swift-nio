@@ -150,16 +150,16 @@ class BaseSocket: Selectable {
                 case AF_INET:
                     return address.withMemoryRebound(to: sockaddr_in.self, capacity: 1, { ipv4 in
                         var ipAddressString = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
-                        return SocketAddress(IPv4Address: ipv4.pointee, host: String(cString: inet_ntop(AF_INET, &ipv4.pointee.sin_addr, &ipAddressString, socklen_t(INET_ADDRSTRLEN))))
+                        return SocketAddress(ipv4.pointee, host: String(cString: inet_ntop(AF_INET, &ipv4.pointee.sin_addr, &ipAddressString, socklen_t(INET_ADDRSTRLEN))))
                     })
                 case AF_INET6:
                     return address.withMemoryRebound(to: sockaddr_in6.self, capacity: 1, { ipv6 in
                         var ipAddressString = [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
-                        return SocketAddress(IPv6Address: ipv6.pointee, host: String(cString: inet_ntop(AF_INET6, &ipv6.pointee.sin6_addr, &ipAddressString, socklen_t(INET6_ADDRSTRLEN))))
+                        return SocketAddress(ipv6.pointee, host: String(cString: inet_ntop(AF_INET6, &ipv6.pointee.sin6_addr, &ipAddressString, socklen_t(INET6_ADDRSTRLEN))))
                     })
                 case AF_UNIX:
                     return address.withMemoryRebound(to: sockaddr_un.self, capacity: 1) { uds in
-                        return SocketAddress(unixDomainSocket: uds.pointee)
+                        return SocketAddress(uds.pointee)
                     }
                 default:
                     fatalError("address family \(address.pointee.sa_family) not supported")

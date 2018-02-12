@@ -80,7 +80,7 @@ class IdleStateHandlerTest : XCTestCase {
                 channel.pipeline.add(handler: handler).then { f in
                     channel.pipeline.add(handler: TestWriteHandler(writeToChannel, assertEventFn))
                 }
-            }.bind(to: "127.0.0.1", on: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait()
         
         defer {
             _ = serverChannel.close()

@@ -23,10 +23,10 @@ public class SocketChannelTest : XCTestCase {
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         // Create two channels with different event loops.
-        let channelA = try ServerBootstrap(group: group).bind(to: "127.0.0.1", on: 0).wait()
+        let channelA = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
         let channelB: Channel = try { 
             while true {
-                let channel = try ServerBootstrap(group: group).bind(to: "127.0.0.1", on: 0).wait()
+                let channel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
                 if channel.eventLoop !== channelA.eventLoop {
                     return channel
                 }

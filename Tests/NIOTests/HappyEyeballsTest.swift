@@ -133,7 +133,7 @@ private extension SocketAddress {
             sockaddr.sin_family = sa_family_t(AF_INET)
             sockaddr.sin_port = in_port_t(port)
             sockaddr.sin_addr = v4addr
-            self = .init(IPv4Address: sockaddr, host: host)
+            self = .init(sockaddr, host: host)
         } else if inet_pton(AF_INET6, ipAddress, &v6addr) == 1 {
             var sockaddr = sockaddr_in6()
             sockaddr.sin6_family = sa_family_t(AF_INET6)
@@ -141,7 +141,7 @@ private extension SocketAddress {
             sockaddr.sin6_flowinfo = 0
             sockaddr.sin6_scope_id = 0
             sockaddr.sin6_addr = v6addr
-            self = .init(IPv6Address: sockaddr, host: host)
+            self = .init(sockaddr, host: host)
         } else {
             fatalError("Unable to convert to IP")
         }
