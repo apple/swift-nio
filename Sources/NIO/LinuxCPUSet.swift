@@ -59,9 +59,7 @@ import CNIOLinux
                 CNIOLinux_CPU_ZERO(&cpuset);
                 
                 let res = CNIOLinux_pthread_getaffinity_np(pthread, MemoryLayout.size(ofValue: cpuset), &cpuset)
-                guard res == 0 else {
-                    fatalError("pthread_setaffinity_np failed: \(res)")
-                }
+                precondition(res == 0, "pthread_getaffinity_np failed: \(res)")
                 
                 let set = Set((CInt(0)..<CNIOLinux_CPU_SETSIZE()).lazy.filter { CNIOLinux_CPU_ISSET($0, &cpuset) != 0 }.map { Int($0) })
                 return LinuxCPUSet(cpuIds: set)
@@ -75,9 +73,7 @@ import CNIOLinux
                 // Mark the CPU we want to run on.
                 cpuSet.cpuIds.forEach { CNIOLinux_CPU_SET(CInt($0), &cpuset) }
                 let res = CNIOLinux_pthread_setaffinity_np(pthread, MemoryLayout.size(ofValue: cpuset), &cpuset)
-                guard res == 0 else {
-                    fatalError("pthread_setaffinity_np failed: \(res)")
-                }
+                precondition(res == 0, "pthread_setaffinity_np failed: \(res)")
             }
         }
     }

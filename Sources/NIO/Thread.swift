@@ -17,6 +17,21 @@ import CNIOLinux
 private typealias ThreadBoxValue = (body: (Thread) -> Void, name: String?)
 private typealias ThreadBox = Box<ThreadBoxValue>
 
+
+#if os(Linux)
+private let sys_pthread_getname_np = CNIOLinux_pthread_getname_np
+private let sys_pthread_setname_np = CNIOLinux_pthread_setname_np
+#else
+private let sys_pthread_getname_np = pthread_getname_np
+// Emulate the same method signature as pthread_setname_np on Linux.
+private func sys_pthread_setname_np(_ p: pthread_t, _ pointer: UnsafePointer<Int8>) -> Int32 {
+    assert(pthread_equal(pthread_self(), p) != 0)
+    pthread_setname_np(pointer)
+    // Will never fail on macOS so just return 0 which will be used on linux to signal it not failed.
+    return 0
+}
+#endif
+
 /// A Thread that executes some runnable block.
 ///
 /// All methods exposed are thread-safe.
@@ -38,15 +53,9 @@ final class Thread {
         get {
             // 64 bytes should be good enough as on linux the limit is usually 16 and its very unlikely a user will ever set something longer anyway.
             var chars: [CChar] = Array(repeating: 0, count: 64)
-            #if os(Linux)
-                guard CNIOLinux_pthread_getname_np(pthread, &chars, chars.count) == 0 else {
-                    return nil
-                }
-            #else
-                guard pthread_getname_np(pthread, &chars, chars.count) == 0 else {
-                    return nil
-                }
-            #endif
+            guard sys_pthread_getname_np(pthread, &chars, chars.count) == 0 else {
+                return nil
+            }
             return String(cString: chars)
         }
     }
@@ -77,16 +86,9 @@ final class Thread {
             let pt = pthread_self()
             
             if let threadName = name {
-                #if os(Linux)
-                    let res = CNIOLinux_pthread_setname_np(pt, threadName)
-                    guard res == 0 else {
-                        // This should only happen in case of a too-long name.
-                        fatalError("Unable to set thread name '\(threadName)': \(res)")
-                    }
-                #else
-                    // On macOS this will never fail.
-                    pthread_setname_np(threadName)
-                #endif
+                let res = sys_pthread_setname_np(pt, threadName)
+                // This should only happen in case of a too-long name.
+                precondition(res == 0, "pthread_setname_np failed for '\(threadName)': \(res)")
             }
 
             fn(Thread(pthread: pt))
