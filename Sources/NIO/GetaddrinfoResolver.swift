@@ -80,7 +80,7 @@ internal class GetaddrinfoResolver: Resolver {
         var info: UnsafeMutablePointer<addrinfo>?
 
         guard getaddrinfo(host, String(port), nil, &info) == 0 else {
-            self.fail(error: SocketAddressError.unknown(host: host, port: Int32(port)))
+            self.fail(error: SocketAddressError.unknown(host: host, port: port))
             return
         }
 

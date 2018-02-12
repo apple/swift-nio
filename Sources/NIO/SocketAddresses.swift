@@ -15,7 +15,7 @@
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
 public enum SocketAddressError: Error {
     /// The host is unknown (could not be resolved).
-    case unknown(host: String, port: Int32)
+    case unknown(host: String, port: Int)
     /// The requested `SocketAddress` is not supported.
     case unsupported
     /// The requested UDS path is too long.
@@ -230,7 +230,7 @@ public enum SocketAddress: CustomStringConvertible {
     ///       - port: the port itself
     /// - returns: the `SocketAddress` for the host / port pair.
     /// - throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
-    public static func newAddressResolving(host: String, port: Int32) throws -> SocketAddress {
+    public static func newAddressResolving(host: String, port: Int) throws -> SocketAddress {
         var info: UnsafeMutablePointer<addrinfo>?
         
         /* FIXME: this is blocking! */

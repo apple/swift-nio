@@ -69,15 +69,15 @@ let arg1 = arguments.dropFirst().first
 let arg2 = arguments.dropFirst().dropFirst().first
 
 let defaultHost = "::1"
-let defaultPort: Int32 = 9999
+let defaultPort = 9999
 
 enum BindTo {
-    case ip(host: String, port: Int32)
+    case ip(host: String, port: Int)
     case unixDomainSocket(path: String)
 }
 
 let bindTarget: BindTo
-switch (arg1, arg1.flatMap { Int32($0) }, arg2.flatMap { Int32($0) }) {
+switch (arg1, arg1.flatMap { Int($0) }, arg2.flatMap { Int($0) }) {
 case (.some(let h), _ , .some(let p)):
     /* we got two arguments, let's interpret that as host and port */
     bindTarget = .ip(host: h, port: p)

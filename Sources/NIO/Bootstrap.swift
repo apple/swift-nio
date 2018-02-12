@@ -89,7 +89,7 @@ public final class ServerBootstrap {
     /// - parameters:
     ///     - host: The host to bind on.
     ///     - port: The port to bind on.
-    public func bind(to host: String, on port: Int32) -> EventLoopFuture<Channel> {
+    public func bind(to host: String, on port: Int) -> EventLoopFuture<Channel> {
         let evGroup = group
         do {
             let address = try SocketAddress.newAddressResolving(host: host, port: port)

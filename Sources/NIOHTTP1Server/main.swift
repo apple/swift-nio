@@ -357,17 +357,17 @@ let arg2 = arguments.dropFirst().dropFirst().first
 let arg3 = arguments.dropFirst().dropFirst().dropFirst().first
 
 let defaultHost = "::1"
-let defaultPort: Int32 = 8888
+let defaultPort = 8888
 let defaultHtdocs = "/dev/null/"
 
 enum BindTo {
-    case ip(host: String, port: Int32)
+    case ip(host: String, port: Int)
     case unixDomainSocket(path: String)
 }
 
 let htdocs: String
 let bindTarget: BindTo
-switch (arg1, arg1.flatMap { Int32($0) }, arg2, arg2.flatMap { Int32($0) }, arg3) {
+switch (arg1, arg1.flatMap { Int($0) }, arg2, arg2.flatMap { Int($0) }, arg3) {
 case (.some(let h), _ , _, .some(let p), let maybeHtdocs):
     /* second arg an integer --> host port [htdocs] */
     bindTarget = .ip(host: h, port: p)
