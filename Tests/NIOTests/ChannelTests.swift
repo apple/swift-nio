@@ -175,7 +175,7 @@ public class ChannelTests: XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 childChannelPromise.succeed(result: channel)
-                return channel.eventLoop.newSucceedFuture(result: ())
+                return channel.eventLoop.newSucceededFuture(result: ())
             }.bind(host: "127.0.0.1", port: 0).wait()
 
         let clientChannel = try ClientBootstrap(group: group)
@@ -1308,7 +1308,7 @@ public class ChannelTests: XCTestCase {
                 .childChannelInitializer { channel in
                     serverChildChannelPromise.succeed(result: channel)
                     channel.close(promise: nil)
-                    return channel.eventLoop.newSucceedFuture(result: ())
+                    return channel.eventLoop.newSucceededFuture(result: ())
                 }
                 .bind(host: "127.0.0.1", port: 0).wait()
 

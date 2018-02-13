@@ -236,7 +236,7 @@ public struct NonBlockingFileIO {
                     }
                 }
             } else {
-                return eventLoop.newSucceedFuture(result: ())
+                return eventLoop.newSucceededFuture(result: ())
             }
         }
 
@@ -284,7 +284,7 @@ public struct NonBlockingFileIO {
     /// - returns: An `EventLoopFuture` which delivers a `ByteBuffer` if the read was successful or a failure on error.
     public func read(descriptor: CInt, byteCount: Int, allocator: ByteBufferAllocator, eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
         guard byteCount > 0 else {
-            return eventLoop.newSucceedFuture(result: allocator.buffer(capacity: 0))
+            return eventLoop.newSucceededFuture(result: allocator.buffer(capacity: 0))
         }
 
         let p: EventLoopPromise<ByteBuffer> = eventLoop.newPromise()

@@ -40,7 +40,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             XCTFail("Negotiation fired")
-            return loop.newSucceedFuture(result: ())
+            return loop.newSucceededFuture(result: ())
         }
 
         try channel.pipeline.add(handler: handler).wait()
@@ -102,7 +102,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             XCTFail("Should not be called")
-            return loop.newSucceedFuture(result: ())
+            return loop.newSucceededFuture(result: ())
         }
 
         try channel.pipeline.add(handler: handler).wait()

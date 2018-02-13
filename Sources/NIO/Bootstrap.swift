@@ -293,7 +293,7 @@ public final class ClientBootstrap {
                                                host: host,
                                                port: port,
                                                connectTimeout: self.connectTimeout) { eventLoop, protocolFamily in
-            return self.execute(eventLoop: eventLoop, protocolFamily: protocolFamily) { $0.eventLoop.newSucceedFuture(result: ()) }
+            return self.execute(eventLoop: eventLoop, protocolFamily: protocolFamily) { $0.eventLoop.newSucceededFuture(result: ()) }
         }
         return connector.resolveAndConnect()
     }

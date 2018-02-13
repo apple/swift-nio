@@ -227,7 +227,7 @@ extension DummyResolver.Event: Equatable {
 private func defaultChannelBuilder(loop: EventLoop, family: Int32) -> EventLoopFuture<Channel> {
     let channel = EmbeddedChannel(loop: loop as! EmbeddedEventLoop)
     XCTAssertNoThrow(try channel.pipeline.add(name: CONNECT_RECORDER, handler: ConnectRecorder()).wait())
-    return loop.newSucceedFuture(result: channel)
+    return loop.newSucceededFuture(result: channel)
 }
 
 private func buildEyeballer(host: String,

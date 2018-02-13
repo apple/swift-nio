@@ -357,7 +357,7 @@ class SniHandlerTest: XCTestCase {
 
         let handler = SniHandler { result in
             XCTFail("Handler was called")
-            return loop.newSucceedFuture(result: ())
+            return loop.newSucceededFuture(result: ())
         }
 
         try channel.pipeline.add(handler: handler).wait()

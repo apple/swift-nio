@@ -156,7 +156,7 @@ class NonBlockingFileIOTest: XCTestCase {
                                     XCTAssertEqual(1, buf.readableBytes)
                                     XCTAssertEqual(contentBytes[numCalls], buf.readBytes(length: 1)?.first!)
                                     numCalls += 1
-                                    return self.eventLoop.newSucceedFuture(result: ())
+                                    return self.eventLoop.newSucceededFuture(result: ())
                 }.wait()
         }
         XCTAssertEqual(content.utf8.count, numCalls)
@@ -204,7 +204,7 @@ class NonBlockingFileIOTest: XCTestCase {
                                         allocator: self.allocator,
                                         eventLoop: self.eventLoop) { buf in
                                             XCTFail("shouldn't have been called")
-                                            return self.eventLoop.newSucceedFuture(result: ())
+                                            return self.eventLoop.newSucceededFuture(result: ())
                 }.wait()
             XCTFail("call successful but should've failed")
         } catch let e as IOError {
@@ -233,7 +233,7 @@ class NonBlockingFileIOTest: XCTestCase {
                                             XCTAssertEqual(1, buf.readableBytes)
                                             XCTAssertEqual(expectedByte, buf.readBytes(length: 1)!.first!)
                                             numCalls += 1
-                                            return self.eventLoop.newSucceedFuture(result: ())
+                                            return self.eventLoop.newSucceededFuture(result: ())
                 }.wait()
         }
         XCTAssertEqual(content.utf8.count, numCalls)
@@ -253,7 +253,7 @@ class NonBlockingFileIOTest: XCTestCase {
                                             XCTAssertEqual(2, buf.readableBytes)
                                             XCTAssertEqual(Array("\(numCalls*2)\(numCalls*2 + 1)".utf8), buf.readBytes(length: 2)!)
                                             numCalls += 1
-                                            return self.eventLoop.newSucceedFuture(result: ())
+                                            return self.eventLoop.newSucceededFuture(result: ())
                 }.wait()
         }
         XCTAssertEqual(content.utf8.count/2, numCalls)
@@ -301,7 +301,7 @@ class NonBlockingFileIOTest: XCTestCase {
                                             XCTAssertTrue(self.eventLoop.inEventLoop)
                                             allBytesActual += buf.readString(length: buf.readableBytes) ?? "WRONG"
                                             numCalls += 1
-                                            return self.eventLoop.newSucceedFuture(result: ())
+                                            return self.eventLoop.newSucceededFuture(result: ())
                 }.wait()
         }
         XCTAssertEqual(allBytesExpected, allBytesActual)
@@ -324,7 +324,7 @@ class NonBlockingFileIOTest: XCTestCase {
                                                     XCTAssertEqual(3, buf.readableBytes)
                                                 }
                                                 allBytes.append(buf.readString(length: buf.readableBytes) ?? "THIS IS WRONG")
-                                                return self.eventLoop.newSucceedFuture(result: ())
+                                                return self.eventLoop.newSucceededFuture(result: ())
             }
 
             do {
@@ -360,7 +360,7 @@ class NonBlockingFileIOTest: XCTestCase {
                                     XCTAssertEqual(5, buf.readableBytes)
                                     XCTAssertEqual("01234", buf.readString(length: buf.readableBytes) ?? "bad")
                                     numCalls += 1
-                                    return self.eventLoop.newSucceedFuture(result: ())
+                                    return self.eventLoop.newSucceededFuture(result: ())
                 }.wait()
         }
         XCTAssertEqual(1, numCalls)
@@ -376,7 +376,7 @@ class NonBlockingFileIOTest: XCTestCase {
                                             allocator: self.allocator,
                                             eventLoop: self.eventLoop) { buf in
                                                 XCTFail("this shouldn't have been called")
-                                                return self.eventLoop.newSucceedFuture(result: ())
+                                                return self.eventLoop.newSucceededFuture(result: ())
                     }.wait()
                 XCTFail("succeeded and shouldn't have")
             } catch let e as IOError where e.errnoCode == ESPIPE {
@@ -398,7 +398,7 @@ class NonBlockingFileIOTest: XCTestCase {
                                             allocator: self.allocator,
                                             eventLoop: self.eventLoop) { buf in
                                                 XCTFail("this shouldn't have been called")
-                                                return self.eventLoop.newSucceedFuture(result: ())
+                                                return self.eventLoop.newSucceededFuture(result: ())
                     }.wait()
                 XCTFail("succeeded and shouldn't have")
             } catch let e as NonBlockingFileIO.Error where e == NonBlockingFileIO.Error.descriptorSetToNonBlocking {
@@ -439,7 +439,7 @@ class NonBlockingFileIOTest: XCTestCase {
                                                 XCTAssertEqual(1, buf.readableBytes)
                                                 XCTAssertEqual("9", buf.readString(length: buf.readableBytes) ?? "bad")
                                             }
-                                            return self.eventLoop.newSucceedFuture(result: ())
+                                            return self.eventLoop.newSucceededFuture(result: ())
                 }.wait()
         }
         XCTAssertEqual(2, numCalls)

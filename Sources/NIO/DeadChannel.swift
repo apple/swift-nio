@@ -81,7 +81,7 @@ internal final class DeadChannel: Channel {
     }
 
     var closeFuture: EventLoopFuture<Void> {
-        return self.pipeline.eventLoop.newSucceedFuture(result: ())
+        return self.pipeline.eventLoop.newSucceededFuture(result: ())
     }
 
     let localAddress: SocketAddress? = nil
