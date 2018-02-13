@@ -42,7 +42,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
             guard buffer.readableBytes >= MemoryLayout<Int32>.size else {
                 return false
             }
-            ctx.fireChannelRead(data: self.wrapInboundOut(buffer.readInteger()!))
+            ctx.fireChannelRead(self.wrapInboundOut(buffer.readInteger()!))
             return true
         }
     }
@@ -57,15 +57,15 @@ public class ByteToMessageDecoderTest: XCTestCase {
         let writerIndex = buffer.writerIndex
         buffer.moveWriterIndex(to: writerIndex - 1)
         
-        channel.pipeline.fireChannelRead(data: NIOAny(buffer))
+        channel.pipeline.fireChannelRead(NIOAny(buffer))
         XCTAssertNil(channel.readInbound())
         
-        channel.pipeline.fireChannelRead(data: NIOAny(buffer.getSlice(at: writerIndex - 1, length: 1)!))
+        channel.pipeline.fireChannelRead(NIOAny(buffer.getSlice(at: writerIndex - 1, length: 1)!))
         
         var buffer2 = channel.allocator.buffer(capacity: 32)
         buffer2.write(integer: Int32(2))
         buffer2.write(integer: Int32(3))
-        channel.pipeline.fireChannelRead(data: NIOAny(buffer2))
+        channel.pipeline.fireChannelRead(NIOAny(buffer2))
         
         XCTAssertNoThrow(try channel.finish())
         
@@ -86,7 +86,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         var buffer = channel.allocator.buffer(capacity: 32)
         buffer.write(integer: Int32(1))
-        channel.pipeline.fireChannelRead(data: NIOAny(buffer))
+        channel.pipeline.fireChannelRead(NIOAny(buffer))
         XCTAssertEqual(Int32(1), channel.readInbound())
 
         XCTAssertFalse(inactivePromiser.channelInactivePromise.futureResult.fulfilled)
@@ -135,7 +135,7 @@ public class MessageToByteEncoderTest: XCTestCase {
         
         _ = try channel.pipeline.add(handler: Int32ToByteEncoder()).wait()
         
-        _ = try channel.writeAndFlush(data: NIOAny(Int32(5))).wait()
+        _ = try channel.writeAndFlush(NIOAny(Int32(5))).wait()
         
         if case .some(.byteBuffer(var buffer)) = channel.readOutbound() {
             XCTAssertEqual(Int32(5), buffer.readInteger())

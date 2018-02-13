@@ -67,7 +67,7 @@ class EchoServerClientTest : XCTestCase {
             buffer.write(integer: UInt8(i % 256))
         }
 
-        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         try countingHandler.assertReceived(buffer: buffer)
     }
@@ -143,7 +143,7 @@ class EchoServerClientTest : XCTestCase {
             buffer.write(integer: UInt8(i % 256))
         }
 
-        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         try countingHandler.assertReceived(buffer: buffer)
     }
@@ -186,7 +186,7 @@ class EchoServerClientTest : XCTestCase {
             buffer.write(integer: UInt8(i % 256))
         }
 
-        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         try countingHandler.assertReceived(buffer: buffer)
     }
@@ -247,7 +247,7 @@ class EchoServerClientTest : XCTestCase {
         for i in 0..<numBytes {
             buffer.write(integer: UInt8(i % 256))
         }
-        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         try countingHandler.assertReceived(buffer: buffer)
     }
@@ -276,7 +276,7 @@ class EchoServerClientTest : XCTestCase {
         typealias OutboundOut = ByteBuffer
         
         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-            ctx.write(data: data, promise: nil)
+            ctx.write(data, promise: nil)
         }
         
         func channelReadComplete(ctx: ChannelHandlerContext) {
@@ -305,7 +305,7 @@ class EchoServerClientTest : XCTestCase {
             self.numberOfReads += 1
             precondition(self.numberOfReads == 1, "\(self) is only ever allowed to read once")
             _ = ctx.eventLoop.scheduleTask(in: self.timeAmount) {
-                ctx.writeAndFlush(data: data, promise: nil)
+                ctx.writeAndFlush(data, promise: nil)
                 self.group.leave()
             }.futureResult.whenComplete { res in
                 switch res {
@@ -316,7 +316,7 @@ class EchoServerClientTest : XCTestCase {
                     ()
                 }
             }
-            ctx.writeAndFlush(data: data, promise: nil)
+            ctx.writeAndFlush(data, promise: nil)
         }
     }
 
@@ -326,7 +326,7 @@ class EchoServerClientTest : XCTestCase {
 
         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             for _ in 0..<10000 {
-                ctx.write(data: data, promise: nil)
+                ctx.write(data, promise: nil)
             }
         }
 
@@ -409,7 +409,7 @@ class EchoServerClientTest : XCTestCase {
         func channelActive(ctx: ChannelHandlerContext) {
             var dataToWrite = ctx.channel.allocator.buffer(capacity: toWrite.utf8.count)
             dataToWrite.write(string: toWrite)
-            ctx.writeAndFlush(data: NIOAny(dataToWrite), promise: nil)
+            ctx.writeAndFlush(NIOAny(dataToWrite), promise: nil)
             ctx.fireChannelActive()
         }
     }
@@ -483,7 +483,7 @@ class EchoServerClientTest : XCTestCase {
         // First we confirm that the channel really is up by sending in the appropriate number of bytes.
         var bytesToWrite = clientChannel.allocator.buffer(capacity: writingBytes.utf8.count)
         bytesToWrite.write(string: writingBytes)
-        clientChannel.writeAndFlush(data: NIOAny(bytesToWrite), promise: nil)
+        clientChannel.writeAndFlush(NIOAny(bytesToWrite), promise: nil)
 
         // When we've received all the bytes we know the connection is up.
         _ = try bytesReceivedPromise.futureResult.wait()
@@ -591,7 +591,7 @@ class EchoServerClientTest : XCTestCase {
 
         var buffer = clientChannel.allocator.buffer(capacity: str.utf8.count)
         buffer.write(string: str)
-        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         try countingHandler.assertReceived(buffer: buffer)
 
@@ -625,7 +625,7 @@ class EchoServerClientTest : XCTestCase {
             }
             
             private func writeUntilFailed(_ ctx: ChannelHandlerContext, _ buffer: ByteBuffer) {
-                ctx.writeAndFlush(data: NIOAny(buffer)).whenSuccess { _ in
+                ctx.writeAndFlush(NIOAny(buffer)).whenSuccess { _ in
                     ctx.eventLoop.execute {
                         self.writeUntilFailed(ctx, buffer)
                     }
@@ -649,14 +649,14 @@ class EchoServerClientTest : XCTestCase {
                 buffer.write(string: str)
                 
                 // write it four times and then close the connect.
-                ctx.writeAndFlush(data: NIOAny(buffer)).then{ _ in
-                    ctx.writeAndFlush(data: NIOAny(buffer)).then{ _ in
-                        ctx.writeAndFlush(data: NIOAny(buffer)).then{ _ in
-                            ctx.writeAndFlush(data: NIOAny(buffer)).then{ _ in
-                                ctx.close()
-                            }
-                        }
-                    }
+                ctx.writeAndFlush(NIOAny(buffer)).then { () in
+                    ctx.writeAndFlush(NIOAny(buffer))
+                }.then { () in
+                    ctx.writeAndFlush(NIOAny(buffer))
+                }.then { () in
+                    ctx.writeAndFlush(NIOAny(buffer))
+                }.then { () in
+                    ctx.close()
                 }.whenComplete{ _ in
                     self.dpGroup.leave()
                 }

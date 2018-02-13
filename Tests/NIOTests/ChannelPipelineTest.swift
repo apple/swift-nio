@@ -68,7 +68,7 @@ class ChannelPipelineTest: XCTestCase {
             return 1
         }).wait()
         
-        _ = channel.write(data: NIOAny("msg"))
+        _ = channel.write(NIOAny("msg"))
         _ = try channel.flush().wait()
         if let data = channel.readOutbound() {
             XCTAssertEqual(IOData.byteBuffer(buf), data)
@@ -109,7 +109,7 @@ class ChannelPipelineTest: XCTestCase {
         
         public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             do {
-                ctx.write(data: self.wrapOutboundOut(try fn(self.unwrapOutboundIn(data))), promise: promise)
+                ctx.write(self.wrapOutboundOut(try fn(self.unwrapOutboundIn(data))), promise: promise)
             } catch let err {
                 promise!.fail(error: err)
             }
@@ -134,7 +134,7 @@ class ChannelPipelineTest: XCTestCase {
         typealias InboundOut = Int
 
         public func handlerRemoved(ctx: ChannelHandlerContext) {
-            ctx.fireChannelRead(data: self.wrapInboundOut(1))
+            ctx.fireChannelRead(self.wrapInboundOut(1))
         }
     }
 
@@ -152,7 +152,7 @@ class ChannelPipelineTest: XCTestCase {
 
     func testEmptyPipelineWorks() throws {
         let channel = EmbeddedChannel()
-        try channel.writeInbound(data: 2)
+        try channel.writeInbound(2)
         XCTAssertEqual(Optional<Int>.some(2), channel.readInbound())
         XCTAssertFalse(try channel.finish())
     }
@@ -166,7 +166,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertTrue(loop.inEventLoop)
         do {
-            try channel.writeOutbound(data: FileRegion(descriptor: -1, readerIndex: 0, endIndex: 0))
+            try channel.writeOutbound(FileRegion(descriptor: -1, readerIndex: 0, endIndex: 0))
             loop.run()
             XCTFail("we ran but an error should have been thrown")
         } catch let err as ChannelError {
@@ -188,7 +188,7 @@ class ChannelPipelineTest: XCTestCase {
 
             func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
                 let data = self.unwrapInboundIn(data)
-                ctx.fireChannelRead(data: self.wrapInboundOut(data + [self.no]))
+                ctx.fireChannelRead(self.wrapInboundOut(data + [self.no]))
             }
         }
 
@@ -205,7 +205,7 @@ class ChannelPipelineTest: XCTestCase {
 
             func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
                 let data = self.unwrapOutboundIn(data)
-                ctx.write(data: self.wrapOutboundOut(data + [self.no]), promise: promise)
+                ctx.write(self.wrapOutboundOut(data + [self.no]), promise: promise)
             }
         }
 
@@ -217,8 +217,8 @@ class ChannelPipelineTest: XCTestCase {
 
             func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
                 let data = self.unwrapInboundIn(data)
-                ctx.write(data: self.wrapOutboundOut(data.map { $0 * -1 }), promise: nil)
-                ctx.fireChannelRead(data: self.wrapInboundOut(data))
+                ctx.write(self.wrapOutboundOut(data.map { $0 * -1 }), promise: nil)
+                ctx.fireChannelRead(self.wrapInboundOut(data))
             }
         }
 
@@ -231,7 +231,7 @@ class ChannelPipelineTest: XCTestCase {
                 let data = self.unwrapOutboundIn(data)
                 var buf = ctx.channel.allocator.buffer(capacity: 123)
                 buf.write(string: String(describing: data))
-                ctx.write(data: self.wrapOutboundOut(buf), promise: promise)
+                ctx.write(self.wrapOutboundOut(buf), promise: promise)
             }
         }
 
@@ -247,7 +247,7 @@ class ChannelPipelineTest: XCTestCase {
         try channel.pipeline.add(handler: MarkingInboundHandler(number: 6)).wait()
         try channel.pipeline.add(handler: WriteOnReadHandler()).wait()
 
-        try channel.writeInbound(data: [])
+        try channel.writeInbound([])
         loop.run()
         XCTAssertEqual([2, 6], channel.readInbound()!)
 

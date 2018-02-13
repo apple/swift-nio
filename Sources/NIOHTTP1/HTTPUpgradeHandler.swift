@@ -86,7 +86,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         // We're trying to remove ourselves from the pipeline, so just pass this on.
         if seenFirstRequest {
-            ctx.fireChannelRead(data: data)
+            ctx.fireChannelRead(data)
             return
         }
 
@@ -96,7 +96,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
         // We should only ever see a request header: by the time the body comes in we should
         // be out of the pipeline. Anything else is an error.
         guard case .head(let request) = requestPart else {
-            ctx.fireErrorCaught(error: HTTPUpgradeErrors.invalidHTTPOrdering)
+            ctx.fireErrorCaught(HTTPUpgradeErrors.invalidHTTPOrdering)
             notUpgrading(ctx: ctx, data: data)
             return
         }
@@ -135,14 +135,14 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
                 responseHeaders = try upgrader.buildUpgradeResponse(upgradeRequest: request, initialResponseHeaders: responseHeaders)
             } catch {
                 // We should fire this error so the user can log it, but keep going.
-                ctx.fireErrorCaught(error: error)
+                ctx.fireErrorCaught(error)
                 continue
             }
 
             sendUpgradeResponse(ctx: ctx, upgradeRequest: request, responseHeaders: responseHeaders).whenSuccess {
                 self.upgradeCompletionHandler(ctx)
                 upgrader.upgrade(ctx: ctx, upgradeRequest: request)
-                ctx.fireUserInboundEventTriggered(event: HTTPUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request))
+                ctx.fireUserInboundEventTriggered(HTTPUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request))
                 let _ = ctx.pipeline.remove(ctx: ctx)
             }
 
@@ -156,12 +156,12 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     private func sendUpgradeResponse(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead, responseHeaders: HTTPHeaders) -> EventLoopFuture<Void> {
         var response = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .switchingProtocols)
         response.headers = responseHeaders
-        return ctx.writeAndFlush(data: wrapOutboundOut(HTTPServerResponsePart.head(response)))
+        return ctx.writeAndFlush(wrapOutboundOut(HTTPServerResponsePart.head(response)))
     }
 
     /// Called when we know we're not upgrading. Passes the data on and then removes this object from the pipeline.
     private func notUpgrading(ctx: ChannelHandlerContext, data: NIOAny) {
-        ctx.fireChannelRead(data: data)
+        ctx.fireChannelRead(data)
         let _ = ctx.pipeline.remove(ctx: ctx)
     }
 

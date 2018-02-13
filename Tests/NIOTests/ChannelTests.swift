@@ -89,7 +89,7 @@ public class ChannelTests: XCTestCase {
 
         var buffer = clientChannel.allocator.buffer(capacity: 1)
         buffer.write(string: "a")
-        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         // Start shutting stuff down.
         try clientChannel.close().wait()
@@ -121,7 +121,7 @@ public class ChannelTests: XCTestCase {
         for _ in 0...Socket.writevLimitIOVectors {
             var buffer = clientChannel.allocator.buffer(capacity: 1)
             buffer.write(string: "a")
-            clientChannel.write(data: NIOAny(buffer), promise: nil)
+            clientChannel.write(NIOAny(buffer), promise: nil)
         }
         try clientChannel.flush().wait()
 
@@ -150,7 +150,7 @@ public class ChannelTests: XCTestCase {
 
         var written = 0
         while written <= Int(INT32_MAX) {
-            clientChannel.write(data: NIOAny(buffer), promise: nil)
+            clientChannel.write(NIOAny(buffer), promise: nil)
             written += bufferSize
         }
 
@@ -1088,11 +1088,11 @@ public class ChannelTests: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 12)
         buffer.write(string: "1234")
 
-        try channel.writeAndFlush(data: NIOAny(buffer)).wait()
+        try channel.writeAndFlush(NIOAny(buffer)).wait()
         try channel.close(mode: .output).wait()
         
         do {
-            try channel.writeAndFlush(data: NIOAny(buffer)).wait()
+            try channel.writeAndFlush(NIOAny(buffer)).wait()
             XCTFail()
         } catch let err as ChannelError {
             XCTAssertEqual(ChannelError.outputClosed, err)
@@ -1212,7 +1212,7 @@ public class ChannelTests: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 12)
         buffer.write(string: "1234")
         
-        try channel.writeAndFlush(data: NIOAny(buffer)).wait()
+        try channel.writeAndFlush(NIOAny(buffer)).wait()
     }
     
     private class ShutdownVerificationHandler: ChannelInboundHandler {
@@ -1243,7 +1243,7 @@ public class ChannelTests: XCTestCase {
                
                 fallthrough
             default:
-                ctx.fireUserInboundEventTriggered(event: event)
+                ctx.fireUserInboundEventTriggered(event)
             }
         }
         
@@ -1267,7 +1267,7 @@ public class ChannelTests: XCTestCase {
             .connect(to: serverChannel.localAddress!).wait()
 
         do {
-            try clientChannel.writeAndFlush(data: NIOAny(5)).wait()
+            try clientChannel.writeAndFlush(NIOAny(5)).wait()
             XCTFail("Did not throw")
         } catch ChannelError.writeDataUnsupported {
             // All good
@@ -1328,7 +1328,7 @@ public class ChannelTests: XCTestCase {
             try pipeline.eventLoop.submit { () -> Channel in
                 XCTAssertTrue(pipeline.channel is DeadChannel)
                 return pipeline.channel
-            }.wait().write(data: NIOAny(())).wait()
+            }.wait().write(NIOAny(())).wait()
             XCTFail("shouldn't have been reached")
         } catch let e as ChannelError where e == .ioOnClosedChannel {
             // OK

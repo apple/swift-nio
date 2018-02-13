@@ -48,7 +48,7 @@ private final class EchoHandler: ChannelInboundHandler {
         var buffer = ctx.channel.allocator.buffer(capacity: line.lengthOfBytes(using: String.Encoding.utf8))
         buffer.write(string: line)
         self.numBytes = buffer.readableBytes
-        ctx.writeAndFlush(data: self.wrapOutboundOut(buffer), promise: nil)
+        ctx.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
     }
 }
 

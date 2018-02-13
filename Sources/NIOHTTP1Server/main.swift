@@ -71,9 +71,9 @@ private final class HTTPHandler: ChannelInboundHandler {
             self.buffer.write(string: response)
             var headers = HTTPHeaders()
             headers.add(name: "Content-Length", value: "\(response.utf8.count)")
-            ctx.write(data: self.wrapOutboundOut(.head(HTTPResponseHead(version: self.infoSavedRequestHead!.version, status: .ok, headers: headers))), promise: nil)
-            ctx.write(data: self.wrapOutboundOut(.body(.byteBuffer(self.buffer))), promise: nil)
-            ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)), promise: nil)
+            ctx.write(self.wrapOutboundOut(.head(HTTPResponseHead(version: self.infoSavedRequestHead!.version, status: .ok, headers: headers))), promise: nil)
+            ctx.write(self.wrapOutboundOut(.body(.byteBuffer(self.buffer))), promise: nil)
+            ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
         }
     }
 
@@ -87,23 +87,23 @@ private final class HTTPHandler: ChannelInboundHandler {
             if balloonInMemory {
                 self.buffer.clear()
             } else {
-                ctx.writeAndFlush(data: self.wrapOutboundOut(.head(.init(version: request.version, status: .ok))), promise: nil)
+                ctx.writeAndFlush(self.wrapOutboundOut(.head(.init(version: request.version, status: .ok))), promise: nil)
             }
         case .body(buffer: var buf):
             if balloonInMemory {
                 self.buffer.write(buffer: &buf)
             } else {
-                ctx.writeAndFlush(data: self.wrapOutboundOut(.body(.byteBuffer(buf))), promise: nil)
+                ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buf))), promise: nil)
             }
         case .end(_):
             if balloonInMemory {
                 var headers = HTTPHeaders()
                 headers.add(name: "Content-Length", value: "\(self.buffer.readableBytes)")
-                ctx.write(data: self.wrapOutboundOut(.head(HTTPResponseHead(version: HTTPVersion(major: 1, minor: 0), status: .ok, headers: headers))), promise: nil)
-                ctx.write(data: self.wrapOutboundOut(.body(.byteBuffer(self.buffer))), promise: nil)
-                ctx.write(data: self.wrapOutboundOut(.end(nil)), promise: nil)
+                ctx.write(self.wrapOutboundOut(.head(HTTPResponseHead(version: HTTPVersion(major: 1, minor: 0), status: .ok, headers: headers))), promise: nil)
+                ctx.write(self.wrapOutboundOut(.body(.byteBuffer(self.buffer))), promise: nil)
+                ctx.write(self.wrapOutboundOut(.end(nil)), promise: nil)
             } else {
-                ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)), promise: nil)
+                ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
             }
         }
     }
@@ -111,20 +111,20 @@ private final class HTTPHandler: ChannelInboundHandler {
     func handleJustWrite(ctx: ChannelHandlerContext, request: HTTPServerRequestPart, statusCode: HTTPResponseStatus = .ok, string: String, trailer: (String, String)? = nil, delay: TimeAmount = .nanoseconds(0)) {
         switch request {
         case .head(let request):
-            ctx.writeAndFlush(data: self.wrapOutboundOut(.head(.init(version: request.version, status: .ok))), promise: nil)
+            ctx.writeAndFlush(self.wrapOutboundOut(.head(.init(version: request.version, status: .ok))), promise: nil)
         case .body(buffer: _):
             ()
         case .end(_):
             let _ = ctx.eventLoop.scheduleTask(in: delay) { () -> Void in
                 var buf = ctx.channel.allocator.buffer(capacity: string.utf8.count)
                 buf.write(string: string)
-                ctx.writeAndFlush(data: self.wrapOutboundOut(.body(.byteBuffer(buf))), promise: nil)
+                ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buf))), promise: nil)
                 var trailers: HTTPHeaders? = nil
                 if let trailer = trailer {
                     trailers = HTTPHeaders()
                     trailers?.add(name: trailer.0, value: trailer.1)
                 }
-                ctx.writeAndFlush(data: self.wrapOutboundOut(.end(trailers)), promise: nil)
+                ctx.writeAndFlush(self.wrapOutboundOut(.end(trailers)), promise: nil)
             }
         }
     }
@@ -137,16 +137,16 @@ private final class HTTPHandler: ChannelInboundHandler {
                 self.buffer.clear()
                 self.continuousCount += 1
                 self.buffer.write(string: "line \(self.continuousCount)\n")
-                ctx.writeAndFlush(data: self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenComplete { res in
+                ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenComplete { res in
                     switch res {
                     case .success(()):
                         _ = ctx.eventLoop.scheduleTask(in: .milliseconds(400), doNext)
                     case .failure(_):
-                        ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)), promise: nil)
+                        ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                     }
                 }
             }
-            ctx.writeAndFlush(data: self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
+            ctx.writeAndFlush(self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
             doNext()
         default:
             ()
@@ -160,13 +160,13 @@ private final class HTTPHandler: ChannelInboundHandler {
             func doNext() {
                 self.buffer.clear()
                 self.buffer.write(string: strings[self.continuousCount])
-                ctx.writeAndFlush(data: self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenComplete { res in
+                ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenComplete { res in
                     switch res {
                     case .success(()):
                         if self.continuousCount < strings.count - 1 {
                             _ = ctx.eventLoop.scheduleTask(in: delay, doNext)
                         } else {
-                            ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)), promise: nil)
+                            ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                         }
                     case .failure(_):
                         ()
@@ -174,7 +174,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                 }
                 self.continuousCount += 1
             }
-            ctx.writeAndFlush(data: self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
+            ctx.writeAndFlush(self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
             doNext()
         default:
             ()
@@ -213,8 +213,8 @@ private final class HTTPHandler: ChannelInboundHandler {
         case .head(let request):
             guard !request.uri.contains("..") else {
                 let response = HTTPResponseHead(version: request.version, status: .forbidden)
-                ctx.write(data: self.wrapOutboundOut(.head(response)), promise: nil)
-                ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)), promise: nil)
+                ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
+                ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 return
             }
             let path = self.htdocsPath + "/" + path
@@ -234,19 +234,19 @@ private final class HTTPHandler: ChannelInboundHandler {
                                             eventLoop: ctx.eventLoop) { buffer in
                                                 if !responseStarted {
                                                     responseStarted = true
-                                                    ctx.write(data: self.wrapOutboundOut(.head(response)), promise: nil)
+                                                    ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
                                                 }
-                                                return ctx.writeAndFlush(data: self.wrapOutboundOut(.body(.byteBuffer(buffer))))
+                                                return ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buffer))))
                         }.then { _ in
-                            ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)))
+                            ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)))
                         }.thenIfError { error in
                             if !responseStarted {
                                 let response = HTTPResponseHead(version: request.version, status: .ok)
-                                ctx.write(data: self.wrapOutboundOut(.head(response)), promise: nil)
+                                ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
                                 var buffer = ctx.channel.allocator.buffer(capacity: 100)
                                 buffer.write(string: "fail: \(error.localizedDescription)")
-                                ctx.write(data: self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-                                return ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)))
+                                ctx.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+                                return ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)))
                             } else {
                                 return ctx.close()
                             }
@@ -254,10 +254,10 @@ private final class HTTPHandler: ChannelInboundHandler {
                             _ = try? region.close()
                         }
                 case .sendfile:
-                    ctx.write(data: self.wrapOutboundOut(.head(response))).then { _ in
-                        ctx.writeAndFlush(data: self.wrapOutboundOut(.body(.fileRegion(region))))
-                    } .then { _ in
-                        ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)))
+                    ctx.write(self.wrapOutboundOut(.head(response))).then { _ in
+                        ctx.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region))))
+                    }.then { _ in
+                        ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)))
                     }.thenIfError { _ in
                         ctx.close()
                     }.whenComplete { _ in
@@ -283,9 +283,9 @@ private final class HTTPHandler: ChannelInboundHandler {
                 }()
                 body.write(string: error.localizedDescription)
                 body.write(staticString: "\r\n")
-                ctx.write(data: self.wrapOutboundOut(.head(response)), promise: nil)
-                ctx.write(data: self.wrapOutboundOut(.body(.byteBuffer(body))), promise: nil)
-                ctx.writeAndFlush(data: self.wrapOutboundOut(.end(nil)), promise: nil)
+                ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
+                ctx.write(self.wrapOutboundOut(.body(.byteBuffer(body))), promise: nil)
+                ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 ctx.channel.close(promise: nil)
             }
         case .end(_):
@@ -323,17 +323,17 @@ private final class HTTPHandler: ChannelInboundHandler {
             var responseHead = HTTPResponseHead(version: request.version, status: HTTPResponseStatus.ok)
             responseHead.headers.add(name: "content-length", value: "12")
             let response = HTTPServerResponsePart.head(responseHead)
-            ctx.write(data: self.wrapOutboundOut(response), promise: nil)
+            ctx.write(self.wrapOutboundOut(response), promise: nil)
         case .body:
             break
         case .end:
             let content = HTTPServerResponsePart.body(.byteBuffer(buffer!.slice()))
-            ctx.write(data: self.wrapOutboundOut(content), promise: nil)
+            ctx.write(self.wrapOutboundOut(content), promise: nil)
 
             if keepAlive {
-                ctx.write(data: self.wrapOutboundOut(HTTPServerResponsePart.end(nil)), promise: nil)
+                ctx.write(self.wrapOutboundOut(HTTPServerResponsePart.end(nil)), promise: nil)
             } else {
-                ctx.write(data: self.wrapOutboundOut(HTTPServerResponsePart.end(nil))).whenComplete { _ in
+                ctx.write(self.wrapOutboundOut(HTTPServerResponsePart.end(nil))).whenComplete { _ in
                     ctx.close(promise: nil)
                 }
             }

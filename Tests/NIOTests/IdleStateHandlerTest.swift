@@ -69,7 +69,7 @@ class IdleStateHandlerTest : XCTestCase {
                 if writeToChannel {
                     var buffer = ctx.channel.allocator.buffer(capacity: 4)
                     buffer.write(staticString: "test")
-                    ctx.writeAndFlush(data: self.wrapOutboundOut(buffer), promise: nil)
+                    ctx.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
                 }
             }
         }
@@ -90,7 +90,7 @@ class IdleStateHandlerTest : XCTestCase {
         if !writeToChannel {
             var buffer = clientChannel.allocator.buffer(capacity: 4)
             buffer.write(staticString: "test")
-            try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
+            try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
         }
         try clientChannel.closeFuture.wait()
     }

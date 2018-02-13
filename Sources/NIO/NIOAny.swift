@@ -39,7 +39,7 @@
 ///              */
 ///              let bacon = self.unwrapInboundIn(data) /* `Bacon` or crash */
 ///              let sandwich = makeSandwich(bacon)
-///              ctx.fireChannelRead(data: self.wrapInboundOut(sandwich)) /* as promised we deliver a wrapped `Sandwich` */
+///              ctx.fireChannelRead(self.wrapInboundOut(sandwich)) /* as promised we deliver a wrapped `Sandwich` */
 ///         }
 ///     }
 public struct NIOAny {

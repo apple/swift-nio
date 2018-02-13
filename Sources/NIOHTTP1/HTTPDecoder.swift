@@ -195,7 +195,7 @@ public final class HTTPResponseDecoder: HTTPDecoder<HTTPClientResponsePart>, Cha
             break
         }
 
-        ctx.write(data: data, promise: promise)
+        ctx.write(data, promise: promise)
     }
 }
 
@@ -273,13 +273,13 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             case let handler as HTTPRequestDecoder:
                 let head = handler.newRequestHead(parser)
                 handler.pendingCallouts.append {
-                    ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPServerRequestPart.head(head)))
+                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPServerRequestPart.head(head)))
                 }
                 return 0
             case let handler as HTTPResponseDecoder:
                 let head = handler.newResponseHead(parser)
                 handler.pendingCallouts.append {
-                    ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPClientResponsePart.head(head)))
+                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPClientResponsePart.head(head)))
                 }
 
                 // http_parser doesn't correctly handle responses to HEAD requests. We have to do something
@@ -311,9 +311,9 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             handler.pendingCallouts.append {
                 switch handler {
                 case let handler as HTTPRequestDecoder:
-                    ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPServerRequestPart.body(slice)))
+                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPServerRequestPart.body(slice)))
                 case let handler as HTTPResponseDecoder:
-                    ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPClientResponsePart.body(slice)))
+                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPClientResponsePart.body(slice)))
                 default:
                     fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
                 }
@@ -373,9 +373,9 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             handler.pendingCallouts.append {
                 switch handler {
                 case let handler as HTTPRequestDecoder:
-                    ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPServerRequestPart.end(trailers)))
+                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPServerRequestPart.end(trailers)))
                 case let handler as HTTPResponseDecoder:
-                    ctx.fireChannelRead(data: handler.wrapInboundOut(HTTPClientResponsePart.end(trailers)))
+                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPClientResponsePart.end(trailers)))
                 default:
                     fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
                 }
@@ -444,7 +444,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     }
 
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
-        ctx.fireErrorCaught(error: error)
+        ctx.fireErrorCaught(error)
         if error is HTTPParserError {
             ctx.close(promise: nil)
         }

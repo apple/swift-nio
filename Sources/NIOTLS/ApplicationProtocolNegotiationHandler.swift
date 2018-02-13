@@ -88,7 +88,7 @@ public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler {
 
     public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
         guard let tlsEvent = event as? TLSUserEvent else {
-            ctx.fireUserInboundEventTriggered(event: event)
+            ctx.fireUserInboundEventTriggered(event)
             return
         }
 
@@ -96,7 +96,7 @@ public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler {
         case .handshakeCompleted(let p):
             handshakeCompleted(context: ctx, negotiatedProtocol: p)
         default:
-            ctx.fireUserInboundEventTriggered(event: event)
+            ctx.fireUserInboundEventTriggered(event)
         }
     }
 
@@ -104,7 +104,7 @@ public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler {
         if waitingForUser {
             eventBuffer.append(data)
         } else {
-            ctx.fireChannelRead(data: data)
+            ctx.fireChannelRead(data)
         }
     }
 
@@ -127,7 +127,7 @@ public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler {
 
     private func unbuffer(context: ChannelHandlerContext) {
         for datum in eventBuffer {
-            context.fireChannelRead(data: datum)
+            context.fireChannelRead(datum)
         }
         let buffer = eventBuffer
         eventBuffer = []

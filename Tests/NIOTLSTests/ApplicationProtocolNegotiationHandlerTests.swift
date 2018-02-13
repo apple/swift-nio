@@ -46,8 +46,8 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.add(handler: handler).wait()
 
         // Fire a pair of events that should be ignored.
-        channel.pipeline.fireUserInboundEventTriggered(event: EventType.basic)
-        channel.pipeline.fireUserInboundEventTriggered(event: TLSUserEvent.shutdownCompleted)
+        channel.pipeline.fireUserInboundEventTriggered(EventType.basic)
+        channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.shutdownCompleted)
 
         // The channel handler should still be in the pipeline.
         try channel.pipeline.assertContains(handler: handler)
@@ -72,7 +72,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.add(handler: handler).wait()
 
         // Fire the handshake complete event.
-        channel.pipeline.fireUserInboundEventTriggered(event: TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
+        channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
 
         // At this time the callback should have fired, but the handler should still be in
         // the pipeline.
@@ -108,7 +108,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.add(handler: handler).wait()
 
         // The data we write should not be buffered.
-        try channel.writeInbound(data: "hello")
+        try channel.writeInbound("hello")
         XCTAssertEqual(channel.readInbound()!, "hello")
 
         XCTAssertFalse(try channel.finish())
@@ -126,12 +126,12 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.add(handler: handler).wait()
 
         // Fire in the event.
-        channel.pipeline.fireUserInboundEventTriggered(event: TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
+        channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
 
         // At this point all writes should be buffered.
-        try channel.writeInbound(data: "writes")
-        try channel.writeInbound(data: "are")
-        try channel.writeInbound(data: "buffered")
+        try channel.writeInbound("writes")
+        try channel.writeInbound("are")
+        try channel.writeInbound("buffered")
         XCTAssertNil(channel.readInbound())
 
         // Complete the pipeline swap.
@@ -159,7 +159,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.add(handler: readCompleteHandler).wait()
 
         // Fire in the event.
-        channel.pipeline.fireUserInboundEventTriggered(event: TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
+        channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
 
         // At this time, readComplete hasn't fired.
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 0)
@@ -186,10 +186,10 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.add(handler: readCompleteHandler).wait()
 
         // Fire in the event.
-        channel.pipeline.fireUserInboundEventTriggered(event: TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
+        channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
 
         // Send a write, which is buffered.
-        try channel.writeInbound(data: "a write")
+        try channel.writeInbound("a write")
 
         // At this time, readComplete hasn't fired.
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 1)

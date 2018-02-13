@@ -97,7 +97,7 @@ public final class HTTPResponseCompressor: ChannelInboundHandler, ChannelOutboun
         default:
             break
         }
-        ctx.fireChannelRead(data: data)
+        ctx.fireChannelRead(data)
     }
 
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
@@ -106,7 +106,7 @@ public final class HTTPResponseCompressor: ChannelInboundHandler, ChannelOutboun
         case .head(var responseHead):
             algorithm = compressionAlgorithm()
             guard algorithm != nil else {
-                ctx.write(data: wrapOutboundOut(.head(responseHead)), promise: promise)
+                ctx.write(wrapOutboundOut(.head(responseHead)), promise: promise)
                 return
             }
 
@@ -119,13 +119,13 @@ public final class HTTPResponseCompressor: ChannelInboundHandler, ChannelOutboun
                 pendingResponse.bufferBodyPart(body)
                 chainPromise(promise)
             } else {
-                ctx.write(data: data, promise: promise)
+                ctx.write(data, promise: promise)
             }
         case .end:
             // This compress is not done in flush because we need to be done with the
             // compressor now.
             guard algorithm != nil else {
-                ctx.write(data: data, promise: promise)
+                ctx.write(data, promise: promise)
                 return
             }
 
@@ -216,17 +216,17 @@ public final class HTTPResponseCompressor: ChannelInboundHandler, ChannelOutboun
         var pendingPromise = pendingWritePromise
 
         if let writeHead = writesToEmit.0 {
-            ctx.write(data: wrapOutboundOut(.head(writeHead)), promise: pendingPromise)
+            ctx.write(wrapOutboundOut(.head(writeHead)), promise: pendingPromise)
             pendingPromise = nil
         }
 
         if let writeBody = writesToEmit.1 {
-            ctx.write(data: wrapOutboundOut(.body(.byteBuffer(writeBody))), promise: pendingPromise)
+            ctx.write(wrapOutboundOut(.body(.byteBuffer(writeBody))), promise: pendingPromise)
             pendingPromise = nil
         }
 
         if let writeEnd = writesToEmit.2 {
-            ctx.write(data: wrapOutboundOut(writeEnd), promise: pendingPromise)
+            ctx.write(wrapOutboundOut(writeEnd), promise: pendingPromise)
             pendingPromise = nil
         }
 

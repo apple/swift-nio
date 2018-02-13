@@ -130,8 +130,8 @@ class HTTPResponseCompressorTest: XCTestCase {
         if let acceptEncoding = acceptEncoding {
             requestHead.headers.add(name: "Accept-Encoding", value: acceptEncoding)
         }
-        try channel.writeInbound(data: HTTPServerRequestPart.head(requestHead))
-        try channel.writeInbound(data: HTTPServerRequestPart.end(nil))
+        try channel.writeInbound(HTTPServerRequestPart.head(requestHead))
+        try channel.writeInbound(HTTPServerRequestPart.end(nil))
     }
 
     private func clientParsingChannel() -> EmbeddedChannel {
@@ -142,14 +142,14 @@ class HTTPResponseCompressorTest: XCTestCase {
 
     private func writeOneChunk(head: HTTPResponseHead, body: [ByteBuffer], channel: EmbeddedChannel) throws {
         let promiseOrderer = PromiseOrderer(eventLoop: channel.eventLoop)
-        channel.pipeline.write(data: NIOAny(HTTPServerResponsePart.head(head)), promise: promiseOrderer.newPromise())
+        channel.pipeline.write(NIOAny(HTTPServerResponsePart.head(head)), promise: promiseOrderer.newPromise())
 
         for bodyChunk in body {
-            channel.pipeline.write(data: NIOAny(HTTPServerResponsePart.body(.byteBuffer(bodyChunk))),
+            channel.pipeline.write(NIOAny(HTTPServerResponsePart.body(.byteBuffer(bodyChunk))),
                                    promise: promiseOrderer.newPromise())
 
         }
-        channel.pipeline.write(data: NIOAny(HTTPServerResponsePart.end(nil)),
+        channel.pipeline.write(NIOAny(HTTPServerResponsePart.end(nil)),
                                promise: promiseOrderer.newPromise())
         channel.pipeline.flush(promise: promiseOrderer.newPromise())
 
@@ -160,16 +160,16 @@ class HTTPResponseCompressorTest: XCTestCase {
     private func writeIntermittentFlushes(head: HTTPResponseHead, body: [ByteBuffer], channel: EmbeddedChannel) throws {
         let promiseOrderer = PromiseOrderer(eventLoop: channel.eventLoop)
         var writeCount = 0
-        channel.pipeline.write(data: NIOAny(HTTPServerResponsePart.head(head)), promise: promiseOrderer.newPromise())
+        channel.pipeline.write(NIOAny(HTTPServerResponsePart.head(head)), promise: promiseOrderer.newPromise())
         for bodyChunk in body {
-            channel.pipeline.write(data: NIOAny(HTTPServerResponsePart.body(.byteBuffer(bodyChunk))),
+            channel.pipeline.write(NIOAny(HTTPServerResponsePart.body(.byteBuffer(bodyChunk))),
                                    promise: promiseOrderer.newPromise())
             writeCount += 1
             if writeCount % 3 == 0 {
                 channel.pipeline.flush(promise: promiseOrderer.newPromise())
             }
         }
-        channel.pipeline.write(data: NIOAny(HTTPServerResponsePart.end(nil)),
+        channel.pipeline.write(NIOAny(HTTPServerResponsePart.end(nil)),
                                promise: promiseOrderer.newPromise())
         channel.pipeline.flush(promise: promiseOrderer.newPromise())
 
@@ -196,12 +196,12 @@ class HTTPResponseCompressorTest: XCTestCase {
         }
         var requestHead = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/")
         requestHead.headers.add(name: "host", value: "apple.com")
-        clientChannel.write(data: NIOAny(HTTPClientRequestPart.head(requestHead)), promise: nil)
-        clientChannel.write(data: NIOAny(HTTPClientRequestPart.end(nil)), promise: nil)
+        clientChannel.write(NIOAny(HTTPClientRequestPart.head(requestHead)), promise: nil)
+        clientChannel.write(NIOAny(HTTPClientRequestPart.end(nil)), promise: nil)
 
         while let nextPart = channel.readOutbound() {
             if case .byteBuffer(let b) = nextPart {
-                try clientChannel.writeInbound(data: b)
+                try clientChannel.writeInbound(b)
             } else {
                 fatalError("We always write bytes")
             }
@@ -502,7 +502,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         try sendRequest(acceptEncoding: "gzip", channel: channel)
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
         let writePromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
-        channel.write(data: NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
+        channel.write(NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
         writePromise.futureResult.whenComplete { result in
             switch result {
             case .success:
@@ -528,7 +528,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         try sendRequest(acceptEncoding: nil, channel: channel)
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
         let writePromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
-        channel.write(data: NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
+        channel.write(NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
         channel.pipeline.removeHandlers()
         try writePromise.futureResult.wait()
     }

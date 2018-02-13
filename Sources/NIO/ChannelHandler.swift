@@ -68,7 +68,7 @@ extension _ChannelOutboundHandler {
     }
     
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        ctx.write(data: data, promise: promise)
+        ctx.write(data, promise: promise)
     }
     
     public func flush(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
@@ -84,7 +84,7 @@ extension _ChannelOutboundHandler {
     }
     
     public func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
-        ctx.triggerUserOutboundEvent(event: event, promise: promise)
+        ctx.triggerUserOutboundEvent(event, promise: promise)
     }
 }
 
@@ -108,7 +108,7 @@ extension _ChannelInboundHandler {
     }
     
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        ctx.fireChannelRead(data: data)
+        ctx.fireChannelRead(data)
     }
     
     public func channelReadComplete(ctx: ChannelHandlerContext) {
@@ -120,11 +120,11 @@ extension _ChannelInboundHandler {
     }
     
     public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
-        ctx.fireUserInboundEventTriggered(event: event)
+        ctx.fireUserInboundEventTriggered(event)
     }
     
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
-        ctx.fireErrorCaught(error: error)
+        ctx.fireErrorCaught(error)
     }
 }
 

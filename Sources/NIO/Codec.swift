@@ -68,7 +68,7 @@ extension ByteToMessageDecoder {
     
     public func handlerRemoved(ctx: ChannelHandlerContext) throws {
         if let buffer = cumulationBuffer as? InboundOut {
-            ctx.fireChannelRead(data: self.wrapInboundOut(buffer))
+            ctx.fireChannelRead(self.wrapInboundOut(buffer))
         } else {
             /* please note that we're dropping the partially received bytes (if any) on the floor here as we can't
                send a full message to the next handler. */
@@ -99,7 +99,7 @@ extension MessageToByteEncoder {
             let data = self.unwrapOutboundIn(data)
             var buffer: ByteBuffer = try allocateOutBuffer(ctx: ctx, data: data)
             try encode(ctx: ctx, data: data, out: &buffer)
-            ctx.write(data: self.wrapOutboundOut(buffer), promise: promise)
+            ctx.write(self.wrapOutboundOut(buffer), promise: promise)
         } catch let err {
             promise?.fail(error: err)
         }

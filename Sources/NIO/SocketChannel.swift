@@ -269,7 +269,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public final func write0(data: NIOAny, promise: EventLoopPromise<Void>?) {
+    public final func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
         if closed {
@@ -437,7 +437,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public final func triggerUserOutboundEvent0(event: Any, promise: EventLoopPromise<Void>?) {
+    public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
         promise?.succeed(result: ())
     }
 
@@ -538,7 +538,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public func channelRead0(data: NIOAny) {
+    public func channelRead0(_ data: NIOAny) {
         // Do nothing by default
     }
 
@@ -718,7 +718,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
                     readPending = false
 
                     assert(!closed)
-                    pipeline.fireChannelRead0(data: NIOAny(buffer))
+                    pipeline.fireChannelRead0(NIOAny(buffer))
                     if mayGrow && i < maxMessagesPerRead {
                         // if the ByteBuffer may grow on the next allocation due we used all the writable bytes we should allocate a new `ByteBuffer` to allow ramping up how much data
                         // we are able to read on the next read operation.
@@ -824,7 +824,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
                 unregisterForWritable()
                 promise?.succeed(result: ())
 
-                pipeline.fireUserInboundEventTriggered(event: ChannelEvent.outputClosed)
+                pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
 
             case .input:
                 if inputShutdown {
@@ -843,7 +843,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
                 unregisterForReadable()
                 promise?.succeed(result: ())
 
-                pipeline.fireUserInboundEventTriggered(event: ChannelEvent.inputClosed)
+                pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
             case .all:
                 if let timeout = connectTimeoutScheduled {
                     connectTimeoutScheduled = nil
@@ -1038,7 +1038,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
                 result = .some
                 do {
                     let chan = try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop, parent: self)
-                    pipeline.fireChannelRead0(data: NIOAny(chan))
+                    pipeline.fireChannelRead0(NIOAny(chan))
                 } catch let err {
                     let _ = try? accepted.close()
                     throw err
@@ -1055,7 +1055,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         return
     }
 
-    override public func channelRead0(data: NIOAny) {
+    override public func channelRead0(_ data: NIOAny) {
         assert(eventLoop.inEventLoop)
 
         let ch = data.forceAsOther() as SocketChannel

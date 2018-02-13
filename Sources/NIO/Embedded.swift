@@ -198,7 +198,7 @@ class EmbeddedChannelCore : ChannelCore {
         promise?.succeed(result: ())
     }
 
-    func write0(data: NIOAny, promise: EventLoopPromise<Void>?) {
+    func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         guard let data = data.tryAsIOData() else {
             promise?.fail(error: ChannelError.writeDataUnsupported)
             return
@@ -224,11 +224,11 @@ class EmbeddedChannelCore : ChannelCore {
         promise?.succeed(result: ())
     }
     
-    public final func triggerUserOutboundEvent0(event: Any, promise: EventLoopPromise<Void>?) {
+    public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
         promise?.succeed(result: ())
     }
     
-    func channelRead0(data: NIOAny) {
+    func channelRead0(_ data: NIOAny) {
         addToBuffer(buffer: &inboundBuffer, data: data)
     }
     
@@ -287,15 +287,15 @@ public class EmbeddedChannel : Channel {
         return readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
     
-    @discardableResult public func writeInbound<T>(data: T) throws -> Bool {
-        pipeline.fireChannelRead(data: NIOAny(data))
+    @discardableResult public func writeInbound<T>(_ data: T) throws -> Bool {
+        pipeline.fireChannelRead(NIOAny(data))
         pipeline.fireChannelReadComplete()
         try throwIfErrorCaught()
         return !channelcore.inboundBuffer.isEmpty
     }
     
-    @discardableResult public func writeOutbound<T>(data: T) throws -> Bool {
-        try writeAndFlush(data: NIOAny(data)).wait()
+    @discardableResult public func writeOutbound<T>(_ data: T) throws -> Bool {
+        try writeAndFlush(NIOAny(data)).wait()
         return !channelcore.outboundBuffer.isEmpty
     }
     

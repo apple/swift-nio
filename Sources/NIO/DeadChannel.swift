@@ -28,7 +28,7 @@ private final class DeadChannelCore: ChannelCore {
         promise?.fail(error: ChannelError.ioOnClosedChannel)
     }
 
-    func write0(data: NIOAny, promise: EventLoopPromise<Void>?) {
+    func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         promise?.fail(error: ChannelError.ioOnClosedChannel)
     }
 
@@ -44,11 +44,11 @@ private final class DeadChannelCore: ChannelCore {
         promise?.fail(error: ChannelError.alreadyClosed)
     }
 
-    func triggerUserOutboundEvent0(event: Any, promise: EventLoopPromise<Void>?) {
+    func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
         promise?.fail(error: ChannelError.ioOnClosedChannel)
     }
 
-    func channelRead0(data: NIOAny) {
+    func channelRead0(_ data: NIOAny) {
         // a `DeadChannel` should never be in any running `ChannelPipeline` and therefore the `TailChannelHandler`
         // should never invoke this.
         fatalError("\(#function) called on DeadChannelCore")

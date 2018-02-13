@@ -151,15 +151,15 @@ class HTTPServerClientTest : XCTestCase {
                     head.headers.add(name: "Content-Length", value: "\(replyString.utf8.count)")
                     head.headers.add(name: "Connection", value: "close")
                     let r = HTTPServerResponsePart.head(head)
-                    ctx.write(data: self.wrapOutboundOut(r), promise: nil)
+                    ctx.write(self.wrapOutboundOut(r), promise: nil)
                     var b = ctx.channel.allocator.buffer(capacity: replyString.count)
                     b.write(string: replyString)
                     
                     let outbound = self.outboundBody(b)
-                    ctx.write(data: self.wrapOutboundOut(outbound.body)).whenComplete { _ in
+                    ctx.write(self.wrapOutboundOut(outbound.body)).whenComplete { _ in
                         outbound.destructor()
                     }
-                    ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
+                    ctx.write(self.wrapOutboundOut(.end(nil))).whenComplete { r in
                         assertSuccess(r)
                         self.sentEnd = true
                         self.maybeClose(ctx: ctx)
@@ -168,7 +168,7 @@ class HTTPServerClientTest : XCTestCase {
                     var head = HTTPResponseHead(version: req.version, status: .ok)
                     head.headers.add(name: "Connection", value: "close")
                     let r = HTTPServerResponsePart.head(head)
-                    ctx.write(data: self.wrapOutboundOut(r)).whenComplete { r in
+                    ctx.write(self.wrapOutboundOut(r)).whenComplete { r in
                         assertSuccess(r)
                     }
                     var b = ctx.channel.allocator.buffer(capacity: 1024)
@@ -177,12 +177,12 @@ class HTTPServerClientTest : XCTestCase {
                         b.write(string: "\(i)")
                         
                         let outbound = self.outboundBody(b)
-                        ctx.write(data: self.wrapOutboundOut(outbound.body)).whenComplete { r in
+                        ctx.write(self.wrapOutboundOut(outbound.body)).whenComplete { r in
                             outbound.destructor()
                             assertSuccess(r)
                         }
                     }
-                    ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
+                    ctx.write(self.wrapOutboundOut(.end(nil))).whenComplete { r in
                         assertSuccess(r)
                         self.sentEnd = true
                         self.maybeClose(ctx: ctx)
@@ -192,7 +192,7 @@ class HTTPServerClientTest : XCTestCase {
                     head.headers.add(name: "Connection", value: "close")
                     head.headers.add(name: "Transfer-Encoding", value: "chunked")
                     let r = HTTPServerResponsePart.head(head)
-                    ctx.write(data: self.wrapOutboundOut(r)).whenComplete { r in
+                    ctx.write(self.wrapOutboundOut(r)).whenComplete { r in
                         assertSuccess(r)
                     }
                     var b = ctx.channel.allocator.buffer(capacity: 1024)
@@ -201,7 +201,7 @@ class HTTPServerClientTest : XCTestCase {
                         b.write(string: "\(i)")
                         
                         let outbound = self.outboundBody(b)
-                        ctx.write(data: self.wrapOutboundOut(outbound.body)).whenComplete { r in
+                        ctx.write(self.wrapOutboundOut(outbound.body)).whenComplete { r in
                             outbound.destructor()
                             assertSuccess(r)
                         }
@@ -210,7 +210,7 @@ class HTTPServerClientTest : XCTestCase {
                     var trailers = HTTPHeaders()
                     trailers.add(name: "X-URL-Path", value: "/trailers")
                     trailers.add(name: "X-Should-Trail", value: "sure")
-                    ctx.write(data: self.wrapOutboundOut(.end(trailers))).whenComplete { r in
+                    ctx.write(self.wrapOutboundOut(.end(trailers))).whenComplete { r in
                         assertSuccess(r)
                         self.sentEnd = true
                         self.maybeClose(ctx: ctx)
@@ -230,15 +230,15 @@ class HTTPServerClientTest : XCTestCase {
                     head.headers.add(name: "Connection", value: "close")
                     head.headers.add(name: "Content-Length", value: "\(HTTPServerClientTest.massiveResponseLength)")
                     let r = HTTPServerResponsePart.head(head)
-                    ctx.write(data: self.wrapOutboundOut(r)).whenComplete { r in
+                    ctx.write(self.wrapOutboundOut(r)).whenComplete { r in
                         assertSuccess(r)
                     }
                     let outbound = self.outboundBody(buf)
-                    ctx.writeAndFlush(data: self.wrapOutboundOut(outbound.body)).whenComplete { r in
+                    ctx.writeAndFlush(self.wrapOutboundOut(outbound.body)).whenComplete { r in
                         outbound.destructor()
                         assertSuccess(r)
                     }
-                    ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
+                    ctx.write(self.wrapOutboundOut(.end(nil))).whenComplete { r in
                         assertSuccess(r)
                         self.sentEnd = true
                         self.maybeClose(ctx: ctx)
@@ -247,10 +247,10 @@ class HTTPServerClientTest : XCTestCase {
                     var head = HTTPResponseHead(version: req.version, status: .ok)
                     head.headers.add(name: "Connection", value: "close")
                     head.headers.add(name: "Content-Length", value: "5000")
-                    ctx.write(data: self.wrapOutboundOut(.head(head))).whenComplete { r in
+                    ctx.write(self.wrapOutboundOut(.head(head))).whenComplete { r in
                         assertSuccess(r)
                     }
-                    ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
+                    ctx.write(self.wrapOutboundOut(.end(nil))).whenComplete { r in
                         assertSuccess(r)
                         self.sentEnd = true
                         self.maybeClose(ctx: ctx)
@@ -258,10 +258,10 @@ class HTTPServerClientTest : XCTestCase {
                 case "/204":
                     var head = HTTPResponseHead(version: req.version, status: .noContent)
                     head.headers.add(name: "Connection", value: "keep-alive")
-                    ctx.write(data: self.wrapOutboundOut(.head(head))).whenComplete { r in
+                    ctx.write(self.wrapOutboundOut(.head(head))).whenComplete { r in
                         assertSuccess(r)
                     }
-                    ctx.write(data: self.wrapOutboundOut(.end(nil))).whenComplete { r in
+                    ctx.write(self.wrapOutboundOut(.end(nil))).whenComplete { r in
                         assertSuccess(r)
                         self.sentEnd = true
                         self.maybeClose(ctx: ctx)
@@ -387,8 +387,8 @@ class HTTPServerClientTest : XCTestCase {
         
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/helloworld")
         head.headers.add(name: "Host", value: "apple.com")
-        clientChannel.write(data: NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-        try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.end(nil))).wait()
+        clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
+        try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
 
         accumulation.syncWaitForCompletion()
     }
@@ -445,8 +445,8 @@ class HTTPServerClientTest : XCTestCase {
         
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/count-to-ten")
         head.headers.add(name: "Host", value: "apple.com")
-        clientChannel.write(data: NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-        try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.end(nil))).wait()
+        clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
+        try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
         accumulation.syncWaitForCompletion()
     }
 
@@ -503,8 +503,8 @@ class HTTPServerClientTest : XCTestCase {
 
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/trailers")
         head.headers.add(name: "Host", value: "apple.com")
-        clientChannel.write(data: NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-        try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.end(nil))).wait()
+        clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
+        try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
         
         accumulation.syncWaitForCompletion()
     }
@@ -560,7 +560,7 @@ class HTTPServerClientTest : XCTestCase {
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
         buffer.write(staticString: "GET /massive-response HTTP/1.1\r\nHost: nio.net\r\n\r\n")
 
-        try clientChannel.writeAndFlush(data: NIOAny(buffer)).wait()
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
         accumulation.syncWaitForCompletion()
     }
 
@@ -604,8 +604,8 @@ class HTTPServerClientTest : XCTestCase {
 
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .HEAD, uri: "/head")
         head.headers.add(name: "Host", value: "apple.com")
-        clientChannel.write(data: NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-        try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.end(nil))).wait()
+        clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
+        try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
 
         accumulation.syncWaitForCompletion()
     }
@@ -649,8 +649,8 @@ class HTTPServerClientTest : XCTestCase {
 
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/204")
         head.headers.add(name: "Host", value: "apple.com")
-        clientChannel.write(data: NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-        try clientChannel.writeAndFlush(data: NIOAny(HTTPClientRequestPart.end(nil))).wait()
+        clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
+        try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
 
         accumulation.syncWaitForCompletion()
     }

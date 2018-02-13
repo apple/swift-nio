@@ -130,7 +130,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
         if readTimeout != nil || allTimeout != nil {
             reading = true
         }
-        ctx.fireChannelRead(data: data)
+        ctx.fireChannelRead(data)
     }
     
     public func channelReadComplete(ctx: ChannelHandlerContext) {
@@ -143,7 +143,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
     
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         if writeTimeout == nil && allTimeout == nil {
-            ctx.write(data: data, promise: promise)
+            ctx.write(data, promise: promise)
             return
         }
         
@@ -151,7 +151,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
         writePromise.futureResult.whenComplete { _ in
             self.lastWriteCompleteTime = DispatchTime.now()
         }
-        ctx.write(data: data, promise: writePromise)
+        ctx.write(data, promise: writePromise)
     }
     
     private func shouldReschedule(_ ctx: ChannelHandlerContext) -> Bool {
@@ -177,7 +177,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
                 // Reader is idle - set a new timeout and trigger an event through the pipeline
                 self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newReadTimeoutTask(ctx, timeout))
                 
-                ctx.fireUserInboundEventTriggered(event: IdleStateEvent.read)
+                ctx.fireUserInboundEventTriggered(IdleStateEvent.read)
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
                 self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(timeout.nanoseconds - diff), self.newReadTimeoutTask(ctx, timeout))
@@ -198,7 +198,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
                 // Writer is idle - set a new timeout and notify the callback.
                 self.scheduledWriterTask = ctx.eventLoop.scheduleTask(in: timeout, self.newWriteTimeoutTask(ctx, timeout))
               
-                ctx.fireUserInboundEventTriggered(event: IdleStateEvent.write)
+                ctx.fireUserInboundEventTriggered(IdleStateEvent.write)
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
                 self.scheduledWriterTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(Int(timeout.nanoseconds) - Int(diff)), self.newWriteTimeoutTask(ctx, timeout))
@@ -224,7 +224,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
                 // Reader is idle - set a new timeout and trigger an event through the pipeline
                 self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newAllTimeoutTask(ctx, timeout))
                 
-                ctx.fireUserInboundEventTriggered(event: IdleStateEvent.all)
+                ctx.fireUserInboundEventTriggered(IdleStateEvent.all)
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
                 self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(Int(timeout.nanoseconds) - diff), self.newAllTimeoutTask(ctx, timeout))

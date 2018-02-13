@@ -53,7 +53,7 @@ class FileRegionTest : XCTestCase {
                 XCTAssertNoThrow(try fr.close())
             }
             try content.write(toFile: filePath, atomically: false, encoding: .ascii)
-            try clientChannel.writeAndFlush(data: NIOAny(fr)).wait()
+            try clientChannel.writeAndFlush(NIOAny(fr)).wait()
             
             var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
             buffer.write(bytes: bytes)
@@ -92,9 +92,9 @@ class FileRegionTest : XCTestCase {
 
             var futures: [EventLoopFuture<()>] = []
             for _ in 0..<10 {
-                futures.append(clientChannel.write(data: NIOAny(fr)))
+                futures.append(clientChannel.write(NIOAny(fr)))
             }
-            try clientChannel.writeAndFlush(data: NIOAny(fr)).wait()
+            try clientChannel.writeAndFlush(NIOAny(fr)).wait()
             try futures.forEach { try $0.wait() }
         }
     }
@@ -138,11 +138,11 @@ class FileRegionTest : XCTestCase {
             }
             try content.write(toFile: filePath, atomically: false, encoding: .ascii)
             do {
-                () = try clientChannel.writeAndFlush(data: NIOAny(fr1)).then {
-                    let frFuture = clientChannel.write(data: NIOAny(fr2))
+                () = try clientChannel.writeAndFlush(NIOAny(fr1)).then {
+                    let frFuture = clientChannel.write(NIOAny(fr2))
                     var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
                     buffer.write(bytes: bytes)
-                    let bbFuture = clientChannel.write(data: NIOAny(buffer))
+                    let bbFuture = clientChannel.write(NIOAny(buffer))
                     clientChannel.close(promise: nil)
                     clientChannel.flush(promise: nil)
                     return frFuture.then { bbFuture }

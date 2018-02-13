@@ -277,7 +277,7 @@ class SniHandlerTest: XCTestCase {
         // forward on any data.
         while buffer.readableBytes > 0 {
             let writeableData = buffer.readSlice(length: 1)!
-            try channel.writeInbound(data: writeableData)
+            try channel.writeInbound(writeableData)
             loop.run()
 
             XCTAssertNil(channel.readInbound())
@@ -323,7 +323,7 @@ class SniHandlerTest: XCTestCase {
         try channel.pipeline.add(handler: handler).wait()
 
         // Ok, let's go.
-        try channel.writeInbound(data: buffer)
+        try channel.writeInbound(buffer)
         loop.run()
 
         // The callback should have fired, but the handler should not have
@@ -363,7 +363,7 @@ class SniHandlerTest: XCTestCase {
         try channel.pipeline.add(handler: handler).wait()
 
         // Ok, let's go.
-        try channel.writeInbound(data: buffer)
+        try channel.writeInbound(buffer)
         loop.run()
 
         // The callback should not have fired, the handler should still be in the pipeline,

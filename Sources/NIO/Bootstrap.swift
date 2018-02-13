@@ -206,16 +206,16 @@ public final class ServerBootstrap {
                                     self.closeAndFire(ctx: ctx, accepted: accepted, err: err)
                                 case .success(_):
                                     if ctx.eventLoop.inEventLoop {
-                                        ctx.fireChannelRead(data: data)
+                                        ctx.fireChannelRead(data)
                                     } else {
                                         ctx.eventLoop.execute {
-                                            ctx.fireChannelRead(data: data)
+                                            ctx.fireChannelRead(data)
                                         }
                                     }
                                 }
                             }
                         } else {
-                            ctx.fireChannelRead(data: data)
+                            ctx.fireChannelRead(data)
                         }
                     }
                }
@@ -225,10 +225,10 @@ public final class ServerBootstrap {
         private func closeAndFire(ctx: ChannelHandlerContext, accepted: SocketChannel, err: Error) {
             _ = accepted.close()
             if ctx.eventLoop.inEventLoop {
-                ctx.fireErrorCaught(error: err)
+                ctx.fireErrorCaught(err)
             } else {
                 ctx.eventLoop.execute {
-                    ctx.fireErrorCaught(error: err)
+                    ctx.fireErrorCaught(err)
                 }
             }
         }

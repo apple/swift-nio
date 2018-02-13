@@ -21,12 +21,12 @@ public protocol ChannelCore : class {
     func register0(promise: EventLoopPromise<Void>?)
     func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?)
     func connect0(to: SocketAddress, promise: EventLoopPromise<Void>?)
-    func write0(data: NIOAny, promise: EventLoopPromise<Void>?)
+    func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?)
     func flush0(promise: EventLoopPromise<Void>?)
     func read0(promise: EventLoopPromise<Void>?)
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?)
-    func triggerUserOutboundEvent0(event: Any, promise: EventLoopPromise<Void>?)
-    func channelRead0(data: NIOAny)
+    func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?)
+    func channelRead0(_ data: NIOAny)
     func errorCaught0(error: Error)
 }
 
@@ -123,16 +123,16 @@ extension Channel {
         pipeline.connect(to: address, promise: promise)
     }
 
-    public func write(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        pipeline.write(data: data, promise: promise)
+    public func write(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
+        pipeline.write(data, promise: promise)
     }
 
     public func flush(promise: EventLoopPromise<Void>?) {
         pipeline.flush(promise: promise)
     }
     
-    public func writeAndFlush(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        pipeline.writeAndFlush(data: data, promise: promise)
+    public func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
+        pipeline.writeAndFlush(data, promise: promise)
     }
 
     public func read(promise: EventLoopPromise<Void>?) {
@@ -147,8 +147,8 @@ extension Channel {
         pipeline.register(promise: promise)
     }
     
-    public func triggerUserOutboundEvent(event: Any, promise: EventLoopPromise<Void>?) {
-        pipeline.triggerUserOutboundEvent(event: event, promise: promise)
+    public func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {
+        pipeline.triggerUserOutboundEvent(event, promise: promise)
     }
 }
 
@@ -160,21 +160,21 @@ public extension Channel {
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
     public func write<T>(_ any: T) -> EventLoopFuture<Void> {
-        return self.write(data: NIOAny(any))
+        return self.write(NIOAny(any))
     }
     
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
     public func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
-        self.write(data: NIOAny(any), promise: promise)
+        self.write(NIOAny(any), promise: promise)
     }
     
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
     public func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
-        return self.writeAndFlush(data: NIOAny(any))
+        return self.writeAndFlush(NIOAny(any))
     }
     
     
@@ -182,7 +182,7 @@ public extension Channel {
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
     public func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
-        self.writeAndFlush(data: NIOAny(any), promise: promise)
+        self.writeAndFlush(NIOAny(any), promise: promise)
     }
 }
 

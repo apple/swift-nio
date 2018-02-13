@@ -21,7 +21,7 @@ private final class EchoHandler: ChannelInboundHandler {
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
-        ctx.write(data: data, promise: nil)
+        ctx.write(data, promise: nil)
     }
 
     // Flush it out. This can make use of gathering writes if multiple buffers are pending

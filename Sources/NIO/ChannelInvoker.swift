@@ -61,7 +61,7 @@ public protocol ChannelOutboundInvoker {
     /// - parameters:
     ///       - data: the data to write
     /// - returns: the future which will be notified once the operation completes.
-    func write(data: NIOAny) -> EventLoopFuture<Void>
+    func write(_ data: NIOAny) -> EventLoopFuture<Void>
    
     /// Write data to the remote peer.
     ///
@@ -72,7 +72,7 @@ public protocol ChannelOutboundInvoker {
     ///       - data: the data to write
     ///       - promise: the `EventLoopPromise` that will be notified once the operation completes,
     ///                  or `nil` if not interested in the outcome of the operation.
-    func write(data: NIOAny, promise: EventLoopPromise<Void>?)
+    func write(_ data: NIOAny, promise: EventLoopPromise<Void>?)
 
     /// Flush data that was previously written via `write` to the remote peer.
     ///
@@ -91,7 +91,7 @@ public protocol ChannelOutboundInvoker {
     /// - parameters:
     ///       - data: the data to write
     /// - returns: the future which will be notified once the operation completes.
-    func writeAndFlush(data: NIOAny) -> EventLoopFuture<Void>
+    func writeAndFlush(_ data: NIOAny) -> EventLoopFuture<Void>
     
     /// Shortcut for calling `write` and `flush`.
     ///
@@ -99,7 +99,7 @@ public protocol ChannelOutboundInvoker {
     ///       - data: the data to write
     ///       - promise: the `EventLoopPromise` that will be notified once the operation completes,
     ///                  or `nil` if not interested in the outcome of the operation.
-    func writeAndFlush(data: NIOAny, promise: EventLoopPromise<Void>?)
+    func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?)
     
     /// Signal that we want to read from the `Channel` once there is data ready.
     ///
@@ -139,14 +139,14 @@ public protocol ChannelOutboundInvoker {
     /// - parameters:
     ///       - event: the event itself.
     /// - returns: the future which will be notified once the operation completes.
-    func triggerUserOutboundEvent(event: Any) -> EventLoopFuture<Void>
+    func triggerUserOutboundEvent(_ event: Any) -> EventLoopFuture<Void>
     
     /// Trigger a custom user outbound event which will flow through the `ChannelPipeline`.
     ///
     /// - parameters:
     ///       - promise: the `EventLoopPromise` that will be notified once the operation completes,
     ///                  or `nil` if not interested in the outcome of the operation.
-    func triggerUserOutboundEvent(event: Any, promise: EventLoopPromise<Void>?)
+    func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?)
     
     /// The `EventLoop` which is used by this `ChannelOutboundInvoker` for execution.
     var eventLoop: EventLoop { get }
@@ -171,9 +171,9 @@ extension ChannelOutboundInvoker {
         return promise.futureResult
     }
     
-    public func write(data: NIOAny) -> EventLoopFuture<Void> {
+    public func write(_ data: NIOAny) -> EventLoopFuture<Void> {
         let promise = newPromise()
-        write(data: data, promise: promise)
+        write(data, promise: promise)
         return promise.futureResult
     }
     
@@ -189,9 +189,9 @@ extension ChannelOutboundInvoker {
         return promise.futureResult
     }
     
-    public func writeAndFlush(data: NIOAny) -> EventLoopFuture<Void> {
+    public func writeAndFlush(_ data: NIOAny) -> EventLoopFuture<Void> {
         let promise = newPromise()
-        writeAndFlush(data: data, promise: promise)
+        writeAndFlush(data, promise: promise)
         return promise.futureResult
     }
     
@@ -201,9 +201,9 @@ extension ChannelOutboundInvoker {
         return promise.futureResult
     }
     
-    public func triggerUserOutboundEvent(event: Any) -> EventLoopFuture<Void> {
+    public func triggerUserOutboundEvent(_ event: Any) -> EventLoopFuture<Void> {
         let promise = newPromise()
-        triggerUserOutboundEvent(event: event, promise: promise)
+        triggerUserOutboundEvent(event, promise: promise)
         return promise.futureResult
     }
     
@@ -237,7 +237,7 @@ public protocol ChannelInboundInvoker {
     ///
     /// - parameters:
     ///       - data: the data that was read and is ready to be processed.
-    func fireChannelRead(data: NIOAny)
+    func fireChannelRead(_ data: NIOAny)
     
     /// Called once there is no more data to read immediately on a `Channel`. Any new data received will be handled later.
     func fireChannelReadComplete()
@@ -259,13 +259,13 @@ public protocol ChannelInboundInvoker {
     ///
     /// - parameters:
     ///       - error: the error we encountered.
-    func fireErrorCaught(error: Error)
+    func fireErrorCaught(_ error: Error)
     
     /// Trigger a custom user inbound event which will flow through the `ChannelPipeline`.
     ///
     /// - parameters:
     ///       - event: the event itself.
-    func fireUserInboundEventTriggered(event: Any)
+    func fireUserInboundEventTriggered(_ event: Any)
 }
 
 /// A protocol that signals that outbound and inbound events are triggered by this invoker.

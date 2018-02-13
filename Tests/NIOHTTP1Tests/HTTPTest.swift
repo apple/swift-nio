@@ -27,7 +27,7 @@ private final class TestChannelInboundHandler: ChannelInboundHandler {
     }
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        ctx.fireChannelRead(data: self.wrapInboundOut(self.fn(self.unwrapInboundIn(data))))
+        ctx.fireChannelRead(self.wrapInboundOut(self.fn(self.unwrapInboundIn(data))))
     }
 }
 
@@ -131,7 +131,7 @@ class HTTPTest: XCTestCase {
         let bd1 = try sendAndCheckRequests(expecteds, body: body, trailers: trailers, sendStrategy: { (reqString, chan) in
             var buf = chan.allocator.buffer(capacity: 1024)
             buf.write(string: reqString)
-            try chan.writeInbound(data: buf)
+            try chan.writeInbound(buf)
         })
 
         /* send the bytes one by one */
@@ -140,7 +140,7 @@ class HTTPTest: XCTestCase {
                 var buf = chan.allocator.buffer(capacity: 1024)
 
                 buf.write(string: "\(c)")
-                try chan.writeInbound(data: buf)
+                try chan.writeInbound(buf)
             }
         })
 

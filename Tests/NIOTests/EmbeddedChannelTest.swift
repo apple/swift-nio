@@ -21,7 +21,7 @@ class EmbeddedChannelTest: XCTestCase {
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
         
-        XCTAssertTrue(try channel.writeOutbound(data: buf))
+        XCTAssertTrue(try channel.writeOutbound(buf))
         XCTAssertTrue(try channel.finish())
         XCTAssertEqual(.byteBuffer(buf), channel.readOutbound())
         XCTAssertNil(channel.readOutbound())
@@ -33,7 +33,7 @@ class EmbeddedChannelTest: XCTestCase {
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
         
-        XCTAssertTrue(try channel.writeInbound(data: buf))
+        XCTAssertTrue(try channel.writeInbound(buf))
         XCTAssertTrue(try channel.finish())
         XCTAssertEqual(buf, channel.readInbound())
         XCTAssertNil(channel.readInbound())
@@ -44,7 +44,7 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
         _ = try channel.pipeline.add(handler: ExceptionThrowingInboundHandler()).wait()
         do {
-            try channel.writeInbound(data: "msg")
+            try channel.writeInbound("msg")
             XCTFail()
         } catch let err {
             XCTAssertEqual(ChannelError.operationUnsupported, err as! ChannelError)
@@ -56,7 +56,7 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
         _ = try channel.pipeline.add(handler: ExceptionThrowingOutboundHandler()).wait()
         do {
-            try channel.writeOutbound(data: "msg")
+            try channel.writeOutbound("msg")
             XCTFail()
         } catch let err {
             XCTAssertEqual(ChannelError.operationUnsupported, err as! ChannelError)
@@ -145,7 +145,7 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
 
         do {
-            try channel.write(data: NIOAny(5)).wait()
+            try channel.write(NIOAny(5)).wait()
             XCTFail("Did not throw")
         } catch ChannelError.writeDataUnsupported {
             // All good

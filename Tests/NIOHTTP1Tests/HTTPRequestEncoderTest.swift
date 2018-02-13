@@ -32,7 +32,7 @@ class HTTPRequestEncoderTests: XCTestCase {
         try channel.pipeline.add(handler: HTTPRequestEncoder()).wait()
         var request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:1), method: method, uri: "/uri")
         request.headers = headers
-        try channel.writeOutbound(data: HTTPClientRequestPart.head(request))
+        try channel.writeOutbound(HTTPClientRequestPart.head(request))
         if case .some(.byteBuffer(let buffer)) = channel.readOutbound() {
             return buffer
         } else {
@@ -82,7 +82,7 @@ class HTTPRequestEncoderTests: XCTestCase {
         
         // This request contains neither Transfer-Encoding: chunked or Content-Length.
         let request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:0), method: .GET, uri: "/uri")
-        XCTAssertNoThrow(try channel.writeOutbound(data: HTTPClientRequestPart.head(request)))
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(request)))
         let writtenData: IOData = channel.readOutbound()!
         
         switch writtenData {
@@ -107,9 +107,9 @@ class HTTPRequestEncoderTests: XCTestCase {
         var buf = channel.allocator.buffer(capacity: 4)
         buf.write(staticString: "test")
     
-        XCTAssertNoThrow(try channel.writeOutbound(data: HTTPClientRequestPart.head(request)))
-        XCTAssertNoThrow(try channel.writeOutbound(data: HTTPClientRequestPart.body(.byteBuffer(buf))))
-        XCTAssertNoThrow(try channel.writeOutbound(data: HTTPClientRequestPart.end(nil)))
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(request)))
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.body(.byteBuffer(buf))))
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(nil)))
 
         assertOutboundContainsOnly(channel, "POST /uri HTTP/1.1\r\ncontent-length: 4\r\n\r\n")
         assertOutboundContainsOnly(channel, "test")

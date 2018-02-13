@@ -40,15 +40,15 @@ private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandler
         let len = String(readableBytes, radix: 16)
         buffer.write(string: len)
         buffer.write(staticString: "\r\n")
-        ctx.write(data: wrapOutboundOut(.byteBuffer(buffer)), promise: mW1)
+        ctx.write(wrapOutboundOut(.byteBuffer(buffer)), promise: mW1)
         
-        ctx.write(data: wrapOutboundOut(chunk), promise: mW2)
+        ctx.write(wrapOutboundOut(chunk), promise: mW2)
         
         // Just move the buffers readerIndex to only make the \r\n readable and depend on COW semantics.
         buffer.moveReaderIndex(forwardBy: buffer.readableBytes - 2)
-        ctx.write(data: wrapOutboundOut(.byteBuffer(buffer)), promise: mW3)
+        ctx.write(wrapOutboundOut(.byteBuffer(buffer)), promise: mW3)
     } else {
-        ctx.write(data: wrapOutboundOut(chunk), promise: mW2)
+        ctx.write(wrapOutboundOut(chunk), promise: mW2)
     }
 }
 
@@ -64,12 +64,12 @@ private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHand
             buffer = ctx.channel.allocator.buffer(capacity: 8)
             buffer.write(staticString: "0\r\n\r\n")
         }
-        ctx.write(data: wrapOutboundOut(.byteBuffer(buffer)), promise: p)
+        ctx.write(wrapOutboundOut(.byteBuffer(buffer)), promise: p)
     case (false, .some(let p)):
         // Not chunked so we have nothing to write. However, we don't want to satisfy this promise out-of-order
         // so we issue a zero-length write down the chain.
         let buf = ctx.channel.allocator.buffer(capacity: 0)
-        ctx.write(data: wrapOutboundOut(.byteBuffer(buf)), promise: p)
+        ctx.write(wrapOutboundOut(.byteBuffer(buf)), promise: p)
     case (false, .none):
         break
     }
@@ -80,7 +80,7 @@ private func writeHead(wrapOutboundOut: (IOData) -> NIOAny, writeStartLine: (ino
     var buffer = ctx.channel.allocator.buffer(capacity: 256)
     writeStartLine(&buffer)
     headers.write(buffer: &buffer)
-    ctx.write(data: wrapOutboundOut(.byteBuffer(buffer)), promise: promise)
+    ctx.write(wrapOutboundOut(.byteBuffer(buffer)), promise: promise)
 }
 
 private func isChunkedPart(_ headers: HTTPHeaders) -> Bool {
