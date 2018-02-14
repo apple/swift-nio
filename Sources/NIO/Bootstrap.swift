@@ -13,6 +13,36 @@
 //===----------------------------------------------------------------------===//
 
 /// A `ServerBootstrap` is an easy way to bootstrap a `ServerChannel` when creating network servers.
+///
+/// Example:
+///
+///     let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
+///     let bootstrap = ServerBootstrap(group: group)
+///         // Specify backlog and enable SO_REUSEADDR for the server itself
+///         .serverChannelOption(ChannelOptions.backlog, value: 256)
+///         .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+///
+///         // Set the handlers that are appled to the accepted child `Channel`s.
+///         .childChannelInitializer { channel in
+///             // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
+///             return channel.pipeline.add(handler: BackPressureHandler()).then { () in
+///                 return channel.pipeline.add(handler: MyChannelHandler())
+///             }
+///         }
+///
+///         // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels
+///         .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+///         .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+///         .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
+///         .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
+///     defer {
+///         try! group.syncShutdownGracefully()
+///     }
+///     try! bootstrap.bind(host: host, port: port).wait()
+///     /* the server will now be accepting connections */
+///
+///     try! channel.closeFuture.wait() // wait forever as we never close the Channel
+///
 public final class ServerBootstrap {
     
     private let group: EventLoopGroup
@@ -236,6 +266,22 @@ public final class ServerBootstrap {
 }
 
 /// A `ClientBootstrap` is an easy way to bootstrap a `SocketChannel` when creating network clients.
+///
+/// Example:
+///
+///     let group = MultiThreadedEventLoopGroup(numThreads: 1)
+///     let bootstrap = ClientBootstrap(group: group)
+///         // Enable SO_REUSEADDR.
+///         .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+///         .channelInitializer { channel in
+///             channel.pipeline.add(handler: MyChannelHandler())
+///         }
+///     defer {
+///         try! group.syncShutdownGracefully()
+///     }
+///     try! bootstrap.connect(host: "example.org", port: 12345).wait()
+///     /* the Channel is now connected */
+///
 public final class ClientBootstrap {
     
     private let group: EventLoopGroup
