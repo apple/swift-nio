@@ -12,15 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(Linux)
-import struct CNIOLinux.CNIOLinux_mmsghdr
-#endif
-
 public typealias IOVector = iovec
-
-#if os(Linux)
-internal typealias MMsgHdr = CNIOLinux_mmsghdr
-#endif
 
 // TODO: scattering support
 final class Socket : BaseSocket {
@@ -117,13 +109,12 @@ final class Socket : BaseSocket {
         return try Posix.sendfile(descriptor: self.descriptor, fd: fd, offset: off_t(offset), count: count)
     }
 
-    #if os(Linux)
     func recvmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
         guard self.open else {
             throw IOError(errnoCode: EBADF, reason: "can't read from socket as it's not open anymore.")
         }
 
-        return try LinuxSocket.recvmmsg(sockfd: self.descriptor, msgvec: msgs.baseAddress!, vlen: CUnsignedInt(msgs.count), flags: 0, timeout: nil)
+        return try Posix.recvmmsg(sockfd: self.descriptor, msgvec: msgs.baseAddress!, vlen: CUnsignedInt(msgs.count), flags: 0, timeout: nil)
     }
 
     func sendmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
@@ -131,9 +122,8 @@ final class Socket : BaseSocket {
             throw IOError(errnoCode: EBADF, reason: "can't write to socket as it's not open anymore.")
         }
 
-        return try LinuxSocket.sendmmsg(sockfd: self.descriptor, msgvec: msgs.baseAddress!, vlen: CUnsignedInt(msgs.count), flags: 0)
+        return try Posix.sendmmsg(sockfd: self.descriptor, msgvec: msgs.baseAddress!, vlen: CUnsignedInt(msgs.count), flags: 0)
     }
-    #endif
     
     func shutdown(how: Shutdown) throws {
         guard self.open else {

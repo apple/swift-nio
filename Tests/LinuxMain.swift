@@ -58,6 +58,7 @@ import XCTest
          testCase(MarkedCircularBufferTests.allTests),
          testCase(MessageToByteEncoderTest.allTests),
          testCase(NonBlockingFileIOTest.allTests),
+         testCase(PendingDatagramWritesManagerTests.allTests),
          testCase(PriorityQueueTest.allTests),
          testCase(SniHandlerTest.allTests),
          testCase(SocketAddressTest.allTests),

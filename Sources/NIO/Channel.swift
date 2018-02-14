@@ -219,6 +219,13 @@ public enum ChannelError: Error {
     /// A `Channel` `write` was made with a data type not supported by the channel type: e.g. an `AddressedEnvelope`
     /// for a stream channel.
     case writeDataUnsupported
+
+    /// A `DatagramChannel` `write` was made with a buffer that is larger than the MTU for the connection, and so the
+    /// datagram was not written. Either shorten the datagram or manually fragment, and then try again.
+    case writeMessageTooLarge
+
+    /// A `DatagramChannel` `write` was made with an address that was not reachable and so could not be delivered.
+    case writeHostUnreachable
 }
 
 extension ChannelError: Equatable {
@@ -239,6 +246,12 @@ extension ChannelError: Equatable {
         case (.inputClosed, .inputClosed):
             return true
         case (.eof, .eof):
+            return true
+        case (.writeDataUnsupported, .writeDataUnsupported):
+            return true
+        case (.writeMessageTooLarge, .writeMessageTooLarge):
+            return true
+        case (.writeHostUnreachable, .writeHostUnreachable):
             return true
         default:
             return false

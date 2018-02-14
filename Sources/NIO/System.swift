@@ -20,9 +20,12 @@
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 @_exported import Darwin.C
-private let sysKevent = kevent
+import CNIODarwin
+internal typealias MMsgHdr = CNIODarwin_mmsghdr
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 @_exported import Glibc
+import CNIOLinux
+internal typealias MMsgHdr = CNIOLinux_mmsghdr
 #else
 let badOS = { fatalError("unsupported OS") }()
 #endif
@@ -46,6 +49,15 @@ private let sysRead = read
 private let sysLseek = lseek
 private let sysRecvFrom = recvfrom
 private let sysSendTo = sendto
+
+#if os(Linux)
+private let sysSendMmsg = CNIOLinux_sendmmsg
+private let sysRecvMmsg = CNIOLinux_recvmmsg
+#else
+private let sysKevent = kevent
+private let sysSendMmsg = CNIODarwin_sendmmsg
+private let sysRecvMmsg = CNIODarwin_recvmmsg
+#endif
 
 private func isBlacklistedErrno(_ code: Int32) -> Bool {
     switch code {
@@ -331,6 +343,19 @@ internal enum Posix {
         }
     }
 
+    @inline(never)
+    public static func sendmmsg(sockfd: CInt, msgvec: UnsafeMutablePointer<MMsgHdr>, vlen: CUnsignedInt, flags: CInt) throws -> IOResult<Int> {
+        return try wrapSyscallMayBlock {
+            Int(sysSendMmsg(sockfd, msgvec, vlen, flags))
+        }
+    }
+
+    @inline(never)
+    public static func recvmmsg(sockfd: CInt, msgvec: UnsafeMutablePointer<MMsgHdr>, vlen: CUnsignedInt, flags: CInt, timeout: UnsafeMutablePointer<timespec>?) throws -> IOResult<Int> {
+        return try wrapSyscallMayBlock {
+            Int(sysRecvMmsg(sockfd, msgvec, vlen, flags, timeout))
+        }
+    }
 }
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)

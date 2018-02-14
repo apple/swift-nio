@@ -95,20 +95,4 @@ internal enum Epoll {
         }
     }
 }
-
-internal enum LinuxSocket {
-    @inline(never)
-    public static func sendmmsg(sockfd: CInt, msgvec: UnsafeMutablePointer<CNIOLinux_mmsghdr>, vlen: CUnsignedInt, flags: CInt) throws -> IOResult<Int> {
-        return try wrapSyscallMayBlock {
-            return Int(CNIOLinux.CNIOLinux_sendmmsg(sockfd, msgvec, vlen, flags))
-        }
-    }
-
-    @inline(never)
-    public static func recvmmsg(sockfd: CInt, msgvec: UnsafeMutablePointer<CNIOLinux_mmsghdr>, vlen: CUnsignedInt, flags: CInt, timeout: UnsafeMutablePointer<timespec>?) throws -> IOResult<Int> {
-        return try wrapSyscallMayBlock {
-            return Int(CNIOLinux.CNIOLinux_recvmmsg(sockfd, msgvec, vlen, flags, timeout))
-        }
-    }
-}
 #endif

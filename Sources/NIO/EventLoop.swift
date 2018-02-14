@@ -283,6 +283,12 @@ internal final class SelectableEventLoop : EventLoop {
     
     let iovecs: UnsafeMutableBufferPointer<IOVector>
     let storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
+
+    // Used for gathering UDP writes.
+    private let _msgs: UnsafeMutablePointer<MMsgHdr>
+    private let _addresses: UnsafeMutablePointer<sockaddr_storage>
+    let msgs: UnsafeMutableBufferPointer<MMsgHdr>
+    let addresses: UnsafeMutableBufferPointer<sockaddr_storage>
     
     /// Creates a new `SelectableEventLoop` instance that is tied to the given `pthread_t`.
 
@@ -309,11 +315,17 @@ internal final class SelectableEventLoop : EventLoop {
         self._storageRefs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
         self.iovecs = UnsafeMutableBufferPointer(start: self._iovecs, count: Socket.writevLimitIOVectors)
         self.storageRefs = UnsafeMutableBufferPointer(start: self._storageRefs, count: Socket.writevLimitIOVectors)
+        self._msgs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
+        self._addresses = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
+        self.msgs = UnsafeMutableBufferPointer(start: _msgs, count: Socket.writevLimitIOVectors)
+        self.addresses = UnsafeMutableBufferPointer(start: _addresses, count: Socket.writevLimitIOVectors)
     }
     
     deinit {
         _iovecs.deallocate()
         _storageRefs.deallocate()
+        _msgs.deallocate()
+        _addresses.deallocate()
     }
     
     /// Register the given `SelectableChannel` with this `SelectableEventLoop`. After this point all I/O for the `SelectableChannel` will be processed by this `SelectableEventLoop` until it

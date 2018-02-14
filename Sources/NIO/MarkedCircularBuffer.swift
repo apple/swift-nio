@@ -73,7 +73,7 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
 
     public var startIndex: Int { return self.buffer.startIndex }
 
-    public var endIndex: Int { return self.buffer.startIndex }
+    public var endIndex: Int { return self.buffer.endIndex }
 
     public func index(after i: Int) -> Int {
         return self.buffer.index(after: i)
