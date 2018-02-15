@@ -261,7 +261,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    expectedVectorWritabilities: nil,
                                                    returns: [],
                                                    promiseStates: [[true, false]])
-            XCTAssertEqual(WriteResult.nothingToBeWritten, result)
+            XCTAssertEqual(WriteResult.writtenCompletely, result)
 
             pwm.markFlushCheckpoint(promise: nil)
 
@@ -622,7 +622,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        expectedVectorWritabilities: [[(4, address), (4, address)]],
                                                        returns: [.ok(.processed(1))],
                                                        promiseStates: [[true, true, true]])
-            XCTAssertEqual(WriteResult.closed, result)
+            XCTAssertEqual(WriteResult.writtenCompletely, result)
             XCTAssertNoThrow(try ps[0].futureResult.wait())
             XCTAssertThrowsError(try ps[1].futureResult.wait())
             XCTAssertThrowsError(try ps[2].futureResult.wait())

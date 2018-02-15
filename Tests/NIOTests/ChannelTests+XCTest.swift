@@ -35,6 +35,7 @@ extension ChannelTests {
                 ("testPendingWritesWorkWithPartialWrites", testPendingWritesWorkWithPartialWrites),
                 ("testPendingWritesSpinCountWorksForSingleWrites", testPendingWritesSpinCountWorksForSingleWrites),
                 ("testPendingWritesSpinCountWorksForVectorWrites", testPendingWritesSpinCountWorksForVectorWrites),
+                ("testPendingWritesCompleteWritesDontConsumeWriteSpinCount", testPendingWritesCompleteWritesDontConsumeWriteSpinCount),
                 ("testPendingWritesCancellationWorksCorrectly", testPendingWritesCancellationWorksCorrectly),
                 ("testPendingWritesNoMoreThanWritevLimitIsWritten", testPendingWritesNoMoreThanWritevLimitIsWritten),
                 ("testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk", testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk),

@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 import NIOConcurrencyHelpers
 
+internal typealias WriteResult = SingleWriteOperationResult
+
 private struct PendingDatagramWrite {
     var data: ByteBuffer
     var promise: EventLoopPromise<Void>?
@@ -562,7 +564,7 @@ final class PendingDatagramWritesManager {
     ///     - singleWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendto`).
     private func triggerSingleWrite(singleWriteOperation: (UnsafeRawBufferPointer, UnsafePointer<sockaddr>, socklen_t) throws -> IOResult<Int>) rethrows -> WriteResult {
         guard self.state.isFlushPending && !self.state.isEmpty else {
-            return .nothingToBeWritten
+            return .writtenCompletely
         }
 
         for _ in 0..<writeSpinCount {
@@ -601,7 +603,7 @@ final class PendingDatagramWritesManager {
                "vector write called in state flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty)")
         for _ in 0..<writeSpinCount {
             if closed {
-                return .closed
+                return .writtenCompletely
             }
             switch self.didWrite(try doPendingDatagramWriteVectorOperation(pending: self.state,
                                                                            iovecs: self.iovecs,

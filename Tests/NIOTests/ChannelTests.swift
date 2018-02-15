@@ -250,7 +250,7 @@ public class ChannelTests: XCTestCase {
                                    returns: [IOResult<Int>],
                                    promiseStates: [[Bool]],
                                    file: StaticString = #file,
-                                   line: UInt = #line) throws -> WriteResult {
+                                   line: UInt = #line) throws -> OverallWriteResult {
         var everythingState = 0
         var singleState = 0
         var multiState = 0
@@ -380,12 +380,12 @@ public class ChannelTests: XCTestCase {
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
 
             var result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: [0],
-                                                   expectedVectorWritabilities: nil,
-                                                   expectedFileWritabilities: nil,
-                                                   returns: [.processed(0)],
-                                                   promiseStates: [[true, false]])
+                                                       promises: ps,
+                                                       expectedSingleWritabilities: [0],
+                                                       expectedVectorWritabilities: nil,
+                                                       expectedFileWritabilities: nil,
+                                                       returns: [.processed(0)],
+                                                       promiseStates: [[true, false]])
 
             XCTAssertFalse(pwm.isEmpty)
             XCTAssertFalse(pwm.isFlushPending)
@@ -398,7 +398,7 @@ public class ChannelTests: XCTestCase {
                                                expectedFileWritabilities: nil,
                                                returns: [],
                                                promiseStates: [[true, false]])
-            XCTAssertEqual(WriteResult.nothingToBeWritten, result)
+            XCTAssertEqual(OverallWriteResult.writtenCompletely, result)
 
             pwm.markFlushCheckpoint(promise: nil)
 
@@ -409,7 +409,7 @@ public class ChannelTests: XCTestCase {
                                                expectedFileWritabilities: nil,
                                                returns: [.processed(0)],
                                                promiseStates: [[true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(OverallWriteResult.writtenCompletely, result)
         }
     }
 
@@ -435,7 +435,7 @@ public class ChannelTests: XCTestCase {
                                                    expectedFileWritabilities: nil,
                                                    returns: [.processed(8)],
                                                    promiseStates: [[true, true, false]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
 
             pwm.markFlushCheckpoint(promise: nil)
 
@@ -446,7 +446,7 @@ public class ChannelTests: XCTestCase {
                                                expectedFileWritabilities: nil,
                                                returns: [.processed(0)],
                                                promiseStates: [[true, true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
         }
     }
 
@@ -473,7 +473,7 @@ public class ChannelTests: XCTestCase {
                                                    returns: [.processed(1), .wouldBlock(0)],
                 promiseStates: [[false, false, false, false], [false, false, false, false]])
 
-            XCTAssertEqual(WriteResult.wouldBlock, result)
+            XCTAssertEqual(.couldNotWriteEverything, result)
             result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                promises: ps,
                                                expectedSingleWritabilities: nil,
@@ -483,7 +483,7 @@ public class ChannelTests: XCTestCase {
                                                promiseStates: [[true, true, false, false], [true, true, false, false]]
 
                                                )
-            XCTAssertEqual(WriteResult.wouldBlock, result)
+            XCTAssertEqual(.couldNotWriteEverything, result)
 
             result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                promises: ps,
@@ -492,7 +492,7 @@ public class ChannelTests: XCTestCase {
                                                expectedFileWritabilities: nil,
                                                returns: [.processed(8)],
                                                promiseStates: [[true, true, true, true], [true, true, true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
         }
     }
 
@@ -503,7 +503,7 @@ public class ChannelTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
 
         try withPendingStreamWritesManager { pwm in
-            let numberOfBytes = Int(pwm.writeSpinCount + 1 /* so one byte remains at the end */)
+            let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */)
             buffer.clear()
             buffer.write(bytes: Array<UInt8>(repeating: 0xff, count: numberOfBytes))
             let ps: [EventLoopPromise<()>] = (0..<1).map { _ in el.newPromise() }
@@ -520,7 +520,7 @@ public class ChannelTests: XCTestCase {
                                                    expectedFileWritabilities: nil,
                                                    returns: Array(repeating: .processed(1), count: numberOfBytes),
                                                    promiseStates: Array(repeating: [false], count: numberOfBytes))
-            XCTAssertEqual(.writtenPartially, result)
+            XCTAssertEqual(.couldNotWriteEverything, result)
 
             /* we'll now write the one last byte and assert that all the writes are complete */
             result = try assertExpectedWritability(pendingWritesManager: pwm,
@@ -541,7 +541,7 @@ public class ChannelTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
 
         try withPendingStreamWritesManager { pwm in
-            let numberOfBytes = Int(pwm.writeSpinCount + 1 /* so one byte remains at the end */)
+            let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */)
             buffer.clear()
             buffer.write(bytes: [0xff] as [UInt8])
             let ps: [EventLoopPromise<()>] = (0..<numberOfBytes).map { _ in
@@ -575,7 +575,7 @@ public class ChannelTests: XCTestCase {
                                                    expectedFileWritabilities: nil,
                                                    returns: Array(repeating: .processed(1), count: numberOfBytes),
                                                    promiseStates: expectedPromiseStates)
-            XCTAssertEqual(.writtenPartially, result)
+            XCTAssertEqual(.couldNotWriteEverything, result)
 
             /* we'll now write the one last byte and assert that all the writes are complete */
             result = try assertExpectedWritability(pendingWritesManager: pwm,
@@ -585,6 +585,45 @@ public class ChannelTests: XCTestCase {
                                                expectedFileWritabilities: nil,
                                                returns: [.processed(1)],
                                                promiseStates: [Array(repeating: true, count: numberOfBytes)])
+            XCTAssertEqual(.writtenCompletely, result)
+        }
+    }
+
+    /// Tests that the spin count works for one long buffer if small bits are written one by one.
+    func testPendingWritesCompleteWritesDontConsumeWriteSpinCount() throws {
+        let el = EmbeddedEventLoop()
+        let alloc = ByteBufferAllocator()
+        var buffer = alloc.buffer(capacity: 12)
+
+        try withPendingStreamWritesManager { pwm in
+            let numberOfWrites = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */)
+            buffer.clear()
+            buffer.write(bytes: Array<UInt8>(repeating: 0xff, count: 1))
+            let handle = FileHandle(descriptor: -1)
+            defer {
+                /* fake file handle, so don't actually close */
+                XCTAssertNoThrow(try handle.takeDescriptorOwnership())
+            }
+            let fileRegion = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 1)
+            let ps: [EventLoopPromise<()>] = (0...numberOfWrites).map { _ in el.newPromise() }
+            (0..<numberOfWrites).forEach { i in
+                _ = pwm.add(data: i % 2 == 0 ? .byteBuffer(buffer) : .fileRegion(fileRegion), promise: ps[i])
+            }
+            pwm.markFlushCheckpoint(promise: ps[numberOfWrites])
+
+            let expectedPromiseStates = Array((1...numberOfWrites).reversed()).map { n in
+                Array(repeating: true, count: numberOfWrites - n + 1) + Array(repeating: false, count: n - 1) + [n - 1 == 0 ? true : false]
+            }
+            /* below, we'll write 1 byte at a time. So the number of bytes offered should decrease by one.
+             The write operation should be repeated until we did it 1 + spin count times and then return `.writtenPartially`.
+             After that, one byte will remain */
+            let result = try assertExpectedWritability(pendingWritesManager: pwm,
+                                                       promises: ps,
+                                                       expectedSingleWritabilities: Array(repeating: 1, count: numberOfWrites / 2),
+                                                       expectedVectorWritabilities: nil,
+                                                       expectedFileWritabilities: Array(repeating: (0, 1), count: numberOfWrites / 2),
+                                                       returns: Array(repeating: .processed(1), count: numberOfWrites),
+                                                       promiseStates: expectedPromiseStates)
             XCTAssertEqual(.writtenCompletely, result)
         }
     }
@@ -605,13 +644,13 @@ public class ChannelTests: XCTestCase {
             _ = pwm.add(data: .byteBuffer(emptyBuffer), promise: ps[2])
 
             let result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: [[4, 4], [2, 4]],
-                                                   expectedFileWritabilities: nil,
-                                                   returns: [.processed(2), .wouldBlock(0)],
-                                                   promiseStates: [[false, false, false], [false, false, false]])
-            XCTAssertEqual(WriteResult.wouldBlock, result)
+                                                       promises: ps,
+                                                       expectedSingleWritabilities: nil,
+                                                       expectedVectorWritabilities: [[4, 4], [2, 4]],
+                                                       expectedFileWritabilities: nil,
+                                                       returns: [.processed(2), .wouldBlock(0)],
+                                                       promiseStates: [[false, false, false], [false, false, false]])
+            XCTAssertEqual(.couldNotWriteEverything, result)
 
             pwm.failAll(error: ChannelError.operationUnsupported, close: true)
 
@@ -642,12 +681,12 @@ public class ChannelTests: XCTestCase {
 
             let result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                    promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: [[halfTheWriteVLimit, halfTheWriteVLimit], [halfTheWriteVLimit]],
+                                                   expectedSingleWritabilities: [halfTheWriteVLimit],
+                                                   expectedVectorWritabilities: [[halfTheWriteVLimit, halfTheWriteVLimit]],
                                                    expectedFileWritabilities: nil,
                                                    returns: [.processed(2 * halfTheWriteVLimit), .processed(halfTheWriteVLimit)],
                                                    promiseStates: [[true, true, false], [true, true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
         }
     }
 
@@ -691,7 +730,7 @@ public class ChannelTests: XCTestCase {
                                                     /*  Xcode   */ [true, false, false],
                                                     /*  needs   */ [true, false, false],
                                                     /*  help    */ [true, true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
             XCTAssertTrue(flushPromise1.futureResult.fulfilled)
 
             let emptyFlushPromise: EventLoopPromise<()> = el.newPromise()
@@ -733,7 +772,7 @@ public class ChannelTests: XCTestCase {
                                                expectedFileWritabilities: nil,
                                                returns: [],
                                                promiseStates: [[true, false]])
-            XCTAssertEqual(WriteResult.nothingToBeWritten, result)
+            XCTAssertEqual(.writtenCompletely, result)
 
             pwm.markFlushCheckpoint(promise: nil)
 
@@ -744,7 +783,7 @@ public class ChannelTests: XCTestCase {
                                                expectedFileWritabilities: [(0, 2), (1, 2)],
                                                returns: [.processed(1), .processed(1)],
                                                promiseStates: [[true, false], [true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
         }
     }
 
@@ -802,44 +841,20 @@ public class ChannelTests: XCTestCase {
 
             var result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                    promises: ps,
-                                                   expectedSingleWritabilities: nil,
+                                                   expectedSingleWritabilities: [4, 3, 2, 1],
                                                    expectedVectorWritabilities: [[4, 4]],
-                                                   expectedFileWritabilities: nil,
-                                                   returns: [.processed(8)],
-                                                   promiseStates: [[true, true, false, false, false]])
-            XCTAssertEqual(.writtenCompletely, result)
-
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: nil,
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: [(99, 99)],
-                                               returns: [.processed(0)],
-                                               promiseStates: [[true, true, true, false, false]])
-            XCTAssertEqual(.writtenCompletely, result)
-
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: [4, 3, 2, 1],
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: nil,
-                                               returns: [.processed(1), .processed(1), .processed(1), .processed(1)],
-                                               promiseStates: [[true, true, true, false, false],
-                                                               [true, true, true, false, false],
-                                                               [true, true, true, false, false],
-                                                               [true, true, true, true, false]])
-            XCTAssertEqual(.writtenCompletely, result)
-
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: nil,
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: [(0, 10), (3, 10), (6, 10)],
-                                               returns: [.wouldBlock(3), .processed(3), .wouldBlock(0)],
-                                               promiseStates: [[true, true, true, true, false],
-                                                               [true, true, true, true, false],
-                                                               [true, true, true, true, false]])
-            XCTAssertEqual(.wouldBlock, result)
+                                                   expectedFileWritabilities: [(99, 99), (0, 10), (3, 10), (6, 10)],
+                                                   returns: [.processed(8), .processed(0), .processed(1), .processed(1), .processed(1), .processed(1), .wouldBlock(3), .processed(3), .wouldBlock(0)],
+                                                   promiseStates: [[true, true, false, false, false],
+                                                                   [true, true, true, false, false],
+                                                                   [true, true, true, false, false],
+                                                                   [true, true, true, false, false],
+                                                                   [true, true, true, false, false],
+                                                                   [true, true, true, true, false],
+                                                                   [true, true, true, true, false],
+                                                                   [true, true, true, true, false],
+                                                                   [true, true, true, true, false]])
+            XCTAssertEqual(.couldNotWriteEverything, result)
 
             result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                promises: ps,
@@ -893,36 +908,12 @@ public class ChannelTests: XCTestCase {
 
             result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                    promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: [[4, 4]],
-                                                   expectedFileWritabilities: nil,
-                                                   returns: [.processed(8)],
-                                                   promiseStates: [[true, false]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: nil,
-                                                   expectedFileWritabilities: [(99, 99)],
-                                                   returns: [.processed(0)],
-                                                   promiseStates: [[true, false]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
                                                    expectedSingleWritabilities: [4],
-                                                   expectedVectorWritabilities: nil,
-                                                   expectedFileWritabilities: nil,
-                                                   returns: [.processed(4)],
-                                                   promiseStates: [[true, false]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: nil,
-                                                   expectedFileWritabilities: [(0, 10)],
-                                                   returns: [.processed(10)],
-                                                   promiseStates: [[true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+                                                   expectedVectorWritabilities: [[4, 4]],
+                                                   expectedFileWritabilities: [(99, 99), (0, 10)],
+                                                   returns: [.processed(8), .processed(0), .processed(4), .processed(10)],
+                                                   promiseStates: [[true, false], [true, false], [true, false], [true, true]])
+            XCTAssertEqual(.writtenCompletely, result)
         }
     }
 
@@ -963,7 +954,7 @@ public class ChannelTests: XCTestCase {
                                                    expectedFileWritabilities: nil,
                                                    returns: [.processed(8)],
                                                    promiseStates: [[true, true, true, true, false, false]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
 
             pwm.markFlushCheckpoint(promise: ps[5])
 
@@ -974,7 +965,7 @@ public class ChannelTests: XCTestCase {
                                                    expectedFileWritabilities: nil,
                                                    returns: [.processed(0)],
                                                    promiseStates: [[true, true, true, true, true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
         }
     }
 
@@ -998,7 +989,7 @@ public class ChannelTests: XCTestCase {
                                                    expectedFileWritabilities: nil,
                                                    returns: [.processed(0)],
                                                    promiseStates: [[true, true, false]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
 
             pwm.markFlushCheckpoint(promise: nil)
 
@@ -1009,7 +1000,7 @@ public class ChannelTests: XCTestCase {
                                                expectedFileWritabilities: nil,
                                                returns: [.processed(0)],
                                                promiseStates: [[true, true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
         }
     }
 
@@ -1037,7 +1028,7 @@ public class ChannelTests: XCTestCase {
                                                    expectedFileWritabilities: nil,
                                                    returns: [.processed(4)],
                                                    promiseStates: [[true, true, true]])
-            XCTAssertEqual(WriteResult.closed, result)
+            XCTAssertEqual(.writtenCompletely, result)
             XCTAssertNoThrow(try ps[0].futureResult.wait())
             XCTAssertThrowsError(try ps[1].futureResult.wait())
             XCTAssertThrowsError(try ps[2].futureResult.wait())
@@ -1060,13 +1051,13 @@ public class ChannelTests: XCTestCase {
 
             var result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                    promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: [Array(repeating: 4, count: Socket.writevLimitIOVectors), [4]],
+                                                   expectedSingleWritabilities: [4],
+                                                   expectedVectorWritabilities: [Array(repeating: 4, count: Socket.writevLimitIOVectors)],
                                                    expectedFileWritabilities: nil,
                                                    returns: [.processed(4 * Socket.writevLimitIOVectors), .wouldBlock(0)],
                                                    promiseStates: [Array(repeating: true, count: Socket.writevLimitIOVectors) + [false],
                                                                    Array(repeating: true, count: Socket.writevLimitIOVectors) + [false]])
-            XCTAssertEqual(WriteResult.wouldBlock, result)
+            XCTAssertEqual(.couldNotWriteEverything, result)
             XCTAssertFalse(flushPromise.futureResult.fulfilled)
             result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                promises: ps,
@@ -1075,7 +1066,7 @@ public class ChannelTests: XCTestCase {
                                                expectedFileWritabilities: nil,
                                                returns: [.processed(4)],
                                                promiseStates: [Array(repeating: true, count: Socket.writevLimitIOVectors + 1)])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
             XCTAssertTrue(flushPromise.futureResult.fulfilled)
         }
     }

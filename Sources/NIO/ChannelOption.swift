@@ -97,8 +97,9 @@ public enum AutoReadOption: ChannelOption {
     case const(())
 }
 
-/// `WriteSpinOption` allows to configure the number of write calls to do before consider the `Channel` as non-writable and give up until it
-/// becomes writable again.
+/// `WriteSpinOption` allows users to configure the number of repetitions of a only partially successful write call before considering the `Channel` not writable.
+/// Setting this option to `0` means that we only issue one write call and if that call does not write all the bytes,
+/// we consider the `Channel` not writable.
 public enum WriteSpinOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = UInt

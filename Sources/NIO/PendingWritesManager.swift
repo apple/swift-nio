@@ -37,12 +37,6 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
 
     // the numbers of storage refs that we need to decrease later.
     var numberOfUsedStorageSlots = 0
-
-    // we need to track if we stopped collecting more buffer because of a writev limit or not.
-    // if we hit a limit we should indicate that we intended to write at least one more buffer so that `didWrite`
-    // returns `.writtenPartially`.
-    var hitLimit = pending.flushedChunks > Socket.writevLimitIOVectors
-
     var toWrite: Int = 0
 
     loop: for i in 0..<count {
@@ -51,7 +45,6 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
         case .byteBuffer(let buffer):
             // Must not write more than Int32.max in one go.
             guard (numberOfUsedStorageSlots == 0) || (Socket.writevLimitBytes - toWrite >= buffer.readableBytes) else {
-                hitLimit = true
                 break loop
             }
             let toWriteForThisBuffer = min(Socket.writevLimitBytes, buffer.readableBytes)
@@ -64,7 +57,6 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
             numberOfUsedStorageSlots += 1
         case .fileRegion(_):
             // We found a FileRegion so stop collecting
-            hitLimit = false
             break loop
         }
     }
@@ -75,25 +67,29 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
     }
     let result = try fn(UnsafeBufferPointer(start: iovecs.baseAddress!, count: numberOfUsedStorageSlots))
     /* if we hit a limit, we really wanted to write more than we have so the caller should retry us */
-    return (numberOfUsedStorageSlots + (hitLimit ? 1 : 0), result)
+    return (numberOfUsedStorageSlots, result)
 }
 
-/// The high-level result of a write operation.
-/* private but tests */ enum WriteResult {
+/// The result of a single write operation, usually `write`, `sendfile` or `writev`.
+internal enum SingleWriteOperationResult {
     /// Wrote everything asked.
     case writtenCompletely
 
     /// Wrote some portion of what was asked.
     case writtenPartially
 
-    /// There was nothing to be written.
-    case nothingToBeWritten
-
     /// Could not write as doing that would have blocked.
     case wouldBlock
+}
 
-    /// Could not write as the underlying descriptor is closed.
-    case closed
+/// The result of trying to write all the outstanding flushed data. That naturally includes all `ByteBuffer`s and
+/// `FileRegions` and the individual writes have potentially been retried (see `WriteSpinOption`).
+internal enum OverallWriteResult {
+    /// Wrote all the data that was flushed. When receiving this result, we can unsubscribe from 'writable' notification.
+    case writtenCompletely
+
+    /// Could not write everything. Before attempting further writes the eventing system should send a 'writable' notification.
+    case couldNotWriteEverything
 }
 
 /// This holds the states of the currently pending stream writes. The core is a `MarkedCircularBuffer` which holds all the
@@ -214,8 +210,8 @@ private struct PendingStreamWritesState {
     ///
     /// - parameters:
     ///     - writeResult: The result of the write operation.
-    /// - returns: A closure that the caller _needs_ to run which will fulfill the promises of the writes and a `WriteResult` which indicates if we could write everything or not.
-    public mutating func didWrite(itemCount: Int, result writeResult: IOResult<Int>) -> (() -> Void, WriteResult) {
+    /// - returns: A closure that the caller _needs_ to run which will fulfill the promises of the writes and a `SingleWriteOperationResult` which indicates if we could write everything or not.
+    public mutating func didWrite(itemCount: Int, result writeResult: IOResult<Int>) -> (() -> Void, SingleWriteOperationResult) {
         var promises: [EventLoopPromise<()>] = []
         let fulfillPromises = { promises.forEach { $0.succeed(result: ()) } }
 
@@ -330,16 +326,29 @@ final class PendingStreamWritesManager {
     ///     - singleWriteOperation: An operation that writes a single, contiguous array of bytes (usually `write`).
     ///     - vectorWriteOperation: An operation that writes multiple contiguous arrays of bytes (usually `writev`).
     ///     - fileWriteOperation: An operation that writes a region of a file descriptor.
-    /// - returns: The `WriteResult` and whether the `Channel` is now writable.
+    /// - returns: The `SingleWriteOperationResult` and whether the `Channel` is now writable.
     func triggerAppropriateWriteOperation(singleWriteOperation: (UnsafeRawBufferPointer) throws -> IOResult<Int>,
                                           vectorWriteOperation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>,
-                                          fileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>) throws -> (writeResult: WriteResult, writable: Bool) {
+                                          fileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>) throws -> (writeResult: OverallWriteResult, writable: Bool) {
         let wasWritable = writable.load()
-        let result: WriteResult
-        if self.state.hasMultipleFlushedByteBuffers {
-            result = try triggerVectorWrite(vectorWriteOperation: vectorWriteOperation)
-        } else {
-            result = try triggerSingleWrite(singleWriteOperation: singleWriteOperation, fileWriteOperation: fileWriteOperation)
+        var result: OverallWriteResult = .couldNotWriteEverything
+
+        writeSpinLoop: for _ in 0...writeSpinCount {
+            var oneResult: SingleWriteOperationResult
+            repeat {
+                guard !self.closed && self.isFlushPending else {
+                    result = .writtenCompletely
+                    break
+                }
+                if self.state.hasMultipleFlushedByteBuffers {
+                    oneResult = try triggerVectorWrite(vectorWriteOperation: vectorWriteOperation)
+                } else {
+                    oneResult = try triggerSingleWrite(singleWriteOperation: singleWriteOperation, fileWriteOperation: fileWriteOperation)
+                }
+                if oneResult == .wouldBlock {
+                    break writeSpinLoop
+                }
+            } while oneResult == .writtenCompletely
         }
 
         if !wasWritable {
@@ -355,7 +364,7 @@ final class PendingStreamWritesManager {
     /// - parameters:
     ///     - itemCount: The number of items we tried to write.
     ///     - result: The result of the write operation.
-    private func didWrite(itemCount: Int, result: IOResult<Int>) -> WriteResult {
+    private func didWrite(itemCount: Int, result: IOResult<Int>) -> SingleWriteOperationResult {
         let (fulfillPromises, result) = self.state.didWrite(itemCount: itemCount, result: result)
 
         if self.state.bytes < waterMark.lowerBound {
@@ -372,65 +381,37 @@ final class PendingStreamWritesManager {
     ///     - singleWriteOperation: An operation that writes a single, contiguous array of bytes (usually `write`).
     ///     - fileWriteOperation: An operation that writes a region of a file descriptor.
     private func triggerSingleWrite(singleWriteOperation: (UnsafeRawBufferPointer) throws -> IOResult<Int>,
-                                    fileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>) throws -> WriteResult {
-        if self.state.isFlushPending && !self.state.isEmpty {
-            for _ in 0..<writeSpinCount {
-                assert(!closed,
-                       "Channel got closed during the spinning of a single write operation which should be impossible as we don't call out")
-                let pending = self.state[0]
-                switch pending.data {
-                case .byteBuffer(let buffer):
-                    switch self.didWrite(itemCount: 1, result: try buffer.withUnsafeReadableBytes(singleWriteOperation)) {
-                    case .writtenPartially:
-                        continue
-                    case let other:
-                        return other
-                    }
-                case .fileRegion(let file):
-                    func with(_ fileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>) throws -> IOResult<Int> {
-                        let readerIndex = file.readerIndex
-                        let endIndex = file.endIndex
-                        return try file.fileHandle.withDescriptor { fd in
-                            return try fileWriteOperation(fd, readerIndex, endIndex)
-                        }
-                    }
-                    switch self.didWrite(itemCount: 1, result: try with(fileWriteOperation)) {
-                    case .writtenPartially:
-                        continue
-                    case let other:
-                        return other
-                    }
+                                    fileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>) throws -> SingleWriteOperationResult {
+        assert(self.state.isFlushPending && !self.state.isEmpty && !self.closed,
+               "single write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), closed: \(self.closed)")
+
+        switch self.state[0].data {
+        case .byteBuffer(let buffer):
+            return self.didWrite(itemCount: 1, result: try buffer.withUnsafeReadableBytes(singleWriteOperation))
+        case .fileRegion(let file):
+            func with(_ fileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>) throws -> IOResult<Int> {
+                let readerIndex = file.readerIndex
+                let endIndex = file.endIndex
+                return try file.fileHandle.withDescriptor { fd in
+                    return try fileWriteOperation(fd, readerIndex, endIndex)
                 }
             }
-            return .writtenPartially
+            return self.didWrite(itemCount: 1, result: try with(fileWriteOperation))
         }
-
-        return .nothingToBeWritten
     }
 
     /// Trigger a vector write operation. In other words: Write multiple contiguous arrays of bytes.
     ///
     /// - parameters:
     ///     - vectorWriteOperation: The vector write operation to use. Usually `writev`.
-    private func triggerVectorWrite(vectorWriteOperation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> WriteResult {
-        assert(self.state.isFlushPending && !self.state.isEmpty,
-               "vector write called in state flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty)")
-        for _ in 0..<writeSpinCount {
-            if closed {
-                return .closed
-            }
-            let (itemCount, result) = try doPendingWriteVectorOperation(pending: self.state,
-                                                                        iovecs: self.iovecs,
-                                                                        storageRefs: self.storageRefs,
-                                                                        vectorWriteOperation)
-            switch self.didWrite(itemCount: itemCount, result: result) {
-            case .writtenPartially:
-                continue
-            case let other:
-                return other
-            }
-        }
-        return .writtenPartially
+    private func triggerVectorWrite(vectorWriteOperation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> SingleWriteOperationResult {
+        assert(self.state.isFlushPending && !self.state.isEmpty && !self.closed,
+               "vector write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), closed: \(self.closed)")
+        let (itemCount, result) = try doPendingWriteVectorOperation(pending: self.state,
+                                                                    iovecs: self.iovecs,
+                                                                    storageRefs: self.storageRefs,
+                                                                    vectorWriteOperation)
+        return self.didWrite(itemCount: itemCount, result: result)
     }
 
     /// Fail all the outstanding writes. This is useful if for example the `Channel` is closed.

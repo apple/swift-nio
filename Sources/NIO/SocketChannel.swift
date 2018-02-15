@@ -15,10 +15,10 @@ import NIOConcurrencyHelpers
 
 private extension ByteBuffer {
     mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> IOResult<Int>) rethrows -> IOResult<Int> {
-        var writeResult: IOResult<Int>!
+        var singleResult: IOResult<Int>!
         _ = try self.writeWithUnsafeMutableBytes { ptr in
             let localWriteResult = try body(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), ptr.count)
-            writeResult = localWriteResult
+            singleResult = localWriteResult
             switch localWriteResult {
             case .processed(let written):
                 return written
@@ -26,7 +26,7 @@ private extension ByteBuffer {
                 return written
             }
         }
-        return writeResult
+        return singleResult
     }
 }
 
@@ -743,44 +743,38 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         return result
     }
 
-    private func writeToSocket(pendingWrites: PendingStreamWritesManager) throws -> WriteResult {
-        repeat {
-            let result = try pendingWrites.triggerAppropriateWriteOperation(singleWriteOperation: { ptr in
-                guard ptr.count > 0 else {
+    private func writeToSocket(pendingWrites: PendingStreamWritesManager) throws -> OverallWriteResult {
+        let result = try pendingWrites.triggerAppropriateWriteOperation(singleWriteOperation: { ptr in
+            guard ptr.count > 0 else {
+                // No need to call write if the buffer is empty.
+                return .processed(0)
+            }
+            // normal write
+            return try self.socket.write(pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), size: ptr.count)
+        }, vectorWriteOperation: { ptrs in
+            switch ptrs.count {
+            case 0:
+                // No need to call write if the buffer is empty.
+                return .processed(0)
+            case 1:
+                let p = ptrs[0]
+                guard p.iov_len > 0 else {
                     // No need to call write if the buffer is empty.
                     return .processed(0)
                 }
-                // normal write
-                return try self.socket.write(pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), size: ptr.count)
-            }, vectorWriteOperation: { ptrs in
-                switch ptrs.count {
-                case 0:
-                    // No need to call write if the buffer is empty.
-                    return .processed(0)
-                case 1:
-                    let p = ptrs[0]
-                    guard p.iov_len > 0 else {
-                        // No need to call write if the buffer is empty.
-                        return .processed(0)
-                    }
-                    return try self.socket.write(pointer: p.iov_base.assumingMemoryBound(to: UInt8.self), size: p.iov_len)
-                default:
-                    // Gathering write
-                    return try self.socket.writev(iovecs: ptrs)
-                }
-            }, fileWriteOperation: { descriptor, index, endIndex in
-                return try self.socket.sendFile(fd: descriptor, offset: index, count: endIndex - index)
-            })
-            if result.writable {
-                // writable again
-                self.pipeline.fireChannelWritabilityChanged0()
+                return try self.socket.write(pointer: p.iov_base.assumingMemoryBound(to: UInt8.self), size: p.iov_len)
+            default:
+                // Gathering write
+                return try self.socket.writev(iovecs: ptrs)
             }
-            if result.writeResult == .writtenCompletely && pendingWrites.isFlushPending {
-                // there are more buffers to process, so continue
-                continue
-            }
-            return result.writeResult
-        } while true
+        }, fileWriteOperation: { descriptor, index, endIndex in
+            return try self.socket.sendFile(fd: descriptor, offset: index, count: endIndex - index)
+        })
+        if result.writable {
+            // writable again
+            self.pipeline.fireChannelWritabilityChanged0()
+        }
+        return result.writeResult
     }
 
     override fileprivate func connectSocket(to address: SocketAddress) throws -> Bool {
@@ -913,16 +907,9 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         while !closed {
             do {
                 switch try self.writeToSocket(pendingWrites: pendingWrites) {
-                case .writtenPartially:
-                    // Could not write the next buffer(s) completely
-                    return false
-                case .wouldBlock:
+                case .couldNotWriteEverything:
                     return false
                 case .writtenCompletely:
-                    return true
-                case .closed:
-                    return true
-                case .nothingToBeWritten:
                     return true
                 }
             } catch let err {
