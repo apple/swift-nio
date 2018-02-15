@@ -288,7 +288,8 @@ public final class ClientBootstrap {
     private var channelInitializer: ((Channel) -> EventLoopFuture<()>)?
     private var channelOptions = ChannelOptionStorage()
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
-
+    private var resolver: Resolver?
+    
     /// Create a `ClientBootstrap` on the `EventLoopGroup` `group`.
     ///
     /// - parameters:
@@ -325,6 +326,15 @@ public final class ClientBootstrap {
         self.connectTimeout = timeout
         return self
     }
+    
+    /// Specifies the `Resolver` to use or `nil` if the default should be used.
+    ///
+    /// - parameters:
+    ///     - timeout: The resolver that will be used during the connection attempt.
+    public func resolver(_ resolver: Resolver?) -> Self {
+        self.resolver = resolver
+        return self
+    }
 
     /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
     ///
@@ -334,8 +344,8 @@ public final class ClientBootstrap {
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
         let loop = self.group.next()
-        let connector = HappyEyeballsConnector(resolver: GetaddrinfoResolver(loop: loop),
-                                               loop: self.group.next(),
+        let connector = HappyEyeballsConnector(resolver: resolver ?? GetaddrinfoResolver(loop: loop),
+                                               loop: loop,
                                                host: host,
                                                port: port,
                                                connectTimeout: self.connectTimeout) { eventLoop, protocolFamily in
