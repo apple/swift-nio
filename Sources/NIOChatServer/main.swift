@@ -122,9 +122,9 @@ let bootstrap = ServerBootstrap(group: group)
     // Set the handlers that are appled to the accepted Channels
     .childChannelInitializer { channel in
         // Add handler that will buffer data until a \n is received
-        return channel.pipeline.add(handler: LineDelimiterCodec()).then { v in
+        channel.pipeline.add(handler: LineDelimiterCodec()).then { v in
             // Its important we use the same handler for all accepted channels. The ChatHandler is thread-safe!
-            return channel.pipeline.add(handler: chatHandler)
+            channel.pipeline.add(handler: chatHandler)
         }
     }
     

@@ -395,8 +395,8 @@ let bootstrap = ServerBootstrap(group: group)
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
-        return channel.pipeline.addHTTPServerHandlers().then { _ in
-            return channel.pipeline.add(handler: HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
+        channel.pipeline.addHTTPServerHandlers().then { _ in
+            channel.pipeline.add(handler: HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
         }
     }
 
