@@ -36,7 +36,7 @@ private class PromiseOrderer {
         let thisPromiseIndex = promiseArray.count
         promiseArray.append(promise)
 
-        promise.futureResult.whenComplete { _ in
+        promise.futureResult.whenComplete {
             let priorFutures = self.promiseArray[0..<thisPromiseIndex]
             let subsequentFutures = self.promiseArray[(thisPromiseIndex + 1)...]
             let allPriorFuturesFired = priorFutures.map { $0.futureResult.fulfilled }.reduce(true, { $0 && $1 })
@@ -503,13 +503,14 @@ class HTTPResponseCompressorTest: XCTestCase {
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
         let writePromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
         channel.write(NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
-        writePromise.futureResult.whenComplete { result in
-            switch result {
-            case .success:
-                XCTFail("Write succeeded")
-            case .failure(HTTPResponseCompressor.CompressionError.uncompressedWritesPending):
-                break
-            case .failure(let err):
+        writePromise.futureResult.map {
+            XCTFail("Write succeeded")
+        }.whenFailure { err in
+            switch err {
+            case HTTPResponseCompressor.CompressionError.uncompressedWritesPending:
+                ()
+                // ok
+            default:
                 XCTFail("\(err)")
             }
         }

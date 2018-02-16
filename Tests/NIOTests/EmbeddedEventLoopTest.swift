@@ -211,14 +211,12 @@ public class EmbeddedEventLoopTest: XCTestCase {
             err = EmbeddedTestError()
             throw err!
         }
-        task.futureResult.whenComplete { result in
+        task.futureResult.map {
+            XCTFail("Scheduled future completed")
+        }.mapIfError { caughtErr in
+            XCTAssertTrue(err === caughtErr as? EmbeddedTestError)
+        }.whenComplete {
             fired = true
-            switch result {
-            case .success:
-                XCTFail("Scheduled future completed")
-            case .failure(let caughtErr):
-                XCTAssertTrue(err === caughtErr as? EmbeddedTestError)
-            }
         }
 
         loop.advanceTime(by: .nanoseconds(4))

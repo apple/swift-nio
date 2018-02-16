@@ -137,13 +137,10 @@ private final class HTTPHandler: ChannelInboundHandler {
                 self.buffer.clear()
                 self.continuousCount += 1
                 self.buffer.write(string: "line \(self.continuousCount)\n")
-                ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenComplete { res in
-                    switch res {
-                    case .success(()):
-                        _ = ctx.eventLoop.scheduleTask(in: .milliseconds(400), doNext)
-                    case .failure(_):
-                        ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
-                    }
+                ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).map {
+                    _ = ctx.eventLoop.scheduleTask(in: .milliseconds(400), doNext)
+                }.whenFailure { error in
+                    ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 }
             }
             ctx.writeAndFlush(self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
@@ -160,16 +157,11 @@ private final class HTTPHandler: ChannelInboundHandler {
             func doNext() {
                 self.buffer.clear()
                 self.buffer.write(string: strings[self.continuousCount])
-                ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenComplete { res in
-                    switch res {
-                    case .success(()):
-                        if self.continuousCount < strings.count - 1 {
-                            _ = ctx.eventLoop.scheduleTask(in: delay, doNext)
-                        } else {
-                            ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
-                        }
-                    case .failure(_):
-                        ()
+                ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenSuccess {
+                    if self.continuousCount < strings.count - 1 {
+                        _ = ctx.eventLoop.scheduleTask(in: delay, doNext)
+                    } else {
+                        ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                     }
                 }
                 self.continuousCount += 1
@@ -238,7 +230,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                                                     ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
                                                 }
                                                 return ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buffer))))
-                        }.then { _ in
+                        }.then {
                             ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)))
                         }.thenIfError { error in
                             if !responseStarted {
@@ -251,17 +243,17 @@ private final class HTTPHandler: ChannelInboundHandler {
                             } else {
                                 return ctx.close()
                             }
-                        }.whenComplete { res in
+                        }.whenComplete {
                             _ = try? file.close()
                         }
                 case .sendfile:
-                    ctx.write(self.wrapOutboundOut(.head(response))).then { _ in
+                    ctx.write(self.wrapOutboundOut(.head(response))).then {
                         ctx.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region))))
-                    }.then { _ in
+                    }.then {
                         ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)))
-                    }.thenIfError { _ in
+                    }.thenIfError { (_: Error) in
                         ctx.close()
-                    }.whenComplete { _ in
+                    }.whenComplete {
                         _ = try? file.close()
                     }
                 }
@@ -334,7 +326,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             if keepAlive {
                 ctx.write(self.wrapOutboundOut(HTTPServerResponsePart.end(nil)), promise: nil)
             } else {
-                ctx.write(self.wrapOutboundOut(HTTPServerResponsePart.end(nil))).whenComplete { _ in
+                ctx.write(self.wrapOutboundOut(HTTPServerResponsePart.end(nil))).whenComplete {
                     ctx.close(promise: nil)
                 }
             }
@@ -398,7 +390,7 @@ let bootstrap = ServerBootstrap(group: group)
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
-        channel.pipeline.addHTTPServerHandlers().then { _ in
+        channel.pipeline.addHTTPServerHandlers().then {
             channel.pipeline.add(handler: HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
         }
     }

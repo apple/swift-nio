@@ -588,21 +588,21 @@ internal final class SelectableEventLoop : EventLoop {
     }
 
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
-        self.closeGently().whenComplete { closeGentlyResult in
-            let closeResult: ()? = try? self.close0()
-            switch (closeGentlyResult, closeResult) {
-            case (.success(()), .some(())):
+        self.closeGently().map {
+            do {
+                try self.close0()
                 queue.async {
                     callback(nil)
                 }
-            case (.failure(let error), _):
+            } catch {
                 queue.async {
                     callback(error)
                 }
-            case (_, .none):
-                queue.async {
-                    callback(EventLoopError.shutdownFailed)
-                }
+            }
+        }.whenFailure { error in
+            _ = try? self.close0()
+            queue.async {
+                callback(error)
             }
         }
     }
@@ -701,7 +701,7 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
     /// - arguments:
     ///     - numThreads: The number of `Threads` to use.
     public convenience init(numThreads: Int) {
-        let initializers: [ThreadInitializer] = Array(repeatElement({ _ in }, count: numThreads))
+        let initializers: [ThreadInitializer] = Array(repeating: { _ in }, count: numThreads)
         self.init(threadInitializers: initializers)
     }
     
@@ -740,13 +740,9 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
 
         for loop in self.eventLoops {
             g.enter()
-            loop.closeGently().whenComplete {
-                switch $0 {
-                case .success:
-                    break
-                case .failure(let err):
-                    q.sync { error = err }
-                }
+            loop.closeGently().mapIfError { err in
+                q.sync { error = err }
+            }.whenComplete {
                 g.leave()
             }
         }

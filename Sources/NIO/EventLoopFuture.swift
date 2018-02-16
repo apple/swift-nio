@@ -15,7 +15,7 @@
 import NIOConcurrencyHelpers
 
 
-public enum EventLoopFutureValue<T> {
+private enum EventLoopFutureValue<T> {
     case success(T)
     case failure(Error)
 }
@@ -472,6 +472,13 @@ extension EventLoopFuture {
         }
     }
     
+    fileprivate func _whenCompleteWithValue(_ callback: @escaping (EventLoopFutureValue<T>) -> ()) {
+        _whenComplete {
+            callback(self.value!)
+            return CallbackList()
+        }
+    }
+
     public func whenSuccess(_ callback: @escaping (T) -> ()) {
         _whenComplete {
             if case .success(let t) = self.value! {
@@ -490,9 +497,14 @@ extension EventLoopFuture {
         }
     }
     
-    public func whenComplete(_ callback: @escaping (EventLoopFutureValue<T>) -> ()) {
+    /// The closure passed to `whenComplete` runs whether the `EventLoopFuture`
+    /// succeeded or failed but it doesn't deliver any value.
+    ///
+    /// - parameters:
+    ///    - callback: A closure that is run regardless of whether the `EventLoopFuture` succeeded or failed.
+    public func whenComplete(_ callback: @escaping () -> ()) {
         _whenComplete {
-            callback(self.value!)
+            callback()
             return CallbackList()
         }
     }
@@ -574,7 +586,7 @@ extension EventLoopFuture {
 extension EventLoopFuture {
     
     public func cascade(promise: EventLoopPromise<T>) {
-        whenComplete { v in
+        _whenCompleteWithValue { v in
             switch v {
             case .failure(let err):
                 promise.fail(error: err)
@@ -625,7 +637,7 @@ extension EventLoopFuture {
             return p0.futureResult
         }
 
-        let fn: EventLoopFuture<Void> = futures.reduce(p0.futureResult, { (f1: EventLoopFuture<Void>, f2: EventLoopFuture<Void>) in f1.and(f2).map({ _ in return () }) })
+        let fn: EventLoopFuture<Void> = futures.reduce(p0.futureResult, { (f1: EventLoopFuture<Void>, f2: EventLoopFuture<Void>) in f1.and(f2).map({ (_ : ((), ())) in }) })
         p0.succeed(result: ())
         return fn
     }

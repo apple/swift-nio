@@ -142,7 +142,7 @@ class ChannelPipelineTest: XCTestCase {
         let channel = EmbeddedChannel()
 
         let h = FireChannelReadOnRemoveHandler()
-        _ = try channel.pipeline.add(handler: h).then { _ in
+        _ = try channel.pipeline.add(handler: h).then {
             channel.pipeline.remove(handler: h)
         }.wait()
 
@@ -324,7 +324,7 @@ class ChannelPipelineTest: XCTestCase {
                     weakHandlerContext2 = ctx
                 }
                 weakHandler2 = handler2
-                XCTAssertNoThrow(try channel.pipeline.add(handler: handler1).then { _  in
+                XCTAssertNoThrow(try channel.pipeline.add(handler: handler1).then {
                     channel.pipeline.add(handler: handler2)
                     }.wait())
             }()

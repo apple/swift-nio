@@ -34,7 +34,7 @@ class EventLoopFutureTest : XCTestCase {
 
     func testAndAllWithAllSuccesses() throws {
         let eventLoop = EmbeddedEventLoop()
-        let promises: [EventLoopPromise<Void>] = (0..<100).map { _ in eventLoop.newPromise() }
+        let promises: [EventLoopPromise<Void>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
         let futures = promises.map { $0.futureResult }
 
         let fN: EventLoopFuture<Void> = EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
@@ -45,7 +45,7 @@ class EventLoopFutureTest : XCTestCase {
     func testAndAllWithAllFailures() throws {
         struct E: Error {}
         let eventLoop = EmbeddedEventLoop()
-        let promises: [EventLoopPromise<Void>] = (0..<100).map { _ in eventLoop.newPromise() }
+        let promises: [EventLoopPromise<Void>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
         let futures = promises.map { $0.futureResult }
 
         let fN: EventLoopFuture<Void> = EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
@@ -63,7 +63,7 @@ class EventLoopFutureTest : XCTestCase {
     func testAndAllWithOneFailure() throws {
         struct E: Error {}
         let eventLoop = EmbeddedEventLoop()
-        var promises: [EventLoopPromise<Void>] = (0..<100).map { _ in eventLoop.newPromise() }
+        var promises: [EventLoopPromise<Void>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
         _ = promises.map { $0.succeed(result: ()) }
         let failedPromise: EventLoopPromise<()> = eventLoop.newPromise()
         failedPromise.fail(error: E())
@@ -133,7 +133,7 @@ class EventLoopFutureTest : XCTestCase {
         }.thenIfErrorThrowing {
             XCTAssertEqual(.some(DummyError.dummyError), $0 as? DummyError)
             return 5
-        }.thenIfErrorThrowing { _ in
+        }.thenIfErrorThrowing { (_: Error) in
             XCTFail("shouldn't have been called")
             return 5
         }.whenSuccess {

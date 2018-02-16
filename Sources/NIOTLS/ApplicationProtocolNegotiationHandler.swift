@@ -119,7 +119,7 @@ public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler {
         }
 
         let switchFuture = completionHandler(result)
-        switchFuture.whenComplete { _ in
+        switchFuture.whenComplete {
             self.unbuffer(context: context)
             _ = context.pipeline.remove(handler: self)
         }

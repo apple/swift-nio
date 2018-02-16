@@ -172,7 +172,7 @@ private extension ByteBuffer {
 
 class HTTPUpgradeTestCase: XCTestCase {
     func testUpgradeWithoutUpgrade() throws {
-        let handler = HTTPServerUpgradeHandler(upgraders: [ExplodingUpgrader(forProtocol: "myproto")]) { _ in
+        let handler = HTTPServerUpgradeHandler(upgraders: [ExplodingUpgrader(forProtocol: "myproto")]) { (_: ChannelHandlerContext) in
             XCTFail("upgrade completed")
         }
         let (group, server, client) = try setUpTest(withHandlers: [handler])
@@ -190,7 +190,7 @@ class HTTPUpgradeTestCase: XCTestCase {
     }
 
     func testUpgradeAfterInitialRequest() throws {
-        let handler = HTTPServerUpgradeHandler(upgraders: [ExplodingUpgrader(forProtocol: "myproto")]) { _ in
+        let handler = HTTPServerUpgradeHandler(upgraders: [ExplodingUpgrader(forProtocol: "myproto")]) { (_: ChannelHandlerContext) in
             XCTFail("upgrade completed")
         }
         let (group, server, client) = try setUpTest(withHandlers: [handler])
@@ -214,7 +214,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTAssertEqual(.some(false), try? channel.finish())
         }
 
-        let handler = HTTPServerUpgradeHandler(upgraders: [ExplodingUpgrader(forProtocol: "myproto")]) { _ in
+        let handler = HTTPServerUpgradeHandler(upgraders: [ExplodingUpgrader(forProtocol: "myproto")]) { (_: ChannelHandlerContext) in
             XCTFail("upgrade completed")
         }
         let data = HTTPServerRequestPart.body(ByteBuffer.forString("hello"))
@@ -286,7 +286,7 @@ class HTTPUpgradeTestCase: XCTestCase {
     }
 
     func testUpgradeRequiresCorrectHeaders() throws {
-        let handler = HTTPServerUpgradeHandler(upgraders: [ExplodingUpgrader(forProtocol: "myproto", requiringHeaders: ["kafkaesque"])]) { _ in
+        let handler = HTTPServerUpgradeHandler(upgraders: [ExplodingUpgrader(forProtocol: "myproto", requiringHeaders: ["kafkaesque"])]) { (_: ChannelHandlerContext) in
             XCTFail("upgrade completed")
         }
         let (group, server, client) = try setUpTest(withHandlers: [handler])
@@ -304,7 +304,7 @@ class HTTPUpgradeTestCase: XCTestCase {
     }
 
     func testUpgradeRequiresHeadersInConnection() throws {
-        let handler = HTTPServerUpgradeHandler(upgraders: [ExplodingUpgrader(forProtocol: "myproto", requiringHeaders: ["kafkaesque"])]) { _ in
+        let handler = HTTPServerUpgradeHandler(upgraders: [ExplodingUpgrader(forProtocol: "myproto", requiringHeaders: ["kafkaesque"])]) { (_: ChannelHandlerContext) in
             XCTFail("upgrade completed")
         }
         let (group, server, client) = try setUpTest(withHandlers: [handler])
@@ -322,7 +322,7 @@ class HTTPUpgradeTestCase: XCTestCase {
     }
 
     func testUpgradeOnlyHandlesKnownProtocols() throws {
-        let handler = HTTPServerUpgradeHandler(upgraders: [ExplodingUpgrader(forProtocol: "myproto")]) { _ in
+        let handler = HTTPServerUpgradeHandler(upgraders: [ExplodingUpgrader(forProtocol: "myproto")]) { (_: ChannelHandlerContext) in
             XCTFail("upgrade completed")
         }
         let (group, server, client) = try setUpTest(withHandlers: [handler])

@@ -304,14 +304,9 @@ class EchoServerClientTest : XCTestCase {
             _ = ctx.eventLoop.scheduleTask(in: self.timeAmount) {
                 ctx.writeAndFlush(data, promise: nil)
                 self.group.leave()
-            }.futureResult.whenComplete { res in
-                switch res {
-                case .failure(let e):
-                    XCTFail("we failed to schedule the task: \(e)")
-                    self.group.leave()
-                default:
-                    ()
-                }
+            }.futureResult.mapIfError { e in
+                XCTFail("we failed to schedule the task: \(e)")
+                self.group.leave()
             }
             ctx.writeAndFlush(data, promise: nil)
         }
@@ -346,13 +341,8 @@ class EchoServerClientTest : XCTestCase {
         }
 
         public func channelActive(ctx: ChannelHandlerContext) {
-            ctx.close().whenComplete { val in
-                switch val {
-                case .success(()):
-                    ()
-                default:
-                    XCTFail("bad, initial close failed")
-                }
+            ctx.close().whenFailure { error in
+                XCTFail("bad, initial close failed (\(error))")
             }
         }
 
@@ -360,15 +350,17 @@ class EchoServerClientTest : XCTestCase {
             if alreadyClosedInChannelInactive.compareAndExchange(expected: false, desired: true) {
                 XCTAssertFalse(self.channelUnregisteredPromise.futureResult.fulfilled,
                                "channelInactive should fire before channelUnregistered")
-                ctx.close().whenComplete { val in
-                    switch val {
-                    case .failure(ChannelError.alreadyClosed):
+                ctx.close().map {
+                    XCTFail("unexpected success")
+                }.mapIfError { err in
+                    switch err {
+                    case ChannelError.alreadyClosed:
+                        // OK
                         ()
-                    case .success(()):
-                        XCTFail("unexpected success")
-                    case .failure(let e):
-                        XCTFail("unexpected error: \(e)")
+                    default:
+                        XCTFail("unexpected error: \(err)")
                     }
+                }.whenComplete {
                     self.channelInactivePromise.succeed(result: ())
                 }
             }
@@ -378,15 +370,17 @@ class EchoServerClientTest : XCTestCase {
             if alreadyClosedInChannelUnregistered.compareAndExchange(expected: false, desired: true) {
                 XCTAssertTrue(self.channelInactivePromise.futureResult.fulfilled,
                               "when channelUnregister fires, channelInactive should already have fired")
-                ctx.close().whenComplete { val in
-                    switch val {
-                    case .failure(ChannelError.alreadyClosed):
+                ctx.close().map {
+                    XCTFail("unexpected success")
+                }.mapIfError { err in
+                    switch err {
+                    case ChannelError.alreadyClosed:
+                        // OK
                         ()
-                    case .success(()):
-                        XCTFail("unexpected success")
-                    case .failure(let e):
-                        XCTFail("unexpected error: \(e)")
+                    default:
+                        XCTFail("unexpected error: \(err)")
                     }
+                }.whenComplete {
                     self.channelUnregisteredPromise.succeed(result: ())
                 }
             }
@@ -458,7 +452,7 @@ class EchoServerClientTest : XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 // When we've received all the bytes we know the connection is up. Remove the handler.
-                _ = bytesReceivedPromise.futureResult.then { _ in
+                _ = bytesReceivedPromise.futureResult.then { (_: ByteBuffer) in
                     channel.pipeline.remove(handler: byteCountingHandler)
                 }
 
@@ -484,13 +478,8 @@ class EchoServerClientTest : XCTestCase {
 
         // Now, with an empty write pipeline, we want to flush. This should complete immediately and without error.
         let flushFuture = clientChannel.flush()
-        flushFuture.whenComplete { result in
-            switch result {
-            case .success:
-                break
-            case .failure(let err):
-                XCTFail("\(err)")
-            }
+        flushFuture.whenFailure { err in
+            XCTFail("\(err)")
         }
         try flushFuture.wait()
     }
@@ -619,7 +608,7 @@ class EchoServerClientTest : XCTestCase {
             }
             
             private func writeUntilFailed(_ ctx: ChannelHandlerContext, _ buffer: ByteBuffer) {
-                ctx.writeAndFlush(NIOAny(buffer)).whenSuccess { _ in
+                ctx.writeAndFlush(NIOAny(buffer)).whenComplete {
                     ctx.eventLoop.execute {
                         self.writeUntilFailed(ctx, buffer)
                     }
@@ -643,15 +632,15 @@ class EchoServerClientTest : XCTestCase {
                 buffer.write(string: str)
                 
                 // write it four times and then close the connect.
-                ctx.writeAndFlush(NIOAny(buffer)).then { () in
+                ctx.writeAndFlush(NIOAny(buffer)).then {
                     ctx.writeAndFlush(NIOAny(buffer))
-                }.then { () in
+                }.then {
                     ctx.writeAndFlush(NIOAny(buffer))
-                }.then { () in
+                }.then {
                     ctx.writeAndFlush(NIOAny(buffer))
-                }.then { () in
+                }.then {
                     ctx.close()
-                }.whenComplete{ _ in
+                }.whenComplete {
                     self.dpGroup.leave()
                 }
             }

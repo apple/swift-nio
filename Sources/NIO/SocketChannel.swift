@@ -977,16 +977,13 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         }
 
         let p: EventLoopPromise<Void> = eventLoop.newPromise()
-        p.futureResult.whenComplete { v in
-            switch v {
-            case .failure(let e):
-                promise?.fail(error: e)
-            case .success(let res):
-                // Its important to call the methods before we actual notify the original promise for ordering reasons.
-                self.becomeActive0()
-                self.readIfNeeded0()
-                promise?.succeed(result: res)
-            }
+        p.futureResult.map {
+            // Its important to call the methods before we actual notify the original promise for ordering reasons.
+            self.becomeActive0()
+            self.readIfNeeded0()
+            promise?.succeed(result: ())
+        }.whenFailure{ error in
+            promise?.fail(error: error)
         }
         executeAndComplete(p) {
             try socket.bind(to: address)
@@ -1034,15 +1031,11 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         assert(eventLoop.inEventLoop)
 
         let ch = data.forceAsOther() as SocketChannel
-        let f = ch.register()
-        f.whenComplete { v in
-            switch v {
-            case .failure(_):
-                ch.close(promise: nil)
-            case .success(_):
-                ch.becomeActive0()
-                ch.readIfNeeded0()
-            }
+        ch.register().map {
+            ch.becomeActive0()
+            ch.readIfNeeded0()
+        }.whenFailure { error in
+            ch.close(promise: nil)
         }
     }
 }

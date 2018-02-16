@@ -191,7 +191,7 @@ class ByteBufferTest: XCTestCase {
     func testWithMutableWritePointerMovesWriterIndexAndReturnsNumBytesWritten() {
         XCTAssertEqual(0, buf.writerIndex)
         
-        let bytesWritten = buf.writeWithUnsafeMutableBytes { _ in return 5 }
+        let bytesWritten = buf.writeWithUnsafeMutableBytes { (_: UnsafeMutableRawBufferPointer) in return 5 }
         XCTAssertEqual(5, bytesWritten)
         XCTAssertEqual(5, buf.writerIndex)
     }

@@ -148,7 +148,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
         }
         
         let writePromise = promise ?? ctx.eventLoop.newPromise()
-        writePromise.futureResult.whenComplete { _ in
+        writePromise.futureResult.whenComplete {
             self.lastWriteCompleteTime = DispatchTime.now()
         }
         ctx.write(data, promise: writePromise)

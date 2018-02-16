@@ -86,13 +86,13 @@
 ///
 /// ```
 /// ChannelPipeline p = ...;
-/// let future = p.add(name: "1", handler: InboundHandlerA()).then { _ in
-///   return p.add(name: "2", handler: InboundHandlerB())
-/// }.then { _ in
-///   return p.add(name: "3", handler: OutboundHandlerA())
-/// }.then { _ in
+/// let future = p.add(name: "1", handler: InboundHandlerA()).then {
+///   p.add(name: "2", handler: InboundHandlerB())
+/// }.then {
+///   p.add(name: "3", handler: OutboundHandlerA())
+/// }.then {
 ///   p.add(name: "4", handler: OutboundHandlerB())
-/// }.then { _ in
+/// }.then {
 ///   p.add(name: "5", handler: InboundOutboundHandlerX())
 /// }
 /// // Handle the future as well ....
@@ -1201,28 +1201,13 @@ public final class ChannelHandlerContext : ChannelInvoker {
 
         if let outboundHandler = self.outboundHandler {
             if let promise = promise {
-                var counter = 2
-                let callback: (EventLoopFutureValue<Void>) -> Void = { v in
-                    switch v {
-                    case .failure(let err):
-                        promise.fail(error: err)
-                    case .success(_):
-                        counter -= 1
-                        if counter == 0 {
-                            promise.succeed(result: ())
-                        }
-                        assert(counter >= 0)
-                    }
-                }
-
                 let writePromise: EventLoopPromise<Void> = eventLoop.newPromise()
                 let flushPromise: EventLoopPromise<Void> = eventLoop.newPromise()
 
                 outboundHandler.write(ctx: self, data: data, promise: writePromise)
                 outboundHandler.flush(ctx: self, promise: flushPromise)
 
-                writePromise.futureResult.whenComplete(callback)
-                flushPromise.futureResult.whenComplete(callback)
+                writePromise.futureResult.and(flushPromise.futureResult).map { (_: ((), ())) in }.cascade(promise: promise)
             } else {
                 outboundHandler.write(ctx: self, data: data, promise: nil)
                 outboundHandler.flush(ctx: self, promise: nil)

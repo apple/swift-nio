@@ -424,8 +424,8 @@ internal class HappyEyeballsConnector {
         // The two queries SHOULD be made as soon after one another as possible,
         // with the AAAA query made first and immediately followed by the A
         // query.
-        resolver.initiateAAAAQuery(host: host, port: port).whenComplete(aaaaLookupComplete)
-        resolver.initiateAQuery(host: host, port: port).whenComplete(aLookupComplete)
+        whenAAAALookupComplete(future: resolver.initiateAAAAQuery(host: host, port: port))
+        whenALookupComplete(future: resolver.initiateAQuery(host: host, port: port))
     }
 
     /// Called when the A query has completed before the AAAA query.
@@ -533,33 +533,30 @@ internal class HappyEyeballsConnector {
                 self.pendingConnections.remove(element: channelFuture)
                 channel.close(promise: nil)
             default:
-                channel.connect(to: target).whenComplete { result in
-                    switch result {
-                    case .success:
-                        // The channel has connected. If we are in the complete state we want to abandon this channel.
-                        // Otherwise, fire the channel connected event. Either way we don't want the channel future to
-                        // be in our list of pending connections, so we don't either double close or close the connection
-                        // we want to use.
-                        self.pendingConnections.remove(element: channelFuture)
+                channel.connect(to: target).map {
+                    // The channel has connected. If we are in the complete state we want to abandon this channel.
+                    // Otherwise, fire the channel connected event. Either way we don't want the channel future to
+                    // be in our list of pending connections, so we don't either double close or close the connection
+                    // we want to use.
+                    self.pendingConnections.remove(element: channelFuture)
 
-                        switch self.state {
-                        case .complete:
-                            channel.close(promise: nil)
-                        default:
-                            self.processInput(.connectSuccess)
-                            self.resolutionPromise.succeed(result: channel)
-                        }
-                    case .failure(let err):
-                        // The connection attempt failed. If we're in the complete state then there's nothing
-                        // to do. Otherwise, notify the state machine of the failure.
-                        switch self.state {
-                        case .complete:
-                            assert(self.pendingConnections.index { $0 === channelFuture } == nil, "failed but was still in pending connections")
-                        default:
-                            self.error.connectionErrors.append(SingleConnectionFailure(target: target, error: err))
-                            self.pendingConnections.remove(element: channelFuture)
-                            self.processInput(.connectFailed)
-                        }
+                    switch self.state {
+                    case .complete:
+                        channel.close(promise: nil)
+                    default:
+                        self.processInput(.connectSuccess)
+                        self.resolutionPromise.succeed(result: channel)
+                    }
+                }.whenFailure { err in
+                    // The connection attempt failed. If we're in the complete state then there's nothing
+                    // to do. Otherwise, notify the state machine of the failure.
+                    switch self.state {
+                    case .complete:
+                        assert(self.pendingConnections.index { $0 === channelFuture } == nil, "failed but was still in pending connections")
+                    default:
+                        self.error.connectionErrors.append(SingleConnectionFailure(target: target, error: err))
+                        self.pendingConnections.remove(element: channelFuture)
+                        self.processInput(.connectFailed)
                     }
                 }
             }
@@ -603,36 +600,33 @@ internal class HappyEyeballsConnector {
     }
 
     /// A future callback that fires when a DNS A lookup completes.
-    private func aLookupComplete(result: EventLoopFutureValue<[SocketAddress]>) {
-        dnsResolutions += 1
-
-        switch result {
-        case .success(let results):
-            targets.aResultsAvailable(results)
-        case .failure(let err):
+    private func whenALookupComplete(future: EventLoopFuture<[SocketAddress]>) {
+        future.map { results in
+            self.targets.aResultsAvailable(results)
+        }.mapIfError { err in
             self.error.dnsAError = err
+        }.whenComplete {
+            self.dnsResolutions += 1
+            self.processInput(.resolverACompleted)
         }
-
-        processInput(.resolverACompleted)
     }
 
     /// A future callback that fires when a DNS AAAA lookup completes.
-    private func aaaaLookupComplete(result: EventLoopFutureValue<[SocketAddress]>) {
-        // It's possible that we were waiting to time out here, so if we were we should
-        // cancel that.
-        resolutionTask?.cancel()
-        resolutionTask = nil
-
-        dnsResolutions += 1
-
-        switch result {
-        case .success(let results):
-            targets.aaaaResultsAvailable(results)
-        case .failure(let err):
+    private func whenAAAALookupComplete(future: EventLoopFuture<[SocketAddress]>) {
+        future.map { results in
+            self.targets.aaaaResultsAvailable(results)
+        }.mapIfError { err in
             self.error.dnsAAAAError = err
-        }
+        }.whenComplete {
+            // It's possible that we were waiting to time out here, so if we were we should
+            // cancel that.
+            self.resolutionTask?.cancel()
+            self.resolutionTask = nil
 
-        processInput(.resolverAAAACompleted)
+            self.dnsResolutions += 1
+
+            self.processInput(.resolverAAAACompleted)
+        }
     }
 
     /// A future callback that fires when the resolution delay completes.
