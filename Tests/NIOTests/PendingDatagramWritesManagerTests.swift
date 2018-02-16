@@ -110,15 +110,15 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                            returns: [FakeWriteResult],
                                            promiseStates: [[Bool]],
                                            file: StaticString = #file,
-                                           line: UInt = #line) throws -> WriteResult {
+                                           line: UInt = #line) throws -> OverallWriteResult {
         var everythingState = 0
         var singleState = 0
         var multiState = 0
         var err: Error? = nil
-        var result: WriteResult? = nil
+        var result: OverallWriteResult? = nil
 
         do {
-            let r = try pwm.triggerAppropriateWriteOperation(singleWriteOperation: { (buf, addr, len) in
+            let r = try pwm.triggerAppropriateWriteOperations(scalarWriteOperation: { (buf, addr, len) in
                 defer {
                     singleState += 1
                     everythingState += 1
@@ -261,7 +261,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    expectedVectorWritabilities: nil,
                                                    returns: [],
                                                    promiseStates: [[true, false]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
 
             pwm.markFlushCheckpoint(promise: nil)
 
@@ -271,7 +271,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    expectedVectorWritabilities: nil,
                                                    returns: [.ok(.processed(0))],
                                                    promiseStates: [[true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
         }
     }
 
@@ -298,7 +298,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        expectedVectorWritabilities: [[(4, firstAddress), (4, secondAddress)]],
                                                        returns: [.ok(.processed(2))],
                                                        promiseStates: [[true, true, false]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
 
             pwm.markFlushCheckpoint(promise: nil)
 
@@ -308,7 +308,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    expectedVectorWritabilities: nil,
                                                    returns: [.ok(.processed(0))],
                                                    promiseStates: [[true, true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
         }
     }
 
@@ -339,19 +339,18 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        returns: [.ok(.processed(1)), .ok(.wouldBlock(0))],
                                                        promiseStates: [[true, false, false, false], [true, false, false, false]])
 
-            XCTAssertEqual(WriteResult.wouldBlock, result)
+            XCTAssertEqual(.couldNotWriteEverything, result)
             result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                    promises: ps,
-                                                   expectedSingleWritabilities: nil,
+                                                   expectedSingleWritabilities: [(4, secondAddress)],
                                                    expectedVectorWritabilities: [
                                                         [(4, secondAddress), (4, firstAddress), (4, secondAddress)],
-                                                        [(4, secondAddress)],
                                                    ],
                                                    returns: [.ok(.processed(2)), .ok(.wouldBlock(0))],
                                                    promiseStates: [[true, true, true, false], [true, true, true, false]]
 
             )
-            XCTAssertEqual(WriteResult.wouldBlock, result)
+            XCTAssertEqual(.couldNotWriteEverything, result)
 
             result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                    promises: ps,
@@ -359,7 +358,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    expectedVectorWritabilities: nil,
                                                    returns: [.ok(.processed(4))],
                                                    promiseStates: [[true, true, true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
         }
     }
 
@@ -372,7 +371,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         buffer.write(bytes: Array<UInt8>(repeating: 0xff, count: 12))
 
         try withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0...pwm.writeSpinCount).map { _ in el.newPromise() }
+            let ps: [EventLoopPromise<()>] = (0...pwm.writeSpinCount+1).map { _ in el.newPromise() }
             ps.forEach { _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: $0) }
             let maxVectorWritabilities = ps.map { _ in (buffer.readableBytes, address) }
             let actualVectorWritabilities = maxVectorWritabilities.indices.dropLast().map { Array(maxVectorWritabilities[$0...]) }
@@ -381,15 +380,15 @@ class PendingDatagramWritesManagerTests: XCTestCase {
             pwm.markFlushCheckpoint(promise: nil)
 
             /* below, we'll write 1 datagram at a time. So the number of datagrams offered should decrease by one.
-             The write operation should be repeated until we did it 1 + spin count times and then return `.writtenPartially`.
+             The write operation should be repeated until we did it 1 + spin count times and then return `.couldNotWriteEverything`.
              After that, one datagram will remain */
             var result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                        promises: ps,
                                                        expectedSingleWritabilities: nil,
-                                                       expectedVectorWritabilities: actualVectorWritabilities,
+                                                       expectedVectorWritabilities: Array(actualVectorWritabilities),
                                                        returns: Array(repeating: .ok(.processed(1)), count: ps.count - 1),
                                                        promiseStates: actualPromiseStates)
-            XCTAssertEqual(.writtenPartially, result)
+            XCTAssertEqual(.couldNotWriteEverything, result)
 
             /* we'll now write the one last datagram and assert that all the writes are complete */
             result = try assertExpectedWritability(pendingWritesManager: pwm,
@@ -423,7 +422,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        expectedVectorWritabilities: [[(4, address), (4, address)]],
                                                        returns: [.ok(.wouldBlock(0))],
                                                        promiseStates: [[false, false, false], [false, false, false]])
-            XCTAssertEqual(WriteResult.wouldBlock, result)
+            XCTAssertEqual(.couldNotWriteEverything, result)
 
             pwm.failAll(error: ChannelError.operationUnsupported, close: true)
 
@@ -455,11 +454,11 @@ class PendingDatagramWritesManagerTests: XCTestCase {
 
             let result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                        promises: ps,
-                                                       expectedSingleWritabilities: nil,
-                                                       expectedVectorWritabilities: [[(halfTheWriteVLimit, address), (halfTheWriteVLimit, address)], [(halfTheWriteVLimit, address)]],
+                                                       expectedSingleWritabilities: [(halfTheWriteVLimit, address)],
+                                                       expectedVectorWritabilities: [[(halfTheWriteVLimit, address), (halfTheWriteVLimit, address)]],
                                                        returns: [.ok(.processed(2)), .ok(.processed(1))],
                                                        promiseStates: [[true, true, false], [true, true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
         }
     }
 
@@ -490,18 +489,16 @@ class PendingDatagramWritesManagerTests: XCTestCase {
 
             let result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                        promises: ps,
-                                                       expectedSingleWritabilities: [
-                                                            (Socket.writevLimitBytes + 23, address),
-                                                            (Socket.writevLimitBytes - 77, address),
-                                                            (Socket.writevLimitBytes - 77, address)],
-                                                       expectedVectorWritabilities: nil,
+                                                       expectedSingleWritabilities: [(Socket.writevLimitBytes + 23, address),
+                                                                                     (Socket.writevLimitBytes - 77, address)],
+                                                       expectedVectorWritabilities: [[(Socket.writevLimitBytes - 77, address)]],
                                                        returns: [
                                                             .error(IOError(errnoCode: EMSGSIZE, reason: "")),
-                                                            .ok(.processed(Socket.writevLimitBytes - 77)),
-                                                            .ok(.processed(Socket.writevLimitBytes - 77))],
+                                                            .ok(.processed(1)),
+                                                            .ok(.processed(1))],
                                                        promiseStates: [[true, false, false], [true, true, false], [true, true, true]])
 
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
             XCTAssertTrue(flushPromise1.futureResult.fulfilled)
 
             XCTAssertNoThrow(try ps[1].futureResult.wait())
@@ -561,7 +558,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    expectedVectorWritabilities: [[(4, address), (4, address), (4, address)]],
                                                    returns: [.ok(.processed(3))],
                                                    promiseStates: [[true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
         }
     }
 
@@ -584,7 +581,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        expectedVectorWritabilities: [[(0, address), (0, address)]],
                                                        returns: [.ok(.processed(2))],
                                                        promiseStates: [[true, true, false]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
 
             pwm.markFlushCheckpoint(promise: nil)
 
@@ -594,7 +591,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    expectedVectorWritabilities: nil,
                                                    returns: [.ok(.processed(0))],
                                                    promiseStates: [[true, true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
         }
     }
 
@@ -622,7 +619,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        expectedVectorWritabilities: [[(4, address), (4, address)]],
                                                        returns: [.ok(.processed(1))],
                                                        promiseStates: [[true, true, true]])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
             XCTAssertNoThrow(try ps[0].futureResult.wait())
             XCTAssertThrowsError(try ps[1].futureResult.wait())
             XCTAssertThrowsError(try ps[2].futureResult.wait())
@@ -646,12 +643,12 @@ class PendingDatagramWritesManagerTests: XCTestCase {
 
             var result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                        promises: ps,
-                                                       expectedSingleWritabilities: nil,
-                                                       expectedVectorWritabilities: [Array(repeating: (4, address), count: Socket.writevLimitIOVectors), [(4, address)]],
+                                                       expectedSingleWritabilities: [(4, address)],
+                                                       expectedVectorWritabilities: [Array(repeating: (4, address), count: Socket.writevLimitIOVectors)],
                                                        returns: [.ok(.processed(Socket.writevLimitIOVectors)), .ok(.wouldBlock(0))],
                                                        promiseStates: [Array(repeating: true, count: Socket.writevLimitIOVectors) + [false],
                                                                        Array(repeating: true, count: Socket.writevLimitIOVectors) + [false]])
-            XCTAssertEqual(WriteResult.wouldBlock, result)
+            XCTAssertEqual(.couldNotWriteEverything, result)
             XCTAssertFalse(flushPromise.futureResult.fulfilled)
             result = try assertExpectedWritability(pendingWritesManager: pwm,
                                                    promises: ps,
@@ -659,7 +656,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    expectedVectorWritabilities: nil,
                                                    returns: [.ok(.processed(4))],
                                                    promiseStates: [Array(repeating: true, count: Socket.writevLimitIOVectors + 1)])
-            XCTAssertEqual(WriteResult.writtenCompletely, result)
+            XCTAssertEqual(.writtenCompletely, result)
             XCTAssertTrue(flushPromise.futureResult.fulfilled)
         }
     }

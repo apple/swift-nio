@@ -255,7 +255,7 @@ public class ChannelTests: XCTestCase {
         var singleState = 0
         var multiState = 0
         var fileState = 0
-        let (result, _) = try pwm.triggerAppropriateWriteOperation(singleWriteOperation: { buf in
+        let (result, _) = try pwm.triggerAppropriateWriteOperations(scalarBufferWriteOperation: { buf in
             defer {
                 singleState += 1
                 everythingState += 1
@@ -273,7 +273,7 @@ public class ChannelTests: XCTestCase {
                 XCTFail("single write called on \(buf) but no single writes expected", file: file, line: line)
                 return IOResult.wouldBlock(-1 * (everythingState + 1))
             }
-        }, vectorWriteOperation: { ptrs in
+        }, vectorBufferWriteOperation: { ptrs in
             defer {
                 multiState += 1
                 everythingState += 1
@@ -294,7 +294,7 @@ public class ChannelTests: XCTestCase {
                     file: file, line: line)
                 return IOResult.wouldBlock(-1 * (everythingState + 1))
             }
-        }, fileWriteOperation: { _, start, end in
+        }, scalarFileWriteOperation: { _, start, end in
             defer {
                 fileState += 1
                 everythingState += 1
