@@ -75,7 +75,7 @@ final class DatagramChannelTests: XCTestCase {
         return try DatagramBootstrap(group: group)
             .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .channelInitializer { channel in
-                return channel.pipeline.add(name: "ByteReadRecorder", handler: DatagramReadRecorder<ByteBuffer>())
+                channel.pipeline.add(name: "ByteReadRecorder", handler: DatagramReadRecorder<ByteBuffer>())
             }
             .bind(host: "127.0.0.1", port: 0)
             .wait()

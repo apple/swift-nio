@@ -45,10 +45,8 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             
-            // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
-                // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-                return channel.pipeline.add(handler: countingHandler)
+                channel.pipeline.add(handler: countingHandler)
             }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
@@ -81,7 +79,7 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                return channel.pipeline.add(handler: WriteALotHandler())
+                channel.pipeline.add(handler: WriteALotHandler())
             }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
@@ -91,8 +89,8 @@ class EchoServerClientTest : XCTestCase {
         let promise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let clientChannel = try ClientBootstrap(group: group)
             .channelInitializer { channel in
-                return channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: "X")).then { v2 in
-                    return channel.pipeline.add(handler: ByteCountingHandler(numBytes: 10000, promise: promise))
+                channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: "X")).then { v2 in
+                    channel.pipeline.add(handler: ByteCountingHandler(numBytes: 10000, promise: promise))
                 }
             }
             .connect(to: serverChannel.localAddress!).wait()
@@ -124,7 +122,7 @@ class EchoServerClientTest : XCTestCase {
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-                return channel.pipeline.add(handler: countingHandler)
+                channel.pipeline.add(handler: countingHandler)
             }.bind(unixDomainSocketPath: udsTempDir + "/server.sock").wait()
 
         defer {
@@ -166,8 +164,7 @@ class EchoServerClientTest : XCTestCase {
 
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
-                // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-                return channel.pipeline.add(handler: countingHandler)
+                channel.pipeline.add(handler: countingHandler)
             }.bind(unixDomainSocketPath: udsTempDir + "/server.sock").wait()
 
         defer {
@@ -207,7 +204,7 @@ class EchoServerClientTest : XCTestCase {
         }
         
         let clientChannel = try ClientBootstrap(group: group)
-            .channelInitializer({ $0.pipeline.add(handler: handler) })
+            .channelInitializer { $0.pipeline.add(handler: handler) }
             .connect(to: serverChannel.localAddress!).wait()
         
         defer {
@@ -226,7 +223,7 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                return channel.pipeline.add(handler: EchoServer())
+                channel.pipeline.add(handler: EchoServer())
             }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
@@ -236,7 +233,7 @@ class EchoServerClientTest : XCTestCase {
         let numBytes = 16 * 1024
         let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().newPromise())
         let clientChannel = try ClientBootstrap(group: group)
-            .channelInitializer({ $0.pipeline.add(handler: countingHandler) })
+            .channelInitializer { $0.pipeline.add(handler: countingHandler) }
             .connect(to: serverChannel.localAddress!).wait()
 
         defer {
@@ -428,10 +425,8 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
-            // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
-                // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-                return channel.pipeline.add(handler: handler)
+                channel.pipeline.add(handler: handler)
             }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
@@ -467,7 +462,6 @@ class EchoServerClientTest : XCTestCase {
                     channel.pipeline.remove(handler: byteCountingHandler)
                 }
 
-                // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                 return channel.pipeline.add(handler: byteCountingHandler)
             }.bind(host: "127.0.0.1", port: 0).wait()
 
@@ -510,7 +504,7 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                return channel.pipeline.add(handler: EchoServer())
+                channel.pipeline.add(handler: EchoServer())
             }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
@@ -521,8 +515,8 @@ class EchoServerClientTest : XCTestCase {
         let promise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let clientChannel = try ClientBootstrap(group: group)
             .channelInitializer { channel in
-                return channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite)).then { v2 in
-                    return channel.pipeline.add(handler: ByteCountingHandler(numBytes: stringToWrite.utf8.count, promise: promise))
+                channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite)).then {
+                    channel.pipeline.add(handler: ByteCountingHandler(numBytes: stringToWrite.utf8.count, promise: promise))
                 }
             }
             .connect(to: serverChannel.localAddress!).wait()
@@ -544,7 +538,7 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                return channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite))
+                channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite))
             }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
@@ -554,7 +548,7 @@ class EchoServerClientTest : XCTestCase {
         let promise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
         let clientChannel = try ClientBootstrap(group: group)
             .channelInitializer { channel in
-                return channel.pipeline.add(handler: ByteCountingHandler(numBytes: stringToWrite.utf8.count, promise: promise))
+                channel.pipeline.add(handler: ByteCountingHandler(numBytes: stringToWrite.utf8.count, promise: promise))
             }
             .connect(to: serverChannel.localAddress!).wait()
 
@@ -574,7 +568,7 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                return channel.pipeline.add(handler: EchoAndEchoAgainAfterSomeTimeServer(time: .seconds(1), secondWriteDoneHandler: {
+                channel.pipeline.add(handler: EchoAndEchoAgainAfterSomeTimeServer(time: .seconds(1), secondWriteDoneHandler: {
                     dpGroup.leave()
                 }))
             }.bind(host: "127.0.0.1", port: 0).wait()
@@ -586,7 +580,7 @@ class EchoServerClientTest : XCTestCase {
         let str = "hi there"
         let countingHandler = ByteCountingHandler(numBytes: str.utf8.count, promise: group.next().newPromise())
         let clientChannel = try ClientBootstrap(group: group)
-            .channelInitializer({ $0.pipeline.add(handler: countingHandler) })
+            .channelInitializer { $0.pipeline.add(handler: countingHandler) }
             .connect(to: serverChannel.localAddress!).wait()
 
         var buffer = clientChannel.allocator.buffer(capacity: str.utf8.count)
@@ -666,7 +660,7 @@ class EchoServerClientTest : XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.socket(SocketOptionLevel(IPPROTO_TCP), TCP_NODELAY), value: 1)
             .childChannelInitializer { channel in
-                return channel.pipeline.add(handler: WriteWhenActiveHandler(str, dpGroup))
+                channel.pipeline.add(handler: WriteWhenActiveHandler(str, dpGroup))
             }.bind(host: "127.0.0.1", port: 0).wait()
         
         defer {
@@ -677,9 +671,9 @@ class EchoServerClientTest : XCTestCase {
             // We will only start reading once we wrote all data on the accepted channel.
             //.channelOption(ChannelOptions.autoRead, value: false)
             .channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 2))
-            .channelInitializer{ channel in
-                return channel.pipeline.add(handler: WriteHandler()).then{ _ in
-                    return channel.pipeline.add(handler: countingHandler)
+            .channelInitializer { channel in
+                channel.pipeline.add(handler: WriteHandler()).then {
+                    channel.pipeline.add(handler: countingHandler)
                 }
             }.connect(to: serverChannel.localAddress!).wait()
         defer {
