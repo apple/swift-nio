@@ -15,113 +15,6 @@
 import NIOConcurrencyHelpers
 import Dispatch
 
-private final class FileIOThreadPool {
-    public enum WorkItemState {
-        case active
-        case cancelled
-    }
-    public typealias WorkItem = (WorkItemState) -> Void
-    private enum State {
-        /// The `FileIOThreadPool` is already stopped.
-        case stopped
-        /// The `FileIOThreadPool` is shutting down, the array has one boolean entry for each thread indicating if it has shut down already.
-        case shuttingDown([Bool])
-        /// The `FileIOThreadPool` is up and running, the `CircularBuffer` containing the yet unprocessed `WorkItems`.
-        case running(CircularBuffer<WorkItem>)
-    }
-    private let semaphore = DispatchSemaphore(value: 0)
-    private let lock = Lock()
-    private let queues: [DispatchQueue]
-    private var state: State = .stopped
-    private let numberOfThreads: Int
-
-    public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
-        let g = DispatchGroup()
-        self.lock.withLock {
-            switch self.state {
-            case .running(let items):
-                items.forEach { $0(.cancelled) }
-                self.state = .shuttingDown(Array(repeating: true, count: numberOfThreads))
-                (0..<numberOfThreads).forEach { _ in
-                    self.semaphore.signal()
-                }
-            case .shuttingDown, .stopped:
-                ()
-            }
-
-            self.queues.forEach { q in
-                q.async(group: g) {}
-            }
-
-            g.notify(queue: queue) {
-                callback(nil)
-            }
-        }
-    }
-
-    public func submit(_ fn: @escaping WorkItem) {
-        let item = self.lock.withLock { () -> WorkItem? in
-            switch self.state {
-            case .running(var items):
-                items.append(fn)
-                self.state = .running(items)
-                self.semaphore.signal()
-                return nil
-            case .shuttingDown, .stopped:
-                return fn
-            }
-        }
-        /* if item couldn't be added run it immediately indicating that it couldn't be run */
-        item.map { $0(.cancelled) }
-    }
-
-    internal init(numberOfThreads: Int) {
-        self.numberOfThreads = numberOfThreads
-        self.queues = (0..<numberOfThreads).map {
-            DispatchQueue(label: "FileIOThreadPool thread #\($0)")
-        }
-    }
-
-    private func process(identifier: Int) {
-        var item: WorkItem? = nil
-        repeat {
-            /* wait until work has become available */
-            self.semaphore.wait()
-
-            item = self.lock.withLock { () -> (WorkItem)? in
-                switch self.state {
-                case .running(var items):
-                    let item = items.removeFirst()
-                    self.state = .running(items)
-                    return item
-                case .shuttingDown(var aliveStates):
-                    assert(aliveStates[identifier])
-                    aliveStates[identifier] = false
-                    self.state = .shuttingDown(aliveStates)
-                    return nil
-                case .stopped:
-                    return nil
-                }
-            }
-            /* if there was a work item popped, run it */
-            item.map { $0(.active) }
-        } while item != nil
-    }
-
-    internal func start() {
-        self.lock.withLock {
-            self.state = .running(CircularBuffer(initialRingCapacity: 16))
-        }
-        self.queues.enumerated().forEach { idAndQueue in
-            let id = idAndQueue.0
-            let q = idAndQueue.1
-            q.async { [unowned self] in
-                self.process(identifier: id)
-            }
-        }
-    }
-}
-
 /// `NonBlockingFileIO` is a helper that allows you to read files without blocking the calling thread.
 ///
 /// It is worth noting that `kqueue`, `epoll` or `poll` returning claiming a file is readable does not mean that the
@@ -150,15 +43,14 @@ public struct NonBlockingFileIO {
         case descriptorSetToNonBlocking
     }
 
-    private let threadPool: FileIOThreadPool
+    private let threadPool: BlockingIOThreadPool
 
-    /// Initialize a `NonBlockingFileIO` thread pool with `numberOfThreads` threads.
+    /// Initialize a `NonBlockingFileIO` which uses the `BlockingIOThreadPool`.
     ///
     /// - parameters:
-    ///   - numberOfThreads: The number of threads to use for the thread pool.
-    public init(numberOfThreads: Int = NonBlockingFileIO.defaultThreadPoolSize) {
-        self.threadPool = FileIOThreadPool(numberOfThreads: numberOfThreads)
-        self.threadPool.start()
+    ///   - threadPool: The `BlockingIOThreadPool` that will be used for all the IO.
+    public init(threadPool: BlockingIOThreadPool) {
+        self.threadPool = threadPool
     }
 
     /// Read a `FileRegion` in chunks of `chunkSize` bytes on `NonBlockingFileIO`'s private thread
@@ -296,7 +188,7 @@ public struct NonBlockingFileIO {
         let p: EventLoopPromise<ByteBuffer> = eventLoop.newPromise()
         var buf = allocator.buffer(capacity: byteCount)
         self.threadPool.submit { shouldRun in
-            guard case shouldRun = FileIOThreadPool.WorkItemState.active else {
+            guard case shouldRun = BlockingIOThreadPool.WorkItemState.active else {
                 p.fail(error: ChannelError.ioOnClosedChannel)
                 return
             }
@@ -332,36 +224,5 @@ public struct NonBlockingFileIO {
             p.succeed(result: buf)
         }
         return p.futureResult
-    }
-
-    /// Shut this `NonBlockingFileIO` down.
-    ///
-    /// - parameters:
-    ///   - queue: The `DispatchQueue` on which to call `callback`.
-    ///   - callback: The callback and optionally an `Error` on why the operation failed.
-    func shutdownGracefully(queue: DispatchQueue = .global(), _ callback: @escaping (Swift.Error?) -> Void) {
-        self.threadPool.shutdownGracefully(queue: queue, callback)
-    }
-
-    /// Shut this `NonBlockingFileIO` synchronously. This call will block until the `NonBlockingFileIO` and its
-    /// thread pool have shut down fully. This might take some time as outstanding IO requests will first be fulfilled.
-    public func syncShutdownGracefully() throws {
-        let errorStorageLock = Lock()
-        var errorStorage: Swift.Error? = nil
-        let continuation = DispatchWorkItem {}
-        self.shutdownGracefully { error in
-            if let error = error {
-                errorStorageLock.withLock {
-                    errorStorage = error
-                }
-            }
-            continuation.perform()
-        }
-        continuation.wait()
-        try errorStorageLock.withLock {
-            if let error = errorStorage {
-                throw error
-            }
-        }
     }
 }

@@ -387,7 +387,10 @@ default:
 }
 
 let group = MultiThreadedEventLoopGroup(numThreads: 1)
-let fileIO = NonBlockingFileIO(numberOfThreads: 6)
+let threadPool = BlockingIOThreadPool(numberOfThreads: 6)
+threadPool.start()
+
+let fileIO = NonBlockingFileIO(threadPool: threadPool)
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .serverChannelOption(ChannelOptions.backlog, value: 256)
@@ -406,8 +409,8 @@ let bootstrap = ServerBootstrap(group: group)
     .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
 
 defer {
-    try! fileIO.syncShutdownGracefully()
     try! group.syncShutdownGracefully()
+    try! threadPool.syncShutdownGracefully()
 }
 
 print("htdocs = \(htdocs)")

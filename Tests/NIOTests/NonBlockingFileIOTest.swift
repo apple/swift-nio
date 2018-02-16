@@ -20,21 +20,25 @@ class NonBlockingFileIOTest: XCTestCase {
     private var eventLoop: EventLoop!
     private var allocator: ByteBufferAllocator!
     private var fileIO: NonBlockingFileIO!
+    private var threadPool: BlockingIOThreadPool!
 
     override func setUp() {
         super.setUp()
         self.allocator = ByteBufferAllocator()
         self.group = MultiThreadedEventLoopGroup(numThreads: 1)
-        self.fileIO = NonBlockingFileIO(numberOfThreads: 6)
+        self.threadPool = BlockingIOThreadPool(numberOfThreads: 6)
+        self.threadPool.start()
+        self.fileIO = NonBlockingFileIO(threadPool: threadPool)
         self.eventLoop = self.group.next()
     }
 
     override func tearDown() {
         XCTAssertNoThrow(try self.group?.syncShutdownGracefully())
-        XCTAssertNoThrow(try self.fileIO?.syncShutdownGracefully())
+        XCTAssertNoThrow(try self.threadPool?.syncShutdownGracefully())
         self.group = nil
         self.eventLoop = nil
         self.allocator = nil
+        self.threadPool = nil
         self.fileIO = nil
         super.tearDown()
     }
@@ -124,7 +128,7 @@ class NonBlockingFileIOTest: XCTestCase {
     }
 
     func testGettingErrorWhenEventLoopGroupIsShutdown() throws {
-        self.fileIO.shutdownGracefully(queue: .global()) { err in
+        self.threadPool.shutdownGracefully(queue: .global()) { err in
             XCTAssertNil(err)
         }
 
@@ -419,12 +423,6 @@ class NonBlockingFileIOTest: XCTestCase {
             }
             return [readFH, writeFH]
         }
-    }
-
-    func testDoubleShutdownWorks() throws {
-        let otherFileIO = NonBlockingFileIO(numberOfThreads: 17)
-        try otherFileIO.syncShutdownGracefully()
-        try otherFileIO.syncShutdownGracefully()
     }
 
     func testSeekPointerIsSetToFront() throws {

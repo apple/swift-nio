@@ -44,7 +44,6 @@ extension NonBlockingFileIOTest {
                 ("testChunkSizeMoreThanTotal", testChunkSizeMoreThanTotal),
                 ("testFileRegionReadFromPipeFails", testFileRegionReadFromPipeFails),
                 ("testReadFromNonBlockingPipeFails", testReadFromNonBlockingPipeFails),
-                ("testDoubleShutdownWorks", testDoubleShutdownWorks),
                 ("testSeekPointerIsSetToFront", testSeekPointerIsSetToFront),
            ]
    }

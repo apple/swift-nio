@@ -33,6 +33,7 @@ import XCTest
          testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
          testCase(ApplicationProtocolNegotiationHandlerTests.allTests),
          testCase(BaseObjectTest.allTests),
+         testCase(BlockingIOThreadPoolTest.allTests),
          testCase(ByteBufferTest.allTests),
          testCase(ByteToMessageDecoderTest.allTests),
          testCase(ChannelPipelineTest.allTests),
