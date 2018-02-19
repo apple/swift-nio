@@ -108,8 +108,8 @@ class EmbeddedChannelTest: XCTestCase {
     private final class ExceptionThrowingInboundHandler : ChannelInboundHandler {
         typealias InboundIn = String
         
-        public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) throws {
-            throw ChannelError.operationUnsupported
+        public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            ctx.fireErrorCaught(ChannelError.operationUnsupported)
         }
         
     }

@@ -242,7 +242,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         return response
     }
     
-    public func decoderAdded(ctx: ChannelHandlerContext) throws {
+    public func decoderAdded(ctx: ChannelHandlerContext) {
         if HTTPMessageT.self == HTTPServerRequestPart.self {
             c_nio_http_parser_init(&parser, HTTP_REQUEST)
         } else if HTTPMessageT.self == HTTPClientResponsePart.self {

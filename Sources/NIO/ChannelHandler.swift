@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-public protocol ChannelHandler : class {
-    func handlerAdded(ctx: ChannelHandlerContext) throws
-    func handlerRemoved(ctx: ChannelHandlerContext) throws
+public protocol ChannelHandler: class {
+    func handlerAdded(ctx: ChannelHandlerContext)
+    func handlerRemoved(ctx: ChannelHandlerContext)
 }
 
 public protocol _ChannelOutboundHandler : ChannelHandler {
@@ -30,15 +30,15 @@ public protocol _ChannelOutboundHandler : ChannelHandler {
 }
 
 public protocol _ChannelInboundHandler : ChannelHandler {
-    func channelRegistered(ctx: ChannelHandlerContext) throws
-    func channelUnregistered(ctx: ChannelHandlerContext) throws
-    func channelActive(ctx: ChannelHandlerContext) throws
-    func channelInactive(ctx: ChannelHandlerContext) throws
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) throws
-    func channelReadComplete(ctx: ChannelHandlerContext) throws
-    func channelWritabilityChanged(ctx: ChannelHandlerContext) throws
-    func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) throws
-    func errorCaught(ctx: ChannelHandlerContext, error: Error) throws
+    func channelRegistered(ctx: ChannelHandlerContext)
+    func channelUnregistered(ctx: ChannelHandlerContext)
+    func channelActive(ctx: ChannelHandlerContext)
+    func channelInactive(ctx: ChannelHandlerContext)
+    func channelRead(ctx: ChannelHandlerContext, data: NIOAny)
+    func channelReadComplete(ctx: ChannelHandlerContext)
+    func channelWritabilityChanged(ctx: ChannelHandlerContext)
+    func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any)
+    func errorCaught(ctx: ChannelHandlerContext, error: Error)
 }
 
 //  Default implementation for the ChannelHandler protocol

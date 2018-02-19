@@ -78,7 +78,7 @@ public protocol ChannelOutboundInvoker {
     ///
     /// - returns: the future which will be notified once the operation completes.
     func flush() -> EventLoopFuture<Void>
-    
+
     /// Flush data that was previously written via `write` to the remote peer.
     ///
     /// - parameters:

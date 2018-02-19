@@ -345,7 +345,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         ctx.flush(promise: nil)
     }
 
-    func handlerAdded(ctx: ChannelHandlerContext) throws {
+    func handlerAdded(ctx: ChannelHandlerContext) {
         self.buffer = ctx.channel.allocator.buffer(capacity: 12)
         self.buffer.write(staticString: "Hello World!")
     }

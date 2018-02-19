@@ -743,7 +743,7 @@ private final class TailChannelHandler : _ChannelInboundHandler, _ChannelOutboun
         // Discard
     }
 
-    func channelUnregistered(ctx: ChannelHandlerContext) throws {
+    func channelUnregistered(ctx: ChannelHandlerContext) {
         // Discard
     }
 
@@ -1018,127 +1018,90 @@ public final class ChannelHandlerContext : ChannelInvoker {
     fileprivate func invokeChannelRegistered() {
         assert(inEventLoop)
 
-        do {
-            if let inboundHandler = self.inboundHandler {
-                try inboundHandler.channelRegistered(ctx: self)
-            } else {
-                self.next?.invokeChannelRegistered()
-            }
-        } catch let err {
-            invokeErrorCaught(err)
+        if let inboundHandler = self.inboundHandler {
+            inboundHandler.channelRegistered(ctx: self)
+        } else {
+            self.next?.invokeChannelRegistered()
         }
     }
 
     fileprivate func invokeChannelUnregistered() {
         assert(inEventLoop)
 
-        do {
-            if let inboundHandler = self.inboundHandler {
-                try inboundHandler.channelUnregistered(ctx: self)
-            } else {
-                self.next?.invokeChannelUnregistered()
-            }
-        } catch let err {
-            invokeErrorCaught(err)
+        if let inboundHandler = self.inboundHandler {
+            inboundHandler.channelUnregistered(ctx: self)
+        } else {
+            self.next?.invokeChannelUnregistered()
         }
     }
 
     fileprivate func invokeChannelActive() {
         assert(inEventLoop)
 
-        do {
-            if let inboundHandler = self.inboundHandler {
-                try inboundHandler.channelActive(ctx: self)
-            } else {
-                self.next?.invokeChannelActive()
-            }
-        } catch let err {
-            invokeErrorCaught(err)
+        if let inboundHandler = self.inboundHandler {
+            inboundHandler.channelActive(ctx: self)
+        } else {
+            self.next?.invokeChannelActive()
         }
     }
 
     fileprivate func invokeChannelInactive() {
         assert(inEventLoop)
 
-        do {
-            if let inboundHandler = self.inboundHandler {
-                try inboundHandler.channelInactive(ctx: self)
-            } else {
-                self.next?.invokeChannelInactive()
-            }
-        } catch let err {
-            invokeErrorCaught(err)
+        if let inboundHandler = self.inboundHandler {
+            inboundHandler.channelInactive(ctx: self)
+        } else {
+            self.next?.invokeChannelInactive()
         }
     }
 
     fileprivate func invokeChannelRead(_ data: NIOAny) {
         assert(inEventLoop)
 
-        do {
-            if let inboundHandler = self.inboundHandler {
-                try inboundHandler.channelRead(ctx: self, data: data)
-            } else {
-                self.next?.invokeChannelRead(data)
-            }
-        } catch let err {
-            invokeErrorCaught(err)
+        if let inboundHandler = self.inboundHandler {
+            inboundHandler.channelRead(ctx: self, data: data)
+        } else {
+            self.next?.invokeChannelRead(data)
         }
     }
 
     fileprivate func invokeChannelReadComplete() {
         assert(inEventLoop)
 
-        do {
-            if let inboundHandler = self.inboundHandler {
-                try inboundHandler.channelReadComplete(ctx: self)
-            } else {
-                self.next?.invokeChannelReadComplete()
-            }
-        } catch let err {
-            invokeErrorCaught(err)
+        if let inboundHandler = self.inboundHandler {
+            inboundHandler.channelReadComplete(ctx: self)
+        } else {
+            self.next?.invokeChannelReadComplete()
         }
     }
 
     fileprivate func invokeChannelWritabilityChanged() {
         assert(inEventLoop)
 
-        do {
-            if let inboundHandler = self.inboundHandler {
-                try inboundHandler.channelWritabilityChanged(ctx: self)
-            } else {
-                self.next?.invokeChannelWritabilityChanged()
-            }
-        } catch let err {
-            invokeErrorCaught(err)
+        if let inboundHandler = self.inboundHandler {
+            inboundHandler.channelWritabilityChanged(ctx: self)
+        } else {
+            self.next?.invokeChannelWritabilityChanged()
         }
     }
 
     fileprivate func invokeErrorCaught(_ error: Error) {
         assert(inEventLoop)
 
-        do {
-            if let inboundHandler = self.inboundHandler {
-                try inboundHandler.errorCaught(ctx: self, error: error)
-            } else {
-                self.next?.invokeErrorCaught(error)
-            }
-        } catch let err {
-            // Forward the error thrown by errorCaught through the pipeline
-            fireErrorCaught(err)
+        if let inboundHandler = self.inboundHandler {
+            inboundHandler.errorCaught(ctx: self, error: error)
+        } else {
+            self.next?.invokeErrorCaught(error)
         }
     }
 
     fileprivate func invokeUserInboundEventTriggered(_ event: Any) {
         assert(inEventLoop)
 
-        do {
-            if let inboundHandler = self.inboundHandler {
-                try inboundHandler.userInboundEventTriggered(ctx: self, event: event)
-            } else {
-                self.next?.invokeUserInboundEventTriggered(event)
-            }
-        } catch let err {
-            invokeErrorCaught(err)
+        if let inboundHandler = self.inboundHandler {
+            inboundHandler.userInboundEventTriggered(ctx: self, event: event)
+        } else {
+            self.next?.invokeUserInboundEventTriggered(event)
         }
     }
 
@@ -1253,13 +1216,13 @@ public final class ChannelHandlerContext : ChannelInvoker {
     fileprivate func invokeHandlerAdded() throws {
         assert(inEventLoop)
 
-        try handler.handlerAdded(ctx: self)
+        handler.handlerAdded(ctx: self)
     }
 
     fileprivate func invokeHandlerRemoved() throws {
         assert(inEventLoop)
 
-        try handler.handlerRemoved(ctx: self)
+        handler.handlerRemoved(ctx: self)
     }
 
     private var inEventLoop : Bool {

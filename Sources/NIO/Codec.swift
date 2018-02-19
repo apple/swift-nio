@@ -26,14 +26,26 @@ public protocol ByteToMessageDecoder : ChannelInboundHandler where InboundIn == 
     var cumulationBuffer: ByteBuffer? { get set }
     func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState
     func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws  -> DecodingState
-    func decoderRemoved(ctx: ChannelHandlerContext) throws
-    func decoderAdded(ctx: ChannelHandlerContext) throws
+    func decoderRemoved(ctx: ChannelHandlerContext)
+    func decoderAdded(ctx: ChannelHandlerContext)
     func shouldReclaimBytes(buffer: ByteBuffer) -> Bool
+}
+
+private extension ChannelHandlerContext {
+    func withThrowingToFireErrorAndClose<T>(_ body: () throws -> T) -> T? {
+        do {
+            return try body()
+        } catch {
+            self.fireErrorCaught(error)
+            self.close(promise: nil)
+            return nil
+        }
+    }
 }
 
 extension ByteToMessageDecoder {
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) throws {
+    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         var buffer = self.unwrapInboundIn(data)
 
         if self.cumulationBuffer != nil {
@@ -43,8 +55,10 @@ extension ByteToMessageDecoder {
             self.cumulationBuffer = buffer
         }
         
-        // Running decode method until either the buffer is not readable anymore or the user returned false.
-        while try decode(ctx: ctx, buffer: &buffer) == .`continue` && buffer.readableBytes > 0 { }
+        ctx.withThrowingToFireErrorAndClose {
+            // Running decode method until either the user returned `.needMoreData` or an error occured.
+            while try decode(ctx: ctx, buffer: &buffer) == .`continue` && buffer.readableBytes > 0 { }
+        }
         
         if buffer.readableBytes > 0 {
             if self.shouldReclaimBytes(buffer: buffer) {
@@ -56,10 +70,12 @@ extension ByteToMessageDecoder {
         }
     }
     
-    public func channelInactive(ctx: ChannelHandlerContext) throws {
+    public func channelInactive(ctx: ChannelHandlerContext) {
         if var buffer = cumulationBuffer {
-            // Running decode method until either the buffer is not readable anymore or the user returned false.
-            while try decodeLast(ctx: ctx, buffer: &buffer)  == .`continue` && buffer.readableBytes > 0 { }
+            ctx.withThrowingToFireErrorAndClose {
+                // Running decodeLast method until either the user returned `.needMoreData` or an error occured.
+                while try decodeLast(ctx: ctx, buffer: &buffer)  == .`continue` && buffer.readableBytes > 0 { }
+            }
             
             if buffer.readableBytes > 0 {
                 cumulationBuffer = buffer
@@ -71,11 +87,11 @@ extension ByteToMessageDecoder {
         ctx.fireChannelInactive()
     }
     
-    public func handlerAdded(ctx: ChannelHandlerContext) throws {
-        try decoderAdded(ctx: ctx)
+    public func handlerAdded(ctx: ChannelHandlerContext) {
+        decoderAdded(ctx: ctx)
     }
     
-    public func handlerRemoved(ctx: ChannelHandlerContext) throws {
+    public func handlerRemoved(ctx: ChannelHandlerContext) {
         if let buffer = cumulationBuffer as? InboundOut {
             ctx.fireChannelRead(self.wrapInboundOut(buffer))
         } else {
@@ -83,17 +99,17 @@ extension ByteToMessageDecoder {
                send a full message to the next handler. */
         }
         cumulationBuffer = nil
-        try decoderRemoved(ctx: ctx)
+        decoderRemoved(ctx: ctx)
     }
 
     public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         return try decode(ctx: ctx, buffer: &buffer)
     }
     
-    public func decoderRemoved(ctx: ChannelHandlerContext) throws {
+    public func decoderRemoved(ctx: ChannelHandlerContext) {
     }
 
-    public func decoderAdded(ctx: ChannelHandlerContext) throws {
+    public func decoderAdded(ctx: ChannelHandlerContext) {
     }
 
     public func shouldReclaimBytes(buffer: ByteBuffer) -> Bool {
