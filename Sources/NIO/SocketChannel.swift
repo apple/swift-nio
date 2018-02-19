@@ -43,6 +43,15 @@ private extension ByteBuffer {
 class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     typealias SelectableType = T
 
+    /// Indicates if a selectable should registered or not for IO notifications.
+    enum IONotificationState {
+        /// We should be registered for IO notifications.
+        case register
+
+        /// We should not be registered for IO notifications.
+        case unregister
+    }
+
     // MARK: Methods to override in subclasses.
 
     /// `true` if the whole `Channel` is closed and so no more IO operation can be done.
@@ -102,10 +111,10 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         fatalError("this must be overridden by sub class")
     }
 
-    /// Flush data to the underlying socket.
+    /// Flush data to the underlying socket and return if this socket needs to be registered for write notifications.
     ///
-    /// - returns: `true` if there is no further data to write.
-    fileprivate func flushNow() -> Bool {
+    /// - returns: If this socket should be registered for write notifications. Ie. `IONotificationState.register` if _not_ all data could be written, so notifications are necessary; and `IONotificationState.unregister` if everything was written and we don't need to be notified about writability at the moment.
+    fileprivate func flushNow() -> IONotificationState {
         fatalError("this must be overridden by sub class")
     }
 
@@ -309,14 +318,14 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public final func flush0(promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
-        if closed {
+        guard !self.closed else {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
 
         self.markFlushPoint(promise: promise)
 
-        if !isWritePending() && !flushNow() && !closed {
+        if !isWritePending() && flushNow() == .register {
             registerForWritable()
         }
     }
@@ -447,7 +456,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         assert(!closed)
 
         finishConnect()  // If we were connecting, that has finished.
-        if flushNow() {
+        if flushNow() == .unregister {
             // Everything was written or connect was complete
             finishWritable()
         }
@@ -879,45 +888,41 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         }
     }
 
-    override fileprivate func flushNow() -> Bool {
+    override fileprivate func flushNow() -> IONotificationState {
         // Guard against re-entry as data that will be put into `pendingWrites` will just be picked up by
         // `writeToSocket`.
-        guard !inFlushNow else {
-            return true
+        guard !inFlushNow && !closed else {
+            return .unregister
         }
 
         defer {
             inFlushNow = false
         }
-
         inFlushNow = true
 
-        while !closed {
-            do {
-                switch try self.writeToSocket(pendingWrites: pendingWrites) {
-                case .couldNotWriteEverything:
-                    return false
-                case .writtenCompletely:
-                    return true
-                }
-            } catch let err {
-                // If there is a write error we should try drain the inbound before closing the socket as there may be some data pending.
-                // We ignore any error that is thrown as we will use the original err to close the channel and notify the user.
-                if readIfNeeded0() {
-
-                    // We need to continue reading until there is nothing more to be read from the socket as we will not have another chance to drain it.
-                    while let read = try? readFromSocket(), read == .some {
-                        pipeline.fireChannelReadComplete()
-                    }
-                }
-
-                close0(error: err, mode: .all, promise: nil)
-
-                // we handled all writes
-                return true
+        do {
+            switch try self.writeToSocket(pendingWrites: pendingWrites) {
+            case .couldNotWriteEverything:
+                return .register
+            case .writtenCompletely:
+                return .unregister
             }
+        } catch let err {
+            // If there is a write error we should try drain the inbound before closing the socket as there may be some data pending.
+            // We ignore any error that is thrown as we will use the original err to close the channel and notify the user.
+            if readIfNeeded0() {
+
+                // We need to continue reading until there is nothing more to be read from the socket as we will not have another chance to drain it.
+                while let read = try? readFromSocket(), read == .some {
+                    pipeline.fireChannelReadComplete()
+                }
+            }
+
+            close0(error: err, mode: .all, promise: nil)
+
+            // we handled all writes
+            return .unregister
         }
-        return true
     }
 }
 
@@ -1211,48 +1216,41 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         self.pendingWrites.failAll(error: error, close: true)
     }
 
-    /// Flush data to the underlying socket.
-    ///
-    /// - returns: `true` if there is no further data to write.
-    override fileprivate func flushNow() -> Bool {
+    override fileprivate func flushNow() -> IONotificationState {
         // Guard against re-entry as data that will be put into `pendingWrites` will just be picked up by
         // `writeToSocket`.
-        guard !inFlushNow else {
-            return true
+        guard !inFlushNow && !closed else {
+            return .unregister
         }
 
         defer {
             inFlushNow = false
         }
-
         inFlushNow = true
 
-        while !closed {
-            do {
-                switch try self.writeToSocket(pendingWrites: pendingWrites) {
-                case .couldNotWriteEverything:
-                    return false
-                case .writtenCompletely:
-                    return true
-                }
-            } catch let err {
-                // If there is a write error we should try drain the inbound before closing the socket as there may be some data pending.
-                // We ignore any error that is thrown as we will use the original err to close the channel and notify the user.
-                if readIfNeeded0() {
-
-                    // We need to continue reading until there is nothing more to be read from the socket as we will not have another chance to drain it.
-                    while let read = try? readFromSocket(), read == .some {
-                        pipeline.fireChannelReadComplete()
-                    }
-                }
-
-                close0(error: err, mode: .all, promise: nil)
-
-                // we handled all writes
-                return true
+        do {
+            switch try self.writeToSocket(pendingWrites: pendingWrites) {
+            case .couldNotWriteEverything:
+                return .register
+            case .writtenCompletely:
+                return .unregister
             }
+        } catch let err {
+            // If there is a write error we should try drain the inbound before closing the socket as there may be some data pending.
+            // We ignore any error that is thrown as we will use the original err to close the channel and notify the user.
+            if readIfNeeded0() {
+
+                // We need to continue reading until there is nothing more to be read from the socket as we will not have another chance to drain it.
+                while let read = try? readFromSocket(), read == .some {
+                    pipeline.fireChannelReadComplete()
+                }
+            }
+
+            close0(error: err, mode: .all, promise: nil)
+
+            // we handled all writes
+            return .unregister
         }
-        return true
     }
 
     private func writeToSocket(pendingWrites: PendingDatagramWritesManager) throws -> OverallWriteResult {
