@@ -335,9 +335,34 @@ public struct HTTPHeaders : Sequence, CustomStringConvertible {
         }
 
         if let result = storage[queryName] {
-            return result.map { tuple in tuple.1.split(separator: ",").map { substring in String(substring).trimmingCharacters(in: .whitespaces) } }.reduce([], +)
+            return result.map { tuple in tuple.1.split(separator: ",").map { String($0.trimWhitespace()) } }.reduce([], +)
         }
         return []
+    }
+}
+
+/* private but tests */ internal extension Character {
+    var isASCIIWhitespace: Bool {
+        return self == " " || self == "\t" || self == "\r" || self == "\n" || self == "\r\n"
+    }
+}
+
+/* private but tests */ internal extension String {
+    func trimASCIIWhitespace() -> Substring {
+        return self.dropFirst(0).trimWhitespace()
+    }
+}
+
+private extension Substring {
+    func trimWhitespace() -> Substring {
+        var me = self
+        while me.first?.isASCIIWhitespace == .some(true) {
+            me = me.dropFirst()
+        }
+        while me.last?.isASCIIWhitespace == .some(true) {
+            me = me.dropLast()
+        }
+        return me
     }
 }
 

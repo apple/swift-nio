@@ -31,6 +31,9 @@ extension HTTPHeadersTest {
                 ("testRevealHeadersSeparately", testRevealHeadersSeparately),
                 ("testSubscriptDoesntSplitHeaders", testSubscriptDoesntSplitHeaders),
                 ("testCanonicalisationDoesntHappenForSetCookie", testCanonicalisationDoesntHappenForSetCookie),
+                ("testTrimWhitespaceWorksOnEmptyString", testTrimWhitespaceWorksOnEmptyString),
+                ("testTrimWhitespaceWorksOnOnlyWhitespace", testTrimWhitespaceWorksOnOnlyWhitespace),
+                ("testTrimWorksWithCharactersInTheMiddleAndWhitespaceAround", testTrimWorksWithCharactersInTheMiddleAndWhitespaceAround),
            ]
    }
 }

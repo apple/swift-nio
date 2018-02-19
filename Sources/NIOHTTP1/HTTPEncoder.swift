@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import NIO
-import class Foundation.NSNull // dummy import to get Foundation to link
 
 private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandlerContext, isChunked: Bool, chunk: IOData, promise: EventLoopPromise<Void>?) {
     let (mW1, mW2, mW3): (EventLoopPromise<()>?, EventLoopPromise<()>?, EventLoopPromise<()>?)

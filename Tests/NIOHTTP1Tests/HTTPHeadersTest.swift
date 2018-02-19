@@ -111,4 +111,25 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertEqual(headers.getCanonicalForm("set-cookie"), ["foo=bar; expires=Sun, 17-Mar-2013 13:49:50 GMT",
                                                                 "buz=cux; expires=Fri, 13 Oct 2017 21:21:41 GMT"])
     }
+
+    func testTrimWhitespaceWorksOnEmptyString() {
+        let expected = ""
+        let actual = String("".trimASCIIWhitespace())
+        XCTAssertEqual(expected, actual)
+    }
+
+    func testTrimWhitespaceWorksOnOnlyWhitespace() {
+        let expected = ""
+        for wsString in [" ", "\t", "\r", "\n", "\r\n", "\n\r", "  \r\n \n\r\t\r\t\n"] {
+            let actual = String(wsString.trimASCIIWhitespace())
+            XCTAssertEqual(expected, actual)
+        }
+    }
+
+    func testTrimWorksWithCharactersInTheMiddleAndWhitespaceAround() {
+        let expected = "x"
+        let actual = String("         x\n\n\n".trimASCIIWhitespace())
+        XCTAssertEqual(expected, actual)
+    }
+
 }
