@@ -13,15 +13,23 @@
 //===----------------------------------------------------------------------===//
 import NIO
 import NIOHTTP1
-import class Foundation.NSNull /* dummy just to get Foundation to link */
 
 extension String {
     func chopPrefix(_ prefix: String) -> String? {
-        if self.hasPrefix(prefix) {
+        if self.unicodeScalars.starts(with: prefix.unicodeScalars) {
             return String(self[self.index(self.startIndex, offsetBy: prefix.count)...])
         } else {
             return nil
         }
+    }
+
+    func containsDotDot() -> Bool {
+        for idx in self.indices {
+            if self[idx] == "." && idx < self.index(before: self.endIndex) && self[self.index(after: idx)] == "." {
+                return true
+            }
+        }
+        return false
     }
 }
 
@@ -203,7 +211,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
         switch request {
         case .head(let request):
-            guard !request.uri.contains("..") else {
+            guard !request.uri.containsDotDot() else {
                 let response = HTTPResponseHead(version: request.version, status: .forbidden)
                 ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
                 ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
@@ -237,7 +245,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                                 let response = HTTPResponseHead(version: request.version, status: .ok)
                                 ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
                                 var buffer = ctx.channel.allocator.buffer(capacity: 100)
-                                buffer.write(string: "fail: \(error.localizedDescription)")
+                                buffer.write(string: "fail: \(error)")
                                 ctx.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
                                 return ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)))
                             } else {
@@ -274,7 +282,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                         return HTTPResponseHead(version: request.version, status: .internalServerError)
                     }
                 }()
-                body.write(string: error.localizedDescription)
+                body.write(string: "\(error)")
                 body.write(staticString: "\r\n")
                 ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
                 ctx.write(self.wrapOutboundOut(.body(.byteBuffer(body))), promise: nil)
@@ -299,7 +307,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         case .head(let request):
             keepAlive = request.isKeepAlive
 
-            if request.uri.hasPrefix("/dynamic") {
+            if request.uri.unicodeScalars.starts(with: "/dynamic".unicodeScalars) {
                 self.handler = self.dynamicHandler(request: request)
                 self.handler!(ctx, reqPart)
                 return

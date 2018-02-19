@@ -15,6 +15,7 @@
 import struct Foundation.Data
 import XCTest
 @testable import NIO
+import NIOFoundationCompat
 
 class ByteBufferTest: XCTestCase {
     private let allocator = ByteBufferAllocator()

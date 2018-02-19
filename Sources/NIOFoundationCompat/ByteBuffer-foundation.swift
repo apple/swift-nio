@@ -12,7 +12,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIO
 import struct Foundation.Data
+
+/*
+ * This is NIO's `NIOFoundationCompat` module which at the moment only adds `ByteBuffer` utility methods
+ * for Foundation's `Data` type.
+ *
+ * The reason that it's not in the `NIO` module is that we don't want to have any direct Foundation dependencies
+ * in `NIO` as Foundation is problematic for a few reasons:
+ *
+ * - its implementation is different on Linux and on macOS which means our macOS tests might be inaccurate
+ * - on macOS Foundation is mostly written in ObjC which means the autorelease pool might get populated
+ * - `swift-corelibs-foundation` (the OSS Foundation used on Linux) links the world which will prevent anyone from
+ *   having static binaries. It can also cause problems in the choice of an SSL library as Foundation already brings
+ *   the platforms OpenSSL in which might cause problems.
+ */
 
 extension Data: ContiguousCollection {
     public func withUnsafeBytes<R>(_ fn: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {

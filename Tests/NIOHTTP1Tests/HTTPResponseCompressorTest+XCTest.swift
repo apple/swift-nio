@@ -43,6 +43,12 @@ extension HTTPResponseCompressorTest {
                 ("testOutOfRangeQValuePreventsChoice", testOutOfRangeQValuePreventsChoice),
                 ("testRemovingHandlerFailsPendingWrites", testRemovingHandlerFailsPendingWrites),
                 ("testDoesNotBufferWritesNoAlgorithm", testDoesNotBufferWritesNoAlgorithm),
+                ("testStartsWithSameUnicodeScalarsWorksOnEmptyStrings", testStartsWithSameUnicodeScalarsWorksOnEmptyStrings),
+                ("testStartsWithSameUnicodeScalarsWorksOnLongerNeedleFalse", testStartsWithSameUnicodeScalarsWorksOnLongerNeedleFalse),
+                ("testStartsWithSameUnicodeScalarsWorksOnSameStrings", testStartsWithSameUnicodeScalarsWorksOnSameStrings),
+                ("testStartsWithSameUnicodeScalarsWorksOnPrefix", testStartsWithSameUnicodeScalarsWorksOnPrefix),
+                ("testStartsWithSameUnicodeScalarsSaysNoForTheSameStringInDifferentNormalisations", testStartsWithSameUnicodeScalarsSaysNoForTheSameStringInDifferentNormalisations),
+                ("testStartsWithSaysYesForTheSameStringInDifferentNormalisations", testStartsWithSaysYesForTheSameStringInDifferentNormalisations),
            ]
    }
 }

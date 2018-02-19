@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 import XCTest
 @testable import NIO
+import NIOFoundationCompat
 import NIOTLS
 
 private let libressl227HelloNoSni = """

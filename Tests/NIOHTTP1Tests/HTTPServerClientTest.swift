@@ -13,8 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import NIOConcurrencyHelpers
 import NIO
+import NIOConcurrencyHelpers
+import NIOFoundationCompat
 import Dispatch
 @testable import NIOHTTP1
 

@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 import NIO
 import Dispatch
-import class Foundation.NSNull // dummy for strings
 
 let newLine = "\n".utf8.first!
 

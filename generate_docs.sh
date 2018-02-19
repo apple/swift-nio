@@ -6,7 +6,7 @@ my_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 swift_version=${swift_version:-4.0.2}
 version=$(git describe --abbrev=0 --tags)
-modules=(SwiftNIO NIOHTTP1 NIOTLS)
+modules=(SwiftNIO NIOHTTP1 NIOTLS NIOFoundationCompat)
 
 if [[ $CI == true ]]; then
   # CI setup, assume this is running in an ubuntu docker container:

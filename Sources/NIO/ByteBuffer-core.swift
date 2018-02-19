@@ -242,7 +242,9 @@ public struct ByteBuffer {
         public func dumpBytes(slice: Slice, offset: Int, length: Int) -> String {
             var desc = "["
             for i in Int(slice.lowerBound) + offset ..< Int(slice.lowerBound) + offset + length {
-                desc += String(format: " %02x", self.bytes.advanced(by: Int(i)).assumingMemoryBound(to: UInt8.self).pointee)
+                let byte = self.bytes.advanced(by: i).assumingMemoryBound(to: UInt8.self).pointee
+                let hexByte = String(byte, radix: 16)
+                desc += " \(hexByte.count == 1 ? " " : "")\(hexByte)"
             }
             desc += " ]"
             return desc

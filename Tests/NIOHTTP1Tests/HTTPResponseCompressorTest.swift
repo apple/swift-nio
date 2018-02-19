@@ -15,7 +15,7 @@
 import XCTest
 import CNIOZlib
 @testable import NIO
-import NIOHTTP1
+@testable import NIOHTTP1
 
 private class PromiseOrderer {
     private var promiseArray: Array<EventLoopPromise<Void>>
@@ -532,5 +532,45 @@ class HTTPResponseCompressorTest: XCTestCase {
         channel.write(NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
         channel.pipeline.removeHandlers()
         try writePromise.futureResult.wait()
+    }
+
+    func testStartsWithSameUnicodeScalarsWorksOnEmptyStrings() throws {
+        XCTAssertTrue("".startsWithSameUnicodeScalars(string: ""))
+    }
+
+    func testStartsWithSameUnicodeScalarsWorksOnLongerNeedleFalse() throws {
+        XCTAssertFalse("_".startsWithSameUnicodeScalars(string: "__"))
+    }
+
+    func testStartsWithSameUnicodeScalarsWorksOnSameStrings() throws {
+        XCTAssertTrue("beer".startsWithSameUnicodeScalars(string: "beer"))
+    }
+
+    func testStartsWithSameUnicodeScalarsWorksOnPrefix() throws {
+        XCTAssertTrue("beer is good".startsWithSameUnicodeScalars(string: "beer"))
+    }
+
+    func testStartsWithSameUnicodeScalarsSaysNoForTheSameStringInDifferentNormalisations() throws {
+        let nfcEncodedEAigu = "\u{e9}"
+        let nfdEncodedEAigu = "\u{65}\u{301}"
+
+        XCTAssertEqual(nfcEncodedEAigu, nfdEncodedEAigu)
+        XCTAssertTrue(nfcEncodedEAigu.startsWithSameUnicodeScalars(string: nfcEncodedEAigu))
+        XCTAssertTrue(nfdEncodedEAigu.startsWithSameUnicodeScalars(string: nfdEncodedEAigu))
+        // the both do _not_ start like the other
+        XCTAssertFalse(nfcEncodedEAigu.startsWithSameUnicodeScalars(string: nfdEncodedEAigu))
+        XCTAssertFalse(nfdEncodedEAigu.startsWithSameUnicodeScalars(string: nfcEncodedEAigu))
+    }
+
+    func testStartsWithSaysYesForTheSameStringInDifferentNormalisations() throws {
+        let nfcEncodedEAigu = "\u{e9}"
+        let nfdEncodedEAigu = "\u{65}\u{301}"
+
+        XCTAssertEqual(nfcEncodedEAigu, nfdEncodedEAigu)
+        XCTAssertTrue(nfcEncodedEAigu.starts(with: nfcEncodedEAigu))
+        XCTAssertTrue(nfdEncodedEAigu.starts(with: nfdEncodedEAigu))
+        // the both do start like the other as we do unicode normalisation
+        XCTAssertTrue(nfcEncodedEAigu.starts(with: nfdEncodedEAigu))
+        XCTAssertTrue(nfdEncodedEAigu.starts(with: nfcEncodedEAigu))
     }
 }

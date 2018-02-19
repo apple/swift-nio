@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 import NIO
-import class Foundation.NSNull // dummy for strings
 
 private final class ChatHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer

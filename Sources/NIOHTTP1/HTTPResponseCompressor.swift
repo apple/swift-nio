@@ -15,6 +15,19 @@
 import CNIOZlib
 import NIO
 
+internal extension String {
+    /// Test if this `Collection` starts with the unicode scalars of `needle`.
+    ///
+    /// - note: This will be faster than `String.startsWith` as no unicode normalisations are performed.
+    ///
+    /// - parameters:
+    ///    - needle: The `Collection` of `Unicode.Scalar`s to match at the beginning of `self`
+    /// - returns: If `self` started with the elements contained in `needle`.
+    func startsWithSameUnicodeScalars<S: StringProtocol>(string needle: S) -> Bool {
+        return self.unicodeScalars.starts(with: needle.unicodeScalars)
+    }
+}
+
 
 /// Given a header value, extracts the q value if there is one present. If one is not present,
 /// returns the default q value, 1.0.
@@ -154,11 +167,11 @@ public final class HTTPResponseCompressor: ChannelInboundHandler, ChannelOutboun
         var anyQValue: Float = -1
 
         for acceptHeader in acceptHeaders {
-            if acceptHeader.hasPrefix("gzip") || acceptHeader.hasPrefix("x-gzip") {
+            if acceptHeader.startsWithSameUnicodeScalars(string: "gzip") || acceptHeader.startsWithSameUnicodeScalars(string: "x-gzip") {
                 gzipQValue = qValueFromHeader(acceptHeader)
-            } else if acceptHeader.hasPrefix("deflate") {
+            } else if acceptHeader.startsWithSameUnicodeScalars(string: "deflate") {
                 deflateQValue = qValueFromHeader(acceptHeader)
-            } else if acceptHeader.hasPrefix("*") {
+            } else if acceptHeader.startsWithSameUnicodeScalars(string: "*") {
                 anyQValue = qValueFromHeader(acceptHeader)
             }
         }

@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 import NIO
-import class Foundation.NSNull // dummy for strings
 
 print("Please enter line to send to the server")
 let line = readLine(strippingNewline: true)!
@@ -45,7 +44,7 @@ private final class EchoHandler: ChannelInboundHandler {
         print("Client connected to \(ctx.channel.remoteAddress!)")
         
         // We are connected its time to send the message to the server to initialize the ping-pong sequence.
-        var buffer = ctx.channel.allocator.buffer(capacity: line.lengthOfBytes(using: String.Encoding.utf8))
+        var buffer = ctx.channel.allocator.buffer(capacity: line.utf8.count)
         buffer.write(string: line)
         self.numBytes = buffer.readableBytes
         ctx.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
