@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This Foundation import is needed for the encoding stuff.
-import struct Foundation.NSStringEncoding
 import NIO
 
 /// The length of the TLS record header in bytes.
@@ -70,6 +68,26 @@ private extension ByteBuffer {
             throw InternalSniErrors.invalidLengthInRecord
         }
         return integer
+    }
+}
+
+private extension Sequence where Element == UInt8 {
+    func decodeStringValidatingASCII() -> String? {
+        var bytesIterator = self.makeIterator()
+        var scalars: [Unicode.Scalar] = []
+        scalars.reserveCapacity(self.underestimatedCount)
+        var decoder = Unicode.ASCII.Parser()
+        decode: while true {
+            switch decoder.parseScalar(from: &bytesIterator) {
+            case .valid(let v):
+                scalars.append(UnicodeScalar(v[0]))
+            case .emptyInput:
+                break decode
+            case .error:
+                return nil
+            }
+        }
+        return String(scalars.map(Character.init))
     }
 }
 
@@ -379,10 +397,18 @@ public class SniHandler: ByteToMessageDecoder {
                 continue
             }
 
-            guard let hostname = buffer.getString(at: buffer.readerIndex, length: Int(nameLength), encoding: .ascii) else {
+            let hostname = buffer.withUnsafeReadableBytes { ptr -> String? in
+                let nameLength = Int(nameLength)
+                guard nameLength <= ptr.count else {
+                    return nil
+                }
+                return UnsafeRawBufferPointer(start: ptr.baseAddress!, count: min(nameLength, ptr.count)).decodeStringValidatingASCII()
+            }
+            if let hostname = hostname {
+                return hostname
+            } else {
                 throw InternalSniErrors.invalidRecord
             }
-            return hostname
         }
         return nil
     }
