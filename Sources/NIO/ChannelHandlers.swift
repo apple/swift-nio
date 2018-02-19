@@ -25,33 +25,17 @@ public class BackPressureHandler: ChannelInboundHandler, _ChannelOutboundHandler
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
     public typealias OutboundOut = ByteBuffer
-
-    private enum PendingRead {
-        case none
-        case promise(promise: EventLoopPromise<Void>?)
-    }
     
-    private var pendingRead: PendingRead = .none
+    private var pendingRead = false
     private var writable: Bool = true;
     
     public init() { }
 
-    public func read(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+    public func read(ctx: ChannelHandlerContext) {
         if writable {
-            ctx.read(promise: promise)
+            ctx.read()
         } else {
-            switch pendingRead {
-            case .none:
-                pendingRead = .promise(promise: promise)
-            case .promise(let pending):
-                if let pending = pending {
-                    if let promise = promise {
-                        pending.futureResult.cascade(promise: promise)
-                    }
-                } else {
-                    pendingRead = .promise(promise: promise)
-                }
-            }
+            pendingRead = true
         }
     }
     
@@ -72,9 +56,9 @@ public class BackPressureHandler: ChannelInboundHandler, _ChannelOutboundHandler
     }
     
     private func mayRead(ctx: ChannelHandlerContext) {
-        if case let .promise(promise) = pendingRead {
-            pendingRead = .none
-            ctx.read(promise: promise)
+        if pendingRead {
+            pendingRead = false
+            ctx.read()
         }
     }
 }

@@ -201,7 +201,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             let auto = value as! Bool
             autoRead = auto
             if auto {
-                read0(promise: nil)
+                read0()
             } else {
                 pauseRead0()
             }
@@ -259,7 +259,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         assert(eventLoop.inEventLoop)
 
         if !readPending && autoRead {
-            pipeline.read0(promise: nil)
+            pipeline.read0()
         }
         return readPending
     }
@@ -330,15 +330,11 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public func read0(promise: EventLoopPromise<Void>?) {
+    public func read0() {
         assert(eventLoop.inEventLoop)
 
         if closed {
-            promise?.fail(error:ChannelError.ioOnClosedChannel)
             return
-        }
-        defer {
-            promise?.succeed(result: ())
         }
         readPending = true
 
@@ -864,12 +860,11 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         return super.readIfNeeded0()
     }
 
-    override public func read0(promise: EventLoopPromise<Void>?) {
+    override public func read0() {
         if inputShutdown {
-            promise?.fail(error: ChannelError.inputClosed)
             return
         }
-        super.read0(promise: promise)
+        super.read0()
     }
 
     override fileprivate func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {

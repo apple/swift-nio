@@ -106,18 +106,7 @@ public protocol ChannelOutboundInvoker {
     /// If `ChannelOptions.autoRead` is set for a `Channel` (which is the default) this method is automatically invoked by the transport implementation,
     /// otherwise it's the user's responsibility to call this method manually once new data should be read and processed.
     ///
-    /// - returns: the future which will be notified once the operation completes.
-    func read() -> EventLoopFuture<Void>
-    
-    /// Signal that we want to read from the `Channel` once there is data ready.
-    ///
-    /// If `ChannelOptions.autoRead` is set for a `Channel` (which is the default) this method is automatically invoked by the transport implementation,
-    /// otherwise it's the user's responsibility to call this method manually once new data should be read and processed.
-    ///
-    /// - parameters:
-    ///       - promise: the `EventLoopPromise` that will be notified once the operation completes,
-    ///                  or `nil` if not interested in the outcome of the operation.
-    func read(promise: EventLoopPromise<Void>?)
+    func read()
 
     /// Close the `Channel` and so the connection if one exists.
     ///
@@ -174,12 +163,6 @@ extension ChannelOutboundInvoker {
     public func write(_ data: NIOAny) -> EventLoopFuture<Void> {
         let promise = newPromise()
         write(data, promise: promise)
-        return promise.futureResult
-    }
-    
-    public func read() -> EventLoopFuture<Void> {
-        let promise = newPromise()
-        read(promise: promise)
         return promise.futureResult
     }
     

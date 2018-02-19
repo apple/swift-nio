@@ -456,12 +456,12 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
 
-    public func read(promise: EventLoopPromise<Void>?) {
+    public func read() {
         if eventLoop.inEventLoop {
-            read0(promise: promise)
+            read0()
         } else {
             eventLoop.execute {
-                self.read0(promise: promise)
+                self.read0()
             }
         }
     }
@@ -552,11 +552,9 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
 
-    func read0(promise: EventLoopPromise<Void>?) {
+    func read0() {
         if let firstOutboundCtx = firstOutboundCtx {
-            firstOutboundCtx.invokeRead(promise: promise)
-        } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            firstOutboundCtx.invokeRead()
         }
     }
 
@@ -711,8 +709,8 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
         ctx.channel._unsafe.close0(error: mode.error, mode: mode, promise: promise)
     }
 
-    func read(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
-        ctx.channel._unsafe.read0(promise: promise)
+    func read(ctx: ChannelHandlerContext) {
+        ctx.channel._unsafe.read0()
     }
 
     func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
@@ -976,14 +974,9 @@ public final class ChannelHandlerContext : ChannelInvoker {
     /// When the `read` event reaches the `HeadChannelHandler` the interest to read data will be signalled to the
     /// `Selector`. This will subsequently -- when data becomes readable -- cause `channelRead` events containing the
     /// data being sent through the `ChannelPipeline`.
-    ///
-    /// - parameters:
-    ///     - promise: The promise fulfilled when data has been read or failed if it that failed.
-    public func read(promise: EventLoopPromise<Void>?) {
+    public func read() {
         if let outboundNext = self.prev {
-            outboundNext.invokeRead(promise: promise)
-        } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            outboundNext.invokeRead()
         }
     }
 
@@ -1217,13 +1210,13 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
 
-    fileprivate func invokeRead(promise: EventLoopPromise<Void>?) {
+    fileprivate func invokeRead() {
         assert(inEventLoop)
 
         if let outboundHandler = self.outboundHandler {
-            outboundHandler.read(ctx: self, promise: promise)
+            outboundHandler.read(ctx: self)
         } else {
-            self.prev?.invokeRead(promise: promise)
+            self.prev?.invokeRead()
         }
     }
 

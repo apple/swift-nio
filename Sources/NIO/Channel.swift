@@ -23,7 +23,7 @@ public protocol ChannelCore : class {
     func connect0(to: SocketAddress, promise: EventLoopPromise<Void>?)
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?)
     func flush0(promise: EventLoopPromise<Void>?)
-    func read0(promise: EventLoopPromise<Void>?)
+    func read0()
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?)
     func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?)
     func channelRead0(_ data: NIOAny)
@@ -135,8 +135,8 @@ extension Channel {
         pipeline.writeAndFlush(data, promise: promise)
     }
 
-    public func read(promise: EventLoopPromise<Void>?) {
-        pipeline.read(promise: promise)
+    public func read() {
+        pipeline.read()
     }
 
     public func close(mode: CloseMode = .all, promise: EventLoopPromise<Void>?) {

@@ -216,12 +216,8 @@ class EmbeddedChannelCore : ChannelCore {
         promise?.succeed(result: ())
     }
 
-    func read0(promise: EventLoopPromise<Void>?) {
-        if closed {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
-            return
-        }
-        promise?.succeed(result: ())
+    func read0() {
+        // NOOP
     }
     
     public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
