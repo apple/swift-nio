@@ -19,7 +19,7 @@ import XCTest
 private extension ChannelPipeline {
     func assertDoesNotContain(handler: ChannelHandler) throws {
         do {
-            let _ = try self.context(handler: handler).wait()
+            _ = try self.context(handler: handler).wait()
             XCTFail("Found handler")
         } catch ChannelPipelineError.notFound {
             // Nothing to see here

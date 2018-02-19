@@ -229,7 +229,7 @@ private let fuzzingInputOne = "FgMAAAQAAgo="
 internal extension ChannelPipeline {
     func contains(handler: ChannelHandler) throws -> Bool {
         do {
-            let _ = try self.context(handler: handler).wait()
+            _ = try self.context(handler: handler).wait()
             return true
         } catch ChannelPipelineError.notFound {
             return false

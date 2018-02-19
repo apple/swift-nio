@@ -114,7 +114,7 @@ class HTTPTest: XCTestCase {
             try channel.pipeline.flush().wait()
             XCTAssertEqual(2 * expecteds.count, step)
 
-            if let _ = body {
+            if body != nil {
                 XCTAssertGreaterThan(allBodyDatas.count, 0)
                 let firstBodyData = allBodyDatas[0]
                 for bodyData in allBodyDatas {

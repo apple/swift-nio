@@ -516,7 +516,7 @@ internal final class SelectableEventLoop : EventLoop {
                 while let task = scheduledTasks.peek(), task.readyIn(now) <= .nanoseconds(0) {
                     tasksCopy.append(task.task)
 
-                    let _ = scheduledTasks.pop()
+                    _ = scheduledTasks.pop()
                 }
 
                 tasksLock.unlock()
@@ -533,7 +533,7 @@ internal final class SelectableEventLoop : EventLoop {
                         task()
                     }
                     
-                    let _ = tasksCopy.removeFirst()
+                    _ = tasksCopy.removeFirst()
                 }
             }
         }

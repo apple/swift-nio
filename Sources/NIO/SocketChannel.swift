@@ -650,7 +650,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         do {
             try socket.setNonBlocking()
         } catch let err {
-            let _ = try? socket.close()
+            _ = try? socket.close()
             throw err
         }
         self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
@@ -942,7 +942,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         do {
             try serverSocket.setNonBlocking()
         } catch let err {
-            let _ = try? serverSocket.close()
+            _ = try? serverSocket.close()
             throw err
         }
         self.group = group
@@ -1017,7 +1017,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
                     let chan = try SocketChannel(socket: accepted, eventLoop: group.next() as! SelectableEventLoop, parent: self)
                     pipeline.fireChannelRead0(NIOAny(chan))
                 } catch let err {
-                    let _ = try? accepted.close()
+                    _ = try? accepted.close()
                     throw err
                 }
             } else {
@@ -1075,7 +1075,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         do {
             try socket.setNonBlocking()
         } catch let err {
-            let _ = try? socket.close()
+            _ = try? socket.close()
             throw err
         }
 

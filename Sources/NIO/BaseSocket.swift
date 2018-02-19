@@ -213,7 +213,7 @@ class BaseSocket: Selectable {
 
         var val = value
         
-        let _ = try Posix.setsockopt(
+        _ = try Posix.setsockopt(
             socket: self.descriptor,
             level: level,
             optionName: name,

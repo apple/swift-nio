@@ -123,7 +123,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         case .body(buffer: _):
             ()
         case .end(_):
-            let _ = ctx.eventLoop.scheduleTask(in: delay) { () -> Void in
+            _ = ctx.eventLoop.scheduleTask(in: delay) { () -> Void in
                 var buf = ctx.channel.allocator.buffer(capacity: string.utf8.count)
                 buf.write(string: string)
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buf))), promise: nil)

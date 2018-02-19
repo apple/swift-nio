@@ -53,17 +53,17 @@ public class EventLoopTest : XCTestCase {
             return true
         }.futureResult
 
-        let _ = try eventLoopGroup.next().scheduleTask(in: smallAmount) {
+        _ = try eventLoopGroup.next().scheduleTask(in: smallAmount) {
             return true
         }.futureResult.wait()
 
         // Ok, the short one has happened. Now we should try connecting them. This connect should happen
         // faster than the final task firing.
-        let _ = try clientBootstrap.connect(to: serverChannel.localAddress!).wait()
+        _ = try clientBootstrap.connect(to: serverChannel.localAddress!).wait()
         XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos < longAmount.nanoseconds)
 
         // Now wait for the long-delayed task.
-        let _ = try longFuture.wait()
+        _ = try longFuture.wait()
         // Now we're ok.
         XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= longAmount.nanoseconds)
     }
