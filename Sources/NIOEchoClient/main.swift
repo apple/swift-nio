@@ -41,7 +41,7 @@ private final class EchoHandler: ChannelInboundHandler {
     }
     
     public func channelActive(ctx: ChannelHandlerContext) {
-        print("Client connected to \(ctx.channel.remoteAddress!)")
+        print("Client connected to \(ctx.remoteAddress!)")
         
         // We are connected its time to send the message to the server to initialize the ping-pong sequence.
         var buffer = ctx.channel.allocator.buffer(capacity: line.utf8.count)

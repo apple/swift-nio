@@ -19,6 +19,18 @@ import NIOFoundationCompat
 import Dispatch
 @testable import NIOHTTP1
 
+internal extension Channel {
+    func syncCloseAcceptingAlreadyClosed() throws {
+        do {
+            try self.close().wait()
+        } catch ChannelError.alreadyClosed {
+            /* we're happy with this one */
+        } catch let e {
+            throw e
+        }
+    }
+}
+
 extension Array where Array.Element == ByteBuffer {
     public func allAsBytes() -> [UInt8] {
         var out: [UInt8] = []
@@ -61,17 +73,6 @@ internal class ArrayAccumulationHandler<T>: ChannelInboundHandler {
 }
 
 class HTTPServerClientTest : XCTestCase {
-    
-    private func syncCloseAcceptingAlreadyClosed(channel: Channel) throws {
-        do {
-            try channel.close().wait()
-        } catch ChannelError.alreadyClosed {
-            /* we're happy with this one */
-        } catch let e {
-            throw e
-        }
-    }
-
     /* needs to be something reasonably large and odd so it has good odds producing incomplete writes even on the loopback interface */
     private static let massiveResponseLength = 5 * 1024 * 1024 + 7
     private static let massiveResponseBytes: [UInt8] = {
@@ -374,7 +375,7 @@ class HTTPServerClientTest : XCTestCase {
             }.bind(host: "127.0.0.1", port: 0).wait()
         
         defer {
-            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
         
         let clientChannel = try ClientBootstrap(group: group)
@@ -387,7 +388,7 @@ class HTTPServerClientTest : XCTestCase {
             .wait()
         
         defer {
-            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: clientChannel))
+            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
         
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/helloworld")
@@ -432,7 +433,7 @@ class HTTPServerClientTest : XCTestCase {
             }.bind(host: "127.0.0.1", port: 0).wait()
         
         defer {
-            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
         
         let clientChannel = try ClientBootstrap(group: group)
@@ -445,7 +446,7 @@ class HTTPServerClientTest : XCTestCase {
             .wait()
         
         defer {
-            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: clientChannel))
+            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
         
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/count-to-ten")
@@ -490,7 +491,7 @@ class HTTPServerClientTest : XCTestCase {
             }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
-            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
         let clientChannel = try ClientBootstrap(group: group)
@@ -503,7 +504,7 @@ class HTTPServerClientTest : XCTestCase {
             .wait()
 
         defer {
-            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: clientChannel))
+            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/trailers")
@@ -550,7 +551,7 @@ class HTTPServerClientTest : XCTestCase {
             }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
-            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
         let clientChannel = try ClientBootstrap(group: group)
@@ -559,7 +560,7 @@ class HTTPServerClientTest : XCTestCase {
             .wait()
 
         defer {
-            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: clientChannel))
+            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
@@ -591,7 +592,7 @@ class HTTPServerClientTest : XCTestCase {
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
         defer {
-            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
         let clientChannel = try ClientBootstrap(group: group)
@@ -604,7 +605,7 @@ class HTTPServerClientTest : XCTestCase {
             .wait()
 
         defer {
-            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: clientChannel))
+            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .HEAD, uri: "/head")
@@ -636,7 +637,7 @@ class HTTPServerClientTest : XCTestCase {
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
         defer {
-            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: serverChannel))
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
         let clientChannel = try ClientBootstrap(group: group)
@@ -649,7 +650,7 @@ class HTTPServerClientTest : XCTestCase {
             .wait()
 
         defer {
-            XCTAssertNoThrow(try syncCloseAcceptingAlreadyClosed(channel: clientChannel))
+            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/204")

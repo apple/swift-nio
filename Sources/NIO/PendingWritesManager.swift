@@ -465,6 +465,7 @@ internal protocol PendingWritesManager {
 }
 
 extension PendingWritesManager {
+    // This is called from `Channel` API so must be thread-safe.
     var isWritable: Bool {
         return self.channelWritabilityFlag.load()
     }

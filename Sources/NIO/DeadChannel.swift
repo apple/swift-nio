@@ -16,6 +16,14 @@
 /// the original `Channel` is closed. Given that the original `Channel` is closed the `DeadChannelCore` should fail
 /// all operations.
 private final class DeadChannelCore: ChannelCore {
+    func localAddress0() throws -> SocketAddress {
+        throw ChannelError.ioOnClosedChannel
+    }
+
+    func remoteAddress0() throws -> SocketAddress {
+        throw ChannelError.ioOnClosedChannel
+    }
+
     func register0(promise: EventLoopPromise<Void>?) {
         promise?.fail(error: ChannelError.ioOnClosedChannel)
     }
@@ -65,27 +73,30 @@ private final class DeadChannelCore: ChannelCore {
 /// channel as it only holds an unowned reference to the original `Channel`. `DeadChannel` serves as a replacement
 /// that can be used when the original `Channel` might no longer be valid.
 internal final class DeadChannel: Channel {
+    let eventLoop: EventLoop
     let pipeline: ChannelPipeline
 
-    var eventLoop: EventLoop {
-        return self.pipeline.eventLoop
+    public var closeFuture: EventLoopFuture<()> {
+        return self.eventLoop.newSucceededFuture(result: ())
     }
 
     internal init(pipeline: ChannelPipeline) {
         self.pipeline = pipeline
+        self.eventLoop = pipeline.eventLoop
     }
 
+    // This is `Channel` API so must be thread-safe.
     var allocator: ByteBufferAllocator {
         return ByteBufferAllocator()
     }
 
-    var closeFuture: EventLoopFuture<Void> {
-        return self.pipeline.eventLoop.newSucceededFuture(result: ())
+    var localAddress: SocketAddress? {
+        return nil
     }
 
-    let localAddress: SocketAddress? = nil
-
-    let remoteAddress: SocketAddress? = nil
+    var remoteAddress: SocketAddress? {
+        return nil
+    }
 
     let parent: Channel? = nil
 

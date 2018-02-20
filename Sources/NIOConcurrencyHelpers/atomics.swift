@@ -307,3 +307,91 @@ extension UInt: AtomicPrimitive {
     public static let atomic_load                 = catmc_atomic_unsigned_long_load
     public static let atomic_store                = catmc_atomic_unsigned_long_store
 }
+
+/// `AtomicBox` is a heap-allocated box which allows atomic access to an instance of a Swift class.
+///
+/// It behaves very much like `Atomic<T>` but for objects, maintaining the correct retain counts.
+public class AtomicBox<T: AnyObject> {
+    private let storage: Atomic<Int>
+
+    public init(value: T) {
+        let ptr = Unmanaged<T>.passRetained(value)
+        self.storage = Atomic(value: Int(bitPattern: ptr.toOpaque()))
+    }
+
+    deinit {
+        let oldPtrBits = self.storage.exchange(with: 0xdeadbeef)
+        let oldPtr = Unmanaged<T>.fromOpaque(UnsafeRawPointer(bitPattern: oldPtrBits)!)
+        oldPtr.release()
+    }
+
+    /// Atomically compares the value against `expected` and, if they are equal,
+    /// replaces the value with `desired`.
+    ///
+    /// This implementation conforms to C11's `atomic_compare_exchange_strong`. This
+    /// means that the compare-and-swap will always succeed if `expected` is equal to
+    /// value. Additionally, it uses a *sequentially consistent ordering*. For more
+    /// details on atomic memory models, check the documentation for C11's
+    /// `stdatomic.h`.
+    ///
+    /// - Parameter expected: The value that this object must currently hold for the
+    ///     compare-and-swap to succeed.
+    /// - Parameter desired: The new value that this object will hold if the compare
+    ///     succeeds.
+    /// - Returns: `True` if the exchange occurred, or `False` if `expected` did not
+    ///     match the current value and so no exchange occurred.
+    public func compareAndExchange(expected: T, desired: T) -> Bool {
+        return withExtendedLifetime(desired) {
+            let expectedPtr = Unmanaged<T>.passUnretained(expected)
+            let desiredPtr = Unmanaged<T>.passUnretained(desired)
+
+            if self.storage.compareAndExchange(expected: Int(bitPattern: expectedPtr.toOpaque()),
+                                               desired: Int(bitPattern: desiredPtr.toOpaque())) {
+                _ = desiredPtr.retain()
+                expectedPtr.release()
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+
+    /// Atomically exchanges `value` for the current value of this object.
+    ///
+    /// This implementation uses a *relaxed* memory ordering. This guarantees nothing
+    /// more than that this operation is atomic: there is no guarantee that any other
+    /// event will be ordered before or after this one.
+    ///
+    /// - Parameter value: The new value to set this object to.
+    /// - Returns: The value previously held by this object.
+    public func exchange(with value: T) -> T {
+        let newPtr = Unmanaged<T>.passRetained(value)
+        let oldPtrBits = self.storage.exchange(with: Int(bitPattern: newPtr.toOpaque()))
+        let oldPtr = Unmanaged<T>.fromOpaque(UnsafeRawPointer(bitPattern: oldPtrBits)!)
+        return oldPtr.takeRetainedValue()
+    }
+
+    /// Atomically loads and returns the value of this object.
+    ///
+    /// This implementation uses a *relaxed* memory ordering. This guarantees nothing
+    /// more than that this operation is atomic: there is no guarantee that any other
+    /// event will be ordered before or after this one.
+    ///
+    /// - Returns: The value of this object
+    public func load() -> T {
+        let ptrBits = self.storage.load()
+        let ptr = Unmanaged<T>.fromOpaque(UnsafeRawPointer(bitPattern: ptrBits)!)
+        return ptr.takeUnretainedValue()
+    }
+
+    /// Atomically replaces the value of this object with `value`.
+    ///
+    /// This implementation uses a *relaxed* memory ordering. This guarantees nothing
+    /// more than that this operation is atomic: there is no guarantee that any other
+    /// event will be ordered before or after this one.
+    ///
+    /// - Parameter value: The new value to set the object to.
+    public func store(_ value: T) -> Void {
+        _ = self.exchange(with: value)
+    }
+}

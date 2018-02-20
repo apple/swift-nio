@@ -50,6 +50,12 @@ private let sysLseek = lseek
 private let sysRecvFrom = recvfrom
 private let sysSendTo = sendto
 private let sysDup = dup
+private let sysGetpeername = getpeername
+private let sysGetsockname = getsockname
+private let sysAF_INET = AF_INET
+private let sysAF_INET6 = AF_INET6
+private let sysAF_UNIX = AF_UNIX
+private let sysInet_ntop = inet_ntop
 
 #if os(Linux)
 private let sysSendMmsg = CNIOLinux_sendmmsg
@@ -110,6 +116,23 @@ internal func wrapSyscall<T: FixedWidthInteger>(where function: StaticString = #
     }
 }
 
+/* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
+@inline(__always)
+internal func wrapErrorIsNullReturnCall(where function: StaticString = #function, _ fn: () throws -> UnsafePointer<CChar>?) throws -> UnsafePointer<CChar>? {
+    while true {
+        let res = try fn()
+        if res == nil {
+            let err = errno
+            if err == EINTR {
+                continue
+            }
+            assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(strerror(err)!)")
+            throw IOError(errnoCode: err, function: function)
+        }
+        return res
+    }
+}
+
 enum Shutdown {
     case RD
     case WR
@@ -148,6 +171,9 @@ internal enum Posix {
     }
 #endif
     
+    static let AF_INET = sa_family_t(sysAF_INET)
+    static let AF_INET6 = sa_family_t(sysAF_INET6)
+    static let AF_UNIX = sa_family_t(sysAF_UNIX)
     
     @inline(never)
     public static func shutdown(descriptor: CInt, how: Shutdown) throws {
@@ -321,6 +347,14 @@ internal enum Posix {
         }
     }
 
+    @discardableResult
+    @inline(never)
+    public static func inet_ntop(addressFamily: CInt, addressBytes: UnsafeRawPointer, addressDescription: UnsafeMutablePointer<CChar>, addressDescriptionLength: socklen_t) throws -> UnsafePointer<CChar>? {
+        return try wrapErrorIsNullReturnCall {
+            sysInet_ntop(addressFamily, addressBytes, addressDescription, addressDescriptionLength)
+        }
+    }
+
     // Its not really posix but exists on Linux and MacOS / BSD so just put it here for now to keep it simple
     @inline(never)
     public static func sendfile(descriptor: CInt, fd: CInt, offset: off_t, count: size_t) throws -> IOResult<Int> {
@@ -365,6 +399,21 @@ internal enum Posix {
             Int(sysRecvMmsg(sockfd, msgvec, vlen, flags, timeout))
         }
     }
+
+    @inline(never)
+    public static func getpeername(socket: CInt, address: UnsafeMutablePointer<sockaddr>, addressLength: UnsafeMutablePointer<socklen_t>) throws {
+        _ = try wrapSyscall {
+            return sysGetpeername(socket, address, addressLength)
+        }
+    }
+
+    @inline(never)
+    public static func getsockname(socket: CInt, address: UnsafeMutablePointer<sockaddr>, addressLength: UnsafeMutablePointer<socklen_t>) throws {
+        _ = try wrapSyscall {
+            return sysGetsockname(socket, address, addressLength)
+        }
+    }
+
 }
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)

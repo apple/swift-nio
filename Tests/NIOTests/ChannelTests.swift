@@ -1157,7 +1157,7 @@ public class ChannelTests: XCTestCase {
                     return channel.pipeline.add(handler: byteCountingHandler)
                 }
             }
-            .connect(to: server.localAddress!)
+            .connect(to: try! server.localAddress())
         let accepted = try server.accept()!
         defer {
             XCTAssertNoThrow(try accepted.close())
@@ -1219,7 +1219,7 @@ public class ChannelTests: XCTestCase {
                     return channel.pipeline.add(handler: ShutdownVerificationHandler(inputShutdown: true, outputShutdown: false))
                 }
             }
-            .connect(to: server.localAddress!)
+            .connect(to: try! server.localAddress())
         let accepted = try server.accept()!
         defer {
             XCTAssertNoThrow(try accepted.close())
@@ -1269,7 +1269,7 @@ public class ChannelTests: XCTestCase {
                 return channel.pipeline.add(handler: ShutdownVerificationHandler(inputShutdown: true, outputShutdown: false))
             }
             .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
-            .connect(to: server.localAddress!)
+            .connect(to: try! server.localAddress())
         let accepted = try server.accept()!
         defer {
             XCTAssertNoThrow(try accepted.close())
@@ -1411,5 +1411,28 @@ public class ChannelTests: XCTestCase {
         XCTAssertNil(weakClientChannel, "weakClientChannel not nil, looks like we leaked it!")
         XCTAssertNil(weakServerChannel, "weakServerChannel not nil, looks like we leaked it!")
         XCTAssertNil(weakServerChildChannel, "weakServerChildChannel not nil, looks like we leaked it!")
+    }
+
+    func testAskForLocalAndRemoteAddressesAfterChannelIsClosed() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+
+
+        // Start shutting stuff down.
+        try serverChannel.syncCloseAcceptingAlreadyClosed()
+        try clientChannel.syncCloseAcceptingAlreadyClosed()
+
+        for f in [ serverChannel.remoteAddress, serverChannel.localAddress, clientChannel.remoteAddress, clientChannel.localAddress ] {
+            XCTAssertNil(f)
+        }
     }
 }

@@ -55,6 +55,7 @@ extension ChannelTests {
                 ("testHalfClosure", testHalfClosure),
                 ("testRejectsInvalidData", testRejectsInvalidData),
                 ("testWeDontCrashIfChannelReleasesBeforePipeline", testWeDontCrashIfChannelReleasesBeforePipeline),
+                ("testAskForLocalAndRemoteAddressesAfterChannelIsClosed", testAskForLocalAndRemoteAddressesAfterChannelIsClosed),
            ]
    }
 }

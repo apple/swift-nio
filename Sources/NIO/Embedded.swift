@@ -140,7 +140,6 @@ public class EmbeddedEventLoop: EventLoop {
 class EmbeddedChannelCore : ChannelCore {
     var closed: Bool = false
     var isActive: Bool = false
-
     
     var eventLoop: EventLoop
     var closePromise: EventLoopPromise<Void>
@@ -163,6 +162,14 @@ class EmbeddedChannelCore : ChannelCore {
     var outboundBuffer: [IOData] = []
     var inboundBuffer: [NIOAny] = []
     
+    func localAddress0() throws -> SocketAddress {
+        throw ChannelError.operationUnsupported
+    }
+
+    func remoteAddress0() throws -> SocketAddress {
+        throw ChannelError.operationUnsupported
+    }
+
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         if closed {
             promise?.fail(error: ChannelError.alreadyClosed)
@@ -269,8 +276,8 @@ public class EmbeddedChannel : Channel {
     public var allocator: ByteBufferAllocator = ByteBufferAllocator()
     public var eventLoop: EventLoop = EmbeddedEventLoop()
 
-    public var localAddress: SocketAddress? = nil
-    public var remoteAddress: SocketAddress? = nil
+    public let localAddress: SocketAddress? = nil
+    public let remoteAddress: SocketAddress? = nil
 
     // Embedded channels never have parents.
     public let parent: Channel? = nil

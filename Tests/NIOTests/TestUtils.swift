@@ -69,6 +69,17 @@ func openTemporaryFile() -> (CInt, String) {
     return (fd, String(decoding: templateBytes, as: UTF8.self))
 }
 
+internal extension Channel {
+    func syncCloseAcceptingAlreadyClosed() throws {
+        do {
+            try self.close().wait()
+        } catch ChannelError.alreadyClosed {
+            /* we're happy with this one */
+        } catch let e {
+            throw e
+        }
+    }
+}
 
 final class ByteCountingHandler : ChannelInboundHandler {
     typealias InboundIn = ByteBuffer

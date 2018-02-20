@@ -18,6 +18,8 @@ import NIOConcurrencyHelpers
 ///
 /// - note: All methods must be called from the EventLoop thread
 public protocol ChannelCore : class {
+    func localAddress0() throws -> SocketAddress
+    func remoteAddress0() throws -> SocketAddress
     func register0(promise: EventLoopPromise<Void>?)
     func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?)
     func connect0(to: SocketAddress, promise: EventLoopPromise<Void>?)
@@ -82,7 +84,9 @@ public protocol Channel : class, ChannelOutboundInvoker {
 
 /// A `SelectableChannel` is a `Channel` that can be used with a `Selector` which notifies a user when certain events
 /// before possible. On UNIX a `Selector` is usually an abstraction of `select`, `poll`, `epoll` or `kqueue`.
-protocol SelectableChannel : Channel {
+///
+/// - warning: `SelectableChannel` methods and properties are _not_ thread-safe (unless they also belong to `Channel`).
+internal protocol SelectableChannel : Channel {
     /// The type of the `Selectable`. A `Selectable` is usually wrapping a file descriptor that can be registered in a
     /// `Selector`.
     associatedtype SelectableType: Selectable

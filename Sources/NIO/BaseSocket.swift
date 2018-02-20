@@ -21,6 +21,19 @@ protocol SockAddrProtocol {
     mutating func withMutableSockAddr<R>(_ fn: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R
 }
 
+private func descriptionForAddress(family: CInt, bytes: UnsafeRawPointer, length byteCount: Int) -> String {
+    var addressBytes: [Int8] = Array(repeating: 0, count: byteCount)
+    return addressBytes.withUnsafeMutableBufferPointer { (addressBytesPtr: inout UnsafeMutableBufferPointer<Int8>) -> String in
+        try! Posix.inet_ntop(addressFamily: family,
+                             addressBytes: bytes,
+                             addressDescription: addressBytesPtr.baseAddress!,
+                             addressDescriptionLength: socklen_t(byteCount))
+        return addressBytesPtr.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: byteCount) { addressBytesPtr -> String in
+            return String(decoding: UnsafeBufferPointer<UInt8>(start: addressBytesPtr, count: byteCount), as: Unicode.ASCII.self)
+        }
+    }
+}
+
 extension sockaddr_in: SockAddrProtocol {
     mutating func withSockAddr<R>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
         var me = self
@@ -33,6 +46,12 @@ extension sockaddr_in: SockAddrProtocol {
         var me = self
         return try withUnsafeMutableBytes(of: &me) { p in
             try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
+
+    mutating func addressDescription() -> String {
+        return withUnsafePointer(to: &self.sin_addr) { addrPtr in
+            descriptionForAddress(family: AF_INET, bytes: addrPtr, length: Int(INET_ADDRSTRLEN))
         }
     }
 }
@@ -49,6 +68,12 @@ extension sockaddr_in6: SockAddrProtocol {
         var me = self
         return try withUnsafeMutableBytes(of: &me) { p in
             try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+        }
+    }
+
+    mutating func addressDescription() -> String {
+        return withUnsafePointer(to: &self.sin6_addr) { addrPtr in
+            descriptionForAddress(family: AF_INET6, bytes: addrPtr, length: Int(INET6_ADDRSTRLEN))
         }
     }
 }
@@ -119,54 +144,45 @@ extension sockaddr_storage {
             }
         }
     }
+
+    mutating func convert() -> SocketAddress {
+        switch self.ss_family {
+        case Posix.AF_INET:
+            var sockAddr: sockaddr_in = self.convert()
+            return SocketAddress(sockAddr, host: sockAddr.addressDescription())
+        case Posix.AF_INET6:
+            var sockAddr: sockaddr_in6 = self.convert()
+            return SocketAddress(sockAddr, host: sockAddr.addressDescription())
+        case Posix.AF_UNIX:
+            return SocketAddress(self.convert() as sockaddr_un)
+        default:
+            fatalError("unknown sockaddr family \(self.ss_family)")
+        }
+    }
 }
 
 class BaseSocket: Selectable {
     public let descriptor: Int32
     public private(set) var open: Bool
     
-    final var localAddress: SocketAddress? {
-        get {
-            return get_addr { getsockname($0, $1, $2) }
-        }
+    final func localAddress() throws -> SocketAddress {
+        return try get_addr { try Posix.getsockname(socket: $0, address: $1, addressLength: $2) }
     }
     
-    final var remoteAddress: SocketAddress? {
-        get {
-            return get_addr { getpeername($0, $1, $2) }
-        }
+    final func remoteAddress() throws -> SocketAddress {
+        return try get_addr { try Posix.getpeername(socket: $0, address: $1, addressLength: $2) }
     }
 
-    private func get_addr(_ fn: (Int32, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) -> Int32) -> SocketAddress? {
+    private func get_addr(_ fn: (Int32, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) throws -> Void) throws -> SocketAddress {
         var addr = sockaddr_storage()
-        var len: socklen_t = socklen_t(MemoryLayout<sockaddr_storage>.size)
-        
-        return withUnsafeMutablePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1, { address in
-                guard  fn(descriptor, address, &len) == 0 else {
-                    return nil
-                }
-                switch Int32(address.pointee.sa_family) {
-                case AF_INET:
-                    return address.withMemoryRebound(to: sockaddr_in.self, capacity: 1, { ipv4 in
-                        var ipAddressString = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
-                        return SocketAddress(ipv4.pointee, host: String(cString: inet_ntop(AF_INET, &ipv4.pointee.sin_addr, &ipAddressString, socklen_t(INET_ADDRSTRLEN))))
-                    })
-                case AF_INET6:
-                    return address.withMemoryRebound(to: sockaddr_in6.self, capacity: 1, { ipv6 in
-                        var ipAddressString = [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
-                        return SocketAddress(ipv6.pointee, host: String(cString: inet_ntop(AF_INET6, &ipv6.pointee.sin6_addr, &ipAddressString, socklen_t(INET6_ADDRSTRLEN))))
-                    })
-                case AF_UNIX:
-                    return address.withMemoryRebound(to: sockaddr_un.self, capacity: 1) { uds in
-                        return SocketAddress(uds.pointee)
-                    }
-                default:
-                    fatalError("address family \(address.pointee.sa_family) not supported")
-                }
-            })
+
+        try addr.withMutableSockAddr { addressPtr, size in
+            var size = socklen_t(size)
+            try fn(self.descriptor, addressPtr, &size)
         }
+        return addr.convert()
     }
+
     static func newSocket(protocolFamily: Int32, type: CInt) throws -> Int32 {
         let sock = try Posix.socket(domain: protocolFamily,
                                     type: type,

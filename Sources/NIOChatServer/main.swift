@@ -74,7 +74,7 @@ final class ChatHandler: ChannelInboundHandler {
     }
     
     public func channelActive(ctx: ChannelHandlerContext) {
-        let remoteAddress = ctx.channel.remoteAddress!
+        let remoteAddress = ctx.remoteAddress!
         let channel = ctx.channel
         self.channelsSyncQueue.async {
             // broadcast the message to all the connected clients except the one that just became active.
@@ -84,7 +84,7 @@ final class ChatHandler: ChannelInboundHandler {
         }
 
         var buffer = channel.allocator.buffer(capacity: 64)
-        buffer.write(string: "(ChatServer) - Welcome to: \(channel.localAddress!)\n")
+        buffer.write(string: "(ChatServer) - Welcome to: \(ctx.localAddress!)\n")
         ctx.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
     }
     

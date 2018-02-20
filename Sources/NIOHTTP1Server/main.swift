@@ -72,7 +72,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             URL: \(self.infoSavedRequestHead!.uri)\r
             body length: \(self.infoSavedBodyBytes)\r
             headers: \(self.infoSavedRequestHead!.headers)\r
-            client: \(ctx.channel.remoteAddress?.description ?? "zombie")\r
+            client: \(ctx.remoteAddress?.description ?? "zombie")\r
             IO: SwiftNIO Electric Boogaloo™️\r\n
             """
             self.buffer.clear()
@@ -200,7 +200,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         case "/dynamic/count-to-ten":
             return { self.handleMultipleWrites(ctx: $0, request: $1, strings: (1...10).map { "\($0)\r\n" }, delay: .milliseconds(100)) }
         case "/dynamic/client-ip":
-            return { ctx, req in self.handleJustWrite(ctx: ctx, request: req, string: "\(ctx.channel.remoteAddress.debugDescription)") }
+            return { ctx, req in self.handleJustWrite(ctx: ctx, request: req, string: "\(ctx.remoteAddress.debugDescription)") }
         default:
             return { ctx, req in self.handleJustWrite(ctx: ctx, request: req, statusCode: .notFound, string: "not found") }
         }

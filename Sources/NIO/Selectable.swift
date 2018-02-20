@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 /// Represents a selectable resource which can be registered to a `Selector` to be notified once there are some events ready for it.
+///
+/// - warning: `Selectable`s are not thread-safe, only to be used on the appropriate `EventLoop`.
 protocol Selectable {
     
     /// The file descriptor itself.

@@ -809,6 +809,14 @@ public final class ChannelHandlerContext : ChannelInvoker {
         return self.inboundHandler ?? self.outboundHandler!
     }
 
+    public var remoteAddress: SocketAddress? {
+        return try? self.channel._unsafe.remoteAddress0()
+    }
+
+    public var localAddress: SocketAddress? {
+        return try? self.channel._unsafe.localAddress0()
+    }
+
     public let name: String
     public let eventLoop: EventLoop
     private let inboundHandler: _ChannelInboundHandler?

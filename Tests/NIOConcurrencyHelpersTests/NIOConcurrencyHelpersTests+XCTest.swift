@@ -39,6 +39,11 @@ extension NIOConcurrencyHelpersTests {
                 ("testConditionLockMutualExclusion", testConditionLockMutualExclusion),
                 ("testConditionLock", testConditionLock),
                 ("testConditionLockWithDifferentConditions", testConditionLockWithDifferentConditions),
+                ("testAtomicBoxDoesNotTriviallyLeak", testAtomicBoxDoesNotTriviallyLeak),
+                ("testAtomicBoxCompareAndExchangeWorksIfEqual", testAtomicBoxCompareAndExchangeWorksIfEqual),
+                ("testAtomicBoxCompareAndExchangeWorksIfNotEqual", testAtomicBoxCompareAndExchangeWorksIfNotEqual),
+                ("testAtomicBoxStoreWorks", testAtomicBoxStoreWorks),
+                ("testAtomicBoxCompareAndExchangeOntoItselfWorks", testAtomicBoxCompareAndExchangeOntoItselfWorks),
            ]
    }
 }
