@@ -266,7 +266,7 @@ public class EmbeddedChannel : Channel {
     }
     
     private var _pipeline: ChannelPipeline!
-    public let allocator: ByteBufferAllocator = ByteBufferAllocator()
+    public var allocator: ByteBufferAllocator = ByteBufferAllocator()
     public var eventLoop: EventLoop = EmbeddedEventLoop()
 
     public var localAddress: SocketAddress? = nil

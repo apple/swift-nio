@@ -26,15 +26,12 @@ extension ByteToMessageDecoder {
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) throws {
         var buffer = self.unwrapInboundIn(data)
-        
-        if var cum = cumulationBuffer {
-            var buf = ctx.channel.allocator.buffer(capacity: cum.readableBytes + buffer.readableBytes)
-            buf.write(buffer: &cum)
-            buf.write(buffer: &buffer)
-            cumulationBuffer = buf
-            buffer = buf
+
+        if self.cumulationBuffer != nil {
+            self.cumulationBuffer!.write(buffer: &buffer)
+            buffer = self.cumulationBuffer!
         } else {
-            cumulationBuffer = buffer
+            self.cumulationBuffer = buffer
         }
         
         // Running decode method until either the buffer is not readable anymore or the user returned false.

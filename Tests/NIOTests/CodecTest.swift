@@ -16,6 +16,26 @@
 import XCTest
 @testable import NIO
 
+private var testDecoderIsNotQuadratic_mallocs = 0
+private var testDecoderIsNotQuadratic_reallocs = 0
+private func testDecoderIsNotQuadratic_freeHook(_ ptr: UnsafeMutableRawPointer) -> Void {
+    free(ptr)
+}
+
+private func testDecoderIsNotQuadratic_mallocHook(_ size: Int) -> UnsafeMutableRawPointer {
+    testDecoderIsNotQuadratic_mallocs += 1
+    return malloc(size)!
+}
+
+private func testDecoderIsNotQuadratic_reallocHook(_ ptr: UnsafeMutableRawPointer, _ count: Int) -> UnsafeMutableRawPointer {
+    testDecoderIsNotQuadratic_reallocs += 1
+    return realloc(ptr, count)
+}
+
+private func testDecoderIsNotQuadratic_memcpyHook(_ dst: UnsafeMutableRawPointer, _ src: UnsafeRawPointer, _ count: Int) -> Void {
+    _ = memcpy(dst, src, count)
+}
+
 private final class ChannelInactivePromiser: ChannelInboundHandler {
     typealias InboundIn = Any
 
@@ -44,6 +64,17 @@ public class ByteToMessageDecoderTest: XCTestCase {
             }
             ctx.fireChannelRead(self.wrapInboundOut(buffer.readInteger()!))
             return true
+        }
+    }
+
+    private final class ForeverDecoder: ByteToMessageDecoder {
+        typealias InboundIn = ByteBuffer
+        typealias InboundOut = Never
+
+        var cumulationBuffer: ByteBuffer?
+
+        func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> Bool {
+            return false
         }
     }
     
@@ -93,6 +124,34 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         channel.pipeline.fireChannelInactive()
         XCTAssertTrue(inactivePromiser.channelInactivePromise.futureResult.fulfilled)
+    }
+
+    func testDecoderIsNotQuadratic() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+
+        XCTAssertEqual(testDecoderIsNotQuadratic_mallocs, 0)
+        XCTAssertEqual(testDecoderIsNotQuadratic_reallocs, 0)
+        XCTAssertNoThrow(try channel.pipeline.add(handler: ForeverDecoder()).wait())
+
+        let dummyAllocator = ByteBufferAllocator(hookedMalloc: testDecoderIsNotQuadratic_mallocHook,
+                                                 hookedRealloc: testDecoderIsNotQuadratic_reallocHook,
+                                                 hookedFree: testDecoderIsNotQuadratic_freeHook,
+                                                 hookedMemcpy: testDecoderIsNotQuadratic_memcpyHook)
+        channel.allocator = dummyAllocator
+        var inputBuffer = dummyAllocator.buffer(capacity: 8)
+        inputBuffer.write(staticString: "whatwhat")
+
+        for _ in 0..<10 {
+            channel.pipeline.fireChannelRead(NIOAny(inputBuffer))
+        }
+
+        // We get one extra malloc the first time around the loop, when we have aliased the buffer. From then on it's
+        // all reallocs of the underlying buffer.
+        XCTAssertEqual(testDecoderIsNotQuadratic_mallocs, 2)
+        XCTAssertEqual(testDecoderIsNotQuadratic_reallocs, 3)
     }
 }
 

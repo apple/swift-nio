@@ -402,9 +402,9 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     
     public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> Bool {
         if let slice = state.slice {
-            // If we stored a slice before we need to ensure we move the readerIndex so we don't try to parse the data again and also
-            // adjust the slice as it now starts from 0.
-            state.slice = (readerIndex: 0 , length: slice.length)
+            // If we stored a slice before we need to ensure we move the readerIndex so we don't try to parse the data again. We
+            // also need to update the reader index to whatever it is now.
+            state.slice = (buffer.readerIndex, slice.length)
             buffer.moveReaderIndex(forwardBy: state.readerIndexAdjustment)
         }
         
@@ -425,8 +425,13 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         }
 
         if let slice = state.slice {
+            // If we have a slice, we need to preserve all of these bytes. To do that, we move the
+            // reader index to where the slice wants it, and then record how many readable bytes that leaves
+            // us with. Then, invalidate the reader index, as it's not stable across calls to decode()
+            // *anyway*, so we want to make sure we can see the bad value in debug errors.
             buffer.moveReaderIndex(to: slice.readerIndex)
             state.readerIndexAdjustment = buffer.readableBytes
+            state.slice = (-1, slice.length)
             return false
         } else {
             buffer.moveReaderIndex(forwardBy: result)
