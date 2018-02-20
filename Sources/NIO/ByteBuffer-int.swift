@@ -26,8 +26,9 @@ extension ByteBuffer {
     ///
     /// - parameters:
     ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
+    ///     - as: the desired `FixedWidthInteger` type (optional parameter)
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if there aren't enough bytes readable.
-    public mutating func readInteger<T: FixedWidthInteger>(endianness: Endianness = .big) -> T? {
+    public mutating func readInteger<T: FixedWidthInteger>(endianness: Endianness = .big, as: T.Type = T.self) -> T? {
         guard self.readableBytes >= MemoryLayout<T>.size else {
             return nil
         }
@@ -42,8 +43,9 @@ extension ByteBuffer {
     /// - parameters:
     ///     - index: The starting index of the bytes for the integer into the `ByteBuffer`.
     ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
+    ///     - as: the desired `FixedWidthInteger` type (optional parameter)
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if the bytes of interest aren't contained in the `ByteBuffer`.
-    public func getInteger<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big) -> T? {
+    public func getInteger<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big, as: T.Type = T.self) -> T? {
         precondition(index >= 0, "index must not be negative")
         return self.withVeryUnsafeBytes { ptr in
             guard index <= ptr.count - MemoryLayout<T>.size else {

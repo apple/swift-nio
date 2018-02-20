@@ -574,7 +574,6 @@ extension StaticString: Collection {
     public var startIndex: Index { return 0 }
     public var endIndex: Index { return self.utf8CodeUnitCount }
     public func index(after i: Index) -> Index { return i + 1 }
-    public func index(before i: Index) -> Index { return i - 1 }
 
     public subscript(position: Int) -> StaticString.Element {
         get {

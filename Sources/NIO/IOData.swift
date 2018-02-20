@@ -58,14 +58,4 @@ extension IOData {
             self = .fileRegion(fileRegion)
         }
     }
-
-    /// Returns if the `IOData` object is in fact a `FileRegion`.
-    public var isFileRegion: Bool {
-        switch self {
-        case .fileRegion:
-            return true
-        default:
-            return false
-        }
-    }
 }
