@@ -28,7 +28,7 @@ private final class EchoHandler: ChannelInboundHandler {
 
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
-        ctx.flush(promise: nil)
+        ctx.flush()
     }
 
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {

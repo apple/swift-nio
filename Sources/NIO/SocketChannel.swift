@@ -397,15 +397,14 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public final func flush0(promise: EventLoopPromise<Void>?) {
+    public final func flush0() {
         assert(eventLoop.inEventLoop)
 
         guard !self.closed else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
 
-        self.markFlushPoint(promise: promise)
+        self.markFlushPoint(promise: nil)
 
         if !isWritePending() && flushNow() == .register {
             registerForWritable()

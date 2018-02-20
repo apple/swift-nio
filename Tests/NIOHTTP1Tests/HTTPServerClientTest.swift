@@ -283,11 +283,7 @@ class HTTPServerClientTest : XCTestCase {
         }
 
         public func channelReadComplete(ctx: ChannelHandlerContext) {
-            ctx.flush().mapIfError { error in
-                XCTFail("unexpected error \(error)")
-            }.whenComplete {
-                self.maybeClose(ctx: ctx)
-            }
+            ctx.flush()
         }
 
         // We should only close the connection when the remote peer has sent the entire request

@@ -36,7 +36,6 @@ extension DatagramChannelTests {
                 ("testLargeWritesFail", testLargeWritesFail),
                 ("testOneLargeWriteDoesntPreventOthersWriting", testOneLargeWriteDoesntPreventOthersWriting),
                 ("testClosingBeforeFlushFailsAllWrites", testClosingBeforeFlushFailsAllWrites),
-                ("testFastFlush", testFastFlush),
            ]
    }
 }

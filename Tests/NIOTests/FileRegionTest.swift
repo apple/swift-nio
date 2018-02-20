@@ -147,7 +147,7 @@ class FileRegionTest : XCTestCase {
                     buffer.write(bytes: bytes)
                     let bbFuture = clientChannel.write(NIOAny(buffer))
                     clientChannel.close(promise: nil)
-                    clientChannel.flush(promise: nil)
+                    clientChannel.flush()
                     return frFuture.then { bbFuture }
                 }.wait()
                 XCTFail("no error happened even though we closed before flush")

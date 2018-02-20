@@ -118,12 +118,15 @@ public class ChannelTests: XCTestCase {
 
         // We're going to try to write loads, and loads, and loads of data. In this case, one more
         // write than the iovecs max.
-        for _ in 0...Socket.writevLimitIOVectors {
-            var buffer = clientChannel.allocator.buffer(capacity: 1)
+        var buffer = clientChannel.allocator.buffer(capacity: 1)
+        for _ in 0..<Socket.writevLimitIOVectors {
+            buffer.clear()
             buffer.write(string: "a")
             clientChannel.write(NIOAny(buffer), promise: nil)
         }
-        try clientChannel.flush().wait()
+        buffer.clear()
+        buffer.write(string: "a")
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         // Start shutting stuff down.
         try clientChannel.close().wait()
@@ -154,11 +157,7 @@ public class ChannelTests: XCTestCase {
             written += bufferSize
         }
 
-        do {
-            _ = try clientChannel.flush().wait()
-        } catch let error {
-            XCTFail("Error occured: \(error)")
-        }
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         // Start shutting stuff down.
         try clientChannel.close().wait()

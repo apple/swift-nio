@@ -151,7 +151,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         }
         channel.pipeline.write(NIOAny(HTTPServerResponsePart.end(nil)),
                                promise: promiseOrderer.newPromise())
-        channel.pipeline.flush(promise: promiseOrderer.newPromise())
+        channel.pipeline.flush()
 
         // Get all the promises to fire.
         try promiseOrderer.waitUntilComplete()
@@ -166,12 +166,12 @@ class HTTPResponseCompressorTest: XCTestCase {
                                    promise: promiseOrderer.newPromise())
             writeCount += 1
             if writeCount % 3 == 0 {
-                channel.pipeline.flush(promise: promiseOrderer.newPromise())
+                channel.pipeline.flush()
             }
         }
         channel.pipeline.write(NIOAny(HTTPServerResponsePart.end(nil)),
                                promise: promiseOrderer.newPromise())
-        channel.pipeline.flush(promise: promiseOrderer.newPromise())
+        channel.pipeline.flush()
 
         // Get all the promises to fire.
         try promiseOrderer.waitUntilComplete()

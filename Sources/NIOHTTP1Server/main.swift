@@ -342,7 +342,7 @@ private final class HTTPHandler: ChannelInboundHandler {
     }
 
     func channelReadComplete(ctx: ChannelHandlerContext) {
-        ctx.flush(promise: nil)
+        ctx.flush()
     }
 
     func handlerAdded(ctx: ChannelHandlerContext) {

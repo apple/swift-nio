@@ -44,7 +44,7 @@ public class BackPressureHandler: ChannelInboundHandler, _ChannelOutboundHandler
         if writable {
             mayRead(ctx: ctx)
         } else {
-            ctx.flush(promise: nil)
+            ctx.flush()
         }
         
         // Propagate the event as the user may still want to do something based on it.

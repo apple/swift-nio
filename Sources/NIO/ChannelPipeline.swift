@@ -446,12 +446,12 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
 
-    public func flush(promise: EventLoopPromise<Void>?) {
+    public func flush() {
         if eventLoop.inEventLoop {
-            flush0(promise: promise)
+            flush0()
         } else {
             eventLoop.execute {
-                self.flush0(promise: promise)
+                self.flush0()
             }
         }
     }
@@ -544,11 +544,9 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
 
-    func flush0(promise: EventLoopPromise<Void>?) {
+    func flush0() {
         if let firstOutboundCtx = firstOutboundCtx {
-            firstOutboundCtx.invokeFlush(promise: promise)
-        } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            firstOutboundCtx.invokeFlush()
         }
     }
 
@@ -701,8 +699,8 @@ private final class HeadChannelHandler : _ChannelOutboundHandler {
         ctx.channel._unsafe.write0(data, promise: promise)
     }
 
-    func flush(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
-        ctx.channel._unsafe.flush0(promise: promise)
+    func flush(ctx: ChannelHandlerContext) {
+        ctx.channel._unsafe.flush0()
     }
 
     func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
@@ -955,11 +953,9 @@ public final class ChannelHandlerContext : ChannelInvoker {
     ///
     /// - parameters:
     ///     - promise: The promise fulfilled when the previously written data been flushed or failed if it cannot be flushed.
-    public func flush(promise: EventLoopPromise<Void>?) {
+    public func flush() {
         if let outboundNext = self.prev {
-            outboundNext.invokeFlush(promise: promise)
-        } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            outboundNext.invokeFlush()
         }
     }
 
@@ -1149,13 +1145,13 @@ public final class ChannelHandlerContext : ChannelInvoker {
         }
     }
 
-    fileprivate func invokeFlush(promise: EventLoopPromise<Void>?) {
+    fileprivate func invokeFlush() {
         assert(inEventLoop)
 
         if let outboundHandler = self.outboundHandler {
-            outboundHandler.flush(ctx: self, promise: promise)
+            outboundHandler.flush(ctx: self)
         } else {
-            self.prev?.invokeFlush(promise: promise)
+            self.prev?.invokeFlush()
         }
     }
 
@@ -1165,17 +1161,11 @@ public final class ChannelHandlerContext : ChannelInvoker {
 
         if let outboundHandler = self.outboundHandler {
             if let promise = promise {
-                let writePromise: EventLoopPromise<Void> = eventLoop.newPromise()
-                let flushPromise: EventLoopPromise<Void> = eventLoop.newPromise()
-
-                outboundHandler.write(ctx: self, data: data, promise: writePromise)
-                outboundHandler.flush(ctx: self, promise: flushPromise)
-
-                writePromise.futureResult.and(flushPromise.futureResult).map { (_: ((), ())) in }.cascade(promise: promise)
+                outboundHandler.write(ctx: self, data: data, promise: promise)
             } else {
                 outboundHandler.write(ctx: self, data: data, promise: nil)
-                outboundHandler.flush(ctx: self, promise: nil)
             }
+            outboundHandler.flush(ctx: self)
         } else {
             self.prev?.invokeWriteAndFlush(data, promise: promise)
         }

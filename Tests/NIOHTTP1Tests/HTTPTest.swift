@@ -71,7 +71,7 @@ class HTTPTest: XCTestCase {
             return s
         }
 
-        func sendAndCheckRequests(_ expecteds: [HTTPRequestHead], body: String?, trailers: HTTPHeaders?, sendStrategy: (String, EmbeddedChannel) throws -> Void) throws -> String? {
+        func sendAndCheckRequests(_ expecteds: [HTTPRequestHead], body: String?, trailers: HTTPHeaders?, sendStrategy: (String, EmbeddedChannel) -> EventLoopFuture<()>) throws -> String? {
             var step = 0
             var index = 0
             let channel = EmbeddedChannel()
@@ -103,15 +103,17 @@ class HTTPTest: XCTestCase {
                 return reqPart
             }).wait()
 
+            var writeFutures: [EventLoopFuture<()>] = []
             for expected in expecteds {
-                try sendStrategy(httpRequestStrForRequest(expected), channel)
+                writeFutures.append(sendStrategy(httpRequestStrForRequest(expected), channel))
                 index += 1
                 if let bodyData = bodyData {
                     allBodyDatas.append(bodyData)
                 }
                 bodyData = nil
             }
-            try channel.pipeline.flush().wait()
+            channel.pipeline.flush()
+            XCTAssertNoThrow(try EventLoopFuture<()>.andAll(writeFutures, eventLoop: channel.eventLoop).wait())
             XCTAssertEqual(2 * expecteds.count, step)
 
             if body != nil {
@@ -131,17 +133,23 @@ class HTTPTest: XCTestCase {
         let bd1 = try sendAndCheckRequests(expecteds, body: body, trailers: trailers, sendStrategy: { (reqString, chan) in
             var buf = chan.allocator.buffer(capacity: 1024)
             buf.write(string: reqString)
-            try chan.writeInbound(buf)
+            return chan.eventLoop.newSucceededFuture(result: ()).thenThrowing {
+                try chan.writeInbound(buf)
+            }
         })
 
         /* send the bytes one by one */
         let bd2 = try sendAndCheckRequests(expecteds, body: body, trailers: trailers, sendStrategy: { (reqString, chan) in
+            var writeFutures: [EventLoopFuture<()>] = []
             for c in reqString {
                 var buf = chan.allocator.buffer(capacity: 1024)
 
                 buf.write(string: "\(c)")
-                try chan.writeInbound(buf)
+                writeFutures.append(chan.eventLoop.newSucceededFuture(result: ()).thenThrowing {
+                    try chan.writeInbound(buf)
+                })
             }
+            return EventLoopFuture<()>.andAll(writeFutures, eventLoop: chan.eventLoop)
         })
 
         XCTAssertEqual(bd1, bd2)

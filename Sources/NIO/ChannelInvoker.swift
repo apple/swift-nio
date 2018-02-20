@@ -75,29 +75,20 @@ public protocol ChannelOutboundInvoker {
     func write(_ data: NIOAny, promise: EventLoopPromise<Void>?)
 
     /// Flush data that was previously written via `write` to the remote peer.
-    ///
-    /// - returns: the future which will be notified once the operation completes.
-    func flush() -> EventLoopFuture<Void>
-
-    /// Flush data that was previously written via `write` to the remote peer.
-    ///
-    /// - parameters:
-    ///       - promise: the `EventLoopPromise` that will be notified once the operation completes,
-    ///                  or `nil` if not interested in the outcome of the operation.
-    func flush(promise: EventLoopPromise<Void>?)
-
+    func flush()
+    
     /// Shortcut for calling `write` and `flush`.
     ///
     /// - parameters:
     ///       - data: the data to write
-    /// - returns: the future which will be notified once the operation completes.
+    /// - returns: the future which will be notified once the `write` operation completes.
     func writeAndFlush(_ data: NIOAny) -> EventLoopFuture<Void>
     
     /// Shortcut for calling `write` and `flush`.
     ///
     /// - parameters:
     ///       - data: the data to write
-    ///       - promise: the `EventLoopPromise` that will be notified once the operation completes,
+    ///       - promise: the `EventLoopPromise` that will be notified once the `write` operation completes,
     ///                  or `nil` if not interested in the outcome of the operation.
     func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?)
     
@@ -163,12 +154,6 @@ extension ChannelOutboundInvoker {
     public func write(_ data: NIOAny) -> EventLoopFuture<Void> {
         let promise = newPromise()
         write(data, promise: promise)
-        return promise.futureResult
-    }
-    
-    public func flush() -> EventLoopFuture<Void> {
-        let promise = newPromise()
-        flush(promise: promise)
         return promise.futureResult
     }
     

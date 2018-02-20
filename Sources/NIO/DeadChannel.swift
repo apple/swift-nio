@@ -40,8 +40,7 @@ private final class DeadChannelCore: ChannelCore {
         promise?.fail(error: ChannelError.ioOnClosedChannel)
     }
 
-    func flush0(promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: ChannelError.ioOnClosedChannel)
+    func flush0() {
     }
 
     func read0() {

@@ -277,7 +277,7 @@ class EchoServerClientTest : XCTestCase {
         }
         
         func channelReadComplete(ctx: ChannelHandlerContext) {
-            ctx.flush(promise: nil)
+            ctx.flush()
         }
     }
 
@@ -323,7 +323,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         func channelReadComplete(ctx: ChannelHandlerContext) {
-            ctx.flush(promise: nil)
+            ctx.flush()
         }
     }
 
@@ -471,17 +471,17 @@ class EchoServerClientTest : XCTestCase {
         // First we confirm that the channel really is up by sending in the appropriate number of bytes.
         var bytesToWrite = clientChannel.allocator.buffer(capacity: writingBytes.utf8.count)
         bytesToWrite.write(string: writingBytes)
-        clientChannel.writeAndFlush(NIOAny(bytesToWrite), promise: nil)
+        let lastWriteFuture = clientChannel.writeAndFlush(NIOAny(bytesToWrite))
 
         // When we've received all the bytes we know the connection is up.
         _ = try bytesReceivedPromise.futureResult.wait()
 
         // Now, with an empty write pipeline, we want to flush. This should complete immediately and without error.
-        let flushFuture = clientChannel.flush()
-        flushFuture.whenFailure { err in
+        clientChannel.flush()
+        lastWriteFuture.whenFailure { err in
             XCTFail("\(err)")
         }
-        try flushFuture.wait()
+        try lastWriteFuture.wait()
     }
 
     func testWriteOnConnect() throws {

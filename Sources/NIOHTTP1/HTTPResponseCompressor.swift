@@ -150,9 +150,9 @@ public final class HTTPResponseCompressor: ChannelInboundHandler, ChannelOutboun
         }
     }
 
-    public func flush(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+    public func flush(ctx: ChannelHandlerContext) {
         emitPendingWrites(ctx: ctx)
-        ctx.flush(promise: promise)
+        ctx.flush()
     }
 
     /// Determines the compression algorithm to use for the next response.
