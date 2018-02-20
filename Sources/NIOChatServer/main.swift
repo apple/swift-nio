@@ -23,13 +23,13 @@ final class LineDelimiterCodec : ByteToMessageDecoder {
 
     public var cumulationBuffer: ByteBuffer?
     
-    public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> Bool {
+    public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         let readable = buffer.withUnsafeReadableBytes { $0.index(of: newLine) }
         if let r = readable {
             ctx.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: r + 1)!))
-            return true
+            return .continue
         }
-        return false
+        return .needMoreData
     }
 }
 

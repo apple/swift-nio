@@ -400,7 +400,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         settings.on_message_begin = nil
     }
     
-    public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> Bool {
+    public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         if let slice = state.slice {
             // If we stored a slice before we need to ensure we move the readerIndex so we don't try to parse the data again. We
             // also need to update the reader index to whatever it is now.
@@ -432,11 +432,11 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             buffer.moveReaderIndex(to: slice.readerIndex)
             state.readerIndexAdjustment = buffer.readableBytes
             state.slice = (-1, slice.length)
-            return false
+            return .needMoreData
         } else {
             buffer.moveReaderIndex(forwardBy: result)
             state.readerIndexAdjustment = 0
-            return true
+            return .continue
         }
     }
     

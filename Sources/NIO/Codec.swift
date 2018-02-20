@@ -13,11 +13,19 @@
 //===----------------------------------------------------------------------===//
 
 
-public protocol ByteToMessageDecoder : ChannelInboundHandler where InboundIn == ByteBuffer {
+/// State of the current decoding process.
+public enum DecodingState {
+    /// Continue decoding.
+    case `continue`
+    
+    /// Stop decoding until more data is ready to be processed.
+    case needMoreData
+}
 
+public protocol ByteToMessageDecoder : ChannelInboundHandler where InboundIn == ByteBuffer {
     var cumulationBuffer: ByteBuffer? { get set }
-    func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> Bool
-    func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws  -> Bool
+    func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState
+    func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws  -> DecodingState
     func decoderRemoved(ctx: ChannelHandlerContext) throws
     func decoderAdded(ctx: ChannelHandlerContext) throws
 }
@@ -35,7 +43,7 @@ extension ByteToMessageDecoder {
         }
         
         // Running decode method until either the buffer is not readable anymore or the user returned false.
-        while try decode(ctx: ctx, buffer: &buffer) && buffer.readableBytes > 0 { }
+        while try decode(ctx: ctx, buffer: &buffer) == .`continue` && buffer.readableBytes > 0 { }
         
         if buffer.readableBytes > 0 {
             cumulationBuffer = buffer
@@ -47,7 +55,7 @@ extension ByteToMessageDecoder {
     public func channelInactive(ctx: ChannelHandlerContext) throws {
         if var buffer = cumulationBuffer {
             // Running decode method until either the buffer is not readable anymore or the user returned false.
-            while try decodeLast(ctx: ctx, buffer: &buffer) && buffer.readableBytes > 0 { }
+            while try decodeLast(ctx: ctx, buffer: &buffer)  == .`continue` && buffer.readableBytes > 0 { }
             
             if buffer.readableBytes > 0 {
                 cumulationBuffer = buffer
@@ -74,7 +82,7 @@ extension ByteToMessageDecoder {
         try decoderRemoved(ctx: ctx)
     }
 
-    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> Bool {
+    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         return try decode(ctx: ctx, buffer: &buffer)
     }
     

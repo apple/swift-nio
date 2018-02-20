@@ -58,12 +58,12 @@ public class ByteToMessageDecoderTest: XCTestCase {
         var cumulationBuffer: ByteBuffer?
         
         
-        func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> Bool {
+        func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
             guard buffer.readableBytes >= MemoryLayout<Int32>.size else {
-                return false
+                return .needMoreData
             }
             ctx.fireChannelRead(self.wrapInboundOut(buffer.readInteger()!))
-            return true
+            return .continue
         }
     }
 
@@ -73,8 +73,8 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         var cumulationBuffer: ByteBuffer?
 
-        func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> Bool {
-            return false
+        func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
+            return .needMoreData
         }
     }
     

@@ -120,11 +120,11 @@ public class SniHandler: ByteToMessageDecoder {
     }
 
     // A note to maintainers: this method *never* returns true.
-    public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> Bool {
+    public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
         // If we've asked the user to mutate the pipeline already, we're not interested in
         // this data. Keep waiting.
         if waitingForUser {
-            return false
+            return .needMoreData
         }
 
         let serverName: String?
@@ -132,12 +132,12 @@ public class SniHandler: ByteToMessageDecoder {
             serverName = try parseTLSDataForServerName(buffer: buffer)
         } catch InternalSniErrors.recordIncomplete {
             // Nothing bad here, we just don't have enough data.
-            return false
+            return .needMoreData
         } catch {
             // Some error occurred. Fall back and let the TLS stack
             // handle it.
             sniComplete(result: .fallback, ctx: ctx)
-            return false
+            return .needMoreData
         }
 
         if let serverName = serverName {
@@ -145,7 +145,7 @@ public class SniHandler: ByteToMessageDecoder {
         } else {
             sniComplete(result: .fallback, ctx: ctx)
         }
-        return false
+        return .needMoreData
     }
 
     /// Given a buffer of data that may contain a TLS Client Hello, parses the buffer looking for
