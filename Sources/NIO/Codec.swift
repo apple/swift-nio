@@ -28,6 +28,7 @@ public protocol ByteToMessageDecoder : ChannelInboundHandler where InboundIn == 
     func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws  -> DecodingState
     func decoderRemoved(ctx: ChannelHandlerContext) throws
     func decoderAdded(ctx: ChannelHandlerContext) throws
+    func shouldReclaimBytes(buffer: ByteBuffer) -> Bool
 }
 
 extension ByteToMessageDecoder {
@@ -46,6 +47,9 @@ extension ByteToMessageDecoder {
         while try decode(ctx: ctx, buffer: &buffer) == .`continue` && buffer.readableBytes > 0 { }
         
         if buffer.readableBytes > 0 {
+            if self.shouldReclaimBytes(buffer: buffer) {
+                buffer.discardReadBytes()
+            }
             cumulationBuffer = buffer
         } else {
             cumulationBuffer = nil
@@ -90,6 +94,18 @@ extension ByteToMessageDecoder {
     }
 
     public func decoderAdded(ctx: ChannelHandlerContext) throws {
+    }
+
+    public func shouldReclaimBytes(buffer: ByteBuffer) -> Bool {
+        // We want to reclaim in the following cases:
+        //
+        // 1. If there is more than 2kB of memory to reclaim
+        // 2. If the buffer is more than 50% reclaimable memory and is at least
+        //    1kB in size.
+        if buffer.readerIndex > 2048 {
+            return true
+        }
+        return buffer.capacity > 1024 && (buffer.capacity - buffer.readerIndex) >= buffer.readerIndex
     }
 }
 

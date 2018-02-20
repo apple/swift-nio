@@ -29,6 +29,8 @@ extension ByteToMessageDecoderTest {
                 ("testDecoder", testDecoder),
                 ("testDecoderPropagatesChannelInactive", testDecoderPropagatesChannelInactive),
                 ("testDecoderIsNotQuadratic", testDecoderIsNotQuadratic),
+                ("testMemoryIsReclaimedIfMostIsConsumed", testMemoryIsReclaimedIfMostIsConsumed),
+                ("testMemoryIsReclaimedIfLotsIsAvailable", testMemoryIsReclaimedIfLotsIsAvailable),
            ]
    }
 }
