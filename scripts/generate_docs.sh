@@ -3,71 +3,63 @@
 set -e
 
 my_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
+root_path="$my_path/.."
 swift_version=${swift_version:-4.0.2}
 version=$(git describe --abbrev=0 --tags)
 modules=(SwiftNIO NIOHTTP1 NIOTLS NIOFoundationCompat)
 
-if [[ $CI == true ]]; then
-  # CI setup, assume this is running in an ubuntu docker container:
-  # to test locally:
-  # docker run -v `pwd`:/code -w /code -e CI=true ubuntu:14.04 /bin/bash /code/generate_docs.sh
-
+if [[ "$(uname -s)" == "Linux" ]]; then
   # setup ruby
-  gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
-  \curl -sSL https://get.rvm.io | bash -s stable
-  source $HOME/.rvm/scripts/rvm
-  rvm requirements
-  rvm install 2.4
-  # setup jazzy
-  gem install jazzy --no-ri --no-rdoc
-
-  # setup swift
-  rm -rf "$HOME/.swiftenv"
-  git clone https://github.com/kylef/swiftenv.git "$HOME/.swiftenv"
-  export SWIFTENV_ROOT="$HOME/.swiftenv"
-  export PATH="$SWIFTENV_ROOT/bin:$HOME/scripts:$PATH"
-  eval "$(swiftenv init -)"
-  swiftenv install $swift_version
-  # set path swift libs
-  export LINUX_SOURCEKIT_LIB_PATH="$SWIFTENV_ROOT/versions/$swift_version/usr/lib"
-
-  # setup source-kitten
-  source_kitten_source_path=~/.SourceKitten
-  source_kitten_path="$source_kitten_source_path/.build/x86_64-unknown-linux/debug"
-  git clone https://github.com/jpsim/SourceKitten.git "$source_kitten_source_path"
-  rm -rf "$source_kitten_source_path/.swift-version"
-  cd "$source_kitten_source_path" && swift build && cd "$my_path"
-
-  # build swift-nio if required
-  if [[ ! -d "$my_path/.build/x86_64-unknown-linux" ]]; then
-    swift build
+  if ! command -v ruby > /dev/null; then
+    gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+    \curl -sSL https://get.rvm.io | bash -s stable
+    source $HOME/.rvm/scripts/rvm
+    rvm requirements
+    rvm install 2.4
   fi
 
+  # setup swift
+  if ! command -v swift > /dev/null; then
+    rm -rf "$HOME/.swiftenv"
+    git clone https://github.com/kylef/swiftenv.git "$HOME/.swiftenv"
+    export SWIFTENV_ROOT="$HOME/.swiftenv"
+    export PATH="$SWIFTENV_ROOT/bin:$HOME/scripts:$PATH"
+    eval "$(swiftenv init -)"
+    swiftenv install $swift_version
+    # set path swift libs
+    export LINUX_SOURCEKIT_LIB_PATH="$SWIFTENV_ROOT/versions/$swift_version/usr/lib"
+  fi
+
+  # build code if required
+  if [[ ! -d "$root_path/.build/x86_64-unknown-linux" ]]; then
+    swift build
+  fi
+  # setup source-kitten if required
+  source_kitten_source_path="$root_path/.SourceKitten"
+  if [[ ! -d "$source_kitten_source_path" ]]; then
+    git clone https://github.com/jpsim/SourceKitten.git "$source_kitten_source_path"
+  fi
+  source_kitten_path="$source_kitten_source_path/.build/x86_64-unknown-linux/debug"
+  if [[ ! -d "$source_kitten_path" ]]; then
+    rm -rf "$source_kitten_source_path/.swift-version"
+    cd "$source_kitten_source_path" && swift build && cd "$root_path"
+  fi
   # generate
+  mkdir -p "$root_path/.build/sourcekitten"
   for module in "${modules[@]}"; do
-    if [[ ! -f "$my_path/$module.json" ]]; then
-      "$source_kitten_path/sourcekitten" doc --spm-module $module > "$my_path/$module.json"
+    if [[ ! -f "$root_path/.build/sourcekitten/$module.json" ]]; then
+      "$source_kitten_path/sourcekitten" doc --spm-module $module > "$root_path/.build/sourcekitten/$module.json"
     fi
   done
-elif [[ "$(uname -s)" != Darwin ]]; then
-  echo >&2 "Sorry, at this point in time documentation can only be generated on macOS."
-  exit 1
 fi
-
-if ! command -v jazzy > /dev/null; then
-  echo >&2 "ERROR: jazzy not installed, install with"
-  echo >&2
-  echo >&2 "  gem install jazzy"
-  exit 1
-fi
-
-cd "$my_path"
 
 [[ -d docs/$version ]] || mkdir -p docs/$version
 [[ -d swift-nio.xcodeproj ]] || swift package generate-xcodeproj
 
 # run jazzy
+if ! command -v jazzy > /dev/null; then
+  gem install jazzy --no-ri --no-rdoc
+fi
 module_switcher="docs/$version/README.md"
 jazzy_args=(--clean
             --author 'SwiftNIO Team'
@@ -88,9 +80,9 @@ for module in "${modules[@]}"; do
 done
 
 for module in "${modules[@]}"; do
-  args=("${jazzy_args[@]}"  --output "docs/$version/$module" --module "$module")
-  if [[ -f $module.json ]]; then
-    args+=(--sourcekitten-sourcefile $module.json)
+  args=("${jazzy_args[@]}"  --output "$root_path/docs/$version/$module" --module "$module")
+  if [[ -f "$root_path/.build/sourcekitten/$module.json" ]]; then
+    args+=(--sourcekitten-sourcefile "$root_path/.build/sourcekitten/$module.json")
   fi
   jazzy "${args[@]}"
 done
