@@ -148,7 +148,7 @@ private extension SocketAddress {
     }
 
     func toString() -> String {
-        let ptr = UnsafeMutableRawPointer.allocate(bytes: 256, alignedTo: 1).bindMemory(to: Int8.self, capacity: 256)
+        let ptr = UnsafeMutableRawPointer.allocate(byteCount: 256, alignment: 1).bindMemory(to: Int8.self, capacity: 256)
         switch self {
         case .v4(let address):
             var baseAddress = address.address
@@ -161,7 +161,7 @@ private extension SocketAddress {
         }
 
         let ipString = String(cString: ptr)
-        ptr.deinitialize().deallocate(bytes: 256, alignedTo: 1)
+        ptr.deinitialize(count: 256).deallocate()
         return ipString
     }
 }
@@ -1153,3 +1153,15 @@ public class HappyEyeballsTest : XCTestCase {
         }
     }
 }
+
+#if !swift(>=4.1)
+extension UnsafeMutableRawPointer {
+    public static func allocate(byteCount: Int, alignment: Int) -> UnsafeMutableRawPointer {
+        return UnsafeMutableRawPointer.allocate(bytes: byteCount, alignedTo: alignment)
+    }
+
+    public func deallocate() {
+        self.deallocate(bytes: 1, alignedTo: 1)
+    }
+}
+#endif
