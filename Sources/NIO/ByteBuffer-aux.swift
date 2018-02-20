@@ -224,13 +224,13 @@ extension ByteBuffer {
         return written
     }
 
-    /// Write `bytes`, a `Collection` of `UInt8` into this `ByteBuffer`. Moves the writer index forward by the number of bytes written.
+    /// Write `bytes`, a `Sequence` of `UInt8` into this `ByteBuffer`. Moves the writer index forward by the number of bytes written.
     ///
     /// - parameters:
     ///     - bytes: A `Collection` of `UInt8` to be written.
     /// - returns: The number of bytes written or `bytes.count`.
     @discardableResult
-    public mutating func write<S: Collection>(bytes: S) -> Int where S.Element == UInt8 {
+    public mutating func write<S: Sequence>(bytes: S) -> Int where S.Element == UInt8 {
         let written = set(bytes: bytes, at: self.writerIndex)
         self.moveWriterIndex(forwardBy: written)
         return written

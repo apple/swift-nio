@@ -314,23 +314,30 @@ public struct ByteBuffer {
         return toCapacity(Int(bytes.count))
     }
 
-    private mutating func set<S: Collection>(bytes: S, at index: Index) -> Capacity where S.Element == UInt8 {
+    private mutating func set<S: Sequence>(bytes: S, at index: Index) -> Capacity where S.Element == UInt8 {
         assert(!([Array<S.Element>.self, StaticString.self, ContiguousArray<S.Element>.self, UnsafeRawBufferPointer.self, UnsafeBufferPointer<UInt8>.self].contains(where: { (t: Any.Type) -> Bool in t == type(of: bytes) })),
-               "called the slower set<S: Collection> function even though \(S.self) is a ContiguousCollection")
-        let newEndIndex: Index = index + toIndex(Int(bytes.count))
+               "called the slower set<S: Sequence> function even though \(S.self) is a ContiguousCollection")
+        func ensureCapacityAndReturnStorageBase(capacity: Int) -> UnsafeMutablePointer<UInt8> {
+            self.ensureAvailableCapacity(Capacity(capacity), at: index)
+            return self._storage.bytes.advanced(by: Int(self._slice.lowerBound + index)).assumingMemoryBound(to: UInt8.self)
+        }
+        let underestimatedByteCount = bytes.underestimatedCount
+        let newPastEndIndex: Index = index + toIndex(underestimatedByteCount)
         if !isKnownUniquelyReferenced(&self._storage) {
-            let extraCapacity = newEndIndex > self._slice.upperBound ? newEndIndex - self._slice.upperBound : 0
+            let extraCapacity = newPastEndIndex > self._slice.upperBound ? newPastEndIndex - self._slice.upperBound : 0
             self.copyStorageAndRebase(extraCapacity: extraCapacity)
         }
 
-        self.ensureAvailableCapacity(Capacity(bytes.count), at: index)
-        let base = self._storage.bytes.advanced(by: Int(self._slice.lowerBound + index)).assumingMemoryBound(to: UInt8.self)
+        var base = ensureCapacityAndReturnStorageBase(capacity: underestimatedByteCount)
         var idx = 0
         for b in bytes {
+            if idx >= underestimatedByteCount {
+                base = ensureCapacityAndReturnStorageBase(capacity: idx + 1)
+            }
             base[idx] = b
             idx += 1
         }
-        return toCapacity(Int(bytes.count))
+        return toCapacity(idx)
     }
 
     // MARK: Public Core API
@@ -604,7 +611,7 @@ extension UnsafeBufferPointer: ContiguousCollection {
 extension ByteBuffer {
     /// Copy the collection of `bytes` into the `ByteBuffer` at `index`.
     @discardableResult
-    public mutating func set<S: Collection>(bytes: S, at index: Int) -> Int where S.Element == UInt8 {
+    public mutating func set<S: Sequence>(bytes: S, at index: Int) -> Int where S.Element == UInt8 {
         return Int(self.set(bytes: bytes, at: toIndex(index)))
     }
 

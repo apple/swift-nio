@@ -1113,6 +1113,93 @@ class ByteBufferTest: XCTestCase {
         }
         XCTAssertEqual(bufPtrValPre, bufPtrValPost)
     }
+
+    func testWeUseFastWriteForContiguousCollections() throws {
+        struct WrongCollection: ContiguousCollection {
+            let storage: [UInt8] = [1, 2, 3]
+            typealias Element = UInt8
+            typealias Index = Array<UInt8>.Index
+            typealias SubSequence = Array<UInt8>.SubSequence
+            typealias Indices = Array<UInt8>.Indices
+            public var indices: Indices {
+                return self.storage.indices
+            }
+            public subscript(bounds: Range<Index>) -> SubSequence {
+                return self.storage[bounds]
+            }
+
+            public subscript(position: Index) -> Element {
+                /* this is wrong but we need to check that we don't access this */
+                XCTFail("shouldn't have been called")
+                return 0xff
+            }
+
+            public var startIndex: Index {
+                return self.storage.startIndex
+            }
+
+            public var endIndex: Index {
+                return self.storage.endIndex
+            }
+
+            func index(after i: Index) -> Index {
+                return self.storage.index(after: i)
+            }
+
+            func withUnsafeBytes<R>(_ fn: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+                return try self.storage.withUnsafeBytes(fn)
+            }
+        }
+        buf.clear()
+        buf.write(bytes: WrongCollection())
+        XCTAssertEqual(3, buf.readableBytes)
+        XCTAssertEqual(1, buf.readInteger()! as UInt8)
+        XCTAssertEqual(2, buf.readInteger()! as UInt8)
+        XCTAssertEqual(3, buf.readInteger()! as UInt8)
+        buf.set(bytes: WrongCollection(), at: 0)
+        XCTAssertEqual(0, buf.readableBytes)
+        XCTAssertEqual(1, buf.getInteger(at: 0)! as UInt8)
+        XCTAssertEqual(2, buf.getInteger(at: 1)! as UInt8)
+        XCTAssertEqual(3, buf.getInteger(at: 2)! as UInt8)
+    }
+
+    func testUnderestimatingSequenceWorks() throws {
+        struct UnderestimatingSequence: Sequence {
+            let storage: [UInt8] = Array(0..<12)
+            typealias Element = UInt8
+
+            public var indices: CountableRange<Int> {
+                return self.storage.indices
+            }
+
+            public subscript(position: Int) -> Element {
+                return self.storage[position]
+            }
+
+            public var underestimatedCount: Int {
+                return 8
+            }
+
+            func makeIterator() -> Array<UInt8>.Iterator {
+                return self.storage.makeIterator()
+            }
+        }
+        buf = self.allocator.buffer(capacity: 4)
+        buf.clear()
+        buf.write(bytes: UnderestimatingSequence())
+        XCTAssertEqual(12, buf.readableBytes)
+        for i in 0..<12 {
+            let actual = Int(buf.readInteger()! as UInt8)
+            XCTAssertEqual(i, actual)
+        }
+        buf = self.allocator.buffer(capacity: 4)
+        buf.set(bytes: UnderestimatingSequence(), at: 0)
+        XCTAssertEqual(0, buf.readableBytes)
+        for i in 0..<12 {
+            let actual = Int(buf.getInteger(at: i)! as UInt8)
+            XCTAssertEqual(i, actual)
+        }
+    }
 }
 
 private enum AllocationExpectationState: Int {
