@@ -2,6 +2,8 @@
 
 set -eu
 
+source defines.sh
+
 swift_binary=swift
 here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
@@ -43,31 +45,8 @@ _ = try? withUnsafePointer(to: &whatevs) { ptr in
 exit(42)
 EOF
 
-cat > "$tmpdir/syscallwrapper/Package.swift" <<"EOF"
-// swift-tools-version:4.0
-// The swift-tools-version declares the minimum version of Swift required to build this package.
+make_package
 
-import PackageDescription
-
-let package = Package(
-    name: "syscallwrapper",
-    dependencies: [],
-    targets: [
-        .target(
-            name: "syscallwrapper",
-            dependencies: ["CNIOLinux"]),
-        .target(
-            name: "CNIOLinux",
-            dependencies: []),
-    ]
-)
-EOF
-
-cp "$here/../../Tests/NIOTests/SystemCallWrapperHelpers.swift" \
-    "$here/../../Sources/NIO/System.swift" \
-    "$here/../../Sources/NIO/IO.swift" \
-    "$tmpdir/syscallwrapper/Sources/syscallwrapper"
-ln -s "$here/../../Sources/CNIOLinux" "$tmpdir/syscallwrapper/Sources"
 for mode in debug release; do
     for error in EFAULT EBADF; do
         temp_file="$tmp/stderr"
