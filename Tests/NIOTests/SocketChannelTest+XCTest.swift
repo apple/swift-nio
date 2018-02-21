@@ -11,9 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-///
-/// SocketChannelTest+XCTest.swift
-///
+//
+// SocketChannelTest+XCTest.swift
+//
 import XCTest
 
 ///

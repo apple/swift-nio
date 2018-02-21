@@ -11,9 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-///
-/// NIOConcurrencyHelpersTests+XCTest.swift
-///
+//
+// NIOConcurrencyHelpersTests+XCTest.swift
+//
 import XCTest
 
 ///

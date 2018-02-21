@@ -11,9 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-///
-/// CircularBufferTests+XCTest.swift
-///
+//
+// CircularBufferTests+XCTest.swift
+//
 import XCTest
 
 ///

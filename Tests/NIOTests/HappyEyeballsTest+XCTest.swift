@@ -11,9 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-///
-/// HappyEyeballsTest+XCTest.swift
-///
+//
+// HappyEyeballsTest+XCTest.swift
+//
 import XCTest
 
 ///
