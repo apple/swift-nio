@@ -36,6 +36,7 @@ extension HTTPUpgradeTestCase {
                 ("testUpgradeRespectsClientPreference", testUpgradeRespectsClientPreference),
                 ("testUpgradeFiresUserEvent", testUpgradeFiresUserEvent),
                 ("testUpgraderCanRejectUpgradeForPersonalReasons", testUpgraderCanRejectUpgradeForPersonalReasons),
+                ("testUpgradeIsCaseInsensitive", testUpgradeIsCaseInsensitive),
            ]
    }
 }
