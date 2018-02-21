@@ -45,8 +45,9 @@ public protocol HTTPProtocolUpgrader {
     func buildUpgradeResponse(upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) throws -> HTTPHeaders
 
     /// Called when the upgrade response has been flushed. At this time it is safe to mutate the channel pipeline
-    /// to add whatever channel handlers are required.
-    func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> Void
+    /// to add whatever channel handlers are required. Until the returned `EventLoopFuture` succeeds, all received
+    /// data will be buffered.
+    func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void>
 }
 
 /// A server-side channel handler that receives HTTP requests and optionally performs a HTTP-upgrade.
@@ -66,25 +67,49 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     private let upgraders: [String: HTTPProtocolUpgrader]
     private let upgradeCompletionHandler: (ChannelHandlerContext) -> Void
 
+    private let httpDecoder: HTTPRequestDecoder?
+    private let httpEncoder: HTTPResponseEncoder?
+
     /// Whether we've already seen the first request.
     private var seenFirstRequest = false
+
+    /// Whether we're upgrading: if we are, we want to buffer the data until the
+    /// upgrade is complete.
+    private var upgrading = false
+    private var receivedMessages: [NIOAny] = []
 
     /// Create a `HTTPServerUpgradeHandler`.
     ///
     /// - Parameter upgraders: All `HTTPProtocolUpgrader` objects that this pipeline will be able
     ///     to use to handle HTTP upgrade.
+    /// - Parameter httpEncoder: The `HTTPResponseEncoder` encoding responses from this handler and which will
+    ///     be removed from the pipeline once the upgrade response is sent. This is used mostly to ensure
+    ///     that the pipeline will be in a clean state after upgrade. Pass `nil` to this parameter if for any
+    ///     reason you want to keep the `HTTPResponseEncoder` in the pipeline after upgrade.
+    /// - Parameter httpDecoder: The `HTTPRequestDecoder` decoding responses that are passed to this handler.
+    ///     This is necessary to ensure that no further data is parsed as HTTP when we attempt an upgrade.
+    ///     Pass `nil` to this parameter if for any reason you want to keep the `HTTPRequestDecoder` in
+    ///     the pipeline after upgrade.
     /// - Parameter upgradeCompletionHandler: A block that will be fired when HTTP upgrade is complete.
-    public init(upgraders: [HTTPProtocolUpgrader], upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) {
+    public init(upgraders: [HTTPProtocolUpgrader], httpEncoder: HTTPResponseEncoder?, httpDecoder: HTTPRequestDecoder?, upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) {
         var upgraderMap = [String: HTTPProtocolUpgrader]()
         for upgrader in upgraders {
             upgraderMap[upgrader.supportedProtocol] = upgrader
         }
         self.upgraders = upgraderMap
         self.upgradeCompletionHandler = upgradeCompletionHandler
+        self.httpDecoder = httpDecoder
+        self.httpEncoder = httpEncoder
     }
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        // We're trying to remove ourselves from the pipeline, so just pass this on.
+        if self.upgrading {
+            // We're waiting for upgrade to complete: buffer this data.
+            self.receivedMessages.append(data)
+            return
+        }
+
+        // We're trying to remove ourselves from the pipeline but not upgrading, so just pass this on.
         if seenFirstRequest {
             ctx.fireChannelRead(data)
             return
@@ -139,11 +164,40 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
                 continue
             }
 
-            sendUpgradeResponse(ctx: ctx, upgradeRequest: request, responseHeaders: responseHeaders).whenSuccess {
+            // We are now upgrading, any further data should be buffered and replayed.
+            self.upgrading = true
+
+            // Before we finish the upgrade we have to remove the HTTPDecoder from the
+            // pipeline, to prevent it parsing any more data. We'll buffer the data until that completes.
+            // While there are a lot of Futures involved here it's quite possible that all of this code will
+            // actually complete synchronously: we just want to program for the possibility that it won't.
+            // Once that's done, we send the upgrade response, then remove the HTTP encoder, then call the
+            // internal handler, then call the user code, and then finally when the user code is done we do
+            // our final cleanup steps, namely we replay the received data we buffered in the meantime and
+            // then remove ourselves from the pipeline.
+            _ = self.removeHandler(ctx: ctx, handler: self.httpDecoder).then { (_: Bool) in
+                self.sendUpgradeResponse(ctx: ctx, upgradeRequest: request, responseHeaders: responseHeaders)
+            }.then {
+                self.removeHandler(ctx: ctx, handler: self.httpEncoder)
+            }.map { (_: Bool) in
                 self.upgradeCompletionHandler(ctx)
+            }.then {
                 upgrader.upgrade(ctx: ctx, upgradeRequest: request)
+            }.map {
                 ctx.fireUserInboundEventTriggered(HTTPUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request))
-                _ = ctx.pipeline.remove(ctx: ctx)
+
+                self.upgrading = false
+
+                // We unbuffer any buffered data here and, if we sent any,
+                // we also fire readComplete.
+                let bufferedMessages = self.receivedMessages
+                self.receivedMessages = []
+                bufferedMessages.forEach { ctx.fireChannelRead($0) }
+                if bufferedMessages.count > 0 {
+                    ctx.fireChannelReadComplete()
+                }
+            }.then {
+                ctx.pipeline.remove(ctx: ctx)
             }
 
             return true
@@ -161,6 +215,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
 
     /// Called when we know we're not upgrading. Passes the data on and then removes this object from the pipeline.
     private func notUpgrading(ctx: ChannelHandlerContext, data: NIOAny) {
+        assert(self.receivedMessages.count == 0)
         ctx.fireChannelRead(data)
         _ = ctx.pipeline.remove(ctx: ctx)
     }
@@ -168,5 +223,14 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     /// Builds the initial mandatory HTTP headers for HTTP ugprade responses.
     private func buildUpgradeHeaders(`protocol`: String) -> HTTPHeaders {
         return HTTPHeaders([("connection", "upgrade"), ("upgrade", `protocol`)])
+    }
+
+    /// Removes the given channel handler from the channel pipeline.
+    private func removeHandler(ctx: ChannelHandlerContext, handler: ChannelHandler?) -> EventLoopFuture<Bool> {
+        if let handler = handler {
+            return ctx.pipeline.remove(handler: handler)
+        } else {
+            return ctx.eventLoop.newSucceededFuture(result: true)
+        }
     }
 }
