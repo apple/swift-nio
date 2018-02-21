@@ -1,6 +1,6 @@
 # SwiftNIO
 
-SwiftNIO is an asynchronous event-driven network application framework
+SwiftNIO is a cross-platform asynchronous event-driven network application framework
 for rapid development of maintainable high performance protocol servers & clients.
 
 It's like [Netty](https://netty.io), but written for Swift.
@@ -15,6 +15,13 @@ SwiftNIO does not aim to provide high-level solutions like, for example, web fra
 
 The following sections will describe the low-level tools that SwiftNIO provides, and provide a quick overview of how to work with them. If you feel comfortable with these concepts, then you can skip right ahead to the other sections of this README.
 
+### Supported Platforms
+
+SwiftNIO aims to support all of the platforms where Swift is supported. Currently, it is developed and tested on macOS and Linux, and is known to support the following operating system versions:
+
+* Ubuntu 14.04+
+* macOS 10.12+
+    
 ### Basic Architecture
 
 The basic building blocks of SwiftNIO are the following 6 types of objects:
