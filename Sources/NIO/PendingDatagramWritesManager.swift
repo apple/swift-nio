@@ -425,7 +425,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     internal var waterMark: WriteBufferWaterMark = WriteBufferWaterMark(32 * 1024..<64 * 1024)
     internal let channelWritabilityFlag: Atomic<Bool> = Atomic(value: true)
     internal var writeSpinCount: UInt = 16
-    private(set) var closed = false
+    private(set) var isOpen = true
 
     /// Initialize with a pre-allocated array of message headers and storage references. We pass in these pre-allocated
     /// objects to save allocations. They can be safely be re-used for all `Channel`s on a given `EventLoop` as an
@@ -472,7 +472,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     ///     - promise: Optionally an `EventLoopPromise` that will get the write operation's result
     /// - result: If the `Channel` is still writable after adding the write of `data`.
     func add(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) -> Bool {
-        assert(!closed)
+        assert(self.isOpen)
         self.state.append(.init(data: envelope.data, promise: promise, address: envelope.remoteAddress))
 
         if self.state.bytes > waterMark.upperBound && channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
@@ -565,8 +565,8 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// - parameters:
     ///     - scalarWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendto`).
     private func triggerScalarBufferWrite(scalarWriteOperation: (UnsafeRawBufferPointer, UnsafePointer<sockaddr>, socklen_t) throws -> IOResult<Int>) rethrows -> OneWriteOperationResult {
-        assert(self.state.isFlushPending && !self.closed && !self.state.isEmpty,
-               "illegal state for scalar datagram write operation: flushPending: \(self.state.isFlushPending), closed: \(self.closed), empty: \(self.state.isEmpty)")
+        assert(self.state.isFlushPending && self.isOpen && !self.state.isEmpty,
+               "illegal state for scalar datagram write operation: flushPending: \(self.state.isFlushPending), isOpen: \(self.isOpen), empty: \(self.state.isEmpty)")
         let pending = self.state.nextWrite!
         do {
             let writeResult = try pending.address.withSockAddr { (addrPtr, addrSize) in
@@ -583,8 +583,8 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// - parameters:
     ///     - vectorWriteOperation: The vector write operation to use. Usually `sendmmsg`.
     private func triggerVectorBufferWrite(vectorWriteOperation: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> OneWriteOperationResult {
-        assert(self.state.isFlushPending && !self.closed && !self.state.isEmpty,
-               "illegal state for vector datagram write operation: flushPending: \(self.state.isFlushPending), closed: \(self.closed), empty: \(self.state.isEmpty)")
+        assert(self.state.isFlushPending && self.isOpen && !self.state.isEmpty,
+               "illegal state for vector datagram write operation: flushPending: \(self.state.isFlushPending), isOpen: \(self.isOpen), empty: \(self.state.isEmpty)")
         return self.didWrite(try doPendingDatagramWriteVectorOperation(pending: self.state,
                                                                        iovecs: self.iovecs,
                                                                        msgs: self.msgs,
@@ -607,8 +607,8 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// Fail all the outstanding writes. This is useful if for example the `Channel` is closed.
     func failAll(error: Error, close: Bool) {
         if close {
-            assert(!self.closed)
-            self.closed = true
+            assert(self.isOpen)
+            self.isOpen = false
         }
 
         self.state.failAll(error: error)

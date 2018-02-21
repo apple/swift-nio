@@ -69,7 +69,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                         try addresses.withUnsafeMutableBufferPointer { addresses in
                             let pwm = NIO.PendingDatagramWritesManager(msgs: msgs, iovecs: iovecs, addresses: addresses, storageRefs: managed)
                             XCTAssertTrue(pwm.isEmpty)
-                            XCTAssertFalse(pwm.closed)
+                            XCTAssertTrue(pwm.isOpen)
                             XCTAssertFalse(pwm.isFlushPending)
                             XCTAssertTrue(pwm.isWritable)
 

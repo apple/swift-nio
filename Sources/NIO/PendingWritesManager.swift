@@ -288,7 +288,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
     internal var writeSpinCount: UInt = 16
 
-    private(set) var closed = false
+    private(set) var isOpen = true
 
     /// Mark the flush checkpoint.
     ///
@@ -315,7 +315,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     ///     - promise: Optionally an `EventLoopPromise` that will get the write operation's result
     /// - result: If the `Channel` is still writable after adding the write of `data`.
     func add(data: IOData, promise: EventLoopPromise<Void>?) -> Bool {
-        assert(!closed)
+        assert(self.isOpen)
         self.state.append(.init(data: data, promise: promise))
 
         if self.state.bytes > waterMark.upperBound && channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
@@ -378,8 +378,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// - parameters:
     ///     - operation: An operation that writes a single, contiguous array of bytes (usually `write`).
     private func triggerScalarBufferWrite(_ operation: (UnsafeRawBufferPointer) throws -> IOResult<Int>) throws -> OneWriteOperationResult {
-        assert(self.state.isFlushPending && !self.state.isEmpty && !self.closed,
-               "single write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), closed: \(self.closed)")
+        assert(self.state.isFlushPending && !self.state.isEmpty && self.isOpen,
+               "single write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), isOpen: \(self.isOpen)")
 
         switch self.state[0].data {
         case .byteBuffer(let buffer):
@@ -394,8 +394,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// - parameters:
     ///     - operation: An operation that writes a region of a file descriptor.
     private func triggerScalarFileWrite(_ operation: (CInt, Int, Int) throws -> IOResult<Int>) throws -> OneWriteOperationResult {
-        assert(self.state.isFlushPending && !self.state.isEmpty && !self.closed,
-               "single write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), closed: \(self.closed)")
+        assert(self.state.isFlushPending && !self.state.isEmpty && self.isOpen,
+               "single write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), isOpen: \(self.isOpen)")
 
         switch self.state[0].data {
         case .fileRegion(let file):
@@ -414,8 +414,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// - parameters:
     ///     - operation: The vector write operation to use. Usually `writev`.
     private func triggerVectorBufferWrite(_ operation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> OneWriteOperationResult {
-        assert(self.state.isFlushPending && !self.state.isEmpty && !self.closed,
-               "vector write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), closed: \(self.closed)")
+        assert(self.state.isFlushPending && !self.state.isEmpty && self.isOpen,
+               "vector write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), isOpen: \(self.isOpen)")
         let result = try doPendingWriteVectorOperation(pending: self.state,
                                                        iovecs: self.iovecs,
                                                        storageRefs: self.storageRefs,
@@ -426,8 +426,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// Fail all the outstanding writes. This is useful if for example the `Channel` is closed.
     func failAll(error: Error, close: Bool) {
         if close {
-            assert(!self.closed)
-            self.closed = true
+            assert(self.isOpen)
+            self.isOpen = false
         }
 
         self.state.failAll(error: error)()
@@ -457,7 +457,7 @@ internal enum WriteMechanism {
 }
 
 internal protocol PendingWritesManager {
-    var closed: Bool { get }
+    var isOpen: Bool { get }
     var isFlushPending: Bool { get }
     var writeSpinCount: UInt { get }
     var currentBestWriteMechanism: WriteMechanism { get }
@@ -477,7 +477,7 @@ extension PendingWritesManager {
         writeSpinLoop: for _ in 0...self.writeSpinCount {
             var oneResult: OneWriteOperationResult
             repeat {
-                guard !self.closed && self.isFlushPending else {
+                guard self.isOpen && self.isFlushPending else {
                     result = .writtenCompletely
                     break writeSpinLoop
                 }

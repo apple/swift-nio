@@ -206,7 +206,7 @@ public class ChannelTests: XCTestCase {
                 try managed.withUnsafeMutableBufferPointer { managed in
                     let pwm = NIO.PendingStreamWritesManager(iovecs: iovecs, storageRefs: managed)
                     XCTAssertTrue(pwm.isEmpty)
-                    XCTAssertFalse(pwm.closed)
+                    XCTAssertTrue(pwm.isOpen)
                     XCTAssertFalse(pwm.isFlushPending)
                     XCTAssertTrue(pwm.isWritable)
 

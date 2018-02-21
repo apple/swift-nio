@@ -98,7 +98,7 @@ class HTTPServerClientTest : XCTestCase {
         private var files: [String] = Array()
         private var seenEnd: Bool = false
         private var sentEnd: Bool = false
-        private var closed: Bool = false
+        private var isOpen: Bool = true
         
         init(_ mode: SendMode) {
             self.mode = mode
@@ -289,8 +289,8 @@ class HTTPServerClientTest : XCTestCase {
         // We should only close the connection when the remote peer has sent the entire request
         // and we have sent our entire response.
         private func maybeClose(ctx: ChannelHandlerContext) {
-            if sentEnd && seenEnd && !closed {
-                closed = true
+            if sentEnd && seenEnd && self.isOpen {
+                self.isOpen = false
                 ctx.close().whenFailure { error in
                     XCTFail("unexpected error \(error)")
                 }

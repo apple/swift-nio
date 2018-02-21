@@ -63,7 +63,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     private var inFlushNow: Bool = false // Guard against re-entrance of flushNow() method.
     private var neverRegistered = true
     private var active: Atomic<Bool> = Atomic(value: false)
-    private var _closed: Bool = false
+    private var _isOpen: Bool = true
     private var autoRead: Bool = true
     private var _pipeline: ChannelPipeline!
     private var bufferAllocator: ByteBufferAllocator = ByteBufferAllocator() {
@@ -105,10 +105,10 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         return self.remoteAddressCached.load().value
     }
 
-    /// `true` if the whole `Channel` is closed and so no more IO operation can be done.
-    public var closed: Bool {
+    /// `false` if the whole `Channel` is closed and so no more IO operation can be done.
+    public var isOpen: Bool {
         assert(eventLoop.inEventLoop)
-        return _closed
+        return self._isOpen
     }
 
     internal var selectable: T {
@@ -209,7 +209,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     deinit {
-        assert(self._closed, "leak of open Channel")
+        assert(!self._isOpen, "leak of open Channel")
     }
 
     public final func localAddress0() throws -> SocketAddress {
@@ -234,7 +234,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     fileprivate func flushNow() -> IONotificationState {
         // Guard against re-entry as data that will be put into `pendingWrites` will just be picked up by
         // `writeToSocket`.
-        guard !inFlushNow && !closed else {
+        guard !self.inFlushNow && self.isOpen else {
             return .unregister
         }
 
@@ -353,7 +353,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
-        guard !self.closed else {
+        guard self.isOpen else {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
@@ -367,7 +367,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public final func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
-        if closed {
+        guard self.isOpen else {
             // Channel was already closed, fail the promise and not even queue it.
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
@@ -404,7 +404,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public final func flush0() {
         assert(eventLoop.inEventLoop)
 
-        guard !self.closed else {
+        guard self.isOpen else {
             return
         }
 
@@ -418,7 +418,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public func read0() {
         assert(eventLoop.inEventLoop)
 
-        if closed {
+        guard self.isOpen else {
             return
         }
         readPending = true
@@ -429,7 +429,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     private final func pauseRead0() {
         assert(eventLoop.inEventLoop)
 
-        if !closed {
+        if self.isOpen {
             unregisterForReadable()
         }
     }
@@ -463,7 +463,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
-        if closed {
+        guard self.isOpen else {
             promise?.fail(error: ChannelError.alreadyClosed)
             return
         }
@@ -485,7 +485,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
 
         // Fail all pending writes and so ensure all pending promises are notified
-        self._closed = true
+        self._isOpen = false
         self.unsetCachedAddressesFromSocket()
         self.cancelWritesOnClose(error: error)
 
@@ -512,7 +512,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public final func register0(promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
-        guard !self.closed else {
+        guard self.isOpen else {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
@@ -534,8 +534,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
     // Methods invoked from the EventLoop itself
     public final func writable() {
-        assert(eventLoop.inEventLoop)
-        assert(!closed)
+        assert(self.eventLoop.inEventLoop)
+        assert(self.isOpen)
 
         finishConnect()  // If we were connecting, that has finished.
         if flushNow() == .unregister {
@@ -558,17 +558,17 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     private func finishWritable() {
         assert(eventLoop.inEventLoop)
 
-        if !closed {
+        if self.isOpen {
             unregisterForWritable()
         }
     }
 
     public final func readable() {
         assert(eventLoop.inEventLoop)
-        assert(!closed)
+        assert(self.isOpen)
 
         defer {
-            if !closed, !readPending {
+            if self.isOpen && !self.readPending {
                 unregisterForReadable()
             }
         }
@@ -621,7 +621,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     public final func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
-        guard !self.closed else {
+        guard self.isOpen else {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
@@ -662,7 +662,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
     private func safeReregister(interested: IOEvent) {
         assert(eventLoop.inEventLoop)
-        if closed {
+        guard self.isOpen else {
             interestedEvent = .none
             return
         }
@@ -682,7 +682,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     private func safeRegister(interested: IOEvent) throws {
         assert(eventLoop.inEventLoop)
 
-        if closed {
+        guard self.isOpen else {
             interestedEvent = .none
             throw ChannelError.ioOnClosedChannel
         }
@@ -727,9 +727,9 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         return pendingWrites.isWritable
     }
 
-    override public var closed: Bool {
+    override public var isOpen: Bool {
         assert(eventLoop.inEventLoop)
-        return pendingWrites.closed
+        return pendingWrites.isOpen
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
@@ -796,7 +796,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         var buffer = recvAllocator.buffer(allocator: allocator)
         var result = ReadResult.none
         for i in 1...maxMessagesPerRead {
-            if closed || inputShutdown {
+            guard self.isOpen && !self.inputShutdown else {
                 return result
             }
             // Reset reader and writerIndex and so allow to have the buffer filled again. This is better here than at
@@ -809,7 +809,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
                     readPending = false
 
-                    assert(!closed)
+                    assert(self.isOpen)
                     pipeline.fireChannelRead0(NIOAny(buffer))
                     if mayGrow && i < maxMessagesPerRead {
                         // if the ByteBuffer may grow on the next allocation due we used all the writable bytes we should allocate a new `ByteBuffer` to allow ramping up how much data
@@ -1021,7 +1021,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
     override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
-        guard !self.closed else {
+        guard self.isOpen else {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
@@ -1053,7 +1053,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
     override fileprivate func readFromSocket() throws -> ReadResult {
         var result = ReadResult.none
         for _ in 1...maxMessagesPerRead {
-            if closed {
+            guard self.isOpen else {
                 return result
             }
             if let accepted =  try self.socket.accept() {
@@ -1112,8 +1112,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         return pendingWrites.isWritable
     }
 
-    override public var closed: Bool {
-        return pendingWrites.closed
+    override public var isOpen: Bool {
+        return pendingWrites.isOpen
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
@@ -1189,7 +1189,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         var readResult = ReadResult.none
 
         for i in 1...self.maxMessagesPerRead {
-            if self.closed {
+            guard self.isOpen else {
                 return readResult
             }
             buffer.clear()
@@ -1198,7 +1198,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             switch result {
             case .processed(let bytesRead):
                 assert(bytesRead > 0)
-                assert(!closed)
+                assert(self.isOpen)
                 let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
                 readPending = false
 
