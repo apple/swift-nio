@@ -125,7 +125,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
                 continue
             }
 
-            let requiredHeaders = Set(upgrader.requiredUpgradeHeaders)
+            let requiredHeaders = Set(upgrader.requiredUpgradeHeaders.map { $0.lowercased() })
             guard requiredHeaders.isSubset(of: allHeaderNames) && requiredHeaders.isSubset(of: connectionHeader) else {
                 continue
             }

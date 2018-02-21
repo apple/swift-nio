@@ -504,4 +504,35 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTFail("Unexpected error: \(errorCatcher.errors[0])")
         }
     }
+
+    func testUpgradeIsCaseInsensitive() throws {
+        let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: ["WeIrDcAsE"]) { req in }
+        let handler = HTTPServerUpgradeHandler(upgraders: [upgrader]) { ctx in
+            ctx.close(promise: nil)
+        }
+        let (group, server, client) = try setUpTest(withHandlers: [handler])
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
+            let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
+            assertResponseIs(response: resultString,
+                             expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
+                             expectedResponseHeaders: ["x-upgrade-complete: true", "upgrade: myproto", "connection: upgrade"])
+            completePromise.succeed(result: ())
+        }
+        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+
+        // This request is safe to upgrade.
+        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nWeirdcase: yup\r\nConnection: upgrade,weirdcase\r\n\r\n"
+        XCTAssertNoThrow(try client.writeAndFlush(ByteBuffer.forString(request)).wait())
+
+        // Let the machinery do its thing.
+        XCTAssertNoThrow(try completePromise.futureResult.wait())
+
+        // We also want to confirm that the upgrade handler is no longer in the pipeline.
+        try client.pipeline.assertDoesNotContain(handler: handler)
+    }
 }
