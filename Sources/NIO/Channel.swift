@@ -66,7 +66,7 @@ public protocol Channel : class, ChannelOutboundInvoker {
     func setOption<T: ChannelOption>(option: T, value: T.OptionType) -> EventLoopFuture<Void>
     
     /// Get the value of `option` for this `Channel`.
-    func getOption<T: ChannelOption>(option: T) throws -> T.OptionType
+    func getOption<T: ChannelOption>(option: T) -> EventLoopFuture<T.OptionType>
 
     /// Returns if this `Channel` is currently writable.
     var isWritable: Bool { get }

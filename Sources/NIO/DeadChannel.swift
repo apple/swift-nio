@@ -103,8 +103,8 @@ internal final class DeadChannel: Channel {
         return EventLoopFuture(eventLoop: self.pipeline.eventLoop, error: ChannelError.ioOnClosedChannel, file: #file, line: #line)
     }
 
-    func getOption<T>(option: T) throws -> T.OptionType where T : ChannelOption {
-        throw ChannelError.ioOnClosedChannel
+    func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T : ChannelOption {
+        return eventLoop.newFailedFuture(error: ChannelError.ioOnClosedChannel)
     }
 
     let isWritable = false

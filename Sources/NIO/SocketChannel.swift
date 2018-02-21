@@ -305,11 +305,15 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public final func getOption<T: ChannelOption>(option: T) throws -> T.OptionType {
+    public func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T : ChannelOption {
         if eventLoop.inEventLoop {
-            return try getOption0(option: option)
+            do {
+                return eventLoop.newSucceededFuture(result: try getOption0(option: option))
+            } catch {
+                return eventLoop.newFailedFuture(error: error)
+            }
         } else {
-            return try eventLoop.submit{ try self.getOption0(option: option) }.wait()
+            return eventLoop.submit { try self.getOption0(option: option) }
         }
     }
 
@@ -575,7 +579,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
             // ChannelError.eof is not something we want to fire through the pipeline as it just means the remote
             // peer closed / shutdown the connection.
             if let channelErr = err as? ChannelError, channelErr == ChannelError.eof {
-                if try! getOption(option: ChannelOptions.allowRemoteHalfClosure) {
+                // Directly call getOption0 as we are already on the EventLoop and so not need to create an extra future.
+                if try! getOption0(option: ChannelOptions.allowRemoteHalfClosure) {
                     // If we want to allow half closure we will just mark the input side of the Channel
                     // as closed.
                     pipeline.fireChannelReadComplete0()

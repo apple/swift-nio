@@ -336,9 +336,9 @@ public class EmbeddedChannel : Channel {
         fatalError("no options supported")
     }
 
-    public func getOption<T>(option: T) throws -> T.OptionType where T : ChannelOption {
+    public func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T : ChannelOption {
         if option is AutoReadOption {
-            return true as! T.OptionType
+            return self.eventLoop.newSucceededFuture(result: true as! T.OptionType)
         }
         fatalError("option \(option) not supported")
     }
