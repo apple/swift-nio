@@ -1149,10 +1149,10 @@ public class ChannelTests: XCTestCase {
         try server.listen()
         
         let byteCountingHandler = ByteCountingHandler(numBytes: 4, promise: group.next().newPromise())
-        
+        let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .output, promise: group.next().newPromise())
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
-                return channel.pipeline.add(handler: ShutdownVerificationHandler(inputShutdown: false, outputShutdown: true)).then {
+                return channel.pipeline.add(handler: verificationHandler).then {
                     return channel.pipeline.add(handler: byteCountingHandler)
                 }
             }
@@ -1173,6 +1173,7 @@ public class ChannelTests: XCTestCase {
         try channel.writeAndFlush(NIOAny(buffer)).wait()
         try channel.close(mode: .output).wait()
         
+        verificationHandler.waitForEvent()
         do {
             try channel.writeAndFlush(NIOAny(buffer)).wait()
             XCTFail()
@@ -1212,10 +1213,11 @@ public class ChannelTests: XCTestCase {
             }
         }
         
+        let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .input, promise: group.next().newPromise())
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
                 return channel.pipeline.add(handler: VerifyNoReadHandler()).then {
-                    return channel.pipeline.add(handler: ShutdownVerificationHandler(inputShutdown: true, outputShutdown: false))
+                    return channel.pipeline.add(handler: verificationHandler)
                 }
             }
             .connect(to: try! server.localAddress())
@@ -1230,6 +1232,8 @@ public class ChannelTests: XCTestCase {
         }
        
         try channel.close(mode: .input).wait()
+        
+        verificationHandler.waitForEvent()
         
         var buffer = channel.allocator.buffer(capacity: 12)
         buffer.write(string: "1234")
@@ -1263,9 +1267,11 @@ public class ChannelTests: XCTestCase {
         try server.bind(to: SocketAddress.newAddressResolving(host: "127.0.0.1", port: 0))
         try server.listen()
         
+        let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .input, promise: group.next().newPromise())
+
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
-                return channel.pipeline.add(handler: ShutdownVerificationHandler(inputShutdown: true, outputShutdown: false))
+                return channel.pipeline.add(handler: verificationHandler)
             }
             .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             .connect(to: try! server.localAddress())
@@ -1281,24 +1287,30 @@ public class ChannelTests: XCTestCase {
         
         try accepted.shutdown(how: .WR)
         
+        verificationHandler.waitForEvent()
+        
         var buffer = channel.allocator.buffer(capacity: 12)
         buffer.write(string: "1234")
         
         try channel.writeAndFlush(NIOAny(buffer)).wait()
     }
     
+    enum ShutDownEvent {
+        case input
+        case output
+    }
     private class ShutdownVerificationHandler: ChannelInboundHandler {
         typealias InboundIn = ByteBuffer
         
         private var inputShutdownEventReceived = false
         private var outputShutdownEventReceived = false
         
-        private let inputShutdown: Bool
-        private let outputShutdown: Bool
+        private let promise: EventLoopPromise<Void>
+        private let shutdownEvent: ShutDownEvent
         
-        init(inputShutdown: Bool, outputShutdown: Bool) {
-            self.inputShutdown = inputShutdown
-            self.outputShutdown = outputShutdown
+        init(shutdownEvent: ShutDownEvent, promise: EventLoopPromise<Void>) {
+            self.promise = promise
+            self.shutdownEvent = shutdownEvent
         }
         
         public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
@@ -1308,9 +1320,17 @@ public class ChannelTests: XCTestCase {
                 case .inputClosed:
                     XCTAssertFalse(inputShutdownEventReceived)
                     inputShutdownEventReceived = true
+                    
+                    if shutdownEvent == .input {
+                        promise.succeed(result: ())
+                    }
                 case .outputClosed:
                     XCTAssertFalse(outputShutdownEventReceived)
                     outputShutdownEventReceived = true
+                    
+                    if shutdownEvent == .output {
+                        promise.succeed(result: ())
+                    }
                 }
                
                 fallthrough
@@ -1319,9 +1339,22 @@ public class ChannelTests: XCTestCase {
             }
         }
         
+        public func waitForEvent() {
+            // We always notify it with a success so just force it with !
+            try! promise.futureResult.wait()
+        }
+        
         public func channelInactive(ctx: ChannelHandlerContext) {
-            XCTAssertEqual(inputShutdown, inputShutdownEventReceived)
-            XCTAssertEqual(outputShutdown, outputShutdownEventReceived)
+            switch shutdownEvent {
+            case .input:
+                XCTAssertTrue(inputShutdownEventReceived)
+                XCTAssertFalse(outputShutdownEventReceived)
+            case .output:
+                XCTAssertFalse(inputShutdownEventReceived)
+                XCTAssertTrue(outputShutdownEventReceived)
+            }
+            
+            promise.succeed(result: ())
         }
     }
 
