@@ -11,9 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-///
-/// LinuxMain.swift
-///
+//
+// LinuxMain.swift
+//
 import XCTest
 
 ///
@@ -59,13 +59,13 @@ import XCTest
          testCase(IdleStateHandlerTest.allTests),
          testCase(MarkedCircularBufferTests.allTests),
          testCase(MessageToByteEncoderTest.allTests),
+         testCase(NIOConcurrencyHelpersTests.allTests),
          testCase(NonBlockingFileIOTest.allTests),
          testCase(PendingDatagramWritesManagerTests.allTests),
          testCase(PriorityQueueTest.allTests),
          testCase(SniHandlerTest.allTests),
          testCase(SocketAddressTest.allTests),
          testCase(SocketChannelTest.allTests),
-         testCase(NIOConcurrencyHelpersTests.allTests),
          testCase(SystemTest.allTests),
          testCase(ThreadTest.allTests),
          testCase(TypeAssistedChannelHandlerTest.allTests),

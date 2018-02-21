@@ -11,9 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-///
-/// EmbeddedEventLoopTest+XCTest.swift
-///
+//
+// EmbeddedEventLoopTest+XCTest.swift
+//
 import XCTest
 
 ///
