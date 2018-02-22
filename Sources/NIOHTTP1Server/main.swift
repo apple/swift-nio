@@ -48,8 +48,6 @@ private final class HTTPHandler: ChannelInboundHandler {
     private var infoSavedRequestHead: HTTPRequestHead?
     private var infoSavedBodyBytes: Int = 0
 
-    private var continuousCount: Int = 0
-
     private var handler: ((ChannelHandlerContext, HTTPServerRequestPart) -> Void)? = nil
     private var handlerFuture: EventLoopFuture<()>?
     private let fileIO: NonBlockingFileIO
@@ -140,11 +138,11 @@ private final class HTTPHandler: ChannelInboundHandler {
     func handleContinuousWrites(ctx: ChannelHandlerContext, request: HTTPServerRequestPart) {
         switch request {
         case .head(let request):
-            self.continuousCount = 0
+            var continuousCount = 0
             func doNext() {
                 self.buffer.clear()
-                self.continuousCount += 1
-                self.buffer.write(string: "line \(self.continuousCount)\n")
+                continuousCount += 1
+                self.buffer.write(string: "line \(continuousCount)\n")
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).map {
                     _ = ctx.eventLoop.scheduleTask(in: .milliseconds(400), doNext)
                 }.whenFailure { error in
@@ -161,18 +159,18 @@ private final class HTTPHandler: ChannelInboundHandler {
     func handleMultipleWrites(ctx: ChannelHandlerContext, request: HTTPServerRequestPart, strings: [String], delay: TimeAmount) {
         switch request {
         case .head(let request):
-            self.continuousCount = 0
+            var continuousCount = 0
             func doNext() {
                 self.buffer.clear()
-                self.buffer.write(string: strings[self.continuousCount])
+                self.buffer.write(string: strings[continuousCount])
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenSuccess {
-                    if self.continuousCount < strings.count - 1 {
+                    if continuousCount < strings.count - 1 {
                         _ = ctx.eventLoop.scheduleTask(in: delay, doNext)
                     } else {
                         ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                     }
                 }
-                self.continuousCount += 1
+                continuousCount += 1
             }
             ctx.writeAndFlush(self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
             doNext()
@@ -357,7 +355,7 @@ let arg1 = arguments.dropFirst().first
 let arg2 = arguments.dropFirst().dropFirst().first
 let arg3 = arguments.dropFirst().dropFirst().dropFirst().first
 
-let defaultHost = "::1"
+let defaultHost = "127.0.0.1"
 let defaultPort = 8888
 let defaultHtdocs = "/dev/null/"
 
