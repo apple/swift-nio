@@ -132,6 +132,10 @@ public protocol ChannelOutboundInvoker {
     var eventLoop: EventLoop { get }
 }
 
+/// Default implementations for `ChannelOutboundInvoker` methods. Each method that returns a `EventLoopFuture` will just do the following:
+///     - create a new `EventLoopPromise<Void>`
+///     - call the corresponding method that takes a `EventLoopPromise<Void>`
+///     - return `EventLoopPromise.futureResult`
 extension ChannelOutboundInvoker {
     public func register() -> EventLoopFuture<Void> {
         let promise = newPromise()
