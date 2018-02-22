@@ -14,11 +14,11 @@
 
 /// `NIOAny` is an opaque container for values of *any* type, similar to Swift's builtin `Any` type. Contrary to
 /// `Any` the overhead of `NIOAny` depends on the the type of the wrapped value. Certain types that are important
-/// for the performance of a SwiftNIO appliation like `ByteBuffer` and `FileRegion` can be expected to be wrapped almost
-/// without overhead. All others will have similar performance as if they were passed as an `Any` as `NIOAny` just
-/// like `Any` will contain them within an existential container.
+/// for the performance of a SwiftNIO application like `ByteBuffer`, `FileRegion` and `AddressEnvelope<ByteBuffer>` can be expected
+/// to be wrapped almost without overhead. All others will have similar performance as if they were passed as an `Any` as
+/// `NIOAny` just like `Any` will contain them within an existential container.
 ///
-/// The most important use-cases for `NIOAny` are values travelling through the channel pipeline whose type can't
+/// The most important use-cases for `NIOAny` are values travelling through the `ChannelPipeline` whose type can't
 /// be calculated at compile time. For example:
 ///
 ///  - the `channelRead` of any `ChannelInboundHandler`
@@ -72,9 +72,11 @@ public struct NIOAny {
                 self = .other(value)
             }
         }
-        
     }
     
+    /// Try unwrapping the wrapped message as `ByteBuffer`.
+    ///
+    /// returns: The wrapped `ByteBuffer` or `nil` if the wrapped message is not a `ByteBuffer`.
     func tryAsByteBuffer() -> ByteBuffer? {
         if case .ioData(.byteBuffer(let bb)) = self.storage {
             return bb
@@ -83,6 +85,9 @@ public struct NIOAny {
         }
     }
     
+    /// Force unwrapping the wrapped message as `ByteBuffer`.
+    ///
+    /// returns: The wrapped `ByteBuffer` or crash if the wrapped message is not a `ByteBuffer`.
     func forceAsByteBuffer() -> ByteBuffer {
         if let v = tryAsByteBuffer() {
             return v
@@ -91,6 +96,9 @@ public struct NIOAny {
         }
     }
     
+    /// Try unwrapping the wrapped message as `IOData`.
+    ///
+    /// returns: The wrapped `IOData` or `nil` if the wrapped message is not a `IOData`.
     func tryAsIOData() -> IOData? {
         if case .ioData(let data) = self.storage {
             return data
@@ -99,6 +107,9 @@ public struct NIOAny {
         }
     }
     
+    /// Force unwrapping the wrapped message as `IOData`.
+    ///
+    /// returns: The wrapped `IOData` or crash if the wrapped message is not a `IOData`.
     func forceAsIOData() -> IOData {
         if let v = tryAsIOData() {
             return v
@@ -107,6 +118,9 @@ public struct NIOAny {
         }
     }
     
+    /// Try unwrapping the wrapped message as `FileRegion`.
+    ///
+    /// returns: The wrapped `FileRegion` or `nil` if the wrapped message is not a `FileRegion`.
     func tryAsFileRegion() -> FileRegion? {
         if case .ioData(.fileRegion(let f)) = self.storage {
             return f
@@ -115,6 +129,9 @@ public struct NIOAny {
         }
     }
     
+    /// Force unwrapping the wrapped message as `FileRegion`.
+    ///
+    /// returns: The wrapped `FileRegion` or crash if the wrapped message is not a `FileRegion`.
     func forceAsFileRegion() -> FileRegion {
         if let v = tryAsFileRegion() {
             return v
@@ -123,6 +140,9 @@ public struct NIOAny {
         }
     }
 
+    /// Try unwrapping the wrapped message as `AddressedEnvelope<ByteBuffer>`.
+    ///
+    /// returns: The wrapped `AddressedEnvelope<ByteBuffer>` or `nil` if the wrapped message is not an `AddressedEnvelope<ByteBuffer>`.
     func tryAsByteEnvelope() -> AddressedEnvelope<ByteBuffer>? {
         if case .bufferEnvelope(let e) = self.storage {
             return e
@@ -131,6 +151,9 @@ public struct NIOAny {
         }
     }
 
+    /// Force unwrapping the wrapped message as `AddressedEnvelope<ByteBuffer>`.
+    ///
+    /// returns: The wrapped `AddressedEnvelope<ByteBuffer>` or crash if the wrapped message is not an `AddressedEnvelope<ByteBuffer>`.
     func forceAsByteEnvelope() -> AddressedEnvelope<ByteBuffer> {
         if let e = tryAsByteEnvelope() {
             return e
@@ -139,6 +162,9 @@ public struct NIOAny {
         }
     }
     
+    /// Try unwrapping the wrapped message as `T`.
+    ///
+    /// returns: The wrapped `T` or `nil` if the wrapped message is not a `T`.
     func tryAsOther<T>(type: T.Type = T.self) -> T? {
         if case .other(let any) = self.storage {
             return any as? T
@@ -147,6 +173,9 @@ public struct NIOAny {
         }
     }
     
+    /// Force unwrapping the wrapped message as `T`.
+    ///
+    /// returns: The wrapped `T` or crash if the wrapped message is not a `T`.
     func forceAsOther<T>(type: T.Type = T.self) -> T {
         if let v = tryAsOther(type: type) {
             return v
@@ -155,6 +184,9 @@ public struct NIOAny {
         }
     }
     
+    /// Force unwrapping the wrapped message as `T`.
+    ///
+    /// returns: The wrapped `T` or crash if the wrapped message is not a `T`.
     func forceAs<T>(type: T.Type = T.self) -> T {
         switch T.self {
         case let t where t == ByteBuffer.self:
@@ -169,7 +201,10 @@ public struct NIOAny {
             return self.forceAsOther(type: type)
         }
     }
-    
+
+    /// Try unwrapping the wrapped message as `T`.
+    ///
+    /// returns: The wrapped `T` or `nil` if the wrapped message is not a `T`.
     func tryAs<T>(type: T.Type = T.self) -> T? {
         switch T.self {
         case let t where t == ByteBuffer.self:
@@ -184,7 +219,10 @@ public struct NIOAny {
             return self.tryAsOther(type: type)
         }
     }
-    
+
+    /// Unwrap the wrapped message.
+    ///
+    /// returns: The wrapped message.
     func asAny() -> Any {
         switch self.storage {
         case .ioData(.byteBuffer(let bb)):
