@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// Allows users to invoke an "outbound" operation related to a `Channel` that will flow through the `ChannelPipeline` until
-/// it will finally be executed by the the `Channel.Unsafe` implementation.
+/// it will finally be executed by the the `ChannelCore` implementation.
 public protocol ChannelOutboundInvoker {
     
     /// Register on an `EventLoop` and so have all its IO handled.

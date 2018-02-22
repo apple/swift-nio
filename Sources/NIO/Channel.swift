@@ -16,19 +16,72 @@ import NIOConcurrencyHelpers
 
 /// The core `Channel` methods for NIO-internal use only.
 ///
-/// - note: All methods must be called from the EventLoop thread
+/// - note: All methods must be called from the `EventLoop` thread.
 public protocol ChannelCore : class {
+    /// Returns the local bound `SocketAddress`.
     func localAddress0() throws -> SocketAddress
+
+    /// Return the connected `SocketAddress`.
     func remoteAddress0() throws -> SocketAddress
+    
+    /// Register with the `EventLoop` to receive I/O notifications.
+    ///
+    /// - parameters:
+    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func register0(promise: EventLoopPromise<Void>?)
+
+    /// Bind to a `SocketAddress`.
+    ///
+    /// - parameters:
+    ///     - to: The `SocketAddress` to which we should bind the `Channel`.
+    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?)
+    
+    /// Connect to a `SocketAddress`.
+    ///
+    /// - parameters:
+    ///     - to: The `SocketAddress` to which we should connect the `Channel`.
+    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func connect0(to: SocketAddress, promise: EventLoopPromise<Void>?)
+    
+    /// Write the given data to the outbound buffer.
+    ///
+    /// - parameters:
+    ///     - data: The data to write, wrapped in a `NIOAny`.
+    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?)
+    
+    /// Try to flush out all previous written messages that are pending.
     func flush0()
+    
+    /// Request that the `Channel` perform a read when data is ready.
     func read0()
+    
+    /// Close the `Channel`.
+    ///
+    /// - parameters:
+    ///     - error: The `Error` which will be used to fail any pending writes.
+    ///     - mode: The `CloseMode` to apply.
+    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?)
+    
+    /// Trigger an outbound event.
+    ///
+    /// - parameters:
+    ///     - event: The triggered event.
+    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?)
+    
+    /// Called when data was read from the `Channel` but it was not consumed by any `ChannelInboundHandler` in the `ChannelPipeline`.
+    ///
+    /// - parameters:
+    ///     - data: The data that was read, wrapped in a `NIOAny`.
     func channelRead0(_ data: NIOAny)
+    
+    /// Called when an inbound error was encountered but was not consumed by any `ChannelInboundHandler` in the `ChannelPipeline`.
+    ///
+    /// - parameters:
+    ///     - error: The `Error` that was encountered.
     func errorCaught0(error: Error)
 }
 
