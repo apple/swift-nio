@@ -27,6 +27,7 @@ extension SocketChannelTest {
    static var allTests : [(String, (SocketChannelTest) -> () throws -> Void)] {
       return [
                 ("testAsyncSetOption", testAsyncSetOption),
+                ("testDelayedConnectSetsUpRemotePeerAddress", testDelayedConnectSetsUpRemotePeerAddress),
            ]
    }
 }

@@ -549,6 +549,9 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
 
         if let connectPromise = pendingConnect {
             pendingConnect = nil
+
+            // We already know what the local address is.
+            self.updateCachedAddressesFromSocket(updateLocal: false, updateRemote: true)
             executeAndComplete(connectPromise) {
                 try finishConnectSocket()
             }
@@ -632,7 +635,8 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
         do {
             if try !connectSocket(to: address) {
-                self.updateCachedAddressesFromSocket()
+                // We aren't connected, we'll get the remote address later.
+                self.updateCachedAddressesFromSocket(updateLocal: true, updateRemote: false)
                 if promise != nil {
                     pendingConnect = promise
                 } else {
