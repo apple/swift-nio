@@ -5,8 +5,8 @@ set -e
 my_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 root_path="$my_path/.."
 swift_version=${swift_version:-4.0.2}
-version=$(git describe --abbrev=0 --tags)
-modules=(SwiftNIO NIOHTTP1 NIOTLS NIOFoundationCompat)
+version=$(git describe --abbrev=0 --tags || echo "0.0.0")
+modules=(NIO NIOHTTP1 NIOTLS NIOFoundationCompat)
 
 if [[ "$(uname -s)" == "Linux" ]]; then
   # setup ruby
@@ -64,8 +64,8 @@ module_switcher="docs/$version/README.md"
 jazzy_args=(--clean
             --author 'SwiftNIO Team'
             --readme "$module_switcher"
-            --author_url https://github.com/apple/nio
-            --github_url https://github.com/apple/nio
+            --author_url https://github.com/apple/swift-nio
+            --github_url https://github.com/apple/swift-nio
             --theme fullwidth
             --xcodebuild-arguments -scheme,swift-nio-Package)
 cat > "$module_switcher" <<EOF
