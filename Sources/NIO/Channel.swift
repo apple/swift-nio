@@ -164,18 +164,13 @@ internal protocol SelectableChannel: Channel {
     func registrationFor(interested: IOEvent) -> NIORegistration
 }
 
+/// Default implementations which will start on the head of the `ChannelPipeline`.
 extension Channel {
-    public var open: Bool {
-        return !closeFuture.fulfilled
-    }
-
+    
     public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         pipeline.bind(to: address, promise: promise)
     }
-
-    // Methods invoked from the HeadHandler of the ChannelPipeline
-    // By default, just pass through to pipeline
-
+    
     public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         pipeline.connect(to: address, promise: promise)
     }

@@ -416,7 +416,7 @@ internal final class SelectableEventLoop: EventLoop {
 
     /// Handle the given `IOEvent` for the `SelectableChannel`.
     private func handleEvent<C: SelectableChannel>(_ ev: IOEvent, channel: C) {
-        guard handleEvents(channel) else {
+        guard channel.selectable.isOpen else {
             return
         }
         
@@ -427,21 +427,15 @@ internal final class SelectableEventLoop: EventLoop {
             channel.readable()
         case .all:
             channel.writable()
-            guard handleEvents(channel) else {
+            
+            guard channel.selectable.isOpen else {
                 return
             }
             channel.readable()
         case .none:
             // spurious wakeup
             break
-            
         }
-        guard handleEvents(channel) else {
-            return
-        }
-
-        // Ensure we never reach here if the channel is not open anymore.
-        assert(channel.open)
     }
 
     private func currentSelectorStrategy() -> SelectorStrategy {
@@ -542,21 +536,6 @@ internal final class SelectableEventLoop: EventLoop {
         try self.selector.close()
     }
 
-    /// Returns `true` if the `SelectableChannel` is still open and so we should continue handling IO / tasks for it. Otherwise it returns `false` and will deregister the `SelectableChannel`
-    /// from this `SelectableEventLoop`.
-    private func handleEvents<C: SelectableChannel>(_ channel: C) -> Bool {
-        if channel.open {
-            return true
-        }
-        do {
-            try deregister(channel: channel)
-        } catch {
-            // ignore for now... We should most likely at least log this.
-        }
-
-        return false
-    }
-    
     fileprivate func close0() throws {
         if inEventLoop {
             self.lifecycleState = .closed

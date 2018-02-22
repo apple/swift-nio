@@ -182,10 +182,10 @@ extension sockaddr_storage {
 class BaseSocket: Selectable {
 
     private let descriptor: Int32
-    public private(set) var open: Bool
+    public private(set) var isOpen: Bool
     
     func withUnsafeFileDescriptor<T>(_ body: (Int32) throws -> T) throws -> T {
-        guard self.open else {
+        guard self.isOpen else {
             throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
         }
         return try body(descriptor)
@@ -261,11 +261,11 @@ class BaseSocket: Selectable {
     ///     - descriptor: The file descriptor to wrap.
     init(descriptor: Int32) {
         self.descriptor = descriptor
-        self.open = true
+        self.isOpen = true
     }
 
     deinit {
-        assert(!self.open, "leak of open BaseSocket")
+        assert(!self.isOpen, "leak of open BaseSocket")
     }
     
     /// Set the socket as non-blocking.
@@ -358,7 +358,7 @@ class BaseSocket: Selectable {
             try Posix.close(descriptor: fd)
         }
 
-        self.open = false
+        self.isOpen = false
     }
 }
 
