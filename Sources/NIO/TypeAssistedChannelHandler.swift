@@ -12,26 +12,42 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// ChannelHandler which will emit data by calling `ChannelHandlerContext.write`.
+///
+/// We _strongly_ advice against implementing this protocol directly. Please implement `ChannelInboundHandler` or / and `ChannelOutboundHandler`.
 public protocol _EmittingChannelHandler {
+    /// The type of the outbound data which will be forwarded to the next `ChannelOutboundHandler` in the `ChannelPipeline`.
     associatedtype OutboundOut = Never
     
+    /// Wrap the provided `OutboundOut` that will be passed to the next `ChannelOutboundHandler` by calling `ChannelHandlerContext.write`.
     func wrapOutboundOut(_ value: OutboundOut) -> NIOAny
 }
 
+/// Default implementations for `_EmittingChannelHandler`.
 extension _EmittingChannelHandler {
     public func wrapOutboundOut(_ value: OutboundOut) -> NIOAny {
         return NIOAny(value)
     }
 }
 
+///  `ChannelHandler` which handles inbound I/O events for a `Channel`.
+///
+/// Please refer to `_ChannelInboundHandler` and `_EmittingChannelHandler` for more details on the provided methods.
 public protocol ChannelInboundHandler: _ChannelInboundHandler, _EmittingChannelHandler {
+    /// The type of the inbound data which is wrapped in `NIOAny`.
     associatedtype InboundIn
+    
+    /// The type of the inbound data which will be forwarded to the next `ChannelInboundHandler` in the `ChannelPipeline`.
     associatedtype InboundOut = Never
 
+    /// Unwrap the provided `NIOAny` that was passed to `channelRead`.
     func unwrapInboundIn(_ value: NIOAny) -> InboundIn
+    
+    /// Wrap the provided `InboundOut` that will be passed to the next `ChannelInboundHandler` by calling `ChannelHandlerContext.fireChannelRead`.
     func wrapInboundOut(_ value: InboundOut) -> NIOAny
 }
 
+/// Default implementations for `ChannelInboundHandler`.
 extension ChannelInboundHandler {
     public func unwrapInboundIn(_ value: NIOAny) -> InboundIn {
         return value.forceAs()
@@ -42,13 +58,18 @@ extension ChannelInboundHandler {
     }
 }
 
+/// `ChannelHandler` which handles outbound I/O events or intercept an outbound I/O operation for a `Channel`.
+///
+/// Please refer to `_ChannelOutboundHandler` and `_EmittingChannelHandler` for more details on the provided methods.
 public protocol ChannelOutboundHandler: _ChannelOutboundHandler, _EmittingChannelHandler {
+    /// The type of the outbound data which is wrapped in `NIOAny`.
     associatedtype OutboundIn
-    associatedtype InboundOut = Never
 
+    /// Unwrap the provided `NIOAny` that was passed to `write`.
     func unwrapOutboundIn(_ value: NIOAny) -> OutboundIn
 }
 
+/// Default implementations for `ChannelOutboundHandler`.
 extension ChannelOutboundHandler {
     public func unwrapOutboundIn(_ value: NIOAny) -> OutboundIn {
         return value.forceAs()
