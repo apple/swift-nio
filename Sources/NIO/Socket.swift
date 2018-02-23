@@ -67,13 +67,12 @@ final class Socket : BaseSocket {
     
     /// Private helper function to handle connection attempts.
     private func connectSocket<T>(addr: T) throws -> Bool {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't connect socket as it's not open anymore.")
-        }
-        var addr = addr
-        return try withUnsafePointer(to: &addr) { ptr in
-            try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                try Posix.connect(descriptor: self.descriptor, addr: ptr, size: socklen_t(MemoryLayout<T>.size))
+        return try withUnsafeFileDescriptor { fd in
+            var addr = addr
+            return try withUnsafePointer(to: &addr) { ptr in
+                try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
+                    try Posix.connect(descriptor: fd, addr: ptr, size: socklen_t(MemoryLayout<T>.size))
+                }
             }
         }
     }
@@ -96,10 +95,9 @@ final class Socket : BaseSocket {
     /// - returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func write(pointer: UnsafePointer<UInt8>, size: Int) throws -> IOResult<Int> {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't write to socket as it's not open anymore.")
+        return try withUnsafeFileDescriptor { fd in
+            try Posix.write(descriptor: fd, pointer: pointer, size: size)
         }
-        return try Posix.write(descriptor: self.descriptor, pointer: pointer, size: size)
     }
 
     /// Write data to the remote peer (gathering writes).
@@ -109,11 +107,9 @@ final class Socket : BaseSocket {
     /// - returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't writev to socket as it's not open anymore.")
+        return try withUnsafeFileDescriptor { fd in
+            try Posix.writev(descriptor: fd, iovecs: iovecs)
         }
-
-        return try Posix.writev(descriptor: self.descriptor, iovecs: iovecs)
     }
 
     /// Send data to a destination.
@@ -125,11 +121,9 @@ final class Socket : BaseSocket {
     /// - returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func sendto(pointer: UnsafePointer<UInt8>, size: Int, destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't sendto to socket as it's not open anymore.")
+        return try withUnsafeFileDescriptor { fd in
+            try Posix.sendto(descriptor: fd, pointer: UnsafeMutablePointer(mutating: pointer), size: size, destinationPtr: destinationPtr, destinationSize: destinationSize)
         }
-
-        return try Posix.sendto(descriptor: self.descriptor, pointer: UnsafeMutablePointer(mutating: pointer), size: size, destinationPtr: destinationPtr, destinationSize: destinationSize)
     }
     
     /// Read data from the socket.
@@ -140,11 +134,9 @@ final class Socket : BaseSocket {
     /// - returns: The `IOResult` which indicates how much data could be read and if the operation returned before all could be read (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> IOResult<Int> {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't read from socket as it's not open anymore.")
+        return try withUnsafeFileDescriptor { fd in
+            try Posix.read(descriptor: fd, pointer: pointer, size: size)
         }
-
-        return try Posix.read(descriptor: self.descriptor, pointer: pointer, size: size)
     }
 
     /// Receive data from the socket.
@@ -157,12 +149,10 @@ final class Socket : BaseSocket {
     /// - returns: The `IOResult` which indicates how much data could be received and if the operation returned before all could be received (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func recvfrom(pointer: UnsafeMutablePointer<UInt8>, size: Int, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't recvfrom socket as it's not open anymore")
-        }
-
-        return try storage.withMutableSockAddr { (storagePtr, _) in
-            try Posix.recvfrom(descriptor: self.descriptor, pointer: pointer, len: size, addr: storagePtr, addrlen: &storageLen)
+        return try withUnsafeFileDescriptor { fd in
+            try storage.withMutableSockAddr { (storagePtr, _) in
+                try Posix.recvfrom(descriptor: fd, pointer: pointer, len: size, addr: storagePtr, addrlen: &storageLen)
+            }
         }
     }
     
@@ -175,11 +165,9 @@ final class Socket : BaseSocket {
     /// - returns: The `IOResult` which indicates how much data could be send and if the operation returned before all could be send (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func sendFile(fd: Int32, offset: Int, count: Int) throws -> IOResult<Int> {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't write to socket as it's not open anymore.")
+        return try withUnsafeFileDescriptor { desc in
+            try Posix.sendfile(descriptor: desc, fd: fd, offset: off_t(offset), count: count)
         }
-      
-        return try Posix.sendfile(descriptor: self.descriptor, fd: fd, offset: off_t(offset), count: count)
     }
 
     /// Receive `MMsgHdr`s.
@@ -189,11 +177,9 @@ final class Socket : BaseSocket {
     /// - returns: The `IOResult` which indicates how many messages could be received and if the operation returned before all messages could be received (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func recvmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't read from socket as it's not open anymore.")
+        return try withUnsafeFileDescriptor { fd in
+            try Posix.recvmmsg(sockfd: fd, msgvec: msgs.baseAddress!, vlen: CUnsignedInt(msgs.count), flags: 0, timeout: nil)
         }
-
-        return try Posix.recvmmsg(sockfd: self.descriptor, msgvec: msgs.baseAddress!, vlen: CUnsignedInt(msgs.count), flags: 0, timeout: nil)
     }
 
     /// Send `MMsgHdr`s.
@@ -203,11 +189,9 @@ final class Socket : BaseSocket {
     /// - returns: The `IOResult` which indicates how many messages could be send and if the operation returned before all messages could be send (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
     func sendmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't write to socket as it's not open anymore.")
+        return try withUnsafeFileDescriptor { fd in
+            try Posix.sendmmsg(sockfd: fd, msgvec: msgs.baseAddress!, vlen: CUnsignedInt(msgs.count), flags: 0)
         }
-
-        return try Posix.sendmmsg(sockfd: self.descriptor, msgvec: msgs.baseAddress!, vlen: CUnsignedInt(msgs.count), flags: 0)
     }
     
     /// Shutdown the socket.
@@ -216,9 +200,8 @@ final class Socket : BaseSocket {
     ///     - how: the mode of `Shutdown`.
     /// - throws: An `IOError` if the operation failed.
     func shutdown(how: Shutdown) throws {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't shutdown socket as it's not open anymore.")
+        return try withUnsafeFileDescriptor { fd in
+            try Posix.shutdown(descriptor: fd, how: how)
         }
-        try Posix.shutdown(descriptor: self.descriptor, how: how)
     }
 }

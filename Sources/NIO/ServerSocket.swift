@@ -37,7 +37,9 @@ final class ServerSocket: BaseSocket {
     ///     - backlog: The backlog to use.
     /// - throws: An `IOError` if creation of the socket failed.
     func listen(backlog: Int32 = 128) throws {
-        _ = try Posix.listen(descriptor: descriptor, backlog: backlog)
+        try withUnsafeFileDescriptor { fd in
+            _ = try Posix.listen(descriptor: fd, backlog: backlog)
+        }
     }
     
     /// Accept a new connection
@@ -45,18 +47,20 @@ final class ServerSocket: BaseSocket {
     /// - returns: A `Socket` once a new connection was established or `nil` if this `ServerSocket` is in non-blocking mode and there is no new connection that can be accepted when this method is called.
     /// - throws: An `IOError` if the operation failed.
     func accept() throws -> Socket? {
-        var acceptAddr = sockaddr_in()
-        var addrSize = socklen_t(MemoryLayout<sockaddr_in>.size)
-        
-        let result = try withUnsafeMutablePointer(to: &acceptAddr) { ptr in
-            try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
-                try Posix.accept(descriptor: self.descriptor, addr: ptr, len: &addrSize)
+        return try withUnsafeFileDescriptor { fd in
+            var acceptAddr = sockaddr_in()
+            var addrSize = socklen_t(MemoryLayout<sockaddr_in>.size)
+            
+            let result = try withUnsafeMutablePointer(to: &acceptAddr) { ptr in
+                try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
+                    try Posix.accept(descriptor: fd, addr: ptr, len: &addrSize)
+                }
             }
+            
+            guard let fd = result else {
+                return nil
+            }
+            return Socket(descriptor: fd)
         }
-        
-        guard let fd = result else {
-            return nil
-        }
-        return Socket(descriptor: fd)
     }
 }

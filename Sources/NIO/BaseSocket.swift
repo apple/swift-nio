@@ -180,9 +180,16 @@ extension sockaddr_storage {
 ///
 /// This should not be created directly but one of its sub-classes should be used, like `ServerSocket` or `Socket`.
 class BaseSocket: Selectable {
-    
-    public let descriptor: Int32
+
+    private let descriptor: Int32
     public private(set) var open: Bool
+    
+    func withUnsafeFileDescriptor<T>(_ fn: (Int32) throws -> T) throws -> T {
+        guard self.open else {
+            throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
+        }
+        return try fn(descriptor)
+    }
     
     /// Returns the local bound `SocketAddress` of the socket.
     ///
@@ -206,7 +213,10 @@ class BaseSocket: Selectable {
 
         try addr.withMutableSockAddr { addressPtr, size in
             var size = socklen_t(size)
-            try fn(self.descriptor, addressPtr, &size)
+            
+            try withUnsafeFileDescriptor { fd in
+                try fn(fd, addressPtr, &size)
+            }
         }
         return addr.convert()
     }
@@ -264,11 +274,9 @@ class BaseSocket: Selectable {
     ///
     /// throws: An `IOError` if the operation failed.
     final func setNonBlocking() throws {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't control file descriptor as it's not open anymore.")
+        return try withUnsafeFileDescriptor { fd in
+            try Posix.fcntl(descriptor: fd, command: F_SETFL, value: O_NONBLOCK)
         }
-
-        try Posix.fcntl(descriptor: descriptor, command: F_SETFL, value: O_NONBLOCK)
     }
     
     /// Set the given socket option.
@@ -281,18 +289,16 @@ class BaseSocket: Selectable {
     ///     - value: The value for the option.
     /// - throws: An `IOError` if the operation failed.
     final func setOption<T>(level: Int32, name: Int32, value: T) throws {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't set socket options as it's not open anymore.")
+        try withUnsafeFileDescriptor { fd in
+            var val = value
+            
+            _ = try Posix.setsockopt(
+                socket: fd,
+                level: level,
+                optionName: name,
+                optionValue: &val,
+                optionLen: socklen_t(MemoryLayout.size(ofValue: val)))
         }
-
-        var val = value
-        
-        _ = try Posix.setsockopt(
-            socket: self.descriptor,
-            level: level,
-            optionName: name,
-            optionValue: &val,
-            optionLen: socklen_t(MemoryLayout.size(ofValue: val)))
     }
 
     /// Get the given socket option value.
@@ -304,19 +310,17 @@ class BaseSocket: Selectable {
     ///     - name: The name of the option to set.
     /// - throws: An `IOError` if the operation failed.
     final func getOption<T>(level: Int32, name: Int32) throws -> T {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't get socket options as it's not open anymore.")
+        return try withUnsafeFileDescriptor { fd in
+            var length = socklen_t(MemoryLayout<T>.size)
+            var val = UnsafeMutablePointer<T>.allocate(capacity: 1)
+            defer {
+                val.deinitialize(count: 1)
+                val.deallocate()
+            }
+            
+            try Posix.getsockopt(socket: fd, level: level, optionName: name, optionValue: val, optionLen: &length)
+            return val.pointee
         }
-
-        var length = socklen_t(MemoryLayout<T>.size)
-        var val = UnsafeMutablePointer<T>.allocate(capacity: 1)
-        defer {
-            val.deinitialize(count: 1)
-            val.deallocate()
-        }
-        
-        try Posix.getsockopt(socket: self.descriptor, level: level, optionName: name, optionValue: val, optionLen: &length)
-        return val.pointee
     }
     
     /// Bind the socket to the given `SocketAddress`.
@@ -325,24 +329,22 @@ class BaseSocket: Selectable {
     ///     - address: The `SocketAddress` to which the socket should be bound.
     /// - throws: An `IOError` if the operation failed.
     final func bind(to address: SocketAddress) throws {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't bind socket as it's not open anymore.")
-        }
-
-        func doBind(ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
-           try Posix.bind(descriptor: self.descriptor, ptr: ptr, bytes: bytes)
-        }
-
-        switch address {
-        case .v4(let address):
-            var addr = address.address
-            try addr.withSockAddr(doBind)
-        case .v6(let address):
-            var addr = address.address
-            try addr.withSockAddr(doBind)
-        case .unixDomainSocket(let address):
-            var addr = address.address
-            try addr.withSockAddr(doBind)
+        try withUnsafeFileDescriptor { fd in
+            func doBind(ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
+                try Posix.bind(descriptor: fd, ptr: ptr, bytes: bytes)
+            }
+            
+            switch address {
+            case .v4(let address):
+                var addr = address.address
+                try addr.withSockAddr(doBind)
+            case .v6(let address):
+                var addr = address.address
+                try addr.withSockAddr(doBind)
+            case .unixDomainSocket(let address):
+                var addr = address.address
+                try addr.withSockAddr(doBind)
+            }
         }
     }
     
@@ -352,12 +354,16 @@ class BaseSocket: Selectable {
     ///
     /// - throws: An `IOError` if the operation failed.
     final func close() throws {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't close socket (as it's not open anymore.")
+        try withUnsafeFileDescriptor { fd in
+            try Posix.close(descriptor: fd)
         }
 
-        try Posix.close(descriptor: self.descriptor)
-
         self.open = false
+    }
+}
+
+extension BaseSocket: CustomStringConvertible {
+    var description: String {
+        return "BaseSocket { fd=\(self.descriptor) } "
     }
 }
