@@ -1237,7 +1237,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override fileprivate func markFlushPoint(promise: EventLoopPromise<Void>?) {
         // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actually written once writable() is called.
-        self.pendingWrites.markFlushCheckpoint(promise: promise)
+        self.pendingWrites.markFlushCheckpoint()
     }
 
     /// Called when closing, to instruct the specific implementation to discard all pending
