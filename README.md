@@ -154,7 +154,7 @@ Alternatively, you may want to develop or test with `docker-compose`.
 
 To do that, first `cd docker` and then run the following commands:
 
-- `docker-compose test`
+- `docker-compose up test`
 
   Will create a base image with Swift 4.0 (if missing), compile SwiftNIO and run the tests
 
