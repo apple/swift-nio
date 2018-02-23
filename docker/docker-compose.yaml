@@ -8,6 +8,7 @@ services:
             args:
                 version: 4.0
         volumes:
+            - ~/.ssh:/root/.ssh
             - ..:/code
         working_dir: /code
 
@@ -17,6 +18,7 @@ services:
         image: swift-nio:latest
         command: swift test
         volumes:
+            - ~/.ssh:/root/.ssh
             - ..:/code
         working_dir: /code
 
@@ -28,6 +30,7 @@ services:
             - "9999:9999"
         command: swift run NIOEchoServer 0.0.0.0 9999
         volumes:
+            - ~/.ssh:/root/.ssh
             - ..:/code
         working_dir: /code
 
@@ -39,5 +42,6 @@ services:
             - "8888:8888"
         command: swift run NIOHTTP1Server 0.0.0.0 8888
         volumes:
+            - ~/.ssh:/root/.ssh
             - ..:/code
         working_dir: /code
