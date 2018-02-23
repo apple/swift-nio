@@ -206,14 +206,16 @@ class BaseSocket: Selectable {
         }
         return sock
     }
-    
-    // TODO: This needs a way to encourage proper open/close behavior.
-    //       A closure a la Ruby's File.open may make sense.
+ 
     init(descriptor : Int32) {
         self.descriptor = descriptor
         self.open = true
     }
 
+    deinit {
+        assert(!self.open, "leak of open BaseSocket")
+    }
+    
     final func setNonBlocking() throws {
         guard self.open else {
             throw IOError(errnoCode: EBADF, reason: "can't control file descriptor as it's not open anymore.")
