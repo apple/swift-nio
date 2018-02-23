@@ -12,7 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// A Registration on a `Selector`, which is interested in an `IOEvent`.
 protocol Registration {
+    /// The `IOEvent` in which the `Registration` is interested.
     var interested: IOEvent { get set }
 }
 
@@ -21,6 +23,7 @@ protocol SockAddrProtocol {
     mutating func withMutableSockAddr<R>(_ fn: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R
 }
 
+/// Returns a description for the given address.
 private func descriptionForAddress(family: CInt, bytes: UnsafeRawPointer, length byteCount: Int) -> String {
     var addressBytes: [Int8] = Array(repeating: 0, count: byteCount)
     return addressBytes.withUnsafeMutableBufferPointer { (addressBytesPtr: inout UnsafeMutableBufferPointer<Int8>) -> String in
@@ -49,6 +52,7 @@ extension sockaddr_in: SockAddrProtocol {
         }
     }
 
+    /// Returns a description of the `sockaddr_in`.
     mutating func addressDescription() -> String {
         return withUnsafePointer(to: &self.sin_addr) { addrPtr in
             descriptionForAddress(family: AF_INET, bytes: addrPtr, length: Int(INET_ADDRSTRLEN))
@@ -71,6 +75,7 @@ extension sockaddr_in6: SockAddrProtocol {
         }
     }
 
+    /// Returns a description of the `sockaddr_in6`.
     mutating func addressDescription() -> String {
         return withUnsafePointer(to: &self.sin6_addr) { addrPtr in
             descriptionForAddress(family: AF_INET6, bytes: addrPtr, length: Int(INET6_ADDRSTRLEN))
@@ -118,6 +123,9 @@ extension sockaddr_storage: SockAddrProtocol {
 // avoid getting the Swift compiler to copy the sockaddr_storage for any reason:
 // only our rebinding copy here is allowed.
 extension sockaddr_storage {
+    /// Converts the `socketaddr_storage` to a `sockaddr_in`.
+    ///
+    /// This will crash if `ss_family` != AF_INET!
     mutating func convert() -> sockaddr_in {
         precondition(self.ss_family == AF_INET)
         return withUnsafePointer(to: &self) {
@@ -127,6 +135,9 @@ extension sockaddr_storage {
         }
     }
 
+    /// Converts the `socketaddr_storage` to a `sockaddr_in6`.
+    ///
+    /// This will crash if `ss_family` != AF_INET6!
     mutating func convert() -> sockaddr_in6 {
         precondition(self.ss_family == AF_INET6)
         return withUnsafePointer(to: &self) {
@@ -136,6 +147,9 @@ extension sockaddr_storage {
         }
     }
 
+    /// Converts the `socketaddr_storage` to a `sockaddr_un`.
+    ///
+    /// This will crash if `ss_family` != AF_UNIX!
     mutating func convert() -> sockaddr_un {
         precondition(self.ss_family == AF_UNIX)
         return withUnsafePointer(to: &self) {
@@ -145,6 +159,7 @@ extension sockaddr_storage {
         }
     }
 
+    /// Converts the `socketaddr_storage` to a `SocketAddress`.
     mutating func convert() -> SocketAddress {
         switch self.ss_family {
         case Posix.AF_INET:
@@ -161,18 +176,31 @@ extension sockaddr_storage {
     }
 }
 
+/// Base class for sockets.
+///
+/// This should not be created directly but one of its sub-classes should be used, like `ServerSocket` or `Socket`.
 class BaseSocket: Selectable {
+    
     public let descriptor: Int32
     public private(set) var open: Bool
     
+    /// Returns the local bound `SocketAddress` of the socket.
+    ///
+    /// - returns: The local bound address.
+    /// - throws: An `IOError` if the retrieval of the address failed.
     final func localAddress() throws -> SocketAddress {
         return try get_addr { try Posix.getsockname(socket: $0, address: $1, addressLength: $2) }
     }
     
+    /// Returns the connected `SocketAddress` of the socket.
+    ///
+    /// - returns: The connected address.
+    /// - throws: An `IOError` if the retrieval of the address failed.
     final func remoteAddress() throws -> SocketAddress {
         return try get_addr { try Posix.getpeername(socket: $0, address: $1, addressLength: $2) }
     }
 
+    /// Internal helper function for retrieval of a `SocketAddress`.
     private func get_addr(_ fn: (Int32, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) throws -> Void) throws -> SocketAddress {
         var addr = sockaddr_storage()
 
@@ -183,6 +211,13 @@ class BaseSocket: Selectable {
         return addr.convert()
     }
 
+    /// Create a new socket and return the file descriptor of it.
+    ///
+    /// - parameters:
+    ///     - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
+    ///     - type: The type of the socket to create.
+    /// - returns: the file descriptor of the socket that was created.
+    /// - throws: An `IOError` if creation of the socket failed.
     static func newSocket(protocolFamily: Int32, type: CInt) throws -> Int32 {
         let sock = try Posix.socket(domain: protocolFamily,
                                     type: type,
@@ -206,7 +241,14 @@ class BaseSocket: Selectable {
         }
         return sock
     }
- 
+
+    /// Create a new instance.
+    ///
+    /// The ownership of the passed in descriptor is transferred to this class. A user must call `close` to close the underlying
+    /// file descriptor once its not needed / used anymore.
+    ///
+    /// - parameters:
+    ///     - descriptor: The file descriptor to wrap.
     init(descriptor : Int32) {
         self.descriptor = descriptor
         self.open = true
@@ -216,6 +258,11 @@ class BaseSocket: Selectable {
         assert(!self.open, "leak of open BaseSocket")
     }
     
+    /// Set the socket as non-blocking.
+    ///
+    /// All I/O operations will not block and so may return before the actual action could be completed.
+    ///
+    /// throws: An `IOError` if the operation failed.
     final func setNonBlocking() throws {
         guard self.open else {
             throw IOError(errnoCode: EBADF, reason: "can't control file descriptor as it's not open anymore.")
@@ -224,6 +271,15 @@ class BaseSocket: Selectable {
         try Posix.fcntl(descriptor: descriptor, command: F_SETFL, value: O_NONBLOCK)
     }
     
+    /// Set the given socket option.
+    ///
+    /// This basically just delegates to `setsockopt` syscall.
+    ///
+    /// - parameters:
+    ///     - level: The protocol level (see `man setsockopt`).
+    ///     - name: The name of the option to set.
+    ///     - value: The value for the option.
+    /// - throws: An `IOError` if the operation failed.
     final func setOption<T>(level: Int32, name: Int32, value: T) throws {
         guard self.open else {
             throw IOError(errnoCode: EBADF, reason: "can't set socket options as it's not open anymore.")
@@ -239,6 +295,14 @@ class BaseSocket: Selectable {
             optionLen: socklen_t(MemoryLayout.size(ofValue: val)))
     }
 
+    /// Get the given socket option value.
+    ///
+    /// This basically just delegates to `getsockopt` syscall.
+    ///
+    /// - parameters:
+    ///     - level: The protocol level (see `man getsockopt`).
+    ///     - name: The name of the option to set.
+    /// - throws: An `IOError` if the operation failed.
     final func getOption<T>(level: Int32, name: Int32) throws -> T {
         guard self.open else {
             throw IOError(errnoCode: EBADF, reason: "can't get socket options as it's not open anymore.")
@@ -255,6 +319,11 @@ class BaseSocket: Selectable {
         return val.pointee
     }
     
+    /// Bind the socket to the given `SocketAddress`.
+    ///
+    /// - parameters:
+    ///     - address: The `SocketAddress` to which the socket should be bound.
+    /// - throws: An `IOError` if the operation failed.
     final func bind(to address: SocketAddress) throws {
         guard self.open else {
             throw IOError(errnoCode: EBADF, reason: "can't bind socket as it's not open anymore.")
@@ -277,6 +346,11 @@ class BaseSocket: Selectable {
         }
     }
     
+    /// Close the socket.
+    ///
+    /// After the socket was closed all other methods will throw an `IOError` when called.
+    ///
+    /// - throws: An `IOError` if the operation failed.
     final func close() throws {
         guard self.open else {
             throw IOError(errnoCode: EBADF, reason: "can't close socket (as it's not open anymore.")

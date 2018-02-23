@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// A server socket that can accept new connections.
 final class ServerSocket: BaseSocket {
     public class func bootstrap(protocolFamily: Int32, host: String, port: Int) throws -> ServerSocket {
         let socket = try ServerSocket(protocolFamily: protocolFamily)
@@ -20,15 +21,29 @@ final class ServerSocket: BaseSocket {
         return socket
     }
     
+    /// Create a new instance.
+    ///
+    /// - parameters:
+    ///     - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
+    /// - throws: An `IOError` if creation of the socket failed.
     init(protocolFamily: Int32) throws {
         let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM)
         super.init(descriptor: sock)
     }
     
+    /// Start to listen for new connections.
+    ///
+    /// - parameters:
+    ///     - backlog: The backlog to use.
+    /// - throws: An `IOError` if creation of the socket failed.
     func listen(backlog: Int32 = 128) throws {
         _ = try Posix.listen(descriptor: descriptor, backlog: backlog)
     }
     
+    /// Accept a new connection
+    ///
+    /// - returns: A `Socket` once a new connection was established or `nil` if this `ServerSocket` is in non-blocking mode and there is no new connection that can be accepted when this method is called.
+    /// - throws: An `IOError` if the operation failed.
     func accept() throws -> Socket? {
         var acceptAddr = sockaddr_in()
         var addrSize = socklen_t(MemoryLayout<sockaddr_in>.size)
