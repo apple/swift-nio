@@ -172,23 +172,8 @@ private struct PendingStreamWritesState {
     /// Mark the flush checkpoint.
     ///
     /// All writes before this checkpoint will eventually be written to the socket.
-    ///
-    /// - parameters:
-    ///     - The flush promise.
-    public mutating func markFlushCheckpoint(promise: EventLoopPromise<Void>?) {
+    public mutating func markFlushCheckpoint() {
         self.pendingWrites.mark()
-        let checkpointIdx = self.pendingWrites.markedElementIndex()
-        if let promise = promise, let checkpoint = checkpointIdx {
-            if let p = self.pendingWrites[checkpoint].promise {
-                p.futureResult.cascade(promise: promise)
-            } else {
-                self.pendingWrites[checkpoint].promise = promise
-            }
-        } else if let promise = promise {
-            // No checkpoint index means this is a flush on empty, so we can
-            // satisfy it immediately.
-            promise.succeed(result: ())
-        }
     }
 
     /// Indicate that a write has happened, this may be a write of multiple outstanding writes (using for example `writev`).
@@ -291,11 +276,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
     private(set) var isOpen = true
 
     /// Mark the flush checkpoint.
-    ///
-    /// - parameters:
-    ///     - promise: The flush promise.
-    func markFlushCheckpoint(promise: EventLoopPromise<()>?) {
-        self.state.markFlushCheckpoint(promise: promise)
+    func markFlushCheckpoint() {
+        self.state.markFlushCheckpoint()
     }
 
     /// Is there a flush pending?

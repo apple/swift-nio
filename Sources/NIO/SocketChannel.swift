@@ -936,7 +936,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     override func markFlushPoint(promise: EventLoopPromise<Void>?) {
         // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actually written once writable() is called.
-        self.pendingWrites.markFlushCheckpoint(promise: promise)
+        self.pendingWrites.markFlushCheckpoint()
     }
 
     override func cancelWritesOnClose(error: Error) {
