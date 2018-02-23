@@ -33,7 +33,6 @@ extension PendingDatagramWritesManagerTests {
                 ("testPendingWritesCancellationWorksCorrectly", testPendingWritesCancellationWorksCorrectly),
                 ("testPendingWritesNoMoreThanWritevLimitIsWritten", testPendingWritesNoMoreThanWritevLimitIsWritten),
                 ("testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk", testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk),
-                ("testPendingWritesFlushPromiseWorksWithoutWritePromises", testPendingWritesFlushPromiseWorksWithoutWritePromises),
                 ("testPendingWritesWorksWithManyEmptyWrites", testPendingWritesWorksWithManyEmptyWrites),
                 ("testPendingWritesCloseDuringVectorWrite", testPendingWritesCloseDuringVectorWrite),
                 ("testPendingWritesMoreThanWritevIOVectorLimit", testPendingWritesMoreThanWritevIOVectorLimit),

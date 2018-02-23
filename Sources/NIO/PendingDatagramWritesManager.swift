@@ -44,17 +44,6 @@ private struct PendingDatagramWrite {
     }
 }
 
-/// This enum is used to keep track of flushes separate from writes for the datagram
-/// channels. This is necessary to handle the richer flush promise notifications that
-/// datagrams provide: specifically, some fraction of writes to datagram sockets may fail
-/// for "recoverable" reasons, and those errors need to be reported on the flush promises.
-/// That means it's vital we keep track of where the flushes were, which `MarkedCircularBuffer`
-/// cannot do for us.
-private enum PendingDatagramOperation {
-    case write(PendingDatagramWrite)
-    case flush(EventLoopPromise<Void>)
-}
-
 fileprivate extension Error {
     /// Returns whether the error is "recoverable" from the perspective of datagram sending.
     ///
@@ -141,17 +130,13 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
 private struct PendingDatagramWritesState {
     fileprivate typealias DatagramWritePromiseFiller = (EventLoopPromise<Void>, Error?)
 
-    private var pendingWrites = MarkedCircularBuffer<PendingDatagramOperation>(initialRingCapacity: 16)
+    private var pendingWrites = MarkedCircularBuffer<PendingDatagramWrite>(initialRingCapacity: 16)
     private var chunks: Int = 0
     private var toBeFlushedErrors: [Error] = []
     public private(set) var bytes: Int = 0
 
     public var nextWrite: PendingDatagramWrite? {
-        guard case .some(.write(let w)) = self.pendingWrites.first else {
-            return nil
-        }
-
-        return w
+        return self.pendingWrites.first
     }
 
     /// Subtract `bytes` from the number of outstanding bytes to write.
@@ -165,10 +150,7 @@ private struct PendingDatagramWritesState {
     /// - returns: The promise that the caller must fire, along with an error to fire it with if it needs one.
     ///
     private mutating func wroteFirst(error: Error? = nil) -> DatagramWritePromiseFiller? {
-        guard case .write(let first) = self.pendingWrites.removeFirst() else {
-            fatalError("First pending write is actually a flush")
-        }
-
+        let first = self.pendingWrites.removeFirst()
         self.chunks -= 1
         self.subtractOutstanding(bytes: first.data.readableBytes)
         if let promise = first.promise {
@@ -196,7 +178,7 @@ private struct PendingDatagramWritesState {
 
     /// Add a new write and optionally the corresponding promise to the list of outstanding writes.
     public mutating func append(_ chunk: PendingDatagramWrite) {
-        self.pendingWrites.append(.write(chunk))
+        self.pendingWrites.append(chunk)
         self.chunks += 1
         self.bytes += chunk.data.readableBytes
     }
@@ -204,18 +186,10 @@ private struct PendingDatagramWritesState {
     /// Mark the flush checkpoint.
     ///
     /// All writes before this checkpoint will eventually be written to the socket.
-    ///
-    /// - parameters:
-    ///     - The flush promise.
-    public mutating func markFlushCheckpoint(promise: EventLoopPromise<Void>?) {
+    public mutating func markFlushCheckpoint() {
+        // No point marking a flush checkpoint if we have no writes!
         guard self.pendingWrites.count > 0 else {
-            // No writes mean this is a flush on empty, so we can satisfy this immediately.
-            promise?.succeed(result: ())
             return
-        }
-
-        if let promise = promise {
-            self.pendingWrites.append(.flush(promise))
         }
         self.pendingWrites.mark()
     }
@@ -249,7 +223,6 @@ private struct PendingDatagramWritesState {
         if let promiseFiller = self.wroteFirst(error: error) {
             pendingPromises.append(promiseFiller)
         }
-        pendingPromises.append(contentsOf: self.processPendingFlushes())
         let result: OneWriteOperationResult = self.pendingWrites.hasMark() ? .writtenPartially : .writtenCompletely
 
         return (pendingPromises, result)
@@ -285,43 +258,16 @@ private struct PendingDatagramWritesState {
     /// - returns: All the promises that must be fired, and a `WriteResult` that indicates if we could write
     ///     everything or not.
     private mutating func didScalarWrite(written: Int) -> ([DatagramWritePromiseFiller], OneWriteOperationResult) {
-        guard case .write(let write) = self.pendingWrites[0] else {
-            fatalError("First write in queue is actually a flush")
-        }
-
-        precondition(written <= write.data.readableBytes,
-                     "Appeared to write more bytes (\(written)) than the datagram contained (\(write.data.readableBytes))")
+        precondition(written <= self.pendingWrites[0].data.readableBytes,
+                     "Appeared to write more bytes (\(written)) than the datagram contained (\(self.pendingWrites[0].data.readableBytes))")
         var fillers: [DatagramWritePromiseFiller] = []
         if let writeFiller = self.wroteFirst() {
             fillers.append(writeFiller)
         }
 
-        fillers.append(contentsOf: self.processPendingFlushes())
-
         // If we no longer have a mark, we wrote everything.
         let result: OneWriteOperationResult = self.pendingWrites.hasMark() ? .writtenPartially : .writtenCompletely
         return (fillers, result)
-    }
-
-    /// Returns any pending flush promises that need to be fired, along with (if needed) a composite error
-    /// to fire them with.
-    private mutating func processPendingFlushes() -> [DatagramWritePromiseFiller] {
-        var results: [DatagramWritePromiseFiller] = []
-
-        while case .some(.flush(let promise)) = self.pendingWrites.first {
-            _ = self.pendingWrites.removeFirst()
-            if self.toBeFlushedErrors.count > 0 {
-                results.append((promise, NIOCompositeError(comprising: self.toBeFlushedErrors)))
-            } else {
-                results.append((promise, nil))
-            }
-        }
-
-        if results.count > 0 {
-            self.toBeFlushedErrors = []
-        }
-
-        return results
     }
 
     /// Is there a pending flush?
@@ -339,14 +285,10 @@ private struct PendingDatagramWritesState {
         promises.reserveCapacity(self.pendingWrites.count)
 
         while !self.pendingWrites.isEmpty {
-            switch self.pendingWrites.removeFirst() {
-            case .write(let w):
-                self.chunks -= 1
-                self.bytes -= w.data.readableBytes
-                w.promise.map { promises.append($0) }
-            case .flush(let p):
-                promises.append(p)
-            }
+            let w = self.pendingWrites.removeFirst()
+            self.chunks -= 1
+            self.bytes -= w.data.readableBytes
+            w.promise.map { promises.append($0) }
         }
 
         promises.forEach { $0.fail(error: error) }
@@ -354,14 +296,14 @@ private struct PendingDatagramWritesState {
 
     /// Returns the best mechanism to write pending data at the current point in time.
     var currentBestWriteMechanism: WriteMechanism {
-        var flushedWrites = self.flushedWrites
-
-        if flushedWrites.next() == nil {
-            return .nothingToBeWritten
-        } else if flushedWrites.next() == nil {
-            return .scalarBufferWrite
-        } else {
+        switch self.pendingWrites.markedElementIndex() {
+        case .some(let e) where e > 0:
             return .vectorBufferWrite
+        case .some(let e):
+            assert(e == 0)  // The compiler can't prove this, but it must be so.
+            return .scalarBufferWrite
+        default:
+            return .nothingToBeWritten
         }
     }
 }
@@ -383,12 +325,7 @@ extension PendingDatagramWritesState {
             while self.index <= self.markedIndex {
                 let element = self.pendingWrites.pendingWrites[index]
                 index += 1
-                switch element {
-                case .write(let w):
-                    return w
-                case .flush:
-                    continue
-                }
+                return element
             }
 
             return nil
@@ -448,11 +385,8 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     }
 
     /// Mark the flush checkpoint.
-    ///
-    /// - parameters:
-    ///     - The flush promise.
-    func markFlushCheckpoint(promise: EventLoopPromise<Void>?) {
-        self.state.markFlushCheckpoint(promise: promise)
+    func markFlushCheckpoint() {
+        self.state.markFlushCheckpoint()
     }
 
     /// Is there a flush pending?
