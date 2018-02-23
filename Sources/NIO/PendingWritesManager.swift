@@ -283,7 +283,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     private var iovecs: UnsafeMutableBufferPointer<IOVector>
     private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
 
-    internal var waterMark: WriteBufferWaterMark = WriteBufferWaterMark(32 * 1024..<64 * 1024)
+    internal var waterMark: WriteBufferWaterMark = WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
     internal let channelWritabilityFlag: Atomic<Bool> = Atomic(value: true)
 
     internal var writeSpinCount: UInt = 16
@@ -318,7 +318,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
         assert(self.isOpen)
         self.state.append(.init(data: data, promise: promise))
 
-        if self.state.bytes > waterMark.upperBound && channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
+        if self.state.bytes > waterMark.high && channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
             // Returns false to signal the Channel became non-writable and we need to notify the user
             return false
         }
@@ -365,7 +365,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     private func didWrite(itemCount: Int, result: IOResult<Int>) -> OneWriteOperationResult {
         let (fulfillPromises, result) = self.state.didWrite(itemCount: itemCount, result: result)
 
-        if self.state.bytes < waterMark.lowerBound {
+        if self.state.bytes < waterMark.low {
             channelWritabilityFlag.store(true)
         }
 

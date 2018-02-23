@@ -124,15 +124,40 @@ public enum BacklogOption: ChannelOption {
     case const(())
 }
 
-/// The watermark used to detect once `Channel.writable` returns `true` or `false`.
-public typealias WriteBufferWaterMark = Range<Int>
+/// The watermark used to detect when `Channel.isWritable` returns `true` or `false`.
+public struct WriteBufferWaterMark {
+    /// The low mark setting for a `Channel`.
+    ///
+    /// When the amount of buffered bytes in the `Channel`s outbound buffer drops below this value the `Channel` will be
+    /// marked as writable again (after it was non-writable).
+    public let low: Int
+    
+    /// The high mark setting for a `Channel`.
+    ///
+    /// When the amount of buffered bytes in the `Channel`s outbound exceeds this value the `Channel` will be
+    /// marked as non-writable. It will be marked as writable again once the amount of buffered bytes drops below `low`.
+    public let high: Int
+    
+    /// Create a new instance.
+    ///
+    /// Valid initialization is restricted to `1 <= low <= high`.
+    ///
+    /// - parameters:
+    ///      - low: The low watermark.
+    ///      - high: The high watermark.
+    public init(low: Int, high: Int) {
+        precondition(low >= 1, "low must be >= 1 but was \(low)")
+        precondition(high >= low, "low must be <= high, but was low: \(low) high: \(high)")
+        self.low = low
+        self.high = high
+    }
+}
 
 /// `WriteBufferWaterMarkOption` allows to configure when a `Channel` should be marked as writable or not. Once the amount of bytes queued in a
-/// `Channel`s outbound buffer is larger then the upper value of the `WriteBufferWaterMark` the channel will be marked as non-writable and so
+/// `Channel`s outbound buffer is larger than `WriteBufferWaterMark.high` the channel will be marked as non-writable and so
 /// `Channel.isWritable` will return `false`. Once we were able to write some data out of the outbound buffer and the amount of bytes queued
-/// falls under the lower value of `WriteBufferWaterMark` the `Channel` will become writable again. Once this happens  `Channel.writable` will return
-/// `true` again. These writability changes are also propagated through the `ChannelPipeline` via the `ChannelPipeline.fireChannelWritabilityChanged`
-/// method and so its possible to act on this in a `ChannelInboundHandler` implementation.
+/// falls below `WriteBufferWaterMark.low` the `Channel` will become writable again. Once this happens `Channel.writable` will return
+/// `true` again. These writability changes are also propagated through the `ChannelPipeline` and so can be intercepted via `ChannelInboundHandler.channelWritabilityChanged`.
 public enum WriteBufferWaterMarkOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = WriteBufferWaterMark

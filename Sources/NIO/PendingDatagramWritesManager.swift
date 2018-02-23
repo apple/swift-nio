@@ -422,7 +422,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     private var state = PendingDatagramWritesState()
 
-    internal var waterMark: WriteBufferWaterMark = WriteBufferWaterMark(32 * 1024..<64 * 1024)
+    internal var waterMark: WriteBufferWaterMark = WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
     internal let channelWritabilityFlag: Atomic<Bool> = Atomic(value: true)
     internal var writeSpinCount: UInt = 16
     private(set) var isOpen = true
@@ -475,7 +475,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         assert(self.isOpen)
         self.state.append(.init(data: envelope.data, promise: promise, address: envelope.remoteAddress))
 
-        if self.state.bytes > waterMark.upperBound && channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
+        if self.state.bytes > waterMark.high && channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
             // Returns false to signal the Channel became non-writable and we need to notify the user
             return false
         }
@@ -529,7 +529,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     private func didWrite(_ data: IOResult<Int>, messages: UnsafeMutableBufferPointer<MMsgHdr>?) -> OneWriteOperationResult {
         let (promises, result) = self.state.didWrite(data, messages: messages)
 
-        if self.state.bytes < waterMark.lowerBound {
+        if self.state.bytes < waterMark.low {
             channelWritabilityFlag.store(true)
         }
 
