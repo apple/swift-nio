@@ -72,7 +72,7 @@ let package = Package(
         .library(name: "NIOConcurrencyHelpers", targets: ["NIOConcurrencyHelpers"]),
     ],
     dependencies: [
-        .package(url: "git@github.com:apple/swift-nio-zlib-support.git", from: "1.0.0"),
+        .package(url: "https://github.com/apple/swift-nio-zlib-support.git", from: "1.0.0"),
     ],
     targets: targets
 )
