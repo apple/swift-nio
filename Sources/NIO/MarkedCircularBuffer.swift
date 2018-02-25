@@ -21,6 +21,10 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
     private var buffer: CircularBuffer<E>
     private var markedIndex: Int = -1 /* negative: nothing marked */
 
+    /// Create a new instance.
+    ///
+    /// - paramaters:
+    ///     - initialRingCapacity: The initial capacity of the internal storage.
     public init(initialRingCapacity: Int) {
         self.buffer = CircularBuffer(initialRingCapacity: initialRingCapacity)
     }
@@ -91,7 +95,7 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
         if count > 0 {
             self.markedIndex = count - 1
         } else {
-            assert(self.markedIndex == -1)
+            assert(self.markedIndex == -1, "marked index is \(self.markedIndex)")
         }
     }
 
@@ -121,7 +125,7 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
     /// Returns tre if the buffer has been marked at all.
     public func hasMark() -> Bool {
         if self.markedIndex < 0 {
-            precondition(self.markedIndex == -1)
+            assert(self.markedIndex == -1, "marked index is \(self.markedIndex)")
             return false
         } else {
             return true
