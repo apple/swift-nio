@@ -4,32 +4,10 @@ set -e
 
 my_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 root_path="$my_path/.."
-swift_version=${swift_version:-4.0.2}
 version=$(git describe --abbrev=0 --tags || echo "0.0.0")
 modules=(NIO NIOHTTP1 NIOTLS NIOFoundationCompat)
 
 if [[ "$(uname -s)" == "Linux" ]]; then
-  # setup ruby
-  if ! command -v ruby > /dev/null; then
-    gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
-    \curl -sSL https://get.rvm.io | bash -s stable
-    source $HOME/.rvm/scripts/rvm
-    rvm requirements
-    rvm install 2.4
-  fi
-
-  # setup swift
-  if ! command -v swift > /dev/null; then
-    rm -rf "$HOME/.swiftenv"
-    git clone https://github.com/kylef/swiftenv.git "$HOME/.swiftenv"
-    export SWIFTENV_ROOT="$HOME/.swiftenv"
-    export PATH="$SWIFTENV_ROOT/bin:$HOME/scripts:$PATH"
-    eval "$(swiftenv init -)"
-    swiftenv install $swift_version
-    # set path swift libs
-    export LINUX_SOURCEKIT_LIB_PATH="$SWIFTENV_ROOT/versions/$swift_version/usr/lib"
-  fi
-
   # build code if required
   if [[ ! -d "$root_path/.build/x86_64-unknown-linux" ]]; then
     swift build
