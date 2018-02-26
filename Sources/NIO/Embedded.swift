@@ -196,13 +196,13 @@ class EmbeddedChannelCore : ChannelCore {
 
     func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         promise?.succeed(result: ())
-        pipeline.fireChannelRegistered0()
         isActive = true
         pipeline.fireChannelActive0()
     }
 
     func register0(promise: EventLoopPromise<Void>?) {
         promise?.succeed(result: ())
+        pipeline.fireChannelRegistered0()
     }
 
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
@@ -318,16 +318,23 @@ public class EmbeddedChannel : Channel {
         return (buffer.removeFirst().forceAs(type: T.self))
     }
     
-    public convenience init(handler: ChannelHandler, loop: EmbeddedEventLoop = EmbeddedEventLoop()) throws {
-        self.init(loop: loop)
-        try _pipeline.add(handler: handler).wait()
-    }
-
-    public init(loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
+    /// Create a new instance.
+    ///
+    /// During creation it will automatically also register itself on the `EmbeddedEventLoop`.
+    ///
+    /// - parameters:
+    ///     - handler: The `ChannelHandler` to add to the `ChannelPipeline` before register or `nil` if none should be added.
+    ///     - loop: The `EmbeddedEventLoop` to use.
+    public init(handler: ChannelHandler? = nil, loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
         self.eventLoop = loop
         self._pipeline = ChannelPipeline(channel: self)
-
-        // we should just register it directly and this will never throw.
+        
+        if let handler = handler {
+            // This will be propagated via fireErrorCaught
+            _ = try? _pipeline.add(handler: handler).wait()
+        }
+        
+        // This will never throw...
         _ = try? register().wait()
     }
 

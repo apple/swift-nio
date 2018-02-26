@@ -88,12 +88,12 @@ class EmbeddedChannelTest: XCTestCase {
     }
 
     func testEmbeddedLifecycle() throws {
-        let channel = EmbeddedChannel()
         let handler = ChannelLifecycleHandler()
         XCTAssertEqual(handler.currentState, .unregistered)
 
-        _ = try channel.pipeline.add(handler: handler).wait()
-        XCTAssertEqual(handler.currentState, .unregistered)
+        let channel = EmbeddedChannel(handler: handler)
+
+        XCTAssertEqual(handler.currentState, .registered)
         XCTAssertFalse(channel.isActive)
 
         _ = try channel.connect(to: try SocketAddress(unixDomainSocketPath: "/fake")).wait()
