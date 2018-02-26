@@ -69,21 +69,21 @@ extension Lock {
     ///
     /// This convenience method should be preferred to `lock` and `unlock` in
     /// most situations, as it ensures that the lock will be released regardless
-    /// of how `fn` exits.
+    /// of how `body` exits.
     ///
-    /// - Parameter fn: The block to execute while holding the lock.
+    /// - Parameter body: The block to execute while holding the lock.
     /// - Returns: The value returned by the block.
-    public func withLock<T>(_ fn: () throws -> T) rethrows -> T {
+    public func withLock<T>(_ body: () throws -> T) rethrows -> T {
         self.lock()
         defer {
             self.unlock()
         }
-        return try fn()
+        return try body()
     }
 
     // specialise Void return (for performance)
-    public func withLockVoid(_ fn: () throws -> Void) rethrows -> Void {
-        try self.withLock(fn)
+    public func withLockVoid(_ body: () throws -> Void) rethrows -> Void {
+        try self.withLock(body)
     }
 }
 

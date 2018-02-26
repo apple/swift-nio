@@ -85,7 +85,7 @@
 /// For example, let us assume that we created the following pipeline:
 ///
 /// ```
-/// ChannelPipeline p = ...;
+/// ChannelPipeline p = ...
 /// let future = p.add(name: "1", handler: InboundHandlerA()).then {
 ///   p.add(name: "2", handler: InboundHandlerB())
 /// }.then {
@@ -133,7 +133,7 @@
 /// # Thread safety
 ///
 /// A `ChannelHandler` can be added or removed at any time because a `ChannelPipeline` is thread safe.
-public final class ChannelPipeline : ChannelInvoker {
+public final class ChannelPipeline: ChannelInvoker {
     private var head: ChannelHandlerContext?
     private var tail: ChannelHandlerContext?
 
@@ -271,13 +271,13 @@ public final class ChannelPipeline : ChannelInvoker {
     }
 
     /// Find a `ChannelHandlerContext` in the `ChannelPipeline`.
-    private func context0(_ fn: @escaping ((ChannelHandlerContext) -> Bool)) -> EventLoopFuture<ChannelHandlerContext> {
+    private func context0(_ body: @escaping ((ChannelHandlerContext) -> Bool)) -> EventLoopFuture<ChannelHandlerContext> {
         let promise: EventLoopPromise<ChannelHandlerContext> = eventLoop.newPromise()
 
         func _context0() {
             var curCtx: ChannelHandlerContext? = self.head
             while let ctx = curCtx {
-                if fn(ctx) {
+                if body(ctx) {
                     promise.succeed(result: ctx)
                     return
                 }
@@ -658,7 +658,7 @@ public final class ChannelPipeline : ChannelInvoker {
         }
     }
 
-    private var inEventLoop : Bool {
+    private var inEventLoop: Bool {
         return eventLoop.inEventLoop
     }
 
@@ -677,7 +677,7 @@ public final class ChannelPipeline : ChannelInvoker {
 }
 
 /// Special `ChannelHandler` that forwards all events to the `Channel.Unsafe` implementation.
-private final class HeadChannelHandler : _ChannelOutboundHandler {
+private final class HeadChannelHandler: _ChannelOutboundHandler {
 
     static let sharedInstance = HeadChannelHandler()
 
@@ -731,7 +731,7 @@ private extension CloseMode {
 }
 
 /// Special `ChannelInboundHandler` which will consume all inbound events.
-private final class TailChannelHandler : _ChannelInboundHandler, _ChannelOutboundHandler {
+private final class TailChannelHandler: _ChannelInboundHandler, _ChannelOutboundHandler {
 
     static let sharedInstance = TailChannelHandler()
 
@@ -775,7 +775,7 @@ private final class TailChannelHandler : _ChannelInboundHandler, _ChannelOutboun
 }
 
 /// `Error` that is used by the `ChannelPipeline` to inform the user of an error.
-public enum ChannelPipelineError : Error {
+public enum ChannelPipelineError: Error {
     /// `ChannelHandler` was already removed.
     case alreadyRemoved
     /// `ChannelHandler` was not found.
@@ -792,7 +792,7 @@ public enum ChannelPipelineError : Error {
 /// Many events are instrumental for a `ChannelHandler`'s life-cycle and it is therefore very important to send them
 /// at the right point in time. Often, the right behaviour is to react to an event and then forward it to the next
 /// `ChannelHandler`.
-public final class ChannelHandlerContext : ChannelInvoker {
+public final class ChannelHandlerContext: ChannelInvoker {
     // visible for ChannelPipeline to modify
     fileprivate var next: ChannelHandlerContext?
     fileprivate var prev: ChannelHandlerContext?
@@ -1215,7 +1215,7 @@ public final class ChannelHandlerContext : ChannelInvoker {
         handler.handlerRemoved(ctx: self)
     }
 
-    private var inEventLoop : Bool {
+    private var inEventLoop: Bool {
         return eventLoop.inEventLoop
     }
 }

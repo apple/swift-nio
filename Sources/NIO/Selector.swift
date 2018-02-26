@@ -28,13 +28,13 @@ private extension timespec {
 }
 
 private extension Optional {
-    func withUnsafeOptionalPointer<T>(_ fn: (UnsafePointer<Wrapped>?) throws -> T) rethrows -> T {
+    func withUnsafeOptionalPointer<T>(_ body: (UnsafePointer<Wrapped>?) throws -> T) rethrows -> T {
         if var this = self {
             return try withUnsafePointer(to: &this) { x in
-                try fn(x)
+                try body(x)
             }
         } else {
-            return try fn(nil)
+            return try body(nil)
         }
     }
 }
@@ -340,8 +340,8 @@ final class Selector<R: Registration> {
     ///
     /// - parameters:
     ///     - strategy: The `SelectorStrategy` to apply
-    ///     - fn: The function to execute for each `SelectorEvent` that was produced.
-    func whenReady(strategy: SelectorStrategy, _ fn: (SelectorEvent<R>) throws -> Void) throws -> Void {
+    ///     - body: The function to execute for each `SelectorEvent` that was produced.
+    func whenReady(strategy: SelectorStrategy, _ body: (SelectorEvent<R>) throws -> Void) throws -> Void {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't call whenReady for selector as it's \(self.lifecycleState).")
         }
@@ -375,7 +375,7 @@ final class Selector<R: Registration> {
                 _ = Glibc.read(timerfd, &val, MemoryLayout<UInt>.size)
             default:
                 let registration = registrations[Int(ev.data.fd)]!
-                try fn(
+                try body(
                     SelectorEvent(
                         readable: (ev.events & Epoll.EPOLLIN.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
                         writable: (ev.events & Epoll.EPOLLOUT.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
@@ -398,11 +398,11 @@ final class Selector<R: Registration> {
                 break
             case EVFILT_READ:
                 if let registration = registrations[Int(ev.ident)] {
-                    try fn((SelectorEvent(readable: true, writable: false, registration: registration)))
+                    try body((SelectorEvent(readable: true, writable: false, registration: registration)))
                 }
             case EVFILT_WRITE:
                 if let registration = registrations[Int(ev.ident)] {
-                    try fn((SelectorEvent(readable: false, writable: true, registration: registration)))
+                    try body((SelectorEvent(readable: false, writable: true, registration: registration)))
                 }
             default:
                 // We only use EVFILT_USER, EVFILT_READ and EVFILT_WRITE.

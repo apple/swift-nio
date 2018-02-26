@@ -241,7 +241,7 @@ public protocol ChannelInboundInvoker {
 }
 
 /// A protocol that signals that outbound and inbound events are triggered by this invoker.
-public protocol ChannelInvoker : ChannelOutboundInvoker, ChannelInboundInvoker { }
+public protocol ChannelInvoker: ChannelOutboundInvoker, ChannelInboundInvoker { }
 
 /// Specify what kind of close operation is requested.
 public enum CloseMode {

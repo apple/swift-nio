@@ -21,9 +21,9 @@ protocol Selectable {
     /// throw an `IOError`.
     ///
     /// - parameters:
-    ///     - fn: The closure to execute if the `Selectable` is still open.
+    ///     - body: The closure to execute if the `Selectable` is still open.
     /// - throws: If either the `Selectable` was closed before or the closure throws by itself.
-    func withUnsafeFileDescriptor<T>(_ fn: (Int32) throws -> T) throws -> T
+    func withUnsafeFileDescriptor<T>(_ body: (Int32) throws -> T) throws -> T
 
     /// `true` if this `Selectable` is open (which means it was not closed yet).
     var open: Bool { get }

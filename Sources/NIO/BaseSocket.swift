@@ -19,8 +19,8 @@ protocol Registration {
 }
 
 protocol SockAddrProtocol {
-    mutating func withSockAddr<R>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R
-    mutating func withMutableSockAddr<R>(_ fn: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R
+    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R
+    mutating func withMutableSockAddr<R>(_ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R
 }
 
 /// Returns a description for the given address.
@@ -38,17 +38,17 @@ private func descriptionForAddress(family: CInt, bytes: UnsafeRawPointer, length
 }
 
 extension sockaddr_in: SockAddrProtocol {
-    mutating func withSockAddr<R>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
         var me = self
         return try withUnsafeBytes(of: &me) { p in
-            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
 
-    mutating func withMutableSockAddr<R>(_ fn: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+    mutating func withMutableSockAddr<R>(_ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
         var me = self
         return try withUnsafeMutableBytes(of: &me) { p in
-            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
 
@@ -61,17 +61,17 @@ extension sockaddr_in: SockAddrProtocol {
 }
 
 extension sockaddr_in6: SockAddrProtocol {
-    mutating func withSockAddr<R>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
         var me = self
         return try withUnsafeBytes(of: &me) { p in
-            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
 
-    mutating func withMutableSockAddr<R>(_ fn: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+    mutating func withMutableSockAddr<R>(_ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
         var me = self
         return try withUnsafeMutableBytes(of: &me) { p in
-            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
 
@@ -84,32 +84,32 @@ extension sockaddr_in6: SockAddrProtocol {
 }
 
 extension sockaddr_un: SockAddrProtocol {
-    mutating func withSockAddr<R>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
         var me = self
         return try withUnsafeBytes(of: &me) { p in
-            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
 
-    mutating func withMutableSockAddr<R>(_ fn: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+    mutating func withMutableSockAddr<R>(_ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
         var me = self
         return try withUnsafeMutableBytes(of: &me) { p in
-            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
 }
 
 extension sockaddr_storage: SockAddrProtocol {
-    mutating func withSockAddr<R>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+    mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
         var me = self
         return try withUnsafeBytes(of: &me) { p in
-            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
 
-    mutating func withMutableSockAddr<R>(_ fn: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
+    mutating func withMutableSockAddr<R>(_ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
         return try withUnsafeMutableBytes(of: &self) { p in
-            try fn(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
 }
@@ -184,11 +184,11 @@ class BaseSocket: Selectable {
     private let descriptor: Int32
     public private(set) var open: Bool
     
-    func withUnsafeFileDescriptor<T>(_ fn: (Int32) throws -> T) throws -> T {
+    func withUnsafeFileDescriptor<T>(_ body: (Int32) throws -> T) throws -> T {
         guard self.open else {
             throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
         }
-        return try fn(descriptor)
+        return try body(descriptor)
     }
     
     /// Returns the local bound `SocketAddress` of the socket.
@@ -208,14 +208,14 @@ class BaseSocket: Selectable {
     }
 
     /// Internal helper function for retrieval of a `SocketAddress`.
-    private func get_addr(_ fn: (Int32, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) throws -> Void) throws -> SocketAddress {
+    private func get_addr(_ body: (Int32, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) throws -> Void) throws -> SocketAddress {
         var addr = sockaddr_storage()
 
         try addr.withMutableSockAddr { addressPtr, size in
             var size = socklen_t(size)
             
             try withUnsafeFileDescriptor { fd in
-                try fn(fd, addressPtr, &size)
+                try body(fd, addressPtr, &size)
             }
         }
         return addr.convert()
@@ -259,7 +259,7 @@ class BaseSocket: Selectable {
     ///
     /// - parameters:
     ///     - descriptor: The file descriptor to wrap.
-    init(descriptor : Int32) {
+    init(descriptor: Int32) {
         self.descriptor = descriptor
         self.open = true
     }

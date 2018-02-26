@@ -38,7 +38,7 @@ public enum DecodingState {
 /// If you move the reader index forward, either manually or by using one of `buffer.read*` methods, you must ensure
 /// that you no longer need to see those bytes again as they will not be returned to you the next time `decode` is called.
 /// If you still need those bytes to come back, consider taking a local copy of buffer inside the function to perform your read operations on.
-public protocol ByteToMessageDecoder : ChannelInboundHandler where InboundIn == ByteBuffer {
+public protocol ByteToMessageDecoder: ChannelInboundHandler where InboundIn == ByteBuffer {
     /// The cumulationBuffer which will be used to buffer any data.
     var cumulationBuffer: ByteBuffer? { get set }
   
@@ -180,7 +180,7 @@ extension ByteToMessageDecoder {
 }
 
 /// `ChannelOutboundHandler` which allows users to encode custom messages to a `ByteBuffer` easily.
-public protocol MessageToByteEncoder : ChannelOutboundHandler where OutboundOut == ByteBuffer {
+public protocol MessageToByteEncoder: ChannelOutboundHandler where OutboundOut == ByteBuffer {
     
     /// Called once there is data to encode. The used `ByteBuffer` is allocated by `allocateOutBuffer`.
     ///

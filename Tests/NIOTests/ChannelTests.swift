@@ -198,7 +198,7 @@ public class ChannelTests: XCTestCase {
         try clientChannel.close().wait()
     }
 
-    private func withPendingStreamWritesManager(_ fn: (PendingStreamWritesManager) throws -> Void) rethrows {
+    private func withPendingStreamWritesManager(_ body: (PendingStreamWritesManager) throws -> Void) rethrows {
         try withExtendedLifetime(NSObject()) { o in
             var iovecs: [IOVector] = Array(repeating: iovec(), count: Socket.writevLimitIOVectors + 1)
             var managed: [Unmanaged<AnyObject>] = Array(repeating: Unmanaged.passUnretained(o), count: Socket.writevLimitIOVectors + 1)
@@ -212,7 +212,7 @@ public class ChannelTests: XCTestCase {
                     XCTAssertFalse(pwm.isFlushPending)
                     XCTAssertTrue(pwm.isWritable)
 
-                    try fn(pwm)
+                    try body(pwm)
 
                     XCTAssertTrue(pwm.isEmpty)
                     XCTAssertFalse(pwm.isFlushPending)

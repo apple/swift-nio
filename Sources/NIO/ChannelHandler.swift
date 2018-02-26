@@ -34,7 +34,7 @@ public protocol ChannelHandler: class {
 /// Untyped `ChannelHandler` which handles outbound I/O events or intercept an outbound I/O operation.
 ///
 /// We _strongly_ advice against implementing this protocol directly. Please implement `ChannelOutboundHandler`.
-public protocol _ChannelOutboundHandler : ChannelHandler {
+public protocol _ChannelOutboundHandler: ChannelHandler {
     
     /// Called to request that the `Channel` register itself for I/O events with its `EventLoop`.
     /// This should call `ctx.register` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or
@@ -125,7 +125,7 @@ public protocol _ChannelOutboundHandler : ChannelHandler {
 /// Untyped `ChannelHandler` which handles inbound I/O events.
 ///
 /// We _strongly_ advice against implementing this protocol directly. Please implement `ChannelInboundHandler`.
-public protocol _ChannelInboundHandler : ChannelHandler {
+public protocol _ChannelInboundHandler: ChannelHandler {
     
     /// Called when the `Channel` has successfully registered with its `EventLoop` to handle I/O.
     ///

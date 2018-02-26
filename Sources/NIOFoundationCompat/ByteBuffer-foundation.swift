@@ -30,9 +30,9 @@ import struct Foundation.Data
  */
 
 extension Data: ContiguousCollection {
-    public func withUnsafeBytes<R>(_ fn: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try self.withUnsafeBytes { (ptr: UnsafePointer<UInt8>) -> R in
-            return try fn(UnsafeRawBufferPointer(start: ptr, count: self.count))
+            return try body(UnsafeRawBufferPointer(start: ptr, count: self.count))
         }
     }
 }

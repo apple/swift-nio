@@ -17,7 +17,7 @@ import Dispatch
 let newLine = "\n".utf8.first!
 
 /// Very simple example codec which will buffer inbound data until a `\n` was found.
-final class LineDelimiterCodec : ByteToMessageDecoder {
+final class LineDelimiterCodec: ByteToMessageDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
 
@@ -49,7 +49,7 @@ final class ChatHandler: ChannelInboundHandler {
     
     // All access to channels is guarded by channelsSyncQueue.
     private let channelsSyncQueue = DispatchQueue(label: "channelsQueue")
-    private var channels = Dictionary<ObjectIdentifier, Channel>()
+    private var channels: [ObjectIdentifier: Channel] = [:]
     
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         let id = ObjectIdentifier(ctx.channel)
@@ -78,7 +78,7 @@ final class ChatHandler: ChannelInboundHandler {
         let channel = ctx.channel
         self.channelsSyncQueue.async {
             // broadcast the message to all the connected clients except the one that just became active.
-            self.writeToAll(channels: self.channels, allocator: channel.allocator, message: "(ChatServer) - New client connected with address: \(remoteAddress)\n");
+            self.writeToAll(channels: self.channels, allocator: channel.allocator, message: "(ChatServer) - New client connected with address: \(remoteAddress)\n")
             
             self.channels[ObjectIdentifier(channel)] = channel
         }
@@ -93,18 +93,18 @@ final class ChatHandler: ChannelInboundHandler {
         self.channelsSyncQueue.async {
             if self.channels.removeValue(forKey: ObjectIdentifier(channel)) != nil {
                 // broadcast the message to all the connected clients except the one that just was disconnected.
-                self.writeToAll(channels: self.channels, allocator: channel.allocator, message: "(ChatServer) - Client disconnected\n");
+                self.writeToAll(channels: self.channels, allocator: channel.allocator, message: "(ChatServer) - Client disconnected\n")
             }
         }
     }
     
-    private func writeToAll(channels: Dictionary<ObjectIdentifier, Channel>, allocator: ByteBufferAllocator, message: String) {
+    private func writeToAll(channels: [ObjectIdentifier: Channel], allocator: ByteBufferAllocator, message: String) {
         var buffer =  allocator.buffer(capacity: message.utf8.count)
         buffer.write(string: message)
         self.writeToAll(channels: channels, buffer: buffer)
     }
     
-    private func writeToAll(channels: Dictionary<ObjectIdentifier, Channel>, buffer: ByteBuffer) {
+    private func writeToAll(channels: [ObjectIdentifier: Channel], buffer: ByteBuffer) {
         channels.forEach { $0.value.writeAndFlush(buffer, promise: nil) }
     }
 }

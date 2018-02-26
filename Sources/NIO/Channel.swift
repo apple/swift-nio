@@ -17,7 +17,7 @@ import NIOConcurrencyHelpers
 /// The core `Channel` methods for NIO-internal use only.
 ///
 /// - note: All methods must be called from the `EventLoop` thread.
-public protocol ChannelCore : class {
+public protocol ChannelCore: class {
     /// Returns the local bound `SocketAddress`.
     func localAddress0() throws -> SocketAddress
 
@@ -95,7 +95,7 @@ public protocol ChannelCore : class {
 /// passed to or returned by the operations are used to retrieve the result of an operation after it has completed.
 ///
 /// A `Channel` owns its `ChannelPipeline` which handles all I/O events and requests associated with the `Channel`.
-public protocol Channel : class, ChannelOutboundInvoker {
+public protocol Channel: class, ChannelOutboundInvoker {
     /// The `Channel`'s `ByteBuffer` allocator. This is _the only_ supported way of allocating `ByteBuffer`s to be used with this `Channel`.
     var allocator: ByteBufferAllocator { get }
 
@@ -139,7 +139,7 @@ public protocol Channel : class, ChannelOutboundInvoker {
 /// before possible. On UNIX a `Selector` is usually an abstraction of `select`, `poll`, `epoll` or `kqueue`.
 ///
 /// - warning: `SelectableChannel` methods and properties are _not_ thread-safe (unless they also belong to `Channel`).
-internal protocol SelectableChannel : Channel {
+internal protocol SelectableChannel: Channel {
     /// The type of the `Selectable`. A `Selectable` is usually wrapping a file descriptor that can be registered in a
     /// `Selector`.
     associatedtype SelectableType: Selectable

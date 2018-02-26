@@ -65,7 +65,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
                                                    msgs: UnsafeMutableBufferPointer<MMsgHdr>,
                                                    addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
                                                    storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
-                                                   _ fn: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> IOResult<Int> {
+                                                   _ body: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> IOResult<Int> {
     assert(msgs.count >= Socket.writevLimitIOVectors, "Insufficiently sized buffer for a maximal sendmmsg")
 
     // the numbers of storage refs that we need to decrease later.
@@ -115,7 +115,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
             storageRefs[i].release()
         }
     }
-    return try fn(UnsafeMutableBufferPointer(start: msgs.baseAddress!, count: c))
+    return try body(UnsafeMutableBufferPointer(start: msgs.baseAddress!, count: c))
 }
 
 /// This holds the states of the currently pending datagram writes. The core is a `MarkedCircularBuffer` which holds all the

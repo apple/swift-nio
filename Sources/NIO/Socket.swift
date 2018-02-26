@@ -16,7 +16,7 @@
 public typealias IOVector = iovec
 
 // TODO: scattering support
-final class Socket : BaseSocket {
+final class Socket: BaseSocket {
 
     /// The maximum number of bytes to write per `writev` call.
     static var writevLimitBytes: Int {
@@ -44,7 +44,7 @@ final class Socket : BaseSocket {
     ///
     /// - parameters:
     ///     - descriptor: The file descriptor to wrap.
-    override init(descriptor : Int32) {
+    override init(descriptor: Int32) {
         super.init(descriptor: descriptor)
     }
     

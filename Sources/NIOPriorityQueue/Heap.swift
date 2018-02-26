@@ -254,8 +254,8 @@ struct HeapIterator<T: Comparable>: IteratorProtocol {
 extension Heap: Sequence {
     typealias Element = T
 
-    var startIndex : Int { return self.storage.startIndex }
-    var endIndex : Int { return self.storage.endIndex }
+    var startIndex: Int { return self.storage.startIndex }
+    var endIndex: Int { return self.storage.endIndex }
 
     var underestimatedCount: Int {
         return self.storage.count

@@ -28,7 +28,7 @@ public protocol RecvByteBufferAllocator {
 
 
 /// `RecvByteBufferAllocator` which will always return a `ByteBuffer` with the same fixed size no matter what was recorded.
-public struct FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
+public struct FixedSizeRecvByteBufferAllocator: RecvByteBufferAllocator {
     public let capacity: Int
     
     public init(capacity: Int) {
@@ -47,7 +47,7 @@ public struct FixedSizeRecvByteBufferAllocator : RecvByteBufferAllocator {
 }
 
 /// `RecvByteBufferAllocator` which will gracefully increment or decrement the buffer size on the feedback that was recorded.
-public struct AdaptiveRecvByteBufferAllocator : RecvByteBufferAllocator {
+public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
     
     private static let indexIncrement = 4
     private static let indexDecrement = 1
@@ -76,8 +76,8 @@ public struct AdaptiveRecvByteBufferAllocator : RecvByteBufferAllocator {
     public let maximum: Int
     public let initial: Int
     
-    private var index:Int
-    private var nextReceiveBufferSize:Int
+    private var index: Int
+    private var nextReceiveBufferSize: Int
     private var decreaseNow: Bool
     
     public init() {
@@ -96,7 +96,7 @@ public struct AdaptiveRecvByteBufferAllocator : RecvByteBufferAllocator {
             self.minIndex = minIndex
         }
         
-        let maxIndex = AdaptiveRecvByteBufferAllocator.sizeTableIndex(maximum);
+        let maxIndex = AdaptiveRecvByteBufferAllocator.sizeTableIndex(maximum)
         if AdaptiveRecvByteBufferAllocator.sizeTable[maxIndex] > maximum {
             self.maxIndex = maxIndex - 1
         } else {

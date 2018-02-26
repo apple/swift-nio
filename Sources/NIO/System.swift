@@ -79,9 +79,9 @@ private func isBlacklistedErrno(_ code: Int32) -> Bool {
 
 /* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
 @inline(__always)
-internal func wrapSyscallMayBlock<T: FixedWidthInteger>(where function: StaticString = #function, _ fn: () throws -> T) throws -> IOResult<T> {
+internal func wrapSyscallMayBlock<T: FixedWidthInteger>(where function: StaticString = #function, _ body: () throws -> T) throws -> IOResult<T> {
     while true {
-        let res = try fn()
+        let res = try body()
         if res == -1 {
             let err = errno
             switch err {
@@ -101,9 +101,9 @@ internal func wrapSyscallMayBlock<T: FixedWidthInteger>(where function: StaticSt
 
 /* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
 @inline(__always)
-internal func wrapSyscall<T: FixedWidthInteger>(where function: StaticString = #function, _ fn: () throws -> T) throws -> T {
+internal func wrapSyscall<T: FixedWidthInteger>(where function: StaticString = #function, _ body: () throws -> T) throws -> T {
     while true {
-        let res = try fn()
+        let res = try body()
         if res == -1 {
             let err = errno
             if err == EINTR {
@@ -118,9 +118,9 @@ internal func wrapSyscall<T: FixedWidthInteger>(where function: StaticString = #
 
 /* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
 @inline(__always)
-internal func wrapErrorIsNullReturnCall(where function: StaticString = #function, _ fn: () throws -> UnsafePointer<CChar>?) throws -> UnsafePointer<CChar>? {
+internal func wrapErrorIsNullReturnCall(where function: StaticString = #function, _ body: () throws -> UnsafePointer<CChar>?) throws -> UnsafePointer<CChar>? {
     while true {
-        let res = try fn()
+        let res = try body()
         if res == nil {
             let err = errno
             if err == EINTR {
@@ -157,7 +157,7 @@ internal enum Posix {
     static let UIO_MAXIOV: Int = 1024
 #elseif os(Linux) || os(FreeBSD) || os(Android)
     static let SOCK_STREAM: CInt = CInt(Glibc.SOCK_STREAM.rawValue)
-    static let SOCK_DGRAM : CInt = CInt(Glibc.SOCK_DGRAM.rawValue)
+    static let SOCK_DGRAM: CInt = CInt(Glibc.SOCK_DGRAM.rawValue)
     static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)
 #else
     static var SOCK_STREAM: CInt {
@@ -250,7 +250,7 @@ internal enum Posix {
             let fd = sysAccept(descriptor, addr, len)
 
             #if !os(Linux)
-                if (fd != -1) {
+                if fd != -1 {
                     // TODO: Handle return code ?
                     _ = try? Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
                 }
