@@ -21,6 +21,7 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
 
     public enum ChannelState {
         case unregistered
+        case registered
         case inactive
         case active
     }
@@ -33,35 +34,36 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
         stateHistory = [.unregistered]
     }
 
+    private func updateState(_ state: ChannelState) {
+        currentState = state
+        stateHistory.append(state)
+    }
+    
     public func channelRegistered(ctx: ChannelHandlerContext) {
         XCTAssertEqual(currentState, .unregistered)
         XCTAssertFalse(ctx.channel.isActive)
-        currentState = .inactive
-        stateHistory.append(.inactive)
+        updateState(.registered)
         ctx.fireChannelRegistered()
     }
 
     public func channelActive(ctx: ChannelHandlerContext) {
-        XCTAssertEqual(currentState, .inactive)
+        XCTAssertEqual(currentState, .registered)
         XCTAssertTrue(ctx.channel.isActive)
-        currentState = .active
-        stateHistory.append(.active)
+        updateState(.active)
         ctx.fireChannelActive()
     }
 
     public func channelInactive(ctx: ChannelHandlerContext) {
         XCTAssertEqual(currentState, .active)
         XCTAssertFalse(ctx.channel.isActive)
-        currentState = .inactive
-        stateHistory.append(.inactive)
+        updateState(.inactive)
         ctx.fireChannelInactive()
     }
 
     public func channelUnregistered(ctx: ChannelHandlerContext) {
         XCTAssertEqual(currentState, .inactive)
         XCTAssertFalse(ctx.channel.isActive)
-        currentState = .unregistered
-        stateHistory.append(.unregistered)
+        updateState(.unregistered)
         ctx.fireChannelUnregistered()
     }
 }
@@ -98,8 +100,8 @@ public class ChannelTests: XCTestCase {
         try EventLoopFuture<Void>.andAll([clientChannel.closeFuture, serverAcceptedChannel!.closeFuture], eventLoop: group.next()).map {
             XCTAssertEqual(clientLifecycleHandler.currentState, .unregistered)
             XCTAssertEqual(serverLifecycleHandler.currentState, .unregistered)
-            XCTAssertEqual(clientLifecycleHandler.stateHistory, [.unregistered, .inactive, .active, .inactive, .unregistered])
-            XCTAssertEqual(serverLifecycleHandler.stateHistory, [.unregistered, .inactive, .active, .inactive, .unregistered])
+            XCTAssertEqual(clientLifecycleHandler.stateHistory, [.unregistered, .registered, .active, .inactive, .unregistered])
+            XCTAssertEqual(serverLifecycleHandler.stateHistory, [.unregistered, .registered, .active, .inactive, .unregistered])
         }.wait()
     }
 
