@@ -106,7 +106,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     /// `false` if the whole `Channel` is closed and so no more IO operation can be done.
-    public var isOpen: Bool {
+    fileprivate var isOpen: Bool {
         assert(eventLoop.inEventLoop)
         return self._isOpen
     }
@@ -149,7 +149,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
     }
 
     // MARK: Methods to override in subclasses.
-    func writeToSocket() throws -> OverallWriteResult {
+    fileprivate func writeToSocket() throws -> OverallWriteResult {
         fatalError("must be overridden")
     }
 
@@ -731,7 +731,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         return pendingWrites.isWritable
     }
 
-    override public var isOpen: Bool {
+    override fileprivate var isOpen: Bool {
         assert(eventLoop.inEventLoop)
         return pendingWrites.isOpen
     }
@@ -785,7 +785,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         }
     }
 
-    public override func registrationFor(interested: IOEvent) -> NIORegistration {
+    override func registrationFor(interested: IOEvent) -> NIORegistration {
         return .socketChannel(self, interested)
     }
 
@@ -839,7 +839,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         return result
     }
 
-    override func writeToSocket() throws -> OverallWriteResult {
+    override fileprivate func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(scalarBufferWriteOperation: { ptr in
             guard ptr.count > 0 else {
                 // No need to call write if the buffer is empty.
@@ -849,9 +849,9 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             return try self.socket.write(pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), size: ptr.count)
         }, vectorBufferWriteOperation: { ptrs in
             // Gathering write
-            return try self.socket.writev(iovecs: ptrs)
+            try self.socket.writev(iovecs: ptrs)
         }, scalarFileWriteOperation: { descriptor, index, endIndex in
-            return try self.socket.sendFile(fd: descriptor, offset: index, count: endIndex - index)
+            try self.socket.sendFile(fd: descriptor, offset: index, count: endIndex - index)
         })
         if result.writable {
             // writable again
@@ -998,7 +998,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
         try super.init(socket: serverSocket, eventLoop: eventLoop, recvAllocator:  AdaptiveRecvByteBufferAllocator())
     }
 
-    public override func registrationFor(interested: IOEvent) -> NIORegistration {
+    override func registrationFor(interested: IOEvent) -> NIORegistration {
         return .serverSocketChannel(self, interested)
     }
 
@@ -1116,7 +1116,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         return pendingWrites.isWritable
     }
 
-    override public var isOpen: Bool {
+    override fileprivate var isOpen: Bool {
+        assert(eventLoop.inEventLoop)
         return pendingWrites.isOpen
     }
 
@@ -1172,7 +1173,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
     }
 
-    public override func registrationFor(interested: IOEvent) -> NIORegistration {
+    override func registrationFor(interested: IOEvent) -> NIORegistration {
         return .datagramChannel(self, interested)
     }
 
@@ -1246,7 +1247,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         self.pendingWrites.failAll(error: error, close: true)
     }
 
-    override func writeToSocket() throws -> OverallWriteResult {
+    override fileprivate func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(scalarWriteOperation: { (ptr, destinationPtr, destinationSize) in
             guard ptr.count > 0 else {
                 // No need to call write if the buffer is empty.
