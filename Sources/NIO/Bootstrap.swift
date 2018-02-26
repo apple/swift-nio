@@ -16,6 +16,7 @@
 ///
 /// Example:
 ///
+/// ```swift
 ///     let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
 ///     let bootstrap = ServerBootstrap(group: group)
 ///         // Specify backlog and enable SO_REUSEADDR for the server itself
@@ -42,6 +43,7 @@
 ///     /* the server will now be accepting connections */
 ///
 ///     try! channel.closeFuture.wait() // wait forever as we never close the Channel
+/// ```
 ///
 public final class ServerBootstrap {
     
@@ -63,7 +65,7 @@ public final class ServerBootstrap {
     /// Create a `ServerBootstrap`.
     ///
     /// - parameters:
-    ///     - group: The `EventLoopGroup` to use for the `bind` of the `ServerSocketChannel`.
+    ///     - group: The `EventLoopGroup` to use for the `bind` of the `ServerSocketChannel` and to accept new `SocketChannel`s with.
     ///     - childGroup: The `EventLoopGroup` to run the accepted `SocketChannel`s on.
     public init(group: EventLoopGroup, childGroup: EventLoopGroup) {
         self.group = group
@@ -228,8 +230,12 @@ public final class ServerBootstrap {
 
 /// A `ClientBootstrap` is an easy way to bootstrap a `SocketChannel` when creating network clients.
 ///
+/// Usually you re-use a `ClientBootstrap` once you set it up and called `connect` multiple times on it.
+/// This way you ensure that the same `EventLoop`s will be shared across all your connections.
+///
 /// Example:
 ///
+/// ```swift
 ///     let group = MultiThreadedEventLoopGroup(numThreads: 1)
 ///     let bootstrap = ClientBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
@@ -242,6 +248,7 @@ public final class ServerBootstrap {
 ///     }
 ///     try! bootstrap.connect(host: "example.org", port: 12345).wait()
 ///     /* the Channel is now connected */
+/// ```
 ///
 public final class ClientBootstrap {
     
@@ -382,6 +389,7 @@ public final class ClientBootstrap {
 ///
 /// Example:
 ///
+/// ```swift
 ///     let group = MultiThreadedEventLoopGroup(numThreads: 1)
 ///     let bootstrap = DatagramBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
@@ -396,6 +404,7 @@ public final class ClientBootstrap {
 ///     /* the Channel is now ready to send/receive datagrams */
 ///
 ///     try channel.closeFuture.wait()  // Wait until the channel un-binds.
+/// ```
 ///
 public final class DatagramBootstrap {
 
@@ -411,7 +420,7 @@ public final class DatagramBootstrap {
         self.group = group
     }
 
-    /// Initialize the connected `DatagramChannel` with `initializer`. The most common task in initializer is to add
+    /// Initialize the bound `DatagramChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
     /// - parameters:
