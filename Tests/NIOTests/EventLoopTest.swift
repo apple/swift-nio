@@ -208,7 +208,7 @@ public class EventLoopTest : XCTestCase {
                 t.affinity = set
                 XCTAssertEqual(set, t.affinity)
             }
-            let threads: [ThreadInitializer] = [fn, body]
+            let threads: [ThreadInitializer] = [body, body]
         
             let group = MultiThreadedEventLoopGroup(threadInitializers: threads)
         
