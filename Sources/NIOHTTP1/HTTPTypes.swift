@@ -75,7 +75,7 @@ public enum HTTPPart<HeadT: Equatable, BodyT: Equatable> {
     case end(HTTPHeaders?)
 }
 
-extension HTTPPart : Equatable {
+extension HTTPPart: Equatable {
     public static func ==(lhs: HTTPPart, rhs: HTTPPart) -> Bool {
         switch (lhs, rhs) {
         case (.head(let h1), .head(let h2)):
@@ -119,7 +119,7 @@ extension HTTPRequestHead {
 }
 
 /// A representation of the status line and header fields of a HTTP response.
-public struct HTTPResponseHead : Equatable {
+public struct HTTPResponseHead: Equatable {
     /// The HTTP response status.
     public let status: HTTPResponseStatus
 
@@ -145,14 +145,14 @@ public struct HTTPResponseHead : Equatable {
     }
 }
 
-fileprivate typealias HTTPHeadersStorage = [String:[(String, String)]] // [lowerCasedName: [(originalCaseName, value)]
+fileprivate typealias HTTPHeadersStorage = [String: [(String, String)]] // [lowerCasedName: [(originalCaseName, value)]
 
 
 /// An iterator of HTTP header fields.
 ///
 /// This iterator will return each value for a given header name separately. That
 /// means that `name` is not guaranteed to be unique in a given block of headers.
-struct HTTPHeadersIterator : IteratorProtocol {
+struct HTTPHeadersIterator: IteratorProtocol {
     fileprivate var storageIterator: HTTPHeadersStorage.Iterator
     fileprivate var valuesIterator: Array<(String, String)>.Iterator?
 
@@ -190,7 +190,7 @@ struct HTTPHeadersIterator : IteratorProtocol {
 /// field when needed. It also supports recomposing headers to a maximally joined
 /// or split representation, such that header fields that are able to be repeated
 /// can be represented appropriately.
-public struct HTTPHeaders : Sequence, CustomStringConvertible {
+public struct HTTPHeaders: Sequence, CustomStringConvertible {
 
     // [lowerCasedName: [(originalCaseName, value)]
     private var storage: HTTPHeadersStorage = HTTPHeadersStorage()
@@ -366,7 +366,7 @@ private extension Substring {
     }
 }
 
-extension HTTPHeaders : Equatable {
+extension HTTPHeaders: Equatable {
     public static func ==(lhs: HTTPHeaders, rhs: HTTPHeaders) -> Bool {
         if lhs.storage.count != rhs.storage.count {
             return false

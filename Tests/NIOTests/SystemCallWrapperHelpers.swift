@@ -17,27 +17,27 @@ import Foundation
 @testable import NIO
 #endif
 
-public func measureRunTime(_ fn: () throws -> Int) rethrows -> TimeInterval {
-    func measureOne(_ fn: () throws -> Int) rethrows -> TimeInterval {
+public func measureRunTime(_ body: () throws -> Int) rethrows -> TimeInterval {
+    func measureOne(_ body: () throws -> Int) rethrows -> TimeInterval {
         let start = Date()
-        _ = try fn()
+        _ = try body()
         let end = Date()
         return end.timeIntervalSince(start)
     }
     
-    _ = try measureOne(fn)
+    _ = try measureOne(body)
     var measurements = Array(repeating: 0.0, count: 10)
     for i in 0..<10 {
-        measurements[i] = try measureOne(fn)
+        measurements[i] = try measureOne(body)
     }
     
     //return measurements.reduce(0, +) / 10.0
     return measurements.min()!
 }
 
-public func measureRunTimeAndPrint(desc: String, fn: () throws -> Int) rethrows -> Void {
+public func measureRunTimeAndPrint(desc: String, body: () throws -> Int) rethrows -> Void {
     print("measuring: \(desc)")
-    print("\(try measureRunTime(fn))s")
+    print("\(try measureRunTime(body))s")
 }
 
 enum TestError: Error {

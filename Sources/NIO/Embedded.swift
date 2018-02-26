@@ -16,10 +16,10 @@ import Dispatch
 import NIOPriorityQueue
 
 private final class EmbeddedScheduledTask {
-    let task: () -> ()
+    let task: () -> Void
     let readyTime: UInt64
 
-    init(readyTime: UInt64, task: @escaping () -> ()) {
+    init(readyTime: UInt64, task: @escaping () -> Void) {
         self.readyTime = readyTime
         self.task = task
     }
@@ -57,7 +57,7 @@ public class EmbeddedEventLoop: EventLoop {
         return true
     }
 
-    var tasks = CircularBuffer<() -> ()>(initialRingCapacity: 2)
+    var tasks = CircularBuffer<() -> Void>(initialRingCapacity: 2)
 
     public init() { }
     
@@ -82,7 +82,7 @@ public class EmbeddedEventLoop: EventLoop {
     // We're not really running a loop here. Tasks aren't run until run() is called,
     // at which point we run everything that's been submitted. Anything newly submitted
     // either gets on that train if it's still moving or waits until the next call to run().
-    public func execute(task: @escaping () -> ()) {
+    public func execute(_ task: @escaping () -> Void) {
         tasks.append(task)
     }
 
@@ -137,7 +137,7 @@ public class EmbeddedEventLoop: EventLoop {
     }
 }
 
-class EmbeddedChannelCore : ChannelCore {
+class EmbeddedChannelCore: ChannelCore {
     var isOpen: Bool = true
     var isActive: Bool = false
     
@@ -241,7 +241,7 @@ class EmbeddedChannelCore : ChannelCore {
     }
 }
 
-public class EmbeddedChannel : Channel {
+public class EmbeddedChannel: Channel {
 
     public var isActive: Bool { return channelcore.isActive }
     public var closeFuture: EventLoopFuture<Void> { return channelcore.closePromise.futureResult }
@@ -338,12 +338,12 @@ public class EmbeddedChannel : Channel {
         _ = try? register().wait()
     }
 
-    public func setOption<T>(option: T, value: T.OptionType) -> EventLoopFuture<Void> where T : ChannelOption {
+    public func setOption<T>(option: T, value: T.OptionType) -> EventLoopFuture<Void> where T: ChannelOption {
         // No options supported
         fatalError("no options supported")
     }
 
-    public func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T : ChannelOption {
+    public func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T: ChannelOption {
         if option is AutoReadOption {
             return self.eventLoop.newSucceededFuture(result: true as! T.OptionType)
         }

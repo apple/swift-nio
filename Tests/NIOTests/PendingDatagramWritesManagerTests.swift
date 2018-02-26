@@ -55,7 +55,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         case error(Error)
     }
 
-    private func withPendingDatagramWritesManager(_ fn: (PendingDatagramWritesManager) throws -> Void) rethrows {
+    private func withPendingDatagramWritesManager(_ body: (PendingDatagramWritesManager) throws -> Void) rethrows {
         try withExtendedLifetime(NSObject()) { o in
             var iovecs: [IOVector] = Array(repeating: iovec(), count: Socket.writevLimitIOVectors + 1)
             var managed: [Unmanaged<AnyObject>] = Array(repeating: Unmanaged.passUnretained(o), count: Socket.writevLimitIOVectors + 1)
@@ -73,7 +73,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                             XCTAssertFalse(pwm.isFlushPending)
                             XCTAssertTrue(pwm.isWritable)
 
-                            try fn(pwm)
+                            try body(pwm)
 
                             XCTAssertTrue(pwm.isEmpty)
                             XCTAssertFalse(pwm.isFlushPending)

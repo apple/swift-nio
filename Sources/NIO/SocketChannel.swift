@@ -40,7 +40,7 @@ private extension ByteBuffer {
 /// For this reason, `BaseSocketChannel` exists to provide a common core implementation of
 /// the `SelectableChannel` protocol. It uses a number of private functions to provide hooks
 /// for subclasses to implement the specific logic to handle their writes and reads.
-class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
+class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     typealias SelectableType = T
 
     // MARK: Stored Properties
@@ -305,7 +305,7 @@ class BaseSocketChannel<T : BaseSocket> : SelectableChannel, ChannelCore {
         }
     }
 
-    public func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T : ChannelOption {
+    public func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T: ChannelOption {
         if eventLoop.inEventLoop {
             do {
                 return eventLoop.newSucceededFuture(result: try getOption0(option: option))
@@ -977,7 +977,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 /// A `Channel` for a server socket.
 ///
 /// - note: All operations on `ServerSocketChannel` are thread-safe.
-final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
+final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
     private var backlog: Int32 = 128
     private let group: EventLoopGroup
@@ -995,7 +995,7 @@ final class ServerSocketChannel : BaseSocketChannel<ServerSocket> {
             throw err
         }
         self.group = group
-        try super.init(socket: serverSocket, eventLoop: eventLoop, recvAllocator:  AdaptiveRecvByteBufferAllocator())
+        try super.init(socket: serverSocket, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
 
     override func registrationFor(interested: IOEvent) -> NIORegistration {

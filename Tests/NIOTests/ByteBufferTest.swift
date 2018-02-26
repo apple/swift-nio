@@ -921,16 +921,16 @@ class ByteBufferTest: XCTestCase {
         buf.changeCapacity(to: 1024)
         buf.write(staticString: "hello world, just some trap bytes here")
 
-        func testIndexAndLengthFunc<T>(_ fn: (Int, Int) -> T?, file: StaticString = #file, line: UInt = #line) {
-            XCTAssertNil(fn(Int.max, 1), file: file, line: line)
-            XCTAssertNil(fn(Int.max - 1, 2), file: file, line: line)
-            XCTAssertNil(fn(1, Int.max), file: file, line: line)
-            XCTAssertNil(fn(2, Int.max - 1), file: file, line: line)
+        func testIndexAndLengthFunc<T>(_ body: (Int, Int) -> T?, file: StaticString = #file, line: UInt = #line) {
+            XCTAssertNil(body(Int.max, 1), file: file, line: line)
+            XCTAssertNil(body(Int.max - 1, 2), file: file, line: line)
+            XCTAssertNil(body(1, Int.max), file: file, line: line)
+            XCTAssertNil(body(2, Int.max - 1), file: file, line: line)
         }
 
-        func testIndexOrLengthFunc<T>(_ fn: (Int) -> T?, file: StaticString = #file, line: UInt = #line) {
-            XCTAssertNil(fn(Int.max))
-            XCTAssertNil(fn(Int.max - 1))
+        func testIndexOrLengthFunc<T>(_ body: (Int) -> T?, file: StaticString = #file, line: UInt = #line) {
+            XCTAssertNil(body(Int.max))
+            XCTAssertNil(body(Int.max - 1))
         }
 
         testIndexOrLengthFunc({ x in buf.getInteger(at: x) as UInt16? })
@@ -1146,8 +1146,8 @@ class ByteBufferTest: XCTestCase {
                 return self.storage.index(after: i)
             }
 
-            func withUnsafeBytes<R>(_ fn: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-                return try self.storage.withUnsafeBytes(fn)
+            func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+                return try self.storage.withUnsafeBytes(body)
             }
         }
         buf.clear()

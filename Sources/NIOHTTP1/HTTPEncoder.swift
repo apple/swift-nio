@@ -74,7 +74,7 @@ private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHand
     }
 }
 
-private func writeHead(wrapOutboundOut: (IOData) -> NIOAny, writeStartLine: (inout ByteBuffer) -> (), ctx: ChannelHandlerContext, headers: HTTPHeaders, promise: EventLoopPromise<Void>?) {
+private func writeHead(wrapOutboundOut: (IOData) -> NIOAny, writeStartLine: (inout ByteBuffer) -> Void, ctx: ChannelHandlerContext, headers: HTTPHeaders, promise: EventLoopPromise<Void>?) {
     
     var buffer = ctx.channel.allocator.buffer(capacity: 256)
     writeStartLine(&buffer)
@@ -112,7 +112,7 @@ private func sanitizeTransportHeaders(hasBody: HTTPMethod.HasBody, headers: inou
 ///
 /// This channel handler is used to translate messages from a series of
 /// `HTTPClientRequestPart` into the HTTP/1.1 wire format.
-public final class HTTPRequestEncoder : ChannelOutboundHandler {
+public final class HTTPRequestEncoder: ChannelOutboundHandler {
     public typealias OutboundIn = HTTPClientRequestPart
     public typealias OutboundOut = IOData
     
@@ -147,7 +147,7 @@ public final class HTTPRequestEncoder : ChannelOutboundHandler {
 ///
 /// This channel handler is used to translate messages from a series of
 /// `HTTPServerResponsePart` into the HTTP/1.1 wire format.
-public final class HTTPResponseEncoder : ChannelOutboundHandler {
+public final class HTTPResponseEncoder: ChannelOutboundHandler {
     public typealias OutboundIn = HTTPServerResponsePart
     public typealias OutboundOut = IOData
 

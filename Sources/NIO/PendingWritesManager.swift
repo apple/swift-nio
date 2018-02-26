@@ -24,12 +24,12 @@ private struct PendingStreamWrite {
 ///    - pending: The currently pending writes.
 ///    - iovecs: Pre-allocated storage (per `EventLoop`) for `iovecs`.
 ///    - storageRefs: Pre-allocated storage references (per `EventLoop`) to manage the lifetime of the buffers to be passed to `writev`.
-///    - fn: The function that actually does the vector write (usually `writev`).
+///    - body: The function that actually does the vector write (usually `writev`).
 /// - returns: A tuple of the number of items attempted to write and the result of the write operation.
 private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
                                            iovecs: UnsafeMutableBufferPointer<IOVector>,
                                            storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
-                                           _ fn: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> (itemCount: Int, writeResult: IOResult<Int>) {
+                                           _ body: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> (itemCount: Int, writeResult: IOResult<Int>) {
     assert(iovecs.count >= Socket.writevLimitIOVectors, "Insufficiently sized buffer for a maximal writev")
 
     // Clamp the number of writes we're willing to issue to the limit for writev.
@@ -66,7 +66,7 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
             storageRefs[i].release()
         }
     }
-    let result = try fn(UnsafeBufferPointer(start: iovecs.baseAddress!, count: numberOfUsedStorageSlots))
+    let result = try body(UnsafeBufferPointer(start: iovecs.baseAddress!, count: numberOfUsedStorageSlots))
     /* if we hit a limit, we really wanted to write more than we have so the caller should retry us */
     return (numberOfUsedStorageSlots, result)
 }
@@ -224,7 +224,7 @@ private struct PendingStreamWritesState {
     /// - warning: See the warning for `didWrite`.
     ///
     /// - returns: A closure that the caller _needs_ to run which will fulfill the promises.
-    public mutating func failAll(error: Error) -> () -> Void {
+    public mutating func failAll(error: Error) -> (() -> Void) {
         var promises: [EventLoopPromise<()>] = []
         promises.reserveCapacity(self.pendingWrites.count)
         while !self.pendingWrites.isEmpty {

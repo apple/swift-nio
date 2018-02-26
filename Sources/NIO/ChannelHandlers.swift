@@ -27,7 +27,7 @@ public class BackPressureHandler: ChannelInboundHandler, _ChannelOutboundHandler
     public typealias OutboundOut = ByteBuffer
     
     private var pendingRead = false
-    private var writable: Bool = true;
+    private var writable: Bool = true
     
     public init() { }
 
@@ -64,7 +64,7 @@ public class BackPressureHandler: ChannelInboundHandler, _ChannelOutboundHandler
 }
 
 /// Triggers an IdleStateEvent when a Channel has not performed read, write, or both operation for a while.
-public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
+public class IdleStateHandler: ChannelInboundHandler, ChannelOutboundHandler {
     public typealias InboundIn = NIOAny
     public typealias InboundOut = NIOAny
     public typealias OutboundIn = NIOAny
@@ -145,7 +145,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
         return false
     }
     
-    private func newReadTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> () -> () {
+    private func newReadTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
         return {
             guard self.shouldReschedule(ctx) else  {
                 return
@@ -169,7 +169,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
         }
     }
     
-    private func newWriteTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> () -> () {
+    private func newWriteTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
         return {
             guard self.shouldReschedule(ctx) else  {
                 return
@@ -190,7 +190,7 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
         }
     }
 
-    private func newAllTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> () -> () {
+    private func newAllTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
         return {
             guard self.shouldReschedule(ctx) else  {
                 return
@@ -216,9 +216,9 @@ public class IdleStateHandler : ChannelInboundHandler, ChannelOutboundHandler {
         }
     }
     
-    private func schedule(_ ctx: ChannelHandlerContext, _ amount: TimeAmount?, _ fn: @escaping (ChannelHandlerContext, TimeAmount) -> () -> ()) -> Scheduled<Void>? {
+    private func schedule(_ ctx: ChannelHandlerContext, _ amount: TimeAmount?, _ body: @escaping (ChannelHandlerContext, TimeAmount) -> (() -> Void) ) -> Scheduled<Void>? {
         if let timeout = amount {
-            return ctx.eventLoop.scheduleTask(in: timeout, fn(ctx, timeout))
+            return ctx.eventLoop.scheduleTask(in: timeout, body(ctx, timeout))
         }
         return nil
     }

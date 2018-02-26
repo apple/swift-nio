@@ -125,17 +125,17 @@ public enum SocketAddress: CustomStringConvertible {
 
     /// Calls the given function with a pointer to a `sockaddr` structure and the associated size
     /// of that structure.
-    public func withSockAddr<T>(_ fn: (UnsafePointer<sockaddr>, Int) throws -> T) rethrows -> T {
+    public func withSockAddr<T>(_ body: (UnsafePointer<sockaddr>, Int) throws -> T) rethrows -> T {
         switch self {
         case .v4(let addr):
             var address = addr.address
-            return try address.withSockAddr(fn)
+            return try address.withSockAddr(body)
         case .v6(let addr):
             var address = addr.address
-            return try address.withSockAddr(fn)
+            return try address.withSockAddr(body)
         case .unixDomainSocket(let addr):
             var address = addr.address
-            return try address.withSockAddr(fn)
+            return try address.withSockAddr(body)
         }
     }
 

@@ -247,7 +247,7 @@ public class MessageToByteEncoderTest: XCTestCase {
 
         public func encode(ctx: ChannelHandlerContext, data value: Int32, out: inout ByteBuffer) throws {
             XCTAssertEqual(MemoryLayout<Int32>.size, out.writableBytes)
-            out.write(integer: value);
+            out.write(integer: value)
         }
         
         public func allocateOutBuffer(ctx: ChannelHandlerContext, data: Int32) throws -> ByteBuffer {
@@ -261,7 +261,7 @@ public class MessageToByteEncoderTest: XCTestCase {
         
         public func encode(ctx: ChannelHandlerContext, data value: Int32, out: inout ByteBuffer) throws {
             XCTAssertEqual(MemoryLayout<Int32>.size, 256)
-            out.write(integer: value);
+            out.write(integer: value)
         }
     }
     

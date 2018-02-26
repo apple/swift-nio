@@ -190,10 +190,10 @@ public class EventLoopTest : XCTestCase {
 
     public func testEventLoopThreads() throws {
         var counter = 0
-        let fn: ThreadInitializer = { t in
+        let body: ThreadInitializer = { t in
             counter += 1
         }
-        let threads: [ThreadInitializer] = [fn, fn]
+        let threads: [ThreadInitializer] = [body, body]
         
         let group = MultiThreadedEventLoopGroup(threadInitializers: threads)
        
@@ -203,12 +203,12 @@ public class EventLoopTest : XCTestCase {
     
     public func testEventLoopPinned() throws {
         #if os(Linux)
-            let fn: ThreadInitializer = { t in
+            let body: ThreadInitializer = { t in
                 let set = LinuxCPUSet(0)
                 t.affinity = set
                 XCTAssertEqual(set, t.affinity)
             }
-            let threads: [ThreadInitializer] = [fn, fn]
+            let threads: [ThreadInitializer] = [fn, body]
         
             let group = MultiThreadedEventLoopGroup(threadInitializers: threads)
         

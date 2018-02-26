@@ -100,15 +100,15 @@ class ChannelPipelineTest: XCTestCase {
         typealias OutboundIn = In
         typealias OutboundOut = Out
         
-        private let fn: (OutboundIn) throws -> OutboundOut
+        private let body: (OutboundIn) throws -> OutboundOut
         
-        init(_ fn: @escaping (OutboundIn) throws -> OutboundOut) {
-            self.fn = fn
+        init(_ body: @escaping (OutboundIn) throws -> OutboundOut) {
+            self.body = body
         }
         
         public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             do {
-                ctx.write(self.wrapOutboundOut(try fn(self.unwrapOutboundIn(data))), promise: promise)
+                ctx.write(self.wrapOutboundOut(try body(self.unwrapOutboundIn(data))), promise: promise)
             } catch let err {
                 promise!.fail(error: err)
             }
@@ -293,14 +293,14 @@ class ChannelPipelineTest: XCTestCase {
         class SomeHandler: ChannelInboundHandler {
             typealias InboundIn = Never
 
-            let fn: (ChannelHandlerContext) -> Void
+            let body: (ChannelHandlerContext) -> Void
 
-            init(_ fn: @escaping (ChannelHandlerContext) -> Void) {
-                self.fn = fn
+            init(_ body: @escaping (ChannelHandlerContext) -> Void) {
+                self.body = body
             }
 
             func handlerAdded(ctx: ChannelHandlerContext) {
-                self.fn(ctx)
+                self.body(ctx)
             }
         }
         try {

@@ -147,10 +147,10 @@ extension ByteBuffer {
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
     /// - parameters:
-    ///     - fn: The closure that will accept the yielded bytes and returns the number of bytes it processed.
+    ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed.
     /// - returns: The number of bytes read.
-    public mutating func readWithUnsafeReadableBytes(_ fn: (UnsafeRawBufferPointer) throws -> Int) rethrows -> Int {
-        let bytesRead = try self.withUnsafeReadableBytes(fn)
+    public mutating func readWithUnsafeReadableBytes(_ body: (UnsafeRawBufferPointer) throws -> Int) rethrows -> Int {
+        let bytesRead = try self.withUnsafeReadableBytes(body)
         self.moveReaderIndex(forwardBy: bytesRead)
         return bytesRead
     }
@@ -161,10 +161,10 @@ extension ByteBuffer {
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
     /// - parameters:
-    ///     - fn: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
+    ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
     /// - returns: The value `fn` returned in the second tuple component.
-    public mutating func readWithUnsafeReadableBytes<T>(_ fn: (UnsafeRawBufferPointer) throws -> (Int, T)) rethrows -> T {
-        let (bytesRead, ret) = try self.withUnsafeReadableBytes(fn)
+    public mutating func readWithUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> (Int, T)) rethrows -> T {
+        let (bytesRead, ret) = try self.withUnsafeReadableBytes(body)
         self.moveReaderIndex(forwardBy: bytesRead)
         return ret
     }
@@ -175,10 +175,10 @@ extension ByteBuffer {
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
     /// - parameters:
-    ///     - fn: The closure that will accept the yielded bytes and returns the number of bytes it processed.
+    ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed.
     /// - returns: The number of bytes read.
-    public mutating func readWithUnsafeMutableReadableBytes(_ fn: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
-        let bytesRead = try self.withUnsafeMutableReadableBytes(fn)
+    public mutating func readWithUnsafeMutableReadableBytes(_ body: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
+        let bytesRead = try self.withUnsafeMutableReadableBytes(body)
         self.moveReaderIndex(forwardBy: bytesRead)
         return bytesRead
     }
@@ -189,10 +189,10 @@ extension ByteBuffer {
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
     /// - parameters:
-    ///     - fn: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
+    ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
     /// - returns: The value `fn` returned in the second tuple component.
-    public mutating func readWithUnsafeMutableReadableBytes<T>(_ fn: (UnsafeMutableRawBufferPointer) throws -> (Int, T)) rethrows -> T {
-        let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes(fn)
+    public mutating func readWithUnsafeMutableReadableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> (Int, T)) rethrows -> T {
+        let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes(body)
         self.moveReaderIndex(forwardBy: bytesRead)
         return ret
     }

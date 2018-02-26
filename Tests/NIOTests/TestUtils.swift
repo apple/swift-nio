@@ -15,20 +15,20 @@
 @testable import NIO
 import XCTest
 
-func withPipe(_ fn: (NIO.FileHandle, NIO.FileHandle) -> [NIO.FileHandle]) throws {
+func withPipe(_ body: (NIO.FileHandle, NIO.FileHandle) -> [NIO.FileHandle]) throws {
     var fds: [Int32] = [-1, -1]
     fds.withUnsafeMutableBufferPointer { ptr in
         XCTAssertEqual(0, pipe(ptr.baseAddress!))
     }
     let readFH = FileHandle(descriptor: fds[0])
     let writeFH = FileHandle(descriptor: fds[1])
-    let toClose = fn(readFH, writeFH)
+    let toClose = body(readFH, writeFH)
     try toClose.forEach { fh in
         XCTAssertNoThrow(try fh.close())
     }
 }
 
-func withTemporaryFile<T>(content: String? = nil, _ fn: (NIO.FileHandle, String) throws -> T) rethrows -> T {
+func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.FileHandle, String) throws -> T) rethrows -> T {
     let (fd, path) = openTemporaryFile()
     let fileHandle = FileHandle(descriptor: fd)
     defer {
@@ -53,7 +53,7 @@ func withTemporaryFile<T>(content: String? = nil, _ fn: (NIO.FileHandle, String)
             XCTAssertEqual(0, lseek(fd, 0, SEEK_SET))
         }
     }
-    return try fn(fileHandle, path)
+    return try body(fileHandle, path)
 }
 
 func openTemporaryFile() -> (CInt, String) {

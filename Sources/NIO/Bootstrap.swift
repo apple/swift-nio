@@ -186,7 +186,7 @@ public final class ServerBootstrap {
         return promise.futureResult
     }
     
-    private class AcceptHandler : ChannelInboundHandler {
+    private class AcceptHandler: ChannelInboundHandler {
         public typealias InboundIn = SocketChannel
         
         private let childChannelInit: ((Channel) -> EventLoopFuture<()>)?

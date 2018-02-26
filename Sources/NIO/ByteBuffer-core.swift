@@ -387,11 +387,11 @@ public struct ByteBuffer {
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
     /// - parameters:
-    ///     - fn: The closure that will accept the yielded bytes.
+    ///     - body: The closure that will accept the yielded bytes.
     /// - returns: The value returned by `fn`.
-    public mutating func withUnsafeMutableReadableBytes<T>(_ fn: (UnsafeMutableRawBufferPointer) throws -> T) rethrows -> T {
+    public mutating func withUnsafeMutableReadableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> T) rethrows -> T {
         self.copyStorageAndRebaseIfNeeded()
-        return try fn(UnsafeMutableRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
+        return try body(UnsafeMutableRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
                                                     count: self.readableBytes))
     }
 
@@ -403,17 +403,17 @@ public struct ByteBuffer {
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
     /// - parameters:
-    ///     - fn: The closure that will accept the yielded bytes and return the number of bytes written.
+    ///     - body: The closure that will accept the yielded bytes and return the number of bytes written.
     /// - returns: The number of bytes written.
-    public mutating func withUnsafeMutableWritableBytes<T>(_ fn: (UnsafeMutableRawBufferPointer) throws -> T) rethrows -> T {
+    public mutating func withUnsafeMutableWritableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> T) rethrows -> T {
         self.copyStorageAndRebaseIfNeeded()
-        return try fn(UnsafeMutableRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._writerIndex)),
+        return try body(UnsafeMutableRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._writerIndex)),
                                                     count: self.writableBytes))
     }
 
     @discardableResult
-    public mutating func writeWithUnsafeMutableBytes(_ fn: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
-        let bytesWritten = try withUnsafeMutableWritableBytes(fn)
+    public mutating func writeWithUnsafeMutableBytes(_ body: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
+        let bytesWritten = try withUnsafeMutableWritableBytes(body)
         self.moveWriterIndex(to: self._writerIndex + toIndex(bytesWritten))
         return bytesWritten
     }
@@ -422,8 +422,8 @@ public struct ByteBuffer {
     /// uninitialised memory and it's undefined behaviour to read it. In most cases you should use `withUnsafeReadableBytes`.
     ///
     /// - warning: Do not escape the pointer from the closure for later use.
-    public func withVeryUnsafeBytes<T>(_ fn: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
-        return try fn(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound)),
+    public func withVeryUnsafeBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
+        return try body(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound)),
                                              count: self._slice.count))
     }
 
@@ -432,10 +432,10 @@ public struct ByteBuffer {
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
     /// - parameters:
-    ///     - fn: The closure that will accept the yielded bytes.
+    ///     - body: The closure that will accept the yielded bytes.
     /// - returns: The value returned by `fn`.
-    public func withUnsafeReadableBytes<T>(_ fn: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
-        return try fn(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
+    public func withUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
+        return try body(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
                                              count: self.readableBytes))
     }
 
@@ -448,18 +448,18 @@ public struct ByteBuffer {
     /// `retain` and `release` must be balanced.
     ///
     /// - parameters:
-    ///     - fn: The closure that will accept the yielded bytes and the `storageManagement`.
+    ///     - body: The closure that will accept the yielded bytes and the `storageManagement`.
     /// - returns: The value returned by `fn`.
-    public func withUnsafeReadableBytesWithStorageManagement<T>(_ fn: (UnsafeRawBufferPointer, Unmanaged<AnyObject>) throws -> T) rethrows -> T {
+    public func withUnsafeReadableBytesWithStorageManagement<T>(_ body: (UnsafeRawBufferPointer, Unmanaged<AnyObject>) throws -> T) rethrows -> T {
         let storageReference: Unmanaged<AnyObject> = Unmanaged.passUnretained(self._storage)
-        return try fn(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
+        return try body(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
                                              count: self.readableBytes), storageReference)
     }
 
     /// See `withUnsafeReadableBytesWithStorageManagement` and `withVeryUnsafeBytes`.
-    public func withVeryUnsafeBytesWithStorageManagement<T>(_ fn: (UnsafeRawBufferPointer, Unmanaged<AnyObject>) throws -> T) rethrows -> T {
+    public func withVeryUnsafeBytesWithStorageManagement<T>(_ body: (UnsafeRawBufferPointer, Unmanaged<AnyObject>) throws -> T) rethrows -> T {
         let storageReference: Unmanaged<AnyObject> = Unmanaged.passUnretained(self._storage)
-        return try fn(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound)),
+        return try body(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound)),
                                              count: self._slice.count), storageReference)
     }
 
@@ -569,7 +569,7 @@ extension ByteBuffer: CustomStringConvertible {
 
 /// A `Collection` that is contiguously layed out in memory and can therefore be duplicated using `memcpy`.
 public protocol ContiguousCollection: Collection {
-    func withUnsafeBytes<R>(_ fn: (UnsafeRawBufferPointer) throws -> R) rethrows -> R
+    func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R
 }
 
 extension StaticString: Collection {
@@ -592,18 +592,18 @@ extension StaticString: Collection {
 extension Array: ContiguousCollection {}
 extension ContiguousArray: ContiguousCollection {}
 extension StaticString: ContiguousCollection {
-    public func withUnsafeBytes<R>(_ fn: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-        return try fn(UnsafeRawBufferPointer(start: self.utf8Start, count: self.utf8CodeUnitCount))
+    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+        return try body(UnsafeRawBufferPointer(start: self.utf8Start, count: self.utf8CodeUnitCount))
     }
 }
 extension UnsafeRawBufferPointer: ContiguousCollection {
-    public func withUnsafeBytes<R>(_ fn: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-        return try fn(self)
+    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+        return try body(self)
     }
 }
 extension UnsafeBufferPointer: ContiguousCollection {
-    public func withUnsafeBytes<R>(_ fn: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-        return try fn(UnsafeRawBufferPointer(self))
+    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+        return try body(UnsafeRawBufferPointer(self))
     }
 }
 

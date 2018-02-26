@@ -76,17 +76,17 @@ public final class BlockingIOThreadPool {
     /// Submit a `WorkItem` to process.
     ///
     /// - parameters:
-    ///     - fn: The `WorkItem` to process by the `BlockingIOThreadPool`.
-    public func submit(_ fn: @escaping WorkItem) {
+    ///     - body: The `WorkItem` to process by the `BlockingIOThreadPool`.
+    public func submit(_ body: @escaping WorkItem) {
         let item = self.lock.withLock { () -> WorkItem? in
             switch self.state {
             case .running(var items):
-                items.append(fn)
+                items.append(body)
                 self.state = .running(items)
                 self.semaphore.signal()
                 return nil
             case .shuttingDown, .stopped:
-                return fn
+                return body
             }
         }
         /* if item couldn't be added run it immediately indicating that it couldn't be run */

@@ -48,15 +48,15 @@ final class Thread {
         self.pthread = pthread
     }
     
-    /// Execute the given fn with the `pthread_t` that is used by this `Thread` as argument.
+    /// Execute the given body with the `pthread_t` that is used by this `Thread` as argument.
     ///
     /// - warning: Do not escape `pthread_t` from the closure for later use.
     ///
     /// - parameters:
-    ///     - fn: The closure that will accept the `pthread_t`.
+    ///     - body: The closure that will accept the `pthread_t`.
     /// - returns: The value returned by `fn`.
-    func withUnsafePthread<T>(_ fn: (pthread_t) throws -> T) rethrows -> T {
-        return try fn(self.pthread)
+    func withUnsafePthread<T>(_ body: (pthread_t) throws -> T) rethrows -> T {
+        return try body(self.pthread)
     }
     
     /// Get current name of the `Thread` or `nil` if not set.
@@ -91,7 +91,7 @@ final class Thread {
             // Cast to UnsafeMutableRawPointer? and force unwrap to make the same code work on macOS and Linux.
             let b = Unmanaged<ThreadBox>.fromOpaque((p as UnsafeMutableRawPointer?)!.assumingMemoryBound(to: ThreadBox.self)).takeRetainedValue()
             
-            let fn = b.value.body
+            let body = b.value.body
             let name = b.value.name
             
             let pt = pthread_self()
@@ -102,7 +102,7 @@ final class Thread {
                 precondition(res == 0, "pthread_setname_np failed for '\(threadName)': \(res)")
             }
 
-            fn(Thread(pthread: pt))
+            body(Thread(pthread: pt))
             return nil
         }, Unmanaged.passRetained(box).toOpaque())
         
@@ -176,7 +176,7 @@ internal struct ThreadSpecificVariable<T: AnyObject> {
     }
 }
 
-extension Thread : Equatable {
+extension Thread: Equatable {
     public static func ==(lhs: Thread, rhs: Thread) -> Bool {
         return pthread_equal(lhs.pthread, rhs.pthread) != 0
     }

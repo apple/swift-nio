@@ -55,20 +55,20 @@ private class PromiseOrderer {
 
 private extension ByteBuffer {
     @discardableResult
-    mutating func withUnsafeMutableReadableUInt8Bytes<T>(fn: (UnsafeMutableBufferPointer<UInt8>) throws -> T) rethrows -> T {
+    mutating func withUnsafeMutableReadableUInt8Bytes<T>(_ body: (UnsafeMutableBufferPointer<UInt8>) throws -> T) rethrows -> T {
         return try self.withUnsafeMutableReadableBytes { (ptr: UnsafeMutableRawBufferPointer) -> T in
             let baseInputPointer = ptr.baseAddress?.assumingMemoryBound(to: UInt8.self)
             let inputBufferPointer = UnsafeMutableBufferPointer(start: baseInputPointer, count: ptr.count)
-            return try fn(inputBufferPointer)
+            return try body(inputBufferPointer)
         }
     }
 
     @discardableResult
-    mutating func writeWithUnsafeMutableUInt8Bytes(fn: (UnsafeMutableBufferPointer<UInt8>) throws -> Int) rethrows -> Int {
+    mutating func writeWithUnsafeMutableUInt8Bytes(_ body: (UnsafeMutableBufferPointer<UInt8>) throws -> Int) rethrows -> Int {
         return try self.writeWithUnsafeMutableBytes { (ptr: UnsafeMutableRawBufferPointer) -> Int in
             let baseInputPointer = ptr.baseAddress?.assumingMemoryBound(to: UInt8.self)
             let inputBufferPointer = UnsafeMutableBufferPointer(start: baseInputPointer, count: ptr.count)
-            return try fn(inputBufferPointer)
+            return try body(inputBufferPointer)
         }
     }
 

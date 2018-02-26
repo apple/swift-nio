@@ -124,7 +124,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
 /// ```
 /// func someAsyncOperation(args) -> EventLoopFuture<ResultType> {
 ///     let promise: EventLoopPromise<ResultType> = eventLoop.newPromise()
-///     someAsyncOperationWithACallback(args) { result -> () in
+///     someAsyncOperationWithACallback(args) { result -> Void in
 ///         // when finished...
 ///         promise.succeed(result: result)
 ///         // if error...
@@ -466,7 +466,7 @@ extension EventLoopFuture {
     /// - returns: A future that will receive the eventual value.
     public func map<U>(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (T) -> (U)) -> EventLoopFuture<U> {
         if U.self == T.self && U.self == Void.self {
-            whenSuccess(callback as! (T) -> ())
+            whenSuccess(callback as! (T) -> Void)
             return self as! EventLoopFuture<U>
         } else {
             return then { return EventLoopFuture<U>(eventLoop: self.eventLoop, result: callback($0), file: file, line: line) }
@@ -539,7 +539,7 @@ extension EventLoopFuture {
         }
     }
     
-    fileprivate func _whenCompleteWithValue(_ callback: @escaping (EventLoopFutureValue<T>) -> ()) {
+    fileprivate func _whenCompleteWithValue(_ callback: @escaping (EventLoopFutureValue<T>) -> Void) {
         _whenComplete {
             callback(self.value!)
             return CallbackList()
@@ -556,7 +556,7 @@ extension EventLoopFuture {
     ///
     /// - parameters:
     ///     - callback: The callback that is called with the successful result of the `EventLoopFuture`.
-    public func whenSuccess(_ callback: @escaping (T) -> ()) {
+    public func whenSuccess(_ callback: @escaping (T) -> Void) {
         _whenComplete {
             if case .success(let t) = self.value! {
                 callback(t)
@@ -575,7 +575,7 @@ extension EventLoopFuture {
     ///
     /// - parameters:
     ///     - callback: The callback that is called with the failed result of the `EventLoopFuture`.
-    public func whenFailure(_ callback: @escaping (Error) -> ()) {
+    public func whenFailure(_ callback: @escaping (Error) -> Void) {
         _whenComplete {
             if case .failure(let e) = self.value! {
                 callback(e)
@@ -593,7 +593,7 @@ extension EventLoopFuture {
     ///
     /// - parameters:
     ///     - callback: The callback that is called when the `EventLoopFuture` is fulfilled.
-    public func whenComplete(_ callback: @escaping () -> ()) {
+    public func whenComplete(_ callback: @escaping () -> Void) {
         _whenComplete {
             callback()
             return CallbackList()
@@ -666,7 +666,7 @@ extension EventLoopFuture {
     /// Return a new EventLoopFuture that contains this "and" another value.
     /// This is just syntactic sugar for `future.and(loop.newSucceedFuture<U>(result: result))`.
     public func and<U>(result: U, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<(T,U)> {
-        return and(EventLoopFuture<U>(eventLoop: self.eventLoop, result:result, file: file, line: line))
+        return and(EventLoopFuture<U>(eventLoop: self.eventLoop, result: result, file: file, line: line))
     }
 }
 
@@ -775,17 +775,17 @@ extension EventLoopFuture {
             return p0.futureResult
         }
 
-        let fn: EventLoopFuture<Void> = futures.reduce(p0.futureResult, { (f1: EventLoopFuture<Void>, f2: EventLoopFuture<Void>) in f1.and(f2).map({ (_ : ((), ())) in }) })
+        let body: EventLoopFuture<Void> = futures.reduce(p0.futureResult, { (f1: EventLoopFuture<Void>, f2: EventLoopFuture<Void>) in f1.and(f2).map({ (_ : ((), ())) in }) })
         p0.succeed(result: ())
-        return fn
+        return body
     }
 
 }
 
 /// Execute the given function and synchronously complete the given `EventLoopPromise` (if not `nil`).
-func executeAndComplete<T>(_ promise: EventLoopPromise<T>?, _ fn: () throws -> T) {
+func executeAndComplete<T>(_ promise: EventLoopPromise<T>?, _ body: () throws -> T) {
     do {
-        let result = try fn()
+        let result = try body()
         promise?.succeed(result: result)
     } catch let e {
         promise?.fail(error: e)

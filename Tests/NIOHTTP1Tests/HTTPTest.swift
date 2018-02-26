@@ -20,14 +20,14 @@ private final class TestChannelInboundHandler: ChannelInboundHandler {
     public typealias InboundIn = HTTPServerRequestPart
     public typealias InboundOut = HTTPServerRequestPart
 
-    private let fn: (HTTPServerRequestPart) -> HTTPServerRequestPart
+    private let body: (HTTPServerRequestPart) -> HTTPServerRequestPart
 
-    init(_ fn: @escaping (HTTPServerRequestPart) -> HTTPServerRequestPart) {
-        self.fn = fn
+    init(_ body: @escaping (HTTPServerRequestPart) -> HTTPServerRequestPart) {
+        self.body = body
     }
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        ctx.fireChannelRead(self.wrapInboundOut(self.fn(self.unwrapInboundIn(data))))
+        ctx.fireChannelRead(self.wrapInboundOut(self.body(self.unwrapInboundIn(data))))
     }
 }
 

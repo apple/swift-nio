@@ -22,9 +22,9 @@ import NIOPriorityQueue
 /// will be notified once the execution is complete.
 public struct Scheduled<T> {
     private let promise: EventLoopPromise<T>
-    private let cancellationTask: () -> ()
+    private let cancellationTask: () -> Void
     
-    init(promise: EventLoopPromise<T>, cancellationTask: @escaping () -> ()) {
+    init(promise: EventLoopPromise<T>, cancellationTask: @escaping () -> Void) {
         self.promise = promise
         promise.futureResult.whenFailure { error in
             guard let err = error as? EventLoopError else {
@@ -82,14 +82,14 @@ public protocol EventLoop: EventLoopGroup {
     var inEventLoop: Bool { get }
     
     /// Submit a given task to be executed by the `EventLoop`
-    func execute(task: @escaping () -> ())
+    func execute(_ task: @escaping () -> Void)
 
     /// Submit a given task to be executed by the `EventLoop`. Once the execution is complete the returned `EventLoopFuture` is notified.
     ///
     /// - parameters:
     ///     - task: The closure that will be submited to the `EventLoop` for execution.
     /// - returns: `EventLoopFuture` that is notified once the task was executed.
-    func submit<T>(task: @escaping () throws-> (T)) -> EventLoopFuture<T>
+    func submit<T>(_ task: @escaping () throws-> (T)) -> EventLoopFuture<T>
     
     /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T>
@@ -171,16 +171,16 @@ extension TimeAmount: Comparable {
 }
 
 extension EventLoop {
-    public func submit<T>(task: @escaping () throws-> (T)) -> EventLoopFuture<T> {
+    public func submit<T>(_ task: @escaping () throws-> (T)) -> EventLoopFuture<T> {
         let promise: EventLoopPromise<T> = newPromise(file: #file, line: #line)
 
-        execute(task: {() -> () in
+        self.execute {
             do {
                 promise.succeed(result: try task())
             } catch let err {
                 promise.fail(error: err)
             }
-        })
+        }
 
         return promise.futureResult
     }
@@ -276,7 +276,7 @@ private enum EventLoopLifecycleState {
 /// `EventLoop` implementation that uses a `Selector` to get notified once there is more I/O or tasks to process.
 /// The whole processing of I/O and tasks is done by a `Thread` that is tied to the `SelectableEventLoop`. This `Thread`
 /// is guaranteed to never change!
-internal final class SelectableEventLoop : EventLoop {
+internal final class SelectableEventLoop: EventLoop {
     private let selector: NIO.Selector<NIORegistration>
     private let thread: Thread
     private var scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
@@ -390,7 +390,7 @@ internal final class SelectableEventLoop : EventLoop {
         return scheduled
     }
     
-    public func execute(task: @escaping () -> ()) {
+    public func execute(_ task: @escaping () -> Void) {
         schedule0(ScheduledTask(task, { error in
             // do nothing
         }, .nanoseconds(0)))
@@ -507,7 +507,7 @@ internal final class SelectableEventLoop : EventLoop {
                     tasksLock.unlock()
                     break
                 }
-                var tasksCopy = ContiguousArray<() -> ()>()
+                var tasksCopy = ContiguousArray<() -> Void>()
 
                 // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
                 let now = DispatchTime.now()
@@ -561,9 +561,9 @@ internal final class SelectableEventLoop : EventLoop {
         if inEventLoop {
             self.lifecycleState = .closed
         } else {
-            _ = self.submit(task: { () -> (Void) in
+            self.execute {
                 self.lifecycleState = .closed
-            })
+            }
         }
     }
 
@@ -659,7 +659,7 @@ extension EventLoopGroup {
 typealias ThreadInitializer = (Thread) -> Void
 
 /// An `EventLoopGroup` which will create multiple `EventLoop`s, each tied to its own `Thread`.
-final public class MultiThreadedEventLoopGroup : EventLoopGroup {
+final public class MultiThreadedEventLoopGroup: EventLoopGroup {
     
     private let index = Atomic<Int>(value: 0)
     private let eventLoops: [SelectableEventLoop]
@@ -759,11 +759,11 @@ final public class MultiThreadedEventLoopGroup : EventLoopGroup {
 }
 
 private final class ScheduledTask {
-    let task: () -> ()
+    let task: () -> Void
     private let failFn: (Error) ->()
     private let readyTime: Int
     
-    init(_ task: @escaping () -> (), _ failFn: @escaping (Error) -> (), _ time: TimeAmount) {
+    init(_ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: TimeAmount) {
         self.task = task
         self.failFn = failFn
         self.readyTime = time.nanoseconds + Int(DispatchTime.now().uptimeNanoseconds)
@@ -787,7 +787,7 @@ extension ScheduledTask: CustomStringConvertible {
     }
 }
 
-extension ScheduledTask : Comparable {
+extension ScheduledTask: Comparable {
     public static func < (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs.readyTime < rhs.readyTime
     }
