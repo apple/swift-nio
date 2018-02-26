@@ -17,12 +17,17 @@
 /// - warning: `Selectable`s are not thread-safe, only to be used on the appropriate `EventLoop`.
 protocol Selectable {
     
-    /// The file descriptor itself.
-    var descriptor: Int32 { get }
+    /// Will be called with the file descriptor of the `Selectable` if still open, if not it will
+    /// throw an `IOError`.
+    ///
+    /// - parameters:
+    ///     - fn: The closure to execute if the `Selectable` is still open.
+    /// - throws: If either the `Selectable` was closed before or the closure throws by itself.
+    func withUnsafeFileDescriptor<T>(_ fn: (Int32) throws -> T) throws -> T
 
     /// `true` if this `Selectable` is open (which means it was not closed yet).
     var open: Bool { get }
 
-    /// Close this `Selectable` (and so its `descriptor`).
+    /// Close this `Selectable` (and so its file descriptor).
     func close() throws
 }

@@ -179,18 +179,20 @@ final class Selector<R: Registration> {
     private func register_kqueue<S: Selectable>(selectable: S, interested: IOEvent, oldInterested: IOEvent?) throws {
         // Allocated on the stack
         var events = (kevent(), kevent())
-
-        events.0.ident = UInt(selectable.descriptor)
-        events.0.filter = Int16(EVFILT_READ)
-        events.0.fflags = 0
-        events.0.data = 0
-        events.0.udata = nil
-
-        events.1.ident = UInt(selectable.descriptor)
-        events.1.filter = Int16(EVFILT_WRITE)
-        events.1.fflags = 0
-        events.1.data = 0
-        events.1.udata = nil
+        try selectable.withUnsafeFileDescriptor { fd in
+            
+            events.0.ident = UInt(fd)
+            events.0.filter = Int16(EVFILT_READ)
+            events.0.fflags = 0
+            events.0.data = 0
+            events.0.udata = nil
+            
+            events.1.ident = UInt(fd)
+            events.1.filter = Int16(EVFILT_WRITE)
+            events.1.fflags = 0
+            events.1.data = 0
+            events.1.udata = nil
+        }
 
         switch interested {
         case .read:
@@ -267,18 +269,19 @@ final class Selector<R: Registration> {
             throw IOError(errnoCode: EBADF, reason: "can't register on selector as it's \(self.lifecycleState).")
         }
         
-        assert(selectable.open)
-        assert(registrations[Int(selectable.descriptor)] == nil)
-#if os(Linux)
-        var ev = Epoll.epoll_event()
-        ev.events = Selector.toEpollEvents(interested: interested)
-        ev.data.fd = selectable.descriptor
-
-        _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd:  selectable.descriptor, event: &ev)
-#else
-        try register_kqueue(selectable: selectable, interested: interested, oldInterested: nil)
-#endif
-        registrations[Int(selectable.descriptor)] = makeRegistration(interested)
+        try selectable.withUnsafeFileDescriptor { fd in
+            assert(registrations[Int(fd)] == nil)
+            #if os(Linux)
+                var ev = Epoll.epoll_event()
+                ev.events = Selector.toEpollEvents(interested: interested)
+                ev.data.fd = fd
+                
+                _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: fd, event: &ev)
+            #else
+                try register_kqueue(selectable: selectable, interested: interested, oldInterested: nil)
+            #endif
+            registrations[Int(fd)] = makeRegistration(interested)
+        }
     }
 
     /// Re-register `Selectable`, must be registered via `register` before.
@@ -290,21 +293,22 @@ final class Selector<R: Registration> {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't re-register on selector as it's \(self.lifecycleState).")
         }
-        assert(selectable.open)
         
-        var reg = registrations[Int(selectable.descriptor)]!
-
-#if os(Linux)
-        var ev = Epoll.epoll_event()
-        ev.events = Selector.toEpollEvents(interested: interested)
-        ev.data.fd = selectable.descriptor
-
-        _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_MOD, fd:  selectable.descriptor, event: &ev)
-#else
-        try register_kqueue(selectable: selectable, interested: interested, oldInterested: reg.interested)
-#endif
-        reg.interested = interested
-        registrations[Int(selectable.descriptor)] = reg
+        try selectable.withUnsafeFileDescriptor { fd in
+            var reg = registrations[Int(fd)]!
+            
+            #if os(Linux)
+                var ev = Epoll.epoll_event()
+                ev.events = Selector.toEpollEvents(interested: interested)
+                ev.data.fd = fd
+                
+                _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_MOD, fd: fd, event: &ev)
+            #else
+                try register_kqueue(selectable: selectable, interested: interested, oldInterested: reg.interested)
+            #endif
+            reg.interested = interested
+            registrations[Int(fd)] = reg
+        }
     }
     
     /// Deregister `Selectable`, must be registered via `register` before.
@@ -317,18 +321,19 @@ final class Selector<R: Registration> {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't deregister from selector as it's \(self.lifecycleState).")
         }
-        assert(selectable.open)
         
-        guard let reg = registrations.removeValue(forKey: Int(selectable.descriptor)) else {
-            return
+        try selectable.withUnsafeFileDescriptor { fd in
+            guard let reg = registrations.removeValue(forKey: Int(fd)) else {
+                return
+            }
+            
+            #if os(Linux)
+                var ev = Epoll.epoll_event()
+                _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_DEL, fd: fd, event: &ev)
+            #else
+                try register_kqueue(selectable: selectable, interested: .none, oldInterested: reg.interested)
+            #endif
         }
-        
-#if os(Linux)
-        var ev = Epoll.epoll_event()
-        _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_DEL, fd:  selectable.descriptor, event: &ev)
-#else
-        try register_kqueue(selectable: selectable, interested: .none, oldInterested: reg.interested)
-#endif
     }
 
     /// Apply the given `SelectorStrategy` and execute `fn` once it's complete (which may produce `SelectorEvent`s to handle).
