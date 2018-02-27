@@ -67,7 +67,7 @@ extension FileRegion {
     /// - parameters:
     ///     - fileHandle: An open `FileHandle` to the file.
     public init(fileHandle: FileHandle) throws {
-        let eof = try fileHandle.withDescriptor { (fd: CInt) throws -> off_t in
+        let eof = try fileHandle.withUnsafeFileDescriptor { (fd: CInt) throws -> off_t in
             let eof = try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_END)
             try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
             return eof

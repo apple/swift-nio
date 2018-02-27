@@ -22,19 +22,19 @@
 /// - warning: Failing to manage the lifetime of a `FileHandle` correctly will result in undefined behaviour.
 ///
 /// - warning: `FileHandle` objects are not thread-safe and are mutable. They also cannot be fully thread-safe as they refer to a global underlying file descriptor.
-public final class FileHandle {
-    private var open: Bool
+public final class FileHandle: FileDescriptor {
+    public private(set) var isOpen: Bool
     private let descriptor: CInt
 
     /// Create a `FileHandle` taking ownership of `descriptor`. You must call `FileHandle.close` or `FileHandle.takeDescriptorOwnership` before
     /// this object can be safely released.
     public init(descriptor: CInt) {
         self.descriptor = descriptor
-        self.open = true
+        self.isOpen = true
     }
 
     deinit {
-        assert(!self.open, "leaked open FileHandle(descriptor: \(self.descriptor)). Call `close()` to close or `takeDescriptorOwnership()` to take ownership and close by some other means.")
+        assert(!self.isOpen, "leaked open FileHandle(descriptor: \(self.descriptor)). Call `close()` to close or `takeDescriptorOwnership()` to take ownership and close by some other means.")
     }
 
     /// Duplicates this `FileHandle`. This means that a new `FileHandle` object with a new underlying file descriptor
@@ -44,11 +44,9 @@ public final class FileHandle {
     ///
     /// - returns: A new `FileHandle` with a fresh underlying file descriptor but shared seek pointer.
     public func duplicate() throws -> FileHandle {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't close file (as it's not open anymore).")
+        return try withUnsafeFileDescriptor { fd in
+            FileHandle(descriptor: try Posix.dup(descriptor: fd))
         }
-
-        return FileHandle(descriptor: try Posix.dup(descriptor: self.descriptor))
     }
 
     /// Take the ownership of the underlying file descriptor. This is similar to `close()` but the underlying file
@@ -58,39 +56,25 @@ public final class FileHandle {
     ///
     /// - returns: The underlying file descriptor, now owned by the caller.
     public func takeDescriptorOwnership() throws -> CInt {
-        guard self.open else {
+        guard self.isOpen else {
             throw IOError(errnoCode: EBADF, reason: "can't close file (as it's not open anymore).")
         }
 
-        defer {
-            self.open = false
-        }
+        self.isOpen = false
         return self.descriptor
     }
 
-    /// Closes this `FileHandle` which will also close the underlying file descriptor.
-    ///
-    /// After calling this, the `FileHandle` cannot be used for anything else and all the operations will throw.
     public func close() throws {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't close file (as it's not open anymore).")
+        try withUnsafeFileDescriptor { fd in
+            try Posix.close(descriptor: fd)
         }
-
-        try Posix.close(descriptor: self.descriptor)
-        self.open = false
+        
+        self.isOpen = false
     }
-
-    /// Temporarily take ownership of the underlying file descriptor. When the closure returns, the ownership of the
-    /// file descriptor is returned into the `FileHandle`.
-    ///
-    /// - warning: Do not escape the file descriptor passed to the closure.
-    ///
-    /// - parameters:
-    ///    - body: A closure which temporarily gets access to the underlying file descriptor.
-    /// - returns: The value returned by the `body` closure.
-    public func withDescriptor<T>(_ body: (CInt) throws -> T) throws -> T {
-        guard self.open else {
-            throw IOError(errnoCode: EBADF, reason: "can't close file (as it's not open anymore).")
+    
+    public func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T {
+        guard self.isOpen else {
+            throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
         }
         return try body(self.descriptor)
     }
@@ -105,5 +89,4 @@ extension FileHandle {
         let fd = try Posix.open(file: path, oFlag: O_RDONLY | O_CLOEXEC)
         self.init(descriptor: fd)
     }
-
 }

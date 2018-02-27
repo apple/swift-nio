@@ -111,7 +111,7 @@ class NonBlockingFileIOTest: XCTestCase {
 
             do {
                 try self.eventLoop.submit {
-                    try writeFH.withDescriptor { writeFD in
+                    try writeFH.withUnsafeFileDescriptor { writeFD in
                         _ = try Posix.write(descriptor: writeFD, pointer: "X", size: 1)
                     }
                     try writeFH.close()
@@ -277,7 +277,7 @@ class NonBlockingFileIOTest: XCTestCase {
                 for i in 0..<10 {
                     // this construction will cause 'read' to repeatedly return with 1 byte read
                     try self.eventLoop.scheduleTask(in: .milliseconds(50)) {
-                        try writeFH.withDescriptor { writeFD in
+                        try writeFH.withUnsafeFileDescriptor { writeFD in
                             _ = try Posix.write(descriptor: writeFD, pointer: "\(i)", size: 1)
                         }
                     }.futureResult.wait()
@@ -340,7 +340,7 @@ class NonBlockingFileIOTest: XCTestCase {
                 for i in 0..<10 {
                     // this construction will cause 'read' to repeatedly return with 1 byte read
                     try self.eventLoop.scheduleTask(in: .milliseconds(50)) {
-                        try writeFH.withDescriptor { writeFD in
+                        try writeFH.withUnsafeFileDescriptor { writeFD in
                             _ = try Posix.write(descriptor: writeFD, pointer: "\(i)", size: 1)
                         }
                     }.futureResult.wait()
@@ -379,7 +379,7 @@ class NonBlockingFileIOTest: XCTestCase {
 
     func testFileRegionReadFromPipeFails() throws {
         try withPipe { readFH, writeFH in
-            try! writeFH.withDescriptor { writeFD in
+            try! writeFH.withUnsafeFileDescriptor { writeFD in
                 _ = try! Posix.write(descriptor: writeFD, pointer: "ABC", size: 3)
             }
             let fr = FileRegion(fileHandle: readFH, readerIndex: 1, endIndex: 2)
@@ -404,7 +404,7 @@ class NonBlockingFileIOTest: XCTestCase {
     func testReadFromNonBlockingPipeFails() throws {
         try withPipe { readFH, writeFH in
             do {
-                try readFH.withDescriptor { readFD in
+                try readFH.withUnsafeFileDescriptor { readFD in
                     try Posix.fcntl(descriptor: readFD, command: F_SETFL, value: O_NONBLOCK)
                 }
                 try self.fileIO.readChunked(fileHandle: readFH,

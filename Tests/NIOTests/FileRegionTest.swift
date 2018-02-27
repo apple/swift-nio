@@ -196,11 +196,11 @@ class FileRegionTest : XCTestCase {
 
             var fr1Bytes: [UInt8] = Array(repeating: 0, count: 5)
             var fr2Bytes = fr1Bytes
-            try fh1.withDescriptor { fd in
+            try fh1.withUnsafeFileDescriptor { fd in
                 let r = try Posix.read(descriptor: fd, pointer: &fr1Bytes, size: 5)
                 XCTAssertEqual(r, IOResult<Int>.processed(5))
             }
-            try fh2.withDescriptor { fd in
+            try fh2.withUnsafeFileDescriptor { fd in
                 let r = try Posix.read(descriptor: fd, pointer: &fr2Bytes, size: 5)
                 XCTAssertEqual(r, IOResult<Int>.processed(5))
             }
