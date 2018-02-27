@@ -51,4 +51,32 @@ public enum System {
         return darwinCoreCount()
         #endif
     }
+
+    /// A utility function that enumerates the available network interfaces on this machine.
+    ///
+    /// This function returns values that are true for a brief snapshot in time. These results can
+    /// change, and the returned values will not change to reflect them. This function must be called
+    /// again to get new results.
+    ///
+    /// - returns: An array of network interfaces available on this machine.
+    /// - throws: If an error is encountered while enumerating interfaces.
+    public static func enumerateInterfaces() throws -> [NIONetworkInterface] {
+        var interface: UnsafeMutablePointer<ifaddrs>? = nil
+        try Posix.getifaddrs(&interface)
+        let originalInterface = interface
+        defer {
+            freeifaddrs(originalInterface)
+        }
+
+        var results: [NIONetworkInterface] = []
+        results.reserveCapacity(12)  // Arbitrary choice.
+        while let concreteInterface = interface {
+            if let nioInterface = NIONetworkInterface(concreteInterface.pointee) {
+                results.append(nioInterface)
+            }
+            interface = concreteInterface.pointee.ifa_next
+        }
+
+        return results
+    }
 }

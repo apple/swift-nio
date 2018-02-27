@@ -27,6 +27,7 @@ extension UtilitiesTest {
    static var allTests : [(String, (UtilitiesTest) -> () throws -> Void)] {
       return [
                 ("testCoreCountWorks", testCoreCountWorks),
+                ("testEnumeratingInterfaces", testEnumeratingInterfaces),
            ]
    }
 }
