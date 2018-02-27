@@ -214,7 +214,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
     public final func localAddress0() throws -> SocketAddress {
         assert(self.eventLoop.inEventLoop)
-        guard self.open else {
+        guard self.isOpen else {
             throw ChannelError.ioOnClosedChannel
         }
         return try self.socket.localAddress()
@@ -222,7 +222,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
     public final func remoteAddress0() throws -> SocketAddress {
         assert(self.eventLoop.inEventLoop)
-        guard self.open else {
+        guard self.isOpen else {
             throw ChannelError.ioOnClosedChannel
         }
         return try self.socket.remoteAddress()

@@ -26,7 +26,7 @@ protocol Selectable {
     func withUnsafeFileDescriptor<T>(_ body: (Int32) throws -> T) throws -> T
 
     /// `true` if this `Selectable` is open (which means it was not closed yet).
-    var open: Bool { get }
+    var isOpen: Bool { get }
 
     /// Close this `Selectable` (and so its file descriptor).
     func close() throws

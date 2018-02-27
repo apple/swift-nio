@@ -293,7 +293,6 @@ final class Selector<R: Registration> {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't re-register on selector as it's \(self.lifecycleState).")
         }
-        
         try selectable.withUnsafeFileDescriptor { fd in
             var reg = registrations[Int(fd)]!
             
@@ -321,7 +320,6 @@ final class Selector<R: Registration> {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't deregister from selector as it's \(self.lifecycleState).")
         }
-        
         try selectable.withUnsafeFileDescriptor { fd in
             guard let reg = registrations.removeValue(forKey: Int(fd)) else {
                 return
