@@ -77,7 +77,7 @@ public struct NonBlockingFileIO {
                             chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<()>) -> EventLoopFuture<()> {
         do {
             let readableBytes = fileRegion.readableBytes
-            try fileRegion.fileHandle.withDescriptor { descriptor in
+            try fileRegion.fileHandle.withUnsafeFileDescriptor { descriptor in
                 _ = try Posix.lseek(descriptor: descriptor, offset: off_t(fileRegion.readerIndex), whence: SEEK_SET)
             }
             return self.readChunked(fileHandle: fileRegion.fileHandle,
@@ -154,7 +154,7 @@ public struct NonBlockingFileIO {
     public func read(fileRegion: FileRegion, allocator: ByteBufferAllocator, eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
         do {
             let readableBytes = fileRegion.readableBytes
-            try fileRegion.fileHandle.withDescriptor { descriptor in
+            try fileRegion.fileHandle.withUnsafeFileDescriptor { descriptor in
                 _ = try Posix.lseek(descriptor: descriptor, offset: off_t(fileRegion.readerIndex), whence: SEEK_SET)
             }
             return self.read(fileHandle: fileRegion.fileHandle,
@@ -197,7 +197,7 @@ public struct NonBlockingFileIO {
             while bytesRead < byteCount {
                 do {
                     let n = try buf.writeWithUnsafeMutableBytes { ptr in
-                        let res = try fileHandle.withDescriptor { descriptor in
+                        let res = try fileHandle.withUnsafeFileDescriptor { descriptor in
                             try Posix.read(descriptor: descriptor,
                                                      pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self),
                                                      size: byteCount - bytesRead)

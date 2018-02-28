@@ -26,7 +26,7 @@ class SystemTest: XCTestCase {
             var randomBytes: UInt8 = 42
             do {
                 _ = try withUnsafePointer(to: &randomBytes) { ptr in
-                    try readFD.withDescriptor { readFD in
+                    try readFD.withUnsafeFileDescriptor { readFD in
                         try Posix.setsockopt(socket: readFD, level: -1, optionName: -1, optionValue: ptr, optionLen: 0)
                     }
                 }

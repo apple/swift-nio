@@ -181,10 +181,10 @@ extension sockaddr_storage {
 /// This should not be created directly but one of its sub-classes should be used, like `ServerSocket` or `Socket`.
 class BaseSocket: Selectable {
 
-    private let descriptor: Int32
+    private let descriptor: CInt
     public private(set) var isOpen: Bool
     
-    func withUnsafeFileDescriptor<T>(_ body: (Int32) throws -> T) throws -> T {
+    func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T {
         guard self.isOpen else {
             throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
         }
@@ -259,7 +259,7 @@ class BaseSocket: Selectable {
     ///
     /// - parameters:
     ///     - descriptor: The file descriptor to wrap.
-    init(descriptor: Int32) {
+    init(descriptor: CInt) {
         self.descriptor = descriptor
         self.isOpen = true
     }

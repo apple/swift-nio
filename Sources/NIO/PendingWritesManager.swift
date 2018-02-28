@@ -383,7 +383,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
         case .fileRegion(let file):
             let readerIndex = file.readerIndex
             let endIndex = file.endIndex
-            return try file.fileHandle.withDescriptor { fd in
+            return try file.fileHandle.withUnsafeFileDescriptor { fd in
                 self.didWrite(itemCount: 1, result: try operation(fd, readerIndex, endIndex))
             }
         case .byteBuffer:
