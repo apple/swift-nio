@@ -61,6 +61,25 @@ private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
         }.bind(host: "127.0.0.1", port: 0).wait()
 }
 
+private class SingleHTTPResponseAccumulator: ChannelInboundHandler {
+    typealias InboundIn = ByteBuffer
+
+    private var receiveds: [InboundIn] = []
+    private let allDoneBlock: ([InboundIn]) -> Void
+
+    public init(completion: @escaping ([InboundIn]) -> Void) {
+        self.allDoneBlock = completion
+    }
+
+    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+        let buffer = self.unwrapInboundIn(data)
+        self.receiveds.append(buffer)
+        if let finalBytes = buffer.getBytes(at: buffer.writerIndex - 4, length: 4), finalBytes == [0x0D, 0x0A, 0x0D, 0x0A] {
+            self.allDoneBlock(self.receiveds)
+        }
+    }
+}
+
 private func connectedClientChannel(group: EventLoopGroup, serverAddress: SocketAddress) throws -> Channel {
     return try ClientBootstrap(group: group)
         .connect(to: serverAddress)
@@ -652,7 +671,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         }
 
         let completePromise: EventLoopPromise<Void> = group.next().newPromise()
-        let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
+        let clientHandler = SingleHTTPResponseAccumulator { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
@@ -679,8 +698,8 @@ class HTTPUpgradeTestCase: XCTestCase {
         try server.eventLoop.submit {
             upgrader.unblockUpgrade()
         }.wait()
-        client.close(promise: nil)
         XCTAssertNoThrow(try completePromise.futureResult.wait())
+        client.close(promise: nil)
         try client.pipeline.assertDoesNotContain(handler: handler)
     }
 
