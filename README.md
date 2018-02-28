@@ -131,7 +131,7 @@ The following projects contain useful protocol implementations that do not live 
 SwiftNIO primarily uses [SwiftPM](https://swift.org/package-manager/) as its build tool, so we recommend using that as well. If you want to depend on SwiftNIO in your own project, it's as simple as adding a `dependencies` clause to your `Package.swift`:
 
     dependencies: [
-        .package(url: "git@github.com:apple/swift-nio.git", from: "1.0.0")
+        .package(url: "https://github.com/apple/swift-nio-zlib-support.git", from: "1.0.0")
     ]
 
 and then adding the appropriate SwiftNIO module(s) to your target dependencies.
