@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>EventLoopFuture Class Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Class/EventLoopFuture" class="dashAnchor"></a>
+
+    <a title="EventLoopFuture Class Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          NIO Docs
+        </a>
+         (89% documented)
+      </p>
+    
+      <p class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="../img/gh.png"/>
+            View on GitHub
+          </a>
+        </p>
+    
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">NIO Reference</a>
+      <img class="carat" src="../img/carat.png" />
+      EventLoopFuture Class Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/BackPressureHandler.html">BackPressureHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/BlockingIOThreadPool.html">BlockingIOThreadPool</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/BlockingIOThreadPool/WorkItemState.html">– WorkItemState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelPipeline.html">ChannelPipeline</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ClientBootstrap.html">ClientBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/DatagramBootstrap.html">DatagramBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedChannel.html">EmbeddedChannel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedEventLoop.html">EmbeddedEventLoop</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EventLoopFuture.html">EventLoopFuture</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/FileHandle.html">FileHandle</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/IdleStateHandler.html">IdleStateHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ServerBootstrap.html">ServerBootstrap</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Enums.html">Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/AllocatorOption.html">AllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/AllowRemoteHalfClosureOption.html">AllowRemoteHalfClosureOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/AutoReadOption.html">AutoReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/BacklogOption.html">BacklogOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelError.html">ChannelError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelEvent.html">ChannelEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelPipelineError.html">ChannelPipelineError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/CloseMode.html">CloseMode</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ConnectTimeoutOption.html">ConnectTimeoutOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/DecodingState.html">DecodingState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/Endianness.html">Endianness</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/EventLoopError.html">EventLoopError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/IOData.html">IOData</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/IOEvent.html">IOEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/IOResult.html">IOResult</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/MaxMessagesPerReadOption.html">MaxMessagesPerReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/RecvAllocatorOption.html">RecvAllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress.html">SocketAddress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/IPv4Address.html">– IPv4Address</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/IPv6Address.html">– IPv6Address</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/UnixSocketAddress.html">– UnixSocketAddress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddressError.html">SocketAddressError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketOption.html">SocketOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/System.html">System</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/WriteBufferWaterMarkOption.html">WriteBufferWaterMarkOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/WriteSpinOption.html">WriteSpinOption</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Extensions.html">Extensions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/EmbeddedScheduledTask.html">EmbeddedScheduledTask</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/LinuxCPUSet.html">LinuxCPUSet</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/ScheduledTask.html">ScheduledTask</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/StaticString.html">StaticString</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Thread.html">Thread</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UInt32.html">UInt32</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UInt64.html">UInt64</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UnsafeBufferPointer.html">UnsafeBufferPointer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UnsafeMutableRawBufferPointer.html">UnsafeMutableRawBufferPointer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UnsafeMutableRawPointer.html">UnsafeMutableRawPointer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UnsafeRawBufferPointer.html">UnsafeRawBufferPointer</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Protocols.html">Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/AppendableCollection.html">AppendableCollection</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ByteToMessageDecoder.html">ByteToMessageDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Channel.html">Channel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelCore.html">ChannelCore</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelHandler.html">ChannelHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelInboundInvoker.html">ChannelInboundInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols.html#/s:3NIO14ChannelInvokerP">ChannelInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOption.html">ChannelOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOutboundHandler.html">ChannelOutboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOutboundInvoker.html">ChannelOutboundInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ContiguousCollection.html">ContiguousCollection</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/EventLoop.html">EventLoop</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/EventLoopGroup.html">EventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/FileDescriptor.html">FileDescriptor</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/MessageToByteEncoder.html">MessageToByteEncoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/RecvByteBufferAllocator.html">RecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Resolver.html">Resolver</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_ChannelInboundHandler.html">_ChannelInboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_ChannelOutboundHandler.html">_ChannelOutboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_EmittingChannelHandler.html">_EmittingChannelHandler</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Structs.html">Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AdaptiveRecvByteBufferAllocator.html">AdaptiveRecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AddressedEnvelope.html">AddressedEnvelope</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ByteBuffer.html">ByteBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ChannelOptions.html">ChannelOptions</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/CircularBuffer.html">CircularBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/EventLoopPromise.html">EventLoopPromise</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/FileRegion.html">FileRegion</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/FixedSizeRecvByteBufferAllocator.html">FixedSizeRecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/IOError.html">IOError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/IOError/FailureDescription.html">– FailureDescription</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/MarkedCircularBuffer.html">MarkedCircularBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOAny.html">NIOAny</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOCompositeError.html">NIOCompositeError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOConnectionError.html">NIOConnectionError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO.html">NonBlockingFileIO</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO/Error.html">– Error</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Scheduled.html">Scheduled</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/SingleConnectionFailure.html">SingleConnectionFailure</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/TimeAmount.html">TimeAmount</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WriteBufferWaterMark.html">WriteBufferWaterMark</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Typealiases.html">Type Aliases</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO8IOVectora">IOVector</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO17ThreadInitializera">ThreadInitializer</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content">
+            <h1>EventLoopFuture</h1>
+              <div class="declaration">
+                <div class="language">
+                  <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+
+                </div>
+              </div>
+            <p>Holder for a result that will be provided later.</p>
+
+<p>Functions that promise to do work asynchronously can return an <code>EventLoopFuture&lt;T&gt;</code>.
+The recipient of such an object can then observe it to be notified when the operation completes.</p>
+
+<p>The provider of a <code>EventLoopFuture&lt;T&gt;</code> can create and return a placeholder object
+before the actual result is available. For example:</p>
+<pre class="highlight plaintext"><code>func getNetworkData(args) -&gt; EventLoopFuture&lt;NetworkResponse&gt; {
+    let promise: EventLoopPromise&lt;NetworkResponse&gt; = eventLoop.newPromise()
+    queue.async {
+        . . . do some work . . .
+        promise.succeed(response)
+        . . . if it fails, instead . . .
+        promise.fail(error)
+    }
+    return promise.futureResult
+}
+</code></pre>
+
+<p>Note that this function returns immediately; the promise object will be given a value
+later on. This behaviour is common to Future/Promise implementations in many programming
+languages. If you are unfamiliar with this kind of object, the following resources may be
+helpful:</p>
+
+<ul>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises">Javascript</a></li>
+<li><a href="http://docs.scala-lang.org/overviews/core/futures.html">Scala</a></li>
+<li><a href="https://docs.google.com/document/d/10WOZgLQaYNpOrag-eTbUm-JUCCfdyfravZ4qSOQPg1M/edit">Python</a></li>
+</ul>
+
+<p>If you receive a <code>EventLoopFuture&lt;T&gt;</code> from another function, you have a number of options:
+The most common operation is to use <code>then()</code> or <code>map()</code> to add a function that will be called
+with the eventual result.  Both methods returns a new <code>EventLoopFuture&lt;T&gt;</code> immediately
+that will receive the return value from your function, but they behave differently. If you have
+a function that can return synchronously, the <code>map</code> function will transform the result <code>T</code> to a
+the new result value <code>U</code> and return an <code>EventLoopFuture&lt;U&gt;</code>.</p>
+<pre class="highlight plaintext"><code>let networkData = getNetworkData(args)
+
+// When network data is received, convert it.
+let processedResult: EventLoopFuture&lt;Processed&gt; = networkData.map { (n: NetworkResponse) -&gt; Processed in
+    ... parse network data ....
+    return processedResult
+}
+</code></pre>
+
+<p>If however you need to do more asynchronous processing, you can call <code>then()</code>. The return value of the
+function passed to <code>then</code> must be a new <code>EventLoopFuture&lt;U&gt;</code> object: the return value of <code>then()</code> is
+a new <code>EventLoopFuture&lt;U&gt;</code> that will contain the eventual result of both the original operation and
+the subsequent one.</p>
+<pre class="highlight plaintext"><code>// When converted network data is available, begin the database operation.
+let databaseResult: EventLoopFuture&lt;DBResult&gt; = processedResult.then { (p: Processed) -&gt; EventLoopFuture&lt;DBResult&gt; in
+    return someDatabaseOperation(p)
+}
+</code></pre>
+
+<p>In essence, future chains created via <code>then()</code> provide a form of data-driven asynchronous programming
+that allows you to dynamically declare data dependencies for your various operations.</p>
+
+<p><code>EventLoopFuture</code> chains created via <code>then()</code> are sufficient for most purposes. All of the registered
+functions will eventually run in order. If one of those functions throws an error, that error will
+bypass the remaining functions. You can use <code>thenIfError()</code> to handle and optionally recover from
+errors in the middle of a chain.</p>
+
+<p>At the end of an <code>EventLoopFuture</code> chain, you can use <code>whenSuccess()</code> or <code>whenFailure()</code> to add an
+observer callback that will be invoked with the result or error at that point. (Note: If you ever
+find yourself invoking <code>promise.succeed()</code> from inside a <code>whenSuccess()</code> callback, you probably should
+use <code>then()</code> or <code>cascade(promise:)</code> instead.)</p>
+
+<p><code>EventLoopFuture</code> objects are typically obtained by:</p>
+
+<ul>
+<li>Using <code>EventLoopFuture&lt;T&gt;.async</code> or a similar wrapper function.</li>
+<li>Using <code>.then()</code> on an existing future to create a new future for the next step in a series of operations.</li>
+<li>Initializing an <code>EventLoopFuture</code> that already has a value or an error</li>
+</ul>
+
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <div class="task-name-container">
+                <a name="/TODO:%20Provide%20a%20tracing%20facility.%20%20It%20would%20be%20nice%20to%20be%20able%20to%20set%20&#39;.debugTrace%20=%20true&#39;%20on%20any%20EventLoopFuture%20or%20EventLoopPromise%20and%20have%20every%20subsequent%20chained%20EventLoopFuture%20report%20the%20success%20result%20or%20failure%20error.%20%20That%20would%20simplify%20some%20debugging%20scenarios."></a>
+                <a name="//apple_ref/swift/Section/TODO: Provide a tracing facility.  It would be nice to be able to set &#39;.debugTrace = true&#39; on any EventLoopFuture or EventLoopPromise and have every subsequent chained EventLoopFuture report the success result or failure error.  That would simplify some debugging scenarios." class="dashAnchor"></a>
+                <a href="#/TODO:%20Provide%20a%20tracing%20facility.%20%20It%20would%20be%20nice%20to%20be%20able%20to%20set%20&#39;.debugTrace%20=%20true&#39;%20on%20any%20EventLoopFuture%20or%20EventLoopPromise%20and%20have%20every%20subsequent%20chained%20EventLoopFuture%20report%20the%20success%20result%20or%20failure%20error.%20%20That%20would%20simplify%20some%20debugging%20scenarios.">
+                  <h3 class="section-name">TODO: Provide a tracing facility.  It would be nice to be able to set &#39;.debugTrace = true&#39; on any EventLoopFuture or EventLoopPromise and have every subsequent chained EventLoopFuture report the success result or failure error.  That would simplify some debugging scenarios.</h3>
+                </a>
+              </div>
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC05eventC0AA0bC0_pv"></a>
+                    <a name="//apple_ref/swift/Property/eventLoop" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC05eventC0AA0bC0_pv">eventLoop</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">let</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:s9EquatableP2eeoiSbx_xtFZ"></a>
+                    <a name="//apple_ref/swift/Method/==(_:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:s9EquatableP2eeoiSbx_xtFZ">==(_:_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="o">==</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">EventLoopFuture</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">EventLoopFuture</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC4thenACyqd__Gs12StaticStringV4file_Su4lineAExctlF"></a>
+                    <a name="//apple_ref/swift/Method/then(file:line:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC4thenACyqd__Gs12StaticStringV4file_Su4lineAExctlF">then(file:line:_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>When the current <code>EventLoopFuture&lt;T&gt;</code> is fulfilled, run the provided callback,
+which will provide a new <code>EventLoopFuture</code>.</p>
+
+<p>This allows you to dynamically dispatch new asynchronous tasks as phases in a
+longer series of processing steps. Note that you can use the results of the
+current <code>EventLoopFuture&lt;T&gt;</code> when determining how to dispatch the next operation.</p>
+
+<p>This works well when you have APIs that already know how to return <code>EventLoopFuture</code>s.
+You can do something with the result of one and just return the next future:</p>
+<pre class="highlight plaintext"><code>let d1 = networkRequest(args).future()
+let d2 = d1.then { t -&gt; EventLoopFuture&lt;U&gt; in
+    . . . something with t . . .
+    return netWorkRequest(args)
+}
+d2.whenSuccess { u in
+    NSLog("Result of second request: \(u)")
+}
+</code></pre>
+
+<p>Note:  In a sense, the <code>EventLoopFuture&lt;U&gt;</code> is returned before it&rsquo;s created.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">then</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>callback</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Function that will receive the value of this <code>EventLoopFuture</code> and return
+a new <code>EventLoopFuture</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A future that will receive the eventual value.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC12thenThrowingACyqd__Gs12StaticStringV4file_Su4lineqd__xKctlF"></a>
+                    <a name="//apple_ref/swift/Method/thenThrowing(file:line:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC12thenThrowingACyqd__Gs12StaticStringV4file_Su4lineqd__xKctlF">thenThrowing(file:line:_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>When the current <code>EventLoopFuture&lt;T&gt;</code> is fulfilled, run the provided callback, which
+performs a synchronous computation and returns a new value of type <code>U</code>. The provided
+callback may optionally <code>throw</code>.</p>
+
+<p>Operations performed in <code>thenThrowing</code> should not block, or they will block the entire
+event loop. <code>thenThrowing</code> is intended for use when you have a data-driven function that
+performs a simple data transformation that can potentially error.</p>
+
+<p>If your callback function throws, the returned <code>EventLoopFuture</code> will error.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">thenThrowing</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">T</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">U</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>callback</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Function that will receive the value of this <code>EventLoopFuture</code> and return
+a new value lifted into a new <code>EventLoopFuture</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A future that will receive the eventual value.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC19thenIfErrorThrowingACyxGs12StaticStringV4file_Su4linexs0G0_pKctF"></a>
+                    <a name="//apple_ref/swift/Method/thenIfErrorThrowing(file:line:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC19thenIfErrorThrowingACyxGs12StaticStringV4file_Su4linexs0G0_pKctF">thenIfErrorThrowing(file:line:_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>When the current <code>EventLoopFuture&lt;T&gt;</code> is in an error state, run the provided callback, which
+may recover from the error and returns a new value of type <code>U</code>. The provided callback may optionally <code>throw</code>,
+in which case the <code>EventLoopFuture</code> will be in a failed state with the new thrown error.</p>
+
+<p>Operations performed in <code>thenIfErrorThrowing</code> should not block, or they will block the entire
+event loop. <code>thenIfErrorThrowing</code> is intended for use when you have the ability to synchronously
+recover from errors.</p>
+
+<p>If your callback function throws, the returned <code>EventLoopFuture</code> will error.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">thenIfErrorThrowing</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Error</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>callback</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Function that will receive the error value of this <code>EventLoopFuture</code> and return
+a new value lifted into a new <code>EventLoopFuture</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A future that will receive the eventual value or a rethrown error.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC3mapACyqd__Gs12StaticStringV4file_Su4lineqd__xctlF"></a>
+                    <a name="//apple_ref/swift/Method/map(file:line:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC3mapACyqd__Gs12StaticStringV4file_Su4lineqd__xctlF">map(file:line:_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>When the current <code>EventLoopFuture&lt;T&gt;</code> is fulfilled, run the provided callback, which
+performs a synchronous computation and returns a new value of type <code>U</code>.</p>
+
+<p>Operations performed in <code>map</code> should not block, or they will block the entire event
+loop. <code>map</code> is intended for use when you have a data-driven function that performs
+a simple data transformation that can potentially error.</p>
+<pre class="highlight plaintext"><code>let future1 = eventually()
+let future2 = future1.map { T -&gt; U in
+    ... stuff ...
+    return u
+}
+let future3 = future2.map { U -&gt; V in
+    ... stuff ...
+    return v
+}
+</code></pre>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">map</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">U</span><span class="p">))</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>callback</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Function that will receive the value of this <code>EventLoopFuture</code> and return
+a new value lifted into a new <code>EventLoopFuture</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A future that will receive the eventual value.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC11thenIfErrorACyxGs12StaticStringV4file_Su4lineAEs0G0_pctF"></a>
+                    <a name="//apple_ref/swift/Method/thenIfError(file:line:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC11thenIfErrorACyxGs12StaticStringV4file_Su4lineAEs0G0_pctF">thenIfError(file:line:_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>When the current <code>EventLoopFuture&lt;T&gt;</code> is in an error state, run the provided callback, which
+may recover from the error by returning an <code>EventLoopFuture&lt;U&gt;</code>. The callback is intended to potentially
+recover from the error by returning a new <code>EventLoopFuture</code> that will eventually contain the recovered
+result.</p>
+
+<p>If the callback cannot recover it should return a failed <code>EventLoopFuture</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">thenIfError</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Error</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>callback</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Function that will receive the error value of this <code>EventLoopFuture</code> and return
+a new value lifted into a new <code>EventLoopFuture</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A future that will receive the recovered value.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC10mapIfErrorACyxGs12StaticStringV4file_Su4linexs0G0_pctF"></a>
+                    <a name="//apple_ref/swift/Method/mapIfError(file:line:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC10mapIfErrorACyxGs12StaticStringV4file_Su4linexs0G0_pctF">mapIfError(file:line:_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>When the current <code>EventLoopFuture&lt;T&gt;</code> is in an error state, run the provided callback, which
+can recover from the error and return a new value of type <code>U</code>. The provided callback may not <code>throw</code>,
+so this function should be used when the error is always recoverable.</p>
+
+<p>Operations performed in <code>mapIfError</code> should not block, or they will block the entire
+event loop. <code>mapIfError</code> is intended for use when you have the ability to synchronously
+recover from errors.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">mapIfError</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Error</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>callback</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Function that will receive the error value of this <code>EventLoopFuture</code> and return
+a new value lifted into a new <code>EventLoopFuture</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A future that will receive the recovered value.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC11whenSuccessyyxcF"></a>
+                    <a name="//apple_ref/swift/Method/whenSuccess(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC11whenSuccessyyxcF">whenSuccess(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Adds an observer callback to this <code>EventLoopFuture</code> that is called when the
+<code>EventLoopFuture</code> has a success result.</p>
+
+<p>An observer callback cannot return a value, meaning that this function cannot be chained
+from. If you are attempting to create a computation pipeline, consider <code>map</code> or <code>then</code>.
+If you find yourself passing the results from this <code>EventLoopFuture</code> to a new <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code>
+in the body of this function, consider using <code>cascade</code> instead.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">whenSuccess</span><span class="p">(</span><span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>callback</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The callback that is called with the successful result of the <code>EventLoopFuture</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC11whenFailureyys5Error_pcF"></a>
+                    <a name="//apple_ref/swift/Method/whenFailure(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC11whenFailureyys5Error_pcF">whenFailure(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Adds an observer callback to this <code>EventLoopFuture</code> that is called when the
+<code>EventLoopFuture</code> has a failure result.</p>
+
+<p>An observer callback cannot return a value, meaning that this function cannot be chained
+from. If you are attempting to create a computation pipeline, consider <code>mapIfError</code> or <code>thenIfError</code>.
+If you find yourself passing the results from this <code>EventLoopFuture</code> to a new <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code>
+in the body of this function, consider using <code>cascade</code> instead.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">whenFailure</span><span class="p">(</span><span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Error</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>callback</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The callback that is called with the failed result of the <code>EventLoopFuture</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC12whenCompleteyyycF"></a>
+                    <a name="//apple_ref/swift/Method/whenComplete(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC12whenCompleteyyycF">whenComplete(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Adds an observer callback to this <code>EventLoopFuture</code> that is called when the
+<code>EventLoopFuture</code> has any result.</p>
+
+<p>Unlike its friends <code>whenSuccess</code> and <code>whenFailure</code>, <code>whenComplete</code> does not receive the result
+of the <code>EventLoopFuture</code>. This is because its primary purpose is to do the appropriate cleanup
+of any resources that needed to be kept open until the <code>EventLoopFuture</code> had resolved.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">whenComplete</span><span class="p">(</span><span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>callback</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The callback that is called when the <code>EventLoopFuture</code> is fulfilled.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC3andACyx_qd__tGACyqd__G_s12StaticStringV4fileSu4linetlF"></a>
+                    <a name="//apple_ref/swift/Method/and(_:file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC3andACyx_qd__tGACyqd__G_s12StaticStringV4fileSu4linetlF">and(_:file:line:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Return a new <code>EventLoopFuture</code> that succeeds when this <q>and</q> another
+provided <code>EventLoopFuture</code> both succeed. It then provides the pair
+of results. If either one fails, the combined <code>EventLoopFuture</code> will fail with
+the first error encountered.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">and</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">other</span><span class="p">:</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="p">(</span><span class="kt">T</span><span class="p">,</span><span class="kt">U</span><span class="p">)</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC3andACyx_qd__tGqd__6result_s12StaticStringV4fileSu4linetlF"></a>
+                    <a name="//apple_ref/swift/Method/and(result:file:line:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC3andACyx_qd__tGqd__6result_s12StaticStringV4fileSu4linetlF">and(result:file:line:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Return a new EventLoopFuture that contains this <q>and</q> another value.
+This is just syntactic sugar for <code>future.and(loop.newSucceedFuture&lt;U&gt;(result: result))</code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">and</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">result</span><span class="p">:</span> <span class="kt">U</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="p">(</span><span class="kt">T</span><span class="p">,</span><span class="kt">U</span><span class="p">)</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC7cascadeyAA0bC7PromiseVyxG7promise_tF"></a>
+                    <a name="//apple_ref/swift/Method/cascade(promise:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC7cascadeyAA0bC7PromiseVyxG7promise_tF">cascade(promise:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Fulfill the given <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code> with the results from this <code>EventLoopFuture</code>.</p>
+
+<p>This is useful when allowing users to provide promises for you to fulfill, but
+when you are calling functions that return their own proimses. They allow you to
+tidy up your computational pipelines. For example:</p>
+<pre class="highlight plaintext"><code>doWork().then {
+    doMoreWork($0)
+}.then {
+    doYetMoreWork($0)
+}.thenIfError {
+    maybeRecoverFromError($0)
+}.map {
+    transformData($0)
+}.cascade(promise: userPromise)
+</code></pre>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">cascade</span><span class="p">(</span><span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>promise</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code> to fulfill with the results of this future.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC14cascadeFailureyAA0bC7PromiseVyqd__G7promise_tlF"></a>
+                    <a name="//apple_ref/swift/Method/cascadeFailure(promise:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC14cascadeFailureyAA0bC7PromiseVyqd__G7promise_tlF">cascadeFailure(promise:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Fulfill the given <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code> with the error result from this <code>EventLoopFuture</code>,
+if one exists.</p>
+
+<p>This is an alternative variant of <code>cascade</code> that allows you to potentially return early failures in
+error cases, while passing the user <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code> onwards. In general, however, <code>cascade</code> is
+more broadly useful.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">cascadeFailure</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>promise</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></code> to fulfill with the results of this future.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC4waitxyKF"></a>
+                    <a name="//apple_ref/swift/Method/wait()" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC4waitxyKF">wait()</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Wait for the resolution of this <code>EventLoopFuture</code> by blocking the current thread until it
+resolves.</p>
+
+<p>If the <code>EventLoopFuture</code> resolves with a value, that value is returned from <code>wait()</code>. If
+the <code>EventLoopFuture</code> resolves with an error, that error will be thrown instead.
+<code>wait()</code> will block whatever thread it is called on, so it must not be called on event loop
+threads: it is primarily useful for testing, or for building interfaces between blocking
+and non-blocking code.</p>
+<div class="aside aside-throws">
+    <p class="aside-title">Throws</p>
+    The error value of the <code>EventLoopFuture</code> if it errors.
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">wait</span><span class="p">()</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The value of the <code>EventLoopFuture</code> when it completes.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO15EventLoopFutureC6andAllACyytGSayAEG_AA0bC0_p05eventC0tFZ"></a>
+                    <a name="//apple_ref/swift/Method/andAll(_:eventLoop:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO15EventLoopFutureC6andAllACyytGSayAEG_AA0bC0_p05eventC0tFZ">andAll(_:eventLoop:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Returns a new <code>EventLoopFuture</code> that fires only when all the provided futures complete.</p>
+
+<p>This extension is only available when you have a collection of <code>EventLoopFuture</code>s that do not provide
+result data: that is, they are completion notifiers. In this case, you can wait for all of them. The
+returned <code>EventLoopFuture</code> will fail as soon as any of the futures fails: otherwise, it will succeed
+only when all of them do.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="nf">andAll</span><span class="p">(</span><span class="n">_</span> <span class="nv">futures</span><span class="p">:</span> <span class="p">[</span><span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">],</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>futures</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>An array of <code>EventLoopFuture&lt;Void&gt;</code> to wait for.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>eventLoop</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> on which the new <code>EventLoopFuture</code> callbacks will fire.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>A new <code>EventLoopFuture</code>.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-01)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.0</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+    </section>
+  </body>
+</div>
+</html>

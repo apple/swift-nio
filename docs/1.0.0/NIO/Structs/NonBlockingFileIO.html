@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>NonBlockingFileIO Structure Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Struct/NonBlockingFileIO" class="dashAnchor"></a>
+
+    <a title="NonBlockingFileIO Structure Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          NIO Docs
+        </a>
+         (89% documented)
+      </p>
+    
+      <p class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="../img/gh.png"/>
+            View on GitHub
+          </a>
+        </p>
+    
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">NIO Reference</a>
+      <img class="carat" src="../img/carat.png" />
+      NonBlockingFileIO Structure Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/BackPressureHandler.html">BackPressureHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/BlockingIOThreadPool.html">BlockingIOThreadPool</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/BlockingIOThreadPool/WorkItemState.html">– WorkItemState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ChannelPipeline.html">ChannelPipeline</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ClientBootstrap.html">ClientBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/DatagramBootstrap.html">DatagramBootstrap</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedChannel.html">EmbeddedChannel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EmbeddedEventLoop.html">EmbeddedEventLoop</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/EventLoopFuture.html">EventLoopFuture</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/FileHandle.html">FileHandle</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/IdleStateHandler.html">IdleStateHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ServerBootstrap.html">ServerBootstrap</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Enums.html">Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/AllocatorOption.html">AllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/AllowRemoteHalfClosureOption.html">AllowRemoteHalfClosureOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/AutoReadOption.html">AutoReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/BacklogOption.html">BacklogOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelError.html">ChannelError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelEvent.html">ChannelEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ChannelPipelineError.html">ChannelPipelineError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/CloseMode.html">CloseMode</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ConnectTimeoutOption.html">ConnectTimeoutOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/DecodingState.html">DecodingState</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/Endianness.html">Endianness</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/EventLoopError.html">EventLoopError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/IOData.html">IOData</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/IOEvent.html">IOEvent</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/IOResult.html">IOResult</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/MaxMessagesPerReadOption.html">MaxMessagesPerReadOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/RecvAllocatorOption.html">RecvAllocatorOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress.html">SocketAddress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/IPv4Address.html">– IPv4Address</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/IPv6Address.html">– IPv6Address</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddress/UnixSocketAddress.html">– UnixSocketAddress</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketAddressError.html">SocketAddressError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SocketOption.html">SocketOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/System.html">System</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/WriteBufferWaterMarkOption.html">WriteBufferWaterMarkOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/WriteSpinOption.html">WriteSpinOption</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Extensions.html">Extensions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/EmbeddedScheduledTask.html">EmbeddedScheduledTask</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/LinuxCPUSet.html">LinuxCPUSet</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/ScheduledTask.html">ScheduledTask</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/StaticString.html">StaticString</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/Thread.html">Thread</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UInt32.html">UInt32</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UInt64.html">UInt64</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UnsafeBufferPointer.html">UnsafeBufferPointer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UnsafeMutableRawBufferPointer.html">UnsafeMutableRawBufferPointer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UnsafeMutableRawPointer.html">UnsafeMutableRawPointer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UnsafeRawBufferPointer.html">UnsafeRawBufferPointer</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Protocols.html">Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/AppendableCollection.html">AppendableCollection</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ByteToMessageDecoder.html">ByteToMessageDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Channel.html">Channel</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelCore.html">ChannelCore</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelHandler.html">ChannelHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelInboundInvoker.html">ChannelInboundInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols.html#/s:3NIO14ChannelInvokerP">ChannelInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOption.html">ChannelOption</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOutboundHandler.html">ChannelOutboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ChannelOutboundInvoker.html">ChannelOutboundInvoker</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/ContiguousCollection.html">ContiguousCollection</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/EventLoop.html">EventLoop</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/EventLoopGroup.html">EventLoopGroup</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/FileDescriptor.html">FileDescriptor</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/MessageToByteEncoder.html">MessageToByteEncoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/RecvByteBufferAllocator.html">RecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/Resolver.html">Resolver</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_ChannelInboundHandler.html">_ChannelInboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_ChannelOutboundHandler.html">_ChannelOutboundHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_EmittingChannelHandler.html">_EmittingChannelHandler</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Structs.html">Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AdaptiveRecvByteBufferAllocator.html">AdaptiveRecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/AddressedEnvelope.html">AddressedEnvelope</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ByteBuffer.html">ByteBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ChannelOptions.html">ChannelOptions</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/CircularBuffer.html">CircularBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/EventLoopPromise.html">EventLoopPromise</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/FileRegion.html">FileRegion</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/FixedSizeRecvByteBufferAllocator.html">FixedSizeRecvByteBufferAllocator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/IOError.html">IOError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/IOError/FailureDescription.html">– FailureDescription</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/MarkedCircularBuffer.html">MarkedCircularBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOAny.html">NIOAny</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOCompositeError.html">NIOCompositeError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NIOConnectionError.html">NIOConnectionError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO.html">NonBlockingFileIO</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/NonBlockingFileIO/Error.html">– Error</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/Scheduled.html">Scheduled</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/SingleConnectionFailure.html">SingleConnectionFailure</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/TimeAmount.html">TimeAmount</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WriteBufferWaterMark.html">WriteBufferWaterMark</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Typealiases.html">Type Aliases</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO8IOVectora">IOVector</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:3NIO17ThreadInitializera">ThreadInitializer</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content">
+            <h1>NonBlockingFileIO</h1>
+              <div class="declaration">
+                <div class="language">
+                  <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">NonBlockingFileIO</span></code></pre>
+
+                </div>
+              </div>
+            <p><code>NonBlockingFileIO</code> is a helper that allows you to read files without blocking the calling thread.</p>
+
+<p>It is worth noting that <code>kqueue</code>, <code>epoll</code> or <code>poll</code> returning claiming a file is readable does not mean that the
+data is already available in the kernel&rsquo;s memory. In other words, a <code>read</code> from a file can still block even if
+reported as readable. This behaviour is also documented behaviour:</p>
+
+<ul>
+<li><a href="pubs.opengroup.org/onlinepubs/009695399/functions/poll.html"><code>poll</code></a>: <q>Regular files shall always poll TRUE for reading and writing.</q></li>
+<li><a href="man7.org/linux/man-pages/man7/epoll.7.html"><code>epoll</code></a>: <q>epoll is simply a faster poll(2), and can be used wherever the latter is used since it shares the same semantics.</q></li>
+<li><a href="https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2"><code>kqueue</code></a>: <q>Returns when the file pointer is not at the end of file.</q></li>
+</ul>
+
+<p><code>NonBlockingFileIO</code> helps to work around this issue by maintaining its own thread pool that is used to read the data
+from the files into memory. It will then hand the (in-memory) data back which makes it available without the possibility
+of blocking.</p>
+
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO17NonBlockingFileIOV21defaultThreadPoolSizeSivZ"></a>
+                    <a name="//apple_ref/swift/Variable/defaultThreadPoolSize" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO17NonBlockingFileIOV21defaultThreadPoolSizeSivZ">defaultThreadPoolSize</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>The default and recommended size for <code>NonBlockingFileIO</code>&lsquo;s thread pool.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">let</span> <span class="nv">defaultThreadPoolSize</span> <span class="o">=</span> <span class="mi">2</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO17NonBlockingFileIOV16defaultChunkSizeSivZ"></a>
+                    <a name="//apple_ref/swift/Variable/defaultChunkSize" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO17NonBlockingFileIOV16defaultChunkSizeSivZ">defaultChunkSize</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>The default and recommended chunk size.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">let</span> <span class="nv">defaultChunkSize</span> <span class="o">=</span> <span class="mf">128*</span><span class="mi">1024</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO17NonBlockingFileIOV5ErrorO"></a>
+                    <a name="//apple_ref/swift/Enum/Error" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO17NonBlockingFileIOV5ErrorO">Error</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p><code><a href="../Structs/NonBlockingFileIO.html">NonBlockingFileIO</a></code> errors.</p>
+
+                        <a href="../Structs/NonBlockingFileIO/Error.html" class="slightly-smaller">See more</a>
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">enum</span> <span class="kt">Error</span><span class="p">:</span> <span class="kt">Swift</span><span class="o">.</span><span class="kt">Error</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO17NonBlockingFileIOVAcA0C12IOThreadPoolC06threadG0_tcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(threadPool:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO17NonBlockingFileIOVAcA0C12IOThreadPoolC06threadG0_tcfc">init(threadPool:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Initialize a <code>NonBlockingFileIO</code> which uses the <code><a href="../Classes/BlockingIOThreadPool.html">BlockingIOThreadPool</a></code>.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="nf">init</span><span class="p">(</span><span class="nv">threadPool</span><span class="p">:</span> <span class="kt"><a href="../Classes/BlockingIOThreadPool.html">BlockingIOThreadPool</a></span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>threadPool</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Classes/BlockingIOThreadPool.html">BlockingIOThreadPool</a></code> that will be used for all the IO.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO17NonBlockingFileIOV11readChunkedAA15EventLoopFutureCyytGAA0D6RegionV04fileK0_Si9chunkSizeAA19ByteBufferAllocatorV9allocatorAA0hI0_p05eventI0AgA0oP0Vc0M7HandlertF"></a>
+                    <a name="//apple_ref/swift/Method/readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO17NonBlockingFileIOV11readChunkedAA15EventLoopFutureCyytGAA0D6RegionV04fileK0_Si9chunkSizeAA19ByteBufferAllocatorV9allocatorAA0hI0_p05eventI0AgA0oP0Vc0M7HandlertF">readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Read a <code><a href="../Structs/FileRegion.html">FileRegion</a></code> in chunks of <code>chunkSize</code> bytes on <code>NonBlockingFileIO</code>&lsquo;s private thread
+pool which is separate from any <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> thread.</p>
+
+<p><code>chunkHandler</code> will be called on <code>eventLoop</code> for every chunk that was read. Assuming <code>fileRegion.readableBytes</code> is greater than
+zero and there are enough bytes available <code>chunkHandler</code> will be called <code>1 + |_ fileRegion.readableBytes / chunkSize _|</code>
+times, delivering <code>chunkSize</code> bytes each time. If less than <code>fileRegion.readableBytes</code> bytes can be read from the file,
+<code>chunkHandler</code> will be called less often with the last invocation possibly being of less than <code>chunkSize</code> bytes.</p>
+
+<p>The allocation and reading of a subsequent chunk will only be attempted when <code>chunkHandler</code> suceeds.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">readChunked</span><span class="p">(</span><span class="nv">fileRegion</span><span class="p">:</span> <span class="kt"><a href="../Structs/FileRegion.html">FileRegion</a></span><span class="p">,</span>
+                        <span class="nv">chunkSize</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="kt">NonBlockingFileIO</span><span class="o">.</span><span class="n"><a href="../Structs/NonBlockingFileIO.html#/s:3NIO17NonBlockingFileIOV16defaultChunkSizeSivZ">defaultChunkSize</a></span><span class="p">,</span>
+                        <span class="nv">allocator</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></span><span class="p">,</span>
+                        <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">,</span>
+                        <span class="nv">chunkHandler</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="p">()</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="p">()</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>fileRegion</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The file region to read.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>chunkSize</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The size of the individual chunks to deliver.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>allocator</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>A <code><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></code> used to allocate space for the chunks.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>eventLoop</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> to call <code>chunkHandler</code> on.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>chunkHandler</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Called for every chunk read. The next chunk will be read upon successful completion of the returned <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code>. If the returned <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> fails, the overall operation is aborted.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which is the result of the overall operation. If either the reading of <code>fileHandle</code> or <code>chunkHandler</code> fails, the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> will fail too. If the reading of <code>fileHandle</code> as well as <code>chunkHandler</code> always succeeded, the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> will succeed too.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO17NonBlockingFileIOV11readChunkedAA15EventLoopFutureCyytGAA0D6HandleC04fileK0_Si9byteCountSi9chunkSizeAA19ByteBufferAllocatorV9allocatorAA0hI0_p05eventI0AgA0qR0Vc0O7HandlertF"></a>
+                    <a name="//apple_ref/swift/Method/readChunked(fileHandle:byteCount:chunkSize:allocator:eventLoop:chunkHandler:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO17NonBlockingFileIOV11readChunkedAA15EventLoopFutureCyytGAA0D6HandleC04fileK0_Si9byteCountSi9chunkSizeAA19ByteBufferAllocatorV9allocatorAA0hI0_p05eventI0AgA0qR0Vc0O7HandlertF">readChunked(fileHandle:byteCount:chunkSize:allocator:eventLoop:chunkHandler:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Read <code>byteCount</code> bytes in chunks of <code>chunkSize</code> bytes from <code>fileHandle</code> in <code>NonBlockingFileIO</code>&lsquo;s private thread
+pool which is separate from any <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> thread.</p>
+
+<p><code>chunkHandler</code> will be called on <code>eventLoop</code> for every chunk that was read. Assuming <code>byteCount</code> is greater than
+zero and there are enough bytes available <code>chunkHandler</code> will be called <code>1 + |_ byteCount / chunkSize _|</code>
+times, delivering <code>chunkSize</code> bytes each time. If less than <code>byteCount</code> bytes can be read from <code>descriptor</code>,
+<code>chunkHandler</code> will be called less often with the last invocation possibly being of less than <code>chunkSize</code> bytes.</p>
+
+<p>The allocation and reading of a subsequent chunk will only be attempted when <code>chunkHandler</code> suceeds.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <p><code><a href="../Structs/NonBlockingFileIO.html#/s:3NIO17NonBlockingFileIOV11readChunkedAA15EventLoopFutureCyytGAA0D6RegionV04fileK0_Si9chunkSizeAA19ByteBufferAllocatorV9allocatorAA0hI0_p05eventI0AgA0oP0Vc0M7HandlertF">readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)</a></code> should be preferred as it uses <code><a href="../Structs/FileRegion.html">FileRegion</a></code> object instead of raw <code><a href="../Classes/FileHandle.html">FileHandle</a></code>s.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">readChunked</span><span class="p">(</span><span class="nv">fileHandle</span><span class="p">:</span> <span class="kt"><a href="../Classes/FileHandle.html">FileHandle</a></span><span class="p">,</span>
+                        <span class="nv">byteCount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span>
+                        <span class="nv">chunkSize</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="kt">NonBlockingFileIO</span><span class="o">.</span><span class="n"><a href="../Structs/NonBlockingFileIO.html#/s:3NIO17NonBlockingFileIOV16defaultChunkSizeSivZ">defaultChunkSize</a></span><span class="p">,</span>
+                        <span class="nv">allocator</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></span><span class="p">,</span>
+                        <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">,</span> <span class="nv">chunkHandler</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="p">()</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="p">()</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>fileHandle</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Classes/FileHandle.html">FileHandle</a></code> to read from.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>byteCount</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes to read from <code>fileHandle</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>chunkSize</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The size of the individual chunks to deliver.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>allocator</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>A <code><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></code> used to allocate space for the chunks.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>eventLoop</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> to call <code>chunkHandler</code> on.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>chunkHandler</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>Called for every chunk read. The next chunk will be read upon successful completion of the returned <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code>. If the returned <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> fails, the overall operation is aborted.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which is the result of the overall operation. If either the reading of <code>fileHandle</code> or <code>chunkHandler</code> fails, the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> will fail too. If the reading of <code>fileHandle</code> as well as <code>chunkHandler</code> always succeeded, the <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> will succeed too.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO17NonBlockingFileIOV4readAA15EventLoopFutureCyAA10ByteBufferVGAA0D6RegionV04fileL0_AA0jK9AllocatorV9allocatorAA0gH0_p05eventH0tF"></a>
+                    <a name="//apple_ref/swift/Method/read(fileRegion:allocator:eventLoop:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO17NonBlockingFileIOV4readAA15EventLoopFutureCyAA10ByteBufferVGAA0D6RegionV04fileL0_AA0jK9AllocatorV9allocatorAA0gH0_p05eventH0tF">read(fileRegion:allocator:eventLoop:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Read a <code><a href="../Structs/FileRegion.html">FileRegion</a></code> in <code>NonBlockingFileIO</code>&lsquo;s private thread pool which is separate from any <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> thread.</p>
+
+<p>The returned <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will not have less than <code>fileRegion.readableBytes</code> unless we hit end-of-file in which
+case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will contain the bytes available to read.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    Only use this function for small enough <code><a href="../Structs/FileRegion.html">FileRegion</a></code>s as it will need to allocate enough memory to hold <code>fileRegion.readableBytes</code> bytes.
+
+</div>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <p>In most cases you should prefer one of the <code>readChunked</code> functions.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">read</span><span class="p">(</span><span class="nv">fileRegion</span><span class="p">:</span> <span class="kt"><a href="../Structs/FileRegion.html">FileRegion</a></span><span class="p">,</span> <span class="nv">allocator</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></span><span class="p">,</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>fileRegion</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The file region to read.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>allocator</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>A <code><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></code> used to allocate space for the returned <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>eventLoop</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> to create the returned <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> from.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which delivers a <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> if the read was successful or a failure on error.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO17NonBlockingFileIOV4readAA15EventLoopFutureCyAA10ByteBufferVGAA0D6HandleC04fileL0_Si9byteCountAA0jK9AllocatorV9allocatorAA0gH0_p05eventH0tF"></a>
+                    <a name="//apple_ref/swift/Method/read(fileHandle:byteCount:allocator:eventLoop:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO17NonBlockingFileIOV4readAA15EventLoopFutureCyAA10ByteBufferVGAA0D6HandleC04fileL0_Si9byteCountAA0jK9AllocatorV9allocatorAA0gH0_p05eventH0tF">read(fileHandle:byteCount:allocator:eventLoop:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Read <code>byteCount</code> bytes from <code>fileHandle</code> in <code>NonBlockingFileIO</code>&lsquo;s private thread pool which is separate from any <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> thread.</p>
+
+<p>The returned <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will not have less than <code>byteCount</code> bytes unless we hit end-of-file in which
+case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will contain the bytes available to read.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    Only use this function for small enough <code>byteCount</code>s as it will need to allocate enough memory to hold <code>byteCount</code> bytes.
+
+</div>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <p><code><a href="../Structs/NonBlockingFileIO.html#/s:3NIO17NonBlockingFileIOV4readAA15EventLoopFutureCyAA10ByteBufferVGAA0D6RegionV04fileL0_AA0jK9AllocatorV9allocatorAA0gH0_p05eventH0tF">read(fileRegion:allocator:eventLoop:)</a></code> should be preferred as it uses <code><a href="../Structs/FileRegion.html">FileRegion</a></code> object instead of raw <code><a href="../Classes/FileHandle.html">FileHandle</a></code>s.</p>
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">read</span><span class="p">(</span><span class="nv">fileHandle</span><span class="p">:</span> <span class="kt"><a href="../Classes/FileHandle.html">FileHandle</a></span><span class="p">,</span> <span class="nv">byteCount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">allocator</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></span><span class="p">,</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>fileHandle</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Classes/FileHandle.html">FileHandle</a></code> to read.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>byteCount</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The number of bytes to read from <code>fileHandle</code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>allocator</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>A <code><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></code> used to allocate space for the returned <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code>.</p>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>eventLoop</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The <code><a href="../Protocols/EventLoop.html">EventLoop</a></code> to create the returned <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> from.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>An <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></code> which delivers a <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> if the read was successful or a failure on error.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-01)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.0</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+    </section>
+  </body>
+</div>
+</html>
