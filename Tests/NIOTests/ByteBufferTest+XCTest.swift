@@ -108,6 +108,7 @@ extension ByteBufferTest {
                 ("testClearDoesNotDupeStorageIfTheresOnlyOneBuffer", testClearDoesNotDupeStorageIfTheresOnlyOneBuffer),
                 ("testWeUseFastWriteForContiguousCollections", testWeUseFastWriteForContiguousCollections),
                 ("testUnderestimatingSequenceWorks", testUnderestimatingSequenceWorks),
+                ("testZeroSizeByteBufferResizes", testZeroSizeByteBufferResizes),
            ]
    }
 }
