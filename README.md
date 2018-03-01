@@ -54,7 +54,7 @@ Almost every file descriptor that a user interacts with in a SwiftNIO program is
 
 `Channel`s by themselves, however, are not useful. After all, it is a rare application that doesn't want to do anything with the data it sends or receives on a socket! So the other important part of the `Channel` is the `ChannelPipeline`.
 
-A `ChannelPipeline` is a sequence of objects, called `ChannelHandler`s, that process events on a `Channel`. The `ChannelHandlers` process these events one after another, in order, mutating and transforming events as they go. This can be thought of as a data processing pipeline; hence the name `ChannelPipeline`.
+A `ChannelPipeline` is a sequence of objects, called `ChannelHandler`s, that process events on a `Channel`. The `ChannelHandler`s process these events one after another, in order, mutating and transforming events as they go. This can be thought of as a data processing pipeline; hence the name `ChannelPipeline`.
 
 All `ChannelHandler`s are either Inbound or Outbound handlers, or both. Inbound handlers process "inbound" events: events like reading data from a socket, reading socket close, or other kinds of events initiated by remote peers. Outbound handlers process "outbound" events, such as writes, connection attempts, and local socket closes.
 
