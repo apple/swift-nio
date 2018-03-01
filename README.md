@@ -104,7 +104,7 @@ An `EventLoopFuture<T>` is essentially a container for the return value of a fun
 
 If you had to poll the future to detect when it completed that would be quite inefficient, so `EventLoopFuture<T>` is designed to have managed callbacks. Essentially, you can hang callbacks off the future that will be executed when a result is available. The `EventLoopFuture<T>` will even carefully arrange the scheduling to ensure that these callbacks always execute on the event loop that initially created the promise, which helps ensure that you don't need too much synchronization around `EventLoopFuture<T>` callbacks.
 
-There are several functions for applying callbacks to `EventLoopFuture<T>`, depening on how and when you want them to execute. Details of these functions is left to the API documentation.
+There are several functions for applying callbacks to `EventLoopFuture<T>`, depending on how and when you want them to execute. Details of these functions is left to the API documentation.
 
 ### Design Philosophy
 
