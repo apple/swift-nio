@@ -1200,6 +1200,12 @@ class ByteBufferTest: XCTestCase {
             XCTAssertEqual(i, actual)
         }
     }
+
+    func testZeroSizeByteBufferResizes() {
+        var buf = ByteBufferAllocator().buffer(capacity: 0)
+        buf.write(staticString: "x")
+        XCTAssertEqual(buf.writerIndex, 1)
+    }
 }
 
 private enum AllocationExpectationState: Int {

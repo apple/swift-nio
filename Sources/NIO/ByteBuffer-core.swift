@@ -270,7 +270,7 @@ public struct ByteBuffer {
 
         if self._slice.lowerBound + index + capacity > self._slice.upperBound {
             // double the capacity, we may want to use different strategies depending on the actual current capacity later on.
-            var newCapacity = toCapacity(self.capacity)
+            var newCapacity = max(1, toCapacity(self.capacity))
             
             // double the capacity until the requested capacity can be full-filled
             repeat {
