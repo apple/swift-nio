@@ -52,8 +52,8 @@ public struct PriorityQueue<T: Comparable> {
 }
 
 extension PriorityQueue: Equatable {
-    public static func ==(lhs: PriorityQueue<T>, rhs: PriorityQueue<T>) -> Bool {
-        return Array(lhs) == Array(rhs)
+    public static func ==(lhs: PriorityQueue, rhs: PriorityQueue) -> Bool {
+        return lhs.heap.storage == rhs.heap.storage
     }
 }
 
