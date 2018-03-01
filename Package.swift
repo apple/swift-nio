@@ -70,6 +70,7 @@ let package = Package(
         .library(name: "NIOTLS", targets: ["NIOTLS"]),
         .library(name: "NIOHTTP1", targets: ["NIOHTTP1"]),
         .library(name: "NIOConcurrencyHelpers", targets: ["NIOConcurrencyHelpers"]),
+        .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio-zlib-support.git", from: "1.0.0"),
