@@ -23,7 +23,7 @@ public protocol ChannelHandler: class {
     /// - parameters:
     ///     - ctx: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func handlerAdded(ctx: ChannelHandlerContext)
-    
+
     /// Called when this `ChannelHandler` is removed from the `ChannelPipeline`.
     ///
     /// - parameters:
@@ -35,7 +35,7 @@ public protocol ChannelHandler: class {
 ///
 /// We _strongly_ advice against implementing this protocol directly. Please implement `ChannelOutboundHandler`.
 public protocol _ChannelOutboundHandler: ChannelHandler {
-    
+
     /// Called to request that the `Channel` register itself for I/O events with its `EventLoop`.
     /// This should call `ctx.register` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or
     /// complete the `EventLoopPromise` to let the caller know that the operation completed.
@@ -44,7 +44,7 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     ///     - ctx: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?)
-    
+
     /// Called to request that the `Channel` bind to a specific `SocketAddress`.
     ///
     /// This should call `ctx.bind` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or
@@ -55,7 +55,7 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     ///     - to: The `SocketAddress` to which this `Channel` should bind.
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func bind(ctx: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?)
-    
+
     /// Called to request that the `Channel` connect to a given `SocketAddress`.
     ///
     /// This should call `ctx.connect` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or
@@ -66,7 +66,7 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     ///     - to: The `SocketAddress` to which the the `Channel` should connect.
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func connect(ctx: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?)
-    
+
     /// Called to request a write operation. The write operation will write the messages through the
     /// `ChannelPipeline`. Those are then ready to be flushed to the actual `Channel` when
     /// `Channel.flush` or `ChannelHandlerContext.flush` is called.
@@ -79,7 +79,7 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     ///     - data: The data to write through the `Channel`, wrapped in a `NIOAny`.
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?)
-    
+
     /// Called to request that the `Channel` flush all pending writes. The flush operation will try to flush out all previous written messages
     /// that are pending.
     ///
@@ -98,7 +98,7 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     /// - parameters:
     ///     - ctx: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func read(ctx: ChannelHandlerContext)
-    
+
     /// Called to request that the `Channel` close itself down`.
     ///
     /// This should call `ctx.close` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or
@@ -109,7 +109,7 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     ///     - mode: The `CloseMode` to apply
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?)
-    
+
     /// Called when an user outbound event is triggered.
     ///
     /// This should call `ctx.triggerUserOutboundEvent` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or
@@ -126,7 +126,7 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
 ///
 /// We _strongly_ advice against implementing this protocol directly. Please implement `ChannelInboundHandler`.
 public protocol _ChannelInboundHandler: ChannelHandler {
-    
+
     /// Called when the `Channel` has successfully registered with its `EventLoop` to handle I/O.
     ///
     /// This should call `ctx.fireChannelRegistered` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
@@ -134,7 +134,7 @@ public protocol _ChannelInboundHandler: ChannelHandler {
     /// - parameters:
     ///     - ctx: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func channelRegistered(ctx: ChannelHandlerContext)
-    
+
     /// Called when the `Channel` has unregistered from its `EventLoop`, and so will no longer be receiving I/O events.
     ///
     /// This should call `ctx.fireChannelUnregistered` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
@@ -142,7 +142,7 @@ public protocol _ChannelInboundHandler: ChannelHandler {
     /// - parameters:
     ///     - ctx: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func channelUnregistered(ctx: ChannelHandlerContext)
-    
+
     /// Called when the `Channel` has become active, and is able to send and receive data.
     ///
     /// This should call `ctx.fireChannelActive` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
@@ -150,7 +150,7 @@ public protocol _ChannelInboundHandler: ChannelHandler {
     /// - parameters:
     ///     - ctx: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func channelActive(ctx: ChannelHandlerContext)
-    
+
     /// Called when the `Channel` has become inactive and is no longer able to send and receive data`.
     ///
     /// This should call `ctx.fireChannelInactive` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
@@ -158,7 +158,7 @@ public protocol _ChannelInboundHandler: ChannelHandler {
     /// - parameters:
     ///     - ctx: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func channelInactive(ctx: ChannelHandlerContext)
-    
+
     /// Called when some data has been read from the remote peer.
     ///
     /// This should call `ctx.fireChannelRead` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
@@ -167,7 +167,7 @@ public protocol _ChannelInboundHandler: ChannelHandler {
     ///     - ctx: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     ///     - data: The data read from the remote peer, wrapped in a `NIOAny`.
     func channelRead(ctx: ChannelHandlerContext, data: NIOAny)
-    
+
     /// Called when the `Channel` has completed its current read loop, either because no more data is available to read from the transport at this time, or because the `Channel` needs to yield to the event loop to process other I/O events for other `Channel`s.
     /// If `ChannelOptions.autoRead` is `false` no futher read attempt will be made until `ChannelHandlerContext.read` or `Channel.read` is explicitly called.
     ///
@@ -176,7 +176,7 @@ public protocol _ChannelInboundHandler: ChannelHandler {
     /// - parameters:
     ///     - ctx: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func channelReadComplete(ctx: ChannelHandlerContext)
-    
+
     /// The writability state of the `Channel` has changed, either because it has buffered more data than the writability high water mark, or because the amount of buffered data has dropped below the writability low water mark.
     /// You can check the state with `Channel.isWritable`.
     ///
@@ -185,7 +185,7 @@ public protocol _ChannelInboundHandler: ChannelHandler {
     /// - parameters:
     ///     - ctx: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func channelWritabilityChanged(ctx: ChannelHandlerContext)
-    
+
     /// Called when a user inbound event has been triggered.
     ///
     /// This should call `ctx.fireUserInboundEventTriggered` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
@@ -194,7 +194,7 @@ public protocol _ChannelInboundHandler: ChannelHandler {
     ///     - ctx: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     ///     - event: The event.
     func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any)
-    
+
     /// An error was encountered earlier in the inbound `ChannelPipeline`.
     ///
     /// This should call `ctx.fireErrorCaught` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the error.
@@ -207,11 +207,11 @@ public protocol _ChannelInboundHandler: ChannelHandler {
 
 //  Default implementations for the ChannelHandler protocol
 extension ChannelHandler {
-    
+
     /// Do nothing by default.
     public func handlerAdded(ctx: ChannelHandlerContext) {
     }
-    
+
     /// Do nothing by default.
     public func handlerRemoved(ctx: ChannelHandlerContext) {
     }
@@ -222,35 +222,35 @@ extension ChannelHandler {
 /// These default implementations will just call `ctx.methodName` to forward to the next `_ChannelOutboundHandler` in
 /// the `ChannelPipeline` until the operation is handled by the `Channel` itself.
 extension _ChannelOutboundHandler {
-    
+
     public func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         ctx.register(promise: promise)
     }
-    
+
     public func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         ctx.bind(to: address, promise: promise)
     }
-    
+
     public func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         ctx.connect(to: address, promise: promise)
     }
-    
+
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         ctx.write(data, promise: promise)
     }
-    
+
     public func flush(ctx: ChannelHandlerContext) {
         ctx.flush()
     }
-    
+
     public func read(ctx: ChannelHandlerContext) {
         ctx.read()
     }
-    
+
     public func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         ctx.close(mode: mode, promise: promise)
     }
-    
+
     public func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
         ctx.triggerUserOutboundEvent(event, promise: promise)
     }
@@ -261,39 +261,39 @@ extension _ChannelOutboundHandler {
 /// These default implementations will just `ctx.fire*` to forward to the next `_ChannelInboundHandler` in
 /// the `ChannelPipeline` until the operation is handled by the `Channel` itself.
 extension _ChannelInboundHandler {
-    
+
     public func channelRegistered(ctx: ChannelHandlerContext) {
         ctx.fireChannelRegistered()
     }
-    
+
     public func channelUnregistered(ctx: ChannelHandlerContext) {
         ctx.fireChannelUnregistered()
     }
-    
+
     public func channelActive(ctx: ChannelHandlerContext) {
         ctx.fireChannelActive()
     }
-    
+
     public func channelInactive(ctx: ChannelHandlerContext) {
         ctx.fireChannelInactive()
     }
-    
+
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         ctx.fireChannelRead(data)
     }
-    
+
     public func channelReadComplete(ctx: ChannelHandlerContext) {
         ctx.fireChannelReadComplete()
     }
-    
+
     public func channelWritabilityChanged(ctx: ChannelHandlerContext) {
         ctx.fireChannelWritabilityChanged()
     }
-    
+
     public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
         ctx.fireUserInboundEventTriggered(event)
     }
-    
+
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         ctx.fireErrorCaught(error)
     }

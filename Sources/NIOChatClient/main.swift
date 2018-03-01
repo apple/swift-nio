@@ -16,7 +16,7 @@ import NIO
 private final class ChatHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
-    
+
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         var buffer = self.unwrapInboundIn(data)
         while let byte: UInt8 = buffer.readInteger() {

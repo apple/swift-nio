@@ -16,42 +16,42 @@ import XCTest
 @testable import NIO
 
 class IdleStateHandlerTest : XCTestCase {
-    
+
     func testIdleRead() throws {
         try testIdle(IdleStateHandler(readTimeout: .seconds(1)), false, { $0 == IdleStateHandler.IdleStateEvent.read })
     }
-    
+
     func testIdleWrite() throws {
         try testIdle(IdleStateHandler(writeTimeout: .seconds(1)), true, { $0 == IdleStateHandler.IdleStateEvent.write })
     }
-    
+
     func testIdleAllWrite() throws {
         try testIdle(IdleStateHandler(allTimeout: .seconds(1)), true, { $0 == IdleStateHandler.IdleStateEvent.all })
     }
-    
+
     func testIdleAllRead() throws {
         try testIdle(IdleStateHandler(allTimeout: .seconds(1)), false, { $0 == IdleStateHandler.IdleStateEvent.all })
     }
-    
+
     private func testIdle(_ handler: IdleStateHandler, _ writeToChannel: Bool, _ assertEventFn: @escaping (IdleStateHandler.IdleStateEvent) -> Bool) throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        
+
         class TestWriteHandler: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
             typealias OutboundOut = ByteBuffer
-            
+
             private var read = false
             private let writeToChannel: Bool
             private let assertEventFn: (IdleStateHandler.IdleStateEvent) -> Bool
-            
+
             init(_ writeToChannel: Bool, _ assertEventFn: @escaping (IdleStateHandler.IdleStateEvent) -> Bool) {
                 self.writeToChannel = writeToChannel
                 self.assertEventFn = assertEventFn
             }
-            
+
             public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
                 self.read = true
             }
@@ -64,7 +64,7 @@ class IdleStateHandlerTest : XCTestCase {
                 XCTAssertTrue(assertEventFn(event as! IdleStateHandler.IdleStateEvent))
                 ctx.close(promise: nil)
             }
-            
+
             public func channelActive(ctx: ChannelHandlerContext) {
                 if writeToChannel {
                     var buffer = ctx.channel.allocator.buffer(capacity: 4)
@@ -73,7 +73,7 @@ class IdleStateHandlerTest : XCTestCase {
                 }
             }
         }
-        
+
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
@@ -81,11 +81,11 @@ class IdleStateHandlerTest : XCTestCase {
                     channel.pipeline.add(handler: TestWriteHandler(writeToChannel, assertEventFn))
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
-        
+
         defer {
             _ = serverChannel.close()
         }
-        
+
         let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
         if !writeToChannel {
             var buffer = clientChannel.allocator.buffer(capacity: 4)

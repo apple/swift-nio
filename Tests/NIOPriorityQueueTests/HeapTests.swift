@@ -62,7 +62,7 @@ class HeapTests: XCTestCase {
         XCTAssertEqual(-1, minHeapInputPtr)
         XCTAssertEqual(input.count, maxHeapInputPtr)
     }
-    
+
     func testSortedAsc() throws {
         var maxHeap = Heap<Int>(type: .maxHeap)
         var minHeap = Heap<Int>(type: .minHeap)

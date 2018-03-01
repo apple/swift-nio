@@ -60,7 +60,7 @@ public class EmbeddedEventLoop: EventLoop {
     var tasks = CircularBuffer<() -> Void>(initialRingCapacity: 2)
 
     public init() { }
-    
+
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = newPromise()
         let readyTime = now + UInt64(`in`.nanoseconds)
@@ -78,7 +78,7 @@ public class EmbeddedEventLoop: EventLoop {
         scheduledTasks.push(task)
         return scheduled
     }
-    
+
     // We're not really running a loop here. Tasks aren't run until run() is called,
     // at which point we run everything that's been submitted. Anything newly submitted
     // either gets on that train if it's still moving or waits until the next call to run().
@@ -140,11 +140,11 @@ public class EmbeddedEventLoop: EventLoop {
 class EmbeddedChannelCore: ChannelCore {
     var isOpen: Bool = true
     var isActive: Bool = false
-    
+
     var eventLoop: EventLoop
     var closePromise: EventLoopPromise<Void>
     var error: Error?
-    
+
     private let pipeline: ChannelPipeline
 
     init(pipeline: ChannelPipeline, eventLoop: EventLoop) {
@@ -152,7 +152,7 @@ class EmbeddedChannelCore: ChannelCore {
         self.pipeline = pipeline
         self.eventLoop = eventLoop
     }
-    
+
     deinit {
         assert(self.pipeline.destroyed, "leaked an open EmbeddedChannel, maybe forgot to call channel.finish()?")
         isOpen = false
@@ -161,7 +161,7 @@ class EmbeddedChannelCore: ChannelCore {
 
     var outboundBuffer: [IOData] = []
     var inboundBuffer: [NIOAny] = []
-    
+
     func localAddress0() throws -> SocketAddress {
         throw ChannelError.operationUnsupported
     }
@@ -182,7 +182,7 @@ class EmbeddedChannelCore: ChannelCore {
         isActive = false
         pipeline.fireChannelInactive0()
         pipeline.fireChannelUnregistered0()
-        
+
         eventLoop.execute {
             // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline
             self.pipeline.removeHandlers()
@@ -221,21 +221,21 @@ class EmbeddedChannelCore: ChannelCore {
     func read0() {
         // NOOP
     }
-    
+
     public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
         promise?.succeed(result: ())
     }
-    
+
     func channelRead0(_ data: NIOAny) {
         addToBuffer(buffer: &inboundBuffer, data: data)
     }
-    
+
     public func errorCaught0(error: Error) {
         if self.error == nil {
             self.error = error
         }
     }
-    
+
     private func addToBuffer<T>(buffer: inout [T], data: T) {
         buffer.append(data)
     }
@@ -251,7 +251,7 @@ public class EmbeddedChannel: Channel {
     public var _unsafe: ChannelCore {
         return channelcore
     }
-    
+
     public var pipeline: ChannelPipeline {
         return _pipeline
     }
@@ -259,14 +259,14 @@ public class EmbeddedChannel: Channel {
     public var isWritable: Bool {
         return true
     }
-    
+
     public func finish() throws -> Bool {
         try close().wait()
         (self.eventLoop as! EmbeddedEventLoop).run()
         try throwIfErrorCaught()
         return !channelcore.outboundBuffer.isEmpty || !channelcore.inboundBuffer.isEmpty
     }
-    
+
     private var _pipeline: ChannelPipeline!
     public var allocator: ByteBufferAllocator = ByteBufferAllocator()
     public var eventLoop: EventLoop = EmbeddedEventLoop()
@@ -276,27 +276,27 @@ public class EmbeddedChannel: Channel {
 
     // Embedded channels never have parents.
     public let parent: Channel? = nil
-    
+
     public func readOutbound() -> IOData? {
         return readFromBuffer(buffer: &channelcore.outboundBuffer)
     }
-    
+
     public func readInbound<T>() -> T? {
         return readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
-    
+
     @discardableResult public func writeInbound<T>(_ data: T) throws -> Bool {
         pipeline.fireChannelRead(NIOAny(data))
         pipeline.fireChannelReadComplete()
         try throwIfErrorCaught()
         return !channelcore.inboundBuffer.isEmpty
     }
-    
+
     @discardableResult public func writeOutbound<T>(_ data: T) throws -> Bool {
         try writeAndFlush(NIOAny(data)).wait()
         return !channelcore.outboundBuffer.isEmpty
     }
-    
+
     public func throwIfErrorCaught() throws {
         if let error = channelcore.error {
             channelcore.error = nil
@@ -317,7 +317,7 @@ public class EmbeddedChannel: Channel {
         }
         return (buffer.removeFirst().forceAs(type: T.self))
     }
-    
+
     /// Create a new instance.
     ///
     /// During creation it will automatically also register itself on the `EmbeddedEventLoop`.
@@ -328,12 +328,12 @@ public class EmbeddedChannel: Channel {
     public init(handler: ChannelHandler? = nil, loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
         self.eventLoop = loop
         self._pipeline = ChannelPipeline(channel: self)
-        
+
         if let handler = handler {
             // This will be propagated via fireErrorCaught
             _ = try? _pipeline.add(handler: handler).wait()
         }
-        
+
         // This will never throw...
         _ = try? register().wait()
     }

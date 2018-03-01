@@ -20,26 +20,26 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
-        
+
         XCTAssertTrue(try channel.writeOutbound(buf))
         XCTAssertTrue(try channel.finish())
         XCTAssertEqual(.byteBuffer(buf), channel.readOutbound())
         XCTAssertNil(channel.readOutbound())
         XCTAssertNil(channel.readInbound())
     }
-    
+
     func testWriteInboundByteBuffer() throws {
         let channel = EmbeddedChannel()
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
-        
+
         XCTAssertTrue(try channel.writeInbound(buf))
         XCTAssertTrue(try channel.finish())
         XCTAssertEqual(buf, channel.readInbound())
         XCTAssertNil(channel.readInbound())
         XCTAssertNil(channel.readOutbound())
     }
-    
+
     func testWriteInboundByteBufferReThrow() throws {
         let channel = EmbeddedChannel()
         _ = try channel.pipeline.add(handler: ExceptionThrowingInboundHandler()).wait()
@@ -51,7 +51,7 @@ class EmbeddedChannelTest: XCTestCase {
         }
         XCTAssertFalse(try channel.finish())
     }
-    
+
     func testWriteOutboundByteBufferReThrow() throws {
         let channel = EmbeddedChannel()
         _ = try channel.pipeline.add(handler: ExceptionThrowingOutboundHandler()).wait()
@@ -104,20 +104,20 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertEqual(handler.currentState, .unregistered)
         XCTAssertFalse(channel.isActive)
     }
-    
+
     private final class ExceptionThrowingInboundHandler : ChannelInboundHandler {
         typealias InboundIn = String
-        
+
         public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             ctx.fireErrorCaught(ChannelError.operationUnsupported)
         }
-        
+
     }
-    
+
     private final class ExceptionThrowingOutboundHandler : ChannelOutboundHandler {
         typealias OutboundIn = String
         typealias OutboundOut = Never
-        
+
         public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             promise!.fail(error: ChannelError.operationUnsupported)
         }

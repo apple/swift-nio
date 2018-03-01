@@ -68,10 +68,10 @@ public final class FileHandle: FileDescriptor {
         try withUnsafeFileDescriptor { fd in
             try Posix.close(descriptor: fd)
         }
-        
+
         self.isOpen = false
     }
-    
+
     public func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T {
         guard self.isOpen else {
             throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")

@@ -598,7 +598,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             // Call before triggering the close of the Channel.
             pipeline.fireChannelReadComplete0()
             close0(error: err, mode: .all, promise: nil)
-    
+
             return
         }
         pipeline.fireChannelReadComplete0()

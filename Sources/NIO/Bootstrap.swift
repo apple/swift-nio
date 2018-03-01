@@ -46,7 +46,7 @@
 /// ```
 ///
 public final class ServerBootstrap {
-    
+
     private let group: EventLoopGroup
     private let childGroup: EventLoopGroup
     private var serverChannelInit: ((Channel) -> EventLoopFuture<()>)?
@@ -71,7 +71,7 @@ public final class ServerBootstrap {
         self.group = group
         self.childGroup = childGroup
     }
-    
+
     /// Initialize the `ServerSocketChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
@@ -83,7 +83,7 @@ public final class ServerBootstrap {
         self.serverChannelInit = initializer
         return self
     }
-    
+
     /// Initialize the accepted `SocketChannel`s with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
@@ -93,7 +93,7 @@ public final class ServerBootstrap {
         self.childChannelInit = initializer
         return self
     }
-    
+
     /// Specifies a `ChannelOption` to be applied to the `ServerSocketChannel`.
     ///
     /// - note: To specify options for the accepted `SocketChannel`s, look at `ServerBootstrap.childChannelOption`.
@@ -105,7 +105,7 @@ public final class ServerBootstrap {
         serverChannelOptions.put(key: option, value: value)
         return self
     }
-    
+
     /// Specifies a `ChannelOption` to be applied to the accepted `SocketChannel`s.
     ///
     /// - parameters:
@@ -115,7 +115,7 @@ public final class ServerBootstrap {
         childChannelOptions.put(key: option, value: value)
         return self
     }
-    
+
     /// Bind the `ServerSocketChannel` to `host` and `port`.
     ///
     /// - parameters:
@@ -160,13 +160,13 @@ public final class ServerBootstrap {
         let serverChannelInit = self.serverChannelInit ?? { _ in eventLoop.newSucceededFuture(result: ()) }
         let childChannelInit = self.childChannelInit
         let childChannelOptions = self.childChannelOptions
-        
+
         let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
         do {
             let serverChannel = try ServerSocketChannel(eventLoop: eventLoop as! SelectableEventLoop,
                                                         group: childEventLoopGroup,
                                                         protocolFamily: address.protocolFamily)
-            
+
             serverChannelInit(serverChannel).then {
                 serverChannel.pipeline.add(handler: AcceptHandler(childChannelInitializer: childChannelInit,
                                                                   childChannelOptions: childChannelOptions))
@@ -185,18 +185,18 @@ public final class ServerBootstrap {
 
         return promise.futureResult
     }
-    
+
     private class AcceptHandler: ChannelInboundHandler {
         public typealias InboundIn = SocketChannel
-        
+
         private let childChannelInit: ((Channel) -> EventLoopFuture<()>)?
         private let childChannelOptions: ChannelOptionStorage
-        
+
         init(childChannelInitializer: ((Channel) -> EventLoopFuture<()>)?, childChannelOptions: ChannelOptionStorage) {
             self.childChannelInit = childChannelInitializer
             self.childChannelOptions = childChannelOptions
         }
-        
+
         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             let accepted = self.unwrapInboundIn(data)
             let hopEventLoopPromise: EventLoopPromise<()> = ctx.eventLoop.newPromise()
@@ -214,7 +214,7 @@ public final class ServerBootstrap {
                 self.closeAndFire(ctx: ctx, accepted: accepted, err: error)
             }
         }
-        
+
         private func closeAndFire(ctx: ChannelHandlerContext, accepted: SocketChannel, err: Error) {
             _ = accepted.close()
             if ctx.eventLoop.inEventLoop {
@@ -251,13 +251,13 @@ public final class ServerBootstrap {
 /// ```
 ///
 public final class ClientBootstrap {
-    
+
     private let group: EventLoopGroup
     private var channelInitializer: ((Channel) -> EventLoopFuture<()>)?
     private var channelOptions = ChannelOptionStorage()
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
     private var resolver: Resolver?
-    
+
     /// Create a `ClientBootstrap` on the `EventLoopGroup` `group`.
     ///
     /// - parameters:
@@ -265,7 +265,7 @@ public final class ClientBootstrap {
     public init(group: EventLoopGroup) {
         self.group = group
     }
-    
+
     /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
@@ -275,7 +275,7 @@ public final class ClientBootstrap {
         self.channelInitializer = handler
         return self
     }
-    
+
     /// Specifies a `ChannelOption` to be applied to the `SocketChannel`.
     ///
     /// - parameters:
@@ -294,7 +294,7 @@ public final class ClientBootstrap {
         self.connectTimeout = timeout
         return self
     }
-    
+
     /// Specifies the `Resolver` to use or `nil` if the default should be used.
     ///
     /// - parameters:
@@ -321,7 +321,7 @@ public final class ClientBootstrap {
         }
         return connector.resolveAndConnect()
     }
-    
+
     /// Specify the `address` to connect to for the TCP `Channel` that will be established.
     ///
     /// - parameters:
@@ -506,7 +506,7 @@ public final class DatagramBootstrap {
 
 fileprivate struct ChannelOptionStorage {
     private var storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
-    
+
     mutating func put<K: ChannelOption>(key: K,
                              value newValue: K.OptionType) {
         func applier(_ t: Channel) -> (Any, Any) -> EventLoopFuture<Void> {
@@ -528,7 +528,7 @@ fileprivate struct ChannelOptionStorage {
             self.storage.append((key, (newValue, applier)))
         }
     }
-  
+
     func applyAll(channel: Channel) -> EventLoopFuture<Void> {
         let applyPromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
         var it = self.storage.makeIterator()

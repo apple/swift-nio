@@ -184,7 +184,7 @@ public final class HTTPResponseCompressor: ChannelInboundHandler, ChannelOutboun
             // the client has expressed a preference.
             return .gzip
         }
-        
+
         return nil
     }
 

@@ -34,7 +34,7 @@ let sysFree = free
 ///
 /// - note: `ByteBufferAllocator` is thread-safe.
 public struct ByteBufferAllocator {
-    
+
     /// Create a fresh `ByteBufferAllocator`. In the future the allocator might use for example allocation pools and
     /// therefore it's recommended to reuse `ByteBufferAllocators` where possible instead of creating fresh ones in
     /// many places.
@@ -217,7 +217,7 @@ public struct ByteBuffer {
             self.allocator.memcpy(new.bytes, self.bytes.advanced(by: Int(slice.lowerBound)), slice.count)
             return new
         }
-        
+
         public func reallocStorage(capacity: Capacity) {
             let ptr = self.allocator.realloc(self.bytes, Int(capacity))
             /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
@@ -226,7 +226,7 @@ public struct ByteBuffer {
             self.capacity = capacity
             self.fullSlice = 0..<self.capacity
         }
-        
+
         private func deallocate() {
             self.allocator.free(self.bytes)
         }
@@ -271,7 +271,7 @@ public struct ByteBuffer {
         if self._slice.lowerBound + index + capacity > self._slice.upperBound {
             // double the capacity, we may want to use different strategies depending on the actual current capacity later on.
             var newCapacity = max(1, toCapacity(self.capacity))
-            
+
             // double the capacity until the requested capacity can be full-filled
             repeat {
                 precondition(newCapacity != Capacity.max, "cannot make ByteBuffers larger than \(newCapacity)")
@@ -281,7 +281,7 @@ public struct ByteBuffer {
                     newCapacity = Capacity.max
                 }
             } while newCapacity < index || newCapacity - index < capacity
-            
+
             self._storage.reallocStorage(capacity: newCapacity)
             self._slice = _slice.lowerBound..<_slice.lowerBound + newCapacity
         }
@@ -293,7 +293,7 @@ public struct ByteBuffer {
         assert(newIndex >= 0 && newIndex <= writerIndex)
         self._readerIndex = newIndex
     }
-    
+
     private mutating func moveWriterIndex(to newIndex: Index) {
         assert(newIndex >= 0 && newIndex <= toCapacity(self._slice.count))
         self._writerIndex = newIndex

@@ -26,7 +26,7 @@ public enum SocketAddressError: Error {
 
 /// Represent a socket address to which we may want to connect or bind.
 public enum SocketAddress: CustomStringConvertible {
-    
+
     /// A single IPv4 address for `SocketAddress`.
     public struct IPv4Address {
         private let _storage: Box<(address: sockaddr_in, host: String)>
@@ -98,7 +98,7 @@ public enum SocketAddress: CustomStringConvertible {
         }
         return "[\(type)]\(host.map { "\($0):" } ?? "")\(port)"
     }
-    
+
     /// Returns the protocol family as defined in `man 2 socket` of this `SocketAddress`.
     public var protocolFamily: Int32 {
         switch self {
@@ -232,18 +232,18 @@ public enum SocketAddress: CustomStringConvertible {
     /// - throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
     public static func newAddressResolving(host: String, port: Int) throws -> SocketAddress {
         var info: UnsafeMutablePointer<addrinfo>?
-        
+
         /* FIXME: this is blocking! */
         if getaddrinfo(host, String(port), nil, &info) != 0 {
             throw SocketAddressError.unknown(host: host, port: port)
         }
-        
+
         defer {
             if info != nil {
                 freeaddrinfo(info)
             }
         }
-        
+
         if let info = info {
             switch info.pointee.ai_family {
             case AF_INET:

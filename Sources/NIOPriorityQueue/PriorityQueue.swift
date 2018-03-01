@@ -14,33 +14,33 @@
 
 public struct PriorityQueue<T: Comparable> {
     private var heap: Heap<T>
-    
+
     public init(ascending: Bool = false) {
         self.heap = Heap(type: ascending ? .minHeap : .maxHeap)
     }
-    
+
     public mutating func remove(_ key: T) {
         assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
         _ = self.heap.remove(value: key)
         assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
     }
-    
+
     public mutating func push(_ key: T) {
         assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
         self.heap.append(key)
         assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
     }
-    
+
     public func peek() -> T? {
         assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
         return self.heap.storage.first
     }
-    
+
     public var isEmpty: Bool {
         assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
         return self.heap.storage.isEmpty
     }
-    
+
     public mutating func pop() -> T? {
         assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
         return self.heap.removeRoot()

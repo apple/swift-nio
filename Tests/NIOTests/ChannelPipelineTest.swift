@@ -17,14 +17,14 @@ import NIOConcurrencyHelpers
 @testable import NIO
 
 class ChannelPipelineTest: XCTestCase {
-    
+
     func testAddAfterClose() throws {
-        
+
         let channel = EmbeddedChannel()
         _ = channel.close()
-        
+
         channel.pipeline.removeHandlers()
-        
+
         let handler = DummyHandler()
         defer {
             XCTAssertFalse(handler.handlerAddedCalled.load())
@@ -37,7 +37,7 @@ class ChannelPipelineTest: XCTestCase {
             XCTAssertEqual(err, .ioOnClosedChannel)
         }
     }
-    
+
     private final class DummyHandler: ChannelHandler {
         let handlerAddedCalled = Atomic<Bool>(value: false)
         let handlerRemovedCalled = Atomic<Bool>(value: false)
@@ -45,29 +45,29 @@ class ChannelPipelineTest: XCTestCase {
         public func handlerAdded(ctx: ChannelHandlerContext) {
             handlerAddedCalled.store(true)
         }
-        
+
         public func handlerRemoved(ctx: ChannelHandlerContext) {
             handlerRemovedCalled.store(true)
         }
     }
-    
+
     func testOutboundOrdering() throws {
-        
+
         let channel = EmbeddedChannel()
 
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
-        
+
         _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<Int, ByteBuffer> { data in
             XCTAssertEqual(1, data)
             return buf
         }).wait()
-        
+
         _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<String, Int> { data in
             XCTAssertEqual("msg", data)
             return 1
         }).wait()
-        
+
         try channel.writeAndFlush(NIOAny("msg")).wait()
         if let data = channel.readOutbound() {
             XCTAssertEqual(IOData.byteBuffer(buf), data)
@@ -78,34 +78,34 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertFalse(try channel.finish())
     }
-    
+
     func testConnectingDoesntCallBind() throws {
         let channel = EmbeddedChannel()
         var ipv4SocketAddress = sockaddr_in()
         ipv4SocketAddress.sin_port = (12345 as UInt16).bigEndian
         let sa = SocketAddress(ipv4SocketAddress, host: "foobar.com")
-        
+
         _ = try channel.pipeline.add(handler: NoBindAllowed()).wait()
         _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<ByteBuffer, ByteBuffer> { data in
             return data
         }).wait()
-        
+
         _ = try channel.connect(to: sa).wait()
         defer {
             XCTAssertFalse(try channel.finish())
         }
     }
-    
+
     private final class TestChannelOutboundHandler<In, Out>: ChannelOutboundHandler {
         typealias OutboundIn = In
         typealias OutboundOut = Out
-        
+
         private let body: (OutboundIn) throws -> OutboundOut
-        
+
         init(_ body: @escaping (OutboundIn) throws -> OutboundOut) {
             self.body = body
         }
-        
+
         public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             do {
                 ctx.write(self.wrapOutboundOut(try body(self.unwrapOutboundIn(data))), promise: promise)
@@ -114,15 +114,15 @@ class ChannelPipelineTest: XCTestCase {
             }
         }
     }
-    
+
     private final class NoBindAllowed: ChannelOutboundHandler {
         typealias OutboundIn = ByteBuffer
         typealias OutboundOut = ByteBuffer
-        
+
         enum TestFailureError: Error {
             case CalledBind
         }
-        
+
         public func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
             promise!.fail(error: TestFailureError.CalledBind)
         }

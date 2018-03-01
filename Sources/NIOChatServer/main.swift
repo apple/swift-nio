@@ -22,7 +22,7 @@ final class LineDelimiterCodec: ByteToMessageDecoder {
     public typealias InboundOut = ByteBuffer
 
     public var cumulationBuffer: ByteBuffer?
-    
+
     public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         let readable = buffer.withUnsafeReadableBytes { $0.index(of: newLine) }
         if let r = readable {
@@ -46,15 +46,15 @@ final class LineDelimiterCodec: ByteToMessageDecoder {
 final class ChatHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
-    
+
     // All access to channels is guarded by channelsSyncQueue.
     private let channelsSyncQueue = DispatchQueue(label: "channelsQueue")
     private var channels: [ObjectIdentifier: Channel] = [:]
-    
+
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         let id = ObjectIdentifier(ctx.channel)
         var read = self.unwrapInboundIn(data)
-        
+
         // 64 should be good enough for the ipaddress
         var buffer = ctx.channel.allocator.buffer(capacity: read.readableBytes + 64)
         buffer.write(string: "(\(ctx.channel.remoteAddress!)) - ")
@@ -64,22 +64,22 @@ final class ChatHandler: ChannelInboundHandler {
             self.writeToAll(channels: self.channels.filter { id != $0.key }, buffer: buffer)
         }
     }
-    
+
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         print("error: ", error)
-        
+
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
         ctx.close(promise: nil)
     }
-    
+
     public func channelActive(ctx: ChannelHandlerContext) {
         let remoteAddress = ctx.remoteAddress!
         let channel = ctx.channel
         self.channelsSyncQueue.async {
             // broadcast the message to all the connected clients except the one that just became active.
             self.writeToAll(channels: self.channels, allocator: channel.allocator, message: "(ChatServer) - New client connected with address: \(remoteAddress)\n")
-            
+
             self.channels[ObjectIdentifier(channel)] = channel
         }
 
@@ -87,7 +87,7 @@ final class ChatHandler: ChannelInboundHandler {
         buffer.write(string: "(ChatServer) - Welcome to: \(ctx.localAddress!)\n")
         ctx.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
     }
-    
+
     public func channelInactive(ctx: ChannelHandlerContext) {
         let channel = ctx.channel
         self.channelsSyncQueue.async {
@@ -97,13 +97,13 @@ final class ChatHandler: ChannelInboundHandler {
             }
         }
     }
-    
+
     private func writeToAll(channels: [ObjectIdentifier: Channel], allocator: ByteBufferAllocator, message: String) {
         var buffer =  allocator.buffer(capacity: message.utf8.count)
         buffer.write(string: message)
         self.writeToAll(channels: channels, buffer: buffer)
     }
-    
+
     private func writeToAll(channels: [ObjectIdentifier: Channel], buffer: ByteBuffer) {
         channels.forEach { $0.value.writeAndFlush(buffer, promise: nil) }
     }
@@ -117,7 +117,7 @@ let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .serverChannelOption(ChannelOptions.backlog, value: 256)
     .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-    
+
     // Set the handlers that are appled to the accepted Channels
     .childChannelInitializer { channel in
         // Add handler that will buffer data until a \n is received
@@ -126,7 +126,7 @@ let bootstrap = ServerBootstrap(group: group)
             channel.pipeline.add(handler: chatHandler)
         }
     }
-    
+
     // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels
     .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)

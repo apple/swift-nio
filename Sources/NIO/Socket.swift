@@ -22,7 +22,7 @@ final class Socket: BaseSocket {
     static var writevLimitBytes: Int {
         return Int(Int32.max)
     }
-    
+
     /// The maximum number of `IOVector`s to write per `writev` call.
     static let writevLimitIOVectors: Int = Posix.UIO_MAXIOV
 
@@ -36,7 +36,7 @@ final class Socket: BaseSocket {
         let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily, type: type)
         super.init(descriptor: sock)
     }
-    
+
     /// Create a new instance.
     ///
     /// The ownership of the passed in descriptor is transferred to this class. A user must call `close` to close the underlying
@@ -47,7 +47,7 @@ final class Socket: BaseSocket {
     override init(descriptor: Int32) {
         super.init(descriptor: descriptor)
     }
-    
+
     /// Connect to the `SocketAddress`.
     ///
     /// - parameters:
@@ -64,7 +64,7 @@ final class Socket: BaseSocket {
             return try connectSocket(addr: addr.address)
         }
     }
-    
+
     /// Private helper function to handle connection attempts.
     private func connectSocket<T>(addr: T) throws -> Bool {
         return try withUnsafeFileDescriptor { fd in
@@ -76,7 +76,7 @@ final class Socket: BaseSocket {
             }
         }
     }
-    
+
     /// Finish a previous non-blocking `connect` operation.
     ///
     /// - throws: An `IOError` if the operation failed.
@@ -86,7 +86,7 @@ final class Socket: BaseSocket {
             throw IOError(errnoCode: result, function: "getsockopt")
         }
     }
-    
+
     /// Write data to the remote peer.
     ///
     /// - parameters:
@@ -125,7 +125,7 @@ final class Socket: BaseSocket {
             try Posix.sendto(descriptor: fd, pointer: UnsafeMutablePointer(mutating: pointer), size: size, destinationPtr: destinationPtr, destinationSize: destinationSize)
         }
     }
-    
+
     /// Read data from the socket.
     ///
     /// - parameters:
@@ -155,7 +155,7 @@ final class Socket: BaseSocket {
             }
         }
     }
-    
+
     /// Send the content of a file descriptor to the remote peer (if possible a zero-copy strategy is applied).
     ///
     /// - parameters:
@@ -193,7 +193,7 @@ final class Socket: BaseSocket {
             try Posix.sendmmsg(sockfd: fd, msgvec: msgs.baseAddress!, vlen: CUnsignedInt(msgs.count), flags: 0)
         }
     }
-    
+
     /// Shutdown the socket.
     ///
     /// - parameters:

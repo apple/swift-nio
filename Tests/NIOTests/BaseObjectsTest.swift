@@ -32,7 +32,7 @@ class BaseObjectTest: XCTestCase {
             XCTFail("tryAs didn't work")
         }
     }
-    
+
     func testNIOIODataConversion() {
         let expected = IOData.byteBuffer(ByteBufferAllocator().buffer(capacity: 1024))
         let asAny = NIOAny(expected)
@@ -49,7 +49,7 @@ class BaseObjectTest: XCTestCase {
             XCTFail("tryAs didn't work")
         }
     }
-    
+
     func testNIOFileRegionConversion() {
         let handle = FileHandle(descriptor: -1)
         let expected = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
@@ -71,7 +71,7 @@ class BaseObjectTest: XCTestCase {
             XCTFail("tryAs didn't work")
         }
     }
-    
+
     func testBadConversions() {
         let handle = FileHandle(descriptor: -1)
         let bb = ByteBufferAllocator().buffer(capacity: 1024)
@@ -81,18 +81,18 @@ class BaseObjectTest: XCTestCase {
             XCTAssertNoThrow(try handle.takeDescriptorOwnership())
         }
         let id = IOData.byteBuffer(bb)
-        
+
         XCTAssertNil(NIOAny(bb).tryAsFileRegion())
         XCTAssertNil(NIOAny(fr).tryAsByteBuffer())
         XCTAssertNil(NIOAny(id).tryAsFileRegion())
     }
-    
+
     func testByteBufferFromIOData() {
         let expected = ByteBufferAllocator().buffer(capacity: 1024)
         let wrapped = IOData.byteBuffer(expected)
         XCTAssertEqual(expected, NIOAny(wrapped).tryAsByteBuffer())
     }
-    
+
     func testFileRegionFromIOData() {
         let handle = FileHandle(descriptor: -1)
         let expected = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
@@ -103,7 +103,7 @@ class BaseObjectTest: XCTestCase {
         let wrapped = IOData.fileRegion(expected)
         XCTAssert(expected == NIOAny(wrapped).tryAsFileRegion())
     }
-    
+
     func testIODataEquals() {
         let handle = FileHandle(descriptor: -1)
         var bb1 = ByteBufferAllocator().buffer(capacity: 1024)

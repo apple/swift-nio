@@ -20,7 +20,7 @@ final class ServerSocket: BaseSocket {
         try socket.listen()
         return socket
     }
-    
+
     /// Create a new instance.
     ///
     /// - parameters:
@@ -30,7 +30,7 @@ final class ServerSocket: BaseSocket {
         let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM)
         super.init(descriptor: sock)
     }
-    
+
     /// Start to listen for new connections.
     ///
     /// - parameters:
@@ -41,7 +41,7 @@ final class ServerSocket: BaseSocket {
             _ = try Posix.listen(descriptor: fd, backlog: backlog)
         }
     }
-    
+
     /// Accept a new connection
     ///
     /// - returns: A `Socket` once a new connection was established or `nil` if this `ServerSocket` is in non-blocking mode and there is no new connection that can be accepted when this method is called.
@@ -50,13 +50,13 @@ final class ServerSocket: BaseSocket {
         return try withUnsafeFileDescriptor { fd in
             var acceptAddr = sockaddr_in()
             var addrSize = socklen_t(MemoryLayout<sockaddr_in>.size)
-            
+
             let result = try withUnsafeMutablePointer(to: &acceptAddr) { ptr in
                 try ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { ptr in
                     try Posix.accept(descriptor: fd, addr: ptr, len: &addrSize)
                 }
             }
-            
+
             guard let fd = result else {
                 return nil
             }

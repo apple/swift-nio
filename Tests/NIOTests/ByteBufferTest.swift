@@ -37,7 +37,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(v, buffer.readInteger())
         XCTAssertEqual(0, buffer.readableBytes)
     }
-    
+
     override func setUp() {
         super.setUp()
 
@@ -68,12 +68,12 @@ class ByteBufferTest: XCTestCase {
         otherBuffer.write(string: "oh hi")
         XCTAssertEqual(otherBuffer, buf)
     }
-    
+
     func testSimpleReadTest() throws {
         buf.withUnsafeReadableBytes { ptr in
             XCTAssertEqual(ptr.count, 0)
         }
-        
+
         buf.write(string: "Hello world!")
         buf.withUnsafeReadableBytes { ptr in
             XCTAssertEqual(12, ptr.count)
@@ -133,13 +133,13 @@ class ByteBufferTest: XCTestCase {
             XCTAssertEqual(expected, String(decoding: d!, as: UTF8.self))
         }
     }
-    
+
     func testString() {
         let written = buf.write(string: "Hello")!
         let string = buf.getString(at: 0, length: written)
         XCTAssertEqual("Hello", string)
     }
-    
+
     func testSliceEasy() {
         buf.write(string: "0123456789abcdefg")
         for i in 0..<16 {
@@ -158,7 +158,7 @@ class ByteBufferTest: XCTestCase {
             XCTAssertEqual("hello", s)
         }
     }
-    
+
     func testSetExpandsBufferOnUpperBoundsCheckFailure() {
         let initialCapacity = buf.capacity
         XCTAssertEqual(5, buf.set(string: "oh hi", at: buf.capacity))
@@ -173,13 +173,13 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(buf, b)
         XCTAssertNotEqual(buf, a)
     }
-    
+
     func testWithMutableReadPointerMovesReaderIndexAndReturnsNumBytesConsumed() {
         XCTAssertEqual(0, buf.readerIndex)
         // We use mutable read pointers when we're consuming the data
         // so first we need some data there!
         buf.write(string: "hello again")
-        
+
         let bytesConsumed = buf.readWithUnsafeReadableBytes { dst in
             // Pretend we did some operation which made use of entire 11 byte string
             return 11
@@ -190,57 +190,57 @@ class ByteBufferTest: XCTestCase {
 
     func testWithMutableWritePointerMovesWriterIndexAndReturnsNumBytesWritten() {
         XCTAssertEqual(0, buf.writerIndex)
-        
+
         let bytesWritten = buf.writeWithUnsafeMutableBytes { (_: UnsafeMutableRawBufferPointer) in return 5 }
         XCTAssertEqual(5, bytesWritten)
         XCTAssertEqual(5, buf.writerIndex)
     }
-    
+
     func testChangeCapacityWhenEnoughAvailable() throws {
         let oldCapacity = buf.capacity
         buf.changeCapacity(to: buf.capacity - 1)
         XCTAssertLessThanOrEqual(buf.capacity, oldCapacity)
     }
-    
+
     func testChangeCapacityWhenNotEnoughMaxCapacity() throws {
         buf = allocator.buffer(capacity: 16)
         let oldCapacity = buf.capacity
         buf.changeCapacity(to: buf.capacity + 1)
         XCTAssertGreaterThan(buf.capacity, oldCapacity)
     }
-    
+
     func testSetGetInt8() throws {
         try setGetInt(index: 0, v: Int8.max)
     }
-    
+
     func testSetGetInt16() throws {
         try setGetInt(index: 1, v: Int16.max)
     }
-    
+
     func testSetGetInt32() throws {
         try setGetInt(index: 2, v: Int32.max)
     }
-    
+
     func testSetGetInt64() throws {
         try setGetInt(index: 3, v: Int64.max)
     }
-    
+
     func testSetGetUInt8() throws {
         try setGetInt(index: 4, v: UInt8.max)
     }
-    
+
     func testSetGetUInt16() throws {
         try setGetInt(index: 5, v: UInt16.max)
     }
-    
+
     func testSetGetUInt32() throws {
         try setGetInt(index: 6, v: UInt32.max)
     }
-    
+
     func testSetGetUInt64() throws {
         try setGetInt(index: 7, v: UInt64.max)
     }
-    
+
     func testWriteReadInt8() throws {
         try writeReadInt(v: Int8.max)
     }
@@ -248,31 +248,31 @@ class ByteBufferTest: XCTestCase {
     func testWriteReadInt16() throws {
         try writeReadInt(v: Int16.max)
     }
-    
+
     func testWriteReadInt32() throws {
         try writeReadInt(v: Int32.max)
     }
-    
+
     func testWriteReadInt64() throws {
         try writeReadInt(v: Int32.max)
     }
-    
+
     func testWriteReadUInt8() throws {
         try writeReadInt(v: UInt8.max)
     }
-    
+
     func testWriteReadUInt16() throws {
         try writeReadInt(v: UInt16.max)
     }
-    
+
     func testWriteReadUInt32() throws {
         try writeReadInt(v: UInt32.max)
     }
-    
+
     func testWriteReadUInt64() throws {
         try writeReadInt(v: UInt32.max)
     }
-    
+
     func testSlice() throws {
         var buffer = allocator.buffer(capacity: 32)
         XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.write(integer: UInt64.max))
@@ -282,7 +282,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.readableBytes)
         XCTAssertEqual(UInt64.max, buffer.readInteger())
     }
-    
+
     func testSliceWithParams() throws {
         var buffer = allocator.buffer(capacity: 32)
         XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.write(integer: UInt64.max))
@@ -292,7 +292,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.readableBytes)
         XCTAssertEqual(UInt64.max, buffer.readInteger())
     }
-    
+
     func testReadSlice() throws {
         var buffer = allocator.buffer(capacity: 32)
         XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.write(integer: UInt64.max))
@@ -303,7 +303,7 @@ class ByteBufferTest: XCTestCase {
         let value: UInt64? = buffer.readInteger()
         XCTAssertTrue(value == nil)
     }
-    
+
     func testSliceNoCopy() throws {
         var buffer = allocator.buffer(capacity: 32)
         XCTAssertEqual(MemoryLayout<UInt64>.size, buffer.write(integer: UInt64.max))
@@ -315,25 +315,25 @@ class ByteBufferTest: XCTestCase {
             }
         }
     }
-    
+
     func testSetGetData() throws {
         var buffer = allocator.buffer(capacity: 32)
         let data = Data(bytes: [1, 2, 3])
-        
+
         XCTAssertEqual(3, buffer.set(bytes: data, at: 0))
         XCTAssertEqual(0, buffer.readableBytes)
         XCTAssertEqual(data, buffer.getData(at: 0, length: 3))
     }
-    
+
     func testWriteReadData() throws {
         var buffer = allocator.buffer(capacity: 32)
         let data = Data(bytes: [1, 2, 3])
-        
+
         XCTAssertEqual(3, buffer.write(bytes: data))
         XCTAssertEqual(3, buffer.readableBytes)
         XCTAssertEqual(data, buffer.readData(length: 3))
     }
-    
+
     func testDiscardReadBytes() throws {
         var buffer = allocator.buffer(capacity: 32)
         buffer.write(integer: UInt8(1))
@@ -355,7 +355,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertTrue(buffer.discardReadBytes())
         XCTAssertFalse(buffer.discardReadBytes())
     }
-    
+
     func testDiscardReadBytesCoW() throws {
         var buffer = allocator.buffer(capacity: 32)
         let bytesWritten = buffer.write(bytes: "0123456789abcdef0123456789ABCDEF".data(using: .utf8)!)
@@ -396,7 +396,7 @@ class ByteBufferTest: XCTestCase {
         testAssumptionOriginalBuffer(&buffer)
 
     }
-    
+
     func testDiscardReadBytesSlice() throws {
         var buffer = allocator.buffer(capacity: 32)
         buffer.write(integer: UInt8(1))
@@ -500,7 +500,7 @@ class ByteBufferTest: XCTestCase {
             XCTAssertEqual("0123456789abcdefX".data(using: .utf8)!, Data(buffer: bPtr))
         }
     }
-    
+
     func testExpansion2() throws {
         var buf = allocator.buffer(capacity: 2)
         XCTAssertEqual(2, buf.capacity)
@@ -710,26 +710,26 @@ class ByteBufferTest: XCTestCase {
         var actualGood = buf.readSlice(length: 4)
         XCTAssertEqual(Data([0, 1, 2, 3]), actualGood?.readData(length: 4))
     }
-    
+
     func testSetBuffer() throws {
         var src = allocator.buffer(capacity: 4)
         src.write(bytes: Data([0, 1, 2, 3]))
-        
+
         buf.set(buffer: src, at: 1)
-        
+
         /* Should bit increase the writerIndex of the src buffer */
         XCTAssertEqual(4, src.readableBytes)
         XCTAssertEqual(0, buf.readableBytes)
- 
+
         XCTAssertEqual(Data([0, 1, 2, 3]), buf.getData(at: 1, length: 4))
     }
-    
+
     func testWriteBuffer() throws {
         var src = allocator.buffer(capacity: 4)
         src.write(bytes: Data([0, 1, 2, 3]))
-        
+
         buf.write(buffer: &src)
-        
+
         /* Should increase the writerIndex of the src buffer */
         XCTAssertEqual(0, src.readableBytes)
         XCTAssertEqual(4, buf.readableBytes)

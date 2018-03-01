@@ -23,7 +23,7 @@ class TypeAssistedChannelHandlerTest: XCTestCase {
             public typealias InboundIn = ByteBuffer
             public typealias InboundOut = ByteBuffer
         }
-        
+
         // This test really just confirms that compilation works: no need to run any code.
         XCTAssert(true)
     }

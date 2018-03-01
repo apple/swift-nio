@@ -21,7 +21,7 @@ class CircularBufferTests: XCTestCase {
         ring.append(1)
         XCTAssertEqual(1, ring.removeFirst())
     }
-    
+
     func testAddRemoveInALoop() {
         var ring = CircularBuffer<Int>(initialRingCapacity: 8)
         for f in 0..<1000 {
@@ -29,7 +29,7 @@ class CircularBufferTests: XCTestCase {
             XCTAssertEqual(f, ring.removeFirst())
         }
     }
-    
+
     func testAddAllRemoveAll() {
         var ring = CircularBuffer<Int>(initialRingCapacity: 8)
         for f in 0..<1000 {
@@ -39,7 +39,7 @@ class CircularBufferTests: XCTestCase {
             XCTAssertEqual(f, ring.removeFirst())
         }
     }
-    
+
     func testHarderExpansion() {
         var ring = CircularBuffer<Int>(initialRingCapacity: 3)
         XCTAssertEqual(ring.indices, 0..<0)
@@ -48,45 +48,45 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(ring.count, 1)
         XCTAssertEqual(ring[0], 1)
         XCTAssertEqual(ring.indices, 0..<1)
-        
+
         ring.append(2)
         XCTAssertEqual(ring.count, 2)
         XCTAssertEqual(ring[0], 1)
         XCTAssertEqual(ring[1], 2)
         XCTAssertEqual(ring.indices, 0..<2)
-        
+
         ring.append(3)
         XCTAssertEqual(ring.count, 3)
         XCTAssertEqual(ring[0], 1)
         XCTAssertEqual(ring[1], 2)
         XCTAssertEqual(ring[2], 3)
         XCTAssertEqual(ring.indices, 0..<3)
-        
-        
+
+
         XCTAssertEqual(1, ring.removeFirst())
         XCTAssertEqual(ring.count, 2)
         XCTAssertEqual(ring[0], 2)
         XCTAssertEqual(ring[1], 3)
         XCTAssertEqual(ring.indices, 0..<2)
-        
+
         XCTAssertEqual(2, ring.removeFirst())
         XCTAssertEqual(ring.count, 1)
         XCTAssertEqual(ring[0], 3)
         XCTAssertEqual(ring.indices, 0..<1)
-        
+
         ring.append(5)
         XCTAssertEqual(ring.count, 2)
         XCTAssertEqual(ring[0], 3)
         XCTAssertEqual(ring[1], 5)
         XCTAssertEqual(ring.indices, 0..<2)
-        
+
         ring.append(6)
         XCTAssertEqual(ring.count, 3)
         XCTAssertEqual(ring[0], 3)
         XCTAssertEqual(ring[1], 5)
         XCTAssertEqual(ring[2], 6)
         XCTAssertEqual(ring.indices, 0..<3)
-        
+
         ring.append(7)
         XCTAssertEqual(ring.count, 4)
         XCTAssertEqual(ring[0], 3)
