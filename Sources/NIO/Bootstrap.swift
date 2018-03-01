@@ -298,7 +298,7 @@ public final class ClientBootstrap {
     /// Specifies the `Resolver` to use or `nil` if the default should be used.
     ///
     /// - parameters:
-    ///     - timeout: The resolver that will be used during the connection attempt.
+    ///     - resolver: The resolver that will be used during the connection attempt.
     public func resolver(_ resolver: Resolver?) -> Self {
         self.resolver = resolver
         return self
