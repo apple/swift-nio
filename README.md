@@ -52,7 +52,7 @@ While `EventLoop`s are critical to the way SwiftNIO works, most users will not i
 
 Almost every file descriptor that a user interacts with in a SwiftNIO program is associated with a single `Channel`. The `Channel` owns this file descriptor, and is responsible for managing its lifetime. It is also responsible for processing inbound and outbound events on that file descriptor: whenever the event loop has an event that corresponds to a file descriptor, it will notify the `Channel` that owns that file descriptor.
 
-`Channel`s by themselves, however, are not useful. After all, it is a rare application that doesn't want to anything with the data it sends or receives on a socket! So the other important part of the `Channel` is the `ChannelPipeline`.
+`Channel`s by themselves, however, are not useful. After all, it is a rare application that doesn't want to do anything with the data it sends or receives on a socket! So the other important part of the `Channel` is the `ChannelPipeline`.
 
 A `ChannelPipeline` is a sequence of objects, called `ChannelHandler`s, that process events on a `Channel`. The `ChannelHandlers` process these events one after another, in order, mutating and transforming events as they go. This can be thought of as a data processing pipeline; hence the name `ChannelPipeline`.
 
