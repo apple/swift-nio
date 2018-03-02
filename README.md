@@ -139,21 +139,27 @@ There are currently several example projects that demonstrate how to use SwiftNI
 
 SwiftNIO primarily uses [SwiftPM](https://swift.org/package-manager/) as its build tool, so we recommend using that as well. If you want to depend on SwiftNIO in your own project, it's as simple as adding a `dependencies` clause to your `Package.swift`:
 
-    dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", from: "1.0.0")
-    ]
+```swift
+dependencies: [
+    .package(url: "https://github.com/apple/swift-nio.git", from: "1.0.0")
+]
+```
 
 and then adding the appropriate SwiftNIO module(s) to your target dependencies.
 
 To work on SwiftNIO itself, or to investigate some of the demonstration applications, you can clone the repository directly and use SwiftPM to help build it. For example, you can run the following commands to compile and run the example echo server:
 
-    swift build
-    swift test
-    swift run NIOEchoServer
+```bash
+swift build
+swift test
+swift run NIOEchoServer
+```
 
 To verify that it is working, you can use another shell to attempt to connect to it:
 
-    echo "Hello SwiftNIO" | nc localhost 9999
+```bash
+echo "Hello SwiftNIO" | nc localhost 9999
+```
 
 If all goes well, you'll see the message echoed back to you.
 
