@@ -21,7 +21,8 @@ import struct Dispatch.DispatchTime
  ChannelHandler implementation which enforces back-pressure by stopping to read from the remote peer when it cannot write back fast enough.
  It will start reading again once pending data was written.
 */
-public class BackPressureHandler: ChannelInboundHandler, _ChannelOutboundHandler {
+public class BackPressureHandler: ChannnelDuplexHandler {
+    public typealias OutboundIn = NIOAny
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
     public typealias OutboundOut = ByteBuffer
@@ -64,7 +65,7 @@ public class BackPressureHandler: ChannelInboundHandler, _ChannelOutboundHandler
 }
 
 /// Triggers an IdleStateEvent when a Channel has not performed read, write, or both operation for a while.
-public class IdleStateHandler: ChannelInboundHandler, ChannelOutboundHandler {
+public class IdleStateHandler: ChannnelDuplexHandler {
     public typealias InboundIn = NIOAny
     public typealias InboundOut = NIOAny
     public typealias OutboundIn = NIOAny
