@@ -17,7 +17,7 @@ import NIOHTTP1
 extension String {
     func chopPrefix(_ prefix: String) -> String? {
         if self.unicodeScalars.starts(with: prefix.unicodeScalars) {
-            return String(self[self.index(self.startIndex, offsetBy: prefix.count)...])
+            return String(dropFirst(prefix.count))
         } else {
             return nil
         }
@@ -64,19 +64,22 @@ private final class HTTPHandler: ChannelInboundHandler {
         case .head(let request):
             self.infoSavedRequestHead = request
             self.infoSavedBodyBytes = 0
+
         case .body(buffer: let buf):
             self.infoSavedBodyBytes += buf.readableBytes
-        case .end(_):
+
+        case .end:
             let response = """
-            HTTP method: \(self.infoSavedRequestHead!.method)\r
-            URL: \(self.infoSavedRequestHead!.uri)\r
-            body length: \(self.infoSavedBodyBytes)\r
-            headers: \(self.infoSavedRequestHead!.headers)\r
-            client: \(ctx.remoteAddress?.description ?? "zombie")\r
-            IO: SwiftNIO Electric Boogaloo™️\r\n
-            """
+                HTTP method: \(self.infoSavedRequestHead!.method)\r
+                URL: \(self.infoSavedRequestHead!.uri)\r
+                body length: \(self.infoSavedBodyBytes)\r
+                headers: \(self.infoSavedRequestHead!.headers)\r
+                client: \(ctx.remoteAddress?.description ?? "zombie")\r
+                IO: SwiftNIO Electric Boogaloo™️\r\n
+                """
             self.buffer.clear()
             self.buffer.write(string: response)
+
             var headers = HTTPHeaders()
             headers.add(name: "Content-Length", value: "\(response.utf8.count)")
             ctx.write(self.wrapOutboundOut(.head(HTTPResponseHead(version: self.infoSavedRequestHead!.version, status: .ok, headers: headers))), promise: nil)
@@ -97,13 +100,15 @@ private final class HTTPHandler: ChannelInboundHandler {
             } else {
                 ctx.writeAndFlush(self.wrapOutboundOut(.head(.init(version: request.version, status: .ok))), promise: nil)
             }
-        case .body(buffer: var buf):
+
+        case .body(var buf):
             if balloonInMemory {
                 self.buffer.write(buffer: &buf)
             } else {
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buf))), promise: nil)
             }
-        case .end(_):
+
+        case .end:
             if balloonInMemory {
                 var headers = HTTPHeaders()
                 headers.add(name: "Content-Length", value: "\(self.buffer.readableBytes)")
@@ -116,14 +121,22 @@ private final class HTTPHandler: ChannelInboundHandler {
         }
     }
 
-    func handleJustWrite(ctx: ChannelHandlerContext, request: HTTPServerRequestPart, statusCode: HTTPResponseStatus = .ok, string: String, trailer: (String, String)? = nil, delay: TimeAmount = .nanoseconds(0)) {
+    func handleJustWrite(
+        ctx: ChannelHandlerContext,
+        request: HTTPServerRequestPart,
+        statusCode: HTTPResponseStatus = .ok,
+        string: String, trailer: (String, String)? = nil,
+        delay: TimeAmount = .nanoseconds(0)
+    ) {
         switch request {
         case .head(let request):
             ctx.writeAndFlush(self.wrapOutboundOut(.head(.init(version: request.version, status: .ok))), promise: nil)
-        case .body(buffer: _):
-            ()
-        case .end(_):
-            _ = ctx.eventLoop.scheduleTask(in: delay) { () -> Void in
+
+        case .body:
+            break
+
+        case .end:
+            _ = ctx.eventLoop.scheduleTask(in: delay) {
                 var buf = ctx.channel.allocator.buffer(capacity: string.utf8.count)
                 buf.write(string: string)
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buf))), promise: nil)
@@ -153,8 +166,9 @@ private final class HTTPHandler: ChannelInboundHandler {
             }
             ctx.writeAndFlush(self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
             doNext()
+
         default:
-            ()
+            break
         }
     }
 
@@ -176,8 +190,9 @@ private final class HTTPHandler: ChannelInboundHandler {
             }
             ctx.writeAndFlush(self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
             doNext()
+
         default:
-            ()
+            break
         }
     }
 
@@ -289,8 +304,10 @@ private final class HTTPHandler: ChannelInboundHandler {
                 ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 ctx.channel.close(promise: nil)
             }
-        case .end(_):
-            ()
+
+        case .end:
+            break
+
         default:
             fatalError("oh noes: \(request)")
         }
@@ -325,8 +342,10 @@ private final class HTTPHandler: ChannelInboundHandler {
             responseHead.headers.add(name: "content-length", value: "12")
             let response = HTTPServerResponsePart.head(responseHead)
             ctx.write(self.wrapOutboundOut(response), promise: nil)
+
         case .body:
             break
+
         case .end:
             let content = HTTPServerResponsePart.body(.byteBuffer(buffer!.slice()))
             ctx.write(self.wrapOutboundOut(content), promise: nil)
@@ -354,8 +373,8 @@ private final class HTTPHandler: ChannelInboundHandler {
 // First argument is the program path
 let arguments = CommandLine.arguments
 let arg1 = arguments.dropFirst().first
-let arg2 = arguments.dropFirst().dropFirst().first
-let arg3 = arguments.dropFirst().dropFirst().dropFirst().first
+let arg2 = arguments.dropFirst(2).first
+let arg3 = arguments.dropFirst(3).first
 
 let defaultHost = "::1"
 let defaultPort = 8888
@@ -368,19 +387,22 @@ enum BindTo {
 
 let htdocs: String
 let bindTarget: BindTo
-switch (arg1, arg1.flatMap { Int($0) }, arg2, arg2.flatMap { Int($0) }, arg3) {
-case (.some(let h), _ , _, .some(let p), let maybeHtdocs):
-    /* second arg an integer --> host port [htdocs] */
+switch (arg1, arg1.flatMap(Int.init), arg2, arg2.flatMap(Int.init), arg3) {
+case (let h?, _ , _, let p?, let maybeHtdocs):
+    // Second arg an integer --> host port [htdocs].
     bindTarget = .ip(host: h, port: p)
     htdocs = maybeHtdocs ?? defaultHtdocs
-case (_, .some(let p), let maybeHtdocs, _, _):
-    /* first arg an integer --> port [htdocs] */
+
+case (_, let p?, let maybeHtdocs, _, _):
+    // First arg an integer --> port [htdocs].
     bindTarget = .ip(host: defaultHost, port: p)
     htdocs = maybeHtdocs ?? defaultHtdocs
-case (.some(let portString), .none, let maybeHtdocs, .none, .none):
-    /* couldn't parse as number --> uds-path [htdocs] */
+
+case (let portString?, .none, let maybeHtdocs, .none, .none):
+    // Couldn't parse as number --> uds-path [htdocs].
     bindTarget = .unixDomainSocket(path: portString)
     htdocs = maybeHtdocs ?? defaultHtdocs
+
 default:
     htdocs = defaultHtdocs
     bindTarget = BindTo.ip(host: defaultHost, port: defaultPort)
@@ -392,18 +414,18 @@ threadPool.start()
 
 let fileIO = NonBlockingFileIO(threadPool: threadPool)
 let bootstrap = ServerBootstrap(group: group)
-    // Specify backlog and enable SO_REUSEADDR for the server itself
+    // Specify backlog and enable SO_REUSEADDR for the server itself.
     .serverChannelOption(ChannelOptions.backlog, value: 256)
     .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
-    // Set the handlers that are applied to the accepted Channels
+    // Set the handlers that are applied to the accepted Channels.
     .childChannelInitializer { channel in
         channel.pipeline.addHTTPServerHandlers().then {
             channel.pipeline.add(handler: HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
         }
     }
 
-    // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels
+    // Enable TCP_NODELAY and SO_REUSEADDR for the accepted Channels.
     .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
@@ -422,11 +444,11 @@ let channel = try { () -> Channel in
     case .unixDomainSocket(let path):
         return try bootstrap.bind(unixDomainSocketPath: path).wait()
     }
-    }()
+}()
 
 print("Server started and listening on \(channel.localAddress!), htdocs path \(htdocs)")
 
-// This will never unblock as we don't close the ServerChannel
+// This will never unblock as we don't close the ServerChannel.
 try channel.closeFuture.wait()
 
 print("Server closed")
