@@ -7,7 +7,7 @@ It's like [Netty](https://netty.io), but written for Swift.
 
 ## Conceptual Overview
 
-SwiftNIO is fundamentally a low-level tool for building high-performance networking applications in Swift. It particularly targets those use-cases where using a "thread-per-connection" model of concurrency is inefficient or untenable. This is a common limitation when building servers that use a large number of relatively low-utilisation connections, such as HTTP servers.
+SwiftNIO is fundamentally a low-level tool for building high-performance networking applications in Swift. It particularly targets those use-cases where using a "thread-per-connection" model of concurrency is inefficient or untenable. This is a common limitation when building servers that use a large number of relatively low-utilization connections, such as HTTP servers.
 
 To achieve its goals SwiftNIO extensively uses "non-blocking I/O": hence the name! Non-blocking I/O differs from the more common blocking I/O model because the application does not wait for data to be sent to or received from the network: instead, SwiftNIO asks for the kernel to notify it when I/O operations can be performed without waiting.
 
@@ -82,11 +82,11 @@ While it is possible to configure and register `Channel`s with `EventLoop`s dire
 
 For this reason, SwiftNIO ships a number of `Bootstrap` objects whose purpose is to streamline the creation of channels. Some `Bootstrap` objects also provide other functionality, such as support for Happy Eyeballs for making TCP connection attempts.
 
-Currently SwiftNIO ships with three `Bootstrap` objects: `ServerBootstrap`, for bootstrapping listening channels; `ClientBootstrap`, for bootstrapping client TCP channels; and `DatagramBootstrap` for bootstraping UDP channels.
+Currently SwiftNIO ships with three `Bootstrap` objects: `ServerBootstrap`, for bootstrapping listening channels; `ClientBootstrap`, for bootstrapping client TCP channels; and `DatagramBootstrap` for bootstrapping UDP channels.
 
 #### ByteBuffer
 
-The majority of the work in a SwiftNIO application involves shuffling buffers of bytes around. At the very least, data is sent and received to and from the network in the form of buffers of bytes. For this reason it's very important to have a high-performance data structure that is optimised for the kind of work SwiftNIO applications perform.
+The majority of the work in a SwiftNIO application involves shuffling buffers of bytes around. At the very least, data is sent and received to and from the network in the form of buffers of bytes. For this reason it's very important to have a high-performance data structure that is optimized for the kind of work SwiftNIO applications perform.
 
 For this reason, SwiftNIO provides `ByteBuffer`, a fast copy-on-write byte buffer that forms a key building block of most SwiftNIO applications.
 
@@ -136,7 +136,7 @@ SwiftNIO primarily uses [SwiftPM](https://swift.org/package-manager/) as its bui
 
 and then adding the appropriate SwiftNIO module(s) to your target dependencies.
 
-To work on SwiftNIO itself, or to investigate some of the demonstration applications, you can clone the repository directly and use SwiftPM to help build it. For example, you can run the folloiwng commands to compile and run the example echo server:
+To work on SwiftNIO itself, or to investigate some of the demonstration applications, you can clone the repository directly and use SwiftPM to help build it. For example, you can run the following commands to compile and run the example echo server:
 
     swift build
     swift test
