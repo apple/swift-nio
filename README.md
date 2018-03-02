@@ -36,6 +36,16 @@ The basic building blocks of SwiftNIO are the following 6 types of objects:
 
 All SwiftNIO applications are ultimately constructed of these various components.
 
+#### Example Usage
+
+We have a few simple projects that demonstrate how to use SwiftNIO.
+
+- **chat client** https://github.com/apple/swift-nio/tree/master/Sources/NIOChatClient
+- **chat server** https://github.com/apple/swift-nio/tree/master/Sources/NIOChatServer
+- **echo client** https://github.com/apple/swift-nio/tree/master/Sources/NIOEchoClient
+- **echo server** https://github.com/apple/swift-nio/tree/master/Sources/NIOEchoServer
+- **HTTP server** https://github.com/apple/swift-nio/tree/master/Sources/NIOHTTP1Server
+
 #### EventLoops and EventLoopGroups
 
 The basic I/O primitive of SwiftNIO is the event loop. The event loop is an object that waits for events (usually I/O related events, such as "data received") to happen and then fires some kind of callback when they do. In almost all SwiftNIO applications there will be relatively few event loops: usually only one or two per CPU core the application wants to use. Generally speaking event loops run for the entire lifetime of your application, spinning in an endless loop dispatching events.
