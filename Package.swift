@@ -56,6 +56,8 @@ var targets: [PackageDescription.Target] = [
                 dependencies: ["NIOHTTP1", "NIOFoundationCompat"]),
     .testTarget(name: "NIOTLSTests",
                 dependencies: ["NIO", "NIOTLS", "NIOFoundationCompat"]),
+    .target(name: "NIOWebFramework",
+            dependencies: ["NIO", "NIOHTTP1"]),
 ]
 
 let package = Package(
@@ -66,6 +68,7 @@ let package = Package(
         .executable(name: "NIOChatServer", targets: ["NIOChatServer"]),
         .executable(name: "NIOChatClient", targets: ["NIOChatClient"]),
         .executable(name: "NIOHTTP1Server", targets: ["NIOHTTP1Server"]),
+        .executable(name: "NIOWebFramework", targets: ["NIOWebFramework"]),
         .library(name: "NIO", targets: ["NIO"]),
         .library(name: "NIOTLS", targets: ["NIOTLS"]),
         .library(name: "NIOHTTP1", targets: ["NIOHTTP1"]),
