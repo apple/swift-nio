@@ -38,7 +38,7 @@ All SwiftNIO applications are ultimately constructed of these various components
 
 #### Example Usage
 
-We have a few simple projects that demonstrate how to use SwiftNIO.
+There are currently several example projects that demonstrate how to use SwiftNIO.
 
 - **chat client** https://github.com/apple/swift-nio/tree/master/Sources/NIOChatClient
 - **chat server** https://github.com/apple/swift-nio/tree/master/Sources/NIOChatServer
