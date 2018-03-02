@@ -16,7 +16,7 @@ import NIO
 
 private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandlerContext, isChunked: Bool, chunk: IOData, promise: EventLoopPromise<Void>?) {
     let (mW1, mW2, mW3): (EventLoopPromise<()>?, EventLoopPromise<()>?, EventLoopPromise<()>?)
-    
+
     switch (isChunked, promise) {
     case (true, .some(let p)):
         /* chunked encoding and the user's interested: we need three promises and need to cascade into the users promise */
@@ -30,9 +30,9 @@ private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandler
         /* user isn't interested, let's not bother even allocating promises */
         (mW1, mW2, mW3) = (nil, nil, nil)
     }
-    
+
     let readableBytes = chunk.readableBytes
-    
+
     /* we don't want to copy the chunk unnecessarily and therefore call write an annoyingly large number of times */
     if isChunked {
         var buffer = ctx.channel.allocator.buffer(capacity: 32)
@@ -40,9 +40,9 @@ private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandler
         buffer.write(string: len)
         buffer.write(staticString: "\r\n")
         ctx.write(wrapOutboundOut(.byteBuffer(buffer)), promise: mW1)
-        
+
         ctx.write(wrapOutboundOut(chunk), promise: mW2)
-        
+
         // Just move the buffers readerIndex to only make the \r\n readable and depend on COW semantics.
         buffer.moveReaderIndex(forwardBy: buffer.readableBytes - 2)
         ctx.write(wrapOutboundOut(.byteBuffer(buffer)), promise: mW3)
@@ -75,7 +75,7 @@ private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHand
 }
 
 private func writeHead(wrapOutboundOut: (IOData) -> NIOAny, writeStartLine: (inout ByteBuffer) -> Void, ctx: ChannelHandlerContext, headers: HTTPHeaders, promise: EventLoopPromise<Void>?) {
-    
+
     var buffer = ctx.channel.allocator.buffer(capacity: 256)
     writeStartLine(&buffer)
     headers.write(buffer: &buffer)
@@ -115,18 +115,18 @@ private func sanitizeTransportHeaders(hasBody: HTTPMethod.HasBody, headers: inou
 public final class HTTPRequestEncoder: ChannelOutboundHandler {
     public typealias OutboundIn = HTTPClientRequestPart
     public typealias OutboundOut = IOData
-    
+
     private var isChunked = false
-    
+
     public init () { }
-    
+
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch self.unwrapOutboundIn(data) {
         case .head(var request):
             sanitizeTransportHeaders(hasBody: request.method.hasRequestBody, headers: &request.headers, version: request.version)
 
             self.isChunked = isChunkedPart(request.headers)
-            
+
             writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
                 request.method.write(buffer: &buffer)
                 buffer.write(staticString: " ")
@@ -159,7 +159,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler {
         switch self.unwrapOutboundIn(data) {
         case .head(var response):
             sanitizeTransportHeaders(hasBody: response.status.mayHaveResponseBody ? .yes : .no, headers: &response.headers, version: response.version)
-            
+
             self.isChunked = isChunkedPart(response.headers)
             writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
                 response.version.write(buffer: &buffer)

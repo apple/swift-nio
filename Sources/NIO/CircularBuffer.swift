@@ -25,32 +25,32 @@ public protocol AppendableCollection: Collection {
 /// expansions from happening frequently. Expansions will always force an allocation and a copy to happen.
 public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
     private var buffer: ContiguousArray<E?>
-    
+
     /// The capacity of the underlying buffer
     private var bufferCapacity: Int
-    
+
     /// The index into the buffer of the first item
     private var startIdx = 0
-    
+
     /// The index into the buffer of the next free slot
     private var endIdx = 0
-    
+
     /// The number of items in the ring part of this buffer
     private var ringLength = 0
-    
+
     /// Allocates a buffer that can hold up to `initialRingCapacity` elements and initialise an empty ring backed by
     /// the buffer. When the ring grows to more than `initialRingCapacity` elements the buffer will be expanded.
     public init(initialRingCapacity: Int) {
         self.bufferCapacity = initialRingCapacity
         self.buffer = ContiguousArray<E?>(repeating: nil, count: Int(initialRingCapacity))
     }
-    
+
     /// Append an element to the end of the ring buffer.
     ///
     /// Amortized *O(1)*
     public mutating func append(_ value: E) {
         let expandBuf: Bool = self.bufferCapacity == self.ringLength
-        
+
         if expandBuf {
             var newBacking: ContiguousArray<E?> = []
             let newCapacity = Swift.max(1, 2 * self.bufferCapacity)
@@ -66,26 +66,26 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
             self.bufferCapacity = newCapacity
             precondition(self.bufferCapacity == self.buffer.count)
         }
-        
+
         self.buffer[self.endIdx] = value
         self.ringLength += 1
         self.endIdx = (self.endIdx + 1) % self.bufferCapacity
     }
-    
+
     /// Remove the front element of the ring buffer.
     ///
     /// *O(1)*
     public mutating func removeFirst() -> E {
         precondition(self.ringLength != 0)
-        
+
         let value = self.buffer[self.startIdx]
         self.buffer[startIdx] = nil
         self.ringLength -= 1
         self.startIdx = (self.startIdx + 1) % self.bufferCapacity
-        
+
         return value!
     }
-    
+
     /// Return the first element of the ring.
     ///
     /// *O(1)*
@@ -126,7 +126,7 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
             return Slice(base: self, bounds: bounds)
         }
     }
-    
+
     /// Return all valid indices of the ring.
     public var indices: CountableRange<Int> {
         return 0..<self.ringLength

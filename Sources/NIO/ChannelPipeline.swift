@@ -714,7 +714,7 @@ private final class HeadChannelHandler: _ChannelOutboundHandler {
     func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
         ctx.channel._unsafe.triggerUserOutboundEvent0(event, promise: promise)
     }
-    
+
 }
 
 private extension CloseMode {
@@ -802,7 +802,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     public var channel: Channel {
         return self.pipeline.channel
     }
-    
+
     public var handler: ChannelHandler {
         return self.inboundHandler ?? self.outboundHandler!
     }

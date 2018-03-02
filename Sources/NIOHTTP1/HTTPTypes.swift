@@ -139,7 +139,7 @@ public struct HTTPResponseHead: Equatable {
         self.status = status
         self.headers = headers
     }
-    
+
     public static func ==(lhs: HTTPResponseHead, rhs: HTTPResponseHead) -> Bool {
         return lhs.status == rhs.status && lhs.version == rhs.version && lhs.headers == rhs.headers
     }
@@ -388,7 +388,7 @@ public enum HTTPMethod: Equatable {
         case no
         case unlikely
     }
-    
+
     public static func ==(lhs: HTTPMethod, rhs: HTTPMethod) -> Bool {
         switch (lhs, rhs){
         case (.GET, .GET):

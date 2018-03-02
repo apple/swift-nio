@@ -23,10 +23,10 @@ public class AdaptiveRecvByteBufferAllocatorTest : XCTestCase {
     func testAdaptive() throws {
         let buffer = adaptive.buffer(allocator: allocator)
         XCTAssertEqual(1024, buffer.capacity)
-        
+
         testActualReadBytes(mayGrow: false, actualReadBytes: 1024, expectedCapacity: 16384)
         testActualReadBytes(mayGrow: true, actualReadBytes: 16384, expectedCapacity: 16384)
-        
+
         // Will never go over maximum
         testActualReadBytes(mayGrow: true, actualReadBytes: 32768, expectedCapacity: 16384)
 
@@ -44,20 +44,20 @@ public class AdaptiveRecvByteBufferAllocatorTest : XCTestCase {
 
         testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 1024)
         testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 1024)
-        
+
         testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 512)
         testActualReadBytes(mayGrow: false, actualReadBytes: 64, expectedCapacity: 512)
 
         testActualReadBytes(mayGrow: false, actualReadBytes: 32, expectedCapacity: 512)
         testActualReadBytes(mayGrow: false, actualReadBytes: 32, expectedCapacity: 512)
     }
-    
+
     private func testActualReadBytes(mayGrow: Bool, actualReadBytes: Int, expectedCapacity: Int) {
         XCTAssertEqual(mayGrow, adaptive.record(actualReadBytes: actualReadBytes))
         let buffer = adaptive.buffer(allocator: allocator)
         XCTAssertEqual(expectedCapacity, buffer.capacity)
     }
-    
+
     func testFixed() throws {
         var buffer = fixed.buffer(allocator: allocator)
         XCTAssertEqual(fixed.capacity, buffer.capacity)

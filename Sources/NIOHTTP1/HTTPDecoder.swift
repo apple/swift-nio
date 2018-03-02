@@ -25,7 +25,7 @@ private struct HTTPParserState {
     var readerIndexAdjustment = 0
     // This is set before http_parser_execute(...) is called and set to nil again after it finish
     var baseAddress: UnsafePointer<UInt8>?
-    
+
     enum DataAwaitingState {
         case messageBegin
         case status
@@ -52,7 +52,7 @@ private struct HTTPParserState {
         self.slice = nil
         return string
     }
-    
+
     mutating func complete(state: DataAwaitingState) {
         switch state {
         case .messageBegin:
@@ -232,13 +232,13 @@ public final class HTTPResponseDecoder: HTTPDecoder<HTTPClientResponsePart>, Cha
 public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = HTTPMessageT
-    
+
     private var parser = http_parser()
     private var settings = http_parser_settings()
-    
+
     fileprivate var pendingCallouts: [() -> Void] = []
     fileprivate var state = HTTPParserState()
-    
+
     fileprivate init(type: HTTPMessageT.Type) {
         /* this is a private init, the public versions only allow HTTPClientResponsePart and HTTPServerRequestPart */
         assert(HTTPMessageT.self == HTTPClientResponsePart.self || HTTPMessageT.self == HTTPServerRequestPart.self)
@@ -248,7 +248,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     ///
     /// Naturally, in the base case this returns nil, as servers never issue requests!
     fileprivate func popRequestMethod() -> HTTPMethod? { return nil }
-    
+
     private func newRequestHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPRequestHead {
         let method = HTTPMethod.from(httpParserMethod: http_method(rawValue: parser.pointee.method))
         let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
@@ -256,7 +256,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         state.currentHeaders = nil
         return request
     }
-    
+
     private func newResponseHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPResponseHead {
         let status = HTTPResponseStatus.from(parser.pointee.status_code, state.currentStatus!)
         let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
@@ -264,7 +264,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         state.currentHeaders = nil
         return response
     }
-    
+
     public func decoderAdded(ctx: ChannelHandlerContext) {
         if HTTPMessageT.self == HTTPServerRequestPart.self {
             c_nio_http_parser_init(&parser, HTTP_REQUEST)
@@ -326,10 +326,10 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             let ctx = evacuateChannelHandlerContext(parser)
             let handler = evacuateHTTPDecoder(parser)
             assert(handler.state.dataAwaitingState == .body)
-            
+
             // Calculate the index of the data in the cumulationBuffer so we can slice out the ByteBuffer without doing any memory copy
             let index = handler.state.calculateIndex(data: data!, length: len)
-            
+
             let slice = handler.state.cumulationBuffer!.getSlice(at: index, length: len)!
             handler.pendingCallouts.append {
                 switch handler {
@@ -341,7 +341,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
                     fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
                 }
             }
-            
+
             return 0
         }
 
@@ -373,7 +373,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             }
             return 0
         }
-        
+
         settings.on_url = { parser, data, len in
             let handler = evacuateHTTPDecoder(parser)
             assert(handler is HTTPRequestDecoder)
@@ -410,7 +410,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     public func decoderRemoved(ctx: ChannelHandlerContext) {
         // Remove the stored reference to ChannelHandlerContext
         parser.data = UnsafeMutableRawPointer(bitPattern: 0x0000deadbeef0000)
-        
+
         // Set the callbacks to nil as we dont need these anymore
         settings.on_body = nil
         settings.on_chunk_complete = nil
@@ -422,7 +422,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         settings.on_header_value = nil
         settings.on_message_begin = nil
     }
-    
+
     public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         if let slice = state.slice {
             // If we stored a slice before we need to ensure we move the readerIndex so we don't try to parse the data again. We
@@ -430,16 +430,16 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             state.slice = (buffer.readerIndex, slice.length)
             buffer.moveReaderIndex(forwardBy: state.readerIndexAdjustment)
         }
-        
+
         let result = try buffer.withVeryUnsafeBytes { (pointer) -> size_t in
             state.baseAddress = pointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
-            
+
             let result = state.baseAddress!.withMemoryRebound(to: Int8.self, capacity: pointer.count, { p in
                 c_nio_http_parser_execute(&parser, &settings, p.advanced(by: buffer.readerIndex), buffer.readableBytes)
             })
-            
+
             state.baseAddress = nil
-            
+
             let errno = parser.http_errno
             if errno != 0 {
                 throw HTTPParserError.httpError(fromCHTTPParserErrno: http_errno(rawValue: errno))!
@@ -462,7 +462,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             return .continue
         }
     }
-    
+
     public func channelReadComplete(ctx: ChannelHandlerContext) {
         /* call all the callbacks generated while parsing */
         let pending = self.pendingCallouts

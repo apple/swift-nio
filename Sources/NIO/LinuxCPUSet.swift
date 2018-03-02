@@ -14,12 +14,12 @@
 import CNIOLinux
 
 #if os(Linux)
-    
+
     /// A set that contains CPU ids to use.
     struct LinuxCPUSet {
         /// The ids of all the cpus.
         let cpuIds: Set<Int>
-        
+
         /// Create a new instace
         ///
         /// - arguments:
@@ -31,7 +31,7 @@ import CNIOLinux
             }
             self.cpuIds = cpuIds
         }
-        
+
         /// Create a new instance
         ///
         /// - arguments:
@@ -41,38 +41,38 @@ import CNIOLinux
             self.init(cpuIds: ids)
         }
     }
-    
+
     extension LinuxCPUSet: Equatable {
         public static func ==(lhs: LinuxCPUSet, rhs: LinuxCPUSet) -> Bool {
             return lhs.cpuIds == rhs.cpuIds
         }
     }
-    
+
     /// Linux specific extension to `Thread`.
     internal extension Thread {
         /// Specify the thread-affinity of the `Thread` itself.
         var affinity: LinuxCPUSet {
             get {
                 var cpuset = cpu_set_t()
-                
+
                 // Ensure the cpuset is empty (and so nothing is selected yet).
                 CNIOLinux_CPU_ZERO(&cpuset)
-                
+
                 let res = withUnsafePthread { p in
                     CNIOLinux_pthread_getaffinity_np(p, MemoryLayout.size(ofValue: cpuset), &cpuset)
                 }
-        
+
                 precondition(res == 0, "pthread_getaffinity_np failed: \(res)")
-                
+
                 let set = Set((CInt(0)..<CNIOLinux_CPU_SETSIZE()).lazy.filter { CNIOLinux_CPU_ISSET($0, &cpuset) != 0 }.map { Int($0) })
                 return LinuxCPUSet(cpuIds: set)
             }
             set(cpuSet) {
                 var cpuset = cpu_set_t()
-                
+
                 // Ensure the cpuset is empty (and so nothing is selected yet).
                 CNIOLinux_CPU_ZERO(&cpuset)
-                
+
                 // Mark the CPU we want to run on.
                 cpuSet.cpuIds.forEach { CNIOLinux_CPU_SET(CInt($0), &cpuset) }
                 let res = withUnsafePthread { p in
@@ -82,9 +82,9 @@ import CNIOLinux
             }
         }
     }
-    
+
     extension MultiThreadedEventLoopGroup {
-        
+
         /// Create a new `MultiThreadedEventLoopGroup` that create as many `Thread`s as `pinnedCPUIds`. Each `Thread` will be pinned to the CPU with the id.
         ///
         /// - arguments:

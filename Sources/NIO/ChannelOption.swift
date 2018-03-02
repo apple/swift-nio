@@ -16,10 +16,10 @@
 public protocol ChannelOption {
     associatedtype AssociatedValueType
     associatedtype OptionType
-    
+
     /// The value of the `ChannelOption`.
     var value: AssociatedValueType { get }
-    
+
     /// The type of the `ChannelOption`
     var type: OptionType.Type { get }
 }
@@ -52,9 +52,9 @@ public enum SocketOption: ChannelOption {
     public typealias AssociatedValueType = (SocketOptionLevel, SocketOptionName)
 
     public typealias OptionType = (SocketOptionValue)
-    
+
     case const(AssociatedValueType)
-    
+
     /// Create a new `SocketOption`.
     ///
     /// - parameters:
@@ -76,7 +76,7 @@ public enum SocketOption: ChannelOption {
 public enum AllocatorOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = ByteBufferAllocator
-    
+
     case const(())
 }
 
@@ -84,7 +84,7 @@ public enum AllocatorOption: ChannelOption {
 public enum RecvAllocatorOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = RecvByteBufferAllocator
-    
+
     case const(())
 }
 
@@ -93,7 +93,7 @@ public enum RecvAllocatorOption: ChannelOption {
 public enum AutoReadOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = Bool
-    
+
     case const(())
 }
 
@@ -103,7 +103,7 @@ public enum AutoReadOption: ChannelOption {
 public enum WriteSpinOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = UInt
-    
+
     case const(())
 }
 
@@ -112,7 +112,7 @@ public enum WriteSpinOption: ChannelOption {
 public enum MaxMessagesPerReadOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = UInt
-    
+
     case const(())
 }
 
@@ -120,7 +120,7 @@ public enum MaxMessagesPerReadOption: ChannelOption {
 public enum BacklogOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = Int32
-    
+
     case const(())
 }
 
@@ -131,13 +131,13 @@ public struct WriteBufferWaterMark {
     /// When the amount of buffered bytes in the `Channel`s outbound buffer drops below this value the `Channel` will be
     /// marked as writable again (after it was non-writable).
     public let low: Int
-    
+
     /// The high mark setting for a `Channel`.
     ///
     /// When the amount of buffered bytes in the `Channel`s outbound exceeds this value the `Channel` will be
     /// marked as non-writable. It will be marked as writable again once the amount of buffered bytes drops below `low`.
     public let high: Int
-    
+
     /// Create a new instance.
     ///
     /// Valid initialization is restricted to `1 <= low <= high`.
@@ -161,7 +161,7 @@ public struct WriteBufferWaterMark {
 public enum WriteBufferWaterMarkOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = WriteBufferWaterMark
-    
+
     case const(())
 }
 
@@ -182,7 +182,7 @@ public enum ConnectTimeoutOption: ChannelOption {
 public enum AllowRemoteHalfClosureOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = Bool
-    
+
     case const(())
 }
 
@@ -199,22 +199,22 @@ public struct ChannelOptions {
 
     /// - seealso: `AutoReadOption`.
     public static let autoRead = AutoReadOption.const(())
-    
+
     /// - seealso: `MaxMessagesPerReadOption`.
     public static let maxMessagesPerRead = MaxMessagesPerReadOption.const(())
-    
+
     /// - seealso: `BacklogOption`.
     public static let backlog = BacklogOption.const(())
-    
+
     /// - seealso: `WriteSpinOption`.
     public static let writeSpin = WriteSpinOption.const(())
-    
+
     /// - seealso: `WriteBufferWaterMarkOption`.
     public static let writeBufferWaterMark = WriteBufferWaterMarkOption.const(())
 
     /// - seealso: `ConnectTimeoutOption`.
     public static let connectTimeout = ConnectTimeoutOption.const(())
-    
+
     /// - seealso: `AllowRemoteHalfClosureOption`.
     public static let allowRemoteHalfClosure = AllowRemoteHalfClosureOption.const(())
 }

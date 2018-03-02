@@ -23,7 +23,7 @@ public struct IOError: Swift.Error {
 
     /// The actual reason (in an human-readable form) for this `IOError`.
     public let reason: FailureDescription
-    
+
     /// Creates a new `IOError``
     ///
     /// - note: At the moment, this constructor is more expensive than `IOError(errnoCode:function:)` as the `String` will incur reference counting
@@ -84,10 +84,10 @@ extension IOError: CustomStringConvertible {
 
 /// An result for an IO operation that was done on a non-blocking resource.
 public enum IOResult<T: Equatable> {
-    
+
     /// Signals that the IO operation could not be completed as otherwise we would need to block.
     case wouldBlock(T)
-    
+
     /// Signals that the IO operation was completed.
     case processed(T)
 }

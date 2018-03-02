@@ -35,7 +35,7 @@ public class SocketChannelTest : XCTestCase {
 
         // Create two channels with different event loops.
         let channelA = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
-        let channelB: Channel = try { 
+        let channelB: Channel = try {
             while true {
                 let channel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
                 if channel.eventLoop !== channelA.eventLoop {

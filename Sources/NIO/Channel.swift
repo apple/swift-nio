@@ -23,7 +23,7 @@ public protocol ChannelCore: class {
 
     /// Return the connected `SocketAddress`.
     func remoteAddress0() throws -> SocketAddress
-    
+
     /// Register with the `EventLoop` to receive I/O notifications.
     ///
     /// - parameters:
@@ -36,27 +36,27 @@ public protocol ChannelCore: class {
     ///     - to: The `SocketAddress` to which we should bind the `Channel`.
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?)
-    
+
     /// Connect to a `SocketAddress`.
     ///
     /// - parameters:
     ///     - to: The `SocketAddress` to which we should connect the `Channel`.
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func connect0(to: SocketAddress, promise: EventLoopPromise<Void>?)
-    
+
     /// Write the given data to the outbound buffer.
     ///
     /// - parameters:
     ///     - data: The data to write, wrapped in a `NIOAny`.
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?)
-    
+
     /// Try to flush out all previous written messages that are pending.
     func flush0()
-    
+
     /// Request that the `Channel` perform a read when data is ready.
     func read0()
-    
+
     /// Close the `Channel`.
     ///
     /// - parameters:
@@ -64,20 +64,20 @@ public protocol ChannelCore: class {
     ///     - mode: The `CloseMode` to apply.
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?)
-    
+
     /// Trigger an outbound event.
     ///
     /// - parameters:
     ///     - event: The triggered event.
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?)
-    
+
     /// Called when data was read from the `Channel` but it was not consumed by any `ChannelInboundHandler` in the `ChannelPipeline`.
     ///
     /// - parameters:
     ///     - data: The data that was read, wrapped in a `NIOAny`.
     func channelRead0(_ data: NIOAny)
-    
+
     /// Called when an inbound error was encountered but was not consumed by any `ChannelInboundHandler` in the `ChannelPipeline`.
     ///
     /// - parameters:
@@ -104,10 +104,10 @@ public protocol Channel: class, ChannelOutboundInvoker {
 
     /// The `ChannelPipeline` which handles all I/O events and requests associated with this `Channel`.
     var pipeline: ChannelPipeline { get }
-    
+
     /// The local `SocketAddress`.
     var localAddress: SocketAddress? { get }
-    
+
     /// The remote peer's `SocketAddress`.
     var remoteAddress: SocketAddress? { get }
 
@@ -117,13 +117,13 @@ public protocol Channel: class, ChannelOutboundInvoker {
 
     /// Set `option` to `value` on this `Channel`.
     func setOption<T: ChannelOption>(option: T, value: T.OptionType) -> EventLoopFuture<Void>
-    
+
     /// Get the value of `option` for this `Channel`.
     func getOption<T: ChannelOption>(option: T) -> EventLoopFuture<T.OptionType>
 
     /// Returns if this `Channel` is currently writable.
     var isWritable: Bool { get }
-    
+
     /// Returns if this `Channel` is currently active. Active is defined as the period of time after the
     /// `channelActive` and before `channelInactive` has fired. The main use for this is to know if `channelActive`
     /// or `channelInactive` can be expected next when `handlerAdded` was received.
@@ -146,13 +146,13 @@ internal protocol SelectableChannel: Channel {
 
     /// Returns the `Selectable` which usually contains the file descriptor for the socket.
     var selectable: SelectableType { get }
-    
+
     /// The event(s) of interest.
     var interestedEvent: IOEvent { get }
 
     /// Called when the `SelectableChannel` is ready to be written.
     func writable()
-    
+
     /// Called when the `SelectableChannel` is ready to be read.
     func readable()
 
@@ -166,11 +166,11 @@ internal protocol SelectableChannel: Channel {
 
 /// Default implementations which will start on the head of the `ChannelPipeline`.
 extension Channel {
-    
+
     public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         pipeline.bind(to: address, promise: promise)
     }
-    
+
     public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         pipeline.connect(to: address, promise: promise)
     }
@@ -182,7 +182,7 @@ extension Channel {
     public func flush() {
         pipeline.flush()
     }
-    
+
     public func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         pipeline.writeAndFlush(data, promise: promise)
     }
@@ -198,7 +198,7 @@ extension Channel {
     public func register(promise: EventLoopPromise<Void>?) {
         pipeline.register(promise: promise)
     }
-    
+
     public func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {
         pipeline.triggerUserOutboundEvent(event, promise: promise)
     }
@@ -207,29 +207,29 @@ extension Channel {
 
 /// Provides special extension to make writing data to the `Channel` easier by removing the need to wrap data in `NIOAny` manually.
 public extension Channel {
-    
+
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
     public func write<T>(_ any: T) -> EventLoopFuture<Void> {
         return self.write(NIOAny(any))
     }
-    
+
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
     public func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
         self.write(NIOAny(any), promise: promise)
     }
-    
+
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
     public func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
         return self.writeAndFlush(NIOAny(any))
     }
-    
-    
+
+
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
@@ -251,10 +251,10 @@ public enum ChannelError: Error {
 
     /// Unsupported operation triggered on a `Channel`. For example `connect` on a `ServerSocketChannel`.
     case operationUnsupported
-    
+
     /// An I/O operation (e.g. read/write/flush) called on a channel that is already closed.
     case ioOnClosedChannel
-    
+
     /// Close was called on a channel that is already closed.
     case alreadyClosed
 
@@ -263,7 +263,7 @@ public enum ChannelError: Error {
 
     /// Input-side of the channel is closed.
     case inputClosed
-    
+
     /// A read operation reached end-of-file. This usually means the remote peer closed the socket but it's still
     /// open locally.
     case eof

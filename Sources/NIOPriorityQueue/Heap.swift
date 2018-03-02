@@ -21,7 +21,7 @@ import Glibc
 public enum HeapType {
     case maxHeap
     case minHeap
-    
+
     public func comparator<T: Comparable>(type: T.Type) -> (T, T) -> Bool {
         switch self {
         case .maxHeap:
@@ -36,7 +36,7 @@ internal struct Heap<T: Comparable> {
     internal let type: HeapType
     internal private(set) var storage: ContiguousArray<T> = []
     private let comparator: (T, T) -> Bool
-    
+
     internal init?(type: HeapType, storage: ContiguousArray<T>) {
         self.comparator = type.comparator(type: T.self)
         self.storage = storage
@@ -50,7 +50,7 @@ internal struct Heap<T: Comparable> {
         self.comparator = type.comparator(type: T.self)
         self.type = type
     }
-    
+
     // MARK: verbatim from CLRS's (Introduction to Algorithms) Heapsort chapter with the following changes
     //  - added a `compare` parameter to make it either a min or a max heap
     //  - renamed `largest` to `root`
@@ -66,34 +66,34 @@ internal struct Heap<T: Comparable> {
     private static func leftIndex(_ i: Int) -> Int {
         return 2*i + 1
     }
-    
+
     // named `RIGHT` in CLRS
     private static func rightIndex(_ i: Int) -> Int {
         return 2*i + 2
     }
-    
+
     // named `MAX-HEAPIFY` in CLRS
     private static func heapify(storage: inout ContiguousArray<T>, compare: (T, T) -> Bool, _ i: Int) {
         let l = Heap<T>.leftIndex(i)
         let r = Heap<T>.rightIndex(i)
-        
+
         var root: Int
         if l <= (storage.count - 1) && compare(storage[l], storage[i]) {
             root = l
         } else {
             root = i
         }
-        
+
         if r <= (storage.count - 1) && compare(storage[r], storage[root]) {
             root = r
         }
-        
+
         if root != i {
             storage.swapAt(i, root)
             heapify(storage: &storage, compare: compare, root)
         }
     }
-    
+
     // named `MAX-HEAP-INSERT` in CRLS
     private static func heapInsert(storage: inout ContiguousArray<T>, compare: (T, T) -> Bool, key: T) {
         var i = storage.count
@@ -103,7 +103,7 @@ internal struct Heap<T: Comparable> {
             i = parentIndex(i)
         }
     }
-    
+
     // named `HEAP-INCREASE-KEY` in CRLS
     private static func heapRootify(storage: inout ContiguousArray<T>, compare: (T, T) -> Bool, index: Int, key: T) {
         var index = index
@@ -122,11 +122,11 @@ internal struct Heap<T: Comparable> {
     public mutating func append(_ value: T) {
         Heap<T>.heapInsert(storage: &self.storage, compare: self.comparator, key: value)
     }
-    
+
     public mutating func removeRoot() -> T? {
         return self.remove(index: 0)
     }
-    
+
     public mutating func remove(value: T) -> Bool {
         if let idx = self.storage.index(of: value) {
             _ = self.remove(index: idx)
@@ -135,7 +135,7 @@ internal struct Heap<T: Comparable> {
             return false
         }
     }
-    
+
     private mutating func remove(index: Int) -> T? {
         guard self.storage.count > 0 else {
             return nil
@@ -197,7 +197,7 @@ extension Heap: CustomDebugStringConvertible {
             }
             return desc
         }
-        
+
         var all = "\n"
         let spacing = String(repeating: " ", count: maxLen)
         func subtreeWidths(rootIndex: Int) -> (Int, Int) {
@@ -220,7 +220,7 @@ extension Heap: CustomDebugStringConvertible {
             all += String(repeating: " ", count: leftWidth)
             all += desc
             all += String(repeating: " ", count: rightWidth)
-            
+
             func height(index: Int) -> Int {
                 return Int(log2(Double(index + 1)))
             }

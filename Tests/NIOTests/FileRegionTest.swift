@@ -16,31 +16,31 @@ import XCTest
 @testable import NIO
 
 class FileRegionTest : XCTestCase {
-    
+
     func testWriteFileRegion() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        
+
         let numBytes = 16 * 1024
-        
+
         var content = ""
         for i in 0..<numBytes {
             content.append("\(i)")
         }
         let bytes = Array(content.utf8)
-        
+
         let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().newPromise())
 
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { $0.pipeline.add(handler: countingHandler) }.bind(host: "127.0.0.1", port: 0).wait()
-        
+
         defer {
             _ = serverChannel.close()
         }
-        
+
         let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
 
         defer {

@@ -184,7 +184,7 @@ public final class HTTPResponseCompressor: ChannnelDuplexHandler {
             // the client has expressed a preference.
             return .gzip
         }
-        
+
         return nil
     }
 

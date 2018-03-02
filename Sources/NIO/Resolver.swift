@@ -29,7 +29,7 @@ public protocol Resolver {
     ///     - port: The port we'll be connecting to.
     /// - returns: An `EventLoopFuture` that fires with the result of the lookup.
     func initiateAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]>
-    
+
     /// Initiate a DNS AAAA query for a given host.
     ///
     /// - parameters:
@@ -37,7 +37,7 @@ public protocol Resolver {
     ///     - port: The port we'll be connecting to.
     /// - returns: An `EventLoopFuture` that fires with the result of the lookup.
     func initiateAAAAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]>
-    
+
     /// Cancel all outstanding DNS queries.
     ///
     /// This method is called whenever queries that have not completed no longer have their

@@ -17,7 +17,7 @@ import Dispatch
 import NIOConcurrencyHelpers
 
 public class EventLoopTest : XCTestCase {
-    
+
     public func testSchedule() throws {
         let nanos = DispatchTime.now().uptimeNanoseconds
         let amount: TimeAmount = .seconds(1)
@@ -28,7 +28,7 @@ public class EventLoopTest : XCTestCase {
         let value = try eventLoopGroup.next().scheduleTask(in: amount) {
             return true
         }.futureResult.wait()
-        
+
         XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= amount.nanoseconds)
         XCTAssertTrue(value)
     }
@@ -67,7 +67,7 @@ public class EventLoopTest : XCTestCase {
         // Now we're ok.
         XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= longAmount.nanoseconds)
     }
-    
+
     public func testScheduleCancelled() throws {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
@@ -77,15 +77,15 @@ public class EventLoopTest : XCTestCase {
         let scheduled = eventLoopGroup.next().scheduleTask(in: .seconds(2)) {
             ran.store(true)
         }
-        
+
         scheduled.cancel()
-        
+
         let nanos = DispatchTime.now().uptimeNanoseconds
         let amount: TimeAmount = .seconds(2)
         let value = try eventLoopGroup.next().scheduleTask(in: amount) {
             return true
         }.futureResult.wait()
-        
+
         XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= amount.nanoseconds)
         XCTAssertTrue(value)
         XCTAssertFalse(ran.load())
@@ -194,13 +194,13 @@ public class EventLoopTest : XCTestCase {
             counter += 1
         }
         let threads: [ThreadInitializer] = [body, body]
-        
+
         let group = MultiThreadedEventLoopGroup(threadInitializers: threads)
-       
+
         XCTAssertEqual(2, counter)
         XCTAssertNoThrow(try group.syncShutdownGracefully())
     }
-    
+
     public func testEventLoopPinned() throws {
         #if os(Linux)
             let body: ThreadInitializer = { t in
@@ -209,13 +209,13 @@ public class EventLoopTest : XCTestCase {
                 XCTAssertEqual(set, t.affinity)
             }
             let threads: [ThreadInitializer] = [body, body]
-        
+
             let group = MultiThreadedEventLoopGroup(threadInitializers: threads)
-        
+
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         #endif
     }
-    
+
     public func testEventLoopPinnedCPUIdsConstructor() throws {
         #if os(Linux)
             let group = MultiThreadedEventLoopGroup(pinnedCPUIds: [0])

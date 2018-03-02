@@ -33,7 +33,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
     typealias Element = () -> CallbackList
     var firstCallback: Element?
     var furtherCallbacks: [Element]?
-    
+
     init() {
         firstCallback = nil
         furtherCallbacks = nil
@@ -60,7 +60,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
             }
         }
     }
-    
+
     private func allCallbacks() -> [Element] {
         switch (self.firstCallback, self.furtherCallbacks) {
         case (.none, _):
@@ -71,7 +71,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
             return [first]+others
         }
     }
-    
+
     func _run() {
         switch (self.firstCallback, self.furtherCallbacks) {
         case (.none, _):
@@ -111,7 +111,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
             }
         }
     }
-    
+
 }
 
 /// A promise to provide a result later.
@@ -319,17 +319,17 @@ public final class EventLoopFuture<T> {
     fileprivate convenience init(eventLoop: EventLoop, file: StaticString, line: UInt) {
         self.init(eventLoop: eventLoop, value: nil, file: file, line: line)
     }
-    
+
     /// A EventLoopFuture<T> that has already succeeded
     convenience init(eventLoop: EventLoop, result: T, file: StaticString, line: UInt) {
         self.init(eventLoop: eventLoop, value: .success(result), file: file, line: line)
     }
-    
+
     /// A EventLoopFuture<T> that has already failed
     convenience init(eventLoop: EventLoop, error: Error, file: StaticString, line: UInt) {
         self.init(eventLoop: eventLoop, value: .failure(error), file: file, line: line)
     }
-    
+
     deinit {
         if _isDebugAssertConfiguration(), let eventLoop = self.eventLoop as? SelectableEventLoop {
             let creation = eventLoop.promiseCreationStoreRemove(future: self)
@@ -473,7 +473,7 @@ extension EventLoopFuture {
         }
     }
 
-    
+
     /// When the current `EventLoopFuture<T>` is in an error state, run the provided callback, which
     /// may recover from the error by returning an `EventLoopFuture<U>`. The callback is intended to potentially
     /// recover from the error by returning a new `EventLoopFuture` that will eventually contain the recovered
@@ -517,7 +517,7 @@ extension EventLoopFuture {
         return thenIfError { return EventLoopFuture<T>(eventLoop: self.eventLoop, result: callback($0), file: file, line: line) }
     }
 
-    
+
     /// Add a callback.  If there's already a value, invoke it and return the resulting list of new callback functions.
     fileprivate func _addCallback(_ callback: @escaping () -> CallbackList) -> CallbackList {
         assert(eventLoop.inEventLoop)
@@ -527,7 +527,7 @@ extension EventLoopFuture {
         }
         return callback()
     }
-    
+
     /// Add a callback.  If there's already a value, run as much of the chain as we can.
     fileprivate func _whenComplete(_ callback: @escaping () -> CallbackList) {
         if eventLoop.inEventLoop {
@@ -538,7 +538,7 @@ extension EventLoopFuture {
             }
         }
     }
-    
+
     fileprivate func _whenCompleteWithValue(_ callback: @escaping (EventLoopFutureValue<T>) -> Void) {
         _whenComplete {
             callback(self.value!)
@@ -583,7 +583,7 @@ extension EventLoopFuture {
             return CallbackList()
         }
     }
-    
+
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has any result.
     ///
@@ -600,7 +600,7 @@ extension EventLoopFuture {
         }
     }
 
-    
+
     /// Internal:  Set the value and return a list of callbacks that should be invoked as a result.
     fileprivate func _setValue(value: EventLoopFutureValue<T>) -> CallbackList {
         assert(eventLoop.inEventLoop)
@@ -625,7 +625,7 @@ extension EventLoopFuture {
         let promise = EventLoopPromise<(T,U)>(eventLoop: eventLoop, file: file, line: line)
         var tvalue: T?
         var uvalue: U?
-        
+
         _whenComplete { () -> CallbackList in
             switch self.value! {
             case .failure(let error):
@@ -642,7 +642,7 @@ extension EventLoopFuture {
             }
             return CallbackList()
         }
-        
+
         other._whenComplete { () -> CallbackList in
             switch other.value! {
             case .failure(let error):
@@ -659,7 +659,7 @@ extension EventLoopFuture {
             }
             return CallbackList()
         }
-        
+
         return promise.futureResult
     }
 
@@ -735,7 +735,7 @@ extension EventLoopFuture {
         if !(self.eventLoop is EmbeddedEventLoop) {
             precondition(!eventLoop.inEventLoop, "wait() must not be called when on the EventLoop")
         }
-        
+
         var v: EventLoopFutureValue <T>? = nil
         let lock = ConditionLock(value: 0)
         _whenComplete { () -> CallbackList in
@@ -746,7 +746,7 @@ extension EventLoopFuture {
         }
         lock.lock(whenValue: 1)
         lock.unlock()
-        
+
         switch(v!) {
         case .success(let result):
             return result

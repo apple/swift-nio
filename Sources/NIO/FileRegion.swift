@@ -24,16 +24,16 @@
 ///
 /// - note: It is important to manually manage the lifetime of the `FileHandle` used to create a `FileRegion`.
 public struct FileRegion {
-    
+
     /// The `FileHandle` that is used by this `FileRegion`.
     public let fileHandle: FileHandle
-    
+
     /// The current reader index of this `FileRegion`
     private(set) public var readerIndex: Int
-    
+
     /// The end index of this `FileRegion`.
     public let endIndex: Int
-    
+
     /// Create a new `FileRegion` from an open `FileHandle`.
     ///
     /// - parameters:
@@ -47,12 +47,12 @@ public struct FileRegion {
         self.readerIndex = readerIndex
         self.endIndex = endIndex
     }
-    
+
     /// The number of readable bytes within this FileRegion (taking the `readerIndex` and `endIndex` into account).
     public var readableBytes: Int {
         return endIndex - readerIndex
     }
-    
+
     /// Move the readerIndex forward by `offset`.
     public mutating func moveReaderIndex(forwardBy offset: Int) {
         let newIndex = self.readerIndex + offset
