@@ -186,4 +186,59 @@ class EventLoopFutureTest : XCTestCase {
         XCTAssertTrue(p.futureResult.fulfilled)
         XCTAssertEqual(state, 3)
     }
+
+    func testEventLoopHoppingInThen() throws {
+        let n = 20
+        let elg = MultiThreadedEventLoopGroup(numThreads: n)
+        var prev: EventLoopFuture<Int> = elg.next().newSucceededFuture(result: 0)
+        (1..<20).forEach { (i: Int) in
+            let p: EventLoopPromise<Int> = elg.next().newPromise()
+            prev.then { (i2: Int) -> EventLoopFuture<Int> in
+                XCTAssertEqual(i - 1, i2)
+                p.succeed(result: i)
+                return p.futureResult
+            }.whenSuccess { i2 in
+                XCTAssertEqual(i, i2)
+            }
+            prev = p.futureResult
+        }
+        XCTAssertEqual(n-1, try prev.wait())
+        XCTAssertNoThrow(try elg.syncShutdownGracefully())
+    }
+
+    func testEventLoopHoppingInThenWithFailures() throws {
+        enum DummyError: Error {
+            case dummy
+        }
+        let n = 20
+        let elg = MultiThreadedEventLoopGroup(numThreads: n)
+        var prev: EventLoopFuture<Int> = elg.next().newSucceededFuture(result: 0)
+        (1..<20).forEach { (i: Int) in
+            let p: EventLoopPromise<Int> = elg.next().newPromise()
+            prev.then { (i2: Int) -> EventLoopFuture<Int> in
+                XCTAssertEqual(i - 1, i2)
+                if i == n/2 {
+                    p.fail(error: DummyError.dummy)
+                } else {
+                    p.succeed(result: i)
+                }
+                return p.futureResult
+            }.thenIfError { error in
+                p.fail(error: error)
+                return p.futureResult
+            }.whenSuccess { i2 in
+                XCTAssertEqual(i, i2)
+            }
+            prev = p.futureResult
+        }
+        do {
+            _ = try prev.wait()
+            XCTFail("should have failed")
+        } catch _ as DummyError {
+            // OK
+        } catch {
+            XCTFail("wrong error \(error)")
+        }
+        XCTAssertNoThrow(try elg.syncShutdownGracefully())
+    }
 }

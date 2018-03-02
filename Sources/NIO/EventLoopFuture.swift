@@ -383,8 +383,13 @@ extension EventLoopFuture {
             switch self.value! {
             case .success(let t):
                 let futureU = callback(t)
-                return futureU._addCallback {
-                    return next._setValue(value: futureU.value!)
+                if futureU.eventLoop.inEventLoop {
+                    return futureU._addCallback {
+                        next._setValue(value: futureU.value!)
+                    }
+                } else {
+                    futureU.cascade(promise: next)
+                    return CallbackList()
                 }
             case .failure(let error):
                 return next._setValue(value: .failure(error))
@@ -493,8 +498,13 @@ extension EventLoopFuture {
                 return next._setValue(value: .success(t))
             case .failure(let e):
                 let t = callback(e)
-                return t._addCallback {
-                    return next._setValue(value: t.value!)
+                if t.eventLoop.inEventLoop {
+                    return t._addCallback {
+                        next._setValue(value: t.value!)
+                    }
+                } else {
+                    t.cascade(promise: next)
+                    return CallbackList()
                 }
             }
         }
