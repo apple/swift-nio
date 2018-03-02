@@ -115,7 +115,7 @@ def createLinuxMain(testsDirectory, allTestSubDirectories, files)
             file.write "         testCase(" + testCase + ".allTests),\n"
         end
         file.write"    ])\n"
-        file.write "#endif"
+        file.write "#endif\n"
     }
 end
 
