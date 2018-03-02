@@ -125,6 +125,15 @@ The following projects contain useful protocol implementations that do not live 
 
  - [API documentation](https://apple.github.io/swift-nio/docs/current/NIO/index.html)
 
+## Example Usage
+
+There are currently several example projects that demonstrate how to use SwiftNIO.
+
+- **chat client** https://github.com/apple/swift-nio/tree/master/Sources/NIOChatClient
+- **chat server** https://github.com/apple/swift-nio/tree/master/Sources/NIOChatServer
+- **echo client** https://github.com/apple/swift-nio/tree/master/Sources/NIOEchoClient
+- **echo server** https://github.com/apple/swift-nio/tree/master/Sources/NIOEchoServer
+- **HTTP server** https://github.com/apple/swift-nio/tree/master/Sources/NIOHTTP1Server
 
 ## Getting Started
 
