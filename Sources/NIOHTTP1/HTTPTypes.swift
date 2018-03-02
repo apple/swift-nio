@@ -391,73 +391,41 @@ public enum HTTPMethod: Equatable {
 
     public static func ==(lhs: HTTPMethod, rhs: HTTPMethod) -> Bool {
         switch (lhs, rhs){
-        case (.GET, .GET):
+        case (.GET, .GET),
+             (.PUT, .PUT),
+             (.ACL, .ACL),
+             (.HEAD, .HEAD),
+             (.POST, .POST),
+             (.COPY, .COPY),
+             (.LOCK, .LOCK),
+             (.MOVE, .MOVE),
+             (.BIND, .BIND),
+             (.LINK, .LINK),
+             (.PATCH, .PATCH),
+             (.TRACE, .TRACE),
+             (.MKCOL, .MKCOL),
+             (.MERGE, .MERGE),
+             (.PURGE, .PURGE),
+             (.NOTIFY, .NOTIFY),
+             (.SEARCH, .SEARCH),
+             (.UNLOCK, .UNLOCK),
+             (.REBIND, .REBIND),
+             (.UNBIND, .UNBIND),
+             (.REPORT, .REPORT),
+             (.DELETE, .DELETE),
+             (.UNLINK, .UNLINK),
+             (.CONNECT, .CONNECT),
+             (.MSEARCH, .MSEARCH),
+             (.OPTIONS, .OPTIONS),
+             (.PROPFIND, .PROPFIND),
+             (.CHECKOUT, .CHECKOUT),
+             (.PROPPATCH, .PROPPATCH),
+             (.SUBSCRIBE, .SUBSCRIBE),
+             (.MKCALENDAR, .MKCALENDAR),
+             (.MKACTIVITY, .MKACTIVITY),
+             (.UNSUBSCRIBE, .UNSUBSCRIBE):
             return true
-        case (.PUT, .PUT):
-            return true
-        case (.ACL, .ACL):
-            return true
-        case (.HEAD, .HEAD):
-            return true
-        case (.POST, .POST):
-            return true
-        case (.COPY, .COPY):
-            return true
-        case (.LOCK, .LOCK):
-            return true
-        case (.MOVE, .MOVE):
-            return true
-        case (.BIND, .BIND):
-            return true
-        case (.LINK, .LINK):
-            return true
-        case (.PATCH, .PATCH):
-            return true
-        case (.TRACE, .TRACE):
-            return true
-        case (.MKCOL, .MKCOL):
-            return true
-        case (.MERGE, .MERGE):
-            return true
-        case (.PURGE, .PURGE):
-            return true
-        case (.NOTIFY, .NOTIFY):
-            return true
-        case (.SEARCH, .SEARCH):
-            return true
-        case (.UNLOCK, .UNLOCK):
-            return true
-        case (.REBIND, .REBIND):
-            return true
-        case (.UNBIND, .UNBIND):
-            return true
-        case (.REPORT, .REPORT):
-            return true
-        case (.DELETE, .DELETE):
-            return true
-        case (.UNLINK, .UNLINK):
-            return true
-        case (.CONNECT, .CONNECT):
-            return true
-        case (.MSEARCH, .MSEARCH):
-            return true
-        case (.OPTIONS, .OPTIONS):
-            return true
-        case (.PROPFIND, .PROPFIND):
-            return true
-        case (.CHECKOUT, .CHECKOUT):
-            return true
-        case (.PROPPATCH, .PROPPATCH):
-            return true
-        case (.SUBSCRIBE, .SUBSCRIBE):
-            return true
-        case (.MKCALENDAR, .MKCALENDAR):
-            return true
-        case (.MKACTIVITY, .MKACTIVITY):
-            return true
-        case (.UNSUBSCRIBE, .UNSUBSCRIBE):
-            return true
-        case (.RAW(let l), .RAW(let r)):
+        case let (.RAW(l), .RAW(r)):
             return l == r
         default:
             return false
