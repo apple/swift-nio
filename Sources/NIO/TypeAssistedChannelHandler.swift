@@ -75,3 +75,6 @@ extension ChannelOutboundHandler {
         return value.forceAs()
     }
 }
+
+/// A combination of `ChannelInboundHandler` and `ChannelOutboundHandler`.
+public protocol ChannnelDuplexHandler: ChannelInboundHandler, ChannelOutboundHandler { }
