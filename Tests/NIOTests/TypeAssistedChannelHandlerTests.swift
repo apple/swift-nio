@@ -17,7 +17,7 @@ import XCTest
 
 class TypeAssistedChannelHandlerTest: XCTestCase {
     func testCanDefineBothInboundAndOutbound() throws {
-        class TestClass: ChannnelDuplexHandler {
+        class TestClass: ChannelDuplexHandler {
             public typealias OutboundIn = ByteBuffer
             public typealias OutboundOut = ByteBuffer
             public typealias InboundIn = ByteBuffer
