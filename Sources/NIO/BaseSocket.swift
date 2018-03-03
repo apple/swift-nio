@@ -334,17 +334,16 @@ class BaseSocket: Selectable {
                 try Posix.bind(descriptor: fd, ptr: ptr, bytes: bytes)
             }
 
+            var addr: SockAddrProtocol
             switch address {
             case .v4(let address):
-                var addr = address.address
-                try addr.withSockAddr(doBind)
+                addr = address.address
             case .v6(let address):
-                var addr = address.address
-                try addr.withSockAddr(doBind)
+                addr = address.address
             case .unixDomainSocket(let address):
-                var addr = address.address
-                try addr.withSockAddr(doBind)
+                addr = address.address
             }
+            try addr.withSockAddr(doBind)
         }
     }
 
