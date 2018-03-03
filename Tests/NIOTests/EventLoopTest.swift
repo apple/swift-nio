@@ -179,7 +179,7 @@ public class EventLoopTest : XCTestCase {
         }
 
         // Confirm that the loop still hasn't closed.
-        XCTAssertFalse(loopCloseFut.fulfilled)
+        XCTAssertFalse(loopCloseFut.isFulfilled)
 
         // Now let it close.
         loop.execute {

@@ -1103,7 +1103,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
 
     fileprivate func invokeRegister(promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
-        assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
+        assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
             outboundHandler.register(ctx: self, promise: promise)
@@ -1114,7 +1114,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
 
    fileprivate func invokeBind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
-        assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
+        assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
             outboundHandler.bind(ctx: self, to: address, promise: promise)
@@ -1125,7 +1125,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
 
     fileprivate func invokeConnect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
-        assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
+        assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
             outboundHandler.connect(ctx: self, to: address, promise: promise)
@@ -1136,7 +1136,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
 
     fileprivate func invokeWrite(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
-        assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
+        assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
             outboundHandler.write(ctx: self, data: data, promise: promise)
@@ -1157,7 +1157,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
 
     fileprivate func invokeWriteAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
-        assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
+        assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
             if let promise = promise {
@@ -1183,7 +1183,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
 
     fileprivate func invokeClose(mode: CloseMode, promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
-        assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
+        assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
             outboundHandler.close(ctx: self, mode: mode, promise: promise)
@@ -1194,7 +1194,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
 
     fileprivate func invokeTriggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {
         assert(inEventLoop)
-        assert(promise.map { !$0.futureResult.fulfilled } ?? true, "Promise \(promise!) already fulfilled")
+        assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
             outboundHandler.triggerUserOutboundEvent(ctx: self, event: event, promise: promise)

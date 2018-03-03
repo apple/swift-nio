@@ -691,7 +691,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         // is still unfulfilled (because the server-side channel isn't closed).
         try client.eventLoop.submit {
             XCTAssertTrue(client.isActive)
-            XCTAssertFalse(completePromise.futureResult.fulfilled)
+            XCTAssertFalse(completePromise.futureResult.isFulfilled)
         }.wait()
 
         // Ok, let's unblock the upgrade now. The machinery should do its thing.
