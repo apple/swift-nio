@@ -545,16 +545,16 @@ internal class HappyEyeballsConnector {
                         self.processInput(.connectSuccess)
                         self.resolutionPromise.succeed(result: channel)
                     }
-                    }.whenFailure { err in
-                        // The connection attempt failed. If we're in the complete state then there's nothing
-                        // to do. Otherwise, notify the state machine of the failure.
-                        if case .complete = self.state {
-                            assert(self.pendingConnections.index { $0 === channelFuture } == nil, "failed but was still in pending connections")
-                        } else {
-                            self.error.connectionErrors.append(SingleConnectionFailure(target: target, error: err))
-                            self.pendingConnections.remove(element: channelFuture)
-                            self.processInput(.connectFailed)
-                        }
+                }.whenFailure { err in
+                    // The connection attempt failed. If we're in the complete state then there's nothing
+                    // to do. Otherwise, notify the state machine of the failure.
+                    if case .complete = self.state {
+                        assert(self.pendingConnections.index { $0 === channelFuture } == nil, "failed but was still in pending connections")
+                    } else {
+                        self.error.connectionErrors.append(SingleConnectionFailure(target: target, error: err))
+                        self.pendingConnections.remove(element: channelFuture)
+                        self.processInput(.connectFailed)
+                    }
                 }
             }
         }
