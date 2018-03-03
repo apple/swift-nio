@@ -167,7 +167,7 @@ If all goes well, you'll see the message echoed back to you.
 
 Alternatively, you may want to develop or test with `docker-compose`.
 
-To do that, first `cd docker` and then run the following commands:
+First make sure you have [Docker](https://www.docker.com/community-edition) installed, next `cd docker` and run the following commands:
 
 - `docker-compose up test`
 
