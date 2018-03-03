@@ -76,7 +76,7 @@ enum BindTo {
 }
 
 let bindTarget: BindTo
-switch (arg1, arg1.flatMap { Int($0) }, arg2.flatMap { Int($0) }) {
+switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
 case (.some(let h), _ , .some(let p)):
     /* we got two arguments, let's interpret that as host and port */
     bindTarget = .ip(host: h, port: p)

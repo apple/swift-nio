@@ -360,7 +360,7 @@ enum BindTo {
 
 let htdocs: String
 let bindTarget: BindTo
-switch (arg1, arg1.flatMap { Int($0) }, arg2, arg2.flatMap { Int($0) }, arg3) {
+switch (arg1, arg1.flatMap(Int.init), arg2, arg2.flatMap(Int.init), arg3) {
 case (.some(let h), _ , _, .some(let p), let maybeHtdocs):
     /* second arg an integer --> host port [htdocs] */
     bindTarget = .ip(host: h, port: p)
