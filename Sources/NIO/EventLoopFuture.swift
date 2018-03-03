@@ -68,7 +68,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
         case (.some(let onlyCallback), .none):
             return [onlyCallback]
         case (.some(let first), .some(let others)):
-            return [first]+others
+            return [first] + others
         }
     }
 
