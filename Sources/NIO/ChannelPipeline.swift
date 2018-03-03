@@ -676,6 +676,39 @@ public final class ChannelPipeline: ChannelInvoker {
     }
 }
 
+extension ChannelPipeline {
+    /// Adds the provided channel handlers to the pipeline in the order given, taking account
+    /// of the behaviour of `ChannelHandler.add(first:)`.
+    ///
+    /// - parameters:
+    ///     - handlers: The array of `ChannelHandler`s to be added.
+    ///     - first: If `true`, the supplied `ChannelHandler`s will be added to the front of the pipeline.
+    ///              If `false`, they will be added to the back.
+    ///
+    /// - returns: A future that will be completed when all of the supplied `ChannelHandler`s were added.
+    public func addHandlers(_ handlers: [ChannelHandler], first: Bool) -> EventLoopFuture<Void> {
+        var handlers = handlers
+        if first {
+            handlers = handlers.reversed()
+        }
+
+        return EventLoopFuture<Void>.andAll(handlers.map { add(handler: $0) }, eventLoop: eventLoop)
+    }
+
+    /// Adds the provided channel handlers to the pipeline in the order given, taking account
+    /// of the behaviour of `ChannelHandler.add(first:)`.
+    ///
+    /// - parameters:
+    ///     - handlers: One or more `ChannelHandler`s to be added.
+    ///     - first: If `true`, the supplied `ChannelHandler`s will be added to the front of the pipeline.
+    ///              If `false`, they will be added to the back.
+    ///
+    /// - returns: A future that will be completed when all of the supplied `ChannelHandler`s were added.
+    public func addHandlers(_ handlers: ChannelHandler..., first: Bool) -> EventLoopFuture<Void> {
+        return addHandlers(handlers, first: first)
+    }
+}
+
 /// Special `ChannelHandler` that forwards all events to the `Channel.Unsafe` implementation.
 private final class HeadChannelHandler: _ChannelOutboundHandler {
 
