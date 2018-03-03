@@ -148,35 +148,6 @@ public struct HTTPResponseHead: Equatable {
 fileprivate typealias HTTPHeadersStorage = [String: [(String, String)]] // [lowerCasedName: [(originalCaseName, value)]
 
 
-/// An iterator of HTTP header fields.
-///
-/// This iterator will return each value for a given header name separately. That
-/// means that `name` is not guaranteed to be unique in a given block of headers.
-struct HTTPHeadersIterator: IteratorProtocol {
-    fileprivate var storageIterator: HTTPHeadersStorage.Iterator
-    fileprivate var valuesIterator: Array<(String, String)>.Iterator?
-
-    fileprivate init(wrapping: HTTPHeadersStorage.Iterator) {
-        self.storageIterator = wrapping
-    }
-
-    mutating func next() -> (name: String, value: String)? {
-        // If we're already iterating an entry in the dict, grab the next one
-        if let nextValues = valuesIterator?.next() {
-            return nextValues
-        } else {
-            // If there's nothing left in this array, clear the iterator
-            valuesIterator = nil
-        }
-
-        if let entry = storageIterator.next() {
-            valuesIterator = entry.value.makeIterator()
-            return next()
-        } else {
-            return nil
-        }
-    }
-}
 
 /// A representation of a block of HTTP header fields.
 ///
@@ -190,7 +161,7 @@ struct HTTPHeadersIterator: IteratorProtocol {
 /// field when needed. It also supports recomposing headers to a maximally joined
 /// or split representation, such that header fields that are able to be repeated
 /// can be represented appropriately.
-public struct HTTPHeaders: Sequence, CustomStringConvertible {
+public struct HTTPHeaders: CustomStringConvertible {
 
     // [lowerCasedName: [(originalCaseName, value)]
     private var storage: HTTPHeadersStorage = HTTPHeadersStorage()
@@ -316,10 +287,6 @@ public struct HTTPHeaders: Sequence, CustomStringConvertible {
         }
     }
 
-    public func makeIterator() -> AnyIterator<(name: String, value: String)> {
-        return AnyIterator(HTTPHeadersIterator(wrapping: storage.makeIterator()))
-    }
-
     /// Retrieves the header values for the given header field in "canonical form": that is,
     /// splitting them on commas as extensively as possible such that multiple values received on the
     /// one line are returned as separate entries. Also respects the fact that Set-Cookie should not
@@ -340,6 +307,59 @@ public struct HTTPHeaders: Sequence, CustomStringConvertible {
         return []
     }
 }
+
+extension HTTPHeaders: Sequence {
+    public typealias Element = (name: String, value: String)
+  
+    /// An iterator of HTTP header fields.
+    ///
+    /// This iterator will return each value for a given header name separately. That
+    /// means that `name` is not guaranteed to be unique in a given block of headers.
+    public struct Iterator: IteratorProtocol {
+        private var storageIterator: HTTPHeadersStorage.Iterator
+        private var valuesIterator: Array<(String, String)>.Iterator?
+
+        fileprivate init(wrapping: HTTPHeadersStorage.Iterator) {
+            self.storageIterator = wrapping
+        }
+
+        public mutating func next() -> Element? {
+            // If we're already iterating an entry in the dict, grab the next one
+            if let nextValues = valuesIterator?.next() {
+                return nextValues
+            } else {
+                // If there's nothing left in this array, clear the iterator
+                valuesIterator = nil
+            }
+
+            if let entry = storageIterator.next() {
+                valuesIterator = entry.value.makeIterator()
+                return next()
+            } else {
+                return nil
+            }
+        }
+    }  
+
+    public func makeIterator() -> Iterator {
+        return Iterator(wrapping: storage.makeIterator())
+    }
+}
+
+// Dance to ensure that this version of makeIterator(), which returns
+// an AnyIterator, is only called when forced through type context.
+protocol _DeprecateHTTPHeaderIterator: Sequence { }
+extension HTTPHeaders: _DeprecateHTTPHeaderIterator {
+  @available(*, deprecated, renamed: "Element")
+  public typealias T = Element
+}
+extension _DeprecateHTTPHeaderIterator {
+  @available(*, deprecated, message: "Please use HTTPHeaders.Iterator")
+  func makeIterator() -> AnyIterator<Element> {
+    return AnyIterator(makeIterator() as Iterator)
+  }  
+}
+
 
 /* private but tests */ internal extension Character {
     var isASCIIWhitespace: Bool {
