@@ -41,7 +41,7 @@ public enum ALPNResult: Equatable {
             return p1 == p2
         case (.fallback, .fallback):
             return true
-        default:
+        case (.fallback, _), (.negotiated, _):
             return false
         }
     }

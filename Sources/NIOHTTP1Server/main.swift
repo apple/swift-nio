@@ -90,9 +90,8 @@ private final class HTTPHandler: ChannelInboundHandler {
             self.state.requestReceived()
         case .body(buffer: let buf):
             self.infoSavedBodyBytes += buf.readableBytes
-        case .end(_):
+        case .end:
             self.state.requestComplete()
-
             let response = """
             HTTP method: \(self.infoSavedRequestHead!.method)\r
             URL: \(self.infoSavedRequestHead!.uri)\r
@@ -131,7 +130,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             } else {
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buf))), promise: nil)
             }
-        case .end(_):
+        case .end:
             self.state.requestComplete()
             if balloonInMemory {
                 var headers = HTTPHeaders()
@@ -153,7 +152,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             ctx.writeAndFlush(self.wrapOutboundOut(.head(.init(version: request.version, status: .ok))), promise: nil)
         case .body(buffer: _):
             ()
-        case .end(_):
+        case .end:
             self.state.requestComplete()
             _ = ctx.eventLoop.scheduleTask(in: delay) { () -> Void in
                 var buf = ctx.channel.allocator.buffer(capacity: string.utf8.count)
@@ -338,7 +337,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                 ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 ctx.channel.close(promise: nil)
             }
-        case .end(_):
+        case .end:
             self.state.requestComplete()
         default:
             fatalError("oh noes: \(request)")

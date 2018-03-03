@@ -292,7 +292,7 @@ extension SocketAddress: Equatable {
             var sunpath1 = addr1.address.sun_path
             var sunpath2 = addr2.address.sun_path
             return memcmp(&sunpath1, &sunpath2, MemoryLayout.size(ofValue: sunpath1)) == 0
-        default:
+        case (.v4, _), (.v6, _), (.unixDomainSocket, _):
             return false
         }
     }

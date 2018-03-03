@@ -70,9 +70,7 @@ private let sysRecvMmsg = CNIODarwin_recvmmsg
 
 private func isBlacklistedErrno(_ code: Int32) -> Bool {
     switch code {
-    case EFAULT:
-        fallthrough
-    case EBADF:
+    case EFAULT, EBADF:
         return true
     default:
         return false

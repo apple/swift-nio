@@ -29,7 +29,7 @@ extension IOData: Equatable {
             return lhs == rhs
         case (.fileRegion(let lhs), .fileRegion(let rhs)):
             return lhs == rhs
-        default:
+        case (.byteBuffer, _), (.fileRegion, _):
             return false
         }
     }
