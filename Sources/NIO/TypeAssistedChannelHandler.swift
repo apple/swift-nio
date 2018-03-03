@@ -77,4 +77,4 @@ extension ChannelOutboundHandler {
 }
 
 /// A combination of `ChannelInboundHandler` and `ChannelOutboundHandler`.
-public protocol ChannnelDuplexHandler: ChannelInboundHandler, ChannelOutboundHandler { }
+public typealias ChannelDuplexHandler = ChannelInboundHandler & ChannelOutboundHandler

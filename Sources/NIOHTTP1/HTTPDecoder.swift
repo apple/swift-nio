@@ -153,17 +153,6 @@ public extension ChannelPipeline {
                                                 upgradeCompletionHandler: upgradeCompletionHandler)
         return addHandlers(responseEncoder, requestDecoder, upgrader, first: first)
     }
-
-    /// Adds the provided channel handlers to the pipeline in the order given, taking account
-    /// of the behaviour of `ChannelHandler.add(first:)`.
-    private func addHandlers(_ handlers: ChannelHandler..., first: Bool) -> EventLoopFuture<Void> {
-        var handlers = handlers
-        if first {
-            handlers = handlers.reversed()
-        }
-
-        return EventLoopFuture<Void>.andAll(handlers.map { add(handler: $0) }, eventLoop: eventLoop)
-    }
 }
 
 /// A `ChannelInboundHandler` used to decode HTTP requests. See the documentation

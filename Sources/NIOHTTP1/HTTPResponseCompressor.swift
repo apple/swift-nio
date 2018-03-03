@@ -56,7 +56,7 @@ private func qValueFromHeader(_ text: String) -> Float {
 /// ahead-of-time instead of dynamically, could be a waste of CPU time and latency for relatively minimal
 /// benefit. This channel handler should be present in the pipeline only for dynamically-generated and
 /// highly-compressible content, which will see the biggest benefits from streaming compression.
-public final class HTTPResponseCompressor: ChannnelDuplexHandler {
+public final class HTTPResponseCompressor: ChannelDuplexHandler {
     public typealias InboundIn = HTTPServerRequestPart
     public typealias InboundOut = HTTPServerRequestPart
     public typealias OutboundIn = HTTPServerResponsePart
