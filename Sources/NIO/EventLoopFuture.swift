@@ -308,10 +308,8 @@ public final class EventLoopFuture<T> {
         self.value = value
         self._isFulfilled = Atomic(value: value != nil)
 
-        if _isDebugAssertConfiguration() {
-            if let me = eventLoop as? SelectableEventLoop {
-                me.promiseCreationStoreAdd(future: self, file: file, line: line)
-            }
+        if _isDebugAssertConfiguration(), let me = eventLoop as? SelectableEventLoop {
+            me.promiseCreationStoreAdd(future: self, file: file, line: line)
         }
     }
 
