@@ -107,7 +107,7 @@ private struct PendingStreamWritesState {
     public private(set) var bytes: Int = 0
 
     public var flushedChunks: Int {
-        return self.pendingWrites.markedElementIndex().map { $0 + 1 } ?? 0
+        return self.pendingWrites.markedElementIndex.map { $0 + 1 } ?? 0
     }
 
     /// Subtract `bytes` from the number of outstanding bytes to write.
@@ -144,7 +144,7 @@ private struct PendingStreamWritesState {
         if self.pendingWrites.isEmpty {
             assert(self.chunks == 0)
             assert(self.bytes == 0)
-            assert(!self.pendingWrites.hasMark())
+            assert(!self.pendingWrites.hasMark)
             return true
         } else {
             assert(self.chunks > 0 && self.bytes >= 0)
@@ -216,7 +216,7 @@ private struct PendingStreamWritesState {
 
     /// Is there a pending flush?
     public var isFlushPending: Bool {
-        return self.pendingWrites.hasMark()
+        return self.pendingWrites.hasMark
     }
 
     /// Fail all the outstanding writes.

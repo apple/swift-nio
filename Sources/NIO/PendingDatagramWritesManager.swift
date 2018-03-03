@@ -168,7 +168,7 @@ private struct PendingDatagramWritesState {
         if self.pendingWrites.isEmpty {
             assert(self.chunks == 0)
             assert(self.bytes == 0)
-            assert(!self.pendingWrites.hasMark())
+            assert(!self.pendingWrites.hasMark)
             return true
         } else {
             assert(self.chunks > 0 && self.bytes >= 0)
@@ -223,7 +223,7 @@ private struct PendingDatagramWritesState {
         if let promiseFiller = self.wroteFirst(error: error) {
             pendingPromises.append(promiseFiller)
         }
-        let result: OneWriteOperationResult = self.pendingWrites.hasMark() ? .writtenPartially : .writtenCompletely
+        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
 
         return (pendingPromises, result)
     }
@@ -247,7 +247,7 @@ private struct PendingDatagramWritesState {
         }
 
         // If we no longer have a mark, we wrote everything.
-        let result: OneWriteOperationResult = self.pendingWrites.hasMark() ? .writtenPartially : .writtenCompletely
+        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
         return (fillers, result)
     }
 
@@ -266,13 +266,13 @@ private struct PendingDatagramWritesState {
         }
 
         // If we no longer have a mark, we wrote everything.
-        let result: OneWriteOperationResult = self.pendingWrites.hasMark() ? .writtenPartially : .writtenCompletely
+        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
         return (fillers, result)
     }
 
     /// Is there a pending flush?
     public var isFlushPending: Bool {
-        return self.pendingWrites.hasMark()
+        return self.pendingWrites.hasMark
     }
 
     /// Fail all the outstanding writes.
@@ -296,7 +296,7 @@ private struct PendingDatagramWritesState {
 
     /// Returns the best mechanism to write pending data at the current point in time.
     var currentBestWriteMechanism: WriteMechanism {
-        switch self.pendingWrites.markedElementIndex() {
+        switch self.pendingWrites.markedElementIndex {
         case .some(let e) where e > 0:
             return .vectorBufferWrite
         case .some(let e):
@@ -318,7 +318,7 @@ extension PendingDatagramWritesState {
         init(_ pendingWrites: PendingDatagramWritesState) {
             self.pendingWrites = pendingWrites
             self.index = pendingWrites.pendingWrites.startIndex
-            self.markedIndex = pendingWrites.pendingWrites.markedElementIndex() ?? -1
+            self.markedIndex = pendingWrites.pendingWrites.markedElementIndex ?? -1
         }
 
         mutating func next() -> PendingDatagramWrite? {
