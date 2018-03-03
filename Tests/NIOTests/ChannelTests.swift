@@ -1128,10 +1128,9 @@ public class ChannelTests: XCTestCase {
         let written = try buffer.withUnsafeReadableBytes { p in
             try accepted.write(pointer: p.baseAddress!.assumingMemoryBound(to: UInt8.self), size: 4)
         }
-        switch written {
-        case .processed(let numBytes):
+        if case .processed(let numBytes) = written {
             XCTAssertEqual(4, numBytes)
-        default:
+        } else {
             XCTFail()
         }
         try byteCountingHandler.assertReceived(buffer: buffer)

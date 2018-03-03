@@ -138,47 +138,39 @@ private final class HTTPHandler: ChannelInboundHandler {
     }
 
     func handleContinuousWrites(ctx: ChannelHandlerContext, request: HTTPServerRequestPart) {
-        switch request {
-        case .head(let request):
-            self.continuousCount = 0
-            func doNext() {
-                self.buffer.clear()
-                self.continuousCount += 1
-                self.buffer.write(string: "line \(self.continuousCount)\n")
-                ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).map {
-                    _ = ctx.eventLoop.scheduleTask(in: .milliseconds(400), doNext)
-                }.whenFailure { error in
-                    ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
-                }
+        guard case .head(let request) = request else { return }
+        self.continuousCount = 0
+        func doNext() {
+            self.buffer.clear()
+            self.continuousCount += 1
+            self.buffer.write(string: "line \(self.continuousCount)\n")
+            ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).map {
+                _ = ctx.eventLoop.scheduleTask(in: .milliseconds(400), doNext)
+            }.whenFailure { error in
+                ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
             }
-            ctx.writeAndFlush(self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
-            doNext()
-        default:
-            ()
         }
+        ctx.writeAndFlush(self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
+        doNext()
     }
 
     func handleMultipleWrites(ctx: ChannelHandlerContext, request: HTTPServerRequestPart, strings: [String], delay: TimeAmount) {
-        switch request {
-        case .head(let request):
-            self.continuousCount = 0
-            func doNext() {
-                self.buffer.clear()
-                self.buffer.write(string: strings[self.continuousCount])
-                ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenSuccess {
-                    if self.continuousCount < strings.count - 1 {
-                        _ = ctx.eventLoop.scheduleTask(in: delay, doNext)
-                    } else {
-                        ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
-                    }
+        guard case .head(let request) = request else { return }
+        self.continuousCount = 0
+        func doNext() {
+            self.buffer.clear()
+            self.buffer.write(string: strings[self.continuousCount])
+            ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenSuccess {
+                if self.continuousCount < strings.count - 1 {
+                    _ = ctx.eventLoop.scheduleTask(in: delay, doNext)
+                } else {
+                    ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 }
-                self.continuousCount += 1
             }
-            ctx.writeAndFlush(self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
-            doNext()
-        default:
-            ()
+            self.continuousCount += 1
         }
+        ctx.writeAndFlush(self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
+        doNext()
     }
 
     func dynamicHandler(request reqHead: HTTPRequestHead) -> ((ChannelHandlerContext, HTTPServerRequestPart) -> Void)? {

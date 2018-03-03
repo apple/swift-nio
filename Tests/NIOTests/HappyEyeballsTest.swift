@@ -312,10 +312,9 @@ public class HappyEyeballsTest : XCTestCase {
         loop.advanceTime(by: .seconds(1))
         XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
 
-        switch channelFuture.getError() {
-        case .some(ChannelError.connectTimeout(let amount)):
+        if case .some(ChannelError.connectTimeout(let amount)) = channelFuture.getError() {
             XCTAssertEqual(amount, .seconds(10))
-        default:
+        } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
         }
 
@@ -523,14 +522,13 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertEqual(resolver.events, expectedQueries)
 
         // But we should have failed.
-        switch channelFuture.getError() {
-        case .some(ChannelError.connectFailed(let inner)):
+        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
             XCTAssertEqual(inner.host, "example.com")
             XCTAssertEqual(inner.port, 80)
             XCTAssertNil(inner.dnsAError)
             XCTAssertNil(inner.dnsAAAAError)
             XCTAssertEqual(inner.connectionErrors.count, 0)
-        default:
+        } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
         }
     }
@@ -556,14 +554,13 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertEqual(resolver.events, expectedQueries)
 
         // But we should have failed.
-        switch channelFuture.getError() {
-        case .some(ChannelError.connectFailed(let inner)):
+        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
             XCTAssertEqual(inner.host, "example.com")
             XCTAssertEqual(inner.port, 80)
             XCTAssertEqual(inner.dnsAError as? DummyError ?? DummyError(), v4Error)
             XCTAssertEqual(inner.dnsAAAAError as? DummyError ?? DummyError(), v6Error)
             XCTAssertEqual(inner.connectionErrors.count, 0)
-        default:
+        } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
         }
     }
@@ -692,8 +689,7 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertTrue(channelFuture.fulfilled)
 
         // Check the error.
-        switch channelFuture.getError() {
-        case .some(ChannelError.connectFailed(let inner)):
+        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
             XCTAssertEqual(inner.host, "example.com")
             XCTAssertEqual(inner.port, 80)
             XCTAssertNil(inner.dnsAError)
@@ -703,7 +699,7 @@ public class HappyEyeballsTest : XCTestCase {
             for (idx, error) in inner.connectionErrors.enumerated() {
                 XCTAssertEqual(error.error as? DummyError, errors[idx])
             }
-        default:
+        } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
         }
     }
@@ -1145,10 +1141,9 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertEqual(errors.count, 20)
 
         XCTAssertTrue(channelFuture.fulfilled)
-        switch channelFuture.getError() {
-        case .some(ChannelError.connectFailed(let inner)):
+        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
             XCTAssertEqual(inner.connectionErrors.map { $0.error as! DummyError }, errors)
-        default:
+        } else {
             XCTFail("Got unexpected error: \(String(describing: channelFuture.getError()))")
         }
     }

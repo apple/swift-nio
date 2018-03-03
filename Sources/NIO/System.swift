@@ -256,10 +256,9 @@ internal enum Posix {
             return fd
         }
 
-        switch result {
-        case .processed(let fd):
+        if case .processed(let fd) = result {
             return fd
-        default:
+        } else {
             return nil
         }
     }

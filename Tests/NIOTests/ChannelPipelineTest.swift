@@ -258,28 +258,25 @@ class ChannelPipelineTest: XCTestCase {
 
         /* the first thing, we should receive is `[-2]` as it shouldn't hit any `MarkingOutboundHandler`s (`4`) */
         var outbound = channel.readOutbound()
-        switch outbound {
-        case .some(.byteBuffer(var buf)):
+        if case .some(.byteBuffer(var buf)) = outbound {
             XCTAssertEqual("[-2]", buf.readString(length: buf.readableBytes))
-        default:
+        } else {
             XCTFail("wrong contents: \(outbound.debugDescription)")
         }
 
         /* the next thing we should receive is `[-2, 4]` as the first `WriteOnReadHandler` (receiving `[2]`) is behind the `MarkingOutboundHandler` (`4`) */
         outbound = channel.readOutbound()
-        switch outbound {
-        case .some(.byteBuffer(var buf)):
+        if case .some(.byteBuffer(var buf)) = outbound {
             XCTAssertEqual("[-2, 4]", buf.readString(length: buf.readableBytes))
-        default:
+        } else {
             XCTFail("wrong contents: \(outbound.debugDescription)")
         }
 
         /* and finally, we're waiting for `[-2, -6, 4]` as the second `WriteOnReadHandler`s (receiving `[2, 4]`) is behind the `MarkingOutboundHandler` (`4`) */
         outbound = channel.readOutbound()
-        switch outbound {
-        case .some(.byteBuffer(var buf)):
+        if case .some(.byteBuffer(var buf)) = outbound {
             XCTAssertEqual("[-2, -6, 4]", buf.readString(length: buf.readableBytes))
-        default:
+        } else {
             XCTFail("wrong contents: \(outbound.debugDescription)")
         }
 

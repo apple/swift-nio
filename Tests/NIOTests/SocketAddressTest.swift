@@ -27,8 +27,7 @@ class SocketAddressTest: XCTestCase {
     func testCanCreateIPv4AddressFromString() throws {
         let sa = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
         let expectedAddress: [UInt8] = [0x7F, 0x00, 0x00, 0x01]
-        switch sa {
-        case .v4(let address):
+        if case .v4(let address) = sa {
             var addr = address.address
             let host = address.host
             XCTAssertEqual(host, "")
@@ -40,7 +39,7 @@ class SocketAddressTest: XCTestCase {
                     XCTAssertEqual(rc, 0)
                 }
             }
-        default:
+        } else {
             XCTFail("Invalid address: \(sa)")
         }
     }
@@ -48,8 +47,7 @@ class SocketAddressTest: XCTestCase {
     func testCanCreateIPv6AddressFromString() throws {
         let sa = try SocketAddress(ipAddress: "fe80::5", port: 443)
         let expectedAddress: [UInt8] = [0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]
-        switch sa {
-        case .v6(let address):
+        if case .v6(let address) = sa {
             var addr = address.address
             let host = address.host
             XCTAssertEqual(host, "")
@@ -63,7 +61,7 @@ class SocketAddressTest: XCTestCase {
                     XCTAssertEqual(rc, 0)
                 }
             }
-        default:
+        } else {
             XCTFail("Invalid address: \(sa)")
         }
     }
