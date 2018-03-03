@@ -190,7 +190,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         case .end:
             self.state.requestComplete()
         default:
-            ()
+            break
         }
     }
 

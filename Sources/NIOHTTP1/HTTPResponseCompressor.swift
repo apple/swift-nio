@@ -103,13 +103,10 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
     }
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        let httpData = unwrapInboundIn(data)
-        switch httpData {
-        case .head(let requestHead):
+        if case .head(let requestHead) = unwrapInboundIn(data) {
             acceptQueue.append(requestHead.headers.getCanonicalForm("accept-encoding"))
-        default:
-            break
         }
+
         ctx.fireChannelRead(data)
     }
 

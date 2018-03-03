@@ -92,10 +92,9 @@ public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler {
             return
         }
 
-        switch tlsEvent {
-        case .handshakeCompleted(let p):
+        if case .handshakeCompleted(let p) = tlsEvent {
             handshakeCompleted(context: ctx, negotiatedProtocol: p)
-        default:
+        } else {
             ctx.fireUserInboundEventTriggered(event)
         }
     }
