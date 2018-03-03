@@ -218,7 +218,7 @@ extension DummyResolver.Event: Equatable {
             return host1 == host2 && port1 == port2
         case(.cancel, .cancel):
             return true
-        default:
+        case (.a, _), (.aaaa, _), (.cancel, _):
             return false
         }
     }

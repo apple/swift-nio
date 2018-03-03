@@ -55,7 +55,7 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
                 iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: toWriteForThisBuffer)
             }
             numberOfUsedStorageSlots += 1
-        case .fileRegion(_):
+        case .fileRegion:
             assert(numberOfUsedStorageSlots != 0, "first item in doPendingWriteVectorOperation was a FileRegion")
             // We found a FileRegion so stop collecting
             break loop

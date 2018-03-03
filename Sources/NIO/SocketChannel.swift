@@ -384,7 +384,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             safeReregister(interested: .all)
         case .none:
             safeReregister(interested: .write)
-        default:
+        case .write, .all:
             break
         }
     }
@@ -396,7 +396,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             safeReregister(interested: .read)
         case .write:
             safeReregister(interested: .none)
-        default:
+        case .read, .none:
             break
         }
     }
@@ -442,7 +442,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             safeReregister(interested: .all)
         case .none:
             safeReregister(interested: .read)
-        default:
+        case .read, .all:
             break
         }
     }
@@ -455,7 +455,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             safeReregister(interested: .none)
         case .all:
             safeReregister(interested: .write)
-        default:
+        case .write, .none:
             break
         }
     }

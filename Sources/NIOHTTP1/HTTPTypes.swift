@@ -84,7 +84,7 @@ extension HTTPPart: Equatable {
             return b1 == b2
         case (.end(let h1), .end(let h2)):
             return h1 == h2
-        default:
+        case (.head, _), (.body, _), (.end, _):
             return false
         }
     }
