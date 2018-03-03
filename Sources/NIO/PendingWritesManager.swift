@@ -333,7 +333,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
                 return try triggerScalarFileWrite(scalarFileWriteOperation)
             case .nothingToBeWritten:
                 assertionFailure("called \(#function) with nothing available to be written")
-                return OneWriteOperationResult.writtenCompletely
+                return .writtenCompletely
             }
         }
     }

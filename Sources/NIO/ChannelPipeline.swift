@@ -920,11 +920,11 @@ private extension CloseMode {
     var error: ChannelError {
         switch self {
         case .all:
-            return ChannelError.alreadyClosed
+            return .alreadyClosed
         case .output:
-            return ChannelError.outputClosed
+            return .outputClosed
         case .input:
-            return ChannelError.inputClosed
+            return .inputClosed
         }
     }
 }
