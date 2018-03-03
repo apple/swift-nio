@@ -37,6 +37,29 @@ private func descriptionForAddress(family: CInt, bytes: UnsafeRawPointer, length
     }
 }
 
+/// A helper extension for working with sockaddr pointers.
+extension UnsafeMutablePointer where Pointee == sockaddr {
+    /// Converts the `sockaddr` to a `SocketAddress`.
+    func convert() -> SocketAddress? {
+        switch pointee.sa_family {
+        case Posix.AF_INET:
+            return self.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
+                SocketAddress($0.pointee, host: $0.pointee.addressDescription())
+            }
+        case Posix.AF_INET6:
+            return self.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
+                SocketAddress($0.pointee, host: $0.pointee.addressDescription())
+            }
+        case Posix.AF_UNIX:
+            return self.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
+                SocketAddress($0.pointee)
+            }
+        default:
+            return nil
+        }
+    }
+}
+
 extension sockaddr_in: SockAddrProtocol {
     mutating func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
         var me = self
