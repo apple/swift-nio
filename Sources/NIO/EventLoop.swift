@@ -89,10 +89,10 @@ public protocol EventLoop: EventLoopGroup {
     /// - parameters:
     ///     - task: The closure that will be submited to the `EventLoop` for execution.
     /// - returns: `EventLoopFuture` that is notified once the task was executed.
-    func submit<T>(_ task: @escaping () throws-> (T)) -> EventLoopFuture<T>
+    func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
 
     /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
-    func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T>
+    func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
 }
 
 /// Represents a time _interval_.
@@ -165,13 +165,14 @@ extension TimeAmount: Comparable {
     public static func < (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds < rhs.nanoseconds
     }
+    
     public static func == (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds == rhs.nanoseconds
     }
 }
 
 extension EventLoop {
-    public func submit<T>(_ task: @escaping () throws-> (T)) -> EventLoopFuture<T> {
+    public func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
         let promise: EventLoopPromise<T> = newPromise(file: #file, line: #line)
 
         self.execute {
@@ -367,7 +368,7 @@ internal final class SelectableEventLoop: EventLoop {
         return thread.isCurrent
     }
 
-    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
+    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = newPromise()
         let task = ScheduledTask({
             do {
@@ -770,6 +771,7 @@ extension ScheduledTask: Comparable {
     public static func < (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs.readyTime < rhs.readyTime
     }
+    
     public static func == (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs === rhs
     }

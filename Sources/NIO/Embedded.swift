@@ -61,7 +61,7 @@ public class EmbeddedEventLoop: EventLoop {
 
     public init() { }
 
-    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
+    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = newPromise()
         let readyTime = now + UInt64(`in`.nanoseconds)
         let task = EmbeddedScheduledTask(readyTime: readyTime) {
