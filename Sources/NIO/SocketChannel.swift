@@ -206,6 +206,9 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.active.store(false)
         self.recvAllocator = recvAllocator
         self._pipeline = ChannelPipeline(channel: self)
+        // As the socket may already be connected we should ensure we start with the correct addresses cached.
+        self.localAddressCached.store(Box(try? socket.localAddress()))
+        self.remoteAddressCached.store(Box(try? socket.remoteAddress()))
     }
 
     deinit {

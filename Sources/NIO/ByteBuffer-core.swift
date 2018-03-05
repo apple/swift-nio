@@ -87,7 +87,7 @@ private func toIndex(_ value: Int) -> Index {
 /// more bytes (octets).
 ///
 /// ### Allocation
-/// Use `ByteBufferAllocator.buffer(capacity: desiredCapacity)` to allocate a new `ByteBuffer`.
+/// Use `allocator.buffer(capacity: desiredCapacity)` to allocate a new `ByteBuffer`.
 ///
 /// ### Supported types
 /// A variety of types can be read/written from/to a `ByteBuffer`. Using Swift's `extension` mechanism you can easily
@@ -100,13 +100,9 @@ private func toIndex(_ value: Int) -> Index {
 ///  - `[UInt8]` and generally any `Collection` (& `ContiguousCollection`) of `UInt8`
 ///
 /// ### Random Access
-/// `ByteBuffer` provides two properties which are indices into the `ByteBuffer` to support sequential access:
-///  - `readerIndex`, the index of the next readable byte
-///  - `writerIndex`, the index of the next byte to write
-///
 /// For every supported type `ByteBuffer` usually contains two methods for random access:
 ///
-///  1. `get<type>(at: Int, length: Int)` where `<type>` is for example `string`, `Data`, `bytes` (for `[UInt8]`)
+///  1. `get<type>(at: Int, length: Int)` where `<type>` is for example `String`, `Data`, `Bytes` (for `[UInt8]`)
 ///  2. `set(<type>: Type, at: Int)`
 ///
 /// Example:
@@ -121,6 +117,10 @@ private func toIndex(_ value: Int) -> Index {
 /// If needed, `ByteBuffer` will automatically resize its storage to accomodate your `set` request.
 ///
 /// ### Sequential Access
+/// `ByteBuffer` provides two properties which are indices into the `ByteBuffer` to support sequential access:
+///  - `readerIndex`, the index of the next readable byte
+///  - `writerIndex`, the index of the next byte to write
+///
 /// For every supported type `ByteBuffer` usually contains two methods for sequential access:
 ///
 ///  1. `read<type>(length: Int)` to read `length` bytes from the current `readerIndex` (and then advance the reader index by `length` bytes)
@@ -361,10 +361,10 @@ public struct ByteBuffer {
         return self._slice.count
     }
 
-    /// Change the capacity to at least `newCapacity` bytes.
+    /// Change the capacity to at least `to` bytes.
     ///
     /// - parameters:
-    ///     - newCapacity: The desired minimum capacity.
+    ///     - to: The desired minimum capacity.
     public mutating func changeCapacity(to newCapacity: Int) {
         precondition(newCapacity >= self.writerIndex,
                      "new capacity \(newCapacity) less than the writer index (\(self.writerIndex))")
