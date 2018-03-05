@@ -130,7 +130,7 @@ final class Thread {
 /// returned by `currentValue` is defined per thread.
 ///
 /// - note: `ThreadSpecificVariable` has reference semantics.
-internal struct ThreadSpecificVariable<T: AnyObject> {
+public struct ThreadSpecificVariable<T: AnyObject> {
     private let key: pthread_key_t
 
     /// Initialize a new `ThreadSpecificVariable` without a current value (`currentValue == nil`).
