@@ -662,8 +662,13 @@ public final class ChannelPipeline: ChannelInvoker {
         return eventLoop.inEventLoop
     }
 
-    // Only executed from Channel
-    init (channel: Channel) {
+    /// Create `ChannelPipeline` for a given `Channel`. This method should never be called by the end-user
+    /// directly: it is only intended for use with custom `Channel` implementations. Users should always use
+    /// `channel.pipeline` to access the `ChannelPipeline` for a `Channel`.
+    ///
+    /// - parameters:
+    ///    - channel: The `Channel` this `ChannelPipeline` is created for.
+    public init(channel: Channel) {
         self._channel = channel
         self.eventLoop = channel.eventLoop
 
