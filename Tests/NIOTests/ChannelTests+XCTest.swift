@@ -56,6 +56,7 @@ extension ChannelTests {
                 ("testWeDontCrashIfChannelReleasesBeforePipeline", testWeDontCrashIfChannelReleasesBeforePipeline),
                 ("testAskForLocalAndRemoteAddressesAfterChannelIsClosed", testAskForLocalAndRemoteAddressesAfterChannelIsClosed),
                 ("testReceiveAddressAfterAccept", testReceiveAddressAfterAccept),
+                ("testWeDontJamSocketsInANoIOState", testWeDontJamSocketsInANoIOState),
            ]
    }
 }
