@@ -87,7 +87,7 @@ private func toIndex(_ value: Int) -> Index {
 /// more bytes (octets).
 ///
 /// ### Allocation
-/// Use `ByteBufferAllocator().buffer(capacity: desiredCapacity)` to allocate a new `ByteBuffer`.
+/// Use `allocator.buffer(capacity: desiredCapacity)` to allocate a new `ByteBuffer`.
 ///
 /// ### Supported types
 /// A variety of types can be read/written from/to a `ByteBuffer`. Using Swift's `extension` mechanism you can easily
