@@ -1411,4 +1411,118 @@ public class ChannelTests: XCTestCase {
             XCTAssertNil(f)
         }
     }
+
+    func testReceiveAddressAfterAccept() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        class AddressVerificationHandler : ChannelInboundHandler {
+            typealias InboundIn = Never
+
+            public func channelActive(ctx: ChannelHandlerContext) {
+                XCTAssertNotNil(ctx.channel.localAddress)
+                XCTAssertNotNil(ctx.channel.remoteAddress)
+                ctx.channel.close(promise: nil)
+            }
+        }
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer { ch in
+                ch.pipeline.add(handler: AddressVerificationHandler())
+            }
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+
+        try clientChannel.closeFuture.wait()
+        try serverChannel.syncCloseAcceptingAlreadyClosed()
+    }
+
+    func testWeDontJamSocketsInANoIOState() throws {
+        final class ReadDelayer: ChannelDuplexHandler {
+            typealias InboundIn = Any
+            typealias InboundOut = Any
+            typealias OutboundIn = Any
+            typealias OutboundOut = Any
+
+            public var reads = 0
+            private var ctx: ChannelHandlerContext!
+            private var readCountPromise: EventLoopPromise<Void>!
+            private var waitingForReadPromise: EventLoopPromise<Void>?
+
+            func handlerAdded(ctx: ChannelHandlerContext) {
+                self.ctx = ctx
+                self.readCountPromise = ctx.eventLoop.newPromise()
+            }
+
+            public func expectRead(loop: EventLoop) -> EventLoopFuture<Void> {
+                return loop.submit {
+                    self.waitingForReadPromise = loop.newPromise()
+                }.then { (_: Void) in
+                    return self.waitingForReadPromise!.futureResult
+                }
+            }
+
+            func channelReadComplete(ctx: ChannelHandlerContext) {
+                self.waitingForReadPromise?.succeed(result: ())
+                self.waitingForReadPromise = nil
+            }
+
+            func read(ctx: ChannelHandlerContext) {
+                self.reads += 1
+
+                // Allow the first read through.
+                if self.reads == 1 {
+                    self.ctx.read()
+                }
+            }
+
+            public func issueDelayedRead() {
+                self.ctx.read()
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let readDelayer = ReadDelayer()
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer {
+                $0.pipeline.add(handler: readDelayer)
+            }
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+
+        // We send a first write and expect it to arrive.
+        var buffer = clientChannel.allocator.buffer(capacity: 12)
+        let firstReadPromise = readDelayer.expectRead(loop: serverChannel.eventLoop)
+        buffer.write(staticString: "hello, world")
+        XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
+        XCTAssertNoThrow(try firstReadPromise.wait())
+
+        // We send a second write. This won't arrive immediately.
+        XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
+        let readFuture = readDelayer.expectRead(loop: serverChannel.eventLoop)
+        try serverChannel.eventLoop.scheduleTask(in: .milliseconds(100)) {
+            XCTAssertFalse(readFuture.fulfilled)
+        }.futureResult.wait()
+
+        // Ok, now let it proceed.
+        try serverChannel.eventLoop.submit {
+            XCTAssertEqual(readDelayer.reads, 2)
+            readDelayer.issueDelayedRead()
+        }.wait()
+
+        // The read should go through.
+        XCTAssertNoThrow(try readFuture.wait())
+    }
 }

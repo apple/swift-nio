@@ -171,7 +171,7 @@ First make sure you have [Docker](https://www.docker.com/community-edition) inst
 
 - `docker-compose up test`
 
-  Will create a base image with Swift 4.0 (if missing), compile SwiftNIO and run the tests
+  Will create a base image with Swift runtime and other build and test dependencies, compile SwiftNIO and run the unit and integration tests
 
 - `docker-compose up echo`
 

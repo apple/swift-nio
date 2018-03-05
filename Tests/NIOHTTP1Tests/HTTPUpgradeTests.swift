@@ -659,11 +659,15 @@ class HTTPUpgradeTestCase: XCTestCase {
     func testDelayedUpgradeBehaviour() throws {
         let g = DispatchGroup()
         g.enter()
+        var serverChannel: Channel? = nil
 
         let upgrader = UpgradeDelayer(forProtocol: "myproto")
         let handler = HTTPServerUpgradeHandler(upgraders: [upgrader],
                                                httpEncoder: nil,
-                                               httpDecoder: nil) { ctx in g.leave() }
+                                               httpDecoder: nil) { ctx in
+                                                  serverChannel = ctx.channel
+                                                  g.leave()
+                                               }
 
         let (group, server, client) = try setUpTest(withHandlers: [handler])
         defer {
@@ -687,12 +691,8 @@ class HTTPUpgradeTestCase: XCTestCase {
         g.wait()
 
         // Ok, we don't think this upgrade should have succeeded yet, but neither should it have failed. We want to
-        // dispatch onto the client event loop and check that the channel is still up, and that the complete promise
-        // is still unfulfilled (because the server-side channel isn't closed).
-        try client.eventLoop.submit {
-            XCTAssertTrue(client.isActive)
-            XCTAssertFalse(completePromise.futureResult.isFulfilled)
-        }.wait()
+        // dispatch onto the server event loop and check that the channel still contains the upgrade handler.
+        try serverChannel!.pipeline.assertContains(handler: handler)
 
         // Ok, let's unblock the upgrade now. The machinery should do its thing.
         try server.eventLoop.submit {
@@ -700,7 +700,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         }.wait()
         XCTAssertNoThrow(try completePromise.futureResult.wait())
         client.close(promise: nil)
-        try client.pipeline.assertDoesNotContain(handler: handler)
+        try serverChannel!.pipeline.assertDoesNotContain(handler: handler)
     }
 
     func testBuffersInboundDataDuringDelayedUpgrade() throws {

@@ -50,7 +50,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
     private var continuousCount: Int = 0
 
-    private var handler: ((ChannelHandlerContext, HTTPServerRequestPart) -> Void)? = nil
+    private var handler: ((ChannelHandlerContext, HTTPServerRequestPart) -> Void)?
     private var handlerFuture: EventLoopFuture<()>?
     private let fileIO: NonBlockingFileIO
 
@@ -146,7 +146,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             self.buffer.write(string: "line \(self.continuousCount)\n")
             ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).map {
                 _ = ctx.eventLoop.scheduleTask(in: .milliseconds(400), doNext)
-            }.whenFailure { error in
+            }.whenFailure { (_: Error) in
                 ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
             }
         }
@@ -414,7 +414,7 @@ let channel = try { () -> Channel in
     case .unixDomainSocket(let path):
         return try bootstrap.bind(unixDomainSocketPath: path).wait()
     }
-    }()
+}()
 
 print("Server started and listening on \(channel.localAddress!), htdocs path \(htdocs)")
 
