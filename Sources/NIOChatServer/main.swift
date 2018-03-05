@@ -57,7 +57,7 @@ final class ChatHandler: ChannelInboundHandler {
 
         // 64 should be good enough for the ipaddress
         var buffer = ctx.channel.allocator.buffer(capacity: read.readableBytes + 64)
-        buffer.write(string: "(\(ctx.channel.remoteAddress!)) - ")
+        buffer.write(string: "(\(ctx.remoteAddress!)) - ")
         buffer.write(buffer: &read)
         self.channelsSyncQueue.async {
             // broadcast the message to all the connected clients except the one that wrote it.
