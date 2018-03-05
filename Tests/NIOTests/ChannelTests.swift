@@ -1412,4 +1412,34 @@ public class ChannelTests: XCTestCase {
             XCTAssertNil(f)
         }
     }
+
+    func testReceiveAddressAfterAccept() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        class AddressVerificationHandler : ChannelInboundHandler {
+            typealias InboundIn = Never
+
+            public func channelActive(ctx: ChannelHandlerContext) {
+                XCTAssertNotNil(ctx.channel.localAddress)
+                XCTAssertNotNil(ctx.channel.remoteAddress)
+                ctx.channel.close(promise: nil)
+            }
+        }
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer { ch in
+                ch.pipeline.add(handler: AddressVerificationHandler())
+            }
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+
+        try clientChannel.closeFuture.wait()
+        try serverChannel.syncCloseAcceptingAlreadyClosed()
+    }
 }

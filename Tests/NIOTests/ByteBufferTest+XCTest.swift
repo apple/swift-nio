@@ -109,6 +109,7 @@ extension ByteBufferTest {
                 ("testWeUseFastWriteForContiguousCollections", testWeUseFastWriteForContiguousCollections),
                 ("testUnderestimatingSequenceWorks", testUnderestimatingSequenceWorks),
                 ("testZeroSizeByteBufferResizes", testZeroSizeByteBufferResizes),
+                ("testSpecifyTypesAndEndiannessForIntegerMethods", testSpecifyTypesAndEndiannessForIntegerMethods),
            ]
    }
 }
