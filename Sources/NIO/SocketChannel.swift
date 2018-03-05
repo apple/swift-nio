@@ -49,8 +49,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     internal let socket: T
     private let closePromise: EventLoopPromise<Void>
     private let selectableEventLoop: SelectableEventLoop
-    private let localAddressCached: AtomicBox<Box<SocketAddress?>> = AtomicBox(value: Box(nil))
-    private let remoteAddressCached: AtomicBox<Box<SocketAddress?>> = AtomicBox(value: Box(nil))
+    private let addressesCached: AtomicBox<Box<(local:SocketAddress?, remote:SocketAddress?)>> = AtomicBox(value: Box((local: nil, remote: nil)))
     private let bufferAllocatorCached: AtomicBox<Box<ByteBufferAllocator>>
 
     internal var interestedEvent: IOEvent = .none
@@ -97,12 +96,12 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
     // This is `Channel` API so must be thread-safe.
     public final var localAddress: SocketAddress? {
-        return self.localAddressCached.load().value
+        return self.addressesCached.load().value.local
     }
 
     // This is `Channel` API so must be thread-safe.
     public final var remoteAddress: SocketAddress? {
-        return self.remoteAddressCached.load().value
+        return self.addressesCached.load().value.remote
     }
 
     /// `false` if the whole `Channel` is closed and so no more IO operation can be done.
@@ -207,8 +206,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.recvAllocator = recvAllocator
         self._pipeline = ChannelPipeline(channel: self)
         // As the socket may already be connected we should ensure we start with the correct addresses cached.
-        self.localAddressCached.store(Box(try? socket.localAddress()))
-        self.remoteAddressCached.store(Box(try? socket.remoteAddress()))
+        self.addressesCached.store(Box((local: try? socket.localAddress(), remote: try? socket.remoteAddress())))
     }
 
     deinit {
@@ -610,18 +608,16 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
     internal final func updateCachedAddressesFromSocket(updateLocal: Bool = true, updateRemote: Bool = true) {
         assert(self.eventLoop.inEventLoop)
-        if updateLocal {
-            self.localAddressCached.store(Box(try? self.localAddress0()))
-        }
-        if updateRemote {
-            self.remoteAddressCached.store(Box(try? self.remoteAddress0()))
-        }
+        assert(updateLocal || updateRemote)
+        let cached = addressesCached.load().value
+        let local = updateLocal ? try? self.localAddress0() : cached.local
+        let remote = updateRemote ? try? self.remoteAddress0() : cached.remote
+        self.addressesCached.store(Box((local: local, remote: remote)))
     }
 
     internal final func unsetCachedAddressesFromSocket() {
         assert(self.eventLoop.inEventLoop)
-        self.localAddressCached.store(Box(nil))
-        self.remoteAddressCached.store(Box(nil))
+        self.addressesCached.store(Box((local: nil, remote: nil)))
     }
 
     public final func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
