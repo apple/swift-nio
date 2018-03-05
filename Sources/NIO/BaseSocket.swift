@@ -357,16 +357,17 @@ class BaseSocket: Selectable {
                 try Posix.bind(descriptor: fd, ptr: ptr, bytes: bytes)
             }
 
-            var addr: SockAddrProtocol
             switch address {
             case .v4(let address):
-                addr = address.address
+                var addr = address.address
+                try addr.withSockAddr(doBind)
             case .v6(let address):
-                addr = address.address
+                var addr = address.address
+                try addr.withSockAddr(doBind)
             case .unixDomainSocket(let address):
-                addr = address.address
+                var addr = address.address
+                try addr.withSockAddr(doBind)
             }
-            try addr.withSockAddr(doBind)
         }
     }
 
