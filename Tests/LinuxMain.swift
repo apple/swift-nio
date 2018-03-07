@@ -28,10 +28,12 @@ import XCTest
    @testable import NIOPriorityQueueTests
    @testable import NIOTLSTests
    @testable import NIOTests
+   @testable import NIOWebSocketTests
 
    XCTMain([
          testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
          testCase(ApplicationProtocolNegotiationHandlerTests.allTests),
+         testCase(Base64Test.allTests),
          testCase(BaseObjectTest.allTests),
          testCase(BlockingIOThreadPoolTest.allTests),
          testCase(ByteBufferTest.allTests),
@@ -44,6 +46,7 @@ import XCTest
          testCase(EchoServerClientTest.allTests),
          testCase(EmbeddedChannelTest.allTests),
          testCase(EmbeddedEventLoopTest.allTests),
+         testCase(EndToEndTests.allTests),
          testCase(EventLoopFutureTest.allTests),
          testCase(EventLoopTest.allTests),
          testCase(FileRegionTest.allTests),
@@ -70,5 +73,7 @@ import XCTest
          testCase(ThreadTest.allTests),
          testCase(TypeAssistedChannelHandlerTest.allTests),
          testCase(UtilitiesTest.allTests),
+         testCase(WebSocketFrameDecoderTest.allTests),
+         testCase(WebSocketFrameEncoderTest.allTests),
     ])
 #endif
