@@ -311,6 +311,11 @@ public final class ClientBootstrap {
     ///     - port: The port to connect to.
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
+        // First check if the given "host" was actual an ipaddress and if so use it directly without
+        // even try to use the resolver.
+        if let address = try? SocketAddress(ipAddress: host, port: UInt16(port)) {
+            return connect(to: address)
+        }
         let loop = self.group.next()
         let connector = HappyEyeballsConnector(resolver: resolver ?? GetaddrinfoResolver(loop: loop),
                                                loop: loop,
