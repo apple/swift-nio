@@ -32,7 +32,7 @@ private func descriptionForAddress(family: CInt, bytes: UnsafeRawPointer, length
                              addressDescription: addressBytesPtr.baseAddress!,
                              addressDescriptionLength: socklen_t(byteCount))
         return addressBytesPtr.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: byteCount) { addressBytesPtr -> String in
-            return String(decoding: UnsafeBufferPointer<UInt8>(start: addressBytesPtr, count: byteCount), as: Unicode.ASCII.self)
+            return String(cString: addressBytesPtr)
         }
     }
 }

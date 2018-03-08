@@ -67,7 +67,7 @@ extension ByteBuffer {
     ///     - endianness: The endianness to use, defaults to big endian.
     /// - returns: The number of bytes written.
     @discardableResult
-    public mutating func write<T: FixedWidthInteger>(integer: T, endianness: Endianness = .big) -> Int {
+    public mutating func write<T: FixedWidthInteger>(integer: T, endianness: Endianness = .big, as: T.Type = T.self) -> Int {
         let bytesWritten = self.set(integer: integer, at: self.writerIndex, endianness: endianness)
         self.moveWriterIndex(forwardBy: bytesWritten)
         return Int(bytesWritten)
@@ -81,7 +81,7 @@ extension ByteBuffer {
     ///     - endianness: The endianness to use, defaults to big endian.
     /// - returns: The number of bytes written.
     @discardableResult
-    public mutating func set<T: FixedWidthInteger>(integer: T, at index: Int, endianness: Endianness = .big) -> Int {
+    public mutating func set<T: FixedWidthInteger>(integer: T, at index: Int, endianness: Endianness = .big, as: T.Type = T.self) -> Int {
         var value = toEndianness(value: integer, endianness: endianness)
         return Swift.withUnsafeBytes(of: &value) { ptr in
             self.set(bytes: ptr, at: index)

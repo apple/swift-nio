@@ -167,18 +167,18 @@ If all goes well, you'll see the message echoed back to you.
 
 Alternatively, you may want to develop or test with `docker-compose`.
 
-First make sure you have [Docker](https://www.docker.com/community-edition) installed, next `cd docker` and run the following commands:
+First make sure you have [Docker](https://www.docker.com/community-edition) installed, next run the following commands:
 
-- `docker-compose up test`
+- `docker-compose -f docker/docker-compose.yaml up test`
 
-  Will create a base image with Swift 4.0 (if missing), compile SwiftNIO and run the tests
+  Will create a base image with Swift runtime and other build and test dependencies, compile SwiftNIO and run the unit and integration tests
 
-- `docker-compose up echo`
+- `docker-compose -f docker/docker-compose.yaml up echo`
 
   Will create a base image, compile SwiftNIO, and run a sample `NIOEchoServer` on
   `localhost:9999`. Test it by `echo Hello SwiftNIO | nc localhost 9999`.
 
-- `docker-compose up http`
+- `docker-compose -f docker/docker-compose.yaml up http`
 
   Will create a base image, compile SwiftNIO, and run a sample `NIOHTTP1Server` on
   `localhost:8888`. Test it by `curl http://localhost:8888`
