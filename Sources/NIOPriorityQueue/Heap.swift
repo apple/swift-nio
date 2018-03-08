@@ -32,13 +32,13 @@ public enum HeapType {
     }
 }
 
-internal struct Heap<T: Comparable> {
+internal struct Heap<Element: Comparable> {
     internal let type: HeapType
-    internal private(set) var storage: ContiguousArray<T> = []
-    private let comparator: (T, T) -> Bool
+    internal private(set) var storage: ContiguousArray<Element> = []
+    private let comparator: (Element, Element) -> Bool
 
-    internal init?(type: HeapType, storage: ContiguousArray<T>) {
-        self.comparator = type.comparator(type: T.self)
+    internal init?(type: HeapType, storage: ContiguousArray<Element>) {
+        self.comparator = type.comparator(type: Element.self)
         self.storage = storage
         self.type = type
         if !self.checkHeapProperty() {
@@ -47,7 +47,7 @@ internal struct Heap<T: Comparable> {
     }
 
     public init(type: HeapType) {
-        self.comparator = type.comparator(type: T.self)
+        self.comparator = type.comparator(type: Element.self)
         self.type = type
     }
 
@@ -73,9 +73,9 @@ internal struct Heap<T: Comparable> {
     }
 
     // named `MAX-HEAPIFY` in CLRS
-    private static func heapify(storage: inout ContiguousArray<T>, compare: (T, T) -> Bool, _ i: Int) {
-        let l = Heap<T>.leftIndex(i)
-        let r = Heap<T>.rightIndex(i)
+    private static func heapify(storage: inout ContiguousArray<Element>, compare: (Element, Element) -> Bool, _ i: Int) {
+        let l = leftIndex(i)
+        let r = rightIndex(i)
 
         var root: Int
         if l <= (storage.count - 1) && compare(storage[l], storage[i]) {
@@ -95,7 +95,7 @@ internal struct Heap<T: Comparable> {
     }
 
     // named `MAX-HEAP-INSERT` in CRLS
-    private static func heapInsert(storage: inout ContiguousArray<T>, compare: (T, T) -> Bool, key: T) {
+    private static func heapInsert(storage: inout ContiguousArray<Element>, compare: (Element, Element) -> Bool, key: Element) {
         var i = storage.count
         storage.append(key)
         while i > 0 && compare(storage[i], storage[parentIndex(i)]) {
@@ -105,7 +105,7 @@ internal struct Heap<T: Comparable> {
     }
 
     // named `HEAP-INCREASE-KEY` in CRLS
-    private static func heapRootify(storage: inout ContiguousArray<T>, compare: (T, T) -> Bool, index: Int, key: T) {
+    private static func heapRootify(storage: inout ContiguousArray<Element>, compare: (Element, Element) -> Bool, index: Int, key: Element) {
         var index = index
         if compare(storage[index], key) {
             fatalError("New key must be closer to the root than current key")
@@ -119,15 +119,15 @@ internal struct Heap<T: Comparable> {
     }
 
     // MARK: Swift interface using the low-level methods above
-    public mutating func append(_ value: T) {
-        Heap<T>.heapInsert(storage: &self.storage, compare: self.comparator, key: value)
+    public mutating func append(_ value: Element) {
+        Heap.heapInsert(storage: &self.storage, compare: self.comparator, key: value)
     }
 
-    public mutating func removeRoot() -> T? {
+    public mutating func removeRoot() -> Element? {
         return self.remove(index: 0)
     }
 
-    public mutating func remove(value: T) -> Bool {
+    public mutating func remove(value: Element) -> Bool {
         if let idx = self.storage.index(of: value) {
             _ = self.remove(index: idx)
             return true
@@ -136,7 +136,7 @@ internal struct Heap<T: Comparable> {
         }
     }
 
-    private mutating func remove(index: Int) -> T? {
+    private mutating func remove(index: Int) -> Element? {
         guard self.storage.count > 0 else {
             return nil
         }
@@ -144,20 +144,20 @@ internal struct Heap<T: Comparable> {
         if self.storage.count == 1 || self.storage[index] == self.storage[self.storage.count - 1] {
             _ = self.storage.removeLast()
         } else if !self.comparator(self.storage[index], self.storage[self.storage.count - 1]) {
-            Heap<T>.heapRootify(storage: &self.storage, compare: self.comparator, index: index, key: self.storage[self.storage.count - 1])
+            Heap.heapRootify(storage: &self.storage, compare: self.comparator, index: index, key: self.storage[self.storage.count - 1])
             _ = self.storage.removeLast()
         } else {
             self.storage[index] = self.storage[self.storage.count - 1]
             _ = self.storage.removeLast()
-            Heap<T>.heapify(storage: &self.storage, compare: self.comparator, index)
+            Heap.heapify(storage: &self.storage, compare: self.comparator, index)
         }
         return element
     }
 
     internal func checkHeapProperty() -> Bool {
         func checkHeapProperty(index: Int) -> Bool {
-            let li = Heap<T>.leftIndex(index)
-            let ri = Heap<T>.rightIndex(index)
+            let li = Heap<Element>.leftIndex(index)
+            let ri = Heap<Element>.rightIndex(index)
             if index >= self.storage.count {
                 return true
             } else {
@@ -201,8 +201,8 @@ extension Heap: CustomDebugStringConvertible {
         var all = "\n"
         let spacing = String(repeating: " ", count: maxLen)
         func subtreeWidths(rootIndex: Int) -> (Int, Int) {
-            let lcIdx = Heap<T>.leftIndex(rootIndex)
-            let rcIdx = Heap<T>.rightIndex(rootIndex)
+            let lcIdx = Heap<Element>.leftIndex(rootIndex)
+            let rcIdx = Heap<Element>.rightIndex(rootIndex)
             var leftSpace = 0
             var rightSpace = 0
             if lcIdx < self.storage.count {
@@ -237,22 +237,19 @@ extension Heap: CustomDebugStringConvertible {
     }
 }
 
-struct HeapIterator<T: Comparable>: IteratorProtocol {
-    typealias Element = T
-
-    private var heap: Heap<T>
-
-    init(heap: Heap<T>) {
-        self.heap = heap
-    }
-
-    mutating func next() -> T? {
-        return self.heap.removeRoot()
-    }
-}
 
 extension Heap: Sequence {
-    typealias Element = T
+    struct Iterator: IteratorProtocol {
+        private var heap: Heap
+
+        init(heap: Heap) {
+            self.heap = heap
+        }
+
+        mutating func next() -> Element? {
+            return self.heap.removeRoot()
+        }
+    }
 
     var startIndex: Int { return self.storage.startIndex }
     var endIndex: Int { return self.storage.endIndex }
@@ -261,11 +258,11 @@ extension Heap: Sequence {
         return self.storage.count
     }
 
-    func makeIterator() -> HeapIterator<T> {
-        return HeapIterator(heap: self)
+    func makeIterator() -> Iterator {
+        return Iterator(heap: self)
     }
 
-    subscript(position: Int) -> T {
+    subscript(position: Int) -> Element {
         return self.storage[position]
     }
 
