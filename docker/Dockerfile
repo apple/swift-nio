@@ -26,7 +26,7 @@ RUN update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-5.0 
 #RUN apt-get install -y curl
 RUN apt-get install -y build-essential libssl-dev
 RUN mkdir $HOME/.curl
-RUN wget -q http://curl.haxx.se/download/curl-7.50.3.tar.gz -O $HOME/curl.tar.gz
+RUN wget -q https://curl.haxx.se/download/curl-7.50.3.tar.gz -O $HOME/curl.tar.gz
 RUN tar xzf $HOME/curl.tar.gz --directory $HOME/.curl --strip-components=1
 RUN cd $HOME/.curl && ./configure --with-ssl && make && make install && cd -
 RUN ldconfig
