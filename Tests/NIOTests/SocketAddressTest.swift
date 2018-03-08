@@ -24,6 +24,32 @@ class SocketAddressTest: XCTestCase {
         XCTAssertEqual("[IPv4]foobar.com:12345", sa.description)
     }
 
+    func testIn6AddrDescriptionWorks() throws {
+        let sampleString = "::1"
+        let sampleIn6Addr: [UInt8] = [ // ::1
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+            0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x70, 0x0, 0x0, 0x54,
+            0xc2, 0xb5, 0x58, 0xff, 0x7f, 0x0, 0x0, 0x7, 
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x40, 0x1, 0x1, 0x0
+        ]
+
+        var address         = sockaddr_in6()
+        #if os(Linux) // no sin_len on Linux
+        #else
+          address.sin6_len  = UInt8(MemoryLayout<sockaddr_in6>.size)
+        #endif
+        address.sin6_family = sa_family_t(AF_INET6)
+        address.sin6_addr   = sampleIn6Addr.withUnsafeBytes {
+            $0.baseAddress!.assumingMemoryBound(to: in6_addr.self).pointee
+        }
+
+        let s = address.addressDescription()
+        XCTAssertEqual(s.count, sampleString.count,
+                       "Address description has unexpected length 😱")
+        XCTAssertEqual(s, sampleString,
+                       "Address description is way below our expectations 😱")
+    }
+
     func testCanCreateIPv4AddressFromString() throws {
         let sa = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
         let expectedAddress: [UInt8] = [0x7F, 0x00, 0x00, 0x01]
