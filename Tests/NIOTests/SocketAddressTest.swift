@@ -34,7 +34,10 @@ class SocketAddressTest: XCTestCase {
         ]
 
         var address         = sockaddr_in6()
-        address.sin6_len    = UInt8(MemoryLayout<in6_addr>.size)
+        #if os(Linux) // no sin_len on Linux
+        #else
+          address.sin6_len  = UInt8(MemoryLayout<sockaddr_in6>.size)
+        #endif
         address.sin6_family = sa_family_t(AF_INET6)
         address.sin6_addr   = sampleIn6Addr.withUnsafeBytes {
             $0.baseAddress!.assumingMemoryBound(to: in6_addr.self).pointee
