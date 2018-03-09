@@ -52,6 +52,8 @@ private let sysSendTo = sendto
 private let sysDup = dup
 private let sysGetpeername = getpeername
 private let sysGetsockname = getsockname
+private let sysGetifaddrs = getifaddrs
+private let sysFreeifaddrs = freeifaddrs
 private let sysAF_INET = AF_INET
 private let sysAF_INET6 = AF_INET6
 private let sysAF_UNIX = AF_UNIX
@@ -411,6 +413,13 @@ internal enum Posix {
     public static func getsockname(socket: CInt, address: UnsafeMutablePointer<sockaddr>, addressLength: UnsafeMutablePointer<socklen_t>) throws {
         _ = try wrapSyscall {
             return sysGetsockname(socket, address, addressLength)
+        }
+    }
+
+    @inline(never)
+    public static func getifaddrs(_ addrs: UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>) throws {
+        _ = try wrapSyscall {
+            sysGetifaddrs(addrs)
         }
     }
 

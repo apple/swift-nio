@@ -14,7 +14,7 @@
 import NIO
 import Dispatch
 
-let newLine = "\n".utf8.first!
+private let newLine = "\n".utf8.first!
 
 /// Very simple example codec which will buffer inbound data until a `\n` was found.
 final class LineDelimiterCodec: ByteToMessageDecoder {
@@ -34,9 +34,9 @@ final class LineDelimiterCodec: ByteToMessageDecoder {
 }
 
 /// This `ChannelInboundHandler` demonstrates a few things:
-///   * synchronisation between `EventLoop`s
-///   * mixing `Dispatch` and SwiftNIO
-///   * `Channel`s are thread-safe, `ChannelHandlerContext`s are not
+///   * Synchronisation between `EventLoop`s.
+///   * Mixing `Dispatch` and SwiftNIO.
+///   * `Channel`s are thread-safe, `ChannelHandlerContext`s are not.
 ///
 /// As we are using an `MultiThreadedEventLoopGroup` that uses more then 1 thread we need to ensure proper
 /// synchronization on the shared state in the `ChatHandler` (as the same instance is shared across
@@ -57,7 +57,7 @@ final class ChatHandler: ChannelInboundHandler {
 
         // 64 should be good enough for the ipaddress
         var buffer = ctx.channel.allocator.buffer(capacity: read.readableBytes + 64)
-        buffer.write(string: "(\(ctx.channel.remoteAddress!)) - ")
+        buffer.write(string: "(\(ctx.remoteAddress!)) - ")
         buffer.write(buffer: &read)
         self.channelsSyncQueue.async {
             // broadcast the message to all the connected clients except the one that wrote it.
@@ -92,7 +92,7 @@ final class ChatHandler: ChannelInboundHandler {
         let channel = ctx.channel
         self.channelsSyncQueue.async {
             if self.channels.removeValue(forKey: ObjectIdentifier(channel)) != nil {
-                // broadcast the message to all the connected clients except the one that just was disconnected.
+                // Broadcast the message to all the connected clients except the one that just was disconnected.
                 self.writeToAll(channels: self.channels, allocator: channel.allocator, message: "(ChatServer) - Client disconnected\n")
             }
         }
@@ -109,7 +109,8 @@ final class ChatHandler: ChannelInboundHandler {
     }
 }
 
-// We need to share the same ChatHandler for all as it keeps track of all connected clients. For this ChatHandler MUST be thread-safe!
+// We need to share the same ChatHandler for all as it keeps track of all
+// connected clients. For this ChatHandler MUST be thread-safe!
 let chatHandler = ChatHandler()
 
 let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
@@ -139,7 +140,7 @@ defer {
 // First argument is the program path
 let arguments = CommandLine.arguments
 let arg1 = arguments.dropFirst().first
-let arg2 = arguments.dropFirst().dropFirst().first
+let arg2 = arguments.dropFirst(2).first
 
 let defaultHost = "::1"
 let defaultPort = 9999
@@ -150,16 +151,19 @@ enum BindTo {
 }
 
 let bindTarget: BindTo
-switch (arg1, arg1.flatMap { Int($0) }, arg2.flatMap { Int($0) }) {
-case (.some(let h), _ , .some(let p)):
-    /* we got two arguments, let's interpret that as host and port */
+switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
+case (let h?, _ , let p?):
+    // We got two arguments, let's interpret that as host and port.
     bindTarget = .ip(host: h, port: p)
-case (.some(let portString), .none, _):
-    /* couldn't parse as number, expecting unix domain socket path */
+
+case (let portString?, .none, _):
+    // Couldn't parse as number, expecting unix domain socket path.
     bindTarget = .unixDomainSocket(path: portString)
-case (_, .some(let p), _):
-    /* only one argument --> port */
+
+case (_, let p?, _):
+    // Only one argument --> port.
     bindTarget = .ip(host: defaultHost, port: p)
+
 default:
     bindTarget = .ip(host: defaultHost, port: defaultPort)
 }
@@ -171,11 +175,11 @@ let channel = try { () -> Channel in
     case .unixDomainSocket(let path):
         return try bootstrap.bind(unixDomainSocketPath: path).wait()
     }
-    }()
+}()
 
 print("ChatServer started and listening on \(channel.localAddress!)")
 
-// This will never unblock as we don't close the ServerChannel
+// This will never unblock as we don't close the ServerChannel.
 try channel.closeFuture.wait()
 
 print("ChatServer closed")
