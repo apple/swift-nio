@@ -76,7 +76,7 @@ final class Thread {
     /// - arguments:
     ///     - name: The name of the `Thread` or `nil` if no specific name should be set.
     ///     - body: The function to execute within the spawned `Thread`.
-    class func spawnAndRun(name: String? = nil, body: @escaping (Thread) -> Void) {
+    static func spawnAndRun(name: String? = nil, body: @escaping (Thread) -> Void) {
         // Unfortunally the pthread_create method take a different first argument depending on if its on linux or macOS, so ensure we use the correct one.
         #if os(Linux)
             var pt: pthread_t = pthread_t()
@@ -130,7 +130,7 @@ final class Thread {
 /// returned by `currentValue` is defined per thread.
 ///
 /// - note: `ThreadSpecificVariable` has reference semantics.
-internal struct ThreadSpecificVariable<T: AnyObject> {
+public struct ThreadSpecificVariable<T: AnyObject> {
     private let key: pthread_key_t
 
     /// Initialize a new `ThreadSpecificVariable` without a current value (`currentValue == nil`).

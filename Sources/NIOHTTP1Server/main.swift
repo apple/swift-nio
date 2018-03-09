@@ -50,7 +50,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
     private var continuousCount: Int = 0
 
-    private var handler: ((ChannelHandlerContext, HTTPServerRequestPart) -> Void)? = nil
+    private var handler: ((ChannelHandlerContext, HTTPServerRequestPart) -> Void)?
     private var handlerFuture: EventLoopFuture<()>?
     private let fileIO: NonBlockingFileIO
 
@@ -147,7 +147,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                 self.buffer.write(string: "line \(self.continuousCount)\n")
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).map {
                     _ = ctx.eventLoop.scheduleTask(in: .milliseconds(400), doNext)
-                }.whenFailure { error in
+                }.whenFailure { (_: Error) in
                     ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 }
             }
@@ -369,7 +369,7 @@ enum BindTo {
 let htdocs: String
 let bindTarget: BindTo
 switch (arg1, arg1.flatMap { Int($0) }, arg2, arg2.flatMap { Int($0) }, arg3) {
-case (.some(let h), _ , _, .some(let p), let maybeHtdocs):
+case (.some(let h), _, _, .some(let p), let maybeHtdocs):
     /* second arg an integer --> host port [htdocs] */
     bindTarget = .ip(host: h, port: p)
     htdocs = maybeHtdocs ?? defaultHtdocs
@@ -386,7 +386,7 @@ default:
     bindTarget = BindTo.ip(host: defaultHost, port: defaultPort)
 }
 
-let group = MultiThreadedEventLoopGroup(numThreads: 1)
+let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
 let threadPool = BlockingIOThreadPool(numberOfThreads: 6)
 threadPool.start()
 
@@ -422,7 +422,7 @@ let channel = try { () -> Channel in
     case .unixDomainSocket(let path):
         return try bootstrap.bind(unixDomainSocketPath: path).wait()
     }
-    }()
+}()
 
 print("Server started and listening on \(channel.localAddress!), htdocs path \(htdocs)")
 

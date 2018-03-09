@@ -662,8 +662,13 @@ public final class ChannelPipeline: ChannelInvoker {
         return eventLoop.inEventLoop
     }
 
-    // Only executed from Channel
-    init (channel: Channel) {
+    /// Create `ChannelPipeline` for a given `Channel`. This method should never be called by the end-user
+    /// directly: it is only intended for use with custom `Channel` implementations. Users should always use
+    /// `channel.pipeline` to access the `ChannelPipeline` for a `Channel`.
+    ///
+    /// - parameters:
+    ///    - channel: The `Channel` this `ChannelPipeline` is created for.
+    public init(channel: Channel) {
         self._channel = channel
         self.eventLoop = channel.eventLoop
 
@@ -673,6 +678,39 @@ public final class ChannelPipeline: ChannelInvoker {
         self.tail?.prev = self.head
         self.tail?.prev = self.head
         self.head?.next = self.tail
+    }
+}
+
+extension ChannelPipeline {
+    /// Adds the provided channel handlers to the pipeline in the order given, taking account
+    /// of the behaviour of `ChannelHandler.add(first:)`.
+    ///
+    /// - parameters:
+    ///     - handlers: The array of `ChannelHandler`s to be added.
+    ///     - first: If `true`, the supplied `ChannelHandler`s will be added to the front of the pipeline.
+    ///              If `false`, they will be added to the back.
+    ///
+    /// - returns: A future that will be completed when all of the supplied `ChannelHandler`s were added.
+    public func addHandlers(_ handlers: [ChannelHandler], first: Bool) -> EventLoopFuture<Void> {
+        var handlers = handlers
+        if first {
+            handlers = handlers.reversed()
+        }
+
+        return EventLoopFuture<Void>.andAll(handlers.map { add(handler: $0) }, eventLoop: eventLoop)
+    }
+
+    /// Adds the provided channel handlers to the pipeline in the order given, taking account
+    /// of the behaviour of `ChannelHandler.add(first:)`.
+    ///
+    /// - parameters:
+    ///     - handlers: One or more `ChannelHandler`s to be added.
+    ///     - first: If `true`, the supplied `ChannelHandler`s will be added to the front of the pipeline.
+    ///              If `false`, they will be added to the back.
+    ///
+    /// - returns: A future that will be completed when all of the supplied `ChannelHandler`s were added.
+    public func addHandlers(_ handlers: ChannelHandler..., first: Bool) -> EventLoopFuture<Void> {
+        return addHandlers(handlers, first: first)
     }
 }
 
