@@ -697,7 +697,7 @@ extension ChannelPipeline {
             handlers = handlers.reversed()
         }
 
-        return EventLoopFuture<Void>.andAll(handlers.map { add(handler: $0) }, eventLoop: eventLoop)
+        return EventLoopFuture<Void>.andAll(handlers.map { add(handler: $0, first: first) }, eventLoop: eventLoop)
     }
 
     /// Adds the provided channel handlers to the pipeline in the order given, taking account
