@@ -123,7 +123,7 @@ extension ByteBuffer {
         }
     }
 
-    /// Read `length` bytes off this `ByteBuffer`, decoding it as `String` using the UTF-8 encoding. Does not move the reader index.
+    /// Read `length` bytes off this `ByteBuffer`, decoding it as `String` using the UTF-8 encoding. Move the reader index forward by `length`.
     ///
     /// - parameters:
     ///     - length: The number of bytes making up the string.
