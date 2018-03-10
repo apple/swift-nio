@@ -641,6 +641,8 @@ typealias ThreadInitializer = (Thread) -> Void
 /// An `EventLoopGroup` which will create multiple `EventLoop`s, each tied to its own `Thread`.
 final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
+    private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
+    
     private let index = Atomic<Int>(value: 0)
     private let eventLoops: [SelectableEventLoop]
 
@@ -660,6 +662,10 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
                 do {
                     /* we try! this as this must work (just setting up kqueue/epoll) or else there's not much we can do here */
                     let l = try! SelectableEventLoop(thread: t)
+                    threadSpecificEventLoop.currentValue = l
+                    defer {
+                        threadSpecificEventLoop.currentValue = nil
+                    }
                     lock.withLock {
                         _loop = l
                     }
@@ -699,6 +705,13 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         }
     }
 
+    /// Returns the `EventLoop` for the calling thread.
+    ///
+    /// - returns: The current `EventLoop` for the calling thread or `nil` if none is assigned to the thread.
+    public static var currentEventLoop: EventLoop? {
+        return threadSpecificEventLoop.currentValue
+    }
+
     public func next() -> EventLoop {
         return eventLoops[abs(index.add(1) % eventLoops.count)]
     }
@@ -729,6 +742,9 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
         g.notify(queue: q) {
             let failure = self.eventLoops.map { try? $0.close0() }.filter { $0 == nil }.count > 0
+
+            // TODO: In the next major release we should join in the Thread used by the EventLoop before invoking the callback to ensure
+            //       it is really gone.
             if failure {
                 error = EventLoopError.shutdownFailed
             }
