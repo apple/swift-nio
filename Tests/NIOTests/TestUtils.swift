@@ -15,17 +15,38 @@
 @testable import NIO
 import XCTest
 
-func withPipe(_ body: (NIO.FileHandle, NIO.FileHandle) -> [NIO.FileHandle]) throws {
+func withPipe(_ body: (NIO.FileHandle, NIO.FileHandle) throws -> [NIO.FileHandle]) throws {
     var fds: [Int32] = [-1, -1]
     fds.withUnsafeMutableBufferPointer { ptr in
         XCTAssertEqual(0, pipe(ptr.baseAddress!))
     }
     let readFH = FileHandle(descriptor: fds[0])
     let writeFH = FileHandle(descriptor: fds[1])
-    let toClose = body(readFH, writeFH)
-    try toClose.forEach { fh in
-        XCTAssertNoThrow(try fh.close())
+
+    var toClose = [readFH, writeFH]
+    defer {
+        for fh in toClose {
+            XCTAssertNoThrow(try fh.close())
+        }
     }
+    toClose = try body(readFH, writeFH)
+}
+
+func withSocketpair(_ body: (NIO.FileHandle, NIO.FileHandle) throws -> [NIO.FileHandle]) throws {
+    var fds: [Int32] = [-1, -1]
+    fds.withUnsafeMutableBufferPointer { ptr in
+        XCTAssertEqual(0, socketpair(AF_UNIX, Posix.SOCK_STREAM, 0, ptr.baseAddress!))
+    }
+    let readFH = FileHandle(descriptor: fds[0])
+    let writeFH = FileHandle(descriptor: fds[1])
+
+    var toClose = [readFH, writeFH]
+    defer {
+        for fh in toClose {
+            XCTAssertNoThrow(try fh.close())
+        }
+    }
+    toClose = try body(readFH, writeFH)
 }
 
 func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.FileHandle, String) throws -> T) rethrows -> T {
@@ -81,7 +102,7 @@ internal extension Channel {
     }
 }
 
-final class ByteCountingHandler : ChannelInboundHandler {
+final class ByteCountingHandler: ChannelInboundHandler {
     typealias InboundIn = ByteBuffer
 
     private let numBytes: Int
