@@ -128,15 +128,15 @@ class SocketAddressTest: XCTestCase {
 
         var firstCopy = firstIPAddress.withMutableSockAddr { (addr, size) -> sockaddr_in in
             XCTAssertEqual(size, MemoryLayout<sockaddr_in>.size)
-            return addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { return $0.pointee }
+            return addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { $0.pointee }
         }
         var secondCopy = secondIPAddress.withMutableSockAddr { (addr, size) -> sockaddr_in6 in
             XCTAssertEqual(size, MemoryLayout<sockaddr_in6>.size)
-            return addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { return $0.pointee }
+            return addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { $0.pointee }
         }
         var thirdCopy = thirdIPAddress.withMutableSockAddr { (addr, size) -> sockaddr_un in
             XCTAssertEqual(size, MemoryLayout<sockaddr_un>.size)
-            return addr.withMemoryRebound(to: sockaddr_un.self, capacity: 1) { return $0.pointee }
+            return addr.withMemoryRebound(to: sockaddr_un.self, capacity: 1) { $0.pointee }
         }
 
         XCTAssertEqual(memcmp(&firstIPAddress, &firstCopy, MemoryLayout<sockaddr_in>.size), 0)

@@ -1256,7 +1256,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             return try self.socket.sendto(pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), size: ptr.count,
                                           destinationPtr: destinationPtr, destinationSize: destinationSize)
         }, vectorWriteOperation: { msgs in
-            return try self.socket.sendmmsg(msgs: msgs)
+            try self.socket.sendmmsg(msgs: msgs)
         })
         if result.writable {
             // writable again

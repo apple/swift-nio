@@ -553,7 +553,7 @@ public class ChannelTests: XCTestCase {
              `[[1, 1, 1, 1], [1, 1, 1], [1, 1], [1]]`
              */
             let expectedVectorWrites = Array((2...numberOfBytes).reversed()).map { n in
-                return Array(repeating: 1, count: n)
+                Array(repeating: 1, count: n)
             }
 
             /* this will create an `Array` like this (for `numberOfBytes == 4`)
@@ -659,8 +659,8 @@ public class ChannelTests: XCTestCase {
     /// Test that with a few massive buffers, we don't offer more than we should to `writev` if the individual chunks fit.
     func testPendingWritesNoMoreThanWritevLimitIsWritten() throws {
         let el = EmbeddedEventLoop()
-        let alloc = ByteBufferAllocator(hookedMalloc: { _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
-                                        hookedRealloc: { _, _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
+        let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
+                                        hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
                                         hookedFree: { _ in },
                                         hookedMemcpy: { _, _, _ in })
         /* each buffer is half the writev limit */
@@ -691,8 +691,8 @@ public class ChannelTests: XCTestCase {
     /// Test that with a massive buffers (bigger than writev size), we don't offer more than we should to `writev`.
     func testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk() throws {
         let el = EmbeddedEventLoop()
-        let alloc = ByteBufferAllocator(hookedMalloc: { _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
-                                        hookedRealloc: { _, _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
+        let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
+                                        hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
                                         hookedFree: { _ in },
                                         hookedMemcpy: { _, _, _ in })
         /* each buffer is half the writev limit */
@@ -1097,8 +1097,8 @@ public class ChannelTests: XCTestCase {
         let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .output, promise: group.next().newPromise())
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
-                return channel.pipeline.add(handler: verificationHandler).then {
-                    return channel.pipeline.add(handler: byteCountingHandler)
+                channel.pipeline.add(handler: verificationHandler).then {
+                    channel.pipeline.add(handler: byteCountingHandler)
                 }
             }
             .connect(to: try! server.localAddress())
@@ -1161,8 +1161,8 @@ public class ChannelTests: XCTestCase {
         let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .input, promise: group.next().newPromise())
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
-                return channel.pipeline.add(handler: VerifyNoReadHandler()).then {
-                    return channel.pipeline.add(handler: verificationHandler)
+                channel.pipeline.add(handler: VerifyNoReadHandler()).then {
+                    channel.pipeline.add(handler: verificationHandler)
                 }
             }
             .connect(to: try! server.localAddress())
@@ -1216,7 +1216,7 @@ public class ChannelTests: XCTestCase {
 
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
-                return channel.pipeline.add(handler: verificationHandler)
+                channel.pipeline.add(handler: verificationHandler)
             }
             .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             .connect(to: try! server.localAddress())
@@ -1464,7 +1464,7 @@ public class ChannelTests: XCTestCase {
                 return loop.submit {
                     self.waitingForReadPromise = loop.newPromise()
                 }.then { (_: Void) in
-                    return self.waitingForReadPromise!.futureResult
+                    self.waitingForReadPromise!.futureResult
                 }
             }
 

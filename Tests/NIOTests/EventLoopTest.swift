@@ -26,7 +26,7 @@ public class EventLoopTest : XCTestCase {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
         let value = try eventLoopGroup.next().scheduleTask(in: amount) {
-            return true
+            true
         }.futureResult.wait()
 
         XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= amount.nanoseconds)
@@ -50,11 +50,11 @@ public class EventLoopTest : XCTestCase {
         // Now, schedule two tasks: one that takes a while, one that doesn't.
         let nanos = DispatchTime.now().uptimeNanoseconds
         let longFuture = eventLoopGroup.next().scheduleTask(in: longAmount) {
-            return true
+            true
         }.futureResult
 
         _ = try eventLoopGroup.next().scheduleTask(in: smallAmount) {
-            return true
+            true
         }.futureResult.wait()
 
         // Ok, the short one has happened. Now we should try connecting them. This connect should happen
@@ -83,7 +83,7 @@ public class EventLoopTest : XCTestCase {
         let nanos = DispatchTime.now().uptimeNanoseconds
         let amount: TimeAmount = .seconds(2)
         let value = try eventLoopGroup.next().scheduleTask(in: amount) {
-            return true
+            true
         }.futureResult.wait()
 
         XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= amount.nanoseconds)
@@ -221,7 +221,7 @@ public class EventLoopTest : XCTestCase {
             let group = MultiThreadedEventLoopGroup(pinnedCPUIds: [0])
             let eventLoop = group.next()
             let set = try eventLoop.submit {
-                return NIO.Thread.current.affinity
+                NIO.Thread.current.affinity
             }.wait()
 
             XCTAssertEqual(LinuxCPUSet(0), set)

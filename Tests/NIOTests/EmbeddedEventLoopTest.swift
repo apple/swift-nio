@@ -194,7 +194,7 @@ public class EmbeddedEventLoopTest: XCTestCase {
     func testScheduledTasksFuturesFire() throws {
         var fired = false
         let loop = EmbeddedEventLoop()
-        let task = loop.scheduleTask(in: .nanoseconds(5)) { return true }
+        let task = loop.scheduleTask(in: .nanoseconds(5)) { true }
         task.futureResult.whenSuccess { fired = $0 }
 
         loop.advanceTime(by: .nanoseconds(4))

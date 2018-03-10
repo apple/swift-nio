@@ -440,7 +440,7 @@ internal enum KQueue {
     @inline(never)
     public static func kevent(kq: CInt, changelist: UnsafePointer<kevent>?, nchanges: CInt, eventlist: UnsafeMutablePointer<kevent>?, nevents: CInt, timeout: UnsafePointer<Darwin.timespec>?) throws -> CInt {
         return try wrapSyscall {
-            return sysKevent(kq, changelist, nchanges, eventlist, nevents, timeout)
+            sysKevent(kq, changelist, nchanges, eventlist, nevents, timeout)
         }
     }
 }
