@@ -132,23 +132,7 @@ public class SocketChannelTest : XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        class NonAcceptingServerSocket : ServerSocket {
-            private var error: Int32?
-            
-            init(error: Int32) throws {
-                self.error = error
-                try super.init(protocolFamily: AF_INET, setNonBlocking: true)
-            }
-            
-            override func accept(setNonBlocking: Bool) throws -> Socket? {
-                if let err = self.error {
-                    self.error = nil
-                    throw IOError(errnoCode: err, function: "accept")
-                }
-                return nil
-            }
-        }
-        let socket = try NonAcceptingServerSocket(error: error)
+        let socket = try NonAcceptingServerSocket(errors: [error])
         let serverChannel = try ServerSocketChannel(serverSocket: socket, eventLoop: group.next() as! SelectableEventLoop, group: group)
         XCTAssertNoThrow(try serverChannel.register().wait())
         XCTAssertNoThrow(try serverChannel.pipeline.add(handler: AcceptHandler()).wait())
