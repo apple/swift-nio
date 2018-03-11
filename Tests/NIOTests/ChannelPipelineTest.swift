@@ -87,7 +87,7 @@ class ChannelPipelineTest: XCTestCase {
 
         _ = try channel.pipeline.add(handler: NoBindAllowed()).wait()
         _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<ByteBuffer, ByteBuffer> { data in
-            return data
+            data
         }).wait()
 
         _ = try channel.connect(to: sa).wait()

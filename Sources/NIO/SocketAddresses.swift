@@ -248,11 +248,11 @@ public enum SocketAddress: CustomStringConvertible {
             switch info.pointee.ai_family {
             case AF_INET:
                 return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { ptr in
-                    return .v4(.init(address: ptr.pointee, host: host))
+                    .v4(.init(address: ptr.pointee, host: host))
                 }
             case AF_INET6:
                 return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { ptr in
-                    return .v6(.init(address: ptr.pointee, host: host))
+                    .v6(.init(address: ptr.pointee, host: host))
                 }
             default:
                 throw SocketAddressError.unsupported
