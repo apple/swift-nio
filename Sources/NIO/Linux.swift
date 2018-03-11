@@ -91,7 +91,7 @@ internal enum Epoll {
     @inline(never)
     public static func epoll_wait(epfd: Int32, events: UnsafeMutablePointer<epoll_event>, maxevents: Int32, timeout: Int32) throws -> Int32 {
         return try wrapSyscall {
-            return CNIOLinux.epoll_wait(epfd, events, maxevents, timeout)
+            CNIOLinux.epoll_wait(epfd, events, maxevents, timeout)
         }
     }
 }

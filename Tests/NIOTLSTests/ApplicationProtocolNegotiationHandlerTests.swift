@@ -120,7 +120,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let continuePromise: EventLoopPromise<Void> = loop.newPromise()
 
         let handler = ApplicationProtocolNegotiationHandler { result in
-            return continuePromise.futureResult
+            continuePromise.futureResult
         }
 
         try channel.pipeline.add(handler: handler).wait()
@@ -151,7 +151,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let continuePromise: EventLoopPromise<Void> = loop.newPromise()
 
         let handler = ApplicationProtocolNegotiationHandler { result in
-            return continuePromise.futureResult
+            continuePromise.futureResult
         }
         let readCompleteHandler = ReadCompletedHandler()
 
@@ -178,7 +178,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let continuePromise: EventLoopPromise<Void> = loop.newPromise()
 
         let handler = ApplicationProtocolNegotiationHandler { result in
-            return continuePromise.futureResult
+            continuePromise.futureResult
         }
         let readCompleteHandler = ReadCompletedHandler()
 
