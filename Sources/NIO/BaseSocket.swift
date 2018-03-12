@@ -204,10 +204,8 @@ extension sockaddr_storage {
 /// This should not be created directly but one of its sub-classes should be used, like `ServerSocket` or `Socket`.
 class BaseSocket: Selectable {
 
-    private var descriptor: CInt
-    public var isOpen: Bool {
-        return descriptor >= 0
-    }
+    private let descriptor: CInt
+    public private(set) var isOpen: Bool
 
     func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T {
         guard self.isOpen else {
@@ -285,8 +283,8 @@ class BaseSocket: Selectable {
     /// - parameters:
     ///     - descriptor: The file descriptor to wrap.
     init(descriptor: CInt) {
-        precondition(descriptor >= 0, "invalid file descriptor")
         self.descriptor = descriptor
+        self.isOpen = true
     }
 
     deinit {
@@ -383,7 +381,7 @@ class BaseSocket: Selectable {
             try Posix.close(descriptor: fd)
         }
 
-        self.descriptor = -1
+        self.isOpen = false
     }
 }
 

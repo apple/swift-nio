@@ -23,17 +23,14 @@
 ///
 /// - warning: `FileHandle` objects are not thread-safe and are mutable. They also cannot be fully thread-safe as they refer to a global underlying file descriptor.
 public final class FileHandle: FileDescriptor {
-    private var descriptor: CInt
-
-    public var isOpen: Bool {
-        return descriptor >= 0
-    }
+    public private(set) var isOpen: Bool
+    private let descriptor: CInt
 
     /// Create a `FileHandle` taking ownership of `descriptor`. You must call `FileHandle.close` or `FileHandle.takeDescriptorOwnership` before
     /// this object can be safely released.
     public init(descriptor: CInt) {
-        precondition(descriptor >= 0, "invalid file descriptor")
         self.descriptor = descriptor
+        self.isOpen = true
     }
 
     deinit {
@@ -63,16 +60,16 @@ public final class FileHandle: FileDescriptor {
             throw IOError(errnoCode: EBADF, reason: "can't close file (as it's not open anymore).")
         }
 
-        let savedDescriptor = self.descriptor
-        self.descriptor = -1
-        return savedDescriptor
+        self.isOpen = false
+        return self.descriptor
     }
 
     public func close() throws {
         try withUnsafeFileDescriptor { fd in
             try Posix.close(descriptor: fd)
         }
-        self.descriptor = -1
+
+        self.isOpen = false
     }
 
     public func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T {
