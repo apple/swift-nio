@@ -279,10 +279,7 @@ private enum EventLoopLifecycleState {
 internal final class SelectableEventLoop: EventLoop {
     private let selector: NIO.Selector<NIORegistration>
     private let thread: Thread
-    private var scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
-    private var tasksCopy = ContiguousArray<() -> Void>()
-
-    private let tasksLock = Lock()
+    private var scheduledTasks = TaskQueue()
     private var lifecycleState: EventLoopLifecycleState = .open
 
     private let _iovecs: UnsafeMutablePointer<IOVector>
@@ -326,8 +323,6 @@ internal final class SelectableEventLoop: EventLoop {
         self._addresses = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
         self.msgs = UnsafeMutableBufferPointer(start: _msgs, count: Socket.writevLimitIOVectors)
         self.addresses = UnsafeMutableBufferPointer(start: _addresses, count: Socket.writevLimitIOVectors)
-        // We will process 4096 tasks per while loop.
-        self.tasksCopy.reserveCapacity(4096)
     }
 
     deinit {
@@ -384,9 +379,7 @@ internal final class SelectableEventLoop: EventLoop {
         },`in`)
 
         let scheduled = Scheduled(promise: promise, cancellationTask: {
-            self.tasksLock.withLockVoid {
-                self.scheduledTasks.remove(task)
-            }
+            self.scheduledTasks.remove(task)
             self.wakeupSelector()
         })
 
@@ -402,9 +395,7 @@ internal final class SelectableEventLoop: EventLoop {
 
     /// Add the `ScheduledTask` to be executed.
     private func schedule0(_ task: ScheduledTask) {
-        tasksLock.withLockVoid {
-            scheduledTasks.push(task)
-        }
+        scheduledTasks.push(task)
         wakeupSelector()
     }
 
@@ -461,22 +452,16 @@ internal final class SelectableEventLoop: EventLoop {
     public func run() throws {
         precondition(self.inEventLoop, "tried to run the EventLoop on the wrong thread.")
         defer {
-            var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
-            tasksLock.withLockVoid {
-                // reserve the correct capacity so we don't need to realloc later on.
-                scheduledTasksCopy.reserveCapacity(scheduledTasks.count)
-                while let sched = scheduledTasks.pop() {
-                    scheduledTasksCopy.append(sched)
-                }
-            }
-
+            scheduledTasks.coalesce()
             // Fail all the scheduled tasks.
-            for task in scheduledTasksCopy {
+            while let task = scheduledTasks.pop() {
                 task.fail(error: EventLoopError.shutdown)
             }
         }
         var nextReadyTask: ScheduledTask? = nil
         while lifecycleState != .closed {
+            scheduledTasks.coalesce()
+            nextReadyTask = scheduledTasks.peek()
             // Block until there are events to handle or the selector was woken up
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
             try withAutoReleasePool {
@@ -492,30 +477,17 @@ internal final class SelectableEventLoop: EventLoop {
                     }
                 }
             }
-
+            
             // We need to ensure we process all tasks, even if a task added another task again
             while true {
-                // TODO: Better locking
-                tasksLock.withLockVoid {
-                    if !scheduledTasks.isEmpty {
-                        // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
-                        let now = DispatchTime.now()
-
-                        // Make a copy of the tasks so we can execute these while not holding the lock anymore
-                        while tasksCopy.count < tasksCopy.capacity, let task = scheduledTasks.peek() {
-                            if task.readyIn(now) <= .nanoseconds(0) {
-                                _ = scheduledTasks.pop()
-                                tasksCopy.append(task.task)
-                            } else {
-                                nextReadyTask = task
-                                break
-                            }
-                        }
-                    } else {
-                        // Reset nextReadyTask to nil which means we will do a blocking select.
-                        nextReadyTask = nil
-                    }
+                scheduledTasks.coalesce()
+                if scheduledTasks.isEmpty {
+                    break
                 }
+                // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
+                let now = DispatchTime.now()
+
+                var tasksCopy = scheduledTasks.removeReady(now)
 
                 // all pending tasks are set to occur in the future, so we can stop looping.
                 if tasksCopy.isEmpty {
@@ -591,9 +563,7 @@ internal final class SelectableEventLoop: EventLoop {
 
 extension SelectableEventLoop: CustomStringConvertible {
     var description: String {
-        return self.tasksLock.withLock {
-            return "SelectableEventLoop { selector = \(self.selector), scheduledTasks = \(self.scheduledTasks.description) }"
-        }
+        return "SelectableEventLoop { selector = \(self.selector), scheduledTasks = \(self.scheduledTasks.description) }"
     }
 }
 
@@ -803,4 +773,78 @@ public enum EventLoopError: Error {
 
     /// Shutting down the `EventLoop` failed.
     case shutdownFailed
+}
+
+fileprivate class TaskQueue {
+    private let thread = Thread.current
+    private var scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
+    private var pendingPushes = [ScheduledTask]()
+    private var pendingRemoves = [ScheduledTask]()
+    private let lock = Lock()
+    private let needCoalesce = Atomic<Bool>(value: false)
+    
+    var isEmpty: Bool {
+        return scheduledTasks.isEmpty
+    }
+    
+    var description: String {
+        return scheduledTasks.description
+    }
+    
+    func push(_ task: ScheduledTask) {
+        if thread.isCurrent {
+            scheduledTasks.push(task)
+            return
+        }
+        lock.lock()
+        needCoalesce.store(true)
+        pendingPushes.append(task)
+        lock.unlock()
+    }
+    
+    func peek() -> ScheduledTask? {
+        return scheduledTasks.peek()
+    }
+    
+    func pop() -> ScheduledTask? {
+        return scheduledTasks.pop()
+    }
+    
+    func remove(_ task: ScheduledTask) {
+        if thread.isCurrent {
+            scheduledTasks.remove(task)
+            return
+        }
+        lock.lock()
+        needCoalesce.store(true)
+        pendingRemoves.append(task)
+        lock.unlock()
+    }
+    
+    func removeReady(_ now: DispatchTime) -> ContiguousArray<() -> Void> {
+        precondition(thread.isCurrent)
+        var readyTasks = ContiguousArray<() -> Void>()
+        while let task = scheduledTasks.peek(), task.readyIn(now) <= .nanoseconds(0) {
+            readyTasks.append(task.task)
+            _ = scheduledTasks.pop()
+        }
+        return readyTasks
+    }
+    
+    func coalesce() {
+        precondition(thread.isCurrent)
+        guard needCoalesce.exchange(with: false) else {
+            return
+        }
+        lock.lock()
+        for task in pendingPushes {
+            scheduledTasks.push(task)
+        }
+        for task in pendingRemoves {
+            scheduledTasks.remove(task)
+        }
+        pendingPushes.removeAll()
+        pendingRemoves.removeAll()
+        lock.unlock()
+    }
 }
