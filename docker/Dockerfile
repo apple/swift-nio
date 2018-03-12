@@ -36,7 +36,7 @@ RUN cd $HOME/.curl && ./configure --with-ssl && make && make install && cd -
 RUN ldconfig
 
 # swift
-ARG version=4.0.2
+ARG version=4.0.3
 RUN mkdir $HOME/.swift
 RUN wget -q https://swift.org/builds/swift-${version}-release/ubuntu1404/swift-${version}-RELEASE/swift-${version}-RELEASE-ubuntu14.04.tar.gz -O $HOME/swift.tar.gz
 RUN tar xzf $HOME/swift.tar.gz --directory $HOME/.swift --strip-components=1
