@@ -50,37 +50,41 @@ class BaseObjectTest: XCTestCase {
         }
     }
 
-    func testNIOFileRegionConversion() throws {
-        try withPipe { (readFH, writeFH) in
-            let expected = FileRegion(fileHandle: readFH, readerIndex: 1, endIndex: 2)
-            let asAny = NIOAny(expected)
-            XCTAssert(expected == asAny.forceAs(type: FileRegion.self))
-            XCTAssert(expected == asAny.forceAsFileRegion())
-            if let actual = asAny.tryAs(type: FileRegion.self) {
-                XCTAssert(expected == actual)
-            } else {
-                XCTFail("tryAs didn't work")
-            }
-            if let actual = asAny.tryAsFileRegion() {
-                XCTAssert(expected == actual)
-            } else {
-                XCTFail("tryAs didn't work")
-            }
-            return [readFH, writeFH]
+    func testNIOFileRegionConversion() {
+        let handle = FileHandle(descriptor: -1)
+        let expected = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
+        defer {
+            // fake descriptor, so shouldn't be closed.
+            XCTAssertNoThrow(try handle.takeDescriptorOwnership())
+        }
+        let asAny = NIOAny(expected)
+        XCTAssert(expected == asAny.forceAs(type: FileRegion.self))
+        XCTAssert(expected == asAny.forceAsFileRegion())
+        if let actual = asAny.tryAs(type: FileRegion.self) {
+            XCTAssert(expected == actual)
+        } else {
+            XCTFail("tryAs didn't work")
+        }
+        if let actual = asAny.tryAsFileRegion() {
+            XCTAssert(expected == actual)
+        } else {
+            XCTFail("tryAs didn't work")
         }
     }
 
-    func testBadConversions() throws {
-        try withPipe { (readFH, writeFH) in
-            let bb = ByteBufferAllocator().buffer(capacity: 1024)
-            let fr = FileRegion(fileHandle: readFH, readerIndex: 1, endIndex: 2)
-            let id = IOData.byteBuffer(bb)
-
-            XCTAssertNil(NIOAny(bb).tryAsFileRegion())
-            XCTAssertNil(NIOAny(fr).tryAsByteBuffer())
-            XCTAssertNil(NIOAny(id).tryAsFileRegion())
-            return [readFH, writeFH]
+    func testBadConversions() {
+        let handle = FileHandle(descriptor: -1)
+        let bb = ByteBufferAllocator().buffer(capacity: 1024)
+        let fr = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
+        defer {
+            // fake descriptor, so shouldn't be closed.
+            XCTAssertNoThrow(try handle.takeDescriptorOwnership())
         }
+        let id = IOData.byteBuffer(bb)
+
+        XCTAssertNil(NIOAny(bb).tryAsFileRegion())
+        XCTAssertNil(NIOAny(fr).tryAsByteBuffer())
+        XCTAssertNil(NIOAny(id).tryAsFileRegion())
     }
 
     func testByteBufferFromIOData() {
@@ -89,25 +93,29 @@ class BaseObjectTest: XCTestCase {
         XCTAssertEqual(expected, NIOAny(wrapped).tryAsByteBuffer())
     }
 
-    func testFileRegionFromIOData() throws {
-        try withPipe { (readFH, writeFH) in
-            let expected = FileRegion(fileHandle: readFH, readerIndex: 1, endIndex: 2)
-            let wrapped = IOData.fileRegion(expected)
-            XCTAssert(expected == NIOAny(wrapped).tryAsFileRegion())
-            return [readFH, writeFH]
+    func testFileRegionFromIOData() {
+        let handle = FileHandle(descriptor: -1)
+        let expected = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
+        defer {
+            // fake descriptor, so shouldn't be closed.
+            XCTAssertNoThrow(try handle.takeDescriptorOwnership())
         }
+        let wrapped = IOData.fileRegion(expected)
+        XCTAssert(expected == NIOAny(wrapped).tryAsFileRegion())
     }
 
-    func testIODataEquals() throws {
-        try withPipe { (readFH, writeFH) in
-            var bb1 = ByteBufferAllocator().buffer(capacity: 1024)
-            let bb2 = ByteBufferAllocator().buffer(capacity: 1024)
-            bb1.write(string: "hello")
-            let fr = FileRegion(fileHandle: readFH, readerIndex: 1, endIndex: 2)
-            XCTAssertEqual(IOData.byteBuffer(bb1), IOData.byteBuffer(bb1))
-            XCTAssertNotEqual(IOData.byteBuffer(bb1), IOData.byteBuffer(bb2))
-            XCTAssertNotEqual(IOData.byteBuffer(bb1), IOData.fileRegion(fr))
-            return [readFH, writeFH]
+    func testIODataEquals() {
+        let handle = FileHandle(descriptor: -1)
+        var bb1 = ByteBufferAllocator().buffer(capacity: 1024)
+        let bb2 = ByteBufferAllocator().buffer(capacity: 1024)
+        bb1.write(string: "hello")
+        let fr = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
+        defer {
+            // fake descriptor, so shouldn't be closed.
+            XCTAssertNoThrow(try handle.takeDescriptorOwnership())
         }
+        XCTAssertEqual(IOData.byteBuffer(bb1), IOData.byteBuffer(bb1))
+        XCTAssertNotEqual(IOData.byteBuffer(bb1), IOData.byteBuffer(bb2))
+        XCTAssertNotEqual(IOData.byteBuffer(bb1), IOData.fileRegion(fr))
     }
 }
