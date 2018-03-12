@@ -87,7 +87,7 @@ class ChannelPipelineTest: XCTestCase {
 
         _ = try channel.pipeline.add(handler: NoBindAllowed()).wait()
         _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<ByteBuffer, ByteBuffer> { data in
-            return data
+            data
         }).wait()
 
         _ = try channel.connect(to: sa).wait()
@@ -349,5 +349,59 @@ class ChannelPipelineTest: XCTestCase {
 
             XCTAssertNoThrow(try loop.syncShutdownGracefully())
         }()
+    }
+
+    func testAddingHandlersFirstWorks() throws {
+        final class ReceiveIntHandler: ChannelInboundHandler {
+            typealias InboundIn = Int
+
+            var intReadCount = 0
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                if data.tryAs(type: Int.self) != nil {
+                    self.intReadCount += 1
+                }
+            }
+        }
+
+        final class TransformStringToIntHandler: ChannelInboundHandler {
+            typealias InboundIn = String
+            typealias InboundOut = Int
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                if let dataString = data.tryAs(type: String.self) {
+                    ctx.fireChannelRead(self.wrapInboundOut(dataString.count))
+                }
+            }
+        }
+
+        final class TransformByteBufferToStringHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = String
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                if var buffer = data.tryAs(type: ByteBuffer.self) {
+                    ctx.fireChannelRead(self.wrapInboundOut(buffer.readString(length: buffer.readableBytes)!))
+                }
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+        let countHandler = ReceiveIntHandler()
+        var buffer = channel.allocator.buffer(capacity: 12)
+        buffer.write(staticString: "hello, world")
+
+        XCTAssertNoThrow(try channel.pipeline.add(handler: countHandler).wait())
+        XCTAssertFalse(try channel.writeInbound(buffer))
+        XCTAssertEqual(countHandler.intReadCount, 0)
+
+        try channel.pipeline.addHandlers(TransformByteBufferToStringHandler(),
+                                         TransformStringToIntHandler(),
+                                         first: true).wait()
+        XCTAssertFalse(try channel.writeInbound(buffer))
+        XCTAssertEqual(countHandler.intReadCount, 1)
     }
 }

@@ -74,7 +74,7 @@ extension ByteBuffer {
     /// - returns: The number of bytes written.
     public mutating func set(staticString string: StaticString, at index: Int) -> Int {
         return string.withUTF8Buffer { ptr -> Int in
-            return self.set(bytes: UnsafeRawBufferPointer(ptr), at: index)
+            self.set(bytes: UnsafeRawBufferPointer(ptr), at: index)
         }
     }
 
