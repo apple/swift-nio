@@ -249,13 +249,29 @@ class BaseSocket: Selectable {
     /// - parameters:
     ///     - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
     ///     - type: The type of the socket to create.
+    ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - returns: the file descriptor of the socket that was created.
     /// - throws: An `IOError` if creation of the socket failed.
-    static func newSocket(protocolFamily: Int32, type: CInt) throws -> Int32 {
+    static func newSocket(protocolFamily: Int32, type: CInt, setNonBlocking: Bool = false) throws -> Int32 {
+        var sockType = type
+        #if os(Linux)
+        if setNonBlocking {
+            sockType = type | Linux.SOCK_NONBLOCK
+        }
+        #endif
         let sock = try Posix.socket(domain: protocolFamily,
-                                    type: type,
+                                    type: sockType,
                                     protocol: 0)
-
+        #if !os(Linux)
+        if setNonBlocking {
+            do {
+                try Posix.fcntl(descriptor: sock, command: F_SETFL, value: O_NONBLOCK)
+            } catch {
+                _ = try? Posix.close(descriptor: sock)
+                throw error
+            }
+        }
+        #endif
         if protocolFamily == AF_INET6 {
             var zero: Int32 = 0
             do {

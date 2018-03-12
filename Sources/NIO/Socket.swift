@@ -31,9 +31,10 @@ final class Socket: BaseSocket {
     /// - parameters:
     ///     - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
     ///     - type: The type of the socket to create.
+    ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if creation of the socket failed.
-    init(protocolFamily: CInt, type: CInt) throws {
-        let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily, type: type)
+    init(protocolFamily: CInt, type: CInt, setNonBlocking: Bool = false) throws {
+        let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily, type: type, setNonBlocking: setNonBlocking)
         super.init(descriptor: sock)
     }
 

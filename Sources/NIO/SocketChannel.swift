@@ -736,13 +736,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
-        let socket = try Socket(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM)
-        do {
-            try socket.setNonBlocking()
-        } catch let err {
-            _ = try? socket.close()
-            throw err
-        }
+        let socket = try Socket(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: true)
         self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
         try super.init(socket: socket, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
@@ -789,7 +783,6 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     fileprivate init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
-        try socket.setNonBlocking()
         self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
         try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
@@ -864,7 +857,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             return true
         }
         if let timeout = connectTimeout {
-            connectTimeoutScheduled = eventLoop.scheduleTask(in: timeout) { () -> (Void) in
+            connectTimeoutScheduled = eventLoop.scheduleTask(in: timeout) { () -> Void in
                 if self.pendingConnect != nil {
                     // The connection was still not established, close the Channel which will also fail the pending promise.
                     self.close0(error: ChannelError.connectTimeout(timeout), mode: .all, promise: nil)
@@ -986,13 +979,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     override public var isWritable: Bool { return false }
 
     init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: Int32) throws {
-        let serverSocket = try ServerSocket(protocolFamily: protocolFamily)
-        do {
-            try serverSocket.setNonBlocking()
-        } catch let err {
-            _ = try? serverSocket.close()
-            throw err
-        }
+        let serverSocket = try ServerSocket(protocolFamily: protocolFamily, setNonBlocking: true)
         self.group = group
         try super.init(socket: serverSocket, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
@@ -1059,7 +1046,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             guard self.isOpen else {
                 return result
             }
-            if let accepted =  try self.socket.accept() {
+            if let accepted =  try self.socket.accept(setNonBlocking: true) {
                 readPending = false
                 result = .some
                 do {

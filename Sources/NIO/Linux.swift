@@ -95,4 +95,22 @@ internal enum Epoll {
         }
     }
 }
+
+internal enum Linux {
+    static let SOCK_CLOEXEC = Int32(bitPattern: Glibc.SOCK_CLOEXEC.rawValue)
+    static let SOCK_NONBLOCK = Int32(bitPattern: Glibc.SOCK_NONBLOCK.rawValue)
+
+    @inline(never)
+    public static func accept4(descriptor: CInt, addr: UnsafeMutablePointer<sockaddr>, len: UnsafeMutablePointer<socklen_t>, flags: Int32) throws -> CInt? {
+        let result: IOResult<CInt> = try wrapSyscallMayBlock {
+            CNIOLinux.CNIOLinux_accept4(descriptor, addr, len, flags)
+        }
+        switch result {
+        case .processed(let fd):
+            return fd
+        default:
+            return nil
+        }
+    }
+}
 #endif
