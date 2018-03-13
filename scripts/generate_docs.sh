@@ -89,6 +89,8 @@ if [[ $CI == true ]]; then
   git add --all docs
   echo '<html><head><meta http-equiv="refresh" content="0; url=docs/current/NIO/index.html" /></head></html>' > index.html
   git add index.html
+  touch .nojekyll
+  git add .nojekyll
   changes=$(git diff-index --name-only HEAD)
   if [[ -n "$changes" ]]; then
     git commit --author="$GIT_AUTHOR" -m "publish $version docs"
