@@ -204,14 +204,14 @@ private final class HTTPHandler: ChannelInboundHandler {
             func doNext() {
                 self.buffer.clear()
                 self.buffer.write(string: strings[self.continuousCount])
+                self.continuousCount += 1
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenSuccess {
-                    if self.continuousCount < strings.count - 1 {
+                    if self.continuousCount < strings.count {
                         _ = ctx.eventLoop.scheduleTask(in: delay, doNext)
                     } else {
                         self.completeResponse(ctx, trailers: nil, promise: nil)
                     }
                 }
-                self.continuousCount += 1
             }
             ctx.writeAndFlush(self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
             doNext()
@@ -347,12 +347,13 @@ private final class HTTPHandler: ChannelInboundHandler {
 
     private func completeResponse(_ ctx: ChannelHandlerContext, trailers: HTTPHeaders?, promise: EventLoopPromise<Void>?) {
         self.state.responseComplete()
-        let promise = self.keepAlive ? promise : (promise ?? ctx.eventLoop.newPromise())
-        ctx.writeAndFlush(self.wrapOutboundOut(.end(trailers)), promise: promise)
 
+        let promise = self.keepAlive ? promise : (promise ?? ctx.eventLoop.newPromise())
         if !self.keepAlive {
             promise!.futureResult.whenComplete { ctx.close(promise: nil) }
         }
+
+        ctx.writeAndFlush(self.wrapOutboundOut(.end(trailers)), promise: promise)
     }
 
     func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
@@ -471,6 +472,8 @@ let bootstrap = ServerBootstrap(group: group)
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
         channel.pipeline.addHTTPServerHandlers().then {
+            channel.pipeline.add(handler: HTTPServerPipelineHandler())
+        }.then {
             channel.pipeline.add(handler: HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
         }
     }
