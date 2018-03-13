@@ -1463,7 +1463,7 @@ public class ChannelTests: XCTestCase {
             public func expectRead(loop: EventLoop) -> EventLoopFuture<Void> {
                 return loop.submit {
                     self.waitingForReadPromise = loop.newPromise()
-                }.then { (_: Void) in
+                }.then {
                     self.waitingForReadPromise!.futureResult
                 }
             }
