@@ -14,9 +14,6 @@
 //  This file contains code that ensures errno is captured correctly when doing syscalls and no ARC traffic can happen inbetween that *could* change the errno
 //  value before we were able to read it.
 //  Its important that all static methods are declared with `@inline(never)` so its not possible any ARC traffic happens while we need to read errno.
-//
-//  Created by Norman Maurer on 11/10/17.
-//
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 @_exported import Darwin.C

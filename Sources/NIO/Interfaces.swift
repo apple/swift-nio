@@ -11,12 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-//
-//  Interfaces.swift
-//  NIO
-//
-//  Created by Cory Benfield on 27/02/2018.
-//
 
 private extension ifaddrs {
     var dstaddr: UnsafeMutablePointer<sockaddr>? {
