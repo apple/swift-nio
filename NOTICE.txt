@@ -59,3 +59,12 @@ This product contains "cpp_magic.h" from Thomas Nixon & Jonathan Heathcote's uSH
     * https://github.com/18sg/uSHET/blob/master/LICENSE
   * HOMEPAGE:
     * https://github.com/18sg/uSHET
+
+---
+
+This product contains "sha1.c" and "sha1.h" from FreeBSD (Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project)
+
+  * LICENSE (BSD-3):
+    * https://opensource.org/licenses/BSD-3-Clause
+  * HOMEPAGE:
+    * https://github.com/freebsd/freebsd/tree/master/sys/crypto
