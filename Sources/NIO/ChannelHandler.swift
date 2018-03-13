@@ -33,7 +33,12 @@ public protocol ChannelHandler: class {
 
 /// Untyped `ChannelHandler` which handles outbound I/O events or intercept an outbound I/O operation.
 ///
-/// We _strongly_ advice against implementing this protocol directly. Please implement `ChannelOutboundHandler`.
+/// Despite the fact that `write` is one of the methods on this `protocol`, you should avoid assuming that "outbound" events are to do with
+/// writing to channel sources. Instead, "outbound" events are events that are passed *to* the channel source (e.g. a socket): that is, things you tell
+/// the channel source to do. That includes `write` ("write this data to the channel source"), but it also includes `read` ("please begin attempting to read from
+/// the channel source") and `bind` ("please bind the following address"), which have nothing to do with sending data.
+///
+/// We _strongly_ advise against implementing this protocol directly. Please implement `ChannelOutboundHandler`.
 public protocol _ChannelOutboundHandler: ChannelHandler {
 
     /// Called to request that the `Channel` register itself for I/O events with its `EventLoop`.
@@ -124,7 +129,12 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
 
 /// Untyped `ChannelHandler` which handles inbound I/O events.
 ///
-/// We _strongly_ advice against implementing this protocol directly. Please implement `ChannelInboundHandler`.
+/// Despite the fact that `channelRead` is one of the methods on this `protocol`, you should avoid assuming that "inbound" events are to do with
+/// reading from channel sources. Instead, "inbound" events are events that originate *from* the channel source (e.g. the socket): that is, events that the
+/// channel source tells you about. This includes things like `channelRead` ("there is some data to read"), but it also includes things like
+/// `channelWritabilityChanged` ("this source is no longer marked writable").
+///
+/// We _strongly_ advise against implementing this protocol directly. Please implement `ChannelInboundHandler`.
 public protocol _ChannelInboundHandler: ChannelHandler {
 
     /// Called when the `Channel` has successfully registered with its `EventLoop` to handle I/O.
