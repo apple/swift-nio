@@ -153,7 +153,7 @@ public extension ChannelPipeline {
         let requestDecoder = HTTPRequestDecoder()
         let upgrader = HTTPServerUpgradeHandler(upgraders: upgraders,
                                                 httpEncoder: responseEncoder,
-                                                httpDecoder: requestDecoder,
+                                                extraHTTPHandlers: [requestDecoder],
                                                 upgradeCompletionHandler: upgradeCompletionHandler)
         return addHandlers(responseEncoder, requestDecoder, upgrader, first: first)
     }
