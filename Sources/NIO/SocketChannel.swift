@@ -588,7 +588,9 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
                     // If we want to allow half closure we will just mark the input side of the Channel
                     // as closed.
                     pipeline.fireChannelReadComplete0()
-                    close0(error: err, mode: .input, promise: nil)
+                    if shouldCloseOnReadError(err) {
+                        close0(error: err, mode: .input, promise: nil)
+                    }
                     readPending = false
                     return
                 }
@@ -598,7 +600,10 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
             // Call before triggering the close of the Channel.
             pipeline.fireChannelReadComplete0()
-            close0(error: err, mode: .all, promise: nil)
+            
+            if shouldCloseOnReadError(err) {
+                close0(error: err, mode: .all, promise: nil)
+            }
 
             return
         }
@@ -606,6 +611,15 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         readIfNeeded0()
     }
 
+    /// Returns `true` if the `Channel` should be closed as result of the given `Error` which happened during `readFromSocket`.
+    ///
+    /// - parameters:
+    ///     - err: The `Error` which was thrown by `readFromSocket`.
+    /// - returns: `true` if the `Channel` should be closed, `false` otherwise.
+    fileprivate func shouldCloseOnReadError(_ err: Error) -> Bool {
+        return true
+    }
+    
     internal final func updateCachedAddressesFromSocket(updateLocal: Bool = true, updateRemote: Bool = true) {
         assert(self.eventLoop.inEventLoop)
         assert(updateLocal || updateRemote)
@@ -978,8 +992,11 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool { return false }
 
-    init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: Int32) throws {
-        let serverSocket = try ServerSocket(protocolFamily: protocolFamily, setNonBlocking: true)
+    convenience init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: Int32) throws {
+        try self.init(serverSocket: try ServerSocket(protocolFamily: protocolFamily, setNonBlocking: true), eventLoop: eventLoop, group: group)
+    }
+    
+    init(serverSocket: ServerSocket, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
         self.group = group
         try super.init(socket: serverSocket, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
@@ -1061,6 +1078,23 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             }
         }
         return result
+    }
+    
+    override fileprivate func shouldCloseOnReadError(_ err: Error) -> Bool {
+        guard let err = err as? IOError else { return true }
+        
+        switch err.errnoCode {
+        case ECONNABORTED,
+             EMFILE,
+             ENFILE,
+             ENOBUFS,
+             ENOMEM:
+            // These are errors we may be able to recover from. The user may just want to stop accepting connections for example
+            // or provide some other means of back-pressure. This could be achieved by a custom ChannelDuplexHandler.
+            return false
+        default:
+            return true
+        }
     }
 
     override fileprivate func cancelWritesOnClose(error: Error) {
