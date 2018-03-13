@@ -17,10 +17,14 @@ import Dispatch
 @testable import NIO
 @testable import NIOHTTP1
 
-private extension ChannelPipeline {
+extension ChannelPipeline {
     func assertDoesNotContainUpgrader() throws {
+        try self.assertDoesNotContain(handlerType: HTTPServerUpgradeHandler.self)
+    }
+
+    func assertDoesNotContain<T>(handlerType: T.Type) throws {
         do {
-            _ = try self.context(handlerType: HTTPServerUpgradeHandler.self).wait()
+            _ = try self.context(handlerType: handlerType).wait()
             XCTFail("Found handler")
         } catch ChannelPipelineError.notFound {
             // Nothing to see here
@@ -28,10 +32,14 @@ private extension ChannelPipeline {
     }
 
     func assertContainsUpgrader() throws {
+        try self.assertContains(handlerType: HTTPServerUpgradeHandler.self)
+    }
+
+    func assertContains<T>(handlerType: T.Type) throws {
         do {
-            _ = try self.context(handlerType: HTTPServerUpgradeHandler.self).wait()
+            _ = try self.context(handlerType: handlerType).wait()
         } catch ChannelPipelineError.notFound {
-            XCTFail("Found handler")
+            XCTFail("Did not find handler")
         }
     }
 
@@ -53,7 +61,19 @@ private extension ChannelPipeline {
     }
 }
 
+extension EmbeddedChannel {
+    func readAllOutboundBuffers() -> ByteBuffer {
+        var buffer = self.allocator.buffer(capacity: 100)
+        while case .some(.byteBuffer(var writtenData)) = self.readOutbound() {
+            buffer.write(buffer: &writtenData)
+        }
+
+        return buffer
+    }
+}
+
 private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
+                                              pipelining: Bool,
                                               upgraders: [HTTPProtocolUpgrader],
                                               extraHandlers: [ChannelHandler],
                                               _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) throws -> (Channel, EventLoopFuture<Channel>) {
@@ -62,7 +82,8 @@ private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
         .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
         .childChannelInitializer { channel in
             p.succeed(result: channel)
-            return channel.pipeline.addHTTPServerHandlersWithUpgrader(upgraders: upgraders, upgradeCompletionHandler).then {
+            let upgradeConfig = (upgraders: upgraders, completionHandler: upgradeCompletionHandler)
+            return channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: pipelining, withServerUpgrade: upgradeConfig).then {
                 let futureResults = extraHandlers.map { channel.pipeline.add(handler: $0) }
                 return EventLoopFuture<Void>.andAll(futureResults, eventLoop: channel.eventLoop)
             }
@@ -103,11 +124,13 @@ private func connectedClientChannel(group: EventLoopGroup, serverAddress: Socket
         .wait()
 }
 
-private func setUpTestWithAutoremoval(upgraders: [HTTPProtocolUpgrader],
+private func setUpTestWithAutoremoval(pipelining: Bool = false,
+                                      upgraders: [HTTPProtocolUpgrader],
                                       extraHandlers: [ChannelHandler],
                                       _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) throws -> (EventLoopGroup, Channel, Channel, Channel) {
     let group = MultiThreadedEventLoopGroup(numThreads: 1)
     let (serverChannel, connectedServerChannelFuture) = try serverHTTPChannelWithAutoremoval(group: group,
+                                                                                             pipelining: pipelining,
                                                                                              upgraders: upgraders,
                                                                                              extraHandlers: extraHandlers,
                                                                                              upgradeCompletionHandler)
@@ -741,5 +764,54 @@ class HTTPUpgradeTestCase: XCTestCase {
         }.wait()
         let resultString = data.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
         XCTAssertEqual(resultString, appData)
+    }
+
+    func testRemovesAllHTTPRelatedHandlersAfterUpgrade() throws {
+        let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: []) { req in }
+        let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(pipelining: true,
+                                                                                    upgraders: [upgrader],
+                                                                                    extraHandlers: []) { ctx in }
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        // First, validate the pipeline is right.
+        XCTAssertNoThrow(try connectedServer.pipeline.assertContains(handlerType: HTTPRequestDecoder.self))
+        XCTAssertNoThrow(try connectedServer.pipeline.assertContains(handlerType: HTTPResponseEncoder.self))
+        XCTAssertNoThrow(try connectedServer.pipeline.assertContains(handlerType: HTTPServerPipelineHandler.self))
+
+        // This request is safe to upgrade.
+        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
+
+        // Let the machinery do its thing.
+        XCTAssertNoThrow(try connectedServer.pipeline.waitForUpgraderToBeRemoved())
+
+        // At this time we should validate that none of the HTTP handlers in the pipeline exist.
+        XCTAssertNoThrow(try connectedServer.pipeline.assertDoesNotContain(handlerType: HTTPRequestDecoder.self))
+        XCTAssertNoThrow(try connectedServer.pipeline.assertDoesNotContain(handlerType: HTTPResponseEncoder.self))
+        XCTAssertNoThrow(try connectedServer.pipeline.assertDoesNotContain(handlerType: HTTPServerPipelineHandler.self))
+    }
+
+    @available(*, deprecated, message: "Tests deprecated function addHTTPServerHandlers")
+    func testBasicUpgradePipelineMutation() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertFalse(try channel.finish())
+        }
+        let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: []) { req in }
+        XCTAssertNoThrow(try channel.pipeline.addHTTPServerHandlersWithUpgrader(upgraders: [upgrader]) { ctx in }.wait())
+        try channel.pipeline.assertContainsUpgrader()
+        try channel.pipeline.assertContains(handlerType: HTTPRequestDecoder.self)
+        try channel.pipeline.assertContains(handlerType: HTTPResponseEncoder.self)
+
+        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\n"
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+
+        var buffer = channel.readAllOutboundBuffers()
+        XCTAssertEqual(buffer.readString(length: 34), "HTTP/1.1 101 Switching Protocols\r\n")
+        try channel.pipeline.assertDoesNotContainUpgrader()
+        try channel.pipeline.assertDoesNotContain(handlerType: HTTPRequestDecoder.self)
+        try channel.pipeline.assertDoesNotContain(handlerType: HTTPResponseEncoder.self)
     }
 }

@@ -110,55 +110,6 @@ private protocol AnyHTTPDecoder: class {
     func popRequestMethod() -> HTTPMethod?
 }
 
-public extension ChannelPipeline {
-    /// Configure a `ChannelPipeline` for use as a HTTP server.
-    ///
-    /// - parameters:
-    ///     - first: Whether to add the HTTP server at the head of the channel pipeline,
-    ///         or at the tail.
-    ///     - supportPipelining: Whether your code can manually handle pipelined requests,
-    ///         or whether it needs requests serialized. If `false` (the default), this
-    ///         call will also insert a `HTTPServerPipelineHandler` to serialize HTTP
-    ///         requests.
-    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    public func addHTTPServerHandlers(first: Bool = false, supportPipelining: Bool = false) -> EventLoopFuture<Void> {
-        return addHandlers(HTTPResponseEncoder(), HTTPRequestDecoder(), first: first)
-    }
-
-    /// Configure a `ChannelPipeline` for use as a HTTP client.
-    ///
-    /// - parameters:
-    ///     - first: Whether to add the HTTP client at the head of the channel pipeline,
-    ///              or at the tail.
-    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    public func addHTTPClientHandlers(first: Bool = false) -> EventLoopFuture<Void> {
-        return addHandlers(HTTPRequestEncoder(), HTTPResponseDecoder(), first: first)
-    }
-
-    /// Configure a `ChannelPipeline` for use as a HTTP server that can perform a HTTP
-    /// upgrade to a non-HTTP protocol: that is, after upgrade the channel pipeline must
-    /// have none of the handlers added by this function in it.
-    ///
-    /// - parameters:
-    ///     - first: Whether to add the HTTP server at the head of the channel pipeline,
-    ///              or at the tail.
-    ///     - upgraders: The HTTP protocol upgraders to offer.
-    ///     - upgradeCompletionHandler: A block that will be fired when the HTTP upgrade is
-    ///                                 complete.
-    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    public func addHTTPServerHandlersWithUpgrader(first: Bool = false,
-                                                  upgraders: [HTTPProtocolUpgrader],
-                                                  _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) -> EventLoopFuture<Void> {
-        let responseEncoder = HTTPResponseEncoder()
-        let requestDecoder = HTTPRequestDecoder()
-        let upgrader = HTTPServerUpgradeHandler(upgraders: upgraders,
-                                                httpEncoder: responseEncoder,
-                                                extraHTTPHandlers: [requestDecoder],
-                                                upgradeCompletionHandler: upgradeCompletionHandler)
-        return addHandlers(responseEncoder, requestDecoder, upgrader, first: first)
-    }
-}
-
 /// A `ChannelInboundHandler` used to decode HTTP requests. See the documentation
 /// on `HTTPDecoder` for more.
 ///
