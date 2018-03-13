@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 /// A server socket that can accept new connections.
-final class ServerSocket: BaseSocket {
+/* final but tests */ class ServerSocket: BaseSocket {
     public class func bootstrap(protocolFamily: Int32, host: String, port: Int) throws -> ServerSocket {
         let socket = try ServerSocket(protocolFamily: protocolFamily)
         try socket.bind(to: SocketAddress.newAddressResolving(host: host, port: port))
