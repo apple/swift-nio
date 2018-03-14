@@ -125,7 +125,7 @@ public struct NonBlockingFileIO {
                 let readSize = remainingReads > 1 ? chunkSize : lastReadSize
                 assert(readSize > 0)
                 return self.read(fileHandle: fileHandle, byteCount: readSize, allocator: allocator, eventLoop: eventLoop).then { buffer in
-                    return chunkHandler(buffer).then { () -> EventLoopFuture<()> in
+                    chunkHandler(buffer).then { () -> EventLoopFuture<()> in
                         assert(eventLoop.inEventLoop)
                         return _read(remainingReads: remainingReads - 1)
                     }

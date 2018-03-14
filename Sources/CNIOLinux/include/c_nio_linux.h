@@ -51,6 +51,9 @@ int CNIOLinux_recvmmsg(int sockfd, CNIOLinux_mmsghdr *msgvec, unsigned int vlen,
 int CNIOLinux_pthread_setname_np(pthread_t thread, const char *name);
 int CNIOLinux_pthread_getname_np(pthread_t thread, char *name, size_t len);
 
+// Non-standard socket stuff.
+int CNIOLinux_accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags);
+
 // Thread affinity stuff.
 int CNIOLinux_pthread_setaffinity_np(pthread_t thread, size_t cpusetsize, const cpu_set_t *cpuset);
 int CNIOLinux_pthread_getaffinity_np(pthread_t thread, size_t cpusetsize, cpu_set_t *cpuset);

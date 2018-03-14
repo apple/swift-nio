@@ -115,9 +115,13 @@ public extension ChannelPipeline {
     ///
     /// - parameters:
     ///     - first: Whether to add the HTTP server at the head of the channel pipeline,
-    ///              or at the tail.
+    ///         or at the tail.
+    ///     - supportPipelining: Whether your code can manually handle pipelined requests,
+    ///         or whether it needs requests serialized. If `false` (the default), this
+    ///         call will also insert a `HTTPServerPipelineHandler` to serialize HTTP
+    ///         requests.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    public func addHTTPServerHandlers(first: Bool = false) -> EventLoopFuture<Void> {
+    public func addHTTPServerHandlers(first: Bool = false, supportPipelining: Bool = false) -> EventLoopFuture<Void> {
         return addHandlers(HTTPResponseEncoder(), HTTPRequestDecoder(), first: first)
     }
 
@@ -149,7 +153,7 @@ public extension ChannelPipeline {
         let requestDecoder = HTTPRequestDecoder()
         let upgrader = HTTPServerUpgradeHandler(upgraders: upgraders,
                                                 httpEncoder: responseEncoder,
-                                                httpDecoder: requestDecoder,
+                                                extraHTTPHandlers: [requestDecoder],
                                                 upgradeCompletionHandler: upgradeCompletionHandler)
         return addHandlers(responseEncoder, requestDecoder, upgrader, first: first)
     }

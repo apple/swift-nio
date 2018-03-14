@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import XCTest
-import NIO
+@testable import NIO
 import Dispatch
 import NIOConcurrencyHelpers
 
@@ -92,5 +92,75 @@ public class SocketChannelTest : XCTestCase {
         // setup causes us to get nil as the remote address, even though we connected (and we did, as these are all
         // up right now).
         remoteAddresses.assertAll { $0 != nil }
+    }
+    
+    public func testAcceptFailsWithECONNABORTED() throws {
+        try assertAcceptFails(error: ECONNABORTED, active: true)
+    }
+
+    public func testAcceptFailsWithEMFILE() throws {
+        try assertAcceptFails(error: EMFILE, active: true)
+    }
+    
+    public func testAcceptFailsWithENFILE() throws {
+        try assertAcceptFails(error: ENFILE, active: true)
+    }
+    
+    public func testAcceptFailsWithENOBUFS() throws {
+        try assertAcceptFails(error: ENOBUFS, active: true)
+    }
+    
+    public func testAcceptFailsWithENOMEM() throws {
+        try assertAcceptFails(error: ENOMEM, active: true)
+    }
+    
+    public func testAcceptFailsWithEFAULT() throws {
+        try assertAcceptFails(error: EFAULT, active: false)
+    }
+    
+    private func assertAcceptFails(error: Int32, active: Bool) throws {
+        final class AcceptHandler: ChannelInboundHandler {
+            typealias InboundIn = Channel
+            typealias InboundOut = Channel
+            
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                XCTFail("Should not accept a Channel but got \(self.unwrapInboundIn(data))")
+            }
+        }
+        
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        class NonAcceptingServerSocket : ServerSocket {
+            private var error: Int32?
+            
+            init(error: Int32) throws {
+                self.error = error
+                try super.init(protocolFamily: AF_INET, setNonBlocking: true)
+            }
+            
+            override func accept(setNonBlocking: Bool) throws -> Socket? {
+                if let err = self.error {
+                    self.error = nil
+                    throw IOError(errnoCode: err, function: "accept")
+                }
+                return nil
+            }
+        }
+        let socket = try NonAcceptingServerSocket(error: error)
+        let serverChannel = try ServerSocketChannel(serverSocket: socket, eventLoop: group.next() as! SelectableEventLoop, group: group)
+        XCTAssertNoThrow(try serverChannel.register().wait())
+        XCTAssertNoThrow(try serverChannel.pipeline.add(handler: AcceptHandler()).wait())
+        XCTAssertNoThrow(try serverChannel.bind(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())
+    
+        XCTAssertEqual(active, try serverChannel.eventLoop.submit {
+            serverChannel.readable()
+            return serverChannel.isActive
+        }.wait())
+    
+        if active {
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        }
     }
 }
