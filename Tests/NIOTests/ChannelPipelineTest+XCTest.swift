@@ -41,6 +41,8 @@ extension ChannelPipelineTest {
                 ("testAddBeforeFirst", testAddBeforeFirst),
                 ("testAddAfterWhileClosed", testAddAfterWhileClosed),
                 ("testAddBeforeWhileClosed", testAddBeforeWhileClosed),
+                ("testFindHandlerByType", testFindHandlerByType),
+                ("testFindHandlerByTypeReturnsTheFirstOfItsType", testFindHandlerByTypeReturnsTheFirstOfItsType),
            ]
    }
 }
