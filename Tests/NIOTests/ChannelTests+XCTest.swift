@@ -57,6 +57,8 @@ extension ChannelTests {
                 ("testAskForLocalAndRemoteAddressesAfterChannelIsClosed", testAskForLocalAndRemoteAddressesAfterChannelIsClosed),
                 ("testReceiveAddressAfterAccept", testReceiveAddressAfterAccept),
                 ("testWeDontJamSocketsInANoIOState", testWeDontJamSocketsInANoIOState),
+                ("testBootstrapNoResolverUsedWhenIPUsed", testBootstrapNoResolverUsedWhenIPUsed),
+                ("testBootstrapResolverUsedWhenHostnameUsed", testBootstrapResolverUsedWhenHostnameUsed),
            ]
    }
 }

@@ -1526,4 +1526,84 @@ public class ChannelTests: XCTestCase {
         // The read should go through.
         XCTAssertNoThrow(try readFuture.wait())
     }
+
+    func testBootstrapNoResolverUsedWhenIPUsed() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let loop = group.next()
+
+        let serverChannel = try ServerBootstrap(group: loop)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        class TestResolver: Resolver {
+            let loop: EventLoop
+
+            init(_ loop: EventLoop) {
+                self.loop = loop
+            }
+
+            func initiateAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
+                return loop.newFailedFuture(error: SocketAddressError.unsupported)
+            }
+
+            func initiateAAAAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
+                return loop.newFailedFuture(error: SocketAddressError.unsupported)
+            }
+
+            func cancelQueries() {
+                // noop
+            }
+        }
+        let clientChannel = try ClientBootstrap(group: loop)
+            .resolver(TestResolver(loop))
+            .connect(host: "127.0.0.1", port: Int(serverChannel.localAddress!.port!)).wait()
+
+        try clientChannel.syncCloseAcceptingAlreadyClosed()
+        try serverChannel.syncCloseAcceptingAlreadyClosed()
+    }
+
+    func testBootstrapResolverUsedWhenHostnameUsed() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let loop = group.next()
+
+        let serverChannel = try ServerBootstrap(group: loop)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        class TestResolver: Resolver {
+            let loop: EventLoop
+
+            init(_ loop: EventLoop) {
+                self.loop = loop
+            }
+
+            func initiateAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
+                XCTAssertEqual("swiftnio", host)
+                let address = try! SocketAddress(ipAddress: "127.0.0.1", port: UInt16(port))
+                return loop.newSucceededFuture(result: [address])
+            }
+
+            func initiateAAAAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
+                return loop.newSucceededFuture(result: [])
+            }
+
+            func cancelQueries() {
+                // noop
+            }
+        }
+        let clientChannel = try ClientBootstrap(group: loop)
+            .resolver(TestResolver(loop))
+            .connect(host: "swiftnio", port: Int(serverChannel.localAddress!.port!)).wait()
+
+        try clientChannel.syncCloseAcceptingAlreadyClosed()
+        try serverChannel.syncCloseAcceptingAlreadyClosed()
+    }
 }
