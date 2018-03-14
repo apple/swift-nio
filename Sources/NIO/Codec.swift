@@ -122,7 +122,7 @@ extension ByteToMessageDecoder {
         }
     }
 
-    /// Call `decodeLast` before forward the event throught the pipeline.
+    /// Call `decodeLast` before forward the event through the pipeline.
     public func channelInactive(ctx: ChannelHandlerContext) {
         if var buffer = cumulationBuffer {
             ctx.withThrowingToFireErrorAndClose {
