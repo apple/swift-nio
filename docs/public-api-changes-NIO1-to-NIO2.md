@@ -28,6 +28,7 @@
 - Made `WebSocketOpcode` a struct. Removed `WebSocketOpcode.unknownControl` and
   `WebSocketOpcode.unknownNonControl` values: these should be replaced by
   simply instantiating `WebSocketOpcode` with the value.
+- `ThreadSpecificVariable` is now a `class` instead of a `struct`
 - `Channel.setOption(option:value:)` has been renamed `Channel.setOption(_:value:)`
 - `Channel.getOption(option:value:)` has been renamed `Channel.getOption(_:value:)`
 - `ChannelOption.AssociatedValueType` has been removed
