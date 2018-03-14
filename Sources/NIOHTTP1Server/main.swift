@@ -282,7 +282,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                                                 }
                                                 return ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buffer))))
                                             }
-                    f.then { (_: Void) -> EventLoopFuture<Void> in
+                    f.then { () -> EventLoopFuture<Void> in
                         let p: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
                         self.completeResponse(ctx, trailers: nil, promise: p)
                         return p.futureResult
@@ -304,7 +304,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                 case .sendfile:
                     ctx.write(self.wrapOutboundOut(.head(response))).then {
                         ctx.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region))))
-                    }.then { (_: Void) in
+                    }.then {
                         let p: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
                         self.completeResponse(ctx, trailers: nil, promise: p)
                         return p.futureResult
