@@ -564,4 +564,63 @@ class ChannelPipelineTest: XCTestCase {
             XCTFail("Got incorrect error: \(error)")
         }
     }
+
+    func testFindHandlerByType() {
+        class TypeAHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+            typealias InboundOut = Any
+        }
+
+        class TypeBHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+            typealias InboundOut = Any
+        }
+
+        class TypeCHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+            typealias InboundOut = Any
+        }
+
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+
+        let h1 = TypeAHandler()
+        let h2 = TypeBHandler()
+        XCTAssertNoThrow(try channel.pipeline.add(handler: h1).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: h2).wait())
+
+        XCTAssertTrue(try h1 === channel.pipeline.context(handlerType: TypeAHandler.self).wait().handler)
+        XCTAssertTrue(try h2 === channel.pipeline.context(handlerType: TypeBHandler.self).wait().handler)
+
+        do {
+            _ = try channel.pipeline.context(handlerType: TypeCHandler.self).wait()
+            XCTFail("Did not throw")
+        } catch ChannelPipelineError.notFound {
+            // ok
+        } catch {
+            XCTFail("Unexpected error \(error)")
+        }
+    }
+
+    func testFindHandlerByTypeReturnsTheFirstOfItsType() {
+        class TestHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+            typealias InboundOut = Any
+        }
+
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+
+        let h1 = TestHandler()
+        let h2 = TestHandler()
+        XCTAssertNoThrow(try channel.pipeline.add(handler: h1).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: h2).wait())
+
+        XCTAssertTrue(try h1 === channel.pipeline.context(handlerType: TestHandler.self).wait().handler)
+        XCTAssertFalse(try h2 === channel.pipeline.context(handlerType: TestHandler.self).wait().handler)
+    }
 }
