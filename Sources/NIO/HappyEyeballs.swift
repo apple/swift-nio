@@ -17,7 +17,7 @@
 // The natural implementation of RFC 8305 is to use an explicit FSM, and this module does so. However,
 // it doesn't use the natural Swift idiom for an FSM of using an enum with mutating methods. The reason
 // for this is that the RFC 8305 FSM here needs to trigger a number of concurrent asynchronous operations,
-// each of which will register callbacks that attempt to mutate `self`. This gets tricky fast, becuase enums
+// each of which will register callbacks that attempt to mutate `self`. This gets tricky fast, because enums
 // are value types, while all of these callbacks need to trigger state transitions on the same underlying
 // state machine.
 //
