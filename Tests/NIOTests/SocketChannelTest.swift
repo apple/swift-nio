@@ -111,7 +111,7 @@ public class SocketChannelTest : XCTestCase {
     }
     
     public func testAcceptFailsWithENOMEM() throws {
-        try assertAcceptFails(error: ENOBUFS, active: true)
+        try assertAcceptFails(error: ENOMEM, active: true)
     }
     
     public func testAcceptFailsWithEFAULT() throws {
