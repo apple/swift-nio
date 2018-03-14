@@ -514,10 +514,10 @@ internal extension Selector where R == NIORegistration {
 
 /// The strategy used for the `Selector`.
 enum SelectorStrategy {
-    /// Block until there is some IO ready to be processed or the `Selector` is explictly woken up.
+    /// Block until there is some IO ready to be processed or the `Selector` is explicitly woken up.
     case block
 
-    /// Block until there is some IO ready to be processed, the `Selector` is explictly woken up or the given `TimeAmount` elapsed.
+    /// Block until there is some IO ready to be processed, the `Selector` is explicitly woken up or the given `TimeAmount` elapsed.
     case blockUntilTimeout(TimeAmount)
 
     /// Try to select all ready IO at this point in time without blocking at all.
