@@ -14,7 +14,8 @@
 
 import XCTest
 @testable import NIO
-
+import NIOConcurrencyHelpers
+import Dispatch
 
 class ChannelLifecycleHandler: ChannelInboundHandler {
     public typealias InboundIn = Any
@@ -1613,5 +1614,107 @@ public class ChannelTests: XCTestCase {
         try promise.futureResult.wait()
 
         try serverChannel.close().wait()
+    }
+
+    func testAcceptsAfterCloseDontCauseIssues() throws {
+        class ChannelCollector {
+            let q = DispatchQueue(label: "q")
+            let group: EventLoopGroup
+            var channels: [ObjectIdentifier: Channel] = [:]
+
+            init(group: EventLoopGroup) {
+                self.group = group
+            }
+
+            deinit {
+                XCTAssertTrue(channels.isEmpty, "\(channels)")
+            }
+
+            func add(_ channel: Channel) {
+                self.q.sync {
+                    assert(self.channels[ObjectIdentifier(channel)] == nil)
+                    channels[ObjectIdentifier(channel)] = channel
+                }
+            }
+
+            func remove(_ channel: Channel) {
+                let removed: Channel? = self.q.sync {
+                    return self.channels.removeValue(forKey: ObjectIdentifier(channel))
+                }
+                XCTAssertTrue(removed != nil)
+            }
+
+            func closeAll() -> [EventLoopFuture<()>] {
+                return q.sync { self.channels.values }.map { channel in
+                    channel.close()
+                }
+            }
+        }
+
+        class CheckActiveHandler: ChannelInboundHandler {
+            public typealias InboundIn = Any
+            public typealias OutboundOut = Any
+
+            private var isActive = false
+            private let channelCollector: ChannelCollector
+
+            init(channelCollector: ChannelCollector) {
+                self.channelCollector = channelCollector
+            }
+
+            deinit {
+                XCTAssertFalse(self.isActive)
+            }
+
+            func channelActive(ctx: ChannelHandlerContext) {
+                XCTAssertFalse(self.isActive)
+                self.isActive = true
+                self.channelCollector.add(ctx.channel)
+                ctx.fireChannelActive()
+            }
+
+            func channelInactive(ctx: ChannelHandlerContext) {
+                XCTAssertTrue(self.isActive)
+                self.isActive = false
+                self.channelCollector.remove(ctx.channel)
+                ctx.fireChannelInactive()
+            }
+        }
+
+        func runTest() throws {
+            let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
+            defer {
+                try! group.syncShutdownGracefully()
+            }
+            let collector = ChannelCollector(group: group)
+            let serverBoot = ServerBootstrap(group: group)
+                .childChannelInitializer { channel in
+                    return channel.pipeline.add(handler: CheckActiveHandler(channelCollector: collector))
+            }
+            let listeningChannel = try serverBoot.bind(host: "127.0.0.1", port: 0).wait()
+            let clientBoot = ClientBootstrap(group: group)
+            try clientBoot.connect(to: listeningChannel.localAddress!).wait().close().wait()
+            let closeFutures = collector.closeAll()
+            let strayClient = try clientBoot.connect(to: listeningChannel.localAddress!).wait()
+            try strayClient.close().wait()
+            try listeningChannel.close().wait()
+            closeFutures.forEach {
+                do {
+                    try $0.wait()
+                } catch let e as ChannelError where e == .alreadyClosed {
+                    // ok
+                } catch {
+                    XCTFail("unexpected error \(error) received")
+                }
+            }
+        }
+
+        do {
+            for _ in 0..<1000 {
+                try runTest()
+            }
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
     }
 }
