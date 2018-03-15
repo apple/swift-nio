@@ -169,7 +169,7 @@ public protocol _ChannelInboundHandler: ChannelHandler {
     func channelRead(ctx: ChannelHandlerContext, data: NIOAny)
 
     /// Called when the `Channel` has completed its current read loop, either because no more data is available to read from the transport at this time, or because the `Channel` needs to yield to the event loop to process other I/O events for other `Channel`s.
-    /// If `ChannelOptions.autoRead` is `false` no futher read attempt will be made until `ChannelHandlerContext.read` or `Channel.read` is explicitly called.
+    /// If `ChannelOptions.autoRead` is `false` no further read attempt will be made until `ChannelHandlerContext.read` or `Channel.read` is explicitly called.
     ///
     /// This should call `ctx.fireChannelReadComplete` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///

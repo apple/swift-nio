@@ -22,7 +22,7 @@ private struct PendingDatagramWrite {
     /// and then returns the length.
     ///
     /// This copying is an annoyance, but one way or another this copy will have to happen as
-    /// we do not want to expose the backing socket address to libc in case it mutates it. Becuase
+    /// we do not want to expose the backing socket address to libc in case it mutates it. Because
     /// we are using a box to store the underlying sockaddr, if libc ever did mess with that data
     /// it will screw any other values pointing to that box. That would be a pretty bad scene. And
     /// in most cases we're not copying large values here: only for UDS does this become a problem.
@@ -341,7 +341,7 @@ extension PendingDatagramWritesState {
 /// value. The most important purpose of this object is to call `sendto` or `sendmmsg` depending on the writes held and
 /// the availability of the functions.
 final class PendingDatagramWritesManager: PendingWritesManager {
-    /// Storage for mmsghdr strutures. Only present on Linux becuase Darwin does not support
+    /// Storage for mmsghdr strutures. Only present on Linux because Darwin does not support
     /// gathering datagram writes.
     private var msgs: UnsafeMutableBufferPointer<MMsgHdr>
 
