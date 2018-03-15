@@ -44,7 +44,7 @@ extension EmbeddedScheduledTask: Comparable {
 /// kinds of mocking.
 ///
 /// - warning: Unlike `SelectableEventLoop`, `EmbeddedEventLoop` **is not thread-safe**. This
-///     is becuase it is intended to be run in the thread that instantiated it. Users are
+///     is because it is intended to be run in the thread that instantiated it. Users are
 ///     responsible for ensuring they never call into the `EmbeddedEventLoop` in an
 ///     unsynchronized fashion.
 public class EmbeddedEventLoop: EventLoop {

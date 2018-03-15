@@ -61,7 +61,7 @@ public struct NonBlockingFileIO {
     /// times, delivering `chunkSize` bytes each time. If less than `fileRegion.readableBytes` bytes can be read from the file,
     /// `chunkHandler` will be called less often with the last invocation possibly being of less than `chunkSize` bytes.
     ///
-    /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` suceeds.
+    /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` succeeds.
     ///
     /// - parameters:
     ///   - fileRegion: The file region to read.
@@ -99,7 +99,7 @@ public struct NonBlockingFileIO {
     /// times, delivering `chunkSize` bytes each time. If less than `byteCount` bytes can be read from `descriptor`,
     /// `chunkHandler` will be called less often with the last invocation possibly being of less than `chunkSize` bytes.
     ///
-    /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` suceeds.
+    /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` succeeds.
     ///
     /// - note: `readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)` should be preferred as it uses `FileRegion` object instead of raw `FileHandle`s.
     ///

@@ -412,6 +412,18 @@ public final class ChannelPipeline: ChannelInvoker {
         return context0({ $0.name == name })
     }
 
+    /// Returns the `ChannelHandlerContext` that belongs to a `ChannelHandler` of the given type.
+    ///
+    /// If multiple channel handlers of the same type are present in the pipeline, returns the context
+    /// belonging to the first such handler.
+    ///
+    /// - parameters:
+    ///     - handlerType: The type of the handler to search for.
+    /// - returns: the `EventLoopFuture` which will be notified once the the operation completes.
+    public func context<T>(handlerType: T.Type) -> EventLoopFuture<ChannelHandlerContext> {
+        return context0({ $0.handler is T })
+    }
+
     /// Find a `ChannelHandlerContext` in the `ChannelPipeline`.
     private func context0(_ body: @escaping ((ChannelHandlerContext) -> Bool)) -> EventLoopFuture<ChannelHandlerContext> {
         let promise: EventLoopPromise<ChannelHandlerContext> = eventLoop.newPromise()

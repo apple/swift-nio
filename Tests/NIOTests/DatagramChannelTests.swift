@@ -219,7 +219,7 @@ final class DatagramChannelTests: XCTestCase {
         // switches.
         _ = try self.firstChannel.eventLoop.submit {
             let myPromise: EventLoopPromise<()> = self.firstChannel.eventLoop.newPromise()
-            // For datagrams this buffer cannot be very large, becuase if it's larger than the path MTU it
+            // For datagrams this buffer cannot be very large, because if it's larger than the path MTU it
             // will cause EMSGSIZE.
             let bufferSize = 1024 * 5
             var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)

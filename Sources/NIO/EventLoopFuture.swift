@@ -148,6 +148,8 @@ private struct CallbackList: ExpressibleByArrayLiteral {
 ///     or `eventLoop.newFailedFuture(error:)`.
 ///
 public struct EventLoopPromise<T> {
+    /// The `EventLoopFuture` which is used by the `EventLoopPromise`. You can use it to add callbacks which are notified once the
+    /// `EventLoopPromise` is completed.
     public let futureResult: EventLoopFuture<T>
 
     /// General initializer
@@ -289,6 +291,8 @@ public final class EventLoopFuture<T> {
         }
     }
     fileprivate let _fulfilled: Atomic<Bool>
+
+    /// The `EventLoop` which is tied to the `EventLoopFuture` and is used to notify all registered callbacks.
     public let eventLoop: EventLoop
 
     /// Whether this `EventLoopFuture` has been fulfilled. This is a thread-safe

@@ -124,7 +124,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
     }
 
     public func testFramesWith64BitLengthsRoundTrip() throws {
-        // We need a new decoder channel here, becuase the max length would otherwise trigger an error.
+        // We need a new decoder channel here, because the max length would otherwise trigger an error.
         _ = try! self.decoderChannel.finish()
         self.decoderChannel = EmbeddedChannel()
         XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameDecoder(maxFrameSize: 80000)).wait())

@@ -520,10 +520,12 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
         // Was not registered yet so do it now.
         do {
-            try self.safeRegister(interested: .read)
+            // We always register with interested .none and will just trigger readIfNeeded0() later to re-register if needed.
+            try self.safeRegister(interested: .none)
             neverRegistered = false
             promise?.succeed(result: ())
             pipeline.fireChannelRegistered0()
+            readIfNeeded0()
         } catch {
             promise?.fail(error: error)
         }
