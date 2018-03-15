@@ -59,7 +59,7 @@ class SocketAddressTest: XCTestCase {
             let host = address.host
             XCTAssertEqual(host, "")
             XCTAssertEqual(addr.sin_family, sa_family_t(AF_INET))
-            XCTAssertEqual(addr.sin_port, 80)
+            XCTAssertEqual(addr.sin_port, in_port_t(80).bigEndian)
             expectedAddress.withUnsafeBytes { expectedPtr in
                 withUnsafeBytes(of: &addr.sin_addr) { actualPtr in
                     let rc = memcmp(actualPtr.baseAddress!, expectedPtr.baseAddress!, MemoryLayout<in_addr>.size)
@@ -80,7 +80,7 @@ class SocketAddressTest: XCTestCase {
             let host = address.host
             XCTAssertEqual(host, "")
             XCTAssertEqual(addr.sin6_family, sa_family_t(AF_INET6))
-            XCTAssertEqual(addr.sin6_port, 443)
+            XCTAssertEqual(addr.sin6_port, in_port_t(443).bigEndian)
             XCTAssertEqual(addr.sin6_scope_id, 0)
             XCTAssertEqual(addr.sin6_flowinfo, 0)
             expectedAddress.withUnsafeBytes { expectedPtr in
@@ -179,7 +179,7 @@ class SocketAddressTest: XCTestCase {
         _ = secondIPAddress.withMutableSockAddr { (addr, size) -> Void in
             XCTAssertEqual(size, MemoryLayout<sockaddr_in6>.size)
             addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
-                $0.pointee.sin6_port = 5
+                $0.pointee.sin6_port = in_port_t(5).bigEndian
             }
         }
         _ = thirdIPAddress.withMutableSockAddr { (addr, size) -> Void in
