@@ -500,8 +500,13 @@ public final class ChannelPipeline: ChannelInvoker {
             remove0(ctx: ctx, promise: nil)
         }
 
+        // After we removed all "user" errors we nil out (almost) all prev/next referenced to ensure we not have a reference cycle.
+        // We still set head.next = tail as this ensures we always can delegate to ChanneCore.* operations which may need to perform
+        // some special operations (like do some cleanup for received messages).
         self.head.next = tail
-        self.tail.prev = head
+        self.head.prev = nil
+        self.tail.next = nil
+        self.tail.prev = nil
 
         destroyed = true
     }

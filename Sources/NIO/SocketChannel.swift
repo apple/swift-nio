@@ -1106,18 +1106,18 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         assert(eventLoop.inEventLoop)
 
         let ch = data.forceAsOther() as SocketChannel
-        if isOpen {
-            ch.register().map {
-                ch.becomeActive0()
-                ch.readIfNeeded0()
-            }.whenFailure { error in
-                ch.close(promise: nil)
-            }
-        } else {
+        guard isOpen else {
             // if the Channel is not open anymore we will close the previous accepted Channel.
             // We do this as if the Channel is not open anymore the ChannelPipeline is also "cleared".
             // In this case the user had no chance to intercept the accepted Channel itself and so its not possible
             // to close it at all (which would result in a leaked Channel / Socket).
+            ch.close(promise: nil)
+            return
+        }
+        ch.register().map {
+            ch.becomeActive0()
+            ch.readIfNeeded0()
+        }.whenFailure { error in
             ch.close(promise: nil)
         }
     }
