@@ -134,8 +134,8 @@
 ///
 /// A `ChannelHandler` can be added or removed at any time because a `ChannelPipeline` is thread safe.
 public final class ChannelPipeline: ChannelInvoker {
-    private var head: ChannelHandlerContext?
-    private var tail: ChannelHandlerContext?
+    private var head: ChannelHandlerContext!
+    private var tail: ChannelHandlerContext!
 
     private var idx: Int = 0
     internal private(set) var destroyed: Bool = false
@@ -171,9 +171,9 @@ public final class ChannelPipeline: ChannelInvoker {
             }
 
             if first {
-                self.add0(name: name, handler: handler, relativeContext: head!, operation: self.add0(context:after:), promise: promise)
+                self.add0(name: name, handler: handler, relativeContext: head, operation: self.add0(context:after:), promise: promise)
             } else {
-                self.add0(name: name, handler: handler, relativeContext: tail!, operation: self.add0(context:before:), promise: promise)
+                self.add0(name: name, handler: handler, relativeContext: tail, operation: self.add0(context:before:), promise: promise)
             }
         }
 
@@ -447,8 +447,8 @@ public final class ChannelPipeline: ChannelInvoker {
     }
 
     private func contextForPredicate0(_ body: @escaping((ChannelHandlerContext) -> Bool)) -> ChannelHandlerContext? {
-        var curCtx: ChannelHandlerContext? = self.head
-        while let ctx = curCtx {
+        var curCtx: ChannelHandlerContext? = self.head.next
+        while let ctx = curCtx, ctx !== tail {
             if body(ctx) {
                 return ctx
             }
@@ -496,14 +496,17 @@ public final class ChannelPipeline: ChannelInvoker {
     func removeHandlers() {
         assert(eventLoop.inEventLoop)
 
-        if let head = self.head {
-            while let ctx = head.next {
-                remove0(ctx: ctx, promise: nil)
-            }
-            remove0(ctx: self.head!, promise: nil)
+        while let ctx = head.next {
+            remove0(ctx: ctx, promise: nil)
         }
-        self.head = nil
-        self.tail = nil
+
+        // After we removed all "user" errors we nil out (almost) all prev/next referenced to ensure we not have a reference cycle.
+        // We still set head.next = tail as this ensures we always can delegate to ChanneCore.* operations which may need to perform
+        // some special operations (like do some cleanup for received messages).
+        self.head.next = tail
+        self.head.prev = nil
+        self.tail.next = nil
+        self.tail.prev = nil
 
         destroyed = true
     }
@@ -692,11 +695,11 @@ public final class ChannelPipeline: ChannelInvoker {
     // These methods are expected to only be called from within the EventLoop
 
     private var firstOutboundCtx: ChannelHandlerContext? {
-        return self.tail?.prev
+        return self.tail.prev
     }
 
     private var firstInboundCtx: ChannelHandlerContext? {
-        return self.head?.next
+        return self.head.next
     }
 
     func close0(mode: CloseMode, promise: EventLoopPromise<Void>?) {
@@ -837,8 +840,8 @@ public final class ChannelPipeline: ChannelInvoker {
 
         self.head = ChannelHandlerContext(name: "head", handler: HeadChannelHandler.sharedInstance, pipeline: self)
         self.tail = ChannelHandlerContext(name: "tail", handler: TailChannelHandler.sharedInstance, pipeline: self)
-        self.head?.next = self.tail
-        self.tail?.prev = self.head
+        self.head.next = self.tail
+        self.tail.prev = self.head
     }
 }
 
@@ -1422,8 +1425,8 @@ public final class ChannelHandlerContext: ChannelInvoker {
 extension ChannelPipeline: CustomDebugStringConvertible {
     public var debugDescription: String {
         var desc = "ChannelPipeline (\(ObjectIdentifier(self))):\n"
-        var node = self.head
-        while let ctx = node {
+        var node = self.head.next
+        while let ctx = node, ctx !== tail {
             let inboundStr = ctx.handler is _ChannelInboundHandler ? "I" : ""
             let outboundStr = ctx.handler is _ChannelOutboundHandler ? "O" : ""
             desc += "        \(ctx.name) (\(type(of: ctx.handler))) [\(inboundStr)\(outboundStr)]\n"
