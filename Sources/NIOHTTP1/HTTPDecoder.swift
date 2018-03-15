@@ -204,11 +204,8 @@ public final class HTTPResponseDecoder: HTTPDecoder<HTTPClientResponsePart>, Cha
     }
 
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch unwrapOutboundIn(data) {
-        case .head(let head):
+        if case .head(let head) = unwrapOutboundIn(data) {
             methods.append(head.method)
-        default:
-            break
         }
 
         ctx.write(data, promise: promise)

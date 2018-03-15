@@ -84,7 +84,7 @@ extension HTTPPart: Equatable {
             return b1 == b2
         case (.end(let h1), .end(let h2)):
             return h1 == h2
-        default:
+        case (.head, _), (.body, _), (.end, _):
             return false
         }
     }
@@ -995,11 +995,10 @@ extension HTTPResponseStatus {
     /// - Parameter buffer: A buffer to write the serialized bytes into. Will increment
     ///     the writer index of this buffer.
     func write(buffer: inout ByteBuffer) {
-        switch self {
-        case .ok:
+        if case .ok = self {
             // Optimize for 200 ok, which should be the most likely code (...hopefully).
             buffer.write(staticString: status200)
-        default:
+        } else {
             buffer.write(string: String(code))
             buffer.write(string: " ")
             buffer.write(string: reasonPhrase)

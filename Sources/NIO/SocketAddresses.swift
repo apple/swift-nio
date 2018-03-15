@@ -127,15 +127,15 @@ public enum SocketAddress: CustomStringConvertible {
     /// of that structure.
     public func withSockAddr<T>(_ body: (UnsafePointer<sockaddr>, Int) throws -> T) rethrows -> T {
         switch self {
-        case .v4(let addr):
-            var address = addr.address
-            return try address.withSockAddr(body)
-        case .v6(let addr):
-            var address = addr.address
-            return try address.withSockAddr(body)
-        case .unixDomainSocket(let addr):
-            var address = addr.address
-            return try address.withSockAddr(body)
+        case .v4(let address):
+            var addr = address.address
+            return try addr.withSockAddr(body)
+        case .v6(let address):
+            var addr = address.address
+            return try addr.withSockAddr(body)
+        case .unixDomainSocket(let address):
+            var addr = address.address
+            return try addr.withSockAddr(body)
         }
     }
 
@@ -292,7 +292,7 @@ extension SocketAddress: Equatable {
             var sunpath1 = addr1.address.sun_path
             var sunpath2 = addr2.address.sun_path
             return memcmp(&sunpath1, &sunpath2, MemoryLayout.size(ofValue: sunpath1)) == 0
-        default:
+        case (.v4, _), (.v6, _), (.unixDomainSocket, _):
             return false
         }
     }

@@ -264,7 +264,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         func assertChannelActiveFired() {
-            XCTAssert(promise.futureResult.fulfilled)
+            XCTAssert(promise.futureResult.isFulfilled)
         }
     }
 
@@ -348,7 +348,7 @@ class EchoServerClientTest : XCTestCase {
 
         public func channelInactive(ctx: ChannelHandlerContext) {
             if alreadyClosedInChannelInactive.compareAndExchange(expected: false, desired: true) {
-                XCTAssertFalse(self.channelUnregisteredPromise.futureResult.fulfilled,
+                XCTAssertFalse(self.channelUnregisteredPromise.futureResult.isFulfilled,
                                "channelInactive should fire before channelUnregistered")
                 ctx.close().map {
                     XCTFail("unexpected success")
@@ -368,7 +368,7 @@ class EchoServerClientTest : XCTestCase {
 
         public func channelUnregistered(ctx: ChannelHandlerContext) {
             if alreadyClosedInChannelUnregistered.compareAndExchange(expected: false, desired: true) {
-                XCTAssertTrue(self.channelInactivePromise.futureResult.fulfilled,
+                XCTAssertTrue(self.channelInactivePromise.futureResult.isFulfilled,
                               "when channelUnregister fires, channelInactive should already have fired")
                 ctx.close().map {
                     XCTFail("unexpected success")

@@ -23,13 +23,13 @@ class EventLoopFutureTest : XCTestCase {
     func testFutureFulfilledIfHasResult() throws {
         let eventLoop = EmbeddedEventLoop()
         let f = EventLoopFuture(eventLoop: eventLoop, result: 5, file: #file, line: #line)
-        XCTAssertTrue(f.fulfilled)
+        XCTAssertTrue(f.isFulfilled)
     }
 
     func testFutureFulfilledIfHasError() throws {
         let eventLoop = EmbeddedEventLoop()
         let f = EventLoopFuture<Void>(eventLoop: eventLoop, error: EventLoopFutureTestError.example, file: #file, line: #line)
-        XCTAssertTrue(f.fulfilled)
+        XCTAssertTrue(f.isFulfilled)
     }
 
     func testAndAllWithAllSuccesses() throws {
@@ -183,7 +183,7 @@ class EventLoopFutureTest : XCTestCase {
             state += 1
         }
         p.succeed(result: ())
-        XCTAssertTrue(p.futureResult.fulfilled)
+        XCTAssertTrue(p.futureResult.isFulfilled)
         XCTAssertEqual(state, 3)
     }
 

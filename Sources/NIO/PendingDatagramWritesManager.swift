@@ -48,7 +48,7 @@ fileprivate extension Error {
     /// Returns whether the error is "recoverable" from the perspective of datagram sending.
     ///
     /// - returns: `true` if the error is recoverable, `false` otherwise.
-    fileprivate func isRecoverable() -> Bool {
+    fileprivate var isRecoverable: Bool {
         switch self {
         case let e as IOError where e.errnoCode == EMSGSIZE,
              let e as IOError where e.errnoCode == EHOSTUNREACH:
@@ -440,7 +440,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
                 } catch {
                     // If the error we just hit is recoverable, we fall back to single write mode to
                     // isolate exactly which write triggered the problem.
-                    guard error.isRecoverable() else {
+                    guard error.isRecoverable else {
                         throw error
                     }
 

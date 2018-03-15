@@ -206,7 +206,7 @@ public struct NonBlockingFileIO {
                         case .processed(let n):
                             assert(n >= 0, "read claims to have read a negative number of bytes \(n)")
                             return n
-                        case .wouldBlock(_):
+                        case .wouldBlock:
                             throw Error.descriptorSetToNonBlocking
                         }
                     }

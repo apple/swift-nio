@@ -105,7 +105,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(response)))
         let writtenData: IOData = channel.readOutbound()!
 
-        switch writtenData{
+        switch writtenData {
         case .byteBuffer(let b):
             let writtenResponse = b.getString(at: b.readerIndex, length: b.readableBytes)!
             XCTAssertEqual(writtenResponse, "HTTP/1.0 200 OK\r\n\r\n")

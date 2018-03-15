@@ -39,8 +39,8 @@ private class PromiseOrderer {
         promise.futureResult.whenComplete {
             let priorFutures = self.promiseArray[0..<thisPromiseIndex]
             let subsequentFutures = self.promiseArray[(thisPromiseIndex + 1)...]
-            let allPriorFuturesFired = priorFutures.map { $0.futureResult.fulfilled }.reduce(true, { $0 && $1 })
-            let allSubsequentFuturesUnfired = subsequentFutures.map { $0.futureResult.fulfilled }.reduce(false, { $0 || $1 })
+            let allPriorFuturesFired = priorFutures.map { $0.futureResult.isFulfilled }.reduce(true, { $0 && $1 })
+            let allSubsequentFuturesUnfired = subsequentFutures.map { $0.futureResult.isFulfilled }.reduce(false, { $0 || $1 })
 
             XCTAssertTrue(allPriorFuturesFired)
             XCTAssertFalse(allSubsequentFuturesUnfired)
