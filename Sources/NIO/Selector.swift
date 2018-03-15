@@ -148,7 +148,7 @@ final class Selector<R: Registration> {
         case .all:
             return Epoll.EPOLLIN.rawValue | Epoll.EPOLLOUT.rawValue | Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue
         case .none:
-            return Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue
+            return Epoll.EPOLLERR.rawValue
         }
     }
 #else
