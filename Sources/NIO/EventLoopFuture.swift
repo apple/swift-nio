@@ -149,6 +149,12 @@ private struct CallbackList: ExpressibleByArrayLiteral {
 ///
 public struct EventLoopPromise<T> {
     public let futureResult: EventLoopFuture<T>
+    /// Returns the `EventLoop` which is tied to the `EventLoopPromise`.
+    ///
+    /// - returns: The `EventLoop` which is tied to the `EventLoopPromise`. This `EventLoop` is used to notify all registered callbacks on the `futureResult`.
+    public var eventLoop: EventLoop {
+        return futureResult.eventLoop
+    }
 
     /// General initializer
     ///
@@ -289,6 +295,10 @@ public final class EventLoopFuture<T> {
         }
     }
     fileprivate let _fulfilled: Atomic<Bool>
+
+    /// Returns the `EventLoop` which is tied to the `EventLoopFuture`.
+    ///
+    /// - returns: The `EventLoop` which is tied to the `EventLoopFuture`. This `EventLoop` is used to notify all registered callbacks.
     public let eventLoop: EventLoop
 
     /// Whether this `EventLoopFuture` has been fulfilled. This is a thread-safe
