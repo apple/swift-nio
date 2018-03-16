@@ -726,4 +726,57 @@ class EchoServerClientTest : XCTestCase {
 
         XCTAssertNoThrow(try promise.futureResult.wait())
     }
+
+    func testPortNumbers() throws {
+        var atLeastOneSucceeded = false
+        for host in ["127.0.0.1", "::1"] {
+            let group = MultiThreadedEventLoopGroup(numThreads: 1)
+            defer {
+                XCTAssertNoThrow(try group.syncShutdownGracefully())
+            }
+            let acceptedRemotePort: Atomic<Int> = Atomic(value: -1)
+            let acceptedLocalPort: Atomic<Int> = Atomic(value: -2)
+            let sem = DispatchSemaphore(value: 0)
+
+            let serverChannel: Channel
+            do {
+                serverChannel = try ServerBootstrap(group: group)
+                    .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+                    .childChannelInitializer { channel in
+                        acceptedRemotePort.store(channel.remoteAddress?.port.map(Int.init) ?? -3)
+                        acceptedLocalPort.store(channel.localAddress?.port.map(Int.init) ?? -4)
+                        sem.signal()
+                        return channel.eventLoop.newSucceededFuture(result: ())
+                    }.bind(host: host, port: 0).wait()
+            } catch let e as SocketAddressError {
+                if case .unknown(host, port: 0) = e {
+                    /* this can happen if the system isn't configured for both IPv4 and IPv6 */
+                    continue
+                } else {
+                    /* nope, that's a different socket error */
+                    XCTFail("unexpected SocketAddressError: \(e)")
+                    break
+                }
+            } catch {
+                /* other unknown error */
+                XCTFail("unexpected error: \(error)")
+                break
+            }
+            atLeastOneSucceeded = true
+            defer {
+                XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
+            }
+
+            let clientChannel = try ClientBootstrap(group: group).connect(host: host,
+                                                                          port: Int(serverChannel.localAddress!.port!)).wait()
+            defer {
+                XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
+            }
+            sem.wait()
+            XCTAssertEqual(serverChannel.localAddress?.port, clientChannel.remoteAddress?.port)
+            XCTAssertEqual(acceptedLocalPort.load(), clientChannel.remoteAddress?.port.map(Int.init) ?? -5)
+            XCTAssertEqual(acceptedRemotePort.load(), clientChannel.localAddress?.port.map(Int.init) ?? -6)
+        }
+        XCTAssertTrue(atLeastOneSucceeded)
+    }
 }
