@@ -794,6 +794,10 @@ public final class ChannelPipeline: ChannelInvoker {
     func fireChannelRead0(_ data: NIOAny) {
         if let firstInboundCtx = firstInboundCtx {
             firstInboundCtx.invokeChannelRead(data)
+        } else if let channel: Channel = data.tryAs() {
+            // If fireChannelRead0 was called with a `Channel` wrapped (as done by our ServerSocketChannel) we need to ensure we close
+            // it if there is no way to intercept it by te user.
+            channel.close(promise: nil)
         }
     }
 
