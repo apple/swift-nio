@@ -312,7 +312,7 @@ public final class EventLoopFuture<T> {
         self.value = value
         self._fulfilled = Atomic(value: value != nil)
 
-        if _isDebugAssertConfiguration() {
+        debugOnly {
             if let me = eventLoop as? SelectableEventLoop {
                 me.promiseCreationStoreAdd(future: self, file: file, line: line)
             }
@@ -335,13 +335,15 @@ public final class EventLoopFuture<T> {
     }
 
     deinit {
-        if _isDebugAssertConfiguration(), let eventLoop = self.eventLoop as? SelectableEventLoop {
-            let creation = eventLoop.promiseCreationStoreRemove(future: self)
-            if !fulfilled {
-                fatalError("leaking promise created at \(creation)", file: creation.file, line: creation.line)
+        debugOnly {
+            if let eventLoop = self.eventLoop as? SelectableEventLoop {
+                let creation = eventLoop.promiseCreationStoreRemove(future: self)
+                if !fulfilled {
+                    fatalError("leaking promise created at \(creation)", file: creation.file, line: creation.line)
+                }
+            } else {
+                precondition(fulfilled, "leaking an unfulfilled Promise")
             }
-        } else {
-            precondition(fulfilled, "leaking an unfulfilled Promise")
         }
     }
 }
