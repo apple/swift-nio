@@ -635,43 +635,75 @@ extension EventLoopFuture {
     /// of results. If either one fails, the combined `EventLoopFuture` will fail with
     /// the first error encountered.
     public func and<U>(_ other: EventLoopFuture<U>, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<(T,U)> {
-        let andlock = Lock()
         let promise = EventLoopPromise<(T,U)>(eventLoop: eventLoop, file: file, line: line)
         var tvalue: T?
         var uvalue: U?
-
-        _whenComplete { () -> CallbackList in
-            switch self.value! {
-            case .failure(let error):
-                return promise._setValue(value: .failure(error))
-            case .success(let t):
-                andlock.lock()
-                if let u = uvalue {
-                    andlock.unlock()
-                    return promise._setValue(value: .success((t, u)))
-                } else {
-                    andlock.unlock()
-                    tvalue = t
+        
+        if self.eventLoop === other.eventLoop {
+            assert(self.eventLoop === promise.futureResult.eventLoop)
+            _whenComplete { () -> CallbackList in
+                switch self.value! {
+                case .failure(let error):
+                    return promise._setValue(value: .failure(error))
+                case .success(let t):
+                    if let u = uvalue {
+                        return promise._setValue(value: .success((t, u)))
+                    } else {
+                        tvalue = t
+                    }
                 }
+                return CallbackList()
             }
-            return CallbackList()
-        }
-
-        other._whenComplete { () -> CallbackList in
-            switch other.value! {
-            case .failure(let error):
-                return promise._setValue(value: .failure(error))
-            case .success(let u):
-                andlock.lock()
-                if let t = tvalue {
-                    andlock.unlock()
-                    return promise._setValue(value: .success((t, u)))
-                } else {
-                    andlock.unlock()
-                    uvalue = u
+            
+            other._whenComplete { () -> CallbackList in
+                switch other.value! {
+                case .failure(let error):
+                    return promise._setValue(value: .failure(error))
+                case .success(let u):
+                    if let t = tvalue {
+                        return promise._setValue(value: .success((t, u)))
+                    } else {
+                        uvalue = u
+                    }
                 }
+                return CallbackList()
             }
-            return CallbackList()
+        } else {
+            let andlock = Lock()
+
+            _whenComplete { () -> CallbackList in
+                switch self.value! {
+                case .failure:
+                    self.cascadeFailure(promise: promise)
+                case .success(let t):
+                    andlock.lock()
+                    if let u = uvalue {
+                        andlock.unlock()
+                        promise.succeed(result: (t, u))
+                    } else {
+                        tvalue = t
+                        andlock.unlock()
+                    }
+                }
+                return CallbackList()
+            }
+            
+            other._whenComplete { () -> CallbackList in
+                switch other.value! {
+                case .failure:
+                    other.cascadeFailure(promise: promise)
+                case .success(let u):
+                    andlock.lock()
+                    if let t = tvalue {
+                        andlock.unlock()
+                        promise.succeed(result: (t, u))
+                    } else {
+                        uvalue = u
+                        andlock.unlock()
+                    }
+                }
+                return CallbackList()
+            }
         }
 
         return promise.futureResult
