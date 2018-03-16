@@ -41,6 +41,9 @@ extension EventLoopFutureTest {
                 ("testEventLoopHoppingAndAll", testEventLoopHoppingAndAll),
                 ("testEventLoopHoppingAndAllWithFailures", testEventLoopHoppingAndAllWithFailures),
                 ("testFutureInVariousScenarios", testFutureInVariousScenarios),
+                ("testLoopHoppingHelperSuccess", testLoopHoppingHelperSuccess),
+                ("testLoopHoppingHelperFailure", testLoopHoppingHelperFailure),
+                ("testLoopHoppingHelperNoHopping", testLoopHoppingHelperNoHopping),
            ]
    }
 }

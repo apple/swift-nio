@@ -199,11 +199,9 @@ public final class ServerBootstrap {
 
         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             let accepted = self.unwrapInboundIn(data)
-            let hopEventLoopPromise: EventLoopPromise<()> = ctx.eventLoop.newPromise()
-            self.childChannelOptions.applyAll(channel: accepted).cascade(promise: hopEventLoopPromise)
             let childChannelInit = self.childChannelInit ?? { (_: Channel) in ctx.eventLoop.newSucceededFuture(result: ()) }
 
-            hopEventLoopPromise.futureResult.then {
+            self.childChannelOptions.applyAll(channel: accepted).hopTo(eventLoop: ctx.eventLoop).then {
                 assert(ctx.eventLoop.inEventLoop)
                 return childChannelInit(accepted)
             }.then { () -> EventLoopFuture<()> in
