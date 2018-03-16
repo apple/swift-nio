@@ -635,45 +635,48 @@ extension EventLoopFuture {
     /// of results. If either one fails, the combined `EventLoopFuture` will fail with
     /// the first error encountered.
     public func and<U>(_ other: EventLoopFuture<U>, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<(T,U)> {
-        let andlock = Lock()
         let promise = EventLoopPromise<(T,U)>(eventLoop: eventLoop, file: file, line: line)
         var tvalue: T?
         var uvalue: U?
-
+        
+        assert(self.eventLoop === promise.futureResult.eventLoop)
         _whenComplete { () -> CallbackList in
             switch self.value! {
             case .failure(let error):
                 return promise._setValue(value: .failure(error))
             case .success(let t):
-                andlock.lock()
                 if let u = uvalue {
-                    andlock.unlock()
                     return promise._setValue(value: .success((t, u)))
                 } else {
-                    andlock.unlock()
                     tvalue = t
                 }
             }
             return CallbackList()
         }
-
-        other._whenComplete { () -> CallbackList in
+        
+        let hopOver: EventLoopFuture<U>
+        if self.eventLoop === other.eventLoop {
+            hopOver = other
+        } else {
+            let hopOverP = EventLoopPromise<U>(eventLoop: self.eventLoop, file: file, line: line)
+            other.cascade(promise: hopOverP)
+            hopOver = hopOverP.futureResult
+        }
+        hopOver._whenComplete { () -> CallbackList in
+            assert(self.eventLoop.inEventLoop)
             switch other.value! {
             case .failure(let error):
                 return promise._setValue(value: .failure(error))
             case .success(let u):
-                andlock.lock()
                 if let t = tvalue {
-                    andlock.unlock()
                     return promise._setValue(value: .success((t, u)))
                 } else {
-                    andlock.unlock()
                     uvalue = u
                 }
             }
             return CallbackList()
         }
-
+        
         return promise.futureResult
     }
 
