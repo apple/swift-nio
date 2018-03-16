@@ -211,7 +211,7 @@ class EchoServerClientTest : XCTestCase {
             _ = clientChannel.close()
         }
 
-        handler.assertChannelActiveFired()
+        try handler.assertChannelActiveFired()
     }
 
     func testWriteThenRead() throws {
@@ -263,8 +263,8 @@ class EchoServerClientTest : XCTestCase {
             ctx.fireChannelActive()
         }
 
-        func assertChannelActiveFired() {
-            XCTAssert(promise.futureResult.fulfilled)
+        func assertChannelActiveFired() throws {
+            try promise.futureResult.wait()
         }
     }
 

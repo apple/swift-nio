@@ -39,6 +39,7 @@ import XCTest
          testCase(BlockingIOThreadPoolTest.allTests),
          testCase(ByteBufferTest.allTests),
          testCase(ByteToMessageDecoderTest.allTests),
+         testCase(ChannelNotificationTest.allTests),
          testCase(ChannelPipelineTest.allTests),
          testCase(ChannelTests.allTests),
          testCase(CircularBufferTests.allTests),
