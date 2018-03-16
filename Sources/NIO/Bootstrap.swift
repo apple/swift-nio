@@ -206,9 +206,15 @@ public final class ServerBootstrap {
             hopEventLoopPromise.futureResult.then {
                 assert(ctx.eventLoop.inEventLoop)
                 return childChannelInit(accepted)
-            }.map {
+            }.then { () -> EventLoopFuture<()> in
                 assert(ctx.eventLoop.inEventLoop)
+                guard !ctx.pipeline.destroyed else {
+                    return accepted.close().thenThrowing {
+                        throw ChannelError.ioOnClosedChannel
+                    }
+                }
                 ctx.fireChannelRead(data)
+                return ctx.eventLoop.newSucceededFuture(result: ())
             }.whenFailure { error in
                 assert(ctx.eventLoop.inEventLoop)
                 self.closeAndFire(ctx: ctx, accepted: accepted, err: error)

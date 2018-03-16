@@ -59,6 +59,7 @@ extension ChannelTests {
                 ("testWeDontJamSocketsInANoIOState", testWeDontJamSocketsInANoIOState),
                 ("testNoChannelReadIfNoAutoRead", testNoChannelReadIfNoAutoRead),
                 ("testEOFOnlyReceivedOnceReadRequested", testEOFOnlyReceivedOnceReadRequested),
+                ("testAcceptsAfterCloseDontCauseIssues", testAcceptsAfterCloseDontCauseIssues),
            ]
    }
 }

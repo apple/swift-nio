@@ -61,6 +61,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
     private var inFlushNow: Bool = false // Guard against re-entrance of flushNow() method.
     private var neverRegistered = true
+    private var neverActivated = true
     private var active: Atomic<Bool> = Atomic(value: false)
     private var _isOpen: Bool = true
     private var autoRead: Bool = true
@@ -490,9 +491,11 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.unsetCachedAddressesFromSocket()
         self.cancelWritesOnClose(error: error)
 
-        becomeInactive0()
+        if !self.neverActivated {
+            becomeInactive0()
+        }
 
-        if !neverRegistered {
+        if !self.neverRegistered {
             pipeline.fireChannelUnregistered0()
         }
 
@@ -717,12 +720,17 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
     fileprivate func becomeActive0() {
         assert(eventLoop.inEventLoop)
+        assert(!self.active.load())
+        assert(self._isOpen)
+
+        self.neverActivated = false
         active.store(true)
         pipeline.fireChannelActive0()
     }
 
     fileprivate func becomeInactive0() {
         assert(eventLoop.inEventLoop)
+        assert(self.active.load())
         active.store(false)
         pipeline.fireChannelInactive0()
     }
@@ -1108,7 +1116,10 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         assert(eventLoop.inEventLoop)
 
         let ch = data.forceAsOther() as SocketChannel
-        ch.register().map {
+        ch.register().thenThrowing {
+            guard ch.isOpen else {
+                throw ChannelError.ioOnClosedChannel
+            }
             ch.becomeActive0()
             ch.readIfNeeded0()
         }.whenFailure { error in
