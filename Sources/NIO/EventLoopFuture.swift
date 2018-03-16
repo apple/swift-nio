@@ -635,45 +635,41 @@ extension EventLoopFuture {
     /// of results. If either one fails, the combined `EventLoopFuture` will fail with
     /// the first error encountered.
     public func and<U>(_ other: EventLoopFuture<U>, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<(T,U)> {
-        let andlock = Lock()
         let promise = EventLoopPromise<(T,U)>(eventLoop: eventLoop, file: file, line: line)
         var tvalue: T?
         var uvalue: U?
-
+        
+        assert(self.eventLoop === promise.futureResult.eventLoop)
         _whenComplete { () -> CallbackList in
             switch self.value! {
             case .failure(let error):
                 return promise._setValue(value: .failure(error))
             case .success(let t):
-                andlock.lock()
                 if let u = uvalue {
-                    andlock.unlock()
                     return promise._setValue(value: .success((t, u)))
                 } else {
-                    andlock.unlock()
                     tvalue = t
                 }
             }
             return CallbackList()
         }
-
-        other._whenComplete { () -> CallbackList in
+        
+        let hopOver = other.hopTo(eventLoop: self.eventLoop)
+        hopOver._whenComplete { () -> CallbackList in
+            assert(self.eventLoop.inEventLoop)
             switch other.value! {
             case .failure(let error):
                 return promise._setValue(value: .failure(error))
             case .success(let u):
-                andlock.lock()
                 if let t = tvalue {
-                    andlock.unlock()
                     return promise._setValue(value: .success((t, u)))
                 } else {
-                    andlock.unlock()
                     uvalue = u
                 }
             }
             return CallbackList()
         }
-
+        
         return promise.futureResult
     }
 
@@ -793,7 +789,29 @@ extension EventLoopFuture {
         p0.succeed(result: ())
         return body
     }
+}
 
+extension EventLoopFuture {
+    /// Returns an `EventLoopFuture` that fires when this future completes, but executes its callbacks on the
+    /// target event loop instead of the original one.
+    ///
+    /// It is common to want to "hop" event loops when you arrange some work: for example, you're closing one channel
+    /// from another, and want to hop back when the close completes. This method lets you spell that requirement
+    /// succinctly. It also contains an optimisation for the case when the loop you're hopping *from* is the same as
+    /// the one you're hopping *to*, allowing you to avoid doing allocations in that case.
+    ///
+    /// - parameters:
+    ///     - target: The `EventLoop` that the returned `EventLoopFuture` will run on.
+    /// - returns: An `EventLoopFuture` whose callbacks run on `target` instead of the original loop.
+    func hopTo(eventLoop target: EventLoop) -> EventLoopFuture<T> {
+        if target === self.eventLoop {
+            // We're already on that event loop, nothing to do here. Save an allocation.
+            return self
+        }
+        let hoppingPromise: EventLoopPromise<T> = target.newPromise()
+        self.cascade(promise: hoppingPromise)
+        return hoppingPromise.futureResult
+    }
 }
 
 /// Execute the given function and synchronously complete the given `EventLoopPromise` (if not `nil`).
