@@ -378,7 +378,7 @@ internal enum Posix {
                     }
                     return result
                 #else
-                    let badOS = { fatalError("unsupported OS") }()
+                    fatalError("unsupported OS")
                 #endif
             }
             return .processed(Int(written))
