@@ -363,12 +363,12 @@ internal enum Posix {
         var written: off_t = 0
         do {
             _ = try wrapSyscall { () -> ssize_t in
-                #if os(macOS)
+                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
                     var w: off_t = off_t(count)
                     let result: CInt = Darwin.sendfile(fd, descriptor, offset, &w, nil, 0)
                     written = w
                     return ssize_t(result)
-                #else
+                #elseif os(Linux) || os(FreeBSD) || os(Android)
                     var off: off_t = offset
                     let result: ssize_t = Glibc.sendfile(descriptor, fd, &off, count)
                     if result >= 0 {
@@ -377,6 +377,8 @@ internal enum Posix {
                         written = 0
                     }
                     return result
+                #else
+                    fatalError("unsupported OS")
                 #endif
             }
             return .processed(Int(written))
