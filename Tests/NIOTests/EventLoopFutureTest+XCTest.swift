@@ -38,6 +38,9 @@ extension EventLoopFutureTest {
                 ("testOrderOfFutureCompletion", testOrderOfFutureCompletion),
                 ("testEventLoopHoppingInThen", testEventLoopHoppingInThen),
                 ("testEventLoopHoppingInThenWithFailures", testEventLoopHoppingInThenWithFailures),
+                ("testEventLoopHoppingAndAll", testEventLoopHoppingAndAll),
+                ("testEventLoopHoppingAndAllWithFailures", testEventLoopHoppingAndAllWithFailures),
+                ("testFutureInVariousScenarios", testFutureInVariousScenarios),
            ]
    }
 }
