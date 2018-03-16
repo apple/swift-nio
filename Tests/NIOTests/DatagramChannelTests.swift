@@ -330,4 +330,77 @@ final class DatagramChannelTests: XCTestCase {
             XCTFail("Got unexpected error \(error)")
         }
     }
+
+    public func testRecvFromFailsWithECONNREFUSED() throws {
+        try assertRecvFromFails(error: ECONNREFUSED, active: true)
+    }
+
+    public func testRecvFromFailsWithENOMEM() throws {
+        try assertRecvFromFails(error: ENOMEM, active: true)
+    }
+
+    public func testRecvFromFailsWithEFAULT() throws {
+        try assertRecvFromFails(error: EFAULT, active: false)
+    }
+
+    private func assertRecvFromFails(error: Int32, active: Bool) throws {
+        final class RecvFromHandler: ChannelInboundHandler {
+            typealias InboundIn = AddressedEnvelope<ByteBuffer>
+            typealias InboundOut = AddressedEnvelope<ByteBuffer>
+
+            private let promise: EventLoopPromise<IOError>
+
+            init(_ promise: EventLoopPromise<IOError>) {
+                self.promise = promise
+            }
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                XCTFail("Should not receive data but got \(self.unwrapInboundIn(data))")
+            }
+
+            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+                if let ioError = error as? IOError {
+                    self.promise.succeed(result: ioError)
+                }
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        class NonRecvFromSocket : Socket {
+            private var error: Int32?
+
+            init(error: Int32) throws {
+                self.error = error
+                try super.init(protocolFamily: AF_INET, type: Posix.SOCK_DGRAM)
+            }
+
+            override func recvfrom(pointer: UnsafeMutablePointer<UInt8>, size: Int, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
+                if let err = self.error {
+                    self.error = nil
+                    throw IOError(errnoCode: err, function: "recvfrom")
+                }
+                return IOResult.wouldBlock(0)
+            }
+        }
+        let socket = try NonRecvFromSocket(error: error)
+        let channel = try DatagramChannel(socket: socket, eventLoop: group.next() as! SelectableEventLoop)
+        let promise: EventLoopPromise<IOError> = channel.eventLoop.newPromise()
+        XCTAssertNoThrow(try channel.register().wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: RecvFromHandler(promise)).wait())
+        XCTAssertNoThrow(try channel.bind(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())
+
+        XCTAssertEqual(active, try channel.eventLoop.submit {
+            channel.readable()
+            return channel.isActive
+        }.wait())
+
+        if active {
+            XCTAssertNoThrow(try channel.close().wait())
+        }
+        let ioError = try promise.futureResult.wait()
+        XCTAssertEqual(error, ioError.errnoCode)
+    }
 }
