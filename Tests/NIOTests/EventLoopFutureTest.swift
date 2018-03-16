@@ -381,4 +381,52 @@ class EventLoopFutureTest : XCTestCase {
         
         XCTAssertNoThrow(try elg.syncShutdownGracefully())
     }
+
+    func testLoopHoppingHelperSuccess() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let loop1 = group.next()
+        let loop2 = group.next()
+        XCTAssertFalse(loop1 === loop2)
+
+        let succeedingPromise: EventLoopPromise<Void> = loop1.newPromise()
+        let succeedingFuture = succeedingPromise.futureResult.map {
+            XCTAssertTrue(loop1.inEventLoop)
+        }.hopTo(eventLoop: loop2).map {
+            XCTAssertTrue(loop2.inEventLoop)
+        }
+        succeedingPromise.succeed(result: ())
+        XCTAssertNoThrow(try succeedingFuture.wait())
+    }
+
+    func testLoopHoppingHelperFailure() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let loop1 = group.next()
+        let loop2 = group.next()
+        XCTAssertFalse(loop1 === loop2)
+
+        let failingPromise: EventLoopPromise<Void> = loop2.newPromise()
+        let failingFuture = failingPromise.futureResult.thenIfErrorThrowing { error in
+            XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
+            XCTAssertTrue(loop2.inEventLoop)
+            throw error
+        }.hopTo(eventLoop: loop1).mapIfError { error in
+            XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
+            XCTAssertTrue(loop1.inEventLoop)
+        }
+
+        failingPromise.fail(error: EventLoopFutureTestError.example)
+        XCTAssertNoThrow(try failingFuture.wait())
+    }
+
+    func testLoopHoppingHelperNoHopping() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let loop1 = group.next()
+        let loop2 = group.next()
+        XCTAssertFalse(loop1 === loop2)
+
+        let noHoppingPromise: EventLoopPromise<Void> = loop1.newPromise()
+        let noHoppingFuture = noHoppingPromise.futureResult.hopTo(eventLoop: loop1)
+        XCTAssertTrue(noHoppingFuture === noHoppingPromise.futureResult)
+        noHoppingPromise.succeed(result: ())
+    }
 }
