@@ -16,7 +16,7 @@
 public typealias IOVector = iovec
 
 // TODO: scattering support
-final class Socket: BaseSocket {
+/* final but tests */ class Socket: BaseSocket {
 
     /// The maximum number of bytes to write per `writev` call.
     static var writevLimitBytes: Int {

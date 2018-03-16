@@ -1171,7 +1171,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         try super.init(socket: socket, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
     }
 
-    fileprivate init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
+    init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
         try socket.setNonBlocking()
         self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
                                                           iovecs: eventLoop.iovecs,
@@ -1254,6 +1254,22 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         return readResult
     }
 
+    override fileprivate func shouldCloseOnReadError(_ err: Error) -> Bool {
+        guard let err = err as? IOError else { return true }
+
+        switch err.errnoCode {
+        // ECONNREFUSED can happen on linux if the previous sendto(...) failed.
+        // See also:
+        // -    https://bugzilla.redhat.com/show_bug.cgi?id=1375
+        // -    https://lists.gt.net/linux/kernel/39575
+        case ECONNREFUSED,
+             ENOMEM:
+            // These are errors we may be able to recover from.
+            return false
+        default:
+            return true
+        }
+    }
     /// Buffer a write in preparation for a flush.
     override fileprivate func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         guard let data = data.tryAsByteEnvelope() else {
