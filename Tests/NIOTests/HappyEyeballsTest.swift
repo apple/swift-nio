@@ -1147,6 +1147,104 @@ public class HappyEyeballsTest : XCTestCase {
             XCTFail("Got unexpected error: \(String(describing: channelFuture.getError()))")
         }
     }
+
+    func testCancellationSyncWithConnectDelay() throws {
+        var channels: [Channel] = []
+        defer {
+            channels.finishAll()
+        }
+
+        let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .milliseconds(250)) {
+            let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
+            channelFuture.whenSuccess { channel in
+                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                channels.append(channel)
+            }
+            return channelFuture
+        }
+        let channelFuture = eyeballer.resolveAndConnect()
+        let expectedQueries: [DummyResolver.Event] = [
+            .aaaa(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
+        ]
+        loop.run()
+        XCTAssertEqual(resolver.events, expectedQueries)
+        XCTAssertFalse(channelFuture.isFulfilled)
+
+        // Here the AAAA results return. Let the first connection attempt go out.
+        resolver.v6Promise.succeed(result: MANY_IPv6_RESULTS)
+        XCTAssertEqual(channels.count, 1)
+
+        // Advance time by 250 ms.
+        loop.advanceTime(by: .milliseconds(250))
+
+        // At this time the connection attempt should have failed, as the connect timeout
+        // fired.
+        do {
+            _ = try channelFuture.wait()
+            XCTFail("connection succeeded")
+        } catch ChannelError.connectTimeout(.milliseconds(250)) {
+            // ok
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        // There may be one or two channels, depending on ordering, but both
+        // should be closed.
+        XCTAssertTrue(channels.count == 1 || channels.count == 2, "Unexpected channel count: \(channels.count)")
+        for channel in channels {
+            XCTAssertEqual(channel.state(), .closed)
+        }
+    }
+
+    func testCancellationSyncWithResolutionDelay() throws {
+        var channels: [Channel] = []
+        defer {
+            channels.finishAll()
+        }
+
+        let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .milliseconds(50)) {
+            let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
+            channelFuture.whenSuccess { channel in
+                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                channels.append(channel)
+            }
+            return channelFuture
+        }
+        let channelFuture = eyeballer.resolveAndConnect()
+        let expectedQueries: [DummyResolver.Event] = [
+            .aaaa(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
+        ]
+        loop.run()
+        XCTAssertEqual(resolver.events, expectedQueries)
+        XCTAssertFalse(channelFuture.isFulfilled)
+
+        // Here the A results return. Let the first connection attempt go out.
+        resolver.v4Promise.succeed(result: MANY_IPv4_RESULTS)
+        XCTAssertEqual(channels.count, 0)
+
+        // Advance time by 50 ms.
+        loop.advanceTime(by: .milliseconds(50))
+
+        // At this time the connection attempt should have failed, as the connect timeout
+        // fired.
+        do {
+            _ = try channelFuture.wait()
+            XCTFail("connection succeeded")
+        } catch ChannelError.connectTimeout(.milliseconds(50)) {
+            // ok
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        // There may be zero or one channels, depending on ordering, but if there is one it
+        // should be closed
+        XCTAssertTrue(channels.count == 0 || channels.count == 1, "Unexpected channel count: \(channels.count)")
+        for channel in channels {
+            XCTAssertEqual(channel.state(), .closed)
+        }
+    }
 }
 
 #if !swift(>=4.1)
