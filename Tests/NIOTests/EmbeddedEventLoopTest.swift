@@ -224,4 +224,91 @@ public class EmbeddedEventLoopTest: XCTestCase {
         loop.advanceTime(by: .nanoseconds(1))
         XCTAssertTrue(fired)
     }
+
+    func testTaskOrdering() {
+        // This test validates that the ordering of task firing on EmbeddedEventLoop via
+        // advanceTime(by:) is the same as on MultiThreadedEventLoopGroup: specifically, that tasks run via
+        // schedule that expire "now" all run at the same time, and that any work they schedule is run
+        // after all such tasks expire.
+        let loop = EmbeddedEventLoop()
+        var firstScheduled: Scheduled<Void>? = nil
+        var secondScheduled: Scheduled<Void>? = nil
+        var orderingCounter = 0
+
+        // Here's the setup. First, we'll set up two scheduled tasks to fire in 5 nanoseconds. Each of these
+        // will attempt to cancel the other, whichever fires first. Additionally, each will execute{} a single
+        // callback. Then we'll execute {} one other callback. Finally we'll schedule a task for 10ns, before
+        // we advance time. The ordering should be as follows:
+        //
+        // 1. The task executed by execute {} from this function.
+        // 2. One of the first scheduled tasks.
+        // 3. The other first scheduled task  (note that the cancellation will fail).
+        // 4. One of the execute {} callbacks from a scheduled task.
+        // 5. The other execute {} callbacks from the scheduled task.
+        // 6. The 10ns task.
+        //
+        // To validate the ordering, we'll use a counter.
+
+        func delayedExecute() {
+            // The acceptable value for the delayed execute callbacks is 3 or 4.
+            XCTAssertTrue(orderingCounter == 3 || orderingCounter == 4, "Invalid counter value \(orderingCounter)")
+            orderingCounter += 1
+        }
+
+        firstScheduled = loop.scheduleTask(in: .nanoseconds(5)) {
+            firstScheduled = nil
+
+            let expected: Int
+            if let partner = secondScheduled {
+                // Ok, this callback fired first. Cancel the other, then set the expected current
+                // counter value to 1.
+                partner.cancel()
+                expected = 1
+            } else {
+                // This callback fired second.
+                expected = 2
+            }
+
+            XCTAssertEqual(orderingCounter, expected)
+            orderingCounter = expected + 1
+            loop.execute(delayedExecute)
+        }
+
+        secondScheduled = loop.scheduleTask(in: .nanoseconds(5)) {
+            secondScheduled = nil
+
+            let expected: Int
+            if let partner = firstScheduled {
+                // Ok, this callback fired first. Cancel the other, then set the expected current
+                // counter value to 1.
+                partner.cancel()
+                expected = 1
+            } else {
+                // This callback fired second.
+                expected = 2
+            }
+
+            XCTAssertEqual(orderingCounter, expected)
+            orderingCounter = expected + 1
+            loop.execute(delayedExecute)
+        }
+
+        // Ok, now we set one more task to execute.
+        loop.execute {
+            XCTAssertEqual(orderingCounter, 0)
+            orderingCounter = 1
+        }
+
+        // Finally schedule a task for 10ns.
+        _ = loop.scheduleTask(in: .nanoseconds(10)) {
+            XCTAssertEqual(orderingCounter, 5)
+            orderingCounter = 6
+        }
+
+        // Now we advance time by 10ns.
+        loop.advanceTime(by: .nanoseconds(10))
+
+        // Now the final value should be 6.
+        XCTAssertEqual(orderingCounter, 6)
+    }
 }

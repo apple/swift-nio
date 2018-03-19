@@ -53,20 +53,19 @@ class SocketAddressTest: XCTestCase {
     func testCanCreateIPv4AddressFromString() throws {
         let sa = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
         let expectedAddress: [UInt8] = [0x7F, 0x00, 0x00, 0x01]
-        switch sa {
-        case .v4(let address):
+        if case .v4(let address) = sa {
             var addr = address.address
             let host = address.host
             XCTAssertEqual(host, "")
             XCTAssertEqual(addr.sin_family, sa_family_t(AF_INET))
-            XCTAssertEqual(addr.sin_port, 80)
+            XCTAssertEqual(addr.sin_port, in_port_t(80).bigEndian)
             expectedAddress.withUnsafeBytes { expectedPtr in
                 withUnsafeBytes(of: &addr.sin_addr) { actualPtr in
                     let rc = memcmp(actualPtr.baseAddress!, expectedPtr.baseAddress!, MemoryLayout<in_addr>.size)
                     XCTAssertEqual(rc, 0)
                 }
             }
-        default:
+        } else {
             XCTFail("Invalid address: \(sa)")
         }
     }
@@ -74,13 +73,12 @@ class SocketAddressTest: XCTestCase {
     func testCanCreateIPv6AddressFromString() throws {
         let sa = try SocketAddress(ipAddress: "fe80::5", port: 443)
         let expectedAddress: [UInt8] = [0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]
-        switch sa {
-        case .v6(let address):
+        if case .v6(let address) = sa {
             var addr = address.address
             let host = address.host
             XCTAssertEqual(host, "")
             XCTAssertEqual(addr.sin6_family, sa_family_t(AF_INET6))
-            XCTAssertEqual(addr.sin6_port, 443)
+            XCTAssertEqual(addr.sin6_port, in_port_t(443).bigEndian)
             XCTAssertEqual(addr.sin6_scope_id, 0)
             XCTAssertEqual(addr.sin6_flowinfo, 0)
             expectedAddress.withUnsafeBytes { expectedPtr in
@@ -89,7 +87,7 @@ class SocketAddressTest: XCTestCase {
                     XCTAssertEqual(rc, 0)
                 }
             }
-        default:
+        } else {
             XCTFail("Invalid address: \(sa)")
         }
     }
@@ -179,7 +177,7 @@ class SocketAddressTest: XCTestCase {
         _ = secondIPAddress.withMutableSockAddr { (addr, size) -> Void in
             XCTAssertEqual(size, MemoryLayout<sockaddr_in6>.size)
             addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
-                $0.pointee.sin6_port = 5
+                $0.pointee.sin6_port = in_port_t(5).bigEndian
             }
         }
         _ = thirdIPAddress.withMutableSockAddr { (addr, size) -> Void in

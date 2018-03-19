@@ -31,6 +31,7 @@ import XCTest
    @testable import NIOWebSocketTests
 
    XCTMain([
+         testCase(AcceptBackoffHandlerTest.allTests),
          testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
          testCase(ApplicationProtocolNegotiationHandlerTests.allTests),
          testCase(Base64Test.allTests),
@@ -38,6 +39,7 @@ import XCTest
          testCase(BlockingIOThreadPoolTest.allTests),
          testCase(ByteBufferTest.allTests),
          testCase(ByteToMessageDecoderTest.allTests),
+         testCase(ChannelNotificationTest.allTests),
          testCase(ChannelPipelineTest.allTests),
          testCase(ChannelTests.allTests),
          testCase(CircularBufferTests.allTests),

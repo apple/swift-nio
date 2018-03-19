@@ -108,7 +108,7 @@ extension ByteToMessageDecoder {
         }
 
         ctx.withThrowingToFireErrorAndClose {
-            // Running decode method until either the user returned `.needMoreData` or an error occured.
+            // Running decode method until either the user returned `.needMoreData` or an error occurred.
             while try decode(ctx: ctx, buffer: &buffer) == .`continue` && buffer.readableBytes > 0 { }
         }
 
@@ -122,11 +122,11 @@ extension ByteToMessageDecoder {
         }
     }
 
-    /// Call `decodeLast` before forward the event throught the pipeline.
+    /// Call `decodeLast` before forward the event through the pipeline.
     public func channelInactive(ctx: ChannelHandlerContext) {
         if var buffer = cumulationBuffer {
             ctx.withThrowingToFireErrorAndClose {
-                // Running decodeLast method until either the user returned `.needMoreData` or an error occured.
+                // Running decodeLast method until either the user returned `.needMoreData` or an error occurred.
                 while try decodeLast(ctx: ctx, buffer: &buffer)  == .`continue` && buffer.readableBytes > 0 { }
             }
 

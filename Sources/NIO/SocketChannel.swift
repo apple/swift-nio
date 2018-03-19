@@ -61,6 +61,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
     private var inFlushNow: Bool = false // Guard against re-entrance of flushNow() method.
     private var neverRegistered = true
+    private var neverActivated = true
     private var active: Atomic<Bool> = Atomic(value: false)
     private var _isOpen: Bool = true
     private var autoRead: Bool = true
@@ -385,7 +386,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             safeReregister(interested: .all)
         case .none:
             safeReregister(interested: .write)
-        default:
+        case .write, .all:
             break
         }
     }
@@ -397,7 +398,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             safeReregister(interested: .read)
         case .write:
             safeReregister(interested: .none)
-        default:
+        case .read, .none:
             break
         }
     }
@@ -443,7 +444,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             safeReregister(interested: .all)
         case .none:
             safeReregister(interested: .read)
-        default:
+        case .read, .all:
             break
         }
     }
@@ -456,7 +457,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             safeReregister(interested: .none)
         case .all:
             safeReregister(interested: .write)
-        default:
+        case .write, .none:
             break
         }
     }
@@ -481,8 +482,14 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             pipeline.fireErrorCaught0(error: err)
         }
 
-        executeAndComplete(promise) {
+        let p: EventLoopPromise<Void>?
+        do {
             try socket.close()
+            p = promise
+        } catch {
+            promise?.fail(error: error)
+            // Set p to nil as we want to ensure we pass nil to becomeInactive0(...) so we not try to notify the promise again.
+            p = nil
         }
 
         // Fail all pending writes and so ensure all pending promises are notified
@@ -490,9 +497,13 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.unsetCachedAddressesFromSocket()
         self.cancelWritesOnClose(error: error)
 
-        becomeInactive0()
+        if !self.neverActivated {
+            becomeInactive0(promise: p)
+        } else if let p = p {
+            p.succeed(result: ())
+        }
 
-        if !neverRegistered {
+        if !self.neverRegistered {
             pipeline.fireChannelUnregistered0()
         }
 
@@ -520,10 +531,12 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
         // Was not registered yet so do it now.
         do {
-            try self.safeRegister(interested: .read)
+            // We always register with interested .none and will just trigger readIfNeeded0() later to re-register if needed.
+            try self.safeRegister(interested: .none)
             neverRegistered = false
             promise?.succeed(result: ())
             pipeline.fireChannelRegistered0()
+            readIfNeeded0()
         } catch {
             promise?.fail(error: error)
         }
@@ -551,11 +564,15 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         if let connectPromise = pendingConnect {
             pendingConnect = nil
 
+            do {
+                try finishConnectSocket()
+            } catch {
+                connectPromise.fail(error: error)
+                return
+            }
             // We already know what the local address is.
             self.updateCachedAddressesFromSocket(updateLocal: false, updateRemote: true)
-            executeAndComplete(connectPromise) {
-                try finishConnectSocket()
-            }
+            becomeActive0(promise: connectPromise)
         }
     }
 
@@ -713,15 +730,30 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
     }
 
-    fileprivate func becomeActive0() {
+    fileprivate func becomeActive0(promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
+        assert(!self.active.load())
+        assert(self._isOpen)
+
+        self.neverActivated = false
         active.store(true)
+
+        // Notify the promise before firing the inbound event through the pipeline.
+        if let promise = promise {
+            promise.succeed(result: ())
+        }
         pipeline.fireChannelActive0()
     }
 
-    fileprivate func becomeInactive0() {
+    fileprivate func becomeInactive0(promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
+        assert(self.active.load())
         active.store(false)
+
+        // Notify the promise before firing the inbound event through the pipeline.
+        if let promise = promise {
+            promise.succeed(result: ())
+        }
         pipeline.fireChannelInactive0()
     }
 }
@@ -889,7 +921,6 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             scheduled.cancel()
         }
         try self.socket.finishConnect()
-        becomeActive0()
     }
 
     override func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
@@ -1036,9 +1067,8 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         let p: EventLoopPromise<Void> = eventLoop.newPromise()
         p.futureResult.map {
             // Its important to call the methods before we actual notify the original promise for ordering reasons.
-            self.becomeActive0()
+            self.becomeActive0(promise: promise)
             self.readIfNeeded0()
-            promise?.succeed(result: ())
         }.whenFailure{ error in
             promise?.fail(error: error)
         }
@@ -1106,8 +1136,11 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         assert(eventLoop.inEventLoop)
 
         let ch = data.forceAsOther() as SocketChannel
-        ch.register().map {
-            ch.becomeActive0()
+        ch.register().thenThrowing {
+            guard ch.isOpen else {
+                throw ChannelError.ioOnClosedChannel
+            }
+            ch.becomeActive0(promise: nil)
             ch.readIfNeeded0()
         }.whenFailure { error in
             ch.close(promise: nil)
@@ -1158,7 +1191,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         try super.init(socket: socket, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
     }
 
-    fileprivate init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
+    init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
         try socket.setNonBlocking()
         self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
                                                           iovecs: eventLoop.iovecs,
@@ -1241,6 +1274,22 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         return readResult
     }
 
+    override fileprivate func shouldCloseOnReadError(_ err: Error) -> Bool {
+        guard let err = err as? IOError else { return true }
+
+        switch err.errnoCode {
+        // ECONNREFUSED can happen on linux if the previous sendto(...) failed.
+        // See also:
+        // -    https://bugzilla.redhat.com/show_bug.cgi?id=1375
+        // -    https://lists.gt.net/linux/kernel/39575
+        case ECONNREFUSED,
+             ENOMEM:
+            // These are errors we may be able to recover from.
+            return false
+        default:
+            return true
+        }
+    }
     /// Buffer a write in preparation for a flush.
     override fileprivate func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         guard let data = data.tryAsByteEnvelope() else {
@@ -1293,8 +1342,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         do {
             try socket.bind(to: address)
             self.updateCachedAddressesFromSocket(updateRemote: false)
-            promise?.succeed(result: ())
-            becomeActive0()
+            becomeActive0(promise: promise)
             readIfNeeded0()
         } catch let err {
             promise?.fail(error: err)

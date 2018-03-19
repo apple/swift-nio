@@ -107,7 +107,7 @@ func runSystemCallWrapperPerformanceTest(testAssertFunction: (@autoclosure () ->
             switch try Posix.write(descriptor: fd, pointer: pointer, size: 0) {
             case .processed(let v):
                 preventCompilerOptimisation += v
-            case .wouldBlock(_):
+            case .wouldBlock:
                 throw TestError.wouldBlock
             }
         }

@@ -301,28 +301,25 @@ class ChannelPipelineTest: XCTestCase {
 
         /* the first thing, we should receive is `[-2]` as it shouldn't hit any `MarkingOutboundHandler`s (`4`) */
         var outbound = channel.readOutbound()
-        switch outbound {
-        case .some(.byteBuffer(var buf)):
+        if case .some(.byteBuffer(var buf)) = outbound {
             XCTAssertEqual("[-2]", buf.readString(length: buf.readableBytes))
-        default:
+        } else {
             XCTFail("wrong contents: \(outbound.debugDescription)")
         }
 
         /* the next thing we should receive is `[-2, 4]` as the first `WriteOnReadHandler` (receiving `[2]`) is behind the `MarkingOutboundHandler` (`4`) */
         outbound = channel.readOutbound()
-        switch outbound {
-        case .some(.byteBuffer(var buf)):
+        if case .some(.byteBuffer(var buf)) = outbound {
             XCTAssertEqual("[-2, 4]", buf.readString(length: buf.readableBytes))
-        default:
+        } else {
             XCTFail("wrong contents: \(outbound.debugDescription)")
         }
 
         /* and finally, we're waiting for `[-2, -6, 4]` as the second `WriteOnReadHandler`s (receiving `[2, 4]`) is behind the `MarkingOutboundHandler` (`4`) */
         outbound = channel.readOutbound()
-        switch outbound {
-        case .some(.byteBuffer(var buf)):
+        if case .some(.byteBuffer(var buf)) = outbound {
             XCTAssertEqual("[-2, -6, 4]", buf.readString(length: buf.readableBytes))
-        default:
+        } else {
             XCTFail("wrong contents: \(outbound.debugDescription)")
         }
 
@@ -563,5 +560,64 @@ class ChannelPipelineTest: XCTestCase {
         } catch {
             XCTFail("Got incorrect error: \(error)")
         }
+    }
+
+    func testFindHandlerByType() {
+        class TypeAHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+            typealias InboundOut = Any
+        }
+
+        class TypeBHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+            typealias InboundOut = Any
+        }
+
+        class TypeCHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+            typealias InboundOut = Any
+        }
+
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+
+        let h1 = TypeAHandler()
+        let h2 = TypeBHandler()
+        XCTAssertNoThrow(try channel.pipeline.add(handler: h1).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: h2).wait())
+
+        XCTAssertTrue(try h1 === channel.pipeline.context(handlerType: TypeAHandler.self).wait().handler)
+        XCTAssertTrue(try h2 === channel.pipeline.context(handlerType: TypeBHandler.self).wait().handler)
+
+        do {
+            _ = try channel.pipeline.context(handlerType: TypeCHandler.self).wait()
+            XCTFail("Did not throw")
+        } catch ChannelPipelineError.notFound {
+            // ok
+        } catch {
+            XCTFail("Unexpected error \(error)")
+        }
+    }
+
+    func testFindHandlerByTypeReturnsTheFirstOfItsType() {
+        class TestHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+            typealias InboundOut = Any
+        }
+
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+
+        let h1 = TestHandler()
+        let h2 = TestHandler()
+        XCTAssertNoThrow(try channel.pipeline.add(handler: h1).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: h2).wait())
+
+        XCTAssertTrue(try h1 === channel.pipeline.context(handlerType: TestHandler.self).wait().handler)
+        XCTAssertFalse(try h2 === channel.pipeline.context(handlerType: TestHandler.self).wait().handler)
     }
 }
