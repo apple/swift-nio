@@ -359,7 +359,12 @@ extension _DeprecateHTTPHeaderIterator {
 
 /* private but tests */ internal extension Character {
     var isASCIIWhitespace: Bool {
-        return self == " " || self == "\t" || self == "\r" || self == "\n" || self == "\r\n"
+        switch self {
+        case " ", "\t", "\r", "\n", "\r\n":
+            return true
+        default:
+            return false
+        }
     }
 }
 
@@ -407,73 +412,41 @@ public enum HTTPMethod: Equatable {
 
     public static func ==(lhs: HTTPMethod, rhs: HTTPMethod) -> Bool {
         switch (lhs, rhs){
-        case (.GET, .GET):
+        case (.GET, .GET),
+             (.PUT, .PUT),
+             (.ACL, .ACL),
+             (.HEAD, .HEAD),
+             (.POST, .POST),
+             (.COPY, .COPY),
+             (.LOCK, .LOCK),
+             (.MOVE, .MOVE),
+             (.BIND, .BIND),
+             (.LINK, .LINK),
+             (.PATCH, .PATCH),
+             (.TRACE, .TRACE),
+             (.MKCOL, .MKCOL),
+             (.MERGE, .MERGE),
+             (.PURGE, .PURGE),
+             (.NOTIFY, .NOTIFY),
+             (.SEARCH, .SEARCH),
+             (.UNLOCK, .UNLOCK),
+             (.REBIND, .REBIND),
+             (.UNBIND, .UNBIND),
+             (.REPORT, .REPORT),
+             (.DELETE, .DELETE),
+             (.UNLINK, .UNLINK),
+             (.CONNECT, .CONNECT),
+             (.MSEARCH, .MSEARCH),
+             (.OPTIONS, .OPTIONS),
+             (.PROPFIND, .PROPFIND),
+             (.CHECKOUT, .CHECKOUT),
+             (.PROPPATCH, .PROPPATCH),
+             (.SUBSCRIBE, .SUBSCRIBE),
+             (.MKCALENDAR, .MKCALENDAR),
+             (.MKACTIVITY, .MKACTIVITY),
+             (.UNSUBSCRIBE, .UNSUBSCRIBE):
             return true
-        case (.PUT, .PUT):
-            return true
-        case (.ACL, .ACL):
-            return true
-        case (.HEAD, .HEAD):
-            return true
-        case (.POST, .POST):
-            return true
-        case (.COPY, .COPY):
-            return true
-        case (.LOCK, .LOCK):
-            return true
-        case (.MOVE, .MOVE):
-            return true
-        case (.BIND, .BIND):
-            return true
-        case (.LINK, .LINK):
-            return true
-        case (.PATCH, .PATCH):
-            return true
-        case (.TRACE, .TRACE):
-            return true
-        case (.MKCOL, .MKCOL):
-            return true
-        case (.MERGE, .MERGE):
-            return true
-        case (.PURGE, .PURGE):
-            return true
-        case (.NOTIFY, .NOTIFY):
-            return true
-        case (.SEARCH, .SEARCH):
-            return true
-        case (.UNLOCK, .UNLOCK):
-            return true
-        case (.REBIND, .REBIND):
-            return true
-        case (.UNBIND, .UNBIND):
-            return true
-        case (.REPORT, .REPORT):
-            return true
-        case (.DELETE, .DELETE):
-            return true
-        case (.UNLINK, .UNLINK):
-            return true
-        case (.CONNECT, .CONNECT):
-            return true
-        case (.MSEARCH, .MSEARCH):
-            return true
-        case (.OPTIONS, .OPTIONS):
-            return true
-        case (.PROPFIND, .PROPFIND):
-            return true
-        case (.CHECKOUT, .CHECKOUT):
-            return true
-        case (.PROPPATCH, .PROPPATCH):
-            return true
-        case (.SUBSCRIBE, .SUBSCRIBE):
-            return true
-        case (.MKCALENDAR, .MKCALENDAR):
-            return true
-        case (.MKACTIVITY, .MKACTIVITY):
-            return true
-        case (.UNSUBSCRIBE, .UNSUBSCRIBE):
-            return true
-        case (.RAW(let l), .RAW(let r)):
+        case let (.RAW(l), .RAW(r)):
             return l == r
         default:
             return false
@@ -1232,128 +1205,71 @@ public enum HTTPResponseStatus {
 extension HTTPResponseStatus: Equatable {
     public static func ==(lhs: HTTPResponseStatus, rhs: HTTPResponseStatus) -> Bool {
         switch (lhs, rhs) {
-        case (.custom(let lcode, let lreason), .custom(let rcode, let rreason)):
+        case let (.custom(lcode, lreason), .custom(rcode, rreason)):
             return lcode == rcode && lreason == rreason
-        case (.continue, .continue):
-            return true
-        case (.switchingProtocols, .switchingProtocols):
-            return true
-        case (.processing, .processing):
-            return true
-        case (.ok, .ok):
-            return true
-        case (.created, .created):
-            return true
-        case (.accepted, .accepted):
-            return true
-        case (.nonAuthoritativeInformation, .nonAuthoritativeInformation):
-            return true
-        case (.noContent, .noContent):
-            return true
-        case (.resetContent, .resetContent):
-            return true
-        case (.partialContent, .partialContent):
-            return true
-        case (.multiStatus, .multiStatus):
-            return true
-        case (.alreadyReported, .alreadyReported):
-            return true
-        case (.imUsed, .imUsed):
-            return true
-        case (.multipleChoices, .multipleChoices):
-            return true
-        case (.movedPermanently, .movedPermanently):
-            return true
-        case (.found, .found):
-            return true
-        case (.seeOther, .seeOther):
-            return true
-        case (.notModified, .notModified):
-            return true
-        case (.useProxy, .useProxy):
-            return true
-        case (.temporaryRedirect, .temporaryRedirect):
-            return true
-        case (.permanentRedirect, .permanentRedirect):
-            return true
-        case (.badRequest, .badRequest):
-            return true
-        case (.unauthorized, .unauthorized):
-            return true
-        case (.paymentRequired, .paymentRequired):
-            return true
-        case (.forbidden, .forbidden):
-            return true
-        case (.notFound, .notFound):
-            return true
-        case (.methodNotAllowed, .methodNotAllowed):
-            return true
-        case (.notAcceptable, .notAcceptable):
-            return true
-        case (.proxyAuthenticationRequired, .proxyAuthenticationRequired):
-            return true
-        case (.requestTimeout, .requestTimeout):
-            return true
-        case (.conflict, .conflict):
-            return true
-        case (.gone, .gone):
-            return true
-        case (.lengthRequired, .lengthRequired):
-            return true
-        case (.preconditionFailed, .preconditionFailed):
-            return true
-        case (.payloadTooLarge, .payloadTooLarge):
-            return true
-        case (.uriTooLong, .uriTooLong):
-            return true
-        case (.unsupportedMediaType, .unsupportedMediaType):
-            return true
-        case (.rangeNotSatisfiable, .rangeNotSatisfiable):
-            return true
-        case (.expectationFailed, .expectationFailed):
-            return true
-        case (.misdirectedRequest, .misdirectedRequest):
-            return true
-        case (.unprocessableEntity, .unprocessableEntity):
-            return true
-        case (.locked, .locked):
-            return true
-        case (.failedDependency, .failedDependency):
-            return true
-        case (.upgradeRequired, .upgradeRequired):
-            return true
-        case (.preconditionRequired, .preconditionRequired):
-            return true
-        case (.tooManyRequests, .tooManyRequests):
-            return true
-        case (.requestHeaderFieldsTooLarge, .requestHeaderFieldsTooLarge):
-            return true
-        case (.unavailableForLegalReasons, .unavailableForLegalReasons):
-            return true
-        case (.internalServerError, .internalServerError):
-            return true
-        case (.notImplemented, .notImplemented):
-            return true
-        case (.badGateway, .badGateway):
-            return true
-        case (.serviceUnavailable, .serviceUnavailable):
-            return true
-        case (.gatewayTimeout, .gatewayTimeout):
-            return true
-        case (.httpVersionNotSupported, .httpVersionNotSupported):
-            return true
-        case (.variantAlsoNegotiates, .variantAlsoNegotiates):
-            return true
-        case (.insufficientStorage, .insufficientStorage):
-            return true
-        case (.loopDetected, .loopDetected):
-            return true
-        case (.notExtended, .notExtended):
-            return true
-        case (.networkAuthenticationRequired, .networkAuthenticationRequired):
+        case (.continue, .continue),
+             (.switchingProtocols, .switchingProtocols),
+             (.processing, .processing),
+             (.ok, .ok),
+             (.created, .created),
+             (.accepted, .accepted),
+             (.nonAuthoritativeInformation, .nonAuthoritativeInformation),
+             (.noContent, .noContent),
+             (.resetContent, .resetContent),
+             (.partialContent, .partialContent),
+             (.multiStatus, .multiStatus),
+             (.alreadyReported, .alreadyReported),
+             (.imUsed, .imUsed),
+             (.multipleChoices, .multipleChoices),
+             (.movedPermanently, .movedPermanently),
+             (.found, .found),
+             (.seeOther, .seeOther),
+             (.notModified, .notModified),
+             (.useProxy, .useProxy),
+             (.temporaryRedirect, .temporaryRedirect),
+             (.permanentRedirect, .permanentRedirect),
+             (.badRequest, .badRequest),
+             (.unauthorized, .unauthorized),
+             (.paymentRequired, .paymentRequired),
+             (.forbidden, .forbidden),
+             (.notFound, .notFound),
+             (.methodNotAllowed, .methodNotAllowed),
+             (.notAcceptable, .notAcceptable),
+             (.proxyAuthenticationRequired, .proxyAuthenticationRequired),
+             (.requestTimeout, .requestTimeout),
+             (.conflict, .conflict),
+             (.gone, .gone),
+             (.lengthRequired, .lengthRequired),
+             (.preconditionFailed, .preconditionFailed),
+             (.payloadTooLarge, .payloadTooLarge),
+             (.uriTooLong, .uriTooLong),
+             (.unsupportedMediaType, .unsupportedMediaType),
+             (.rangeNotSatisfiable, .rangeNotSatisfiable),
+             (.expectationFailed, .expectationFailed),
+             (.misdirectedRequest, .misdirectedRequest),
+             (.unprocessableEntity, .unprocessableEntity),
+             (.locked, .locked),
+             (.failedDependency, .failedDependency),
+             (.upgradeRequired, .upgradeRequired),
+             (.preconditionRequired, .preconditionRequired),
+             (.tooManyRequests, .tooManyRequests),
+             (.requestHeaderFieldsTooLarge, .requestHeaderFieldsTooLarge),
+             (.unavailableForLegalReasons, .unavailableForLegalReasons),
+             (.internalServerError, .internalServerError),
+             (.notImplemented, .notImplemented),
+             (.badGateway, .badGateway),
+             (.serviceUnavailable, .serviceUnavailable),
+             (.gatewayTimeout, .gatewayTimeout),
+             (.httpVersionNotSupported, .httpVersionNotSupported),
+             (.variantAlsoNegotiates, .variantAlsoNegotiates),
+             (.insufficientStorage, .insufficientStorage),
+             (.loopDetected, .loopDetected),
+             (.notExtended, .notExtended),
+             (.networkAuthenticationRequired, .networkAuthenticationRequired):
             return true
         default:
             return false
         }
     }
 }
+
