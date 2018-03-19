@@ -272,4 +272,11 @@ public class EventLoopTest : XCTestCase {
             tries += 1
         }
     }
+
+    public func testShutdownWhileScheduledTasksNotReady() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoop = group.next()
+        _ = eventLoop.scheduleTask(in: .hours(1)) { }
+        try group.syncShutdownGracefully()
+    }
 }
