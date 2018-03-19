@@ -473,7 +473,7 @@ internal final class SelectableEventLoop: EventLoop {
             tasksLock.unlock()
 
             // Fail all the scheduled tasks.
-            while let task = tasksCopy.first {
+            for task in tasksCopy {
                 task.fail(error: EventLoopError.shutdown)
             }
         }
@@ -522,13 +522,11 @@ internal final class SelectableEventLoop: EventLoop {
                 }
 
                 // Execute all the tasks that were summited
-                while let task = tasksCopy.first {
+                for task in tasksCopy {
                     /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
                     withAutoReleasePool {
                         task()
                     }
-
-                    _ = tasksCopy.removeFirst()
                 }
             }
         }
