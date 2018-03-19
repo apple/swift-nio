@@ -528,11 +528,10 @@ internal class HappyEyeballsConnector {
         channelFuture.whenSuccess { channel in
             // If we are in the complete state then we want to abandon this channel. Otherwise, begin
             // connecting.
-            switch self.state {
-            case .complete:
+            if case .complete = self.state {
                 self.pendingConnections.remove(element: channelFuture)
                 channel.close(promise: nil)
-            default:
+            } else {
                 channel.connect(to: target).map {
                     // The channel has connected. If we are in the complete state we want to abandon this channel.
                     // Otherwise, fire the channel connected event. Either way we don't want the channel future to
@@ -540,20 +539,18 @@ internal class HappyEyeballsConnector {
                     // we want to use.
                     self.pendingConnections.remove(element: channelFuture)
 
-                    switch self.state {
-                    case .complete:
+                    if case .complete = self.state {
                         channel.close(promise: nil)
-                    default:
+                    } else {
                         self.processInput(.connectSuccess)
                         self.resolutionPromise.succeed(result: channel)
                     }
                 }.whenFailure { err in
                     // The connection attempt failed. If we're in the complete state then there's nothing
                     // to do. Otherwise, notify the state machine of the failure.
-                    switch self.state {
-                    case .complete:
+                    if case .complete = self.state {
                         assert(self.pendingConnections.index { $0 === channelFuture } == nil, "failed but was still in pending connections")
-                    default:
+                    } else {
                         self.error.connectionErrors.append(SingleConnectionFailure(target: target, error: err))
                         self.pendingConnections.remove(element: channelFuture)
                         self.processInput(.connectFailed)

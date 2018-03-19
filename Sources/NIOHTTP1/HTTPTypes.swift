@@ -84,7 +84,7 @@ extension HTTPPart: Equatable {
             return b1 == b2
         case (.end(let h1), .end(let h2)):
             return h1 == h2
-        default:
+        case (.head, _), (.body, _), (.end, _):
             return false
         }
     }
@@ -348,11 +348,11 @@ extension HTTPHeaders: Sequence {
 
 // Dance to ensure that this version of makeIterator(), which returns
 // an AnyIterator, is only called when forced through type context.
-protocol _DeprecateHTTPHeaderIterator: Sequence { }
+public protocol _DeprecateHTTPHeaderIterator: Sequence { }
 extension HTTPHeaders: _DeprecateHTTPHeaderIterator { }
-extension _DeprecateHTTPHeaderIterator {
+public extension _DeprecateHTTPHeaderIterator {
   @available(*, deprecated, message: "Please use the HTTPHeaders.Iterator type")
-  func makeIterator() -> AnyIterator<Element> {
+  public func makeIterator() -> AnyIterator<Element> {
     return AnyIterator(makeIterator() as Iterator)
   }  
 }
@@ -995,11 +995,10 @@ extension HTTPResponseStatus {
     /// - Parameter buffer: A buffer to write the serialized bytes into. Will increment
     ///     the writer index of this buffer.
     func write(buffer: inout ByteBuffer) {
-        switch self {
-        case .ok:
+        if case .ok = self {
             // Optimize for 200 ok, which should be the most likely code (...hopefully).
             buffer.write(staticString: status200)
-        default:
+        } else {
             buffer.write(string: String(code))
             buffer.write(string: " ")
             buffer.write(string: reasonPhrase)

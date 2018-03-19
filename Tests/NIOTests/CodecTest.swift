@@ -154,10 +154,10 @@ public class ByteToMessageDecoderTest: XCTestCase {
         channel.pipeline.fireChannelRead(NIOAny(buffer))
         XCTAssertEqual(Int32(1), channel.readInbound())
 
-        XCTAssertFalse(inactivePromiser.channelInactivePromise.futureResult.fulfilled)
+        XCTAssertFalse(inactivePromiser.channelInactivePromise.futureResult.isFulfilled)
 
         channel.pipeline.fireChannelInactive()
-        XCTAssertTrue(inactivePromiser.channelInactivePromise.futureResult.fulfilled)
+        XCTAssertTrue(inactivePromiser.channelInactivePromise.futureResult.isFulfilled)
     }
 
     func testDecoderIsNotQuadratic() throws {
