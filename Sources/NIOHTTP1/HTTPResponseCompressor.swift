@@ -103,13 +103,10 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
     }
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        let httpData = unwrapInboundIn(data)
-        switch httpData {
-        case .head(let requestHead):
+        if case .head(let requestHead) = unwrapInboundIn(data) {
             acceptQueue.append(requestHead.headers.getCanonicalForm("accept-encoding"))
-        default:
-            break
         }
+
         ctx.fireChannelRead(data)
     }
 
@@ -267,7 +264,7 @@ private struct PartialHTTPResponse {
     var end: HTTPServerResponsePart?
     private let initialBufferSize: Int
 
-    var completeResponse: Bool {
+    var isCompleteResponse: Bool {
         return head != nil && end != nil
     }
 
@@ -344,7 +341,7 @@ private struct PartialHTTPResponse {
         let flag = mustFlush ? Z_FINISH : Z_SYNC_FLUSH
 
         let body = compressBody(compressor: &compressor, allocator: allocator, flag: flag)
-        if let bodyLength = body?.readableBytes, completeResponse && bodyLength > 0 {
+        if let bodyLength = body?.readableBytes, isCompleteResponse && bodyLength > 0 {
             head!.headers.remove(name: "transfer-encoding")
             head!.headers.replaceOrAdd(name: "content-length", value: "\(bodyLength)")
         } else if head != nil && head!.status.mayHaveResponseBody {

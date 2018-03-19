@@ -285,7 +285,7 @@ extension ChannelError: Equatable {
         switch (lhs, rhs) {
         case (.connectPending, .connectPending):
             return true
-        case (.connectTimeout(_), .connectTimeout(_)):
+        case (.connectTimeout, .connectTimeout):
             return true
         case (.operationUnsupported, .operationUnsupported):
             return true

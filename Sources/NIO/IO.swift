@@ -99,7 +99,7 @@ extension IOResult: Equatable {
             return lhs == rhs
         case (.processed(let lhs), .processed(let rhs)):
             return lhs == rhs
-        default:
+        case (.wouldBlock, _), (.processed, _):
             return false
         }
     }

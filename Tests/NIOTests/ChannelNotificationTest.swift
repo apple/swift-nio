@@ -19,7 +19,7 @@ class ChannelNotificationTest: XCTestCase {
 
     private static func assertFulfilled(promise: EventLoopPromise<Void>?, promiseName: String, trigger: String, setter: String, file: StaticString = #file, line: UInt = #line) {
         if let promise = promise {
-            XCTAssertTrue(promise.futureResult.fulfilled, "\(promiseName) not fulfilled before \(trigger) was called", file: file, line: line)
+            XCTAssertTrue(promise.futureResult.isFulfilled, "\(promiseName) not fulfilled before \(trigger) was called", file: file, line: line)
         } else {
             XCTFail("\(setter) not called before \(trigger)", file: file, line: line)
         }
@@ -42,7 +42,7 @@ class ChannelNotificationTest: XCTestCase {
             assertFulfilled(promise: self.connectPromise, promiseName: "connectPromise", trigger: "channelActive", setter: "connect")
 
             XCTAssertNil(self.closePromise)
-            XCTAssertFalse(ctx.channel.closeFuture.fulfilled)
+            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
         }
 
         public func channelInactive(ctx: ChannelHandlerContext) {
@@ -52,7 +52,7 @@ class ChannelNotificationTest: XCTestCase {
             assertFulfilled(promise: self.connectPromise, promiseName: "connectPromise", trigger: "channelInactive", setter: "connect")
             assertFulfilled(promise: self.closePromise, promiseName: "closePromise", trigger: "channelInactive", setter: "close")
 
-            XCTAssertFalse(ctx.channel.closeFuture.fulfilled)
+            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
         }
 
         public func channelRegistered(ctx: ChannelHandlerContext) {
@@ -62,7 +62,7 @@ class ChannelNotificationTest: XCTestCase {
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelRegistered", setter: "register")
 
-            XCTAssertFalse(ctx.channel.closeFuture.fulfilled)
+            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
         }
 
         public func channelUnregistered(ctx: ChannelHandlerContext) {
@@ -72,7 +72,7 @@ class ChannelNotificationTest: XCTestCase {
             assertFulfilled(promise: self.connectPromise, promiseName: "connectPromise", trigger: "channelInactive", setter: "connect")
             assertFulfilled(promise: self.closePromise, promiseName: "closePromise", trigger: "channelInactive", setter: "close")
 
-            XCTAssertFalse(ctx.channel.closeFuture.fulfilled)
+            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
         }
 
         public func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
@@ -136,8 +136,8 @@ class ChannelNotificationTest: XCTestCase {
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelActive", setter: "register")
 
-            XCTAssertFalse(ctx.channel.closeFuture.fulfilled)
-            XCTAssertFalse(self.activeChannelPromise.futureResult.fulfilled)
+            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
+            XCTAssertFalse(self.activeChannelPromise.futureResult.isFulfilled)
             self.activeChannelPromise.succeed(result: ctx.channel)
         }
 
@@ -146,7 +146,7 @@ class ChannelNotificationTest: XCTestCase {
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelInactive", setter: "register")
 
-            XCTAssertFalse(ctx.channel.closeFuture.fulfilled)
+            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
         }
 
         public func channelRegistered(ctx: ChannelHandlerContext) {
@@ -154,7 +154,7 @@ class ChannelNotificationTest: XCTestCase {
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelRegistered", setter: "register")
 
-            XCTAssertFalse(ctx.channel.closeFuture.fulfilled)
+            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
         }
 
         public func channelUnregistered(ctx: ChannelHandlerContext) {
@@ -162,7 +162,7 @@ class ChannelNotificationTest: XCTestCase {
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelUnregistered", setter: "register")
 
-            XCTAssertFalse(ctx.channel.closeFuture.fulfilled)
+            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
         }
 
         public func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
@@ -208,7 +208,7 @@ class ChannelNotificationTest: XCTestCase {
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelActive", setter: "register")
 
             XCTAssertNil(self.closePromise)
-            XCTAssertFalse(ctx.channel.closeFuture.fulfilled)
+            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
         }
 
         public func channelInactive(ctx: ChannelHandlerContext) {
@@ -217,7 +217,7 @@ class ChannelNotificationTest: XCTestCase {
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelInactive", setter: "register")
             assertFulfilled(promise: self.closePromise, promiseName: "closePromise", trigger: "channelInactive", setter: "close")
 
-            XCTAssertFalse(ctx.channel.closeFuture.fulfilled)
+            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
         }
 
         public func channelRegistered(ctx: ChannelHandlerContext) {
@@ -226,7 +226,7 @@ class ChannelNotificationTest: XCTestCase {
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelRegistered", setter: "register")
 
-            XCTAssertFalse(ctx.channel.closeFuture.fulfilled)
+            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
         }
 
         public func channelUnregistered(ctx: ChannelHandlerContext) {
@@ -235,7 +235,7 @@ class ChannelNotificationTest: XCTestCase {
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelUnregistered", setter: "register")
             assertFulfilled(promise: self.closePromise, promiseName: "closePromise", trigger: "channelInactive", setter: "close")
 
-            XCTAssertFalse(ctx.channel.closeFuture.fulfilled)
+            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
         }
 
         public func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {

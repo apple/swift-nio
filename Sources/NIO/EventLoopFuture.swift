@@ -68,7 +68,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
         case (.some(let onlyCallback), .none):
             return [onlyCallback]
         case (.some(let first), .some(let others)):
-            return [first]+others
+            return [first] + others
         }
     }
 
@@ -287,18 +287,18 @@ public final class EventLoopFuture<T> {
     // TODO: Provide a tracing facility.  It would be nice to be able to set '.debugTrace = true' on any EventLoopFuture or EventLoopPromise and have every subsequent chained EventLoopFuture report the success result or failure error.  That would simplify some debugging scenarios.
     fileprivate var value: EventLoopFutureValue<T>? {
         didSet {
-            _fulfilled.store(true)
+            _isFulfilled.store(true)
         }
     }
-    fileprivate let _fulfilled: Atomic<Bool>
 
+    fileprivate let _isFulfilled: Atomic<Bool>
     /// The `EventLoop` which is tied to the `EventLoopFuture` and is used to notify all registered callbacks.
     public let eventLoop: EventLoop
 
     /// Whether this `EventLoopFuture` has been fulfilled. This is a thread-safe
     /// computed-property.
-    internal var fulfilled: Bool {
-        return _fulfilled.load()
+    internal var isFulfilled: Bool {
+        return _isFulfilled.load()
     }
 
     /// Callbacks that should be run when this `EventLoopFuture<T>` gets a value.
@@ -310,7 +310,7 @@ public final class EventLoopFuture<T> {
     private init(eventLoop: EventLoop, value: EventLoopFutureValue<T>?, file: StaticString, line: UInt) {
         self.eventLoop = eventLoop
         self.value = value
-        self._fulfilled = Atomic(value: value != nil)
+        self._isFulfilled = Atomic(value: value != nil)
 
         debugOnly {
             if let me = eventLoop as? SelectableEventLoop {
@@ -338,11 +338,11 @@ public final class EventLoopFuture<T> {
         debugOnly {
             if let eventLoop = self.eventLoop as? SelectableEventLoop {
                 let creation = eventLoop.promiseCreationStoreRemove(future: self)
-                if !fulfilled {
+                if !isFulfilled {
                     fatalError("leaking promise created at \(creation)", file: creation.file, line: creation.line)
                 }
             } else {
-                precondition(fulfilled, "leaking an unfulfilled Promise")
+                precondition(isFulfilled, "leaking an unfulfilled Promise")
             }
         }
     }

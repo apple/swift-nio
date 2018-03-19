@@ -43,7 +43,7 @@ public enum SniResult: Equatable {
             return true
         case (.hostname(let s1), .hostname(let s2)):
             return s1 == s2
-        default:
+        case (.fallback, _), (.hostname, _):
             return false
         }
     }
