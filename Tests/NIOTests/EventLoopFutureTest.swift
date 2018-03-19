@@ -384,6 +384,9 @@ class EventLoopFutureTest : XCTestCase {
 
     func testLoopHoppingHelperSuccess() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
         let loop1 = group.next()
         let loop2 = group.next()
         XCTAssertFalse(loop1 === loop2)
@@ -400,6 +403,10 @@ class EventLoopFutureTest : XCTestCase {
 
     func testLoopHoppingHelperFailure() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
         let loop1 = group.next()
         let loop2 = group.next()
         XCTAssertFalse(loop1 === loop2)
@@ -420,6 +427,9 @@ class EventLoopFutureTest : XCTestCase {
 
     func testLoopHoppingHelperNoHopping() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
         let loop1 = group.next()
         let loop2 = group.next()
         XCTAssertFalse(loop1 === loop2)
