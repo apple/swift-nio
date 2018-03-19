@@ -482,8 +482,14 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             pipeline.fireErrorCaught0(error: err)
         }
 
-        executeAndComplete(promise) {
+        let p: EventLoopPromise<Void>?
+        do {
             try socket.close()
+            p = promise
+        } catch {
+            promise?.fail(error: error)
+            // Set p to nil as we want to ensure we pass nil to becomeInactive0(...) so we not try to notify the promise again.
+            p = nil
         }
 
         // Fail all pending writes and so ensure all pending promises are notified
@@ -492,7 +498,9 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.cancelWritesOnClose(error: error)
 
         if !self.neverActivated {
-            becomeInactive0()
+            becomeInactive0(promise: p)
+        } else if let p = p {
+            p.succeed(result: ())
         }
 
         if !self.neverRegistered {
@@ -556,11 +564,15 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         if let connectPromise = pendingConnect {
             pendingConnect = nil
 
+            do {
+                try finishConnectSocket()
+            } catch {
+                connectPromise.fail(error: error)
+                return
+            }
             // We already know what the local address is.
             self.updateCachedAddressesFromSocket(updateLocal: false, updateRemote: true)
-            executeAndComplete(connectPromise) {
-                try finishConnectSocket()
-            }
+            becomeActive0(promise: connectPromise)
         }
     }
 
@@ -718,20 +730,30 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
     }
 
-    fileprivate func becomeActive0() {
+    fileprivate func becomeActive0(promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
         assert(!self.active.load())
         assert(self._isOpen)
 
         self.neverActivated = false
         active.store(true)
+
+        // Notify the promise before firing the inbound event through the pipeline.
+        if let promise = promise {
+            promise.succeed(result: ())
+        }
         pipeline.fireChannelActive0()
     }
 
-    fileprivate func becomeInactive0() {
+    fileprivate func becomeInactive0(promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
         assert(self.active.load())
         active.store(false)
+
+        // Notify the promise before firing the inbound event through the pipeline.
+        if let promise = promise {
+            promise.succeed(result: ())
+        }
         pipeline.fireChannelInactive0()
     }
 }
@@ -899,7 +921,6 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             scheduled.cancel()
         }
         try self.socket.finishConnect()
-        becomeActive0()
     }
 
     override func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
@@ -1046,9 +1067,8 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         let p: EventLoopPromise<Void> = eventLoop.newPromise()
         p.futureResult.map {
             // Its important to call the methods before we actual notify the original promise for ordering reasons.
-            self.becomeActive0()
+            self.becomeActive0(promise: promise)
             self.readIfNeeded0()
-            promise?.succeed(result: ())
         }.whenFailure{ error in
             promise?.fail(error: error)
         }
@@ -1120,7 +1140,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             guard ch.isOpen else {
                 throw ChannelError.ioOnClosedChannel
             }
-            ch.becomeActive0()
+            ch.becomeActive0(promise: nil)
             ch.readIfNeeded0()
         }.whenFailure { error in
             ch.close(promise: nil)
@@ -1322,8 +1342,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         do {
             try socket.bind(to: address)
             self.updateCachedAddressesFromSocket(updateRemote: false)
-            promise?.succeed(result: ())
-            becomeActive0()
+            becomeActive0(promise: promise)
             readIfNeeded0()
         } catch let err {
             promise?.fail(error: err)
