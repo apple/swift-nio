@@ -27,6 +27,7 @@ extension ChannelNotificationTest {
    static var allTests : [(String, (ChannelNotificationTest) -> () throws -> Void)] {
       return [
                 ("testNotificationOrder", testNotificationOrder),
+                ("testActiveBeforeChannelRead", testActiveBeforeChannelRead),
            ]
    }
 }
