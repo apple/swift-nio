@@ -281,6 +281,8 @@ internal final class SelectableEventLoop: EventLoop {
     private let selector: NIO.Selector<NIORegistration>
     private let thread: Thread
     private var scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
+    private var tasksCopy = ContiguousArray<() -> Void>()
+
     private let tasksLock = Lock()
     private var lifecycleState: EventLoopLifecycleState = .open
 
@@ -325,6 +327,8 @@ internal final class SelectableEventLoop: EventLoop {
         self._addresses = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
         self.msgs = UnsafeMutableBufferPointer(start: _msgs, count: Socket.writevLimitIOVectors)
         self.addresses = UnsafeMutableBufferPointer(start: _addresses, count: Socket.writevLimitIOVectors)
+        // We will process 4096 tasks per while loop.
+        self.tasksCopy.reserveCapacity(4096)
     }
 
     deinit {
@@ -464,16 +468,17 @@ internal final class SelectableEventLoop: EventLoop {
     public func run() throws {
         precondition(self.inEventLoop, "tried to run the EventLoop on the wrong thread.")
         defer {
-            var tasksCopy = ContiguousArray<ScheduledTask>()
-
+            var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
             tasksLock.lock()
+            // reserve the correct capacity so we don't need to realloc later on.
+            scheduledTasksCopy.reserveCapacity(scheduledTasks.count)
             while let sched = scheduledTasks.pop() {
-                tasksCopy.append(sched)
+                scheduledTasksCopy.append(sched)
             }
             tasksLock.unlock()
 
             // Fail all the scheduled tasks.
-            for task in tasksCopy {
+            for task in scheduledTasksCopy {
                 task.fail(error: EventLoopError.shutdown)
             }
         }
@@ -502,13 +507,12 @@ internal final class SelectableEventLoop: EventLoop {
                     tasksLock.unlock()
                     break
                 }
-                var tasksCopy = ContiguousArray<() -> Void>()
 
                 // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
                 let now = DispatchTime.now()
 
                 // Make a copy of the tasks so we can execute these while not holding the lock anymore
-                while let task = scheduledTasks.peek(), task.readyIn(now) <= .nanoseconds(0) {
+                while tasksCopy.count < tasksCopy.capacity, let task = scheduledTasks.peek(), task.readyIn(now) <= .nanoseconds(0) {
                     tasksCopy.append(task.task)
 
                     _ = scheduledTasks.pop()
@@ -528,6 +532,8 @@ internal final class SelectableEventLoop: EventLoop {
                         task()
                     }
                 }
+                // Drop everything (but keep the capacity) so we can fill it again on the next iteration.
+                tasksCopy.removeAll(keepingCapacity: true)
             }
         }
 
