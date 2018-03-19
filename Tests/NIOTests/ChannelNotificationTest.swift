@@ -317,7 +317,7 @@ class ChannelNotificationTest: XCTestCase {
         buffer.write(string: "test")
 
 
-        while let result = try? channel.writeAndFlush(buffer).wait() {
+        while (try? channel.writeAndFlush(buffer).wait()) != nil {
             // Just write in a loop until it fails to ensure we detect the closed connection in a timely manner.
         }
         try channel.closeFuture.wait()

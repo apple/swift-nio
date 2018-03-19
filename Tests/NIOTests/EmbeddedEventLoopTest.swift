@@ -300,7 +300,7 @@ public class EmbeddedEventLoopTest: XCTestCase {
         }
 
         // Finally schedule a task for 10ns.
-        loop.scheduleTask(in: .nanoseconds(10)) {
+        _ = loop.scheduleTask(in: .nanoseconds(10)) {
             XCTAssertEqual(orderingCounter, 5)
             orderingCounter = 6
         }
