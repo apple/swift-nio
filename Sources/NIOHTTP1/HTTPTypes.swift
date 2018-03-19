@@ -348,11 +348,11 @@ extension HTTPHeaders: Sequence {
 
 // Dance to ensure that this version of makeIterator(), which returns
 // an AnyIterator, is only called when forced through type context.
-protocol _DeprecateHTTPHeaderIterator: Sequence { }
+public protocol _DeprecateHTTPHeaderIterator: Sequence { }
 extension HTTPHeaders: _DeprecateHTTPHeaderIterator { }
-extension _DeprecateHTTPHeaderIterator {
+public extension _DeprecateHTTPHeaderIterator {
   @available(*, deprecated, message: "Please use the HTTPHeaders.Iterator type")
-  func makeIterator() -> AnyIterator<Element> {
+  public func makeIterator() -> AnyIterator<Element> {
     return AnyIterator(makeIterator() as Iterator)
   }  
 }
