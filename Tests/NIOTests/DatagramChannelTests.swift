@@ -403,4 +403,8 @@ final class DatagramChannelTests: XCTestCase {
         let ioError = try promise.futureResult.wait()
         XCTAssertEqual(error, ioError.errnoCode)
     }
+
+    public func testSetGetOptionClosedDatagramChannel() throws {
+        try assertSetGetOptionOnOpenAndClosed(channel: firstChannel, option: ChannelOptions.maxMessagesPerRead, value: 1)
+    }
 }

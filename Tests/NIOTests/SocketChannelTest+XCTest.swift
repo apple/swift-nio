@@ -34,6 +34,7 @@ extension SocketChannelTest {
                 ("testAcceptFailsWithENOBUFS", testAcceptFailsWithENOBUFS),
                 ("testAcceptFailsWithENOMEM", testAcceptFailsWithENOMEM),
                 ("testAcceptFailsWithEFAULT", testAcceptFailsWithEFAULT),
+                ("testSetGetOptionClosedServerSocketChannel", testSetGetOptionClosedServerSocketChannel),
            ]
    }
 }

@@ -164,4 +164,16 @@ public class SocketChannelTest : XCTestCase {
         let ioError = try promise.futureResult.wait()
         XCTAssertEqual(error, ioError.errnoCode)
     }
+
+    public func testSetGetOptionClosedServerSocketChannel() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+
+        // Create two channels with different event loops.
+        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+
+        try assertSetGetOptionOnOpenAndClosed(channel: clientChannel, option: ChannelOptions.allowRemoteHalfClosure, value: true)
+        try assertSetGetOptionOnOpenAndClosed(channel: serverChannel, option: ChannelOptions.backlog, value: 100)
+    }
 }

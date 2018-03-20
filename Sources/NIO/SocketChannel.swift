@@ -284,6 +284,10 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     fileprivate func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
         assert(eventLoop.inEventLoop)
 
+        guard isOpen else {
+            throw ChannelError.ioOnClosedChannel
+        }
+
         switch option {
         case _ as SocketOption:
             let (level, name) = option.value as! (SocketOptionLevel, SocketOptionName)
@@ -327,6 +331,10 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
     fileprivate func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
         assert(eventLoop.inEventLoop)
+
+        guard isOpen else {
+            throw ChannelError.ioOnClosedChannel
+        }
 
         switch option {
         case _ as SocketOption:
@@ -802,6 +810,11 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
     override fileprivate func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
         assert(eventLoop.inEventLoop)
+
+        guard isOpen else {
+            throw ChannelError.ioOnClosedChannel
+        }
+
         switch option {
         case _ as ConnectTimeoutOption:
             connectTimeout = value as? TimeAmount
@@ -818,6 +831,11 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
     override fileprivate func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
         assert(eventLoop.inEventLoop)
+
+        guard isOpen else {
+            throw ChannelError.ioOnClosedChannel
+        }
+
         switch option {
         case _ as ConnectTimeoutOption:
             return connectTimeout as! T.OptionType
@@ -1046,6 +1064,11 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
     override fileprivate func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
         assert(eventLoop.inEventLoop)
+
+        guard isOpen else {
+            throw ChannelError.ioOnClosedChannel
+        }
+
         switch option {
         case _ as BacklogOption:
             backlog = value as! Int32
@@ -1056,6 +1079,11 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
     override fileprivate func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
         assert(eventLoop.inEventLoop)
+
+        guard isOpen else {
+            throw ChannelError.ioOnClosedChannel
+        }
+
         switch option {
         case _ as BacklogOption:
             return backlog as! T.OptionType
@@ -1212,6 +1240,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     override fileprivate func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
         assert(eventLoop.inEventLoop)
+
+        guard isOpen else {
+            throw ChannelError.ioOnClosedChannel
+        }
+
         switch option {
         case _ as WriteSpinOption:
             pendingWrites.writeSpinCount = value as! UInt
@@ -1224,6 +1257,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     override fileprivate func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
         assert(eventLoop.inEventLoop)
+
+        guard isOpen else {
+            throw ChannelError.ioOnClosedChannel
+        }
+
         switch option {
         case _ as WriteSpinOption:
             return pendingWrites.writeSpinCount as! T.OptionType

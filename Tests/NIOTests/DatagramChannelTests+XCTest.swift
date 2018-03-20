@@ -39,6 +39,7 @@ extension DatagramChannelTests {
                 ("testRecvFromFailsWithECONNREFUSED", testRecvFromFailsWithECONNREFUSED),
                 ("testRecvFromFailsWithENOMEM", testRecvFromFailsWithENOMEM),
                 ("testRecvFromFailsWithEFAULT", testRecvFromFailsWithEFAULT),
+                ("testSetGetOptionClosedDatagramChannel", testSetGetOptionClosedDatagramChannel),
            ]
    }
 }
