@@ -325,4 +325,75 @@ class ChannelNotificationTest: XCTestCase {
         try serverChannel.close().wait()
         try serverChannel.closeFuture.wait()
     }
+
+    func testActiveBeforeChannelRead() throws {
+        // Use two EventLoops to ensure the ServerSocketChannel and the SocketChannel are on different threads.
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        class OrderVerificationHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            private enum State {
+                case `init`
+                case active
+                case read
+                case readComplete
+                case inactive
+            }
+
+            private var state = State.`init`
+            private let promise: EventLoopPromise<Void>
+
+            init(_ promise: EventLoopPromise<Void>) {
+                self.promise = promise
+            }
+
+            public func channelActive(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.`init`, state)
+                state = .active
+            }
+
+            public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                XCTAssertEqual(.active, state)
+                state = .read
+            }
+
+            public func channelReadComplete(ctx: ChannelHandlerContext) {
+                XCTAssertTrue(.read == state || .readComplete == state, "State should either be .read or .readComplete but was \(state)")
+                state = .readComplete
+            }
+
+            public func channelInactive(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.readComplete, state)
+                state = .inactive
+
+                promise.succeed(result: ())
+            }
+        }
+
+        let promise: EventLoopPromise<Void> = group.next().newPromise()
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelOption(ChannelOptions.autoRead, value: true)
+            .childChannelInitializer { channel in
+                channel.pipeline.add(handler: OrderVerificationHandler(promise))
+            }
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+
+        var buffer = clientChannel.allocator.buffer(capacity: 2)
+        buffer.write(string: "X")
+        try clientChannel.writeAndFlush(buffer).then {
+            clientChannel.close()
+        }.wait()
+
+        try clientChannel.closeFuture.wait()
+        try serverChannel.close().wait()
+        try serverChannel.closeFuture.wait()
+    }
 }

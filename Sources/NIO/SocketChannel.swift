@@ -294,11 +294,17 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             recvAllocator = value as! RecvByteBufferAllocator
         case _ as AutoReadOption:
             let auto = value as! Bool
-            autoRead = auto
-            if auto {
-                read0()
-            } else {
-                pauseRead0()
+            let old = self.autoRead
+            self.autoRead = auto
+
+            // We only want to call read0() or pauseRead0() if we already registered to the EventLoop if not this will be automatically done
+            // once register0 is called. Beside this we also only need to do it when the value actually change.
+            if !neverRegistered && old != auto {
+                if auto {
+                    read0()
+                } else {
+                    pauseRead0()
+                }
             }
         case _ as MaxMessagesPerReadOption:
             maxMessagesPerRead = value as! UInt
@@ -425,13 +431,15 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
         readPending = true
 
-        registerForReadable()
+        if !neverRegistered {
+            registerForReadable()
+        }
     }
 
     private final func pauseRead0() {
         assert(eventLoop.inEventLoop)
 
-        if self.isOpen {
+        if self.isOpen && !neverRegistered{
             unregisterForReadable()
         }
     }
