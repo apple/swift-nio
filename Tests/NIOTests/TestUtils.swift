@@ -132,3 +132,22 @@ final class NonAcceptingServerSocket: ServerSocket {
         return nil
     }
 }
+
+func assertSetGetOptionOnOpenAndClosed<T: ChannelOption>(channel: Channel, option: T, value: T.OptionType) throws {
+    _ = try channel.setOption(option: option, value: value).wait()
+    _ = try channel.getOption(option: option).wait()
+    try channel.close().wait()
+    try channel.closeFuture.wait()
+
+    do {
+        _ = try channel.setOption(option: option, value: value).wait()
+    } catch let err as ChannelError where err == .ioOnClosedChannel {
+        // expected
+    }
+
+    do {
+        _ = try channel.getOption(option: option).wait()
+    } catch let err as ChannelError where err == .ioOnClosedChannel {
+        // expected
+    }
+}
