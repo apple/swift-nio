@@ -176,4 +176,47 @@ public class SocketChannelTest : XCTestCase {
         try assertSetGetOptionOnOpenAndClosed(channel: clientChannel, option: ChannelOptions.allowRemoteHalfClosure, value: true)
         try assertSetGetOptionOnOpenAndClosed(channel: serverChannel, option: ChannelOptions.backlog, value: 100)
     }
+
+    public func testConnect() throws {
+        final class ActiveVerificationHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+
+            private let promise: EventLoopPromise<Void>
+
+            init(_ promise: EventLoopPromise<Void>) {
+                self.promise = promise
+            }
+
+            func channelActive(ctx: ChannelHandlerContext) {
+                promise.succeed(result: ())
+            }
+        }
+
+        class ConnectSocket: Socket {
+            init() throws {
+                try super.init(protocolFamily: PF_INET, type: Posix.SOCK_STREAM)
+            }
+
+            override func connect(to address: SocketAddress) throws -> Bool {
+                return true
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let socket = try ConnectSocket()
+        let channel = try SocketChannel(socket: socket, eventLoop: group.next() as! SelectableEventLoop)
+        let promise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
+
+        XCTAssertNoThrow(try channel.register().wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: ActiveVerificationHandler(promise)).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())
+
+        try channel.close().wait()
+        try channel.closeFuture.wait()
+        try promise.futureResult.wait()
+    }
 }
