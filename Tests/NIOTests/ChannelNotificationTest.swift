@@ -391,6 +391,7 @@ class ChannelNotificationTest: XCTestCase {
         try clientChannel.writeAndFlush(buffer).then {
             clientChannel.close()
         }.wait()
+        try promise.futureResult.wait()
 
         try clientChannel.closeFuture.wait()
         try serverChannel.close().wait()
