@@ -552,7 +552,6 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             neverRegistered = false
             promise?.succeed(result: ())
             pipeline.fireChannelRegistered0()
-            readIfNeeded0()
         } catch {
             promise?.fail(error: error)
         }
@@ -746,7 +745,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
     }
 
-    fileprivate func becomeActive0(promise: EventLoopPromise<Void>?) {
+    fileprivate final func becomeActive0(promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
         assert(!self.active.load())
         assert(self._isOpen)
@@ -759,6 +758,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             promise.succeed(result: ())
         }
         pipeline.fireChannelActive0()
+        self.readIfNeeded0()
     }
 
     fileprivate func becomeInactive0(promise: EventLoopPromise<Void>?) {
@@ -860,6 +860,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override fileprivate func readFromSocket() throws -> ReadResult {
+        assert(self.eventLoop.inEventLoop)
         // Just allocate one time for the while read loop. This is fine as ByteBuffer is a struct and uses COW.
         var buffer = recvAllocator.buffer(allocator: allocator)
         var result = ReadResult.none
@@ -1104,7 +1105,6 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         p.futureResult.map {
             // Its important to call the methods before we actual notify the original promise for ordering reasons.
             self.becomeActive0(promise: promise)
-            self.readIfNeeded0()
         }.whenFailure{ error in
             promise?.fail(error: error)
         }
@@ -1177,7 +1177,6 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
                 throw ChannelError.ioOnClosedChannel
             }
             ch.becomeActive0(promise: nil)
-            ch.readIfNeeded0()
         }.whenFailure { error in
             ch.close(promise: nil)
         }
@@ -1389,7 +1388,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             try socket.bind(to: address)
             self.updateCachedAddressesFromSocket(updateRemote: false)
             becomeActive0(promise: promise)
-            readIfNeeded0()
         } catch let err {
             promise?.fail(error: err)
         }

@@ -60,6 +60,7 @@ extension ChannelTests {
                 ("testNoChannelReadIfNoAutoRead", testNoChannelReadIfNoAutoRead),
                 ("testEOFOnlyReceivedOnceReadRequested", testEOFOnlyReceivedOnceReadRequested),
                 ("testAcceptsAfterCloseDontCauseIssues", testAcceptsAfterCloseDontCauseIssues),
+                ("testChannelReadsDoesNotHappenAfterRegistration", testChannelReadsDoesNotHappenAfterRegistration),
            ]
    }
 }
