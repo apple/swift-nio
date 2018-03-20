@@ -406,12 +406,16 @@ internal class HappyEyeballsConnector {
 
         // Once we've completed, it's not impossible that we'll get state machine events for
         // some amounts of work. For example, we could get late DNS results and late connection
-        // notifications. We want to just quietly ignore these, as our transition into the complete
-        // state should have already sent cleanup messages to all of these things.
+        // notifications, and can also get late scheduled task callbacks. We want to just quietly
+        // ignore these, as our transition into the complete state should have already sent
+        // cleanup messages to all of these things.
         case (.complete, .resolverACompleted),
              (.complete, .resolverAAAACompleted),
              (.complete, .connectSuccess),
-             (.complete, .connectFailed):
+             (.complete, .connectFailed),
+             (.complete, .connectDelayElapsed),
+             (.complete, .connectTimeoutElapsed),
+             (.complete, .resolutionDelayElapsed):
             break
         default:
             fatalError("Invalid FSM transition attempt: state \(state), input \(input)")
