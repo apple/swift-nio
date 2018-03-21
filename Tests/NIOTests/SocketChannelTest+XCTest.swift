@@ -28,6 +28,14 @@ extension SocketChannelTest {
       return [
                 ("testAsyncSetOption", testAsyncSetOption),
                 ("testDelayedConnectSetsUpRemotePeerAddress", testDelayedConnectSetsUpRemotePeerAddress),
+                ("testAcceptFailsWithECONNABORTED", testAcceptFailsWithECONNABORTED),
+                ("testAcceptFailsWithEMFILE", testAcceptFailsWithEMFILE),
+                ("testAcceptFailsWithENFILE", testAcceptFailsWithENFILE),
+                ("testAcceptFailsWithENOBUFS", testAcceptFailsWithENOBUFS),
+                ("testAcceptFailsWithENOMEM", testAcceptFailsWithENOMEM),
+                ("testAcceptFailsWithEFAULT", testAcceptFailsWithEFAULT),
+                ("testSetGetOptionClosedServerSocketChannel", testSetGetOptionClosedServerSocketChannel),
+                ("testConnect", testConnect),
            ]
    }
 }

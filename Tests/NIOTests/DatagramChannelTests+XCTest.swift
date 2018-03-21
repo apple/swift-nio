@@ -36,6 +36,10 @@ extension DatagramChannelTests {
                 ("testLargeWritesFail", testLargeWritesFail),
                 ("testOneLargeWriteDoesntPreventOthersWriting", testOneLargeWriteDoesntPreventOthersWriting),
                 ("testClosingBeforeFlushFailsAllWrites", testClosingBeforeFlushFailsAllWrites),
+                ("testRecvFromFailsWithECONNREFUSED", testRecvFromFailsWithECONNREFUSED),
+                ("testRecvFromFailsWithENOMEM", testRecvFromFailsWithENOMEM),
+                ("testRecvFromFailsWithEFAULT", testRecvFromFailsWithEFAULT),
+                ("testSetGetOptionClosedDatagramChannel", testSetGetOptionClosedDatagramChannel),
            ]
    }
 }

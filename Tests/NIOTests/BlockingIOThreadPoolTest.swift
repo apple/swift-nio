@@ -23,7 +23,7 @@ class BlockingIOThreadPoolTest: XCTestCase {
         try threadPool.syncShutdownGracefully()
         try threadPool.syncShutdownGracefully()
     }
-    
+
     func testStateCancelled() throws {
         let threadPool = BlockingIOThreadPool(numberOfThreads: 17)
         let group = DispatchGroup()
@@ -35,7 +35,7 @@ class BlockingIOThreadPoolTest: XCTestCase {
         group.wait()
         try threadPool.syncShutdownGracefully()
     }
-    
+
     func testStateActive() throws {
         let threadPool = BlockingIOThreadPool(numberOfThreads: 17)
         threadPool.start()

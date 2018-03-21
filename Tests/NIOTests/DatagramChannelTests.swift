@@ -177,7 +177,7 @@ final class DatagramChannelTests: XCTestCase {
 
         // Now close the channel. When that completes, all the futures should be complete too.
         let fulfilled = try self.firstChannel.close().map {
-            promises.map { $0.fulfilled }.reduce(true, { $0 && $1 })
+            promises.map { $0.isFulfilled }.reduce(true, { $0 && $1 })
         }.wait()
         XCTAssertTrue(fulfilled)
 
@@ -219,7 +219,7 @@ final class DatagramChannelTests: XCTestCase {
         // switches.
         _ = try self.firstChannel.eventLoop.submit {
             let myPromise: EventLoopPromise<()> = self.firstChannel.eventLoop.newPromise()
-            // For datagrams this buffer cannot be very large, becuase if it's larger than the path MTU it
+            // For datagrams this buffer cannot be very large, because if it's larger than the path MTU it
             // will cause EMSGSIZE.
             let bufferSize = 1024 * 5
             var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
@@ -329,5 +329,82 @@ final class DatagramChannelTests: XCTestCase {
         } catch {
             XCTFail("Got unexpected error \(error)")
         }
+    }
+
+    public func testRecvFromFailsWithECONNREFUSED() throws {
+        try assertRecvFromFails(error: ECONNREFUSED, active: true)
+    }
+
+    public func testRecvFromFailsWithENOMEM() throws {
+        try assertRecvFromFails(error: ENOMEM, active: true)
+    }
+
+    public func testRecvFromFailsWithEFAULT() throws {
+        try assertRecvFromFails(error: EFAULT, active: false)
+    }
+
+    private func assertRecvFromFails(error: Int32, active: Bool) throws {
+        final class RecvFromHandler: ChannelInboundHandler {
+            typealias InboundIn = AddressedEnvelope<ByteBuffer>
+            typealias InboundOut = AddressedEnvelope<ByteBuffer>
+
+            private let promise: EventLoopPromise<IOError>
+
+            init(_ promise: EventLoopPromise<IOError>) {
+                self.promise = promise
+            }
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                XCTFail("Should not receive data but got \(self.unwrapInboundIn(data))")
+            }
+
+            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+                if let ioError = error as? IOError {
+                    self.promise.succeed(result: ioError)
+                }
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        class NonRecvFromSocket : Socket {
+            private var error: Int32?
+
+            init(error: Int32) throws {
+                self.error = error
+                try super.init(protocolFamily: AF_INET, type: Posix.SOCK_DGRAM)
+            }
+
+            override func recvfrom(pointer: UnsafeMutablePointer<UInt8>, size: Int, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
+                if let err = self.error {
+                    self.error = nil
+                    throw IOError(errnoCode: err, function: "recvfrom")
+                }
+                return IOResult.wouldBlock(0)
+            }
+        }
+        let socket = try NonRecvFromSocket(error: error)
+        let channel = try DatagramChannel(socket: socket, eventLoop: group.next() as! SelectableEventLoop)
+        let promise: EventLoopPromise<IOError> = channel.eventLoop.newPromise()
+        XCTAssertNoThrow(try channel.register().wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: RecvFromHandler(promise)).wait())
+        XCTAssertNoThrow(try channel.bind(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())
+
+        XCTAssertEqual(active, try channel.eventLoop.submit {
+            channel.readable()
+            return channel.isActive
+        }.wait())
+
+        if active {
+            XCTAssertNoThrow(try channel.close().wait())
+        }
+        let ioError = try promise.futureResult.wait()
+        XCTAssertEqual(error, ioError.errnoCode)
+    }
+
+    public func testSetGetOptionClosedDatagramChannel() throws {
+        try assertSetGetOptionOnOpenAndClosed(channel: firstChannel, option: ChannelOptions.maxMessagesPerRead, value: 1)
     }
 }

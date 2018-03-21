@@ -25,7 +25,7 @@ private struct HTTPParserState {
     var readerIndexAdjustment = 0
     // This is set before http_parser_execute(...) is called and set to nil again after it finish
     var baseAddress: UnsafePointer<UInt8>?
-    
+
     enum DataAwaitingState {
         case messageBegin
         case status
@@ -52,7 +52,7 @@ private struct HTTPParserState {
         self.slice = nil
         return string
     }
-    
+
     mutating func complete(state: DataAwaitingState) {
         switch state {
         case .messageBegin:
@@ -110,62 +110,6 @@ private protocol AnyHTTPDecoder: class {
     func popRequestMethod() -> HTTPMethod?
 }
 
-public extension ChannelPipeline {
-    /// Configure a `ChannelPipeline` for use as a HTTP server.
-    ///
-    /// - parameters:
-    ///     - first: Whether to add the HTTP server at the head of the channel pipeline,
-    ///              or at the tail.
-    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    public func addHTTPServerHandlers(first: Bool = false) -> EventLoopFuture<Void> {
-        return addHandlers(HTTPResponseEncoder(), HTTPRequestDecoder(), first: first)
-    }
-
-    /// Configure a `ChannelPipeline` for use as a HTTP client.
-    ///
-    /// - parameters:
-    ///     - first: Whether to add the HTTP client at the head of the channel pipeline,
-    ///              or at the tail.
-    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    public func addHTTPClientHandlers(first: Bool = false) -> EventLoopFuture<Void> {
-        return addHandlers(HTTPRequestEncoder(), HTTPResponseDecoder(), first: first)
-    }
-
-    /// Configure a `ChannelPipeline` for use as a HTTP server that can perform a HTTP
-    /// upgrade to a non-HTTP protocol: that is, after upgrade the channel pipeline must
-    /// have none of the handlers added by this function in it.
-    ///
-    /// - parameters:
-    ///     - first: Whether to add the HTTP server at the head of the channel pipeline,
-    ///              or at the tail.
-    ///     - upgraders: The HTTP protocol upgraders to offer.
-    ///     - upgradeCompletionHandler: A block that will be fired when the HTTP upgrade is
-    ///                                 complete.
-    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    public func addHTTPServerHandlersWithUpgrader(first: Bool = false,
-                                                  upgraders: [HTTPProtocolUpgrader],
-                                                  _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) -> EventLoopFuture<Void> {
-        let responseEncoder = HTTPResponseEncoder()
-        let requestDecoder = HTTPRequestDecoder()
-        let upgrader = HTTPServerUpgradeHandler(upgraders: upgraders,
-                                                httpEncoder: responseEncoder,
-                                                httpDecoder: requestDecoder,
-                                                upgradeCompletionHandler: upgradeCompletionHandler)
-        return addHandlers(responseEncoder, requestDecoder, upgrader, first: first)
-    }
-
-    /// Adds the provided channel handlers to the pipeline in the order given, taking account
-    /// of the behaviour of `ChannelHandler.add(first:)`.
-    private func addHandlers(_ handlers: ChannelHandler..., first: Bool) -> EventLoopFuture<Void> {
-        var handlers = handlers
-        if first {
-            handlers = handlers.reversed()
-        }
-
-        return EventLoopFuture<Void>.andAll(handlers.map { add(handler: $0) }, eventLoop: eventLoop)
-    }
-}
-
 /// A `ChannelInboundHandler` used to decode HTTP requests. See the documentation
 /// on `HTTPDecoder` for more.
 ///
@@ -211,11 +155,8 @@ public final class HTTPResponseDecoder: HTTPDecoder<HTTPClientResponsePart>, Cha
     }
 
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch unwrapOutboundIn(data) {
-        case .head(let head):
+        if case .head(let head) = unwrapOutboundIn(data) {
             methods.append(head.method)
-        default:
-            break
         }
 
         ctx.write(data, promise: promise)
@@ -232,13 +173,13 @@ public final class HTTPResponseDecoder: HTTPDecoder<HTTPClientResponsePart>, Cha
 public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = HTTPMessageT
-    
+
     private var parser = http_parser()
     private var settings = http_parser_settings()
-    
+
     fileprivate var pendingCallouts: [() -> Void] = []
     fileprivate var state = HTTPParserState()
-    
+
     fileprivate init(type: HTTPMessageT.Type) {
         /* this is a private init, the public versions only allow HTTPClientResponsePart and HTTPServerRequestPart */
         assert(HTTPMessageT.self == HTTPClientResponsePart.self || HTTPMessageT.self == HTTPServerRequestPart.self)
@@ -248,7 +189,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     ///
     /// Naturally, in the base case this returns nil, as servers never issue requests!
     fileprivate func popRequestMethod() -> HTTPMethod? { return nil }
-    
+
     private func newRequestHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPRequestHead {
         let method = HTTPMethod.from(httpParserMethod: http_method(rawValue: parser.pointee.method))
         let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
@@ -256,15 +197,15 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         state.currentHeaders = nil
         return request
     }
-    
+
     private func newResponseHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPResponseHead {
-        let status = HTTPResponseStatus.from(parser.pointee.status_code, state.currentStatus!)
+        let status = HTTPResponseStatus(statusCode: Int(parser.pointee.status_code), reasonPhrase: state.currentStatus!)
         let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
         let response = HTTPResponseHead(version: version, status: status, headers: state.currentHeaders ?? HTTPHeaders())
         state.currentHeaders = nil
         return response
     }
-    
+
     public func decoderAdded(ctx: ChannelHandlerContext) {
         if HTTPMessageT.self == HTTPServerRequestPart.self {
             c_nio_http_parser_init(&parser, HTTP_REQUEST)
@@ -326,10 +267,10 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             let ctx = evacuateChannelHandlerContext(parser)
             let handler = evacuateHTTPDecoder(parser)
             assert(handler.state.dataAwaitingState == .body)
-            
+
             // Calculate the index of the data in the cumulationBuffer so we can slice out the ByteBuffer without doing any memory copy
             let index = handler.state.calculateIndex(data: data!, length: len)
-            
+
             let slice = handler.state.cumulationBuffer!.getSlice(at: index, length: len)!
             handler.pendingCallouts.append {
                 switch handler {
@@ -341,7 +282,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
                     fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
                 }
             }
-            
+
             return 0
         }
 
@@ -373,7 +314,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             }
             return 0
         }
-        
+
         settings.on_url = { parser, data, len in
             let handler = evacuateHTTPDecoder(parser)
             assert(handler is HTTPRequestDecoder)
@@ -410,7 +351,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     public func decoderRemoved(ctx: ChannelHandlerContext) {
         // Remove the stored reference to ChannelHandlerContext
         parser.data = UnsafeMutableRawPointer(bitPattern: 0x0000deadbeef0000)
-        
+
         // Set the callbacks to nil as we dont need these anymore
         settings.on_body = nil
         settings.on_chunk_complete = nil
@@ -422,7 +363,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         settings.on_header_value = nil
         settings.on_message_begin = nil
     }
-    
+
     public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         if let slice = state.slice {
             // If we stored a slice before we need to ensure we move the readerIndex so we don't try to parse the data again. We
@@ -430,16 +371,16 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             state.slice = (buffer.readerIndex, slice.length)
             buffer.moveReaderIndex(forwardBy: state.readerIndexAdjustment)
         }
-        
+
         let result = try buffer.withVeryUnsafeBytes { (pointer) -> size_t in
             state.baseAddress = pointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
-            
+
             let result = state.baseAddress!.withMemoryRebound(to: Int8.self, capacity: pointer.count, { p in
                 c_nio_http_parser_execute(&parser, &settings, p.advanced(by: buffer.readerIndex), buffer.readableBytes)
             })
-            
+
             state.baseAddress = nil
-            
+
             let errno = parser.http_errno
             if errno != 0 {
                 throw HTTPParserError.httpError(fromCHTTPParserErrno: http_errno(rawValue: errno))!
@@ -462,7 +403,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             return .continue
         }
     }
-    
+
     public func channelReadComplete(ctx: ChannelHandlerContext) {
         /* call all the callbacks generated while parsing */
         let pending = self.pendingCallouts
@@ -630,139 +571,6 @@ extension HTTPMethod {
             return .UNLINK
         default:
             fatalError("Unexpected http_method \(httpParserMethod)")
-        }
-    }
-}
-
-extension HTTPResponseStatus {
-    /// Create a `HTTPResponseStatus` from a given status and reason produced by
-    /// `http_parser`.
-    ///
-    /// - Parameter statusCode: The integer value of the HTTP response status code
-    /// - Parameter reasonPhrase: The textual reason phrase from the response.
-    /// - Returns: The corresponding `HTTPResponseStatus`.
-    static func from(_ statusCode: UInt32, _ reasonPhrase: String) -> HTTPResponseStatus {
-        switch statusCode {
-        case 100:
-            return .`continue`
-        case 101:
-            return .switchingProtocols
-        case 102:
-            return .processing
-        case 200:
-            return .ok
-        case 201:
-            return .created
-        case 202:
-            return .accepted
-        case 203:
-            return .nonAuthoritativeInformation
-        case 204:
-            return .noContent
-        case 205:
-            return .resetContent
-        case 206:
-            return .partialContent
-        case 207:
-            return .multiStatus
-        case 208:
-            return .alreadyReported
-        case 226:
-            return .imUsed
-        case 300:
-            return .multipleChoices
-        case 301:
-            return .movedPermanently
-        case 302:
-            return .found
-        case 303:
-            return .seeOther
-        case 304:
-            return .notModified
-        case 305:
-            return .useProxy
-        case 307:
-            return .temporaryRedirect
-        case 308:
-            return .permanentRedirect
-        case 400:
-            return .badRequest
-        case 401:
-            return .unauthorized
-        case 402:
-            return .paymentRequired
-        case 403:
-            return .forbidden
-        case 404:
-            return .notFound
-        case 405:
-            return .methodNotAllowed
-        case 406:
-            return .notAcceptable
-        case 407:
-            return .proxyAuthenticationRequired
-        case 408:
-            return .requestTimeout
-        case 409:
-            return .conflict
-        case 410:
-            return .gone
-        case 411:
-            return .lengthRequired
-        case 412:
-            return .preconditionFailed
-        case 413:
-            return .payloadTooLarge
-        case 414:
-            return .uriTooLong
-        case 415:
-            return .unsupportedMediaType
-        case 416:
-            return .rangeNotSatisfiable
-        case 417:
-            return .expectationFailed
-        case 421:
-            return .misdirectedRequest
-        case 422:
-            return .unprocessableEntity
-        case 423:
-            return .locked
-        case 424:
-            return .failedDependency
-        case 426:
-            return .upgradeRequired
-        case 428:
-            return .preconditionRequired
-        case 429:
-            return .tooManyRequests
-        case 431:
-            return .requestHeaderFieldsTooLarge
-        case 451:
-            return .unavailableForLegalReasons
-        case 500:
-            return .internalServerError
-        case 501:
-            return .notImplemented
-        case 502:
-            return .badGateway
-        case 503:
-            return .serviceUnavailable
-        case 504:
-            return .gatewayTimeout
-        case 505:
-            return .httpVersionNotSupported
-        case 506:
-            return .variantAlsoNegotiates
-        case 507:
-            return .insufficientStorage
-        case 508:
-            return .loopDetected
-        case 510:
-            return .notExtended
-        case 511:
-            return .networkAuthenticationRequired
-        default:
-            return .custom(code: UInt(statusCode), reasonPhrase: reasonPhrase)
         }
     }
 }

@@ -18,7 +18,7 @@ import NIOConcurrencyHelpers
 
 /// A thread pool that should be used for blocking IO.
 public final class BlockingIOThreadPool {
-    
+
     /// The state of the `WorkItem`.
     public enum WorkItemState {
         /// The `WorkItem` is active now and in process by the `BlockingIOThreadPool`.
@@ -26,10 +26,10 @@ public final class BlockingIOThreadPool {
         /// The `WorkItem` was cancelled and will not be processed by the `BlockingIOThreadPool`.
         case cancelled
     }
-    
+
     /// The work that should be done by the `BlockingIOThreadPool`.
     public typealias WorkItem = (WorkItemState) -> Void
-    
+
     private enum State {
         /// The `BlockingIOThreadPool` is already stopped.
         case stopped
@@ -43,7 +43,7 @@ public final class BlockingIOThreadPool {
     private let queues: [DispatchQueue]
     private var state: State = .stopped
     private let numberOfThreads: Int
-    
+
     /// Gracefully shutdown this `BlockingIOThreadPool`. All tasks will be run before shutdown will take place.
     ///
     /// - parameters:
@@ -62,17 +62,17 @@ public final class BlockingIOThreadPool {
             case .shuttingDown, .stopped:
                 ()
             }
-            
+
             self.queues.forEach { q in
                 q.async(group: g) {}
             }
-            
+
             g.notify(queue: queue) {
                 callback(nil)
             }
         }
     }
-    
+
     /// Submit a `WorkItem` to process.
     ///
     /// - parameters:
@@ -92,7 +92,7 @@ public final class BlockingIOThreadPool {
         /* if item couldn't be added run it immediately indicating that it couldn't be run */
         item.map { $0(.cancelled) }
     }
-    
+
     /// Initialize a `BlockingIOThreadPool` thread pool with `numberOfThreads` threads.
     ///
     /// - parameters:
@@ -103,13 +103,13 @@ public final class BlockingIOThreadPool {
             DispatchQueue(label: "BlockingIOThreadPool thread #\($0)")
         }
     }
-    
+
     private func process(identifier: Int) {
         var item: WorkItem? = nil
         repeat {
             /* wait until work has become available */
             self.semaphore.wait()
-            
+
             item = self.lock.withLock { () -> (WorkItem)? in
                 switch self.state {
                 case .running(var items):
@@ -129,7 +129,7 @@ public final class BlockingIOThreadPool {
             item.map { $0(.active) }
         } while item != nil
     }
-    
+
     /// Start the `NonBlockingIOThreadPool` if not already started.
     public func start() {
         self.lock.withLock {
@@ -157,7 +157,7 @@ extension BlockingIOThreadPool {
     public func shutdownGracefully(_ callback: @escaping (Error?) -> Void) {
         self.shutdownGracefully(queue: .global(), callback)
     }
-    
+
     public func syncShutdownGracefully() throws {
         let errorStorageLock = Lock()
         var errorStorage: Swift.Error? = nil

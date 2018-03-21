@@ -41,8 +41,30 @@ private final class HTTPHandler: ChannelInboundHandler {
     public typealias InboundIn = HTTPServerRequestPart
     public typealias OutboundOut = HTTPServerResponsePart
 
+    private enum State {
+        case idle
+        case waitingForRequestBody
+        case sendingResponse
+
+        mutating func requestReceived() {
+            precondition(self == .idle, "Invalid state for request received: \(self)")
+            self = .waitingForRequestBody
+        }
+
+        mutating func requestComplete() {
+            precondition(self == .waitingForRequestBody, "Invalid state for request complete: \(self)")
+            self = .sendingResponse
+        }
+
+        mutating func responseComplete() {
+            precondition(self == .sendingResponse, "Invalid state for response complete: \(self)")
+            self = .idle
+        }
+    }
+
     private var buffer: ByteBuffer! = nil
     private var keepAlive = false
+    private var state = State.idle
     private let htdocsPath: String
 
     private var infoSavedRequestHead: HTTPRequestHead?
@@ -50,7 +72,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
     private var continuousCount: Int = 0
 
-    private var handler: ((ChannelHandlerContext, HTTPServerRequestPart) -> Void)? = nil
+    private var handler: ((ChannelHandlerContext, HTTPServerRequestPart) -> Void)?
     private var handlerFuture: EventLoopFuture<()>?
     private let fileIO: NonBlockingFileIO
 
@@ -64,9 +86,12 @@ private final class HTTPHandler: ChannelInboundHandler {
         case .head(let request):
             self.infoSavedRequestHead = request
             self.infoSavedBodyBytes = 0
+            self.keepAlive = request.isKeepAlive
+            self.state.requestReceived()
         case .body(buffer: let buf):
             self.infoSavedBodyBytes += buf.readableBytes
-        case .end(_):
+        case .end:
+            self.state.requestComplete()
             let response = """
             HTTP method: \(self.infoSavedRequestHead!.method)\r
             URL: \(self.infoSavedRequestHead!.uri)\r
@@ -81,7 +106,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             headers.add(name: "Content-Length", value: "\(response.utf8.count)")
             ctx.write(self.wrapOutboundOut(.head(HTTPResponseHead(version: self.infoSavedRequestHead!.version, status: .ok, headers: headers))), promise: nil)
             ctx.write(self.wrapOutboundOut(.body(.byteBuffer(self.buffer))), promise: nil)
-            ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+            self.completeResponse(ctx, trailers: nil, promise: nil)
         }
     }
 
@@ -92,6 +117,8 @@ private final class HTTPHandler: ChannelInboundHandler {
     func handleEcho(ctx: ChannelHandlerContext, request: HTTPServerRequestPart, balloonInMemory: Bool = false) {
         switch request {
         case .head(let request):
+            self.keepAlive = request.isKeepAlive
+            self.state.requestReceived()
             if balloonInMemory {
                 self.buffer.clear()
             } else {
@@ -103,15 +130,16 @@ private final class HTTPHandler: ChannelInboundHandler {
             } else {
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buf))), promise: nil)
             }
-        case .end(_):
+        case .end:
+            self.state.requestComplete()
             if balloonInMemory {
                 var headers = HTTPHeaders()
                 headers.add(name: "Content-Length", value: "\(self.buffer.readableBytes)")
                 ctx.write(self.wrapOutboundOut(.head(HTTPResponseHead(version: HTTPVersion(major: 1, minor: 0), status: .ok, headers: headers))), promise: nil)
                 ctx.write(self.wrapOutboundOut(.body(.byteBuffer(self.buffer))), promise: nil)
-                ctx.write(self.wrapOutboundOut(.end(nil)), promise: nil)
+                self.completeResponse(ctx, trailers: nil, promise: nil)
             } else {
-                ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                self.completeResponse(ctx, trailers: nil, promise: nil)
             }
         }
     }
@@ -119,10 +147,13 @@ private final class HTTPHandler: ChannelInboundHandler {
     func handleJustWrite(ctx: ChannelHandlerContext, request: HTTPServerRequestPart, statusCode: HTTPResponseStatus = .ok, string: String, trailer: (String, String)? = nil, delay: TimeAmount = .nanoseconds(0)) {
         switch request {
         case .head(let request):
+            self.keepAlive = request.isKeepAlive
+            self.state.requestReceived()
             ctx.writeAndFlush(self.wrapOutboundOut(.head(.init(version: request.version, status: .ok))), promise: nil)
         case .body(buffer: _):
             ()
-        case .end(_):
+        case .end:
+            self.state.requestComplete()
             _ = ctx.eventLoop.scheduleTask(in: delay) { () -> Void in
                 var buf = ctx.channel.allocator.buffer(capacity: string.utf8.count)
                 buf.write(string: string)
@@ -132,7 +163,8 @@ private final class HTTPHandler: ChannelInboundHandler {
                     trailers = HTTPHeaders()
                     trailers?.add(name: trailer.0, value: trailer.1)
                 }
-                ctx.writeAndFlush(self.wrapOutboundOut(.end(trailers)), promise: nil)
+
+                self.completeResponse(ctx, trailers: trailers, promise: nil)
             }
         }
     }
@@ -140,44 +172,52 @@ private final class HTTPHandler: ChannelInboundHandler {
     func handleContinuousWrites(ctx: ChannelHandlerContext, request: HTTPServerRequestPart) {
         switch request {
         case .head(let request):
+            self.keepAlive = request.isKeepAlive
             self.continuousCount = 0
+            self.state.requestReceived()
             func doNext() {
                 self.buffer.clear()
                 self.continuousCount += 1
                 self.buffer.write(string: "line \(self.continuousCount)\n")
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).map {
                     _ = ctx.eventLoop.scheduleTask(in: .milliseconds(400), doNext)
-                }.whenFailure { error in
-                    ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                }.whenFailure { (_: Error) in
+                    self.completeResponse(ctx, trailers: nil, promise: nil)
                 }
             }
             ctx.writeAndFlush(self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
             doNext()
+        case .end:
+            self.state.requestComplete()
         default:
-            ()
+            break
         }
     }
 
     func handleMultipleWrites(ctx: ChannelHandlerContext, request: HTTPServerRequestPart, strings: [String], delay: TimeAmount) {
         switch request {
         case .head(let request):
+            self.keepAlive = request.isKeepAlive
             self.continuousCount = 0
+            self.state.requestReceived()
             func doNext() {
                 self.buffer.clear()
                 self.buffer.write(string: strings[self.continuousCount])
+                self.continuousCount += 1
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenSuccess {
-                    if self.continuousCount < strings.count - 1 {
+                    if self.continuousCount < strings.count {
                         _ = ctx.eventLoop.scheduleTask(in: delay, doNext)
                     } else {
-                        ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                        self.completeResponse(ctx, trailers: nil, promise: nil)
                     }
                 }
-                self.continuousCount += 1
             }
             ctx.writeAndFlush(self.wrapOutboundOut(.head(HTTPResponseHead(version: request.version, status: .ok))), promise: nil)
             doNext()
+        case .end:
+            self.state.requestComplete()
         default:
-            ()
+            break
         }
     }
 
@@ -198,7 +238,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         case "/dynamic/continuous":
             return self.handleContinuousWrites
         case "/dynamic/count-to-ten":
-            return { self.handleMultipleWrites(ctx: $0, request: $1, strings: (1...10).map { "\($0)\r\n" }, delay: .milliseconds(100)) }
+            return { self.handleMultipleWrites(ctx: $0, request: $1, strings: (1...10).map { "\($0)" }, delay: .milliseconds(100)) }
         case "/dynamic/client-ip":
             return { ctx, req in self.handleJustWrite(ctx: ctx, request: req, string: "\(ctx.remoteAddress.debugDescription)") }
         default:
@@ -211,10 +251,12 @@ private final class HTTPHandler: ChannelInboundHandler {
 
         switch request {
         case .head(let request):
+            self.keepAlive = request.isKeepAlive
+            self.state.requestReceived()
             guard !request.uri.containsDotDot() else {
                 let response = HTTPResponseHead(version: request.version, status: .forbidden)
                 ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
-                ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                self.completeResponse(ctx, trailers: nil, promise: nil)
                 return
             }
             let path = self.htdocsPath + "/" + path
@@ -229,7 +271,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                 switch ioMethod {
                 case .nonblockingFileIO:
                     var responseStarted = false
-                    self.fileIO.readChunked(fileRegion: region,
+                    let f = self.fileIO.readChunked(fileRegion: region,
                                             chunkSize: 32 * 1024,
                                             allocator: ctx.channel.allocator,
                                             eventLoop: ctx.eventLoop) { buffer in
@@ -238,27 +280,33 @@ private final class HTTPHandler: ChannelInboundHandler {
                                                     ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
                                                 }
                                                 return ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buffer))))
-                        }.then {
-                            ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)))
-                        }.thenIfError { error in
-                            if !responseStarted {
-                                let response = HTTPResponseHead(version: request.version, status: .ok)
-                                ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
-                                var buffer = ctx.channel.allocator.buffer(capacity: 100)
-                                buffer.write(string: "fail: \(error)")
-                                ctx.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-                                return ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)))
-                            } else {
-                                return ctx.close()
-                            }
-                        }.whenComplete {
-                            _ = try? file.close()
+                                            }
+                    f.then { () -> EventLoopFuture<Void> in
+                        let p: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
+                        self.completeResponse(ctx, trailers: nil, promise: p)
+                        return p.futureResult
+                    }.thenIfError { error in
+                        if !responseStarted {
+                            let response = HTTPResponseHead(version: request.version, status: .ok)
+                            ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
+                            var buffer = ctx.channel.allocator.buffer(capacity: 100)
+                            buffer.write(string: "fail: \(error)")
+                            ctx.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+                            self.state.responseComplete()
+                            return ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)))
+                        } else {
+                            return ctx.close()
                         }
+                    }.whenComplete {
+                        _ = try? file.close()
+                    }
                 case .sendfile:
                     ctx.write(self.wrapOutboundOut(.head(response))).then {
                         ctx.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region))))
                     }.then {
-                        ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)))
+                        let p: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
+                        self.completeResponse(ctx, trailers: nil, promise: p)
+                        return p.futureResult
                     }.thenIfError { (_: Error) in
                         ctx.close()
                     }.whenComplete {
@@ -289,11 +337,22 @@ private final class HTTPHandler: ChannelInboundHandler {
                 ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 ctx.channel.close(promise: nil)
             }
-        case .end(_):
-            ()
+        case .end:
+            self.state.requestComplete()
         default:
             fatalError("oh noes: \(request)")
         }
+    }
+
+    private func completeResponse(_ ctx: ChannelHandlerContext, trailers: HTTPHeaders?, promise: EventLoopPromise<Void>?) {
+        self.state.responseComplete()
+
+        let promise = self.keepAlive ? promise : (promise ?? ctx.eventLoop.newPromise())
+        if !self.keepAlive {
+            promise!.futureResult.whenComplete { ctx.close(promise: nil) }
+        }
+
+        ctx.writeAndFlush(self.wrapOutboundOut(.end(trailers)), promise: promise)
     }
 
     func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
@@ -305,8 +364,6 @@ private final class HTTPHandler: ChannelInboundHandler {
 
         switch reqPart {
         case .head(let request):
-            keepAlive = request.isKeepAlive
-
             if request.uri.unicodeScalars.starts(with: "/dynamic".unicodeScalars) {
                 self.handler = self.dynamicHandler(request: request)
                 self.handler!(ctx, reqPart)
@@ -321,6 +378,9 @@ private final class HTTPHandler: ChannelInboundHandler {
                 return
             }
 
+            self.keepAlive = request.isKeepAlive
+            self.state.requestReceived()
+
             var responseHead = HTTPResponseHead(version: request.version, status: HTTPResponseStatus.ok)
             responseHead.headers.add(name: "content-length", value: "12")
             let response = HTTPServerResponsePart.head(responseHead)
@@ -328,16 +388,10 @@ private final class HTTPHandler: ChannelInboundHandler {
         case .body:
             break
         case .end:
+            self.state.requestComplete()
             let content = HTTPServerResponsePart.body(.byteBuffer(buffer!.slice()))
             ctx.write(self.wrapOutboundOut(content), promise: nil)
-
-            if keepAlive {
-                ctx.write(self.wrapOutboundOut(HTTPServerResponsePart.end(nil)), promise: nil)
-            } else {
-                ctx.write(self.wrapOutboundOut(HTTPServerResponsePart.end(nil))).whenComplete {
-                    ctx.close(promise: nil)
-                }
-            }
+            self.completeResponse(ctx, trailers: nil, promise: nil)
         }
     }
 
@@ -348,6 +402,24 @@ private final class HTTPHandler: ChannelInboundHandler {
     func handlerAdded(ctx: ChannelHandlerContext) {
         self.buffer = ctx.channel.allocator.buffer(capacity: 12)
         self.buffer.write(staticString: "Hello World!")
+    }
+
+    func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+        switch event {
+        case let evt as ChannelEvent where evt == ChannelEvent.inputClosed:
+            // The remote peer half-closed the channel. At this time, any
+            // outstanding response will now get the channel closed, and
+            // if we are idle or waiting for a request body to finish we
+            // will close the channel immediately.
+            switch self.state {
+            case .idle, .waitingForRequestBody:
+                ctx.close(promise: nil)
+            case .sendingResponse:
+                self.keepAlive = false
+            }
+        default:
+            ctx.fireUserInboundEventTriggered(event)
+        }
     }
 }
 
@@ -368,7 +440,8 @@ enum BindTo {
 
 let htdocs: String
 let bindTarget: BindTo
-switch (arg1, arg1.flatMap { Int($0) }, arg2, arg2.flatMap { Int($0) }, arg3) {
+
+switch (arg1, arg1.flatMap(Int.init), arg2, arg2.flatMap(Int.init), arg3) {
 case (.some(let h), _ , _, .some(let p), let maybeHtdocs):
     /* second arg an integer --> host port [htdocs] */
     bindTarget = .ip(host: h, port: p)
@@ -386,7 +459,7 @@ default:
     bindTarget = BindTo.ip(host: defaultHost, port: defaultPort)
 }
 
-let group = MultiThreadedEventLoopGroup(numThreads: 1)
+let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
 let threadPool = BlockingIOThreadPool(numberOfThreads: 6)
 threadPool.start()
 
@@ -398,7 +471,7 @@ let bootstrap = ServerBootstrap(group: group)
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
-        channel.pipeline.addHTTPServerHandlers().then {
+        channel.pipeline.configureHTTPServerPipeline().then {
             channel.pipeline.add(handler: HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
         }
     }
@@ -407,6 +480,7 @@ let bootstrap = ServerBootstrap(group: group)
     .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+    .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
 
 defer {
     try! group.syncShutdownGracefully()
@@ -422,7 +496,7 @@ let channel = try { () -> Channel in
     case .unixDomainSocket(let path):
         return try bootstrap.bind(unixDomainSocketPath: path).wait()
     }
-    }()
+}()
 
 print("Server started and listening on \(channel.localAddress!), htdocs path \(htdocs)")
 

@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import XCTest
-import NIO
+@testable import NIO
 import Dispatch
 import NIOConcurrencyHelpers
 
@@ -35,7 +35,7 @@ public class SocketChannelTest : XCTestCase {
 
         // Create two channels with different event loops.
         let channelA = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
-        let channelB: Channel = try { 
+        let channelB: Channel = try {
             while true {
                 let channel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
                 if channel.eventLoop !== channelA.eventLoop {
@@ -92,5 +92,131 @@ public class SocketChannelTest : XCTestCase {
         // setup causes us to get nil as the remote address, even though we connected (and we did, as these are all
         // up right now).
         remoteAddresses.assertAll { $0 != nil }
+    }
+    
+    public func testAcceptFailsWithECONNABORTED() throws {
+        try assertAcceptFails(error: ECONNABORTED, active: true)
+    }
+
+    public func testAcceptFailsWithEMFILE() throws {
+        try assertAcceptFails(error: EMFILE, active: true)
+    }
+    
+    public func testAcceptFailsWithENFILE() throws {
+        try assertAcceptFails(error: ENFILE, active: true)
+    }
+    
+    public func testAcceptFailsWithENOBUFS() throws {
+        try assertAcceptFails(error: ENOBUFS, active: true)
+    }
+    
+    public func testAcceptFailsWithENOMEM() throws {
+        try assertAcceptFails(error: ENOMEM, active: true)
+    }
+    
+    public func testAcceptFailsWithEFAULT() throws {
+        try assertAcceptFails(error: EFAULT, active: false)
+    }
+    
+    private func assertAcceptFails(error: Int32, active: Bool) throws {
+        final class AcceptHandler: ChannelInboundHandler {
+            typealias InboundIn = Channel
+            typealias InboundOut = Channel
+
+            private let promise: EventLoopPromise<IOError>
+
+            init(_ promise: EventLoopPromise<IOError>) {
+                self.promise = promise
+            }
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                XCTFail("Should not accept a Channel but got \(self.unwrapInboundIn(data))")
+            }
+
+            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+                if let ioError = error as? IOError {
+                    self.promise.succeed(result: ioError)
+                }
+            }
+        }
+        
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let socket = try NonAcceptingServerSocket(errors: [error])
+        let serverChannel = try ServerSocketChannel(serverSocket: socket, eventLoop: group.next() as! SelectableEventLoop, group: group)
+        let promise: EventLoopPromise<IOError> = serverChannel.eventLoop.newPromise()
+
+        XCTAssertNoThrow(try serverChannel.register().wait())
+        XCTAssertNoThrow(try serverChannel.pipeline.add(handler: AcceptHandler(promise)).wait())
+        XCTAssertNoThrow(try serverChannel.bind(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())
+    
+        XCTAssertEqual(active, try serverChannel.eventLoop.submit {
+            serverChannel.readable()
+            return serverChannel.isActive
+        }.wait())
+    
+        if active {
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        }
+
+        let ioError = try promise.futureResult.wait()
+        XCTAssertEqual(error, ioError.errnoCode)
+    }
+
+    public func testSetGetOptionClosedServerSocketChannel() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+
+        // Create two channels with different event loops.
+        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+
+        try assertSetGetOptionOnOpenAndClosed(channel: clientChannel, option: ChannelOptions.allowRemoteHalfClosure, value: true)
+        try assertSetGetOptionOnOpenAndClosed(channel: serverChannel, option: ChannelOptions.backlog, value: 100)
+    }
+
+    public func testConnect() throws {
+        final class ActiveVerificationHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+
+            private let promise: EventLoopPromise<Void>
+
+            init(_ promise: EventLoopPromise<Void>) {
+                self.promise = promise
+            }
+
+            func channelActive(ctx: ChannelHandlerContext) {
+                promise.succeed(result: ())
+            }
+        }
+
+        class ConnectSocket: Socket {
+            init() throws {
+                try super.init(protocolFamily: PF_INET, type: Posix.SOCK_STREAM)
+            }
+
+            override func connect(to address: SocketAddress) throws -> Bool {
+                return true
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let socket = try ConnectSocket()
+        let channel = try SocketChannel(socket: socket, eventLoop: group.next() as! SelectableEventLoop)
+        let promise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
+
+        XCTAssertNoThrow(try channel.register().wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: ActiveVerificationHandler(promise)).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())
+
+        try channel.close().wait()
+        try channel.closeFuture.wait()
+        try promise.futureResult.wait()
     }
 }

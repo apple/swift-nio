@@ -34,7 +34,7 @@ let sysFree = free
 ///
 /// - note: `ByteBufferAllocator` is thread-safe.
 public struct ByteBufferAllocator {
-    
+
     /// Create a fresh `ByteBufferAllocator`. In the future the allocator might use for example allocation pools and
     /// therefore it's recommended to reuse `ByteBufferAllocators` where possible instead of creating fresh ones in
     /// many places.
@@ -87,7 +87,7 @@ private func toIndex(_ value: Int) -> Index {
 /// more bytes (octets).
 ///
 /// ### Allocation
-/// Use `ByteBufferAllocator.buffer(capacity: desiredCapacity)` to allocate a new `ByteBuffer`.
+/// Use `allocator.buffer(capacity: desiredCapacity)` to allocate a new `ByteBuffer`.
 ///
 /// ### Supported types
 /// A variety of types can be read/written from/to a `ByteBuffer`. Using Swift's `extension` mechanism you can easily
@@ -100,13 +100,9 @@ private func toIndex(_ value: Int) -> Index {
 ///  - `[UInt8]` and generally any `Collection` (& `ContiguousCollection`) of `UInt8`
 ///
 /// ### Random Access
-/// `ByteBuffer` provides two properties which are indices into the `ByteBuffer` to support sequential access:
-///  - `readerIndex`, the index of the next readable byte
-///  - `writerIndex`, the index of the next byte to write
-///
 /// For every supported type `ByteBuffer` usually contains two methods for random access:
 ///
-///  1. `get<type>(at: Int, length: Int)` where `<type>` is for example `string`, `Data`, `bytes` (for `[UInt8]`)
+///  1. `get<type>(at: Int, length: Int)` where `<type>` is for example `String`, `Data`, `Bytes` (for `[UInt8]`)
 ///  2. `set(<type>: Type, at: Int)`
 ///
 /// Example:
@@ -118,9 +114,13 @@ private func toIndex(_ value: Int) -> Index {
 ///     buf.set(integer: 17 as Int, at: 11)
 ///     let seventeen: Int = buf.getInteger(at: 11)
 ///
-/// If needed, `ByteBuffer` will automatically resize its storage to accomodate your `set` request.
+/// If needed, `ByteBuffer` will automatically resize its storage to accommodate your `set` request.
 ///
 /// ### Sequential Access
+/// `ByteBuffer` provides two properties which are indices into the `ByteBuffer` to support sequential access:
+///  - `readerIndex`, the index of the next readable byte
+///  - `writerIndex`, the index of the next byte to write
+///
 /// For every supported type `ByteBuffer` usually contains two methods for sequential access:
 ///
 ///  1. `read<type>(length: Int)` to read `length` bytes from the current `readerIndex` (and then advance the reader index by `length` bytes)
@@ -217,7 +217,7 @@ public struct ByteBuffer {
             self.allocator.memcpy(new.bytes, self.bytes.advanced(by: Int(slice.lowerBound)), slice.count)
             return new
         }
-        
+
         public func reallocStorage(capacity: Capacity) {
             let ptr = self.allocator.realloc(self.bytes, Int(capacity))
             /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
@@ -226,7 +226,7 @@ public struct ByteBuffer {
             self.capacity = capacity
             self.fullSlice = 0..<self.capacity
         }
-        
+
         private func deallocate() {
             self.allocator.free(self.bytes)
         }
@@ -271,7 +271,7 @@ public struct ByteBuffer {
         if self._slice.lowerBound + index + capacity > self._slice.upperBound {
             // double the capacity, we may want to use different strategies depending on the actual current capacity later on.
             var newCapacity = max(1, toCapacity(self.capacity))
-            
+
             // double the capacity until the requested capacity can be full-filled
             repeat {
                 precondition(newCapacity != Capacity.max, "cannot make ByteBuffers larger than \(newCapacity)")
@@ -281,7 +281,7 @@ public struct ByteBuffer {
                     newCapacity = Capacity.max
                 }
             } while newCapacity < index || newCapacity - index < capacity
-            
+
             self._storage.reallocStorage(capacity: newCapacity)
             self._slice = _slice.lowerBound..<_slice.lowerBound + newCapacity
         }
@@ -293,7 +293,7 @@ public struct ByteBuffer {
         assert(newIndex >= 0 && newIndex <= writerIndex)
         self._readerIndex = newIndex
     }
-    
+
     private mutating func moveWriterIndex(to newIndex: Index) {
         assert(newIndex >= 0 && newIndex <= toCapacity(self._slice.count))
         self._writerIndex = newIndex
@@ -361,10 +361,10 @@ public struct ByteBuffer {
         return self._slice.count
     }
 
-    /// Change the capacity to at least `newCapacity` bytes.
+    /// Change the capacity to at least `to` bytes.
     ///
     /// - parameters:
-    ///     - newCapacity: The desired minimum capacity.
+    ///     - to: The desired minimum capacity.
     public mutating func changeCapacity(to newCapacity: Int) {
         precondition(newCapacity >= self.writerIndex,
                      "new capacity \(newCapacity) less than the writer index (\(self.writerIndex))")

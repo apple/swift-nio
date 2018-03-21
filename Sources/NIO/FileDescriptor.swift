@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 public protocol FileDescriptor {
-    
+
     /// Will be called with the file descriptor if still open, if not it will
     /// throw an `IOError`.
     ///
@@ -24,10 +24,10 @@ public protocol FileDescriptor {
     ///     - body: The closure to execute if the `FileDescriptor` is still open.
     /// - throws: If either the `FileDescriptor` was closed before or the closure throws by itself.
     func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T
-    
+
     /// `true` if this `FileDescriptor` is open (which means it was not closed yet).
     var isOpen: Bool { get }
-    
+
     /// Close this `FileDescriptor`.
     func close() throws
 }

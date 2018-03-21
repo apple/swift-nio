@@ -7,7 +7,7 @@ It's like [Netty](https://netty.io), but written for Swift.
 
 ## Conceptual Overview
 
-SwiftNIO is fundamentally a low-level tool for building high-performance networking applications in Swift. It particularly targets those use-cases where using a "thread-per-connection" model of concurrency is inefficient or untenable. This is a common limitation when building servers that use a large number of relatively low-utilisation connections, such as HTTP servers.
+SwiftNIO is fundamentally a low-level tool for building high-performance networking applications in Swift. It particularly targets those use-cases where using a "thread-per-connection" model of concurrency is inefficient or untenable. This is a common limitation when building servers that use a large number of relatively low-utilization connections, such as HTTP servers.
 
 To achieve its goals SwiftNIO extensively uses "non-blocking I/O": hence the name! Non-blocking I/O differs from the more common blocking I/O model because the application does not wait for data to be sent to or received from the network: instead, SwiftNIO asks for the kernel to notify it when I/O operations can be performed without waiting.
 
@@ -54,7 +54,7 @@ Almost every file descriptor that a user interacts with in a SwiftNIO program is
 
 `Channel`s by themselves, however, are not useful. After all, it is a rare application that doesn't want to do anything with the data it sends or receives on a socket! So the other important part of the `Channel` is the `ChannelPipeline`.
 
-A `ChannelPipeline` is a sequence of objects, called `ChannelHandler`s, that process events on a `Channel`. The `ChannelHandlers` process these events one after another, in order, mutating and transforming events as they go. This can be thought of as a data processing pipeline; hence the name `ChannelPipeline`.
+A `ChannelPipeline` is a sequence of objects, called `ChannelHandler`s, that process events on a `Channel`. The `ChannelHandler`s process these events one after another, in order, mutating and transforming events as they go. This can be thought of as a data processing pipeline; hence the name `ChannelPipeline`.
 
 All `ChannelHandler`s are either Inbound or Outbound handlers, or both. Inbound handlers process "inbound" events: events like reading data from a socket, reading socket close, or other kinds of events initiated by remote peers. Outbound handlers process "outbound" events, such as writes, connection attempts, and local socket closes.
 
@@ -82,11 +82,11 @@ While it is possible to configure and register `Channel`s with `EventLoop`s dire
 
 For this reason, SwiftNIO ships a number of `Bootstrap` objects whose purpose is to streamline the creation of channels. Some `Bootstrap` objects also provide other functionality, such as support for Happy Eyeballs for making TCP connection attempts.
 
-Currently SwiftNIO ships with three `Bootstrap` objects: `ServerBootstrap`, for bootstrapping listening channels; `ClientBootstrap`, for bootstrapping client TCP channels; and `DatagramBootstrap` for bootstraping UDP channels.
+Currently SwiftNIO ships with three `Bootstrap` objects: `ServerBootstrap`, for bootstrapping listening channels; `ClientBootstrap`, for bootstrapping client TCP channels; and `DatagramBootstrap` for bootstrapping UDP channels.
 
 #### ByteBuffer
 
-The majority of the work in a SwiftNIO application involves shuffling buffers of bytes around. At the very least, data is sent and received to and from the network in the form of buffers of bytes. For this reason it's very important to have a high-performance data structure that is optimised for the kind of work SwiftNIO applications perform.
+The majority of the work in a SwiftNIO application involves shuffling buffers of bytes around. At the very least, data is sent and received to and from the network in the form of buffers of bytes. For this reason it's very important to have a high-performance data structure that is optimized for the kind of work SwiftNIO applications perform.
 
 For this reason, SwiftNIO provides `ByteBuffer`, a fast copy-on-write byte buffer that forms a key building block of most SwiftNIO applications.
 
@@ -104,7 +104,7 @@ An `EventLoopFuture<T>` is essentially a container for the return value of a fun
 
 If you had to poll the future to detect when it completed that would be quite inefficient, so `EventLoopFuture<T>` is designed to have managed callbacks. Essentially, you can hang callbacks off the future that will be executed when a result is available. The `EventLoopFuture<T>` will even carefully arrange the scheduling to ensure that these callbacks always execute on the event loop that initially created the promise, which helps ensure that you don't need too much synchronization around `EventLoopFuture<T>` callbacks.
 
-There are several functions for applying callbacks to `EventLoopFuture<T>`, depening on how and when you want them to execute. Details of these functions is left to the API documentation.
+There are several functions for applying callbacks to `EventLoopFuture<T>`, depending on how and when you want them to execute. Details of these functions is left to the API documentation.
 
 ### Design Philosophy
 
@@ -125,26 +125,41 @@ The following projects contain useful protocol implementations that do not live 
 
  - [API documentation](https://apple.github.io/swift-nio/docs/current/NIO/index.html)
 
+## Example Usage
+
+There are currently several example projects that demonstrate how to use SwiftNIO.
+
+- **chat client** https://github.com/apple/swift-nio/tree/master/Sources/NIOChatClient
+- **chat server** https://github.com/apple/swift-nio/tree/master/Sources/NIOChatServer
+- **echo client** https://github.com/apple/swift-nio/tree/master/Sources/NIOEchoClient
+- **echo server** https://github.com/apple/swift-nio/tree/master/Sources/NIOEchoServer
+- **HTTP server** https://github.com/apple/swift-nio/tree/master/Sources/NIOHTTP1Server
 
 ## Getting Started
 
 SwiftNIO primarily uses [SwiftPM](https://swift.org/package-manager/) as its build tool, so we recommend using that as well. If you want to depend on SwiftNIO in your own project, it's as simple as adding a `dependencies` clause to your `Package.swift`:
 
-    dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", from: "1.0.0")
-    ]
+```swift
+dependencies: [
+    .package(url: "https://github.com/apple/swift-nio.git", from: "1.0.0")
+]
+```
 
 and then adding the appropriate SwiftNIO module(s) to your target dependencies.
 
-To work on SwiftNIO itself, or to investigate some of the demonstration applications, you can clone the repository directly and use SwiftPM to help build it. For example, you can run the folloiwng commands to compile and run the example echo server:
+To work on SwiftNIO itself, or to investigate some of the demonstration applications, you can clone the repository directly and use SwiftPM to help build it. For example, you can run the following commands to compile and run the example echo server:
 
-    swift build
-    swift test
-    swift run NIOEchoServer
+```bash
+swift build
+swift test
+swift run NIOEchoServer
+```
 
 To verify that it is working, you can use another shell to attempt to connect to it:
 
-    echo "Hello SwiftNIO" | nc localhost 9999
+```bash
+echo "Hello SwiftNIO" | nc localhost 9999
+```
 
 If all goes well, you'll see the message echoed back to you.
 
@@ -152,18 +167,18 @@ If all goes well, you'll see the message echoed back to you.
 
 Alternatively, you may want to develop or test with `docker-compose`.
 
-To do that, first `cd docker` and then run the following commands:
+First make sure you have [Docker](https://www.docker.com/community-edition) installed, next run the following commands:
 
-- `docker-compose up test`
+- `docker-compose -f docker/docker-compose.yaml up test`
 
-  Will create a base image with Swift 4.0 (if missing), compile SwiftNIO and run the tests
+  Will create a base image with Swift runtime and other build and test dependencies, compile SwiftNIO and run the unit and integration tests
 
-- `docker-compose up echo`
+- `docker-compose -f docker/docker-compose.yaml up echo`
 
   Will create a base image, compile SwiftNIO, and run a sample `NIOEchoServer` on
   `localhost:9999`. Test it by `echo Hello SwiftNIO | nc localhost 9999`.
 
-- `docker-compose up http`
+- `docker-compose -f docker/docker-compose.yaml up http`
 
   Will create a base image, compile SwiftNIO, and run a sample `NIOHTTP1Server` on
   `localhost:8888`. Test it by `curl http://localhost:8888`

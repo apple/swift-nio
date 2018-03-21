@@ -83,34 +83,71 @@ internal extension Channel {
 
 final class ByteCountingHandler : ChannelInboundHandler {
     typealias InboundIn = ByteBuffer
-    
+
     private let numBytes: Int
     private let promise: EventLoopPromise<ByteBuffer>
     private var buffer: ByteBuffer!
-    
+
     init(numBytes: Int, promise: EventLoopPromise<ByteBuffer>) {
         self.numBytes = numBytes
         self.promise = promise
     }
-    
+
     func handlerAdded(ctx: ChannelHandlerContext) {
         buffer = ctx.channel.allocator.buffer(capacity: numBytes)
         if self.numBytes == 0 {
             self.promise.succeed(result: buffer)
         }
     }
-    
+
     func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         var currentBuffer = self.unwrapInboundIn(data)
         buffer.write(buffer: &currentBuffer)
-        
+
         if buffer.readableBytes == numBytes {
             promise.succeed(result: buffer)
         }
     }
-    
+
     func assertReceived(buffer: ByteBuffer) throws {
         let received = try promise.futureResult.wait()
         XCTAssertEqual(buffer, received)
+    }
+}
+
+final class NonAcceptingServerSocket: ServerSocket {
+    private var errors: [Int32]
+
+    init(errors: [Int32]) throws {
+        // Reverse so its cheaper to remove errors.
+        self.errors = errors.reversed()
+        try super.init(protocolFamily: AF_INET, setNonBlocking: true)
+    }
+
+    override func accept(setNonBlocking: Bool) throws -> Socket? {
+        if let err = self.errors.last {
+            _ = self.errors.removeLast()
+            throw IOError(errnoCode: err, function: "accept")
+        }
+        return nil
+    }
+}
+
+func assertSetGetOptionOnOpenAndClosed<T: ChannelOption>(channel: Channel, option: T, value: T.OptionType) throws {
+    _ = try channel.setOption(option: option, value: value).wait()
+    _ = try channel.getOption(option: option).wait()
+    try channel.close().wait()
+    try channel.closeFuture.wait()
+
+    do {
+        _ = try channel.setOption(option: option, value: value).wait()
+    } catch let err as ChannelError where err == .ioOnClosedChannel {
+        // expected
+    }
+
+    do {
+        _ = try channel.getOption(option: option).wait()
+    } catch let err as ChannelError where err == .ioOnClosedChannel {
+        // expected
     }
 }

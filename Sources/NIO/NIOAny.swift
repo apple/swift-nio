@@ -51,12 +51,12 @@ public struct NIOAny {
     public init<T>(_ value: T) {
         self.storage = _NIOAny(value)
     }
-    
+
     enum _NIOAny {
         case ioData(IOData)
         case bufferEnvelope(AddressedEnvelope<ByteBuffer>)
         case other(Any)
-        
+
         init<T>(_ value: T) {
             switch value {
             case let value as ByteBuffer:
@@ -73,7 +73,7 @@ public struct NIOAny {
             }
         }
     }
-    
+
     /// Try unwrapping the wrapped message as `ByteBuffer`.
     ///
     /// returns: The wrapped `ByteBuffer` or `nil` if the wrapped message is not a `ByteBuffer`.
@@ -84,7 +84,7 @@ public struct NIOAny {
             return nil
         }
     }
-    
+
     /// Force unwrapping the wrapped message as `ByteBuffer`.
     ///
     /// returns: The wrapped `ByteBuffer` or crash if the wrapped message is not a `ByteBuffer`.
@@ -95,7 +95,7 @@ public struct NIOAny {
             fatalError("tried to decode as type \(ByteBuffer.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
         }
     }
-    
+
     /// Try unwrapping the wrapped message as `IOData`.
     ///
     /// returns: The wrapped `IOData` or `nil` if the wrapped message is not a `IOData`.
@@ -106,7 +106,7 @@ public struct NIOAny {
             return nil
         }
     }
-    
+
     /// Force unwrapping the wrapped message as `IOData`.
     ///
     /// returns: The wrapped `IOData` or crash if the wrapped message is not a `IOData`.
@@ -117,7 +117,7 @@ public struct NIOAny {
             fatalError("tried to decode as type \(IOData.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
         }
     }
-    
+
     /// Try unwrapping the wrapped message as `FileRegion`.
     ///
     /// returns: The wrapped `FileRegion` or `nil` if the wrapped message is not a `FileRegion`.
@@ -128,7 +128,7 @@ public struct NIOAny {
             return nil
         }
     }
-    
+
     /// Force unwrapping the wrapped message as `FileRegion`.
     ///
     /// returns: The wrapped `FileRegion` or crash if the wrapped message is not a `FileRegion`.
@@ -161,7 +161,7 @@ public struct NIOAny {
             fatalError("tried to decode as type \(AddressedEnvelope<ByteBuffer>.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
         }
     }
-    
+
     /// Try unwrapping the wrapped message as `T`.
     ///
     /// returns: The wrapped `T` or `nil` if the wrapped message is not a `T`.
@@ -172,7 +172,7 @@ public struct NIOAny {
             return nil
         }
     }
-    
+
     /// Force unwrapping the wrapped message as `T`.
     ///
     /// returns: The wrapped `T` or crash if the wrapped message is not a `T`.
@@ -183,7 +183,7 @@ public struct NIOAny {
             fatalError("tried to decode as type \(T.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
         }
     }
-    
+
     /// Force unwrapping the wrapped message as `T`.
     ///
     /// returns: The wrapped `T` or crash if the wrapped message is not a `T`.

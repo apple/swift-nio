@@ -55,6 +55,12 @@ extension ChannelTests {
                 ("testRejectsInvalidData", testRejectsInvalidData),
                 ("testWeDontCrashIfChannelReleasesBeforePipeline", testWeDontCrashIfChannelReleasesBeforePipeline),
                 ("testAskForLocalAndRemoteAddressesAfterChannelIsClosed", testAskForLocalAndRemoteAddressesAfterChannelIsClosed),
+                ("testReceiveAddressAfterAccept", testReceiveAddressAfterAccept),
+                ("testWeDontJamSocketsInANoIOState", testWeDontJamSocketsInANoIOState),
+                ("testNoChannelReadIfNoAutoRead", testNoChannelReadIfNoAutoRead),
+                ("testEOFOnlyReceivedOnceReadRequested", testEOFOnlyReceivedOnceReadRequested),
+                ("testAcceptsAfterCloseDontCauseIssues", testAcceptsAfterCloseDontCauseIssues),
+                ("testChannelReadsDoesNotHappenAfterRegistration", testChannelReadsDoesNotHappenAfterRegistration),
            ]
    }
 }

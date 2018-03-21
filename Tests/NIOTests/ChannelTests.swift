@@ -14,7 +14,8 @@
 
 import XCTest
 @testable import NIO
-
+import NIOConcurrencyHelpers
+import Dispatch
 
 class ChannelLifecycleHandler: ChannelInboundHandler {
     public typealias InboundIn = Any
@@ -38,7 +39,7 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
         currentState = state
         stateHistory.append(state)
     }
-    
+
     public func channelRegistered(ctx: ChannelHandlerContext) {
         XCTAssertEqual(currentState, .unregistered)
         XCTAssertFalse(ctx.channel.isActive)
@@ -322,7 +323,7 @@ public class ChannelTests: XCTestCase {
                            "number of promises (\(promises.count)) != number of promise states (\(promiseStates[everythingState - 1].count))",
                 file: file, line: line)
             _ = zip(promises, promiseStates[everythingState - 1]).map { p, pState in
-                XCTAssertEqual(p.futureResult.fulfilled, pState, "promise states incorrect (\(everythingState) callbacks)", file: file, line: line)
+                XCTAssertEqual(p.futureResult.isFulfilled, pState, "promise states incorrect (\(everythingState) callbacks)", file: file, line: line)
             }
 
             XCTAssertEqual(everythingState, singleState + multiState + fileState,
@@ -350,7 +351,7 @@ public class ChannelTests: XCTestCase {
             XCTAssertNil(expectedFileWritabilities, "no callbacks calles but apparently some file writes expected", file: file, line: line)
 
             _ = zip(promises, promiseStates[0]).map { p, pState in
-                XCTAssertEqual(p.futureResult.fulfilled, pState, "promise states incorrect (no callbacks)", file: file, line: line)
+                XCTAssertEqual(p.futureResult.isFulfilled, pState, "promise states incorrect (no callbacks)", file: file, line: line)
             }
         }
         return result
@@ -553,7 +554,7 @@ public class ChannelTests: XCTestCase {
              `[[1, 1, 1, 1], [1, 1, 1], [1, 1], [1]]`
              */
             let expectedVectorWrites = Array((2...numberOfBytes).reversed()).map { n in
-                return Array(repeating: 1, count: n)
+                Array(repeating: 1, count: n)
             }
 
             /* this will create an `Array` like this (for `numberOfBytes == 4`)
@@ -652,15 +653,15 @@ public class ChannelTests: XCTestCase {
 
             pwm.failAll(error: ChannelError.operationUnsupported, close: true)
 
-            XCTAssertTrue(ps.map { $0.futureResult.fulfilled }.reduce(true) { $0 && $1 })
+            XCTAssertTrue(ps.map { $0.futureResult.isFulfilled }.reduce(true) { $0 && $1 })
         }
     }
 
     /// Test that with a few massive buffers, we don't offer more than we should to `writev` if the individual chunks fit.
     func testPendingWritesNoMoreThanWritevLimitIsWritten() throws {
         let el = EmbeddedEventLoop()
-        let alloc = ByteBufferAllocator(hookedMalloc: { _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
-                                        hookedRealloc: { _, _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
+        let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
+                                        hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
                                         hookedFree: { _ in },
                                         hookedMemcpy: { _, _, _ in })
         /* each buffer is half the writev limit */
@@ -691,8 +692,8 @@ public class ChannelTests: XCTestCase {
     /// Test that with a massive buffers (bigger than writev size), we don't offer more than we should to `writev`.
     func testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk() throws {
         let el = EmbeddedEventLoop()
-        let alloc = ByteBufferAllocator(hookedMalloc: { _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
-                                        hookedRealloc: { _, _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
+        let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
+                                        hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)! },
                                         hookedFree: { _ in },
                                         hookedMemcpy: { _, _, _ in })
         /* each buffer is half the writev limit */
@@ -1043,7 +1044,7 @@ public class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-       
+
         do {
             // This must throw as 198.51.100.254 is reserved for documentation only
             _ = try ClientBootstrap(group: group)
@@ -1079,26 +1080,26 @@ public class ChannelTests: XCTestCase {
             }
         }
     }
-    
+
     func testCloseOutput() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        
+
         let server = try ServerSocket(protocolFamily: PF_INET)
         defer {
             XCTAssertNoThrow(try server.close())
         }
         try server.bind(to: SocketAddress.newAddressResolving(host: "127.0.0.1", port: 0))
         try server.listen()
-        
+
         let byteCountingHandler = ByteCountingHandler(numBytes: 4, promise: group.next().newPromise())
         let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .output, promise: group.next().newPromise())
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
-                return channel.pipeline.add(handler: verificationHandler).then {
-                    return channel.pipeline.add(handler: byteCountingHandler)
+                channel.pipeline.add(handler: verificationHandler).then {
+                    channel.pipeline.add(handler: byteCountingHandler)
                 }
             }
             .connect(to: try! server.localAddress())
@@ -1111,13 +1112,13 @@ public class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try channel.close(mode: .all).wait())
         }
-        
+
         var buffer = channel.allocator.buffer(capacity: 12)
         buffer.write(string: "1234")
 
         try channel.writeAndFlush(NIOAny(buffer)).wait()
         try channel.close(mode: .output).wait()
-        
+
         verificationHandler.waitForEvent()
         do {
             try channel.writeAndFlush(NIOAny(buffer)).wait()
@@ -1128,41 +1129,40 @@ public class ChannelTests: XCTestCase {
         let written = try buffer.withUnsafeReadableBytes { p in
             try accepted.write(pointer: p.baseAddress!.assumingMemoryBound(to: UInt8.self), size: 4)
         }
-        switch written {
-        case .processed(let numBytes):
+        if case .processed(let numBytes) = written {
             XCTAssertEqual(4, numBytes)
-        default:
+        } else {
             XCTFail()
         }
         try byteCountingHandler.assertReceived(buffer: buffer)
     }
-    
+
     func testCloseInput() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        
+
         let server = try ServerSocket(protocolFamily: PF_INET)
         defer {
             XCTAssertNoThrow(try server.close())
         }
         try server.bind(to: SocketAddress.newAddressResolving(host: "127.0.0.1", port: 0))
         try server.listen()
-        
+
         class VerifyNoReadHandler : ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
-            
+
             public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
                 XCTFail("Received data: \(data)")
             }
         }
-        
+
         let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .input, promise: group.next().newPromise())
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
-                return channel.pipeline.add(handler: VerifyNoReadHandler()).then {
-                    return channel.pipeline.add(handler: verificationHandler)
+                channel.pipeline.add(handler: VerifyNoReadHandler()).then {
+                    channel.pipeline.add(handler: verificationHandler)
                 }
             }
             .connect(to: try! server.localAddress())
@@ -1170,53 +1170,53 @@ public class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try accepted.close())
         }
-        
+
         let channel = try future.wait()
         defer {
             XCTAssertNoThrow(try channel.close(mode: .all).wait())
         }
-       
+
         try channel.close(mode: .input).wait()
-        
+
         verificationHandler.waitForEvent()
-        
+
         var buffer = channel.allocator.buffer(capacity: 12)
         buffer.write(string: "1234")
-        
+
         let written = try buffer.withUnsafeReadableBytes { p in
             try accepted.write(pointer: p.baseAddress!.assumingMemoryBound(to: UInt8.self), size: 4)
         }
-        
+
         switch written {
         case .processed(let numBytes):
             XCTAssertEqual(4, numBytes)
         default:
             XCTFail()
         }
-        
+
         try channel.eventLoop.submit {
             // Dummy task execution to give some time for an actual read to open (which should not happen as we closed the input).
         }.wait()
     }
-    
+
     func testHalfClosure() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        
+
         let server = try ServerSocket(protocolFamily: PF_INET)
         defer {
             XCTAssertNoThrow(try server.close())
         }
         try server.bind(to: SocketAddress.newAddressResolving(host: "127.0.0.1", port: 0))
         try server.listen()
-        
+
         let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .input, promise: group.next().newPromise())
 
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
-                return channel.pipeline.add(handler: verificationHandler)
+                channel.pipeline.add(handler: verificationHandler)
             }
             .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             .connect(to: try! server.localAddress())
@@ -1224,40 +1224,40 @@ public class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try accepted.close())
         }
-        
+
         let channel = try future.wait()
         defer {
             XCTAssertNoThrow(try channel.close(mode: .all).wait())
         }
-        
+
         try accepted.shutdown(how: .WR)
-        
+
         verificationHandler.waitForEvent()
-        
+
         var buffer = channel.allocator.buffer(capacity: 12)
         buffer.write(string: "1234")
-        
+
         try channel.writeAndFlush(NIOAny(buffer)).wait()
     }
-    
+
     enum ShutDownEvent {
         case input
         case output
     }
     private class ShutdownVerificationHandler: ChannelInboundHandler {
         typealias InboundIn = ByteBuffer
-        
+
         private var inputShutdownEventReceived = false
         private var outputShutdownEventReceived = false
-        
+
         private let promise: EventLoopPromise<Void>
         private let shutdownEvent: ShutDownEvent
-        
+
         init(shutdownEvent: ShutDownEvent, promise: EventLoopPromise<Void>) {
             self.promise = promise
             self.shutdownEvent = shutdownEvent
         }
-        
+
         public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
             switch event {
             case let ev as ChannelEvent:
@@ -1265,30 +1265,30 @@ public class ChannelTests: XCTestCase {
                 case .inputClosed:
                     XCTAssertFalse(inputShutdownEventReceived)
                     inputShutdownEventReceived = true
-                    
+
                     if shutdownEvent == .input {
                         promise.succeed(result: ())
                     }
                 case .outputClosed:
                     XCTAssertFalse(outputShutdownEventReceived)
                     outputShutdownEventReceived = true
-                    
+
                     if shutdownEvent == .output {
                         promise.succeed(result: ())
                     }
                 }
-               
+
                 fallthrough
             default:
                 ctx.fireUserInboundEventTriggered(event)
             }
         }
-        
+
         public func waitForEvent() {
             // We always notify it with a success so just force it with !
             try! promise.futureResult.wait()
         }
-        
+
         public func channelInactive(ctx: ChannelHandlerContext) {
             switch shutdownEvent {
             case .input:
@@ -1298,7 +1298,7 @@ public class ChannelTests: XCTestCase {
                 XCTAssertFalse(inputShutdownEventReceived)
                 XCTAssertTrue(outputShutdownEventReceived)
             }
-            
+
             promise.succeed(result: ())
         }
     }
@@ -1411,5 +1411,418 @@ public class ChannelTests: XCTestCase {
         for f in [ serverChannel.remoteAddress, serverChannel.localAddress, clientChannel.remoteAddress, clientChannel.localAddress ] {
             XCTAssertNil(f)
         }
+    }
+
+    func testReceiveAddressAfterAccept() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        class AddressVerificationHandler : ChannelInboundHandler {
+            typealias InboundIn = Never
+
+            public func channelActive(ctx: ChannelHandlerContext) {
+                XCTAssertNotNil(ctx.channel.localAddress)
+                XCTAssertNotNil(ctx.channel.remoteAddress)
+                ctx.channel.close(promise: nil)
+            }
+        }
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer { ch in
+                ch.pipeline.add(handler: AddressVerificationHandler())
+            }
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+
+        try clientChannel.closeFuture.wait()
+        try serverChannel.syncCloseAcceptingAlreadyClosed()
+    }
+
+    func testWeDontJamSocketsInANoIOState() throws {
+        final class ReadDelayer: ChannelDuplexHandler {
+            typealias InboundIn = Any
+            typealias InboundOut = Any
+            typealias OutboundIn = Any
+            typealias OutboundOut = Any
+
+            public var reads = 0
+            private var ctx: ChannelHandlerContext!
+            private var readCountPromise: EventLoopPromise<Void>!
+            private var waitingForReadPromise: EventLoopPromise<Void>?
+
+            func handlerAdded(ctx: ChannelHandlerContext) {
+                self.ctx = ctx
+                self.readCountPromise = ctx.eventLoop.newPromise()
+            }
+
+            public func expectRead(loop: EventLoop) -> EventLoopFuture<Void> {
+                return loop.submit {
+                    self.waitingForReadPromise = loop.newPromise()
+                }.then {
+                    self.waitingForReadPromise!.futureResult
+                }
+            }
+
+            func channelReadComplete(ctx: ChannelHandlerContext) {
+                self.waitingForReadPromise?.succeed(result: ())
+                self.waitingForReadPromise = nil
+            }
+
+            func read(ctx: ChannelHandlerContext) {
+                self.reads += 1
+
+                // Allow the first read through.
+                if self.reads == 1 {
+                    self.ctx.read()
+                }
+            }
+
+            public func issueDelayedRead() {
+                self.ctx.read()
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let readDelayer = ReadDelayer()
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer {
+                $0.pipeline.add(handler: readDelayer)
+            }
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+
+        // We send a first write and expect it to arrive.
+        var buffer = clientChannel.allocator.buffer(capacity: 12)
+        let firstReadPromise = readDelayer.expectRead(loop: serverChannel.eventLoop)
+        buffer.write(staticString: "hello, world")
+        XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
+        XCTAssertNoThrow(try firstReadPromise.wait())
+
+        // We send a second write. This won't arrive immediately.
+        XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
+        let readFuture = readDelayer.expectRead(loop: serverChannel.eventLoop)
+        try serverChannel.eventLoop.scheduleTask(in: .milliseconds(100)) {
+            XCTAssertFalse(readFuture.isFulfilled)
+        }.futureResult.wait()
+
+        // Ok, now let it proceed.
+        try serverChannel.eventLoop.submit {
+            XCTAssertEqual(readDelayer.reads, 2)
+            readDelayer.issueDelayedRead()
+        }.wait()
+
+        // The read should go through.
+        XCTAssertNoThrow(try readFuture.wait())
+    }
+
+    func testNoChannelReadIfNoAutoRead() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        class NoChannelReadVerificationHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                XCTFail("Should not be called as autoRead is false and we did not call read(), but received \(self.unwrapInboundIn(data))")
+            }
+        }
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelOption(ChannelOptions.autoRead, value: false)
+            .childChannelInitializer { ch in
+                ch.pipeline.add(handler: NoChannelReadVerificationHandler())
+            }
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+        var buffer = clientChannel.allocator.buffer(capacity: 8)
+        buffer.write(string: "test")
+        try clientChannel.writeAndFlush(buffer).wait()
+        try clientChannel.close().wait()
+
+        // Wait for 100 ms.
+        usleep(100 * 1000);
+        try serverChannel.close().wait()
+    }
+
+    func testEOFOnlyReceivedOnceReadRequested() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        class ChannelInactiveVerificationHandler: ChannelDuplexHandler {
+            typealias InboundIn = ByteBuffer
+            typealias OutboundIn = ByteBuffer
+
+            private let promise: EventLoopPromise<Void>
+            private var readRequested = false
+
+            init(_ promise: EventLoopPromise<Void>) {
+                self.promise = promise
+            }
+
+            public func channelActive(ctx: ChannelHandlerContext) {
+                _ = ctx.eventLoop.scheduleTask(in: .milliseconds(1)) {
+                    self.read(ctx: ctx)
+                }
+            }
+
+            public func read(ctx: ChannelHandlerContext) {
+                readRequested = true
+                ctx.read()
+            }
+
+            public func channelInactive(ctx: ChannelHandlerContext) {
+                XCTAssertTrue(readRequested, "Should only be called after a read was requested")
+                promise.succeed(result: ())
+            }
+        }
+
+        let promise: EventLoopPromise<Void> = group.next().newPromise()
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelOption(ChannelOptions.autoRead, value: false)
+            .childChannelInitializer { ch in
+                ch.pipeline.add(handler: ChannelInactiveVerificationHandler(promise))
+            }
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+        var buffer = clientChannel.allocator.buffer(capacity: 8)
+        buffer.write(string: "test")
+        try clientChannel.writeAndFlush(buffer).wait()
+        try clientChannel.close().wait()
+        try promise.futureResult.wait()
+
+        try serverChannel.close().wait()
+    }
+
+    func testAcceptsAfterCloseDontCauseIssues() throws {
+        class ChannelCollector {
+            let q = DispatchQueue(label: "q")
+            let group: EventLoopGroup
+            var channels: [ObjectIdentifier: Channel] = [:]
+
+            init(group: EventLoopGroup) {
+                self.group = group
+            }
+
+            deinit {
+                XCTAssertTrue(channels.isEmpty, "\(channels)")
+            }
+
+            func add(_ channel: Channel) {
+                self.q.sync {
+                    assert(self.channels[ObjectIdentifier(channel)] == nil)
+                    channels[ObjectIdentifier(channel)] = channel
+                }
+            }
+
+            func remove(_ channel: Channel) {
+                let removed: Channel? = self.q.sync {
+                    return self.channels.removeValue(forKey: ObjectIdentifier(channel))
+                }
+                XCTAssertTrue(removed != nil)
+            }
+
+            func closeAll() -> [EventLoopFuture<()>] {
+                return q.sync { self.channels.values }.map { channel in
+                    channel.close()
+                }
+            }
+        }
+
+        class CheckActiveHandler: ChannelInboundHandler {
+            public typealias InboundIn = Any
+            public typealias OutboundOut = Any
+
+            private var isActive = false
+            private let channelCollector: ChannelCollector
+
+            init(channelCollector: ChannelCollector) {
+                self.channelCollector = channelCollector
+            }
+
+            deinit {
+                XCTAssertFalse(self.isActive)
+            }
+
+            func channelActive(ctx: ChannelHandlerContext) {
+                XCTAssertFalse(self.isActive)
+                self.isActive = true
+                self.channelCollector.add(ctx.channel)
+                ctx.fireChannelActive()
+            }
+
+            func channelInactive(ctx: ChannelHandlerContext) {
+                XCTAssertTrue(self.isActive)
+                self.isActive = false
+                self.channelCollector.remove(ctx.channel)
+                ctx.fireChannelInactive()
+            }
+        }
+
+        func runTest() throws {
+            let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
+            defer {
+                try! group.syncShutdownGracefully()
+            }
+            let collector = ChannelCollector(group: group)
+            let serverBoot = ServerBootstrap(group: group)
+                .childChannelInitializer { channel in
+                    return channel.pipeline.add(handler: CheckActiveHandler(channelCollector: collector))
+            }
+            let listeningChannel = try serverBoot.bind(host: "127.0.0.1", port: 0).wait()
+            let clientBoot = ClientBootstrap(group: group)
+            try clientBoot.connect(to: listeningChannel.localAddress!).wait().close().wait()
+            let closeFutures = collector.closeAll()
+            let strayClient = try clientBoot.connect(to: listeningChannel.localAddress!).wait()
+            try strayClient.close().wait()
+            try listeningChannel.close().wait()
+            closeFutures.forEach {
+                do {
+                    try $0.wait()
+                } catch let e as ChannelError where e == .alreadyClosed {
+                    // ok
+                } catch {
+                    XCTFail("unexpected error \(error) received")
+                }
+            }
+        }
+
+        do {
+            for _ in 0..<1000 {
+                try runTest()
+            }
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
+    func testChannelReadsDoesNotHappenAfterRegistration() throws {
+        class SocketThatSucceedsOnSecondConnectForPort123: Socket {
+            init(protocolFamily: CInt) throws {
+                try super.init(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: true)
+            }
+            override func connect(to address: SocketAddress) throws -> Bool {
+                if address.port == 123 {
+                    return true
+                } else {
+                    return try super.connect(to: address)
+                }
+            }
+        }
+        class ReadDoesNotHappen: ChannelInboundHandler {
+            typealias InboundIn = Any
+            private let hasRegisteredPromise: EventLoopPromise<()>
+            private let hasUnregisteredPromise: EventLoopPromise<()>
+            private let hasReadPromise: EventLoopPromise<()>
+            enum State {
+                case start
+                case registered
+                case active
+                case read
+            }
+            private var state: State = .start
+            init(hasRegisteredPromise: EventLoopPromise<()>, hasUnregisteredPromise: EventLoopPromise<()>, hasReadPromise: EventLoopPromise<()>) {
+                self.hasRegisteredPromise = hasRegisteredPromise
+                self.hasUnregisteredPromise = hasUnregisteredPromise
+                self.hasReadPromise = hasReadPromise
+            }
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                XCTAssertEqual(.active, self.state)
+                self.state = .read
+                self.hasReadPromise.succeed(result: ())
+            }
+            func channelActive(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.registered, self.state)
+                self.state = .active
+            }
+            func channelRegistered(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.start, self.state)
+                self.state = .registered
+                self.hasRegisteredPromise.succeed(result: ())
+            }
+            func channelUnregistered(ctx: ChannelHandlerContext) {
+                self.hasUnregisteredPromise.succeed(result: ())
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let serverEL = group.next()
+        let clientEL = group.next()
+        precondition(serverEL !== clientEL)
+        let sc = try SocketChannel(socket: SocketThatSucceedsOnSecondConnectForPort123(protocolFamily: PF_INET), eventLoop: clientEL as! SelectableEventLoop)
+
+        class WriteImmediatelyHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+            typealias OutboundOut = ByteBuffer
+
+            private let writeDonePromise: EventLoopPromise<()>
+
+            init(writeDonePromise: EventLoopPromise<()>) {
+                self.writeDonePromise = writeDonePromise
+            }
+
+            func channelActive(ctx: ChannelHandlerContext) {
+                var buffer = ctx.channel.allocator.buffer(capacity: 4)
+                buffer.write(string: "foo")
+                ctx.writeAndFlush(NIOAny(buffer), promise: self.writeDonePromise)
+            }
+        }
+
+        let serverWriteHappenedPromise: EventLoopPromise<()> = serverEL.next().newPromise()
+        let clientHasRegistered: EventLoopPromise<()> = serverEL.next().newPromise()
+        let clientHasUnregistered: EventLoopPromise<()> = serverEL.next().newPromise()
+        let clientHasRead: EventLoopPromise<()> = serverEL.next().newPromise()
+
+        let bootstrap = try ServerBootstrap(group: serverEL)
+            .childChannelInitializer { channel in
+                channel.pipeline.add(handler: WriteImmediatelyHandler(writeDonePromise: serverWriteHappenedPromise))
+            }
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        // This is a bit ugly, we're trying to fabricate a situation that can happen in the real world which is that
+        // a socket is readable straight after becoming registered & connected.
+        // In here what we're doing is that we flip the order around and connect it first, make sure the server
+        // has written something and then on registration something is available to be read. We then 'fake connect'
+        // again which our special `Socket` subclass will let succeed.
+        _ = try sc.selectable.connect(to: bootstrap.localAddress!)
+        try serverWriteHappenedPromise.futureResult.wait()
+        try sc.pipeline.add(handler: ReadDoesNotHappen(hasRegisteredPromise: clientHasRegistered,
+                                                       hasUnregisteredPromise: clientHasUnregistered,
+                                                       hasReadPromise: clientHasRead)).then {
+                // this will succeed and should not cause the socket to be read even though there'll be something
+                // available to be read immediately
+                sc.register()
+            }.then {
+                // this would normally fail but our special Socket subclass will let it succeed.
+                sc.connect(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 123))
+            }.wait()
+        try clientHasRegistered.futureResult.wait()
+        try clientHasRead.futureResult.wait()
+        try sc.syncCloseAcceptingAlreadyClosed()
+        try clientHasUnregistered.futureResult.wait()
     }
 }

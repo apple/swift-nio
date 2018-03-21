@@ -20,12 +20,12 @@ private final class EchoHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
     private var numBytes = 0
-    
+
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         numBytes -= self.unwrapInboundIn(data).readableBytes
 
         assert(numBytes >= 0)
-      
+
         if numBytes == 0 {
             print("Received the line back from the server, closing channel")
             ctx.close(promise: nil)
@@ -39,10 +39,10 @@ private final class EchoHandler: ChannelInboundHandler {
         // reduce allocations.
         ctx.close(promise: nil)
     }
-    
+
     public func channelActive(ctx: ChannelHandlerContext) {
         print("Client connected to \(ctx.remoteAddress!)")
-        
+
         // We are connected its time to send the message to the server to initialize the ping-pong sequence.
         var buffer = ctx.channel.allocator.buffer(capacity: line.utf8.count)
         buffer.write(string: line)
@@ -76,7 +76,7 @@ enum ConnectTo {
 }
 
 let connectTarget: ConnectTo
-switch (arg1, arg1.flatMap { Int($0) }, arg2.flatMap { Int($0) }) {
+switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
 case (.some(let h), _ , .some(let p)):
     /* we got two arguments, let's interpret that as host and port */
     connectTarget = .ip(host: h, port: p)

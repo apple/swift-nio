@@ -32,7 +32,30 @@ private func descriptionForAddress(family: CInt, bytes: UnsafeRawPointer, length
                              addressDescription: addressBytesPtr.baseAddress!,
                              addressDescriptionLength: socklen_t(byteCount))
         return addressBytesPtr.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: byteCount) { addressBytesPtr -> String in
-            return String(decoding: UnsafeBufferPointer<UInt8>(start: addressBytesPtr, count: byteCount), as: Unicode.ASCII.self)
+            String(cString: addressBytesPtr)
+        }
+    }
+}
+
+/// A helper extension for working with sockaddr pointers.
+extension UnsafeMutablePointer where Pointee == sockaddr {
+    /// Converts the `sockaddr` to a `SocketAddress`.
+    func convert() -> SocketAddress? {
+        switch pointee.sa_family {
+        case Posix.AF_INET:
+            return self.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
+                SocketAddress($0.pointee, host: $0.pointee.addressDescription())
+            }
+        case Posix.AF_INET6:
+            return self.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
+                SocketAddress($0.pointee, host: $0.pointee.addressDescription())
+            }
+        case Posix.AF_UNIX:
+            return self.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
+                SocketAddress($0.pointee)
+            }
+        default:
+            return nil
         }
     }
 }
@@ -181,16 +204,18 @@ extension sockaddr_storage {
 /// This should not be created directly but one of its sub-classes should be used, like `ServerSocket` or `Socket`.
 class BaseSocket: Selectable {
 
-    private let descriptor: CInt
-    public private(set) var isOpen: Bool
-    
+    private var descriptor: CInt
+    public var isOpen: Bool {
+        return descriptor >= 0
+    }
+
     func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T {
         guard self.isOpen else {
             throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
         }
         return try body(descriptor)
     }
-    
+
     /// Returns the local bound `SocketAddress` of the socket.
     ///
     /// - returns: The local bound address.
@@ -198,7 +223,7 @@ class BaseSocket: Selectable {
     final func localAddress() throws -> SocketAddress {
         return try get_addr { try Posix.getsockname(socket: $0, address: $1, addressLength: $2) }
     }
-    
+
     /// Returns the connected `SocketAddress` of the socket.
     ///
     /// - returns: The connected address.
@@ -213,7 +238,7 @@ class BaseSocket: Selectable {
 
         try addr.withMutableSockAddr { addressPtr, size in
             var size = socklen_t(size)
-            
+
             try withUnsafeFileDescriptor { fd in
                 try body(fd, addressPtr, &size)
             }
@@ -226,13 +251,29 @@ class BaseSocket: Selectable {
     /// - parameters:
     ///     - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
     ///     - type: The type of the socket to create.
+    ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - returns: the file descriptor of the socket that was created.
     /// - throws: An `IOError` if creation of the socket failed.
-    static func newSocket(protocolFamily: Int32, type: CInt) throws -> Int32 {
+    static func newSocket(protocolFamily: Int32, type: CInt, setNonBlocking: Bool = false) throws -> Int32 {
+        var sockType = type
+        #if os(Linux)
+        if setNonBlocking {
+            sockType = type | Linux.SOCK_NONBLOCK
+        }
+        #endif
         let sock = try Posix.socket(domain: protocolFamily,
-                                    type: type,
+                                    type: sockType,
                                     protocol: 0)
-        
+        #if !os(Linux)
+        if setNonBlocking {
+            do {
+                try Posix.fcntl(descriptor: sock, command: F_SETFL, value: O_NONBLOCK)
+            } catch {
+                _ = try? Posix.close(descriptor: sock)
+                throw error
+            }
+        }
+        #endif
         if protocolFamily == AF_INET6 {
             var zero: Int32 = 0
             do {
@@ -260,14 +301,14 @@ class BaseSocket: Selectable {
     /// - parameters:
     ///     - descriptor: The file descriptor to wrap.
     init(descriptor: CInt) {
+        precondition(descriptor >= 0, "invalid file descriptor")
         self.descriptor = descriptor
-        self.isOpen = true
     }
 
     deinit {
         assert(!self.isOpen, "leak of open BaseSocket")
     }
-    
+
     /// Set the socket as non-blocking.
     ///
     /// All I/O operations will not block and so may return before the actual action could be completed.
@@ -278,7 +319,7 @@ class BaseSocket: Selectable {
             try Posix.fcntl(descriptor: fd, command: F_SETFL, value: O_NONBLOCK)
         }
     }
-    
+
     /// Set the given socket option.
     ///
     /// This basically just delegates to `setsockopt` syscall.
@@ -291,7 +332,7 @@ class BaseSocket: Selectable {
     final func setOption<T>(level: Int32, name: Int32, value: T) throws {
         try withUnsafeFileDescriptor { fd in
             var val = value
-            
+
             _ = try Posix.setsockopt(
                 socket: fd,
                 level: level,
@@ -317,12 +358,12 @@ class BaseSocket: Selectable {
                 val.deinitialize(count: 1)
                 val.deallocate()
             }
-            
+
             try Posix.getsockopt(socket: fd, level: level, optionName: name, optionValue: val, optionLen: &length)
             return val.pointee
         }
     }
-    
+
     /// Bind the socket to the given `SocketAddress`.
     ///
     /// - parameters:
@@ -333,7 +374,7 @@ class BaseSocket: Selectable {
             func doBind(ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
                 try Posix.bind(descriptor: fd, ptr: ptr, bytes: bytes)
             }
-            
+
             switch address {
             case .v4(let address):
                 var addr = address.address
@@ -347,7 +388,7 @@ class BaseSocket: Selectable {
             }
         }
     }
-    
+
     /// Close the socket.
     ///
     /// After the socket was closed all other methods will throw an `IOError` when called.
@@ -358,7 +399,7 @@ class BaseSocket: Selectable {
             try Posix.close(descriptor: fd)
         }
 
-        self.isOpen = false
+        self.descriptor = -1
     }
 }
 

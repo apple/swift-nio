@@ -52,6 +52,8 @@ private let sysSendTo = sendto
 private let sysDup = dup
 private let sysGetpeername = getpeername
 private let sysGetsockname = getsockname
+private let sysGetifaddrs = getifaddrs
+private let sysFreeifaddrs = freeifaddrs
 private let sysAF_INET = AF_INET
 private let sysAF_INET6 = AF_INET6
 private let sysAF_UNIX = AF_UNIX
@@ -68,9 +70,7 @@ private let sysRecvMmsg = CNIODarwin_recvmmsg
 
 private func isBlacklistedErrno(_ code: Int32) -> Bool {
     switch code {
-    case EFAULT:
-        fallthrough
-    case EBADF:
+    case EFAULT, EBADF:
         return true
     default:
         return false
@@ -93,7 +93,7 @@ internal func wrapSyscallMayBlock<T: FixedWidthInteger>(where function: StaticSt
                 assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(strerror(err)!)")
                 throw IOError(errnoCode: err, function: function)
             }
-           
+
         }
         return .processed(res)
     }
@@ -137,7 +137,7 @@ enum Shutdown {
     case RD
     case WR
     case RDWR
-    
+
     fileprivate var cValue: CInt {
         switch self {
         case .RD:
@@ -170,32 +170,32 @@ internal enum Posix {
         fatalError("unsupported OS")
     }
 #endif
-    
+
     static let AF_INET = sa_family_t(sysAF_INET)
     static let AF_INET6 = sa_family_t(sysAF_INET6)
     static let AF_UNIX = sa_family_t(sysAF_UNIX)
-    
+
     @inline(never)
     public static func shutdown(descriptor: CInt, how: Shutdown) throws {
         _ = try wrapSyscall {
             sysShutdown(descriptor, how.cValue)
         }
     }
-    
+
     @inline(never)
     public static func close(descriptor: CInt) throws {
         _ = try wrapSyscall {
             sysClose(descriptor)
         }
     }
-    
+
     @inline(never)
     public static func bind(descriptor: CInt, ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
          _ = try wrapSyscall {
             sysBind(descriptor, ptr, socklen_t(bytes))
         }
     }
-    
+
     @inline(never)
     // TODO: Allow varargs
     public static func fcntl(descriptor: CInt, command: CInt, value: CInt) throws {
@@ -203,7 +203,7 @@ internal enum Posix {
             sysFcntl(descriptor, command, value)
         }
     }
-    
+
     @inline(never)
     public static func socket(domain: CInt, type: CInt, `protocol`: CInt) throws -> CInt {
         return try wrapSyscall {
@@ -220,7 +220,7 @@ internal enum Posix {
             return fd
         }
     }
-    
+
     @inline(never)
     public static func setsockopt(socket: CInt, level: CInt, optionName: CInt,
                                   optionValue: UnsafeRawPointer, optionLen: socklen_t) throws {
@@ -228,7 +228,7 @@ internal enum Posix {
             sysSetsockopt(socket, level, optionName, optionValue, optionLen)
         }
     }
-    
+
     @inline(never)
     public static func getsockopt(socket: CInt, level: CInt, optionName: CInt,
                                   optionValue: UnsafeMutableRawPointer, optionLen: UnsafeMutablePointer<socklen_t>) throws {
@@ -243,7 +243,7 @@ internal enum Posix {
             sysListen(descriptor, backlog)
         }
     }
-    
+
     @inline(never)
     public static func accept(descriptor: CInt, addr: UnsafeMutablePointer<sockaddr>, len: UnsafeMutablePointer<socklen_t>) throws -> CInt? {
         let result: IOResult<CInt> = try wrapSyscallMayBlock {
@@ -257,15 +257,14 @@ internal enum Posix {
             #endif
             return fd
         }
-        
-        switch result {
-        case .processed(let fd):
+
+        if case .processed(let fd) = result {
             return fd
-        default:
+        } else {
             return nil
         }
     }
-    
+
     @inline(never)
     public static func connect(descriptor: CInt, addr: UnsafePointer<sockaddr>, size: socklen_t) throws -> Bool {
         do {
@@ -280,7 +279,7 @@ internal enum Posix {
             throw err
         }
     }
-    
+
     @inline(never)
     public static func open(file: UnsafePointer<CChar>, oFlag: CInt, mode: mode_t) throws -> CInt {
         return try wrapSyscall {
@@ -294,14 +293,14 @@ internal enum Posix {
             sysOpen(file, oFlag)
         }
     }
-    
+
     @inline(never)
     public static func write(descriptor: CInt, pointer: UnsafePointer<UInt8>, size: Int) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
             sysWrite(descriptor, pointer, size)
         }
     }
-    
+
     @inline(never)
     public static func writev(descriptor: CInt, iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
@@ -361,12 +360,12 @@ internal enum Posix {
         var written: off_t = 0
         do {
             _ = try wrapSyscall { () -> ssize_t in
-                #if os(macOS)
+                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
                     var w: off_t = off_t(count)
                     let result: CInt = Darwin.sendfile(fd, descriptor, offset, &w, nil, 0)
                     written = w
                     return ssize_t(result)
-                #else
+                #elseif os(Linux) || os(FreeBSD) || os(Android)
                     var off: off_t = offset
                     let result: ssize_t = Glibc.sendfile(descriptor, fd, &off, count)
                     if result >= 0 {
@@ -375,6 +374,8 @@ internal enum Posix {
                         written = 0
                     }
                     return result
+                #else
+                    fatalError("unsupported OS")
                 #endif
             }
             return .processed(Int(written))
@@ -414,6 +415,13 @@ internal enum Posix {
         }
     }
 
+    @inline(never)
+    public static func getifaddrs(_ addrs: UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>) throws {
+        _ = try wrapSyscall {
+            sysGetifaddrs(addrs)
+        }
+    }
+
 }
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
@@ -427,11 +435,11 @@ internal enum KQueue {
             Darwin.kqueue()
         }
     }
-    
+
     @inline(never)
     public static func kevent(kq: CInt, changelist: UnsafePointer<kevent>?, nchanges: CInt, eventlist: UnsafeMutablePointer<kevent>?, nevents: CInt, timeout: UnsafePointer<Darwin.timespec>?) throws -> CInt {
         return try wrapSyscall {
-            return sysKevent(kq, changelist, nchanges, eventlist, nevents, timeout)
+            sysKevent(kq, changelist, nchanges, eventlist, nevents, timeout)
         }
     }
 }

@@ -131,13 +131,13 @@ private extension SocketAddress {
         if inet_pton(AF_INET, ipAddress, &v4addr) == 1 {
             var sockaddr = sockaddr_in()
             sockaddr.sin_family = sa_family_t(AF_INET)
-            sockaddr.sin_port = in_port_t(port)
+            sockaddr.sin_port = in_port_t(port).bigEndian
             sockaddr.sin_addr = v4addr
             self = .init(sockaddr, host: host)
         } else if inet_pton(AF_INET6, ipAddress, &v6addr) == 1 {
             var sockaddr = sockaddr_in6()
             sockaddr.sin6_family = sa_family_t(AF_INET6)
-            sockaddr.sin6_port = in_port_t(port)
+            sockaddr.sin6_port = in_port_t(port).bigEndian
             sockaddr.sin6_flowinfo = 0
             sockaddr.sin6_scope_id = 0
             sockaddr.sin6_addr = v6addr
@@ -168,7 +168,7 @@ private extension SocketAddress {
 
 private extension EventLoopFuture {
     func getError() -> Error? {
-        guard self.fulfilled else { return nil }
+        guard self.isFulfilled else { return nil }
 
         var error: Error? = nil
         self.whenFailure { error = $0 }
@@ -218,7 +218,7 @@ extension DummyResolver.Event: Equatable {
             return host1 == host2 && port1 == port2
         case(.cancel, .cancel):
             return true
-        default:
+        case (.a, _), (.aaaa, _), (.cancel, _):
             return false
         }
     }
@@ -302,20 +302,19 @@ public class HappyEyeballsTest : XCTestCase {
             .a(host: "example.com", port: 80)
         ]
         loop.run()
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
         XCTAssertEqual(resolver.events, expectedQueries)
 
         loop.advanceTime(by: .seconds(9))
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
         XCTAssertEqual(resolver.events, expectedQueries)
 
         loop.advanceTime(by: .seconds(1))
         XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
 
-        switch channelFuture.getError() {
-        case .some(ChannelError.connectTimeout(let amount)):
+        if case .some(ChannelError.connectTimeout(let amount)) = channelFuture.getError() {
             XCTAssertEqual(amount, .seconds(10))
-        default:
+        } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
         }
 
@@ -340,7 +339,7 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(targetFuture.fulfilled)
+        XCTAssertFalse(targetFuture.isFulfilled)
 
         resolver.v6Promise.succeed(result: SINGLE_IPv6_RESULT)
         loop.run()
@@ -372,19 +371,19 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(targetFuture.fulfilled)
+        XCTAssertFalse(targetFuture.isFulfilled)
 
         resolver.v4Promise.succeed(result: SINGLE_IPv4_RESULT)
         loop.run()
 
         // There should have been no connection attempt yet.
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(targetFuture.fulfilled)
+        XCTAssertFalse(targetFuture.isFulfilled)
 
         // Let the resolution delay (default of 50 ms) elapse.
         loop.advanceTime(by: .milliseconds(49))
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(targetFuture.fulfilled)
+        XCTAssertFalse(targetFuture.isFulfilled)
         loop.advanceTime(by: .milliseconds(1))
 
         // The connection attempt should have been made with the IPv4 result.
@@ -414,14 +413,14 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(targetFuture.fulfilled)
+        XCTAssertFalse(targetFuture.isFulfilled)
 
         resolver.v4Promise.succeed(result: SINGLE_IPv4_RESULT)
         loop.run()
 
         // There should have been no connection attempt yet.
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(targetFuture.fulfilled)
+        XCTAssertFalse(targetFuture.isFulfilled)
 
         // Now the AAAA returns.
         resolver.v6Promise.succeed(result: SINGLE_IPv6_RESULT)
@@ -448,14 +447,14 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(targetFuture.fulfilled)
+        XCTAssertFalse(targetFuture.isFulfilled)
 
         resolver.v4Promise.succeed(result: SINGLE_IPv4_RESULT)
         loop.run()
 
         // There should have been no connection attempt yet.
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(targetFuture.fulfilled)
+        XCTAssertFalse(targetFuture.isFulfilled)
 
         // Now the AAAA fails.
         resolver.v6Promise.fail(error: DummyError())
@@ -482,14 +481,14 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(targetFuture.fulfilled)
+        XCTAssertFalse(targetFuture.isFulfilled)
 
         resolver.v4Promise.succeed(result: SINGLE_IPv4_RESULT)
         loop.run()
 
         // There should have been no connection attempt yet.
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(targetFuture.fulfilled)
+        XCTAssertFalse(targetFuture.isFulfilled)
 
         // Now the AAAA returns empty.
         resolver.v6Promise.succeed(result: [])
@@ -512,7 +511,7 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         resolver.v4Promise.succeed(result: [])
         resolver.v6Promise.succeed(result: [])
@@ -523,14 +522,13 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertEqual(resolver.events, expectedQueries)
 
         // But we should have failed.
-        switch channelFuture.getError() {
-        case .some(ChannelError.connectFailed(let inner)):
+        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
             XCTAssertEqual(inner.host, "example.com")
             XCTAssertEqual(inner.port, 80)
             XCTAssertNil(inner.dnsAError)
             XCTAssertNil(inner.dnsAAAAError)
             XCTAssertEqual(inner.connectionErrors.count, 0)
-        default:
+        } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
         }
     }
@@ -544,7 +542,7 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         let v4Error = DummyError()
         let v6Error = DummyError()
@@ -556,14 +554,13 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertEqual(resolver.events, expectedQueries)
 
         // But we should have failed.
-        switch channelFuture.getError() {
-        case .some(ChannelError.connectFailed(let inner)):
+        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
             XCTAssertEqual(inner.host, "example.com")
             XCTAssertEqual(inner.port, 80)
             XCTAssertEqual(inner.dnsAError as? DummyError ?? DummyError(), v4Error)
             XCTAssertEqual(inner.dnsAAAAError as? DummyError ?? DummyError(), v6Error)
             XCTAssertEqual(inner.connectionErrors.count, 0)
-        default:
+        } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
         }
     }
@@ -589,7 +586,7 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // We're providing the IPv4 and IPv6 results. This will lead to 20 total hosts
         // for us to try to connect to.
@@ -618,7 +615,7 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertEqual(actualAddresses, expectedAddresses)
 
         // We still shouldn't have actually connected.
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
         for channel in channels {
             XCTAssertEqual(channel.state(), .idle)
         }
@@ -626,7 +623,7 @@ public class HappyEyeballsTest : XCTestCase {
         // Connect the last channel. This should immediately succeed the
         // future.
         channels.last!.succeedConnection()
-        XCTAssertTrue(channelFuture.fulfilled)
+        XCTAssertTrue(channelFuture.isFulfilled)
         let connectedChannel = try! channelFuture.wait()
         XCTAssertTrue(connectedChannel === channels.last)
         XCTAssertEqual(connectedChannel.state(), .connected)
@@ -658,7 +655,7 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // We're providing the IPv4 and IPv6 results. This will lead to 20 total hosts
         // for us to try to connect to.
@@ -672,7 +669,7 @@ public class HappyEyeballsTest : XCTestCase {
 
         // We still shouldn't have actually connected.
         XCTAssertEqual(channels.count, 20)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
         for channel in channels {
             XCTAssertEqual(channel.state(), .idle)
         }
@@ -683,17 +680,16 @@ public class HappyEyeballsTest : XCTestCase {
             let error = DummyError()
             errors.append(error)
             channel.failConnection(error: error)
-            XCTAssertFalse(channelFuture.fulfilled)
+            XCTAssertFalse(channelFuture.isFulfilled)
         }
 
         // Fail the last channel. This should immediately fail the future.
         errors.append(DummyError())
         channels.last!.failConnection(error: errors.last!)
-        XCTAssertTrue(channelFuture.fulfilled)
+        XCTAssertTrue(channelFuture.isFulfilled)
 
         // Check the error.
-        switch channelFuture.getError() {
-        case .some(ChannelError.connectFailed(let inner)):
+        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
             XCTAssertEqual(inner.host, "example.com")
             XCTAssertEqual(inner.port, 80)
             XCTAssertNil(inner.dnsAError)
@@ -703,7 +699,7 @@ public class HappyEyeballsTest : XCTestCase {
             for (idx, error) in inner.connectionErrors.enumerated() {
                 XCTAssertEqual(error.error as? DummyError, errors[idx])
             }
-        default:
+        } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
         }
     }
@@ -729,7 +725,7 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // Provide the IPv4 results and let five connection attempts play out.
         resolver.v4Promise.succeed(result: MANY_IPv4_RESULTS)
@@ -769,16 +765,16 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // Here the A result returns, but the timeout is sufficiently low that the connect attempt
         // times out before the AAAA can return.
         resolver.v4Promise.succeed(result: SINGLE_IPv4_RESULT)
         loop.advanceTime(by: .milliseconds(48))
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         loop.advanceTime(by: .milliseconds(1))
-        XCTAssertTrue(channelFuture.fulfilled)
+        XCTAssertTrue(channelFuture.isFulfilled)
 
         // We should have had queries for AAAA and A. We should then have had a cancel, because the AAAA
         // never returned.
@@ -812,19 +808,19 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // Here the A result returns, but the timeout is sufficiently low that the connect attempt
         // times out before the AAAA can return and before the connection succeeds.
         resolver.v4Promise.succeed(result: SINGLE_IPv4_RESULT)
         loop.advanceTime(by: .milliseconds(99))
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
         XCTAssertEqual(channels.count, 1)
         XCTAssertEqual(channels.first!.state(), .idle)
 
         // Now the timeout fires.
         loop.advanceTime(by: .milliseconds(1))
-        XCTAssertTrue(channelFuture.fulfilled)
+        XCTAssertTrue(channelFuture.isFulfilled)
         XCTAssertEqual(channels.count, 1)
         XCTAssertEqual(channels.first!.state(), .closed)
 
@@ -857,29 +853,29 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // Here the A result returns and a connection attempt is made. This fails, and we test that
         // we wait for the AAAA query to come in before acting. That connection attempt then times out.
         resolver.v4Promise.succeed(result: SINGLE_IPv4_RESULT)
         loop.advanceTime(by: .milliseconds(50))
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
         XCTAssertEqual(channels.count, 1)
         XCTAssertEqual(channels.first!.state(), .idle)
 
         // The connection attempt fails. We still have no answer.
         channels.first!.failConnection(error: DummyError())
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // Now the AAAA returns.
         resolver.v6Promise.succeed(result: SINGLE_IPv6_RESULT)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
         XCTAssertEqual(channels.count, 2)
         XCTAssertEqual(channels.last!.state(), .idle)
 
         // Now the timeout fires.
         loop.advanceTime(by: .milliseconds(50))
-        XCTAssertTrue(channelFuture.fulfilled)
+        XCTAssertTrue(channelFuture.isFulfilled)
         XCTAssertEqual(channels.count, 2)
         XCTAssertEqual(channels.last!.state(), .closed)
 
@@ -912,7 +908,7 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // Provide the IPv6 results and let all 10 connection attempts play out.
         resolver.v6Promise.succeed(result: MANY_IPv6_RESULTS)
@@ -921,12 +917,12 @@ public class HappyEyeballsTest : XCTestCase {
             XCTAssertEqual(channels.last!.connectTarget()!, "fe80::\(connectionCount)")
             loop.advanceTime(by: .milliseconds(250))
         }
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // Advance time by 30 minutes just to prove that we'll wait a long, long time for the
         // A result.
         loop.advanceTime(by: .minutes(30))
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // Now the IPv4 results come in. Let all 10 connection attempts play out.
         resolver.v4Promise.succeed(result: MANY_IPv4_RESULTS)
@@ -934,7 +930,7 @@ public class HappyEyeballsTest : XCTestCase {
             XCTAssertEqual(channels.last!.connectTarget()!, "10.0.0.\(connectionCount)")
             loop.advanceTime(by: .milliseconds(250))
         }
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
     }
 
     func testTimeoutBeforeAResponse() throws {
@@ -958,19 +954,19 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // Here the AAAA result returns, but the timeout is sufficiently low that the connect attempt
         // times out before the A returns.
         resolver.v6Promise.succeed(result: SINGLE_IPv6_RESULT)
         loop.advanceTime(by: .milliseconds(99))
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
         XCTAssertEqual(channels.count, 1)
         XCTAssertEqual(channels.first!.state(), .idle)
 
         // Now the timeout fires.
         loop.advanceTime(by: .milliseconds(1))
-        XCTAssertTrue(channelFuture.fulfilled)
+        XCTAssertTrue(channelFuture.isFulfilled)
         XCTAssertEqual(channels.count, 1)
         XCTAssertEqual(channels.first!.state(), .closed)
 
@@ -1003,13 +999,13 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // Here the AAAA and A results return. We are going to fail the connections
         // instantly, which should cause all 20 to appear.
         resolver.v6Promise.succeed(result: MANY_IPv6_RESULTS)
         for channelCount in 1...10 {
-            XCTAssertFalse(channelFuture.fulfilled)
+            XCTAssertFalse(channelFuture.isFulfilled)
             XCTAssertEqual(channels.count, channelCount)
             XCTAssertEqual(channels.last!.state(), .idle)
             channels.last?.failConnection(error: DummyError())
@@ -1017,13 +1013,13 @@ public class HappyEyeballsTest : XCTestCase {
 
         resolver.v4Promise.succeed(result: MANY_IPv4_RESULTS)
         for channelCount in 11...20 {
-            XCTAssertFalse(channelFuture.fulfilled)
+            XCTAssertFalse(channelFuture.isFulfilled)
             XCTAssertEqual(channels.count, channelCount)
             XCTAssertEqual(channels.last!.state(), .idle)
             channels.last?.failConnection(error: DummyError())
         }
 
-        XCTAssertTrue(channelFuture.fulfilled)
+        XCTAssertTrue(channelFuture.isFulfilled)
         switch channelFuture.getError() {
         case .some(ChannelError.connectFailed):
             break
@@ -1053,7 +1049,7 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // Here the AAAA results return. Let all the connection attempts go out.
         resolver.v6Promise.succeed(result: MANY_IPv6_RESULTS)
@@ -1090,7 +1086,7 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // Return the IPv6 results and observe the channel creation attempts.
         resolver.v6Promise.succeed(result: MANY_IPv6_RESULTS)
@@ -1098,7 +1094,7 @@ public class HappyEyeballsTest : XCTestCase {
             XCTAssertEqual(ourChannelFutures.count, channelCount)
             loop.advanceTime(by: .milliseconds(250))
         }
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // Succeed the first channel future, which will connect because the default
         // channel builder always does.
@@ -1106,7 +1102,7 @@ public class HappyEyeballsTest : XCTestCase {
             ourChannelFutures.first!.succeed(result: $0)
             XCTAssertEqual($0.state(), .connected)
         }
-        XCTAssertTrue(channelFuture.fulfilled)
+        XCTAssertTrue(channelFuture.isFulfilled)
 
         // Ok, now succeed the second channel future. This should cause the channel to immediately be closed.
         defaultChannelBuilder(loop: loop, family: AF_INET6).whenSuccess {
@@ -1134,22 +1130,119 @@ public class HappyEyeballsTest : XCTestCase {
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
 
         // Here the AAAA and A results return. We are going to fail the channel creation
         // instantly, which should cause all 20 to appear.
         resolver.v6Promise.succeed(result: MANY_IPv6_RESULTS)
         XCTAssertEqual(errors.count, 10)
-        XCTAssertFalse(channelFuture.fulfilled)
+        XCTAssertFalse(channelFuture.isFulfilled)
         resolver.v4Promise.succeed(result: MANY_IPv4_RESULTS)
         XCTAssertEqual(errors.count, 20)
 
-        XCTAssertTrue(channelFuture.fulfilled)
-        switch channelFuture.getError() {
-        case .some(ChannelError.connectFailed(let inner)):
+        XCTAssertTrue(channelFuture.isFulfilled)
+        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
             XCTAssertEqual(inner.connectionErrors.map { $0.error as! DummyError }, errors)
-        default:
+        } else {
             XCTFail("Got unexpected error: \(String(describing: channelFuture.getError()))")
+        }
+    }
+
+    func testCancellationSyncWithConnectDelay() throws {
+        var channels: [Channel] = []
+        defer {
+            channels.finishAll()
+        }
+
+        let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .milliseconds(250)) {
+            let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
+            channelFuture.whenSuccess { channel in
+                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                channels.append(channel)
+            }
+            return channelFuture
+        }
+        let channelFuture = eyeballer.resolveAndConnect()
+        let expectedQueries: [DummyResolver.Event] = [
+            .aaaa(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
+        ]
+        loop.run()
+        XCTAssertEqual(resolver.events, expectedQueries)
+        XCTAssertFalse(channelFuture.isFulfilled)
+
+        // Here the AAAA results return. Let the first connection attempt go out.
+        resolver.v6Promise.succeed(result: MANY_IPv6_RESULTS)
+        XCTAssertEqual(channels.count, 1)
+
+        // Advance time by 250 ms.
+        loop.advanceTime(by: .milliseconds(250))
+
+        // At this time the connection attempt should have failed, as the connect timeout
+        // fired.
+        do {
+            _ = try channelFuture.wait()
+            XCTFail("connection succeeded")
+        } catch ChannelError.connectTimeout(.milliseconds(250)) {
+            // ok
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        // There may be one or two channels, depending on ordering, but both
+        // should be closed.
+        XCTAssertTrue(channels.count == 1 || channels.count == 2, "Unexpected channel count: \(channels.count)")
+        for channel in channels {
+            XCTAssertEqual(channel.state(), .closed)
+        }
+    }
+
+    func testCancellationSyncWithResolutionDelay() throws {
+        var channels: [Channel] = []
+        defer {
+            channels.finishAll()
+        }
+
+        let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .milliseconds(50)) {
+            let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
+            channelFuture.whenSuccess { channel in
+                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                channels.append(channel)
+            }
+            return channelFuture
+        }
+        let channelFuture = eyeballer.resolveAndConnect()
+        let expectedQueries: [DummyResolver.Event] = [
+            .aaaa(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80)
+        ]
+        loop.run()
+        XCTAssertEqual(resolver.events, expectedQueries)
+        XCTAssertFalse(channelFuture.isFulfilled)
+
+        // Here the A results return. Let the first connection attempt go out.
+        resolver.v4Promise.succeed(result: MANY_IPv4_RESULTS)
+        XCTAssertEqual(channels.count, 0)
+
+        // Advance time by 50 ms.
+        loop.advanceTime(by: .milliseconds(50))
+
+        // At this time the connection attempt should have failed, as the connect timeout
+        // fired.
+        do {
+            _ = try channelFuture.wait()
+            XCTFail("connection succeeded")
+        } catch ChannelError.connectTimeout(.milliseconds(50)) {
+            // ok
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        // There may be zero or one channels, depending on ordering, but if there is one it
+        // should be closed
+        XCTAssertTrue(channels.count == 0 || channels.count == 1, "Unexpected channel count: \(channels.count)")
+        for channel in channels {
+            XCTAssertEqual(channel.state(), .closed)
         }
     }
 }

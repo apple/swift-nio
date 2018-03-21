@@ -28,7 +28,7 @@ public enum TLSUserEvent: Equatable {
             return p1 == p2
         case (.shutdownCompleted, .shutdownCompleted):
             return true
-        default:
+        case (.handshakeCompleted, _), (.shutdownCompleted, _):
             return false
         }
     }

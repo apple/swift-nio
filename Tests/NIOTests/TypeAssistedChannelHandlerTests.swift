@@ -17,13 +17,13 @@ import XCTest
 
 class TypeAssistedChannelHandlerTest: XCTestCase {
     func testCanDefineBothInboundAndOutbound() throws {
-        class TestClass: ChannelInboundHandler, ChannelOutboundHandler {
+        class TestClass: ChannelDuplexHandler {
             public typealias OutboundIn = ByteBuffer
             public typealias OutboundOut = ByteBuffer
             public typealias InboundIn = ByteBuffer
             public typealias InboundOut = ByteBuffer
         }
-        
+
         // This test really just confirms that compilation works: no need to run any code.
         XCTAssert(true)
     }

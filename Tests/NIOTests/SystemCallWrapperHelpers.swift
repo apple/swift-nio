@@ -24,13 +24,13 @@ public func measureRunTime(_ body: () throws -> Int) rethrows -> TimeInterval {
         let end = Date()
         return end.timeIntervalSince(start)
     }
-    
+
     _ = try measureOne(body)
     var measurements = Array(repeating: 0.0, count: 10)
     for i in 0..<10 {
         measurements[i] = try measureOne(body)
     }
-    
+
     //return measurements.reduce(0, +) / 10.0
     return measurements.min()!
 }
@@ -65,15 +65,15 @@ func runSystemCallWrapperPerformanceTest(testAssertFunction: (@autoclosure () ->
     defer {
         close(fd)
     }
-    
+
     let isDebugMode = _isDebugAssertConfiguration()
     if !debugModeAllowed && isDebugMode {
         fatalError("running in debug mode, release mode required")
     }
-    
+
     let iterations = isDebugMode ? 100_000 : 1_000_000
     let pointer = UnsafePointer<UInt8>(bitPattern: 0xdeadbeef)!
-    
+
     let directCallTime = try measureRunTime { () -> Int in
         /* imitate what the system call wrappers do to have a fair comparison */
         var preventCompilerOptimisation: Int = 0
@@ -100,20 +100,20 @@ func runSystemCallWrapperPerformanceTest(testAssertFunction: (@autoclosure () ->
         }
         return preventCompilerOptimisation
     }
-    
+
     let withSystemCallWrappersTime = try measureRunTime { () -> Int in
         var preventCompilerOptimisation: Int = 0
         for _ in 0..<iterations {
             switch try Posix.write(descriptor: fd, pointer: pointer, size: 0) {
             case .processed(let v):
                 preventCompilerOptimisation += v
-            case .wouldBlock(_):
+            case .wouldBlock:
                 throw TestError.wouldBlock
             }
         }
         return preventCompilerOptimisation
     }
-    
+
     let allowedOverheadPercent: Int = isDebugMode ? 1000 : 20
     if allowedOverheadPercent > 100 {
         precondition(isDebugMode)

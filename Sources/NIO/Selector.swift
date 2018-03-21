@@ -45,7 +45,7 @@ private extension Optional {
 /* this is deliberately not thread-safe, only the wakeup() function may be called unprotectedly */
 final class Selector<R: Registration> {
     private var lifecycleState: SelectorLifecycleState
-    
+
     #if os(Linux)
     private typealias EventType = Epoll.epoll_event
     private let eventfd: Int32
@@ -58,29 +58,29 @@ final class Selector<R: Registration> {
     private var eventsCapacity = 64
     private var events: UnsafeMutablePointer<EventType>
     private var registrations = [Int: R]()
-    
+
     private static func allocateEventsArray(capacity: Int) -> UnsafeMutablePointer<EventType> {
         let events: UnsafeMutablePointer<EventType> = UnsafeMutablePointer.allocate(capacity: capacity)
         events.initialize(to: EventType())
         return events
     }
-    
+
     private static func deallocateEventsArray(events: UnsafeMutablePointer<EventType>, capacity: Int) {
         events.deinitialize(count: capacity)
         events.deallocate()
     }
-    
+
     private func growEventArrayIfNeeded(ready: Int) {
         guard ready == eventsCapacity else {
             return
         }
         Selector.deallocateEventsArray(events: events, capacity: eventsCapacity)
-        
+
         // double capacity
         eventsCapacity = ready << 1
         events = Selector.allocateEventsArray(capacity: eventsCapacity)
     }
-    
+
     init() throws {
         events = Selector.allocateEventsArray(capacity: eventsCapacity)
         self.lifecycleState = .closed
@@ -89,7 +89,7 @@ final class Selector<R: Registration> {
         fd = try Epoll.epoll_create(size: 128)
         eventfd = try EventFd.eventfd(initval: 0, flags: Int32(EventFd.EFD_CLOEXEC | EventFd.EFD_NONBLOCK))
         timerfd = try TimerFd.timerfd_create(clockId: CLOCK_MONOTONIC, flags: Int32(TimerFd.TFD_CLOEXEC | TimerFd.TFD_NONBLOCK))
-    
+
         self.lifecycleState = .open
 
         var ev = Epoll.epoll_event()
@@ -97,7 +97,7 @@ final class Selector<R: Registration> {
         ev.data.fd = eventfd
 
         _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: eventfd, event: &ev)
-    
+
         var timerev = Epoll.epoll_event()
         timerev.events = Epoll.EPOLLIN.rawValue | Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue | Epoll.EPOLLET.rawValue
         timerev.data.fd = timerfd
@@ -105,7 +105,7 @@ final class Selector<R: Registration> {
 #else
         fd = try KQueue.kqueue()
         self.lifecycleState = .open
-    
+
         var event = kevent()
         event.ident = 0
         event.filter = Int16(EVFILT_USER)
@@ -148,9 +148,22 @@ final class Selector<R: Registration> {
         case .all:
             return Epoll.EPOLLIN.rawValue | Epoll.EPOLLOUT.rawValue | Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue
         case .none:
-            return Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue
+            return Epoll.EPOLLERR.rawValue
         }
     }
+
+    private func ensureFDNotRegisteredOnEpoll(_ fd: CInt) -> Bool {
+        var ev = Epoll.epoll_event()
+        do {
+            _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_DEL, fd: fd, event: &ev)
+        } catch let ioError as IOError {
+            return ioError.errnoCode == Epoll.ENOENT
+        } catch {
+            // Just ignore any other error.
+        }
+        return true
+    }
+
 #else
     private func toKQueueTimeSpec(strategy: SelectorStrategy) -> timespec? {
         switch strategy {
@@ -180,13 +193,13 @@ final class Selector<R: Registration> {
         // Allocated on the stack
         var events = (kevent(), kevent())
         try selectable.withUnsafeFileDescriptor { fd in
-            
+
             events.0.ident = UInt(fd)
             events.0.filter = Int16(EVFILT_READ)
             events.0.fflags = 0
             events.0.data = 0
             events.0.udata = nil
-            
+
             events.1.ident = UInt(fd)
             events.1.filter = Int16(EVFILT_WRITE)
             events.1.fflags = 0
@@ -268,14 +281,14 @@ final class Selector<R: Registration> {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't register on selector as it's \(self.lifecycleState).")
         }
-        
+
         try selectable.withUnsafeFileDescriptor { fd in
             assert(registrations[Int(fd)] == nil)
             #if os(Linux)
                 var ev = Epoll.epoll_event()
                 ev.events = Selector.toEpollEvents(interested: interested)
                 ev.data.fd = fd
-                
+
                 _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: fd, event: &ev)
             #else
                 try register_kqueue(selectable: selectable, interested: interested, oldInterested: nil)
@@ -295,12 +308,12 @@ final class Selector<R: Registration> {
         }
         try selectable.withUnsafeFileDescriptor { fd in
             var reg = registrations[Int(fd)]!
-            
+
             #if os(Linux)
                 var ev = Epoll.epoll_event()
                 ev.events = Selector.toEpollEvents(interested: interested)
                 ev.data.fd = fd
-                
+
                 _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_MOD, fd: fd, event: &ev)
             #else
                 try register_kqueue(selectable: selectable, interested: interested, oldInterested: reg.interested)
@@ -309,7 +322,7 @@ final class Selector<R: Registration> {
             registrations[Int(fd)] = reg
         }
     }
-    
+
     /// Deregister `Selectable`, must be registered via `register` before.
     ///
     /// After the `Selectable is deregistered no `IOEvent`s will be produced anymore for the `Selectable`.
@@ -324,7 +337,7 @@ final class Selector<R: Registration> {
             guard let reg = registrations.removeValue(forKey: Int(fd)) else {
                 return
             }
-            
+
             #if os(Linux)
                 var ev = Epoll.epoll_event()
                 _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_DEL, fd: fd, event: &ev)
@@ -346,7 +359,7 @@ final class Selector<R: Registration> {
 
 #if os(Linux)
         let ready: Int
-    
+
         switch strategy {
         case .now:
             ready = Int(try Epoll.epoll_wait(epfd: self.fd, events: events, maxevents: Int32(eventsCapacity), timeout: 0))
@@ -358,7 +371,7 @@ final class Selector<R: Registration> {
         case .block:
             ready = Int(try Epoll.epoll_wait(epfd: self.fd, events: events, maxevents: Int32(eventsCapacity), timeout: -1))
         }
-    
+
         for i in 0..<ready {
             let ev = events[i]
             switch ev.data.fd {
@@ -372,22 +385,25 @@ final class Selector<R: Registration> {
                 // We are not interested in the result
                 _ = Glibc.read(timerfd, &val, MemoryLayout<UInt>.size)
             default:
-                let registration = registrations[Int(ev.data.fd)]!
-                try body(
-                    SelectorEvent(
-                        readable: (ev.events & Epoll.EPOLLIN.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
-                        writable: (ev.events & Epoll.EPOLLOUT.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
-                        registration: registration))
+                // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skip it.
+                if let registration = registrations[Int(ev.data.fd)] {
+                    try body(
+                        SelectorEvent(
+                            readable: (ev.events & Epoll.EPOLLIN.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
+                            writable: (ev.events & Epoll.EPOLLOUT.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
+                            registration: registration))
+                } else {
+                    assert(ensureFDNotRegisteredOnEpoll(ev.data.fd), "No registration found for \(ev.data.fd), but still registered on epoll.")
+                }
             }
         }
-    
         growEventArrayIfNeeded(ready: ready)
 #else
         let timespec = toKQueueTimeSpec(strategy: strategy)
         let ready = try timespec.withUnsafeOptionalPointer { ts in
             Int(try KQueue.kevent(kq: self.fd, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: ts))
         }
-    
+
         for i in 0..<ready {
             let ev = events[i]
             switch Int32(ev.filter) {
@@ -407,7 +423,7 @@ final class Selector<R: Registration> {
                 fatalError("unexpected filter \(ev.filter)")
             }
         }
-    
+
         growEventArrayIfNeeded(ready: ready)
 #endif
     }
@@ -463,7 +479,7 @@ extension Selector: CustomStringConvertible {
 struct SelectorEvent<R> {
     public let registration: R
     public let io: IOEvent
-    
+
     /// Create new instance
     ///
     /// - parameters:
@@ -514,12 +530,12 @@ internal extension Selector where R == NIORegistration {
 
 /// The strategy used for the `Selector`.
 enum SelectorStrategy {
-    /// Block until there is some IO ready to be processed or the `Selector` is explictly woken up.
+    /// Block until there is some IO ready to be processed or the `Selector` is explicitly woken up.
     case block
 
-    /// Block until there is some IO ready to be processed, the `Selector` is explictly woken up or the given `TimeAmount` elapsed.
+    /// Block until there is some IO ready to be processed, the `Selector` is explicitly woken up or the given `TimeAmount` elapsed.
     case blockUntilTimeout(TimeAmount)
-    
+
     /// Try to select all ready IO at this point in time without blocking at all.
     case now
 }
@@ -528,13 +544,13 @@ enum SelectorStrategy {
 public enum IOEvent {
     /// Something is ready to be read.
     case read
-    
+
     /// Its possible to write some data again.
     case write
-    
+
     /// Combination of `read` and `write`.
     case all
-    
+
     /// Not interested in any event.
     case none
 }

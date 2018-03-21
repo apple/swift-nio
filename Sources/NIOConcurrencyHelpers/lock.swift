@@ -42,6 +42,8 @@ public final class Lock {
     }
 
     deinit {
+        let err = pthread_mutex_destroy(self.mutex)
+        precondition(err == 0)
         mutex.deallocate()
     }
 
@@ -107,6 +109,8 @@ public final class ConditionLock<T: Equatable> {
     }
 
     deinit {
+        let err = pthread_cond_destroy(self.cond)
+        precondition(err == 0)
         self.cond.deallocate()
     }
 

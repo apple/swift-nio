@@ -16,7 +16,7 @@ import NIO
 private final class ChatHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
-    
+
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         var buffer = self.unwrapInboundIn(data)
         while let byte: UInt8 = buffer.readInteger() {
@@ -58,7 +58,7 @@ enum ConnectTo {
 }
 
 let connectTarget: ConnectTo
-switch (arg1, arg1.flatMap { Int($0) }, arg2.flatMap { Int($0) }) {
+switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
 case (.some(let h), _ , .some(let p)):
     /* we got two arguments, let's interpret that as host and port */
     connectTarget = .ip(host: h, port: p)

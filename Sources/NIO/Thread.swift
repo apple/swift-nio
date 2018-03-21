@@ -36,10 +36,10 @@ private func sys_pthread_setname_np(_ p: pthread_t, _ pointer: UnsafePointer<Int
 ///
 /// All methods exposed are thread-safe.
 final class Thread {
-    
+
     /// The pthread_t used by this instance.
     private let pthread: pthread_t
-    
+
     /// Create a new instance
     ///
     /// - arguments:
@@ -47,7 +47,7 @@ final class Thread {
     private init(pthread: pthread_t) {
         self.pthread = pthread
     }
-    
+
     /// Execute the given body with the `pthread_t` that is used by this `Thread` as argument.
     ///
     /// - warning: Do not escape `pthread_t` from the closure for later use.
@@ -58,7 +58,7 @@ final class Thread {
     func withUnsafePthread<T>(_ body: (pthread_t) throws -> T) rethrows -> T {
         return try body(self.pthread)
     }
-    
+
     /// Get current name of the `Thread` or `nil` if not set.
     var name: String? {
         get {
@@ -70,32 +70,32 @@ final class Thread {
             return String(cString: chars)
         }
     }
-    
+
     /// Spawns and runs some task in a `Thread`.
     ///
     /// - arguments:
     ///     - name: The name of the `Thread` or `nil` if no specific name should be set.
     ///     - body: The function to execute within the spawned `Thread`.
-    class func spawnAndRun(name: String? = nil, body: @escaping (Thread) -> Void) {
+    static func spawnAndRun(name: String? = nil, body: @escaping (Thread) -> Void) {
         // Unfortunally the pthread_create method take a different first argument depending on if its on linux or macOS, so ensure we use the correct one.
         #if os(Linux)
             var pt: pthread_t = pthread_t()
         #else
             var pt: pthread_t? = nil
         #endif
- 
+
         // Store everything we want to pass into the c function in a Box so we can hand-over the reference.
         let tuple: ThreadBoxValue = (body: body, name: name)
         let box = ThreadBox(tuple)
         let res = pthread_create(&pt, nil, { p in
             // Cast to UnsafeMutableRawPointer? and force unwrap to make the same code work on macOS and Linux.
             let b = Unmanaged<ThreadBox>.fromOpaque((p as UnsafeMutableRawPointer?)!.assumingMemoryBound(to: ThreadBox.self)).takeRetainedValue()
-            
+
             let body = b.value.body
             let name = b.value.name
-            
+
             let pt = pthread_self()
-            
+
             if let threadName = name {
                 let res = sys_pthread_setname_np(pt, threadName)
                 // This should only happen in case of a too-long name.
@@ -105,18 +105,18 @@ final class Thread {
             body(Thread(pthread: pt))
             return nil
         }, Unmanaged.passRetained(box).toOpaque())
-        
+
         precondition(res == 0, "Unable to create thread: \(res)")
 
         let detachError = pthread_detach((pt as pthread_t?)!)
         precondition(detachError == 0, "pthread_detach failed with error \(detachError)")
     }
-    
+
     /// Returns `true` if the calling thread is the same as this one.
     var isCurrent: Bool {
         return pthread_equal(pthread, pthread_self()) != 0
     }
-    
+
     /// Returns the current running `Thread`.
     static var current: Thread {
         return Thread(pthread: pthread_self())
@@ -130,7 +130,7 @@ final class Thread {
 /// returned by `currentValue` is defined per thread.
 ///
 /// - note: `ThreadSpecificVariable` has reference semantics.
-internal struct ThreadSpecificVariable<T: AnyObject> {
+public struct ThreadSpecificVariable<T: AnyObject> {
     private let key: pthread_key_t
 
     /// Initialize a new `ThreadSpecificVariable` without a current value (`currentValue == nil`).

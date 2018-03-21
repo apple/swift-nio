@@ -73,6 +73,7 @@ internal enum Epoll {
     public static let EPOLLERR = CNIOLinux.EPOLLERR
     public static let EPOLLRDHUP = CNIOLinux.EPOLLRDHUP
     public static let EPOLLET = CNIOLinux.EPOLLET
+    public static let ENOENT = CNIOLinux.ENOENT
 
     @inline(never)
     public static func epoll_create(size: Int32) throws -> Int32 {
@@ -91,7 +92,25 @@ internal enum Epoll {
     @inline(never)
     public static func epoll_wait(epfd: Int32, events: UnsafeMutablePointer<epoll_event>, maxevents: Int32, timeout: Int32) throws -> Int32 {
         return try wrapSyscall {
-            return CNIOLinux.epoll_wait(epfd, events, maxevents, timeout)
+            CNIOLinux.epoll_wait(epfd, events, maxevents, timeout)
+        }
+    }
+}
+
+internal enum Linux {
+    static let SOCK_CLOEXEC = Int32(bitPattern: Glibc.SOCK_CLOEXEC.rawValue)
+    static let SOCK_NONBLOCK = Int32(bitPattern: Glibc.SOCK_NONBLOCK.rawValue)
+
+    @inline(never)
+    public static func accept4(descriptor: CInt, addr: UnsafeMutablePointer<sockaddr>, len: UnsafeMutablePointer<socklen_t>, flags: Int32) throws -> CInt? {
+        let result: IOResult<CInt> = try wrapSyscallMayBlock {
+            CNIOLinux.CNIOLinux_accept4(descriptor, addr, len, flags)
+        }
+        switch result {
+        case .processed(let fd):
+            return fd
+        default:
+            return nil
         }
     }
 }
