@@ -151,6 +151,19 @@ final class Selector<R: Registration> {
             return Epoll.EPOLLERR.rawValue
         }
     }
+
+    private func ensureFDNotRegisteredOnEpoll(_ fd: CInt) -> Bool {
+        var ev = Epoll.epoll_event()
+        do {
+            _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_DEL, fd: fd, event: &ev)
+        } catch let ioError as IOError {
+            return ioError.errnoCode == Epoll.ENOENT
+        } catch {
+            // Just ignore any other error.
+        }
+        return true
+    }
+
 #else
     private func toKQueueTimeSpec(strategy: SelectorStrategy) -> timespec? {
         switch strategy {
@@ -372,15 +385,18 @@ final class Selector<R: Registration> {
                 // We are not interested in the result
                 _ = Glibc.read(timerfd, &val, MemoryLayout<UInt>.size)
             default:
-                let registration = registrations[Int(ev.data.fd)]!
-                try body(
-                    SelectorEvent(
-                        readable: (ev.events & Epoll.EPOLLIN.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
-                        writable: (ev.events & Epoll.EPOLLOUT.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
-                        registration: registration))
+                // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skip it.
+                if let registration = registrations[Int(ev.data.fd)] {
+                    try body(
+                        SelectorEvent(
+                            readable: (ev.events & Epoll.EPOLLIN.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
+                            writable: (ev.events & Epoll.EPOLLOUT.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
+                            registration: registration))
+                } else {
+                    assert(ensureFDNotRegisteredOnEpoll(ev.data.fd), "No registration found for \(ev.data.fd), but still registered on epoll.")
+                }
             }
         }
-
         growEventArrayIfNeeded(ready: ready)
 #else
         let timespec = toKQueueTimeSpec(strategy: strategy)
