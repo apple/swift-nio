@@ -73,6 +73,7 @@ internal enum Epoll {
     public static let EPOLLERR = CNIOLinux.EPOLLERR
     public static let EPOLLRDHUP = CNIOLinux.EPOLLRDHUP
     public static let EPOLLET = CNIOLinux.EPOLLET
+    public static let ENOENT = CNIOLinux.ENOENT
 
     @inline(never)
     public static func epoll_create(size: Int32) throws -> Int32 {
