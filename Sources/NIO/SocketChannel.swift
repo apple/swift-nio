@@ -537,7 +537,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     }
 
 
-    public final func register0(promise: EventLoopPromise<Void>?) {
+    public func register0(promise: EventLoopPromise<Void>?) {
         assert(eventLoop.inEventLoop)
 
         guard self.isOpen else {
@@ -1200,6 +1200,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     // Guard against re-entrance of flushNow() method.
     private let pendingWrites: PendingDatagramWritesManager
 
+    private let activeWithoutBind: Bool
+
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool {
         return pendingWrites.isWritable
@@ -1210,7 +1212,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         return pendingWrites.isOpen
     }
 
-    init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
+    init(eventLoop: SelectableEventLoop, protocolFamily: Int32, activeWithoutBind: Bool) throws {
         let socket = try Socket(protocolFamily: protocolFamily, type: Posix.SOCK_DGRAM)
         do {
             try socket.setNonBlocking()
@@ -1223,7 +1225,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                           iovecs: eventLoop.iovecs,
                                                           addresses: eventLoop.addresses,
                                                           storageRefs: eventLoop.storageRefs)
-
+        self.activeWithoutBind = activeWithoutBind
         try super.init(socket: socket, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
     }
 
@@ -1233,6 +1235,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                           iovecs: eventLoop.iovecs,
                                                           addresses: eventLoop.addresses,
                                                           storageRefs: eventLoop.storageRefs)
+        self.activeWithoutBind = false
         try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 2048))
     }
 
@@ -1388,10 +1391,26 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         do {
             try socket.bind(to: address)
             self.updateCachedAddressesFromSocket(updateRemote: false)
-            becomeActive0(promise: promise)
+            if !activeWithoutBind {
+                becomeActive0(promise: promise)
+            } else {
+                promise?.succeed(result: ())
+            }
             readIfNeeded0()
         } catch let err {
             promise?.fail(error: err)
+        }
+    }
+
+    override func register0(promise: EventLoopPromise<Void>?) {
+        if activeWithoutBind {
+            let p = promise ?? eventLoop.newPromise()
+            p.futureResult.whenSuccess {
+                self.becomeActive0(promise: nil)
+            }
+            super.register0(promise: p)
+        } else {
+            super.register0(promise: promise)
         }
     }
 }

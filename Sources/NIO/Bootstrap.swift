@@ -483,28 +483,55 @@ public final class DatagramBootstrap {
 
     private func bind0(eventLoopGroup: EventLoopGroup, to address: SocketAddress) -> EventLoopFuture<Channel> {
         let eventLoop = eventLoopGroup.next()
-        let channelInitializer = self.channelInitializer ?? { _ in eventLoop.newSucceededFuture(result: ()) }
-        let channelOptions = self.channelOptions
 
         let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
         do {
             let channel = try DatagramChannel(eventLoop: eventLoop as! SelectableEventLoop,
-                                                    protocolFamily: address.protocolFamily)
-
-            channelInitializer(channel).then {
-                channelOptions.applyAll(channel: channel)
-            }.then {
-                channel.register()
-            }.then {
-                channel.bind(to: address)
-            }.map {
-                channel
-            }.cascade(promise: promise)
+                                              protocolFamily: address.protocolFamily, activeWithoutBind: false)
+            initDatagramChannel(channel: channel, address: address, promise: promise)
         } catch let err {
             promise.fail(error: err)
         }
 
         return promise.futureResult
+    }
+
+    /// Open a `DatagramChannel` without binding it.
+    ///
+    /// This `DatagramChannel` can only be used to send data until `bind` is explicitly called.
+    ///
+    /// - paramaters:
+    ///       - protocolFamily: The protocol family of the socket to create.
+    public func open(protocolFamily: Int32) -> EventLoopFuture<Channel> {
+        let eventLoop = group.next()
+        let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
+        do {
+            let channel = try DatagramChannel(eventLoop: eventLoop as! SelectableEventLoop,
+                                              protocolFamily: protocolFamily, activeWithoutBind: true)
+            initDatagramChannel(channel: channel, address: nil, promise: promise)
+        } catch let err {
+            promise.fail(error: err)
+        }
+
+        return promise.futureResult
+    }
+
+    private func initDatagramChannel(channel: Channel, address: SocketAddress?, promise: EventLoopPromise<Channel>) {
+        let channelInitializer = self.channelInitializer ?? { _ in channel.eventLoop.newSucceededFuture(result: ()) }
+        let channelOptions = self.channelOptions
+
+        channelInitializer(channel).then {
+            channelOptions.applyAll(channel: channel)
+        }.then {
+            channel.register()
+        }.then {
+            if let address = address {
+                return channel.bind(to: address)
+            }
+            return channel.eventLoop.newSucceededFuture(result: ())
+        }.map {
+            channel
+        }.cascade(promise: promise)
     }
 }
 

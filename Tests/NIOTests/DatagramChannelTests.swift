@@ -407,4 +407,37 @@ final class DatagramChannelTests: XCTestCase {
     public func testSetGetOptionClosedDatagramChannel() throws {
         try assertSetGetOptionOnOpenAndClosed(channel: firstChannel, option: ChannelOptions.maxMessagesPerRead, value: 1)
     }
+
+    func testOpenWithoutBind() throws {
+        class ActiveVerificationHandler : ChannelInboundHandler {
+            typealias InboundIn = AddressedEnvelope<ByteBuffer>
+
+            private var activeReceived = false
+            public func channelActive(ctx: ChannelHandlerContext) {
+                self.activeReceived = true
+            }
+
+            public func channelInactive(ctx: ChannelHandlerContext) {
+                XCTAssertTrue(self.activeReceived)
+            }
+        }
+
+        let channel = try DatagramBootstrap(group: group).channelInitializer { channel in
+            channel.pipeline.add(handler: ActiveVerificationHandler())
+        }.open(protocolFamily: self.secondChannel.localAddress!.protocolFamily).wait()
+
+        var buffer = channel.allocator.buffer(capacity: 256)
+        buffer.write(staticString: "hello, world!")
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        try channel.writeAndFlush(writeData).wait()
+
+        let reads = try self.secondChannel.waitForDatagrams(count: 1)
+        XCTAssertEqual(reads.count, 1)
+        let read = reads.first!
+        XCTAssertEqual(read.data, buffer)
+
+        try channel.close().wait()
+        // Ensure we receive all events
+        try channel.closeFuture.wait()
+    }
 }
