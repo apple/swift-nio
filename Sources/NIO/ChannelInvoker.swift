@@ -179,8 +179,8 @@ extension ChannelOutboundInvoker {
         return promise.futureResult
     }
 
-    private func newPromise() -> EventLoopPromise<Void> {
-        return eventLoop.newPromise()
+    private func newPromise(file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<Void> {
+        return eventLoop.newPromise(file: file, line: line)
     }
 }
 
