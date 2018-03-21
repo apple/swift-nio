@@ -691,7 +691,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
                 registerForWritable()
             } else {
                 self.updateCachedAddressesFromSocket()
-                promise?.succeed(result: ())
+                becomeActive0(promise: promise)
             }
         } catch let error {
             promise?.fail(error: error)
@@ -854,7 +854,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         return .socketChannel(self, interested)
     }
 
-    fileprivate init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
+    init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
         self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
         try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
