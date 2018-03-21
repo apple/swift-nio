@@ -45,6 +45,12 @@
 ///     try! channel.closeFuture.wait() // wait forever as we never close the Channel
 /// ```
 ///
+/// The `EventLoopFuture` returned by `bind` will fire with a `ServerSocketChannel`. This is the channel that owns the listening socket.
+/// Each time it accepts a new connection it will fire a `SocketChannel` through the `ChannelPipeline` via `fireChannelRead`: as a result,
+/// the `ServerSocketChannel` operates on `Channel`s as inbound messages. Outbound messages are not supported on a `ServerSocketChannel`
+/// which means that each write attempt will fail.
+///
+/// Accepted `SocketChannel`s operate on `ByteBuffer` as inbound data, and `IOData` as outbound data.
 public final class ServerBootstrap {
 
     private let group: EventLoopGroup
@@ -75,6 +81,8 @@ public final class ServerBootstrap {
     /// Initialize the `ServerSocketChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
+    /// The `ServerSocketChannel` uses the accepted `Channel`s as inbound messages.
+    ///
     /// - note: To set the initializer for the accepted `SocketChannel`s, look at `ServerBootstrap.childChannelInitializer`.
     ///
     /// - parameters:
@@ -86,6 +94,8 @@ public final class ServerBootstrap {
 
     /// Initialize the accepted `SocketChannel`s with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
+    ///
+    /// The accepted `Channel` will operate on `ByteBuffer` as inbound and `IOData` as outbound messages.
     ///
     /// - parameters:
     ///     - initializer: A closure that initializes the provided `Channel`.
@@ -254,6 +264,7 @@ public final class ServerBootstrap {
 ///     /* the Channel is now connected */
 /// ```
 ///
+/// The connected `SocketChannel` will operate on `ByteBuffer` as inbound and on `IOData` as outbound messages.
 public final class ClientBootstrap {
 
     private let group: EventLoopGroup
@@ -272,6 +283,8 @@ public final class ClientBootstrap {
 
     /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
+    ///
+    /// The connected `Channel` will operate on `ByteBuffer` as inbound and `IOData` as outbound messages.
     ///
     /// - parameters:
     ///     - handler: A closure that initializes the provided `Channel`.
@@ -410,6 +423,7 @@ public final class ClientBootstrap {
 ///     try channel.closeFuture.wait()  // Wait until the channel un-binds.
 /// ```
 ///
+/// The `DatagramChannel` will operate on `AddressedEnvelope<ByteBuffer>` as inbound and outbound messages.
 public final class DatagramBootstrap {
 
     private let group: EventLoopGroup
