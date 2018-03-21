@@ -1716,4 +1716,113 @@ public class ChannelTests: XCTestCase {
             XCTFail("unexpected error: \(error)")
         }
     }
+
+    func testChannelReadsDoesNotHappenAfterRegistration() throws {
+        class SocketThatSucceedsOnSecondConnectForPort123: Socket {
+            init(protocolFamily: CInt) throws {
+                try super.init(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: true)
+            }
+            override func connect(to address: SocketAddress) throws -> Bool {
+                if address.port == 123 {
+                    return true
+                } else {
+                    return try super.connect(to: address)
+                }
+            }
+        }
+        class ReadDoesNotHappen: ChannelInboundHandler {
+            typealias InboundIn = Any
+            private let hasRegisteredPromise: EventLoopPromise<()>
+            private let hasUnregisteredPromise: EventLoopPromise<()>
+            private let hasReadPromise: EventLoopPromise<()>
+            enum State {
+                case start
+                case registered
+                case active
+                case read
+            }
+            private var state: State = .start
+            init(hasRegisteredPromise: EventLoopPromise<()>, hasUnregisteredPromise: EventLoopPromise<()>, hasReadPromise: EventLoopPromise<()>) {
+                self.hasRegisteredPromise = hasRegisteredPromise
+                self.hasUnregisteredPromise = hasUnregisteredPromise
+                self.hasReadPromise = hasReadPromise
+            }
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                XCTAssertEqual(.active, self.state)
+                self.state = .read
+                self.hasReadPromise.succeed(result: ())
+            }
+            func channelActive(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.registered, self.state)
+                self.state = .active
+            }
+            func channelRegistered(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.start, self.state)
+                self.state = .registered
+                self.hasRegisteredPromise.succeed(result: ())
+            }
+            func channelUnregistered(ctx: ChannelHandlerContext) {
+                self.hasUnregisteredPromise.succeed(result: ())
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let serverEL = group.next()
+        let clientEL = group.next()
+        precondition(serverEL !== clientEL)
+        let sc = try SocketChannel(socket: SocketThatSucceedsOnSecondConnectForPort123(protocolFamily: PF_INET), eventLoop: clientEL as! SelectableEventLoop)
+
+        class WriteImmediatelyHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+            typealias OutboundOut = ByteBuffer
+
+            private let writeDonePromise: EventLoopPromise<()>
+
+            init(writeDonePromise: EventLoopPromise<()>) {
+                self.writeDonePromise = writeDonePromise
+            }
+
+            func channelActive(ctx: ChannelHandlerContext) {
+                var buffer = ctx.channel.allocator.buffer(capacity: 4)
+                buffer.write(string: "foo")
+                ctx.writeAndFlush(NIOAny(buffer), promise: self.writeDonePromise)
+            }
+        }
+
+        let serverWriteHappenedPromise: EventLoopPromise<()> = serverEL.next().newPromise()
+        let clientHasRegistered: EventLoopPromise<()> = serverEL.next().newPromise()
+        let clientHasUnregistered: EventLoopPromise<()> = serverEL.next().newPromise()
+        let clientHasRead: EventLoopPromise<()> = serverEL.next().newPromise()
+
+        let bootstrap = try ServerBootstrap(group: serverEL)
+            .childChannelInitializer { channel in
+                channel.pipeline.add(handler: WriteImmediatelyHandler(writeDonePromise: serverWriteHappenedPromise))
+            }
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        // This is a bit ugly, we're trying to fabricate a situation that can happen in the real world which is that
+        // a socket is readable straight after becoming registered & connected.
+        // In here what we're doing is that we flip the order around and connect it first, make sure the server
+        // has written something and then on registration something is available to be read. We then 'fake connect'
+        // again which our special `Socket` subclass will let succeed.
+        _ = try sc.selectable.connect(to: bootstrap.localAddress!)
+        try serverWriteHappenedPromise.futureResult.wait()
+        try sc.pipeline.add(handler: ReadDoesNotHappen(hasRegisteredPromise: clientHasRegistered,
+                                                       hasUnregisteredPromise: clientHasUnregistered,
+                                                       hasReadPromise: clientHasRead)).then {
+                // this will succeed and should not cause the socket to be read even though there'll be something
+                // available to be read immediately
+                sc.register()
+            }.then {
+                // this would normally fail but our special Socket subclass will let it succeed.
+                sc.connect(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 123))
+            }.wait()
+        try clientHasRegistered.futureResult.wait()
+        try clientHasRead.futureResult.wait()
+        try sc.syncCloseAcceptingAlreadyClosed()
+        try clientHasUnregistered.futureResult.wait()
+    }
 }
