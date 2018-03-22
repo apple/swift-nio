@@ -299,6 +299,15 @@ public final class ChannelPipeline: ChannelInvoker {
             return
         }
 
+        /// The user provided a name let us ensure we not clash.
+        if let n = name {
+            let found = self.contextForPredicate0 { $0.name == n }
+            if found != nil {
+                promise.fail(error: ChannelPipelineError.duplicatedName)
+                return
+            }
+        }
+
         let ctx = ChannelHandlerContext(name: name ?? nextName(), handler: handler, pipeline: self)
         operation(ctx, relativeContext)
 
@@ -988,6 +997,8 @@ public enum ChannelPipelineError: Error {
     case alreadyRemoved
     /// `ChannelHandler` was not found.
     case notFound
+    /// `ChannelHandler` with the name already exists in the `ChannelPipeline`.
+    case duplicatedName
 }
 
 /// Every `ChannelHandler` has -- when added to a `ChannelPipeline` -- a corresponding `ChannelHandlerContext` which is

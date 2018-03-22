@@ -678,4 +678,46 @@ class ChannelPipelineTest: XCTestCase {
             /// expected
         }
     }
+
+    func testAddWithSameNameFails() throws {
+        class TestHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+        }
+
+        let channel = EmbeddedChannel()
+
+        defer {
+            XCTAssertFalse(try channel.finish())
+        }
+
+        let handler = TestHandler()
+        try channel.pipeline.add(name: "handler", handler: handler).wait()
+
+        do {
+            try channel.pipeline.add(name: "handler", handler: TestHandler(), first: true).wait()
+            XCTFail()
+        } catch let err as ChannelPipelineError where err == .duplicatedName {
+            /// expected
+        }
+
+        do {
+            try channel.pipeline.add(name: "handler", handler: TestHandler(), first: false).wait()
+            XCTFail()
+        } catch let err as ChannelPipelineError where err == .duplicatedName {
+            /// expected
+        }
+        do {
+            try channel.pipeline.add(name: "handler", handler: TestHandler(), after: handler).wait()
+            XCTFail()
+        } catch let err as ChannelPipelineError where err == .duplicatedName {
+            /// expected
+        }
+
+        do {
+            try channel.pipeline.add(name: "handler", handler: TestHandler(), before: handler).wait()
+            XCTFail()
+        } catch let err as ChannelPipelineError where err == .duplicatedName {
+            /// expected
+        }
+    }
 }

@@ -45,6 +45,7 @@ extension ChannelPipelineTest {
                 ("testFindHandlerByTypeReturnsTheFirstOfItsType", testFindHandlerByTypeReturnsTheFirstOfItsType),
                 ("testContextForHeadOrTail", testContextForHeadOrTail),
                 ("testRemoveHeadOrTail", testRemoveHeadOrTail),
+                ("testAddWithSameNameFails", testAddWithSameNameFails),
            ]
    }
 }
