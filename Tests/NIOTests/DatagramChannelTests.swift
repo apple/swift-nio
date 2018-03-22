@@ -36,16 +36,31 @@ private class DatagramReadRecorder<DataType>: ChannelInboundHandler {
     typealias InboundIn = AddressedEnvelope<DataType>
     typealias InboundOut = AddressedEnvelope<DataType>
 
+    enum State {
+        case fresh
+        case registered
+        case active
+    }
+
     var reads: [AddressedEnvelope<DataType>] = []
     var loop: EventLoop? = nil
+    var state: State = .fresh
 
     var readWaiters: [Int: EventLoopPromise<[AddressedEnvelope<DataType>]>] = [:]
 
     func channelRegistered(ctx: ChannelHandlerContext) {
+        XCTAssertEqual(.fresh, self.state)
+        self.state = .registered
         self.loop = ctx.eventLoop
     }
 
+    func channelActive(ctx: ChannelHandlerContext) {
+        XCTAssertEqual(.registered, self.state)
+        self.state = .active
+    }
+
     func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+        XCTAssertEqual(.active, self.state)
         let data = self.unwrapInboundIn(data)
         reads.append(data)
 

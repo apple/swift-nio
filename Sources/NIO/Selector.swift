@@ -519,6 +519,14 @@ internal extension Selector where R == NIORegistration {
             case .datagramChannel(let chan, _):
                 return closeChannel(chan)
             }
+        }.map { future in
+            future.thenIfErrorThrowing { error in
+                if let error = error as? ChannelError, error == .alreadyClosed {
+                    return ()
+                } else {
+                    throw error
+                }
+            }
         }
 
         guard futures.count > 0 else {

@@ -1825,4 +1825,161 @@ public class ChannelTests: XCTestCase {
         try sc.syncCloseAcceptingAlreadyClosed()
         try clientHasUnregistered.futureResult.wait()
     }
+
+    func testAppropriateAndInappropriateOperationsForUnregisteredSockets() throws {
+        func checkThatItThrowsInappropriateOperationForState(file: StaticString = #file, line: UInt = #line, _ body: () throws -> Void) {
+            do {
+                try body()
+                XCTFail("didn't throw", file: file, line: line)
+            } catch let error as ChannelLifecycleError where error == .inappropriateOperationForState {
+                //OK
+            } catch {
+                XCTFail("unexpected error \(error)", file: file, line: line)
+            }
+        }
+        let elg = MultiThreadedEventLoopGroup(numThreads: 1)
+
+        func withChannel(skipDatagram: Bool = false, skipStream: Bool = false, skipServerSocket: Bool = false, file: StaticString = #file, line: UInt = #line,  _ body: (Channel) throws -> Void) {
+            XCTAssertNoThrow(try {
+                let el = elg.next() as! SelectableEventLoop
+                let channels: [Channel] = (skipDatagram ? [] : [try DatagramChannel(eventLoop: el, protocolFamily: PF_INET)]) +
+                    /* Xcode need help */ (skipStream ? []: [try SocketChannel(eventLoop: el, protocolFamily: PF_INET)]) +
+                    /* Xcode need help */ (skipServerSocket ? []: [try ServerSocketChannel(eventLoop: el, group: elg, protocolFamily: PF_INET)])
+                for channel in channels {
+                    try body(channel)
+                    XCTAssertNoThrow(try channel.close().wait(), file: file, line: line)
+                }
+            }(), file: file, line: line)
+        }
+        withChannel { channel in
+            checkThatItThrowsInappropriateOperationForState {
+                try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 1234)).wait()
+            }
+        }
+        withChannel { channel in
+            checkThatItThrowsInappropriateOperationForState {
+                try channel.writeAndFlush("foo").wait()
+            }
+        }
+        withChannel { channel in
+            XCTAssertNoThrow(try channel.triggerUserOutboundEvent("foo").wait())
+        }
+        withChannel { channel in
+            XCTAssertFalse(channel.isActive)
+        }
+        withChannel(skipServerSocket: true) { channel in
+            // should probably be changed
+            XCTAssertTrue(channel.isWritable)
+        }
+        withChannel(skipDatagram: true, skipStream: true) { channel in
+            // this should probably be the default for all types
+            XCTAssertFalse(channel.isWritable)
+        }
+
+        withChannel { channel in
+            checkThatItThrowsInappropriateOperationForState {
+                XCTAssertEqual(0, channel.localAddress?.port ?? 0xffff)
+                XCTAssertNil(channel.remoteAddress)
+                try channel.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0)).wait()
+            }
+        }
+    }
+
+    func testCloseSocketWhenReadErrorWasReceivedAndMakeSureNoReadCompleteArrives() throws {
+        class SocketThatHasTheFirstReadSucceedButFailsTheNextWithECONNRESET: Socket {
+            private var firstReadHappened = false
+            init(protocolFamily: CInt) throws {
+                try super.init(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: true)
+            }
+            override func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> IOResult<Int> {
+                defer {
+                    self.firstReadHappened = true
+                }
+                XCTAssertGreaterThan(size, 0)
+                if self.firstReadHappened {
+                    // this is a copy of the exact error that'd come out of the real Socket.read
+                    throw IOError.init(errnoCode: ECONNRESET, function: "read(descriptor:pointer:size:)")
+                } else {
+                    pointer.pointee = 0xff
+                    return .processed(1)
+                }
+            }
+        }
+        class VerifyThingsAreRightHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            private let allDone: EventLoopPromise<Void>
+            enum State {
+                case fresh
+                case active
+                case read
+                case error
+                case readComplete
+                case inactive
+            }
+            private var state: State = .fresh
+
+            init(allDone: EventLoopPromise<Void>) {
+                self.allDone = allDone
+            }
+            func channelActive(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.fresh, self.state)
+                self.state = .active
+            }
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                XCTAssertEqual(.active, self.state)
+                self.state = .read
+                var buffer = self.unwrapInboundIn(data)
+                XCTAssertEqual(1, buffer.readableBytes)
+                XCTAssertEqual([0xff], buffer.readBytes(length: 1)!)
+            }
+
+            func channelReadComplete(ctx: ChannelHandlerContext) {
+                XCTFail("channelReadComplete unexpected")
+                self.state = .readComplete
+            }
+
+            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+                XCTAssertEqual(.read, self.state)
+                self.state = .error
+                ctx.close(promise: nil)
+            }
+
+            func channelInactive(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.error, self.state)
+                self.state = .inactive
+                self.allDone.succeed(result: ())
+            }
+        }
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let serverEL = group.next()
+        let clientEL = group.next()
+        precondition(serverEL !== clientEL)
+        let sc = try SocketChannel(socket: SocketThatHasTheFirstReadSucceedButFailsTheNextWithECONNRESET(protocolFamily: PF_INET), eventLoop: clientEL as! SelectableEventLoop)
+
+        let serverChannel = try ServerBootstrap(group: serverEL)
+            .childChannelInitializer { channel in
+                var buffer = channel.allocator.buffer(capacity: 4)
+                buffer.write(string: "foo")
+                return channel.write(NIOAny(buffer))
+            }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
+        let allDone: EventLoopPromise<Void> = clientEL.newPromise()
+
+        try sc.register().then {
+            sc.pipeline.add(handler: VerifyThingsAreRightHandler(allDone: allDone))
+        }.then {
+            sc.connect(to: serverChannel.localAddress!)
+        }.wait()
+        try allDone.futureResult.wait()
+        XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
+    }
 }

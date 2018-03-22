@@ -49,7 +49,8 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
     override var isOpen: Bool {
         assert(eventLoop.inEventLoop)
-        return pendingWrites.isOpen
+        assert(super.isOpen == self.pendingWrites.isOpen)
+        return super.isOpen
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
@@ -133,7 +134,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
                     readPending = false
 
-                    assert(self.isOpen)
+                    assert(self.isActive)
                     pipeline.fireChannelRead0(NIOAny(buffer))
                     if mayGrow && i < maxMessagesPerRead {
                         // if the ByteBuffer may grow on the next allocation due we used all the writable bytes we should allocate a new `ByteBuffer` to allow ramping up how much data
@@ -356,9 +357,14 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             return
         }
 
+        guard self.isRegistered else {
+            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            return
+        }
+
         let p: EventLoopPromise<Void> = eventLoop.newPromise()
         p.futureResult.map {
-            // Its important to call the methods before we actual notify the original promise for ordering reasons.
+            // Its important to call the methods before we actually notify the original promise for ordering reasons.
             self.becomeActive0(promise: promise)
         }.whenFailure{ error in
             promise?.fail(error: error)
@@ -389,6 +395,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
                 result = .some
                 do {
                     let chan = try SocketChannel(socket: accepted, parent: self, eventLoop: group.next() as! SelectableEventLoop)
+                    assert(self.isActive)
                     pipeline.fireChannelRead0(NIOAny(chan))
                 } catch let err {
                     _ = try? accepted.close()
@@ -473,7 +480,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     override var isOpen: Bool {
         assert(eventLoop.inEventLoop)
-        return pendingWrites.isOpen
+        assert(super.isOpen == self.pendingWrites.isOpen)
+        return super.isOpen
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
@@ -573,6 +581,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 readPending = false
 
                 let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(), data: buffer)
+                assert(self.isActive)
                 pipeline.fireChannelRead0(NIOAny(msg))
                 if mayGrow && i < maxMessagesPerRead {
                     buffer = recvAllocator.buffer(allocator: allocator)
@@ -610,6 +619,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
 
         if !self.pendingWrites.add(envelope: data, promise: promise) {
+            assert(self.isActive)
             pipeline.fireChannelWritabilityChanged0()
         }
     }
@@ -642,6 +652,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         })
         if result.writable {
             // writable again
+            assert(self.isActive)
             self.pipeline.fireChannelWritabilityChanged0()
         }
         return result.writeResult
@@ -651,6 +662,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(self.eventLoop.inEventLoop)
+        guard self.isRegistered else {
+            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            return
+        }
         do {
             try socket.bind(to: address)
             self.updateCachedAddressesFromSocket(updateRemote: false)

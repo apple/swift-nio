@@ -280,6 +280,13 @@ public enum ChannelError: Error {
     case writeHostUnreachable
 }
 
+/// This should be inside of `ChannelError` but we keep it separate to not break API.
+// TODO: For 2.0: bring this inside of `ChannelError`
+public enum ChannelLifecycleError: Error {
+    /// An operation that was inappropriate given the current `Channel` state was attempted.
+    case inappropriateOperationForState
+}
+
 extension ChannelError: Equatable {
     public static func ==(lhs: ChannelError, rhs: ChannelError) -> Bool {
         switch (lhs, rhs) {
