@@ -27,6 +27,7 @@ extension SelectorTest {
    static var allTests : [(String, (SelectorTest) -> () throws -> Void)] {
       return [
                 ("testDeregisterWhileProcessingEvents", testDeregisterWhileProcessingEvents),
+                ("testDeregisterAndCloseWhileProcessingEvents", testDeregisterAndCloseWhileProcessingEvents),
            ]
    }
 }
