@@ -73,7 +73,7 @@ private final class HTTPHandler: ChannelInboundHandler {
     private var continuousCount: Int = 0
 
     private var handler: ((ChannelHandlerContext, HTTPServerRequestPart) -> Void)?
-    private var handlerFuture: EventLoopFuture<()>?
+    private var handlerFuture: EventLoopFuture<Void>?
     private let fileIO: NonBlockingFileIO
 
     public init(fileIO: NonBlockingFileIO, htdocsPath: String) {

@@ -55,8 +55,8 @@ public final class ServerBootstrap {
 
     private let group: EventLoopGroup
     private let childGroup: EventLoopGroup
-    private var serverChannelInit: ((Channel) -> EventLoopFuture<()>)?
-    private var childChannelInit: ((Channel) -> EventLoopFuture<()>)?
+    private var serverChannelInit: ((Channel) -> EventLoopFuture<Void>)?
+    private var childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
     private var serverChannelOptions = ChannelOptionStorage()
     private var childChannelOptions = ChannelOptionStorage()
 
@@ -87,7 +87,7 @@ public final class ServerBootstrap {
     ///
     /// - parameters:
     ///     - initializer: A closure that initializes the provided `Channel`.
-    public func serverChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+    public func serverChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
         self.serverChannelInit = initializer
         return self
     }
@@ -99,7 +99,7 @@ public final class ServerBootstrap {
     ///
     /// - parameters:
     ///     - initializer: A closure that initializes the provided `Channel`.
-    public func childChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+    public func childChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
         self.childChannelInit = initializer
         return self
     }
@@ -199,10 +199,10 @@ public final class ServerBootstrap {
     private class AcceptHandler: ChannelInboundHandler {
         public typealias InboundIn = SocketChannel
 
-        private let childChannelInit: ((Channel) -> EventLoopFuture<()>)?
+        private let childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
         private let childChannelOptions: ChannelOptionStorage
 
-        init(childChannelInitializer: ((Channel) -> EventLoopFuture<()>)?, childChannelOptions: ChannelOptionStorage) {
+        init(childChannelInitializer: ((Channel) -> EventLoopFuture<Void>)?, childChannelOptions: ChannelOptionStorage) {
             self.childChannelInit = childChannelInitializer
             self.childChannelOptions = childChannelOptions
         }
@@ -214,7 +214,7 @@ public final class ServerBootstrap {
             self.childChannelOptions.applyAll(channel: accepted).hopTo(eventLoop: ctx.eventLoop).then {
                 assert(ctx.eventLoop.inEventLoop)
                 return childChannelInit(accepted)
-            }.then { () -> EventLoopFuture<()> in
+            }.then { () -> EventLoopFuture<Void> in
                 assert(ctx.eventLoop.inEventLoop)
                 guard !ctx.pipeline.destroyed else {
                     return accepted.close().thenThrowing {
@@ -268,7 +268,7 @@ public final class ServerBootstrap {
 public final class ClientBootstrap {
 
     private let group: EventLoopGroup
-    private var channelInitializer: ((Channel) -> EventLoopFuture<()>)?
+    private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
     private var channelOptions = ChannelOptionStorage()
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
     private var resolver: Resolver?
@@ -288,7 +288,7 @@ public final class ClientBootstrap {
     ///
     /// - parameters:
     ///     - handler: A closure that initializes the provided `Channel`.
-    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
         self.channelInitializer = handler
         return self
     }
@@ -427,7 +427,7 @@ public final class ClientBootstrap {
 public final class DatagramBootstrap {
 
     private let group: EventLoopGroup
-    private var channelInitializer: ((Channel) -> EventLoopFuture<()>)?
+    private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
     private var channelOptions = ChannelOptionStorage()
 
     /// Create a `DatagramBootstrap` on the `EventLoopGroup` `group`.
@@ -443,7 +443,7 @@ public final class DatagramBootstrap {
     ///
     /// - parameters:
     ///     - handler: A closure that initializes the provided `Channel`.
-    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
         self.channelInitializer = handler
         return self
     }

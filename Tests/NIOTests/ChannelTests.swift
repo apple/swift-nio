@@ -242,7 +242,7 @@ public class ChannelTests: XCTestCase {
     ///     - returns: The return values of the fakes write operations (both single and vector).
     ///     - promiseStates: The states of the promises _after_ the write operations are done.
     func assertExpectedWritability(pendingWritesManager pwm: PendingStreamWritesManager,
-                                   promises: [EventLoopPromise<()>],
+                                   promises: [EventLoopPromise<Void>],
                                    expectedSingleWritabilities: [Int]?,
                                    expectedVectorWritabilities: [[Int]]?,
                                    expectedFileWritabilities: [(Int, Int)]?,
@@ -365,7 +365,7 @@ public class ChannelTests: XCTestCase {
 
         try withPendingStreamWritesManager { pwm in
             buffer.clear()
-            let ps: [EventLoopPromise<()>] = (0..<2).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<2).map { (_: Int) in el.newPromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
 
             XCTAssertFalse(pwm.isEmpty)
@@ -421,7 +421,7 @@ public class ChannelTests: XCTestCase {
         _ = buffer.write(string: "1234")
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -457,7 +457,7 @@ public class ChannelTests: XCTestCase {
         _ = buffer.write(string: "1234")
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<4).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<4).map { (_: Int) in el.newPromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[2])
@@ -505,7 +505,7 @@ public class ChannelTests: XCTestCase {
             let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */)
             buffer.clear()
             buffer.write(bytes: Array<UInt8>(repeating: 0xff, count: numberOfBytes))
-            let ps: [EventLoopPromise<()>] = (0..<1).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.newPromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             pwm.markFlushCheckpoint()
 
@@ -543,8 +543,8 @@ public class ChannelTests: XCTestCase {
             let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */)
             buffer.clear()
             buffer.write(bytes: [0xff] as [UInt8])
-            let ps: [EventLoopPromise<()>] = (0..<numberOfBytes).map { (_: Int) in
-                let p: EventLoopPromise<()> = el.newPromise()
+            let ps: [EventLoopPromise<Void>] = (0..<numberOfBytes).map { (_: Int) in
+                let p: EventLoopPromise<Void> = el.newPromise()
                 _ = pwm.add(data: .byteBuffer(buffer), promise: p)
                 return p
             }
@@ -604,7 +604,7 @@ public class ChannelTests: XCTestCase {
                 XCTAssertNoThrow(try handle.takeDescriptorOwnership())
             }
             let fileRegion = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 1)
-            let ps: [EventLoopPromise<()>] = (0..<numberOfWrites).map { _ in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<numberOfWrites).map { _ in el.newPromise() }
             (0..<numberOfWrites).forEach { i in
                 _ = pwm.add(data: i % 2 == 0 ? .byteBuffer(buffer) : .fileRegion(fileRegion), promise: ps[i])
             }
@@ -636,7 +636,7 @@ public class ChannelTests: XCTestCase {
         _ = buffer.write(string: "1234")
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -671,7 +671,7 @@ public class ChannelTests: XCTestCase {
         buffer.moveWriterIndex(to: halfTheWriteVLimit)
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
             /* add 1.5x the writev limit */
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
@@ -703,7 +703,7 @@ public class ChannelTests: XCTestCase {
         buffer.moveWriterIndex(to: biggerThanWriteV)
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
             /* add 1.5x the writev limit */
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
@@ -736,7 +736,7 @@ public class ChannelTests: XCTestCase {
     func testPendingWritesFileRegion() throws {
         let el = EmbeddedEventLoop()
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<2).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<2).map { (_: Int) in el.newPromise() }
 
             let fh1 = FileHandle(descriptor: -1)
             let fh2 = FileHandle(descriptor: -2)
@@ -785,7 +785,7 @@ public class ChannelTests: XCTestCase {
     func testPendingWritesEmptyFileRegion() throws {
         let el = EmbeddedEventLoop()
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<1).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.newPromise() }
 
             let fh = FileHandle(descriptor: -1)
             let fr = FileRegion(fileHandle: fh, readerIndex: 99, endIndex: 99)
@@ -814,7 +814,7 @@ public class ChannelTests: XCTestCase {
         _ = buffer.write(string: "1234")
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<5).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<5).map { (_: Int) in el.newPromise() }
 
             let fh1 = FileHandle(descriptor: -1)
             let fh2 = FileHandle(descriptor: -1)
@@ -870,7 +870,7 @@ public class ChannelTests: XCTestCase {
         _ = buffer.write(string: "1234")
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
 
             pwm.markFlushCheckpoint()
 
@@ -921,7 +921,7 @@ public class ChannelTests: XCTestCase {
         let emptyBuffer = alloc.buffer(capacity: 12)
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
             _ = pwm.add(data: .byteBuffer(emptyBuffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(emptyBuffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -956,7 +956,7 @@ public class ChannelTests: XCTestCase {
         buffer.write(string: "1234")
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -987,7 +987,7 @@ public class ChannelTests: XCTestCase {
         buffer.write(string: "1234")
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0...Socket.writevLimitIOVectors).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0...Socket.writevLimitIOVectors).map { (_: Int) in el.newPromise() }
             ps.forEach { p in
                 _ = pwm.add(data: .byteBuffer(buffer), promise: p)
             }
@@ -1016,7 +1016,7 @@ public class ChannelTests: XCTestCase {
     func testPendingWritesIsHappyWhenSendfileReturnsWouldBlockButWroteFully() throws {
         let el = EmbeddedEventLoop()
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<1).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.newPromise() }
 
             let fh = FileHandle(descriptor: -1)
             let fr = FileRegion(fileHandle: fh, readerIndex: 0, endIndex: 8192)
@@ -1643,7 +1643,7 @@ public class ChannelTests: XCTestCase {
                 XCTAssertTrue(removed != nil)
             }
 
-            func closeAll() -> [EventLoopFuture<()>] {
+            func closeAll() -> [EventLoopFuture<Void>] {
                 return q.sync { self.channels.values }.map { channel in
                     channel.close()
                 }
@@ -1732,9 +1732,9 @@ public class ChannelTests: XCTestCase {
         }
         class ReadDoesNotHappen: ChannelInboundHandler {
             typealias InboundIn = Any
-            private let hasRegisteredPromise: EventLoopPromise<()>
-            private let hasUnregisteredPromise: EventLoopPromise<()>
-            private let hasReadPromise: EventLoopPromise<()>
+            private let hasRegisteredPromise: EventLoopPromise<Void>
+            private let hasUnregisteredPromise: EventLoopPromise<Void>
+            private let hasReadPromise: EventLoopPromise<Void>
             enum State {
                 case start
                 case registered
@@ -1742,7 +1742,7 @@ public class ChannelTests: XCTestCase {
                 case read
             }
             private var state: State = .start
-            init(hasRegisteredPromise: EventLoopPromise<()>, hasUnregisteredPromise: EventLoopPromise<()>, hasReadPromise: EventLoopPromise<()>) {
+            init(hasRegisteredPromise: EventLoopPromise<Void>, hasUnregisteredPromise: EventLoopPromise<Void>, hasReadPromise: EventLoopPromise<Void>) {
                 self.hasRegisteredPromise = hasRegisteredPromise
                 self.hasUnregisteredPromise = hasUnregisteredPromise
                 self.hasReadPromise = hasReadPromise
@@ -1779,9 +1779,9 @@ public class ChannelTests: XCTestCase {
             typealias InboundIn = Any
             typealias OutboundOut = ByteBuffer
 
-            private let writeDonePromise: EventLoopPromise<()>
+            private let writeDonePromise: EventLoopPromise<Void>
 
-            init(writeDonePromise: EventLoopPromise<()>) {
+            init(writeDonePromise: EventLoopPromise<Void>) {
                 self.writeDonePromise = writeDonePromise
             }
 
@@ -1792,10 +1792,10 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        let serverWriteHappenedPromise: EventLoopPromise<()> = serverEL.next().newPromise()
-        let clientHasRegistered: EventLoopPromise<()> = serverEL.next().newPromise()
-        let clientHasUnregistered: EventLoopPromise<()> = serverEL.next().newPromise()
-        let clientHasRead: EventLoopPromise<()> = serverEL.next().newPromise()
+        let serverWriteHappenedPromise: EventLoopPromise<Void> = serverEL.next().newPromise()
+        let clientHasRegistered: EventLoopPromise<Void> = serverEL.next().newPromise()
+        let clientHasUnregistered: EventLoopPromise<Void> = serverEL.next().newPromise()
+        let clientHasRead: EventLoopPromise<Void> = serverEL.next().newPromise()
 
         let bootstrap = try ServerBootstrap(group: serverEL)
             .childChannelInitializer { channel in

@@ -74,7 +74,7 @@ public struct NonBlockingFileIO {
                             chunkSize: Int = NonBlockingFileIO.defaultChunkSize,
                             allocator: ByteBufferAllocator,
                             eventLoop: EventLoop,
-                            chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<()>) -> EventLoopFuture<()> {
+                            chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
         do {
             let readableBytes = fileRegion.readableBytes
             try fileRegion.fileHandle.withUnsafeFileDescriptor { descriptor in
@@ -115,17 +115,17 @@ public struct NonBlockingFileIO {
                             byteCount: Int,
                             chunkSize: Int = NonBlockingFileIO.defaultChunkSize,
                             allocator: ByteBufferAllocator,
-                            eventLoop: EventLoop, chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<()>) -> EventLoopFuture<()> {
+                            eventLoop: EventLoop, chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
         precondition(chunkSize > 0, "chunkSize must be > 0 (is \(chunkSize))")
         var remainingReads = 1 + (byteCount / chunkSize)
         let lastReadSize = byteCount % chunkSize
 
-        func _read(remainingReads: Int) -> EventLoopFuture<()> {
+        func _read(remainingReads: Int) -> EventLoopFuture<Void> {
             if remainingReads > 1 || (remainingReads == 1 && lastReadSize > 0) {
                 let readSize = remainingReads > 1 ? chunkSize : lastReadSize
                 assert(readSize > 0)
                 return self.read(fileHandle: fileHandle, byteCount: readSize, allocator: allocator, eventLoop: eventLoop).then { buffer in
-                    chunkHandler(buffer).then { () -> EventLoopFuture<()> in
+                    chunkHandler(buffer).then { () -> EventLoopFuture<Void> in
                         assert(eventLoop.inEventLoop)
                         return _read(remainingReads: remainingReads - 1)
                     }

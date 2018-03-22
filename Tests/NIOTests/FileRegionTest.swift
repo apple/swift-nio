@@ -91,7 +91,7 @@ class FileRegionTest : XCTestCase {
             }
             try "".write(toFile: filePath, atomically: false, encoding: .ascii)
 
-            var futures: [EventLoopFuture<()>] = []
+            var futures: [EventLoopFuture<Void>] = []
             for _ in 0..<10 {
                 futures.append(clientChannel.write(NIOAny(fr)))
             }

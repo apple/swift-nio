@@ -110,12 +110,12 @@ final class DatagramChannelTests: XCTestCase {
         var buffer = firstChannel.allocator.buffer(capacity: 256)
         buffer.write(staticString: "hello, world!")
         let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-        var writeFutures: [EventLoopFuture<()>] = []
+        var writeFutures: [EventLoopFuture<Void>] = []
         for _ in 0..<5 {
             writeFutures.append(self.firstChannel.write(NIOAny(writeData)))
         }
         self.firstChannel.flush()
-        XCTAssertNoThrow(try EventLoopFuture<()>.andAll(writeFutures, eventLoop: self.firstChannel.eventLoop).wait())
+        XCTAssertNoThrow(try EventLoopFuture<Void>.andAll(writeFutures, eventLoop: self.firstChannel.eventLoop).wait())
 
         let reads = try self.secondChannel.waitForDatagrams(count: 5)
 
@@ -155,7 +155,7 @@ final class DatagramChannelTests: XCTestCase {
             XCTAssertTrue(writable)
         }
 
-        let lastWritePromise: EventLoopPromise<()> = self.firstChannel.eventLoop.newPromise()
+        let lastWritePromise: EventLoopPromise<Void> = self.firstChannel.eventLoop.newPromise()
         // The last write will push us over the edge.
         var writable: Bool = try self.firstChannel.eventLoop.submit {
             self.firstChannel.write(NIOAny(writeData), promise: lastWritePromise)
@@ -197,14 +197,14 @@ final class DatagramChannelTests: XCTestCase {
         // We're going to try to write loads, and loads, and loads of data. In this case, one more
         // write than the iovecs max.
 
-        var overall: EventLoopFuture<()> = self.firstChannel.eventLoop.newSucceededFuture(result: ())
+        var overall: EventLoopFuture<Void> = self.firstChannel.eventLoop.newSucceededFuture(result: ())
         for _ in 0...Socket.writevLimitIOVectors {
-            let myPromise: EventLoopPromise<()> = self.firstChannel.eventLoop.newPromise()
+            let myPromise: EventLoopPromise<Void> = self.firstChannel.eventLoop.newPromise()
             var buffer = self.firstChannel.allocator.buffer(capacity: 1)
             buffer.write(string: "a")
             let envelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
             self.firstChannel.write(NIOAny(envelope), promise: myPromise)
-            overall = EventLoopFuture<()>.andAll([overall, myPromise.futureResult], eventLoop: self.firstChannel.eventLoop)
+            overall = EventLoopFuture<Void>.andAll([overall, myPromise.futureResult], eventLoop: self.firstChannel.eventLoop)
         }
         self.firstChannel.flush()
         XCTAssertNoThrow(try overall.wait())
@@ -218,7 +218,7 @@ final class DatagramChannelTests: XCTestCase {
         // We defer this work to the background thread because otherwise it incurs an enormous number of context
         // switches.
         _ = try self.firstChannel.eventLoop.submit {
-            let myPromise: EventLoopPromise<()> = self.firstChannel.eventLoop.newPromise()
+            let myPromise: EventLoopPromise<Void> = self.firstChannel.eventLoop.newPromise()
             // For datagrams this buffer cannot be very large, because if it's larger than the path MTU it
             // will cause EMSGSIZE.
             let bufferSize = 1024 * 5
@@ -232,7 +232,7 @@ final class DatagramChannelTests: XCTestCase {
             var written = 0
             while written <= Int(INT32_MAX) {
                 self.firstChannel.write(NIOAny(envelope), promise: myPromise)
-                overall = EventLoopFuture<()>.andAll([overall, myPromise.futureResult], eventLoop: self.firstChannel.eventLoop)
+                overall = EventLoopFuture<Void>.andAll([overall, myPromise.futureResult], eventLoop: self.firstChannel.eventLoop)
                 written += bufferSize
                 datagrams += 1
             }
