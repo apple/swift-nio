@@ -75,7 +75,7 @@ internal final class DeadChannel: Channel {
     let eventLoop: EventLoop
     let pipeline: ChannelPipeline
 
-    public var closeFuture: EventLoopFuture<()> {
+    public var closeFuture: EventLoopFuture<Void> {
         return self.eventLoop.newSucceededFuture(result: ())
     }
 

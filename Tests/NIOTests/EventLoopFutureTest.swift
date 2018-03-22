@@ -66,7 +66,7 @@ class EventLoopFutureTest : XCTestCase {
         let eventLoop = EmbeddedEventLoop()
         var promises: [EventLoopPromise<Void>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
         _ = promises.map { $0.succeed(result: ()) }
-        let failedPromise: EventLoopPromise<()> = eventLoop.newPromise()
+        let failedPromise: EventLoopPromise<Void> = eventLoop.newPromise()
         failedPromise.fail(error: E())
         promises.append(failedPromise)
 
@@ -172,7 +172,7 @@ class EventLoopFutureTest : XCTestCase {
     func testOrderOfFutureCompletion() throws {
         let eventLoop = EmbeddedEventLoop()
         var state = 0
-        let p: EventLoopPromise<()> = EventLoopPromise(eventLoop: eventLoop, file: #file, line: #line)
+        let p: EventLoopPromise<Void> = EventLoopPromise(eventLoop: eventLoop, file: #file, line: #line)
         p.futureResult.map {
             XCTAssertEqual(state, 0)
             state += 1
@@ -242,14 +242,14 @@ class EventLoopFutureTest : XCTestCase {
         }
         XCTAssertNoThrow(try elg.syncShutdownGracefully())
     }
-    
+
     func testEventLoopHoppingAndAll() throws {
         let n = 20
         let elg = MultiThreadedEventLoopGroup(numThreads: n)
-        let ps = (0..<n).map { (_: Int) -> EventLoopPromise<()> in
+        let ps = (0..<n).map { (_: Int) -> EventLoopPromise<Void> in
             elg.next().newPromise()
         }
-        let allOfEm = EventLoopFuture<()>.andAll(ps.map { $0.futureResult }, eventLoop: elg.next())
+        let allOfEm = EventLoopFuture<Void>.andAll(ps.map { $0.futureResult }, eventLoop: elg.next())
         ps.reversed().forEach { p in
             DispatchQueue.global().async {
                 p.succeed(result: ())
@@ -258,16 +258,16 @@ class EventLoopFutureTest : XCTestCase {
         try allOfEm.wait()
         XCTAssertNoThrow(try elg.syncShutdownGracefully())
     }
-    
+
     func testEventLoopHoppingAndAllWithFailures() throws {
         enum DummyError: Error { case dummy }
         let n = 20
         let fireBackEl = MultiThreadedEventLoopGroup(numThreads: 1)
         let elg = MultiThreadedEventLoopGroup(numThreads: n)
-        let ps = (0..<n).map { (_: Int) -> EventLoopPromise<()> in
+        let ps = (0..<n).map { (_: Int) -> EventLoopPromise<Void> in
             elg.next().newPromise()
         }
-        let allOfEm = EventLoopFuture<()>.andAll(ps.map { $0.futureResult }, eventLoop: fireBackEl.next())
+        let allOfEm = EventLoopFuture<Void>.andAll(ps.map { $0.futureResult }, eventLoop: fireBackEl.next())
         ps.reversed().enumerated().forEach { idx, p in
             DispatchQueue.global().async {
                 if idx == n / 2 {
@@ -288,7 +288,7 @@ class EventLoopFutureTest : XCTestCase {
         XCTAssertNoThrow(try elg.syncShutdownGracefully())
         XCTAssertNoThrow(try fireBackEl.syncShutdownGracefully())
     }
-    
+
     func testFutureInVariousScenarios() throws {
         enum DummyError: Error { case dummy0; case dummy1 }
         let elg = MultiThreadedEventLoopGroup(numThreads: 2)
@@ -297,7 +297,7 @@ class EventLoopFutureTest : XCTestCase {
         precondition(el1 !== el2)
         let q1 = DispatchQueue(label: "q1")
         let q2 = DispatchQueue(label: "q2")
-        
+
         // this determines which promise is fulfilled first (and (true, true) meaning they race)
         for whoGoesFirst in [(false, true), (true, false), (true, true)] {
             // this determines what EventLoops the Promises are created on
@@ -307,7 +307,7 @@ class EventLoopFutureTest : XCTestCase {
                     let p0: EventLoopPromise<Int> = eventLoops.0.newPromise()
                     let p1: EventLoopPromise<String> = eventLoops.1.newPromise()
                     let fAll = p0.futureResult.and(p1.futureResult)
-                    
+
                     // preheat both queues so we have a better chance of racing
                     let sem1 = DispatchSemaphore(value: 0)
                     let sem2 = DispatchSemaphore(value: 0)
@@ -321,7 +321,7 @@ class EventLoopFutureTest : XCTestCase {
                         sem2.wait()
                     }
                     g.wait()
-                    
+
                     if whoGoesFirst.0 {
                         q1.async {
                             if whoSucceeds.0 {
@@ -378,7 +378,7 @@ class EventLoopFutureTest : XCTestCase {
                 }
             }
         }
-        
+
         XCTAssertNoThrow(try elg.syncShutdownGracefully())
     }
 

@@ -331,11 +331,11 @@ class EchoServerClientTest : XCTestCase {
         typealias InboundIn = Never
         let alreadyClosedInChannelInactive = Atomic<Bool>(value: false)
         let alreadyClosedInChannelUnregistered = Atomic<Bool>(value: false)
-        let channelUnregisteredPromise: EventLoopPromise<()>
-        let channelInactivePromise: EventLoopPromise<()>
+        let channelUnregisteredPromise: EventLoopPromise<Void>
+        let channelInactivePromise: EventLoopPromise<Void>
 
-        public init(channelUnregisteredPromise: EventLoopPromise<()>,
-                    channelInactivePromise: EventLoopPromise<()>) {
+        public init(channelUnregisteredPromise: EventLoopPromise<Void>,
+                    channelInactivePromise: EventLoopPromise<Void>) {
             self.channelUnregisteredPromise = channelUnregisteredPromise
             self.channelInactivePromise = channelInactivePromise
         }
@@ -411,8 +411,8 @@ class EchoServerClientTest : XCTestCase {
                 XCTAssertNoThrow(try group.syncShutdownGracefully())
             }
 
-        let inactivePromise = group.next().newPromise() as EventLoopPromise<()>
-        let unregistredPromise = group.next().newPromise() as EventLoopPromise<()>
+        let inactivePromise = group.next().newPromise() as EventLoopPromise<Void>
+        let unregistredPromise = group.next().newPromise() as EventLoopPromise<Void>
         let handler = CloseInInActiveAndUnregisteredChannelHandler(channelUnregisteredPromise: unregistredPromise,
                                                                    channelInactivePromise: inactivePromise)
 
