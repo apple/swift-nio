@@ -184,8 +184,20 @@ internal enum Posix {
 
     @inline(never)
     public static func close(descriptor: CInt) throws {
-        _ = try wrapSyscall {
-            sysClose(descriptor)
+        let res = sysClose(descriptor)
+        if res == -1 {
+            let err = errno
+
+            // There is really nothing "sane" we can do when EINTR was reported on close.
+            // So just ignore it and "assume" everything is fine == we closed the file descriptor.
+            //
+            // For more details see:
+            //     - https://bugs.chromium.org/p/chromium/issues/detail?id=269623
+            //     - https://lwn.net/Articles/576478/
+            if err != EINTR {
+                assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(strerror(err)!)")
+                throw IOError(errnoCode: err, function: "close")
+            }
         }
     }
 
