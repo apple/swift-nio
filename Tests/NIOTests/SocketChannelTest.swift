@@ -219,4 +219,46 @@ public class SocketChannelTest : XCTestCase {
         try channel.closeFuture.wait()
         try promise.futureResult.wait()
     }
+
+    public func testWriteServerSocketChannel() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+
+        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        do {
+            try serverChannel.write("test").wait()
+        } catch let err as ChannelError where err == .operationUnsupported {
+            // expected
+        }
+        try serverChannel.close().wait()
+    }
+
+
+    public func testWriteAndFlushServerSocketChannel() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+
+        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        do {
+            try serverChannel.writeAndFlush("test").wait()
+        } catch let err as ChannelError where err == .operationUnsupported {
+            // expected
+        }
+        try serverChannel.close().wait()
+    }
+
+    
+    public func testConnectServerSocketChannel() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+
+        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        do {
+            try serverChannel.connect(to: serverChannel.localAddress!).wait()
+        } catch let err as ChannelError where err == .operationUnsupported {
+            // expected
+        }
+        try serverChannel.close().wait()
+    }
+
 }

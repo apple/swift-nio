@@ -436,6 +436,18 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             ch.close(promise: nil)
         }
     }
+
+    override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
+        promise?.fail(error: ChannelError.operationUnsupported)
+    }
+
+    override func markFlushPoint(promise: EventLoopPromise<Void>?) {
+        promise?.fail(error: ChannelError.operationUnsupported)
+    }
+
+    override func flushNow() -> IONotificationState {
+        return IONotificationState.unregister
+    }
 }
 
 /// A channel used with datagram sockets.
