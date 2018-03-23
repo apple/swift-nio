@@ -446,9 +446,16 @@ public final class ChannelPipeline: ChannelInvoker {
         return promise.futureResult
     }
 
+    /// Returns a `ChannelHandlerContext` which matches.
+    ///
+    /// This skips head and tail (as these are internal and should not be accessible by the user).
+    ///
+    /// - parameters:
+    ///     - body: The predicate to execute per `ChannelHandlerContext` in the `ChannelPipeline`.
+    /// -returns: The first `ChannelHandlerContext` that matches or `nil` if none did.
     private func contextForPredicate0(_ body: @escaping((ChannelHandlerContext) -> Bool)) -> ChannelHandlerContext? {
-        var curCtx: ChannelHandlerContext? = self.head
-        while let ctx = curCtx {
+        var curCtx: ChannelHandlerContext? = self.head?.next
+        while let ctx = curCtx, ctx !== self.tail {
             if body(ctx) {
                 return ctx
             }
@@ -835,8 +842,8 @@ public final class ChannelPipeline: ChannelInvoker {
         self._channel = channel
         self.eventLoop = channel.eventLoop
 
-        self.head = ChannelHandlerContext(name: "head", handler: HeadChannelHandler.sharedInstance, pipeline: self)
-        self.tail = ChannelHandlerContext(name: "tail", handler: TailChannelHandler.sharedInstance, pipeline: self)
+        self.head = ChannelHandlerContext(name: HeadChannelHandler.name, handler: HeadChannelHandler.sharedInstance, pipeline: self)
+        self.tail = ChannelHandlerContext(name: TailChannelHandler.name, handler: TailChannelHandler.sharedInstance, pipeline: self)
         self.head?.next = self.tail
         self.tail?.prev = self.head
     }
@@ -876,8 +883,9 @@ extension ChannelPipeline {
 }
 
 /// Special `ChannelHandler` that forwards all events to the `Channel.Unsafe` implementation.
-private final class HeadChannelHandler: _ChannelOutboundHandler {
+/* private but tests */ final class HeadChannelHandler: _ChannelOutboundHandler {
 
+    static let name = "head"
     static let sharedInstance = HeadChannelHandler()
 
     private init() { }
@@ -930,8 +938,9 @@ private extension CloseMode {
 }
 
 /// Special `ChannelInboundHandler` which will consume all inbound events.
-private final class TailChannelHandler: _ChannelInboundHandler, _ChannelOutboundHandler {
+/* private but tests */ final class TailChannelHandler: _ChannelInboundHandler, _ChannelOutboundHandler {
 
+    static let name = "tail"
     static let sharedInstance = TailChannelHandler()
 
     private init() { }
@@ -1422,8 +1431,8 @@ public final class ChannelHandlerContext: ChannelInvoker {
 extension ChannelPipeline: CustomDebugStringConvertible {
     public var debugDescription: String {
         var desc = "ChannelPipeline (\(ObjectIdentifier(self))):\n"
-        var node = self.head
-        while let ctx = node {
+        var node = self.head?.next
+        while let ctx = node, ctx !== self.tail {
             let inboundStr = ctx.handler is _ChannelInboundHandler ? "I" : ""
             let outboundStr = ctx.handler is _ChannelOutboundHandler ? "O" : ""
             desc += "        \(ctx.name) (\(type(of: ctx.handler))) [\(inboundStr)\(outboundStr)]\n"
