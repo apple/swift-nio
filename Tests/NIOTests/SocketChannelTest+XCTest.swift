@@ -36,6 +36,9 @@ extension SocketChannelTest {
                 ("testAcceptFailsWithEFAULT", testAcceptFailsWithEFAULT),
                 ("testSetGetOptionClosedServerSocketChannel", testSetGetOptionClosedServerSocketChannel),
                 ("testConnect", testConnect),
+                ("testWriteServerSocketChannel", testWriteServerSocketChannel),
+                ("testWriteAndFlushServerSocketChannel", testWriteAndFlushServerSocketChannel),
+                ("testConnectServerSocketChannel", testConnectServerSocketChannel),
            ]
    }
 }
