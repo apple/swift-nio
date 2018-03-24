@@ -514,7 +514,7 @@ public struct ByteBuffer {
         return Int(self._readerIndex)
     }
 
-    /// The write index or the number of bytes previously writte to this `ByteBuffer`. `writerIndex` is `0` for a
+    /// The write index or the number of bytes previously written to this `ByteBuffer`. `writerIndex` is `0` for a
     /// newly allocated `ByteBuffer`.
     public var writerIndex: Int {
         return Int(self._writerIndex)
