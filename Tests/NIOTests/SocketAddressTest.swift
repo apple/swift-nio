@@ -24,23 +24,48 @@ class SocketAddressTest: XCTestCase {
         XCTAssertEqual("[IPv4]foobar.com:12345", sa.description)
     }
 
+    func testIn6AddrDescriptionWorks() throws {
+        let sampleString = "::1"
+        let sampleIn6Addr: [UInt8] = [ // ::1
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+            0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x70, 0x0, 0x0, 0x54,
+            0xc2, 0xb5, 0x58, 0xff, 0x7f, 0x0, 0x0, 0x7, 
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x40, 0x1, 0x1, 0x0
+        ]
+
+        var address         = sockaddr_in6()
+        #if os(Linux) // no sin_len on Linux
+        #else
+          address.sin6_len  = UInt8(MemoryLayout<sockaddr_in6>.size)
+        #endif
+        address.sin6_family = sa_family_t(AF_INET6)
+        address.sin6_addr   = sampleIn6Addr.withUnsafeBytes {
+            $0.baseAddress!.assumingMemoryBound(to: in6_addr.self).pointee
+        }
+
+        let s = address.addressDescription()
+        XCTAssertEqual(s.count, sampleString.count,
+                       "Address description has unexpected length 😱")
+        XCTAssertEqual(s, sampleString,
+                       "Address description is way below our expectations 😱")
+    }
+
     func testCanCreateIPv4AddressFromString() throws {
         let sa = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
         let expectedAddress: [UInt8] = [0x7F, 0x00, 0x00, 0x01]
-        switch sa {
-        case .v4(let address):
+        if case .v4(let address) = sa {
             var addr = address.address
             let host = address.host
             XCTAssertEqual(host, "")
             XCTAssertEqual(addr.sin_family, sa_family_t(AF_INET))
-            XCTAssertEqual(addr.sin_port, 80)
+            XCTAssertEqual(addr.sin_port, in_port_t(80).bigEndian)
             expectedAddress.withUnsafeBytes { expectedPtr in
                 withUnsafeBytes(of: &addr.sin_addr) { actualPtr in
                     let rc = memcmp(actualPtr.baseAddress!, expectedPtr.baseAddress!, MemoryLayout<in_addr>.size)
                     XCTAssertEqual(rc, 0)
                 }
             }
-        default:
+        } else {
             XCTFail("Invalid address: \(sa)")
         }
     }
@@ -48,13 +73,12 @@ class SocketAddressTest: XCTestCase {
     func testCanCreateIPv6AddressFromString() throws {
         let sa = try SocketAddress(ipAddress: "fe80::5", port: 443)
         let expectedAddress: [UInt8] = [0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]
-        switch sa {
-        case .v6(let address):
+        if case .v6(let address) = sa {
             var addr = address.address
             let host = address.host
             XCTAssertEqual(host, "")
             XCTAssertEqual(addr.sin6_family, sa_family_t(AF_INET6))
-            XCTAssertEqual(addr.sin6_port, 443)
+            XCTAssertEqual(addr.sin6_port, in_port_t(443).bigEndian)
             XCTAssertEqual(addr.sin6_scope_id, 0)
             XCTAssertEqual(addr.sin6_flowinfo, 0)
             expectedAddress.withUnsafeBytes { expectedPtr in
@@ -63,7 +87,7 @@ class SocketAddressTest: XCTestCase {
                     XCTAssertEqual(rc, 0)
                 }
             }
-        default:
+        } else {
             XCTFail("Invalid address: \(sa)")
         }
     }
@@ -102,15 +126,15 @@ class SocketAddressTest: XCTestCase {
 
         var firstCopy = firstIPAddress.withMutableSockAddr { (addr, size) -> sockaddr_in in
             XCTAssertEqual(size, MemoryLayout<sockaddr_in>.size)
-            return addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { return $0.pointee }
+            return addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { $0.pointee }
         }
         var secondCopy = secondIPAddress.withMutableSockAddr { (addr, size) -> sockaddr_in6 in
             XCTAssertEqual(size, MemoryLayout<sockaddr_in6>.size)
-            return addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { return $0.pointee }
+            return addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { $0.pointee }
         }
         var thirdCopy = thirdIPAddress.withMutableSockAddr { (addr, size) -> sockaddr_un in
             XCTAssertEqual(size, MemoryLayout<sockaddr_un>.size)
-            return addr.withMemoryRebound(to: sockaddr_un.self, capacity: 1) { return $0.pointee }
+            return addr.withMemoryRebound(to: sockaddr_un.self, capacity: 1) { $0.pointee }
         }
 
         XCTAssertEqual(memcmp(&firstIPAddress, &firstCopy, MemoryLayout<sockaddr_in>.size), 0)
@@ -153,7 +177,7 @@ class SocketAddressTest: XCTestCase {
         _ = secondIPAddress.withMutableSockAddr { (addr, size) -> Void in
             XCTAssertEqual(size, MemoryLayout<sockaddr_in6>.size)
             addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
-                $0.pointee.sin6_port = 5
+                $0.pointee.sin6_port = in_port_t(5).bigEndian
             }
         }
         _ = thirdIPAddress.withMutableSockAddr { (addr, size) -> Void in

@@ -56,7 +56,7 @@ private func qValueFromHeader(_ text: String) -> Float {
 /// ahead-of-time instead of dynamically, could be a waste of CPU time and latency for relatively minimal
 /// benefit. This channel handler should be present in the pipeline only for dynamically-generated and
 /// highly-compressible content, which will see the biggest benefits from streaming compression.
-public final class HTTPResponseCompressor: ChannnelDuplexHandler {
+public final class HTTPResponseCompressor: ChannelDuplexHandler {
     public typealias InboundIn = HTTPServerRequestPart
     public typealias InboundOut = HTTPServerRequestPart
     public typealias OutboundIn = HTTPServerResponsePart
@@ -103,13 +103,10 @@ public final class HTTPResponseCompressor: ChannnelDuplexHandler {
     }
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        let httpData = unwrapInboundIn(data)
-        switch httpData {
-        case .head(let requestHead):
+        if case .head(let requestHead) = unwrapInboundIn(data) {
             acceptQueue.append(requestHead.headers.getCanonicalForm("accept-encoding"))
-        default:
-            break
         }
+
         ctx.fireChannelRead(data)
     }
 
@@ -267,7 +264,7 @@ private struct PartialHTTPResponse {
     var end: HTTPServerResponsePart?
     private let initialBufferSize: Int
 
-    var completeResponse: Bool {
+    var isCompleteResponse: Bool {
         return head != nil && end != nil
     }
 
@@ -344,7 +341,7 @@ private struct PartialHTTPResponse {
         let flag = mustFlush ? Z_FINISH : Z_SYNC_FLUSH
 
         let body = compressBody(compressor: &compressor, allocator: allocator, flag: flag)
-        if let bodyLength = body?.readableBytes, completeResponse && bodyLength > 0 {
+        if let bodyLength = body?.readableBytes, isCompleteResponse && bodyLength > 0 {
             head!.headers.remove(name: "transfer-encoding")
             head!.headers.replaceOrAdd(name: "content-length", value: "\(bodyLength)")
         } else if head != nil && head!.status.mayHaveResponseBody {

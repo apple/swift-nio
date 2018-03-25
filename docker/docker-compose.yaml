@@ -1,46 +1,57 @@
 version: "3"
+
 services:
+
     swift-nio:
         image: swift-nio:latest
         build:
             context: .
-            dockerfile: Dockerfile.xenial
-            args:
-                version: 4.0
+            dockerfile: Dockerfile
+
+    unit-tests:
+        depends_on: [swift-nio]
+        image: swift-nio:latest
+        command: /bin/bash -cl "swift test"
+        volumes:
+            - ~/.ssh:/root/.ssh
+            - ..:/code
+        working_dir: /code
+
+    integration-tests:
+        depends_on: [swift-nio]
+        image: swift-nio:latest
+        command: /bin/bash -cl "./scripts/integration_tests.sh"
         volumes:
             - ~/.ssh:/root/.ssh
             - ..:/code
         working_dir: /code
 
     test:
-        depends_on:
-            - swift-nio
+        depends_on: [swift-nio]
         image: swift-nio:latest
-        command: swift test
+        command: /bin/bash -cl "swift test && ./scripts/integration_tests.sh"
         volumes:
             - ~/.ssh:/root/.ssh
             - ..:/code
         working_dir: /code
 
     echo:
-        depends_on:
-            - swift-nio
+        depends_on: [swift-nio]
         image: swift-nio:latest
         ports:
             - "9999:9999"
-        command: swift run NIOEchoServer 0.0.0.0 9999
+        command: /bin/bash -cl "swift run NIOEchoServer 0.0.0.0 9999"
         volumes:
             - ~/.ssh:/root/.ssh
             - ..:/code
         working_dir: /code
 
     http:
-        depends_on:
-            - swift-nio
+        depends_on: [swift-nio]
         image: swift-nio:latest
         ports:
             - "8888:8888"
-        command: swift run NIOHTTP1Server 0.0.0.0 8888
+        command: /bin/bash -cl "swift run NIOHTTP1Server 0.0.0.0 8888"
         volumes:
             - ~/.ssh:/root/.ssh
             - ..:/code

@@ -114,3 +114,40 @@ final class ByteCountingHandler : ChannelInboundHandler {
         XCTAssertEqual(buffer, received)
     }
 }
+
+final class NonAcceptingServerSocket: ServerSocket {
+    private var errors: [Int32]
+
+    init(errors: [Int32]) throws {
+        // Reverse so its cheaper to remove errors.
+        self.errors = errors.reversed()
+        try super.init(protocolFamily: AF_INET, setNonBlocking: true)
+    }
+
+    override func accept(setNonBlocking: Bool) throws -> Socket? {
+        if let err = self.errors.last {
+            _ = self.errors.removeLast()
+            throw IOError(errnoCode: err, function: "accept")
+        }
+        return nil
+    }
+}
+
+func assertSetGetOptionOnOpenAndClosed<T: ChannelOption>(channel: Channel, option: T, value: T.OptionType) throws {
+    _ = try channel.setOption(option: option, value: value).wait()
+    _ = try channel.getOption(option: option).wait()
+    try channel.close().wait()
+    try channel.closeFuture.wait()
+
+    do {
+        _ = try channel.setOption(option: option, value: value).wait()
+    } catch let err as ChannelError where err == .ioOnClosedChannel {
+        // expected
+    }
+
+    do {
+        _ = try channel.getOption(option: option).wait()
+    } catch let err as ChannelError where err == .ioOnClosedChannel {
+        // expected
+    }
+}

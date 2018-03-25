@@ -148,9 +148,10 @@ final class Selector<R: Registration> {
         case .all:
             return Epoll.EPOLLIN.rawValue | Epoll.EPOLLOUT.rawValue | Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue
         case .none:
-            return Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue
+            return Epoll.EPOLLERR.rawValue
         }
     }
+
 #else
     private func toKQueueTimeSpec(strategy: SelectorStrategy) -> timespec? {
         switch strategy {
@@ -372,15 +373,16 @@ final class Selector<R: Registration> {
                 // We are not interested in the result
                 _ = Glibc.read(timerfd, &val, MemoryLayout<UInt>.size)
             default:
-                let registration = registrations[Int(ev.data.fd)]!
-                try body(
-                    SelectorEvent(
-                        readable: (ev.events & Epoll.EPOLLIN.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
-                        writable: (ev.events & Epoll.EPOLLOUT.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
-                        registration: registration))
+                // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skip it.
+                if let registration = registrations[Int(ev.data.fd)] {
+                    try body(
+                        SelectorEvent(
+                            readable: (ev.events & Epoll.EPOLLIN.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
+                            writable: (ev.events & Epoll.EPOLLOUT.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
+                            registration: registration))
+                }
             }
         }
-
         growEventArrayIfNeeded(ready: ready)
 #else
         let timespec = toKQueueTimeSpec(strategy: strategy)
@@ -514,10 +516,10 @@ internal extension Selector where R == NIORegistration {
 
 /// The strategy used for the `Selector`.
 enum SelectorStrategy {
-    /// Block until there is some IO ready to be processed or the `Selector` is explictly woken up.
+    /// Block until there is some IO ready to be processed or the `Selector` is explicitly woken up.
     case block
 
-    /// Block until there is some IO ready to be processed, the `Selector` is explictly woken up or the given `TimeAmount` elapsed.
+    /// Block until there is some IO ready to be processed, the `Selector` is explicitly woken up or the given `TimeAmount` elapsed.
     case blockUntilTimeout(TimeAmount)
 
     /// Try to select all ready IO at this point in time without blocking at all.

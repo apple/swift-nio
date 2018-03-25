@@ -61,7 +61,7 @@ public struct NonBlockingFileIO {
     /// times, delivering `chunkSize` bytes each time. If less than `fileRegion.readableBytes` bytes can be read from the file,
     /// `chunkHandler` will be called less often with the last invocation possibly being of less than `chunkSize` bytes.
     ///
-    /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` suceeds.
+    /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` succeeds.
     ///
     /// - parameters:
     ///   - fileRegion: The file region to read.
@@ -74,7 +74,7 @@ public struct NonBlockingFileIO {
                             chunkSize: Int = NonBlockingFileIO.defaultChunkSize,
                             allocator: ByteBufferAllocator,
                             eventLoop: EventLoop,
-                            chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<()>) -> EventLoopFuture<()> {
+                            chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
         do {
             let readableBytes = fileRegion.readableBytes
             try fileRegion.fileHandle.withUnsafeFileDescriptor { descriptor in
@@ -99,7 +99,7 @@ public struct NonBlockingFileIO {
     /// times, delivering `chunkSize` bytes each time. If less than `byteCount` bytes can be read from `descriptor`,
     /// `chunkHandler` will be called less often with the last invocation possibly being of less than `chunkSize` bytes.
     ///
-    /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` suceeds.
+    /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` succeeds.
     ///
     /// - note: `readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)` should be preferred as it uses `FileRegion` object instead of raw `FileHandle`s.
     ///
@@ -115,17 +115,17 @@ public struct NonBlockingFileIO {
                             byteCount: Int,
                             chunkSize: Int = NonBlockingFileIO.defaultChunkSize,
                             allocator: ByteBufferAllocator,
-                            eventLoop: EventLoop, chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<()>) -> EventLoopFuture<()> {
+                            eventLoop: EventLoop, chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
         precondition(chunkSize > 0, "chunkSize must be > 0 (is \(chunkSize))")
         var remainingReads = 1 + (byteCount / chunkSize)
         let lastReadSize = byteCount % chunkSize
 
-        func _read(remainingReads: Int) -> EventLoopFuture<()> {
+        func _read(remainingReads: Int) -> EventLoopFuture<Void> {
             if remainingReads > 1 || (remainingReads == 1 && lastReadSize > 0) {
                 let readSize = remainingReads > 1 ? chunkSize : lastReadSize
                 assert(readSize > 0)
                 return self.read(fileHandle: fileHandle, byteCount: readSize, allocator: allocator, eventLoop: eventLoop).then { buffer in
-                    return chunkHandler(buffer).then { () -> EventLoopFuture<()> in
+                    chunkHandler(buffer).then { () -> EventLoopFuture<Void> in
                         assert(eventLoop.inEventLoop)
                         return _read(remainingReads: remainingReads - 1)
                     }
@@ -206,7 +206,7 @@ public struct NonBlockingFileIO {
                         case .processed(let n):
                             assert(n >= 0, "read claims to have read a negative number of bytes \(n)")
                             return n
-                        case .wouldBlock(_):
+                        case .wouldBlock:
                             throw Error.descriptorSetToNonBlocking
                         }
                     }

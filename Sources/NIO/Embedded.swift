@@ -44,7 +44,7 @@ extension EmbeddedScheduledTask: Comparable {
 /// kinds of mocking.
 ///
 /// - warning: Unlike `SelectableEventLoop`, `EmbeddedEventLoop` **is not thread-safe**. This
-///     is becuase it is intended to be run in the thread that instantiated it. Users are
+///     is because it is intended to be run in the thread that instantiated it. Users are
 ///     responsible for ensuring they never call into the `EmbeddedEventLoop` in an
 ///     unsynchronized fashion.
 public class EmbeddedEventLoop: EventLoop {
@@ -57,11 +57,9 @@ public class EmbeddedEventLoop: EventLoop {
         return true
     }
 
-    var tasks = CircularBuffer<() -> Void>(initialRingCapacity: 2)
-
     public init() { }
 
-    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
+    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = newPromise()
         let readyTime = now + UInt64(`in`.nanoseconds)
         let task = EmbeddedScheduledTask(readyTime: readyTime) {
@@ -83,14 +81,12 @@ public class EmbeddedEventLoop: EventLoop {
     // at which point we run everything that's been submitted. Anything newly submitted
     // either gets on that train if it's still moving or waits until the next call to run().
     public func execute(_ task: @escaping () -> Void) {
-        tasks.append(task)
+        _ = self.scheduleTask(in: .nanoseconds(0), task)
     }
 
     public func run() {
-        // Execute all tasks that are currently enqueued.
-        while !tasks.isEmpty {
-            tasks.removeFirst()()
-        }
+        // Execute all tasks that are currently enqueued to be executed *now*.
+        self.advanceTime(by: .nanoseconds(0))
     }
 
     /// Runs the event loop and moves "time" forward by the given amount, running any scheduled
@@ -98,22 +94,26 @@ public class EmbeddedEventLoop: EventLoop {
     public func advanceTime(by: TimeAmount) {
         let newTime = self.now + UInt64(by.nanoseconds)
 
-        // First, run the event loop to dispatch any current work.
-        self.run()
-
         while let nextTask = self.scheduledTasks.peek() {
             guard nextTask.readyTime <= newTime else {
                 break
             }
 
-            // Set the time correctly before we call into user code, then
-            // call in. Once we've done that, spin the event loop in case any
-            // work was scheduled by the delayed task.
-            _ = self.scheduledTasks.pop()
-            self.now = nextTask.readyTime
-            nextTask.task()
+            // Now we want to grab all tasks that are ready to execute at the same
+            // time as the first.
+            var tasks = Array<EmbeddedScheduledTask>()
+            while let candidateTask = self.scheduledTasks.peek(), candidateTask.readyTime == nextTask.readyTime {
+                tasks.append(candidateTask)
+                _ = self.scheduledTasks.pop()
+            }
 
-            self.run()
+            // Set the time correctly before we call into user code, then
+            // call in for all tasks.
+            self.now = nextTask.readyTime
+
+            for task in tasks {
+                task.task()
+            }
         }
 
         // Finally ensure we got the time right.
@@ -132,7 +132,6 @@ public class EmbeddedEventLoop: EventLoop {
     }
 
     deinit {
-        precondition(tasks.isEmpty, "Embedded event loop freed with unexecuted tasks!")
         precondition(scheduledTasks.isEmpty, "Embedded event loop freed with unexecuted scheduled tasks!")
     }
 }

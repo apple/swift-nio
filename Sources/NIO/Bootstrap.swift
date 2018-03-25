@@ -45,12 +45,18 @@
 ///     try! channel.closeFuture.wait() // wait forever as we never close the Channel
 /// ```
 ///
+/// The `EventLoopFuture` returned by `bind` will fire with a `ServerSocketChannel`. This is the channel that owns the listening socket.
+/// Each time it accepts a new connection it will fire a `SocketChannel` through the `ChannelPipeline` via `fireChannelRead`: as a result,
+/// the `ServerSocketChannel` operates on `Channel`s as inbound messages. Outbound messages are not supported on a `ServerSocketChannel`
+/// which means that each write attempt will fail.
+///
+/// Accepted `SocketChannel`s operate on `ByteBuffer` as inbound data, and `IOData` as outbound data.
 public final class ServerBootstrap {
 
     private let group: EventLoopGroup
     private let childGroup: EventLoopGroup
-    private var serverChannelInit: ((Channel) -> EventLoopFuture<()>)?
-    private var childChannelInit: ((Channel) -> EventLoopFuture<()>)?
+    private var serverChannelInit: ((Channel) -> EventLoopFuture<Void>)?
+    private var childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
     private var serverChannelOptions = ChannelOptionStorage()
     private var childChannelOptions = ChannelOptionStorage()
 
@@ -75,11 +81,13 @@ public final class ServerBootstrap {
     /// Initialize the `ServerSocketChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
+    /// The `ServerSocketChannel` uses the accepted `Channel`s as inbound messages.
+    ///
     /// - note: To set the initializer for the accepted `SocketChannel`s, look at `ServerBootstrap.childChannelInitializer`.
     ///
     /// - parameters:
     ///     - initializer: A closure that initializes the provided `Channel`.
-    public func serverChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+    public func serverChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
         self.serverChannelInit = initializer
         return self
     }
@@ -87,9 +95,11 @@ public final class ServerBootstrap {
     /// Initialize the accepted `SocketChannel`s with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
+    /// The accepted `Channel` will operate on `ByteBuffer` as inbound and `IOData` as outbound messages.
+    ///
     /// - parameters:
     ///     - initializer: A closure that initializes the provided `Channel`.
-    public func childChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+    public func childChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
         self.childChannelInit = initializer
         return self
     }
@@ -189,26 +199,30 @@ public final class ServerBootstrap {
     private class AcceptHandler: ChannelInboundHandler {
         public typealias InboundIn = SocketChannel
 
-        private let childChannelInit: ((Channel) -> EventLoopFuture<()>)?
+        private let childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
         private let childChannelOptions: ChannelOptionStorage
 
-        init(childChannelInitializer: ((Channel) -> EventLoopFuture<()>)?, childChannelOptions: ChannelOptionStorage) {
+        init(childChannelInitializer: ((Channel) -> EventLoopFuture<Void>)?, childChannelOptions: ChannelOptionStorage) {
             self.childChannelInit = childChannelInitializer
             self.childChannelOptions = childChannelOptions
         }
 
         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             let accepted = self.unwrapInboundIn(data)
-            let hopEventLoopPromise: EventLoopPromise<()> = ctx.eventLoop.newPromise()
-            self.childChannelOptions.applyAll(channel: accepted).cascade(promise: hopEventLoopPromise)
             let childChannelInit = self.childChannelInit ?? { (_: Channel) in ctx.eventLoop.newSucceededFuture(result: ()) }
 
-            hopEventLoopPromise.futureResult.then {
+            self.childChannelOptions.applyAll(channel: accepted).hopTo(eventLoop: ctx.eventLoop).then {
                 assert(ctx.eventLoop.inEventLoop)
                 return childChannelInit(accepted)
-            }.map {
+            }.then { () -> EventLoopFuture<Void> in
                 assert(ctx.eventLoop.inEventLoop)
+                guard !ctx.pipeline.destroyed else {
+                    return accepted.close().thenThrowing {
+                        throw ChannelError.ioOnClosedChannel
+                    }
+                }
                 ctx.fireChannelRead(data)
+                return ctx.eventLoop.newSucceededFuture(result: ())
             }.whenFailure { error in
                 assert(ctx.eventLoop.inEventLoop)
                 self.closeAndFire(ctx: ctx, accepted: accepted, err: error)
@@ -250,10 +264,11 @@ public final class ServerBootstrap {
 ///     /* the Channel is now connected */
 /// ```
 ///
+/// The connected `SocketChannel` will operate on `ByteBuffer` as inbound and on `IOData` as outbound messages.
 public final class ClientBootstrap {
 
     private let group: EventLoopGroup
-    private var channelInitializer: ((Channel) -> EventLoopFuture<()>)?
+    private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
     private var channelOptions = ChannelOptionStorage()
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
     private var resolver: Resolver?
@@ -269,9 +284,11 @@ public final class ClientBootstrap {
     /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
+    /// The connected `Channel` will operate on `ByteBuffer` as inbound and `IOData` as outbound messages.
+    ///
     /// - parameters:
     ///     - handler: A closure that initializes the provided `Channel`.
-    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
         self.channelInitializer = handler
         return self
     }
@@ -406,10 +423,11 @@ public final class ClientBootstrap {
 ///     try channel.closeFuture.wait()  // Wait until the channel un-binds.
 /// ```
 ///
+/// The `DatagramChannel` will operate on `AddressedEnvelope<ByteBuffer>` as inbound and outbound messages.
 public final class DatagramBootstrap {
 
     private let group: EventLoopGroup
-    private var channelInitializer: ((Channel) -> EventLoopFuture<()>)?
+    private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
     private var channelOptions = ChannelOptionStorage()
 
     /// Create a `DatagramBootstrap` on the `EventLoopGroup` `group`.
@@ -425,7 +443,7 @@ public final class DatagramBootstrap {
     ///
     /// - parameters:
     ///     - handler: A closure that initializes the provided `Channel`.
-    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
         self.channelInitializer = handler
         return self
     }

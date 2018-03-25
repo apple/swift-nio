@@ -68,7 +68,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
         case (.some(let onlyCallback), .none):
             return [onlyCallback]
         case (.some(let first), .some(let others)):
-            return [first]+others
+            return [first] + others
         }
     }
 
@@ -148,6 +148,8 @@ private struct CallbackList: ExpressibleByArrayLiteral {
 ///     or `eventLoop.newFailedFuture(error:)`.
 ///
 public struct EventLoopPromise<T> {
+    /// The `EventLoopFuture` which is used by the `EventLoopPromise`. You can use it to add callbacks which are notified once the
+    /// `EventLoopPromise` is completed.
     public let futureResult: EventLoopFuture<T>
 
     /// General initializer
@@ -281,20 +283,69 @@ public struct EventLoopPromise<T> {
 /// * Using `EventLoopFuture<T>.async` or a similar wrapper function.
 /// * Using `.then()` on an existing future to create a new future for the next step in a series of operations.
 /// * Initializing an `EventLoopFuture` that already has a value or an error
+///
+/// ### Threading and Futures
+///
+/// One of the major performance advantages of NIO over something like Node.js or Python’s asyncio is that NIO will
+/// by default run multiple event loops at once, on different threads. As most network protocols do not require
+/// blocking operation, at least in their low level implementations, this provides enormous speedups on machines
+/// with many cores such as most modern servers.
+///
+/// However, it can present a challenge at higher levels of abstraction when coordination between those threads
+/// becomes necessary. This is usually the case whenever the events on one connection (that is, one `Channel`) depend
+/// on events on another one. As these `Channel`s may be scheduled on different event loops (and so different threads)
+/// care needs to be taken to ensure that communication between the two loops is done in a thread-safe manner that
+/// avoids concurrent mutation of shared state from multiple loops at once.
+///
+/// The main primitives NIO provides for this use are the `EventLoopPromise` and `EventLoopFuture`. As their names
+/// suggest, these two objects are aware of event loops, and so can help manage the safety and correctness of your
+/// programs. However, understanding the exact semantics of these objects is critical to ensuring the safety of your code.
+///
+/// ####  Callbacks
+///
+/// The most important principle of the `EventLoopPromise` and `EventLoopFuture` is this: all callbacks registered on
+/// an `EventLoopFuture` will execute on the thread corresponding to the event loop that created the `Future`,
+/// *regardless* of what thread succeeds or fails the corresponding `EventLoopPromise`.
+///
+/// This means that if *your code* created the `EventLoopPromise`, you can be extremely confident of what thread the
+/// callback will execute on: after all, you held the event loop in hand when you created the `EventLoopPromise`.
+/// However, if your code is handed an `EventLoopFuture` or `EventLoopPromise`, and you want to register callbacks
+/// on those objects, you cannot be confident that those callbacks will execute on the same `EventLoop` that your
+/// code does.
+///
+/// This presents a problem: how do you ensure thread-safety when registering callbacks on an arbitrary
+/// `EventLoopFuture`? The short answer is that when you are holding an `EventLoopFuture`, you can always obtain a
+/// new `EventLoopFuture` whose callbacks will execute on your event loop. You do this by calling
+/// `EventLoopFuture.hopTo(eventLoop:)`. This function returns a new `EventLoopFuture` whose callbacks are guaranteed
+/// to fire on the provided event loop. As an added bonus, `hopTo` will check whether the provided `EventLoopFuture`
+/// was already scheduled to dispatch on the event loop in question, and avoid doing any work if that was the case.
+///
+/// This means that for any `EventLoopFuture` that your code did not create itself (via
+/// `EventLoopPromise.futureResult`), use of `hopTo` is **strongly encouraged** to help guarantee thread-safety. It
+/// should only be elided when thread-safety is provably not needed.
+///
+/// The "thread affinity" of `EventLoopFuture`s is critical to writing safe, performant concurrent code without
+/// boilerplate. It allows you to avoid needing to write or use locks in your own code, instead using the natural
+/// synchronization of the `EventLoop` to manage your thread-safety. In general, if any of your `ChannelHandler`s
+/// or `EventLoopFuture` callbacks need to invoke a lock (either directly or in the form of `DispatchQueue`) this
+/// should be considered a code smell worth investigating: the `EventLoop`-based synchronization guarantees of
+/// `EventLoopFuture` should be sufficient to guarantee thread-safety.
 public final class EventLoopFuture<T> {
     // TODO: Provide a tracing facility.  It would be nice to be able to set '.debugTrace = true' on any EventLoopFuture or EventLoopPromise and have every subsequent chained EventLoopFuture report the success result or failure error.  That would simplify some debugging scenarios.
     fileprivate var value: EventLoopFutureValue<T>? {
         didSet {
-            _fulfilled.store(true)
+            _isFulfilled.store(true)
         }
     }
-    fileprivate let _fulfilled: Atomic<Bool>
+
+    fileprivate let _isFulfilled: Atomic<Bool>
+    /// The `EventLoop` which is tied to the `EventLoopFuture` and is used to notify all registered callbacks.
     public let eventLoop: EventLoop
 
     /// Whether this `EventLoopFuture` has been fulfilled. This is a thread-safe
     /// computed-property.
-    internal var fulfilled: Bool {
-        return _fulfilled.load()
+    internal var isFulfilled: Bool {
+        return _isFulfilled.load()
     }
 
     /// Callbacks that should be run when this `EventLoopFuture<T>` gets a value.
@@ -306,9 +357,9 @@ public final class EventLoopFuture<T> {
     private init(eventLoop: EventLoop, value: EventLoopFutureValue<T>?, file: StaticString, line: UInt) {
         self.eventLoop = eventLoop
         self.value = value
-        self._fulfilled = Atomic(value: value != nil)
+        self._isFulfilled = Atomic(value: value != nil)
 
-        if _isDebugAssertConfiguration() {
+        debugOnly {
             if let me = eventLoop as? SelectableEventLoop {
                 me.promiseCreationStoreAdd(future: self, file: file, line: line)
             }
@@ -331,13 +382,15 @@ public final class EventLoopFuture<T> {
     }
 
     deinit {
-        if _isDebugAssertConfiguration(), let eventLoop = self.eventLoop as? SelectableEventLoop {
-            let creation = eventLoop.promiseCreationStoreRemove(future: self)
-            if !fulfilled {
-                fatalError("leaking promise created at \(creation)", file: creation.file, line: creation.line)
+        debugOnly {
+            if let eventLoop = self.eventLoop as? SelectableEventLoop {
+                let creation = eventLoop.promiseCreationStoreRemove(future: self)
+                if !isFulfilled {
+                    fatalError("leaking promise created at \(creation)", file: creation.file, line: creation.line)
+                }
+            } else {
+                precondition(isFulfilled, "leaking an unfulfilled Promise")
             }
-        } else {
-            precondition(fulfilled, "leaking an unfulfilled Promise")
         }
     }
 }
@@ -631,45 +684,41 @@ extension EventLoopFuture {
     /// of results. If either one fails, the combined `EventLoopFuture` will fail with
     /// the first error encountered.
     public func and<U>(_ other: EventLoopFuture<U>, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<(T,U)> {
-        let andlock = Lock()
         let promise = EventLoopPromise<(T,U)>(eventLoop: eventLoop, file: file, line: line)
         var tvalue: T?
         var uvalue: U?
-
+        
+        assert(self.eventLoop === promise.futureResult.eventLoop)
         _whenComplete { () -> CallbackList in
             switch self.value! {
             case .failure(let error):
                 return promise._setValue(value: .failure(error))
             case .success(let t):
-                andlock.lock()
                 if let u = uvalue {
-                    andlock.unlock()
                     return promise._setValue(value: .success((t, u)))
                 } else {
-                    andlock.unlock()
                     tvalue = t
                 }
             }
             return CallbackList()
         }
-
-        other._whenComplete { () -> CallbackList in
+        
+        let hopOver = other.hopTo(eventLoop: self.eventLoop)
+        hopOver._whenComplete { () -> CallbackList in
+            assert(self.eventLoop.inEventLoop)
             switch other.value! {
             case .failure(let error):
                 return promise._setValue(value: .failure(error))
             case .success(let u):
-                andlock.lock()
                 if let t = tvalue {
-                    andlock.unlock()
                     return promise._setValue(value: .success((t, u)))
                 } else {
-                    andlock.unlock()
                     uvalue = u
                 }
             }
             return CallbackList()
         }
-
+        
         return promise.futureResult
     }
 
@@ -789,7 +838,29 @@ extension EventLoopFuture {
         p0.succeed(result: ())
         return body
     }
+}
 
+extension EventLoopFuture {
+    /// Returns an `EventLoopFuture` that fires when this future completes, but executes its callbacks on the
+    /// target event loop instead of the original one.
+    ///
+    /// It is common to want to "hop" event loops when you arrange some work: for example, you're closing one channel
+    /// from another, and want to hop back when the close completes. This method lets you spell that requirement
+    /// succinctly. It also contains an optimisation for the case when the loop you're hopping *from* is the same as
+    /// the one you're hopping *to*, allowing you to avoid doing allocations in that case.
+    ///
+    /// - parameters:
+    ///     - target: The `EventLoop` that the returned `EventLoopFuture` will run on.
+    /// - returns: An `EventLoopFuture` whose callbacks run on `target` instead of the original loop.
+    func hopTo(eventLoop target: EventLoop) -> EventLoopFuture<T> {
+        if target === self.eventLoop {
+            // We're already on that event loop, nothing to do here. Save an allocation.
+            return self
+        }
+        let hoppingPromise: EventLoopPromise<T> = target.newPromise()
+        self.cascade(promise: hoppingPromise)
+        return hoppingPromise.futureResult
+    }
 }
 
 /// Execute the given function and synchronously complete the given `EventLoopPromise` (if not `nil`).

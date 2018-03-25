@@ -82,11 +82,11 @@ public enum SocketAddress: CustomStringConvertible {
         case .v4(let addr):
             host = addr.host
             type = "IPv4"
-            port = "\(UInt16(bigEndian: addr.address.sin_port))"
+            port = "\(self.port!)"
         case .v6(let addr):
             host = addr.host
             type = "IPv6"
-            port = "\(UInt16(bigEndian: addr.address.sin6_port))"
+            port = "\(self.port!)"
         case .unixDomainSocket(let addr):
             var address = addr.address
             host = nil
@@ -115,9 +115,9 @@ public enum SocketAddress: CustomStringConvertible {
     public var port: UInt16? {
         switch self {
         case .v4(let addr):
-            return UInt16(addr.address.sin_port)
+            return UInt16(bigEndian: addr.address.sin_port)
         case .v6(let addr):
-            return UInt16(addr.address.sin6_port)
+            return UInt16(bigEndian: addr.address.sin6_port)
         case .unixDomainSocket:
             return nil
         }
@@ -206,13 +206,13 @@ public enum SocketAddress: CustomStringConvertible {
             if inet_pton(AF_INET, $0, &ipv4Addr) == 1 {
                 var addr = sockaddr_in()
                 addr.sin_family = sa_family_t(AF_INET)
-                addr.sin_port = port
+                addr.sin_port = port.bigEndian
                 addr.sin_addr = ipv4Addr
                 return .v4(.init(address: addr, host: ""))
             } else if inet_pton(AF_INET6, $0, &ipv6Addr) == 1 {
                 var addr = sockaddr_in6()
                 addr.sin6_family = sa_family_t(AF_INET6)
-                addr.sin6_port = port
+                addr.sin6_port = port.bigEndian
                 addr.sin6_flowinfo = 0
                 addr.sin6_addr = ipv6Addr
                 addr.sin6_scope_id = 0
@@ -248,11 +248,11 @@ public enum SocketAddress: CustomStringConvertible {
             switch info.pointee.ai_family {
             case AF_INET:
                 return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { ptr in
-                    return .v4(.init(address: ptr.pointee, host: host))
+                    .v4(.init(address: ptr.pointee, host: host))
                 }
             case AF_INET6:
                 return info.pointee.ai_addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { ptr in
-                    return .v6(.init(address: ptr.pointee, host: host))
+                    .v6(.init(address: ptr.pointee, host: host))
                 }
             default:
                 throw SocketAddressError.unsupported
@@ -292,7 +292,7 @@ extension SocketAddress: Equatable {
             var sunpath1 = addr1.address.sun_path
             var sunpath2 = addr2.address.sun_path
             return memcmp(&sunpath1, &sunpath2, MemoryLayout.size(ofValue: sunpath1)) == 0
-        default:
+        case (.v4, _), (.v6, _), (.unixDomainSocket, _):
             return false
         }
     }

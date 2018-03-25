@@ -1,6 +1,11 @@
 FROM ubuntu:14.04
 MAINTAINER tomerd@apple.com
 
+ARG DEBIAN_FRONTEND=noninteractive
+
+# do not start services during installation as this will fail and log a warning / error.
+RUN echo "#!/bin/sh\nexit 0" > /usr/sbin/policy-rc.d 
+
 # local
 RUN locale-gen en_US en_US.UTF-8
 RUN dpkg-reconfigure locales
@@ -15,7 +20,7 @@ RUN apt-get install -y libicu-dev libblocksruntime0
 RUN apt-get install -y lsof dnsutils # used by integration tests
 
 # clang
-RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+RUN wget -q -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
 RUN apt-add-repository "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main"
 RUN apt-get update
 RUN apt-get install -y clang-5.0 lldb-5.0
@@ -23,16 +28,15 @@ RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-5.0 100
 RUN update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-5.0 100
 
 # modern curl
-#RUN apt-get install -y curl
 RUN apt-get install -y build-essential libssl-dev
 RUN mkdir $HOME/.curl
-RUN wget -q http://curl.haxx.se/download/curl-7.50.3.tar.gz -O $HOME/curl.tar.gz
+RUN wget -q https://curl.haxx.se/download/curl-7.50.3.tar.gz -O $HOME/curl.tar.gz
 RUN tar xzf $HOME/curl.tar.gz --directory $HOME/.curl --strip-components=1
 RUN cd $HOME/.curl && ./configure --with-ssl && make && make install && cd -
 RUN ldconfig
 
 # swift
-ARG version=4.0.2
+ARG version=4.0.3
 RUN mkdir $HOME/.swift
 RUN wget -q https://swift.org/builds/swift-${version}-release/ubuntu1404/swift-${version}-RELEASE/swift-${version}-RELEASE-ubuntu14.04.tar.gz -O $HOME/swift.tar.gz
 RUN tar xzf $HOME/swift.tar.gz --directory $HOME/.swift --strip-components=1
@@ -53,4 +57,4 @@ RUN apt-get install -y ruby2.4 ruby2.4-dev libsqlite3-dev
 # known_hosts
 RUN mkdir -p $HOME/.ssh
 RUN touch $HOME/.ssh/known_hosts
-RUN ssh-keyscan github.com >> $HOME/.ssh/known_hosts
+RUN ssh-keyscan github.com 2> /dev/null >> $HOME/.ssh/known_hosts

@@ -74,7 +74,7 @@ extension ByteBuffer {
     /// - returns: The number of bytes written.
     public mutating func set(staticString string: StaticString, at index: Int) -> Int {
         return string.withUTF8Buffer { ptr -> Int in
-            return self.set(bytes: UnsafeRawBufferPointer(ptr), at: index)
+            self.set(bytes: UnsafeRawBufferPointer(ptr), at: index)
         }
     }
 
@@ -123,7 +123,7 @@ extension ByteBuffer {
         }
     }
 
-    /// Read `length` bytes off this `ByteBuffer`, decoding it as `String` using the UTF-8 encoding. Does not move the reader index.
+    /// Read `length` bytes off this `ByteBuffer`, decoding it as `String` using the UTF-8 encoding. Move the reader index forward by `length`.
     ///
     /// - parameters:
     ///     - length: The number of bytes making up the string.

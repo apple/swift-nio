@@ -139,21 +139,27 @@ There are currently several example projects that demonstrate how to use SwiftNI
 
 SwiftNIO primarily uses [SwiftPM](https://swift.org/package-manager/) as its build tool, so we recommend using that as well. If you want to depend on SwiftNIO in your own project, it's as simple as adding a `dependencies` clause to your `Package.swift`:
 
-    dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", from: "1.0.0")
-    ]
+```swift
+dependencies: [
+    .package(url: "https://github.com/apple/swift-nio.git", from: "1.0.0")
+]
+```
 
 and then adding the appropriate SwiftNIO module(s) to your target dependencies.
 
 To work on SwiftNIO itself, or to investigate some of the demonstration applications, you can clone the repository directly and use SwiftPM to help build it. For example, you can run the following commands to compile and run the example echo server:
 
-    swift build
-    swift test
-    swift run NIOEchoServer
+```bash
+swift build
+swift test
+swift run NIOEchoServer
+```
 
 To verify that it is working, you can use another shell to attempt to connect to it:
 
-    echo "Hello SwiftNIO" | nc localhost 9999
+```bash
+echo "Hello SwiftNIO" | nc localhost 9999
+```
 
 If all goes well, you'll see the message echoed back to you.
 
@@ -161,18 +167,18 @@ If all goes well, you'll see the message echoed back to you.
 
 Alternatively, you may want to develop or test with `docker-compose`.
 
-To do that, first `cd docker` and then run the following commands:
+First make sure you have [Docker](https://www.docker.com/community-edition) installed, next run the following commands:
 
-- `docker-compose up test`
+- `docker-compose -f docker/docker-compose.yaml up test`
 
-  Will create a base image with Swift 4.0 (if missing), compile SwiftNIO and run the tests
+  Will create a base image with Swift runtime and other build and test dependencies, compile SwiftNIO and run the unit and integration tests
 
-- `docker-compose up echo`
+- `docker-compose -f docker/docker-compose.yaml up echo`
 
   Will create a base image, compile SwiftNIO, and run a sample `NIOEchoServer` on
   `localhost:9999`. Test it by `echo Hello SwiftNIO | nc localhost 9999`.
 
-- `docker-compose up http`
+- `docker-compose -f docker/docker-compose.yaml up http`
 
   Will create a base image, compile SwiftNIO, and run a sample `NIOHTTP1Server` on
   `localhost:8888`. Test it by `curl http://localhost:8888`

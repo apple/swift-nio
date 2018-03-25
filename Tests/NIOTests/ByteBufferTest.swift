@@ -336,10 +336,10 @@ class ByteBufferTest: XCTestCase {
 
     func testDiscardReadBytes() throws {
         var buffer = allocator.buffer(capacity: 32)
-        buffer.write(integer: UInt8(1))
+        buffer.write(integer: 1, as: UInt8.self)
         buffer.write(integer: UInt8(2))
-        buffer.write(integer: UInt8(3))
-        buffer.write(integer: UInt8(4))
+        buffer.write(integer: 3 as UInt8)
+        buffer.write(integer: 4, as: UInt8.self)
         XCTAssertEqual(4, buffer.readableBytes)
         buffer.moveReaderIndex(forwardBy: 2)
         XCTAssertEqual(2, buffer.readableBytes)
@@ -1205,6 +1205,14 @@ class ByteBufferTest: XCTestCase {
         var buf = ByteBufferAllocator().buffer(capacity: 0)
         buf.write(staticString: "x")
         XCTAssertEqual(buf.writerIndex, 1)
+    }
+
+    func testSpecifyTypesAndEndiannessForIntegerMethods() {
+        self.buf.clear()
+        self.buf.write(integer: -1, endianness: .big, as: Int64.self)
+        XCTAssertEqual(-1, self.buf.readInteger(endianness: .big, as: Int64.self))
+        self.buf.set(integer: 0xdeadbeef, at: 0, endianness: .little, as: UInt64.self)
+        XCTAssertEqual(0xdeadbeef, self.buf.getInteger(at: 0, endianness: .little, as: UInt64.self))
     }
 }
 

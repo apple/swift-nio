@@ -39,6 +39,7 @@ extension EchoServerClientTest {
                 ("testWriteAfterChannelIsDead", testWriteAfterChannelIsDead),
                 ("testPendingReadProcessedAfterWriteError", testPendingReadProcessedAfterWriteError),
                 ("testChannelErrorEOFNotFiredThroughPipeline", testChannelErrorEOFNotFiredThroughPipeline),
+                ("testPortNumbers", testPortNumbers),
            ]
    }
 }

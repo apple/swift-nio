@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
+import Dispatch
 @testable import NIO
 
 enum EventLoopFutureTestError : Error {
@@ -23,13 +24,13 @@ class EventLoopFutureTest : XCTestCase {
     func testFutureFulfilledIfHasResult() throws {
         let eventLoop = EmbeddedEventLoop()
         let f = EventLoopFuture(eventLoop: eventLoop, result: 5, file: #file, line: #line)
-        XCTAssertTrue(f.fulfilled)
+        XCTAssertTrue(f.isFulfilled)
     }
 
     func testFutureFulfilledIfHasError() throws {
         let eventLoop = EmbeddedEventLoop()
         let f = EventLoopFuture<Void>(eventLoop: eventLoop, error: EventLoopFutureTestError.example, file: #file, line: #line)
-        XCTAssertTrue(f.fulfilled)
+        XCTAssertTrue(f.isFulfilled)
     }
 
     func testAndAllWithAllSuccesses() throws {
@@ -65,7 +66,7 @@ class EventLoopFutureTest : XCTestCase {
         let eventLoop = EmbeddedEventLoop()
         var promises: [EventLoopPromise<Void>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
         _ = promises.map { $0.succeed(result: ()) }
-        let failedPromise: EventLoopPromise<()> = eventLoop.newPromise()
+        let failedPromise: EventLoopPromise<Void> = eventLoop.newPromise()
         failedPromise.fail(error: E())
         promises.append(failedPromise)
 
@@ -171,7 +172,7 @@ class EventLoopFutureTest : XCTestCase {
     func testOrderOfFutureCompletion() throws {
         let eventLoop = EmbeddedEventLoop()
         var state = 0
-        let p: EventLoopPromise<()> = EventLoopPromise(eventLoop: eventLoop, file: #file, line: #line)
+        let p: EventLoopPromise<Void> = EventLoopPromise(eventLoop: eventLoop, file: #file, line: #line)
         p.futureResult.map {
             XCTAssertEqual(state, 0)
             state += 1
@@ -183,7 +184,7 @@ class EventLoopFutureTest : XCTestCase {
             state += 1
         }
         p.succeed(result: ())
-        XCTAssertTrue(p.futureResult.fulfilled)
+        XCTAssertTrue(p.futureResult.isFulfilled)
         XCTAssertEqual(state, 3)
     }
 
@@ -213,7 +214,7 @@ class EventLoopFutureTest : XCTestCase {
         let n = 20
         let elg = MultiThreadedEventLoopGroup(numThreads: n)
         var prev: EventLoopFuture<Int> = elg.next().newSucceededFuture(result: 0)
-        (1..<20).forEach { (i: Int) in
+        (1..<n).forEach { (i: Int) in
             let p: EventLoopPromise<Int> = elg.next().newPromise()
             prev.then { (i2: Int) -> EventLoopFuture<Int> in
                 XCTAssertEqual(i - 1, i2)
@@ -240,5 +241,202 @@ class EventLoopFutureTest : XCTestCase {
             XCTFail("wrong error \(error)")
         }
         XCTAssertNoThrow(try elg.syncShutdownGracefully())
+    }
+
+    func testEventLoopHoppingAndAll() throws {
+        let n = 20
+        let elg = MultiThreadedEventLoopGroup(numThreads: n)
+        let ps = (0..<n).map { (_: Int) -> EventLoopPromise<Void> in
+            elg.next().newPromise()
+        }
+        let allOfEm = EventLoopFuture<Void>.andAll(ps.map { $0.futureResult }, eventLoop: elg.next())
+        ps.reversed().forEach { p in
+            DispatchQueue.global().async {
+                p.succeed(result: ())
+            }
+        }
+        try allOfEm.wait()
+        XCTAssertNoThrow(try elg.syncShutdownGracefully())
+    }
+
+    func testEventLoopHoppingAndAllWithFailures() throws {
+        enum DummyError: Error { case dummy }
+        let n = 20
+        let fireBackEl = MultiThreadedEventLoopGroup(numThreads: 1)
+        let elg = MultiThreadedEventLoopGroup(numThreads: n)
+        let ps = (0..<n).map { (_: Int) -> EventLoopPromise<Void> in
+            elg.next().newPromise()
+        }
+        let allOfEm = EventLoopFuture<Void>.andAll(ps.map { $0.futureResult }, eventLoop: fireBackEl.next())
+        ps.reversed().enumerated().forEach { idx, p in
+            DispatchQueue.global().async {
+                if idx == n / 2 {
+                    p.fail(error: DummyError.dummy)
+                } else {
+                    p.succeed(result: ())
+                }
+            }
+        }
+        do {
+            try allOfEm.wait()
+            XCTFail("unexpected failure")
+        } catch _ as DummyError {
+            // ok
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+        XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        XCTAssertNoThrow(try fireBackEl.syncShutdownGracefully())
+    }
+
+    func testFutureInVariousScenarios() throws {
+        enum DummyError: Error { case dummy0; case dummy1 }
+        let elg = MultiThreadedEventLoopGroup(numThreads: 2)
+        let el1 = elg.next()
+        let el2 = elg.next()
+        precondition(el1 !== el2)
+        let q1 = DispatchQueue(label: "q1")
+        let q2 = DispatchQueue(label: "q2")
+
+        // this determines which promise is fulfilled first (and (true, true) meaning they race)
+        for whoGoesFirst in [(false, true), (true, false), (true, true)] {
+            // this determines what EventLoops the Promises are created on
+            for eventLoops in [(el1, el1), (el1, el2), (el2, el1), (el2, el2)] {
+                // this determines if the promises fail or succeed
+                for whoSucceeds in [(false, false), (false, true), (true, false), (true, true)] {
+                    let p0: EventLoopPromise<Int> = eventLoops.0.newPromise()
+                    let p1: EventLoopPromise<String> = eventLoops.1.newPromise()
+                    let fAll = p0.futureResult.and(p1.futureResult)
+
+                    // preheat both queues so we have a better chance of racing
+                    let sem1 = DispatchSemaphore(value: 0)
+                    let sem2 = DispatchSemaphore(value: 0)
+                    let g = DispatchGroup()
+                    q1.async(group: g) {
+                        sem2.signal()
+                        sem1.wait()
+                    }
+                    q2.async(group: g) {
+                        sem1.signal()
+                        sem2.wait()
+                    }
+                    g.wait()
+
+                    if whoGoesFirst.0 {
+                        q1.async {
+                            if whoSucceeds.0 {
+                                p0.succeed(result: 7)
+                            } else {
+                                p0.fail(error: DummyError.dummy0)
+                            }
+                            if !whoGoesFirst.1 {
+                                q2.asyncAfter(deadline: .now() + 0.1) {
+                                    if whoSucceeds.1 {
+                                        p1.succeed(result: "hello")
+                                    } else {
+                                        p1.fail(error: DummyError.dummy1)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if whoGoesFirst.1 {
+                        q2.async {
+                            if whoSucceeds.1 {
+                                p1.succeed(result: "hello")
+                            } else {
+                                p1.fail(error: DummyError.dummy1)
+                            }
+                            if !whoGoesFirst.0 {
+                                q1.asyncAfter(deadline: .now() + 0.1) {
+                                    if whoSucceeds.0 {
+                                        p0.succeed(result: 7)
+                                    } else {
+                                        p0.fail(error: DummyError.dummy0)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    do {
+                        let result = try fAll.wait()
+                        if !whoSucceeds.0 || !whoSucceeds.1 {
+                            XCTFail("unexpected success")
+                        } else {
+                            XCTAssert((7, "hello") == result)
+                        }
+                    } catch let e as DummyError {
+                        switch e {
+                        case .dummy0:
+                            XCTAssertFalse(whoSucceeds.0)
+                        case .dummy1:
+                            XCTAssertFalse(whoSucceeds.1)
+                        }
+                    } catch {
+                        XCTFail("unexpected error: \(error)")
+                    }
+                }
+            }
+        }
+
+        XCTAssertNoThrow(try elg.syncShutdownGracefully())
+    }
+
+    func testLoopHoppingHelperSuccess() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let loop1 = group.next()
+        let loop2 = group.next()
+        XCTAssertFalse(loop1 === loop2)
+
+        let succeedingPromise: EventLoopPromise<Void> = loop1.newPromise()
+        let succeedingFuture = succeedingPromise.futureResult.map {
+            XCTAssertTrue(loop1.inEventLoop)
+        }.hopTo(eventLoop: loop2).map {
+            XCTAssertTrue(loop2.inEventLoop)
+        }
+        succeedingPromise.succeed(result: ())
+        XCTAssertNoThrow(try succeedingFuture.wait())
+    }
+
+    func testLoopHoppingHelperFailure() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let loop1 = group.next()
+        let loop2 = group.next()
+        XCTAssertFalse(loop1 === loop2)
+
+        let failingPromise: EventLoopPromise<Void> = loop2.newPromise()
+        let failingFuture = failingPromise.futureResult.thenIfErrorThrowing { error in
+            XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
+            XCTAssertTrue(loop2.inEventLoop)
+            throw error
+        }.hopTo(eventLoop: loop1).mapIfError { error in
+            XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
+            XCTAssertTrue(loop1.inEventLoop)
+        }
+
+        failingPromise.fail(error: EventLoopFutureTestError.example)
+        XCTAssertNoThrow(try failingFuture.wait())
+    }
+
+    func testLoopHoppingHelperNoHopping() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let loop1 = group.next()
+        let loop2 = group.next()
+        XCTAssertFalse(loop1 === loop2)
+
+        let noHoppingPromise: EventLoopPromise<Void> = loop1.newPromise()
+        let noHoppingFuture = noHoppingPromise.futureResult.hopTo(eventLoop: loop1)
+        XCTAssertTrue(noHoppingFuture === noHoppingPromise.futureResult)
+        noHoppingPromise.succeed(result: ())
     }
 }

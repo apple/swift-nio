@@ -365,7 +365,7 @@ class HTTPServerClientTest : XCTestCase {
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-                channel.pipeline.addHTTPServerHandlers().then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
                     channel.pipeline.add(handler: httpHandler)
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
@@ -423,7 +423,7 @@ class HTTPServerClientTest : XCTestCase {
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-                channel.pipeline.addHTTPServerHandlers().then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
                     channel.pipeline.add(handler: httpHandler)
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
@@ -481,7 +481,7 @@ class HTTPServerClientTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.addHTTPServerHandlers().then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
                     channel.pipeline.add(handler: httpHandler)
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
@@ -541,7 +541,7 @@ class HTTPServerClientTest : XCTestCase {
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-                channel.pipeline.addHTTPServerHandlers().then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
                     channel.pipeline.add(handler: httpHandler)
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
@@ -583,7 +583,7 @@ class HTTPServerClientTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.addHTTPServerHandlers().then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
                     channel.pipeline.add(handler: httpHandler)
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
@@ -628,7 +628,7 @@ class HTTPServerClientTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.addHTTPServerHandlers().then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
                     channel.pipeline.add(handler: httpHandler)
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
@@ -650,6 +650,52 @@ class HTTPServerClientTest : XCTestCase {
         }
 
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/204")
+        head.headers.add(name: "Host", value: "apple.com")
+        clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
+        try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
+
+        accumulation.syncWaitForCompletion()
+    }
+
+    @available(*, deprecated, message: "Tests deprecated function addHTTPServerHandlers")
+    func testDeprecatedPipelineConstruction() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        var expectedHeaders = HTTPHeaders()
+        expectedHeaders.add(name: "content-length", value: "14")
+        expectedHeaders.add(name: "connection", value: "close")
+
+        let accumulation = HTTPClientResponsePartAssertHandler(HTTPVersion(major: 1, minor: 1), .ok, expectedHeaders, "Hello World!\r\n")
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer { channel in
+                channel.pipeline.addHTTPServerHandlers().then {
+                    channel.pipeline.add(handler: SimpleHTTPServer(.byteBuffer))
+                }
+            }.bind(host: "127.0.0.1", port: 0).wait()
+
+        defer {
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .channelInitializer { channel in
+                channel.pipeline.addHTTPClientHandlers().then {
+                    channel.pipeline.add(handler: accumulation)
+                }
+            }
+            .connect(to: serverChannel.localAddress!)
+            .wait()
+
+        defer {
+            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
+        var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/helloworld")
         head.headers.add(name: "Host", value: "apple.com")
         clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
         try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()

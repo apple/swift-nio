@@ -89,10 +89,10 @@ public protocol EventLoop: EventLoopGroup {
     /// - parameters:
     ///     - task: The closure that will be submited to the `EventLoop` for execution.
     /// - returns: `EventLoopFuture` that is notified once the task was executed.
-    func submit<T>(_ task: @escaping () throws-> (T)) -> EventLoopFuture<T>
+    func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
 
     /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
-    func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T>
+    func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
 }
 
 /// Represents a time _interval_.
@@ -165,13 +165,14 @@ extension TimeAmount: Comparable {
     public static func < (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds < rhs.nanoseconds
     }
+    
     public static func == (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds == rhs.nanoseconds
     }
 }
 
 extension EventLoop {
-    public func submit<T>(_ task: @escaping () throws-> (T)) -> EventLoopFuture<T> {
+    public func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
         let promise: EventLoopPromise<T> = newPromise(file: #file, line: #line)
 
         self.execute {
@@ -280,6 +281,8 @@ internal final class SelectableEventLoop: EventLoop {
     private let selector: NIO.Selector<NIORegistration>
     private let thread: Thread
     private var scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
+    private var tasksCopy = ContiguousArray<() -> Void>()
+
     private let tasksLock = Lock()
     private var lifecycleState: EventLoopLifecycleState = .open
 
@@ -324,6 +327,8 @@ internal final class SelectableEventLoop: EventLoop {
         self._addresses = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
         self.msgs = UnsafeMutableBufferPointer(start: _msgs, count: Socket.writevLimitIOVectors)
         self.addresses = UnsafeMutableBufferPointer(start: _addresses, count: Socket.writevLimitIOVectors)
+        // We will process 4096 tasks per while loop.
+        self.tasksCopy.reserveCapacity(4096)
     }
 
     deinit {
@@ -367,7 +372,7 @@ internal final class SelectableEventLoop: EventLoop {
         return thread.isCurrent
     }
 
-    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws-> (T)) -> Scheduled<T> {
+    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = newPromise()
         let task = ScheduledTask({
             do {
@@ -463,16 +468,17 @@ internal final class SelectableEventLoop: EventLoop {
     public func run() throws {
         precondition(self.inEventLoop, "tried to run the EventLoop on the wrong thread.")
         defer {
-            var tasksCopy = ContiguousArray<ScheduledTask>()
-
+            var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
             tasksLock.lock()
+            // reserve the correct capacity so we don't need to realloc later on.
+            scheduledTasksCopy.reserveCapacity(scheduledTasks.count)
             while let sched = scheduledTasks.pop() {
-                tasksCopy.append(sched)
+                scheduledTasksCopy.append(sched)
             }
             tasksLock.unlock()
 
             // Fail all the scheduled tasks.
-            while let task = tasksCopy.first {
+            for task in scheduledTasksCopy {
                 task.fail(error: EventLoopError.shutdown)
             }
         }
@@ -501,13 +507,12 @@ internal final class SelectableEventLoop: EventLoop {
                     tasksLock.unlock()
                     break
                 }
-                var tasksCopy = ContiguousArray<() -> Void>()
 
                 // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
                 let now = DispatchTime.now()
 
                 // Make a copy of the tasks so we can execute these while not holding the lock anymore
-                while let task = scheduledTasks.peek(), task.readyIn(now) <= .nanoseconds(0) {
+                while tasksCopy.count < tasksCopy.capacity, let task = scheduledTasks.peek(), task.readyIn(now) <= .nanoseconds(0) {
                     tasksCopy.append(task.task)
 
                     _ = scheduledTasks.pop()
@@ -521,14 +526,14 @@ internal final class SelectableEventLoop: EventLoop {
                 }
 
                 // Execute all the tasks that were summited
-                while let task = tasksCopy.first {
+                for task in tasksCopy {
                     /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
                     withAutoReleasePool {
                         task()
                     }
-
-                    _ = tasksCopy.removeFirst()
                 }
+                // Drop everything (but keep the capacity) so we can fill it again on the next iteration.
+                tasksCopy.removeAll(keepingCapacity: true)
             }
         }
 
@@ -640,6 +645,8 @@ typealias ThreadInitializer = (Thread) -> Void
 /// An `EventLoopGroup` which will create multiple `EventLoop`s, each tied to its own `Thread`.
 final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
+    private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
+    
     private let index = Atomic<Int>(value: 0)
     private let eventLoops: [SelectableEventLoop]
 
@@ -659,6 +666,10 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
                 do {
                     /* we try! this as this must work (just setting up kqueue/epoll) or else there's not much we can do here */
                     let l = try! SelectableEventLoop(thread: t)
+                    threadSpecificEventLoop.currentValue = l
+                    defer {
+                        threadSpecificEventLoop.currentValue = nil
+                    }
                     lock.withLock {
                         _loop = l
                     }
@@ -698,6 +709,13 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         }
     }
 
+    /// Returns the `EventLoop` for the calling thread.
+    ///
+    /// - returns: The current `EventLoop` for the calling thread or `nil` if none is assigned to the thread.
+    public static var currentEventLoop: EventLoop? {
+        return threadSpecificEventLoop.currentValue
+    }
+
     public func next() -> EventLoop {
         return eventLoops[abs(index.add(1) % eventLoops.count)]
     }
@@ -728,6 +746,9 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
         g.notify(queue: q) {
             let failure = self.eventLoops.map { try? $0.close0() }.filter { $0 == nil }.count > 0
+
+            // TODO: In the next major release we should join in the Thread used by the EventLoop before invoking the callback to ensure
+            //       it is really gone.
             if failure {
                 error = EventLoopError.shutdownFailed
             }
@@ -770,6 +791,7 @@ extension ScheduledTask: Comparable {
     public static func < (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs.readyTime < rhs.readyTime
     }
+    
     public static func == (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs === rhs
     }

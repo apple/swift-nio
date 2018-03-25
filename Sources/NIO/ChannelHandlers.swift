@@ -17,11 +17,99 @@
 
 import struct Dispatch.DispatchTime
 
+
+/// A `ChannelHandler` that implements a backoff for a `ServerChannel` when accept produces an `IOError`.
+/// These errors are often recoverable by reducing the rate at which we call accept.
+public final class AcceptBackoffHandler: ChannelDuplexHandler {
+    public typealias InboundIn = Channel
+    public typealias OutboundIn = Channel
+    
+    private var nextReadDeadlineNS: Int?
+    private let backoffProvider: (IOError) -> TimeAmount?
+    private var scheduledRead: Scheduled<Void>?
+
+    /// Default implementation used as `backoffProvider` which delays accept by 1 second.
+    public static func defaultBackoffProvider(error: IOError) -> TimeAmount? {
+        return .seconds(1)
+    }
+
+    /// Create a new instance
+    ///
+    /// - parameters:
+    ///     - backoffProvider: returns a `TimeAmount` which will be the amount of time to wait before attempting another `read`.
+    public init(backoffProvider: @escaping (IOError) -> TimeAmount? = AcceptBackoffHandler.defaultBackoffProvider) {
+        self.backoffProvider = backoffProvider
+    }
+    
+    public func read(ctx: ChannelHandlerContext) {
+        // If we already have a read scheduled there is no need to schedule another one.
+        guard scheduledRead == nil else { return }
+
+        if let deadline = self.nextReadDeadlineNS {
+            let now = Int(DispatchTime.now().uptimeNanoseconds)
+            if now >= deadline {
+                // The backoff already expired, just do a read.
+                doRead(ctx)
+            } else {
+                // Schedule the read to be executed after the backoff time elapsed.
+                scheduleRead(in: .nanoseconds(deadline - now), ctx: ctx)
+            }
+        } else {
+            ctx.read()
+        }
+    }
+    
+    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+        if let ioError = error as? IOError {
+            if let amount = backoffProvider(ioError) {
+                self.nextReadDeadlineNS = Int(DispatchTime.now().uptimeNanoseconds) + amount.nanoseconds
+                if let scheduled = self.scheduledRead {
+                    scheduled.cancel()
+                    scheduleRead(in: amount, ctx: ctx)
+                }
+            }
+        }
+        ctx.fireErrorCaught(error)
+    }
+    
+    public func channelInactive(ctx: ChannelHandlerContext) {
+        if let scheduled = self.scheduledRead {
+            scheduled.cancel()
+            self.scheduledRead = nil
+        }
+        self.nextReadDeadlineNS = nil
+        ctx.fireChannelInactive()
+    }
+    
+    public func handlerRemoved(ctx: ChannelHandlerContext) {
+        if let scheduled = self.scheduledRead {
+            // Cancel the previous scheduled read and trigger a read directly. This is needed as otherwise we may never read again.
+            scheduled.cancel()
+            self.scheduledRead = nil
+            ctx.read()
+        }
+        self.nextReadDeadlineNS = nil
+    }
+    
+    private func scheduleRead(in: TimeAmount, ctx: ChannelHandlerContext) {
+        self.scheduledRead = ctx.eventLoop.scheduleTask(in: `in`) {
+            self.doRead(ctx)
+        }
+    }
+    
+    private func doRead(_ ctx: ChannelHandlerContext) {
+        /// Reset the backoff time and read.
+        self.nextReadDeadlineNS = nil
+        self.scheduledRead = nil
+        ctx.read()
+    }
+}
+
 /**
  ChannelHandler implementation which enforces back-pressure by stopping to read from the remote peer when it cannot write back fast enough.
  It will start reading again once pending data was written.
 */
-public class BackPressureHandler: ChannnelDuplexHandler {
+public class BackPressureHandler: ChannelDuplexHandler {
     public typealias OutboundIn = NIOAny
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
@@ -65,7 +153,7 @@ public class BackPressureHandler: ChannnelDuplexHandler {
 }
 
 /// Triggers an IdleStateEvent when a Channel has not performed read, write, or both operation for a while.
-public class IdleStateHandler: ChannnelDuplexHandler {
+public class IdleStateHandler: ChannelDuplexHandler {
     public typealias InboundIn = NIOAny
     public typealias InboundOut = NIOAny
     public typealias OutboundIn = NIOAny

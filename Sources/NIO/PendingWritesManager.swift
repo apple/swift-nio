@@ -55,7 +55,7 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
                 iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: toWriteForThisBuffer)
             }
             numberOfUsedStorageSlots += 1
-        case .fileRegion(_):
+        case .fileRegion:
             assert(numberOfUsedStorageSlots != 0, "first item in doPendingWriteVectorOperation was a FileRegion")
             // We found a FileRegion so stop collecting
             break loop
@@ -120,7 +120,7 @@ private struct PendingStreamWritesState {
     ///
     /// - returns: The `EventLoopPromise` of the write or `nil` if none was provided. The promise needs to be fulfilled by the caller.
     ///
-    private mutating func fullyWrittenFirst() -> EventLoopPromise<()>? {
+    private mutating func fullyWrittenFirst() -> EventLoopPromise<Void>? {
         self.chunks -= 1
         let first = self.pendingWrites.removeFirst()
         self.subtractOutstanding(bytes: first.data.readableBytes)
@@ -184,7 +184,7 @@ private struct PendingStreamWritesState {
     ///     - writeResult: The result of the write operation.
     /// - returns: A closure that the caller _needs_ to run which will fulfill the promises of the writes and a `OneWriteOperationResult` which indicates if we could write everything or not.
     public mutating func didWrite(itemCount: Int, result writeResult: IOResult<Int>) -> (() -> Void, OneWriteOperationResult) {
-        var promises: [EventLoopPromise<()>] = []
+        var promises: [EventLoopPromise<Void>] = []
         let fulfillPromises = { promises.forEach { $0.succeed(result: ()) } }
 
         switch writeResult {
@@ -225,7 +225,7 @@ private struct PendingStreamWritesState {
     ///
     /// - returns: A closure that the caller _needs_ to run which will fulfill the promises.
     public mutating func failAll(error: Error) -> (() -> Void) {
-        var promises: [EventLoopPromise<()>] = []
+        var promises: [EventLoopPromise<Void>] = []
         promises.reserveCapacity(self.pendingWrites.count)
         while !self.pendingWrites.isEmpty {
             if let p = self.fullyWrittenFirst() {
@@ -333,7 +333,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
                 return try triggerScalarFileWrite(scalarFileWriteOperation)
             case .nothingToBeWritten:
                 assertionFailure("called \(#function) with nothing available to be written")
-                return OneWriteOperationResult.writtenCompletely
+                return .writtenCompletely
             }
         }
     }

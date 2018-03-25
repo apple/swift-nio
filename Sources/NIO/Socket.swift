@@ -16,7 +16,7 @@
 public typealias IOVector = iovec
 
 // TODO: scattering support
-final class Socket: BaseSocket {
+/* final but tests */ class Socket: BaseSocket {
 
     /// The maximum number of bytes to write per `writev` call.
     static var writevLimitBytes: Int {
@@ -31,9 +31,10 @@ final class Socket: BaseSocket {
     /// - parameters:
     ///     - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
     ///     - type: The type of the socket to create.
+    ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if creation of the socket failed.
-    init(protocolFamily: CInt, type: CInt) throws {
-        let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily, type: type)
+    init(protocolFamily: CInt, type: CInt, setNonBlocking: Bool = false) throws {
+        let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily, type: type, setNonBlocking: setNonBlocking)
         super.init(descriptor: sock)
     }
 
@@ -83,7 +84,7 @@ final class Socket: BaseSocket {
     func finishConnect() throws {
         let result: Int32 = try getOption(level: SOL_SOCKET, name: SO_ERROR)
         if result != 0 {
-            throw IOError(errnoCode: result, function: "getsockopt")
+            throw IOError(errnoCode: result, reason: "finishing a non-blocking connect failed")
         }
     }
 

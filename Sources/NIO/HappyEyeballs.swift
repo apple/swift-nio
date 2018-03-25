@@ -17,7 +17,7 @@
 // The natural implementation of RFC 8305 is to use an explicit FSM, and this module does so. However,
 // it doesn't use the natural Swift idiom for an FSM of using an enum with mutating methods. The reason
 // for this is that the RFC 8305 FSM here needs to trigger a number of concurrent asynchronous operations,
-// each of which will register callbacks that attempt to mutate `self`. This gets tricky fast, becuase enums
+// each of which will register callbacks that attempt to mutate `self`. This gets tricky fast, because enums
 // are value types, while all of these callbacks need to trigger state transitions on the same underlying
 // state machine.
 //
@@ -406,12 +406,16 @@ internal class HappyEyeballsConnector {
 
         // Once we've completed, it's not impossible that we'll get state machine events for
         // some amounts of work. For example, we could get late DNS results and late connection
-        // notifications. We want to just quietly ignore these, as our transition into the complete
-        // state should have already sent cleanup messages to all of these things.
+        // notifications, and can also get late scheduled task callbacks. We want to just quietly
+        // ignore these, as our transition into the complete state should have already sent
+        // cleanup messages to all of these things.
         case (.complete, .resolverACompleted),
              (.complete, .resolverAAAACompleted),
              (.complete, .connectSuccess),
-             (.complete, .connectFailed):
+             (.complete, .connectFailed),
+             (.complete, .connectDelayElapsed),
+             (.complete, .connectTimeoutElapsed),
+             (.complete, .resolutionDelayElapsed):
             break
         default:
             fatalError("Invalid FSM transition attempt: state \(state), input \(input)")
@@ -528,11 +532,10 @@ internal class HappyEyeballsConnector {
         channelFuture.whenSuccess { channel in
             // If we are in the complete state then we want to abandon this channel. Otherwise, begin
             // connecting.
-            switch self.state {
-            case .complete:
+            if case .complete = self.state {
                 self.pendingConnections.remove(element: channelFuture)
                 channel.close(promise: nil)
-            default:
+            } else {
                 channel.connect(to: target).map {
                     // The channel has connected. If we are in the complete state we want to abandon this channel.
                     // Otherwise, fire the channel connected event. Either way we don't want the channel future to
@@ -540,20 +543,18 @@ internal class HappyEyeballsConnector {
                     // we want to use.
                     self.pendingConnections.remove(element: channelFuture)
 
-                    switch self.state {
-                    case .complete:
+                    if case .complete = self.state {
                         channel.close(promise: nil)
-                    default:
+                    } else {
                         self.processInput(.connectSuccess)
                         self.resolutionPromise.succeed(result: channel)
                     }
                 }.whenFailure { err in
                     // The connection attempt failed. If we're in the complete state then there's nothing
                     // to do. Otherwise, notify the state machine of the failure.
-                    switch self.state {
-                    case .complete:
+                    if case .complete = self.state {
                         assert(self.pendingConnections.index { $0 === channelFuture } == nil, "failed but was still in pending connections")
-                    default:
+                    } else {
                         self.error.connectionErrors.append(SingleConnectionFailure(target: target, error: err))
                         self.pendingConnections.remove(element: channelFuture)
                         self.processInput(.connectFailed)

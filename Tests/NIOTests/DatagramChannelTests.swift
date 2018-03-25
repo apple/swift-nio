@@ -110,12 +110,12 @@ final class DatagramChannelTests: XCTestCase {
         var buffer = firstChannel.allocator.buffer(capacity: 256)
         buffer.write(staticString: "hello, world!")
         let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-        var writeFutures: [EventLoopFuture<()>] = []
+        var writeFutures: [EventLoopFuture<Void>] = []
         for _ in 0..<5 {
             writeFutures.append(self.firstChannel.write(NIOAny(writeData)))
         }
         self.firstChannel.flush()
-        XCTAssertNoThrow(try EventLoopFuture<()>.andAll(writeFutures, eventLoop: self.firstChannel.eventLoop).wait())
+        XCTAssertNoThrow(try EventLoopFuture<Void>.andAll(writeFutures, eventLoop: self.firstChannel.eventLoop).wait())
 
         let reads = try self.secondChannel.waitForDatagrams(count: 5)
 
@@ -155,7 +155,7 @@ final class DatagramChannelTests: XCTestCase {
             XCTAssertTrue(writable)
         }
 
-        let lastWritePromise: EventLoopPromise<()> = self.firstChannel.eventLoop.newPromise()
+        let lastWritePromise: EventLoopPromise<Void> = self.firstChannel.eventLoop.newPromise()
         // The last write will push us over the edge.
         var writable: Bool = try self.firstChannel.eventLoop.submit {
             self.firstChannel.write(NIOAny(writeData), promise: lastWritePromise)
@@ -177,7 +177,7 @@ final class DatagramChannelTests: XCTestCase {
 
         // Now close the channel. When that completes, all the futures should be complete too.
         let fulfilled = try self.firstChannel.close().map {
-            promises.map { $0.fulfilled }.reduce(true, { $0 && $1 })
+            promises.map { $0.isFulfilled }.reduce(true, { $0 && $1 })
         }.wait()
         XCTAssertTrue(fulfilled)
 
@@ -197,14 +197,14 @@ final class DatagramChannelTests: XCTestCase {
         // We're going to try to write loads, and loads, and loads of data. In this case, one more
         // write than the iovecs max.
 
-        var overall: EventLoopFuture<()> = self.firstChannel.eventLoop.newSucceededFuture(result: ())
+        var overall: EventLoopFuture<Void> = self.firstChannel.eventLoop.newSucceededFuture(result: ())
         for _ in 0...Socket.writevLimitIOVectors {
-            let myPromise: EventLoopPromise<()> = self.firstChannel.eventLoop.newPromise()
+            let myPromise: EventLoopPromise<Void> = self.firstChannel.eventLoop.newPromise()
             var buffer = self.firstChannel.allocator.buffer(capacity: 1)
             buffer.write(string: "a")
             let envelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
             self.firstChannel.write(NIOAny(envelope), promise: myPromise)
-            overall = EventLoopFuture<()>.andAll([overall, myPromise.futureResult], eventLoop: self.firstChannel.eventLoop)
+            overall = EventLoopFuture<Void>.andAll([overall, myPromise.futureResult], eventLoop: self.firstChannel.eventLoop)
         }
         self.firstChannel.flush()
         XCTAssertNoThrow(try overall.wait())
@@ -218,8 +218,8 @@ final class DatagramChannelTests: XCTestCase {
         // We defer this work to the background thread because otherwise it incurs an enormous number of context
         // switches.
         _ = try self.firstChannel.eventLoop.submit {
-            let myPromise: EventLoopPromise<()> = self.firstChannel.eventLoop.newPromise()
-            // For datagrams this buffer cannot be very large, becuase if it's larger than the path MTU it
+            let myPromise: EventLoopPromise<Void> = self.firstChannel.eventLoop.newPromise()
+            // For datagrams this buffer cannot be very large, because if it's larger than the path MTU it
             // will cause EMSGSIZE.
             let bufferSize = 1024 * 5
             var buffer = self.firstChannel.allocator.buffer(capacity: bufferSize)
@@ -232,7 +232,7 @@ final class DatagramChannelTests: XCTestCase {
             var written = 0
             while written <= Int(INT32_MAX) {
                 self.firstChannel.write(NIOAny(envelope), promise: myPromise)
-                overall = EventLoopFuture<()>.andAll([overall, myPromise.futureResult], eventLoop: self.firstChannel.eventLoop)
+                overall = EventLoopFuture<Void>.andAll([overall, myPromise.futureResult], eventLoop: self.firstChannel.eventLoop)
                 written += bufferSize
                 datagrams += 1
             }
@@ -329,5 +329,82 @@ final class DatagramChannelTests: XCTestCase {
         } catch {
             XCTFail("Got unexpected error \(error)")
         }
+    }
+
+    public func testRecvFromFailsWithECONNREFUSED() throws {
+        try assertRecvFromFails(error: ECONNREFUSED, active: true)
+    }
+
+    public func testRecvFromFailsWithENOMEM() throws {
+        try assertRecvFromFails(error: ENOMEM, active: true)
+    }
+
+    public func testRecvFromFailsWithEFAULT() throws {
+        try assertRecvFromFails(error: EFAULT, active: false)
+    }
+
+    private func assertRecvFromFails(error: Int32, active: Bool) throws {
+        final class RecvFromHandler: ChannelInboundHandler {
+            typealias InboundIn = AddressedEnvelope<ByteBuffer>
+            typealias InboundOut = AddressedEnvelope<ByteBuffer>
+
+            private let promise: EventLoopPromise<IOError>
+
+            init(_ promise: EventLoopPromise<IOError>) {
+                self.promise = promise
+            }
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                XCTFail("Should not receive data but got \(self.unwrapInboundIn(data))")
+            }
+
+            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+                if let ioError = error as? IOError {
+                    self.promise.succeed(result: ioError)
+                }
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        class NonRecvFromSocket : Socket {
+            private var error: Int32?
+
+            init(error: Int32) throws {
+                self.error = error
+                try super.init(protocolFamily: AF_INET, type: Posix.SOCK_DGRAM)
+            }
+
+            override func recvfrom(pointer: UnsafeMutablePointer<UInt8>, size: Int, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
+                if let err = self.error {
+                    self.error = nil
+                    throw IOError(errnoCode: err, function: "recvfrom")
+                }
+                return IOResult.wouldBlock(0)
+            }
+        }
+        let socket = try NonRecvFromSocket(error: error)
+        let channel = try DatagramChannel(socket: socket, eventLoop: group.next() as! SelectableEventLoop)
+        let promise: EventLoopPromise<IOError> = channel.eventLoop.newPromise()
+        XCTAssertNoThrow(try channel.register().wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: RecvFromHandler(promise)).wait())
+        XCTAssertNoThrow(try channel.bind(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())
+
+        XCTAssertEqual(active, try channel.eventLoop.submit {
+            channel.readable()
+            return channel.isActive
+        }.wait())
+
+        if active {
+            XCTAssertNoThrow(try channel.close().wait())
+        }
+        let ioError = try promise.futureResult.wait()
+        XCTAssertEqual(error, ioError.errnoCode)
+    }
+
+    public func testSetGetOptionClosedDatagramChannel() throws {
+        try assertSetGetOptionOnOpenAndClosed(channel: firstChannel, option: ChannelOptions.maxMessagesPerRead, value: 1)
     }
 }

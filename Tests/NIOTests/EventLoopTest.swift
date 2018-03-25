@@ -26,7 +26,7 @@ public class EventLoopTest : XCTestCase {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
         let value = try eventLoopGroup.next().scheduleTask(in: amount) {
-            return true
+            true
         }.futureResult.wait()
 
         XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= amount.nanoseconds)
@@ -50,11 +50,11 @@ public class EventLoopTest : XCTestCase {
         // Now, schedule two tasks: one that takes a while, one that doesn't.
         let nanos = DispatchTime.now().uptimeNanoseconds
         let longFuture = eventLoopGroup.next().scheduleTask(in: longAmount) {
-            return true
+            true
         }.futureResult
 
         _ = try eventLoopGroup.next().scheduleTask(in: smallAmount) {
-            return true
+            true
         }.futureResult.wait()
 
         // Ok, the short one has happened. Now we should try connecting them. This connect should happen
@@ -83,7 +83,7 @@ public class EventLoopTest : XCTestCase {
         let nanos = DispatchTime.now().uptimeNanoseconds
         let amount: TimeAmount = .seconds(2)
         let value = try eventLoopGroup.next().scheduleTask(in: amount) {
-            return true
+            true
         }.futureResult.wait()
 
         XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= amount.nanoseconds)
@@ -179,7 +179,7 @@ public class EventLoopTest : XCTestCase {
         }
 
         // Confirm that the loop still hasn't closed.
-        XCTAssertFalse(loopCloseFut.fulfilled)
+        XCTAssertFalse(loopCloseFut.isFulfilled)
 
         // Now let it close.
         loop.execute {
@@ -221,11 +221,62 @@ public class EventLoopTest : XCTestCase {
             let group = MultiThreadedEventLoopGroup(pinnedCPUIds: [0])
             let eventLoop = group.next()
             let set = try eventLoop.submit {
-                return NIO.Thread.current.affinity
+                NIO.Thread.current.affinity
             }.wait()
 
             XCTAssertEqual(LinuxCPUSet(0), set)
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         #endif
+    }
+    
+    public func testCurrentEventLoop() throws {
+        class EventLoopHolder {
+            weak var loop: EventLoop?
+            init(_ loop: EventLoop) {
+                self.loop = loop
+            }
+        }
+        
+        func assertCurrentEventLoop0() throws -> EventLoopHolder {
+            let group = MultiThreadedEventLoopGroup(numThreads: 2)
+            
+            let loop1 = group.next()
+            let currentLoop1 = try loop1.submit {
+                MultiThreadedEventLoopGroup.currentEventLoop
+            }.wait()
+            XCTAssertTrue(loop1 === currentLoop1)
+            
+            let loop2 = group.next()
+            let currentLoop2 = try loop2.submit {
+                MultiThreadedEventLoopGroup.currentEventLoop
+            }.wait()
+            XCTAssertTrue(loop2 === currentLoop2)
+            XCTAssertFalse(loop1 === loop2)
+            
+            let holder = EventLoopHolder(loop2)
+            XCTAssertNotNil(holder.loop)
+            XCTAssertNil(MultiThreadedEventLoopGroup.currentEventLoop)
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+            return holder
+        }
+        
+        let holder = try assertCurrentEventLoop0()
+
+        // We loop as the Thread used by SelectableEventLoop may not be gone yet.
+        // In the next major version we should ensure to join all threads and so be sure all are gone when
+        // syncShutdownGracefully returned.
+        var tries = 0
+        while holder.loop != nil {
+            XCTAssertTrue(tries < 5, "Reference to EventLoop still alive after 5 seconds")
+            sleep(1)
+            tries += 1
+        }
+    }
+
+    public func testShutdownWhileScheduledTasksNotReady() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoop = group.next()
+        _ = eventLoop.scheduleTask(in: .hours(1)) { }
+        try group.syncShutdownGracefully()
     }
 }
