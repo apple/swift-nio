@@ -374,7 +374,7 @@
             <h1>ByteToMessageDecoder</h1>
               <div class="declaration">
                 <div class="language">
-                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">ByteToMessageDecoder</span><span class="p">:</span> <span class="kt"><a href="../Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a></span> <span class="k">where</span> <span class="kt">InboundIn</span> <span class="o">==</span> <span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span></code></pre>
+                  <pre class="highlight"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">ByteToMessageDecoder</span><span class="p">:</span> <span class="kt"><a href="../Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a></span> <span class="k">where</span> <span class="kt">InboundIn</span> <span class="o">==</span> <span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span></code></pre>
 
                 </div>
               </div>
@@ -422,7 +422,7 @@ If you still need those bytes to come back, consider taking a local copy of buff
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="k">var</span> <span class="nv">cumulationBuffer</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="p">?</span></code></pre>
+                          <pre class="highlight"><code><span class="k">var</span> <span class="nv">cumulationBuffer</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="p">?</span></code></pre>
 
                         </div>
                       </div>
@@ -449,7 +449,7 @@ If you still need those bytes to come back, consider taking a local copy of buff
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">decode</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">,</span> <span class="nv">buffer</span><span class="p">:</span> <span class="k">inout</span> <span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Enums/DecodingState.html">DecodingState</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">func</span> <span class="nf">decode</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">,</span> <span class="nv">buffer</span><span class="p">:</span> <span class="k">inout</span> <span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Enums/DecodingState.html">DecodingState</a></span></code></pre>
 
                         </div>
                       </div>
@@ -484,7 +484,7 @@ If you still need those bytes to come back, consider taking a local copy of buff
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">decodeLast</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">,</span> <span class="nv">buffer</span><span class="p">:</span> <span class="k">inout</span> <span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="p">)</span> <span class="k">throws</span>  <span class="o">-&gt;</span> <span class="kt"><a href="../Enums/DecodingState.html">DecodingState</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">func</span> <span class="nf">decodeLast</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">,</span> <span class="nv">buffer</span><span class="p">:</span> <span class="k">inout</span> <span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="p">)</span> <span class="k">throws</span>  <span class="o">-&gt;</span> <span class="kt"><a href="../Enums/DecodingState.html">DecodingState</a></span></code></pre>
 
                         </div>
                       </div>
@@ -519,7 +519,7 @@ If you still need those bytes to come back, consider taking a local copy of buff
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">decoderRemoved</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">func</span> <span class="nf">decoderRemoved</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -573,7 +573,7 @@ If you still need those bytes to come back, consider taking a local copy of buff
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">decoderAdded</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">func</span> <span class="nf">decoderAdded</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -632,7 +632,7 @@ Be aware that reclaiming memory may involve memory copies and so is not free.</p
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">shouldReclaimBytes</span><span class="p">(</span><span class="nv">buffer</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">func</span> <span class="nf">shouldReclaimBytes</span><span class="p">(</span><span class="nv">buffer</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
 
                         </div>
                       </div>
@@ -685,7 +685,7 @@ Be aware that reclaiming memory may involve memory copies and so is not free.</p
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">channelRead</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">,</span> <span class="nv">data</span><span class="p">:</span> <span class="kt"><a href="../Structs/NIOAny.html">NIOAny</a></span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">channelRead</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">,</span> <span class="nv">data</span><span class="p">:</span> <span class="kt"><a href="../Structs/NIOAny.html">NIOAny</a></span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -715,7 +715,7 @@ Be aware that reclaiming memory may involve memory copies and so is not free.</p
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">channelInactive</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">channelInactive</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -744,7 +744,7 @@ Be aware that reclaiming memory may involve memory copies and so is not free.</p
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">handlerAdded</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">handlerAdded</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -773,7 +773,7 @@ Be aware that reclaiming memory may involve memory copies and so is not free.</p
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">handlerRemoved</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">handlerRemoved</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt"><a href="../Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -788,8 +788,8 @@ Be aware that reclaiming memory may involve memory copies and so is not free.</p
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-07)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.1</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-01)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.0</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

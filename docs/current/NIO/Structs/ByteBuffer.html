@@ -374,7 +374,7 @@
             <h1>ByteBuffer</h1>
               <div class="declaration">
                 <div class="language">
-                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">ByteBuffer</span></code></pre>
+                  <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">ByteBuffer</span></code></pre>
 
                 </div>
               </div>
@@ -412,12 +412,12 @@ types (non-exhaustive list):</p>
 </ol>
 
 <p>Example:</p>
-<pre class="highlight swift"><code><span class="k">var</span> <span class="nv">buf</span> <span class="o">=</span> <span class="o">...</span>
-<span class="n">buf</span><span class="o">.</span><span class="nf">set</span><span class="p">(</span><span class="nv">string</span><span class="p">:</span> <span class="s">"Hello World"</span><span class="p">,</span> <span class="nv">at</span><span class="p">:</span> <span class="mi">0</span><span class="p">)</span>
-<span class="k">let</span> <span class="nv">helloWorld</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getString</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
+<pre class="highlight plaintext"><code>var buf = ...
+buf.set(string: "Hello World", at: 0)
+let helloWorld = buf.getString(at: 0, length: 11)
 
-<span class="n">buf</span><span class="o">.</span><span class="nf">set</span><span class="p">(</span><span class="nv">integer</span><span class="p">:</span> <span class="mi">17</span> <span class="k">as</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">at</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
-<span class="k">let</span> <span class="nv">seventeen</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getInteger</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
+buf.set(integer: 17 as Int, at: 11)
+let seventeen: Int = buf.getInteger(at: 11)
 </code></pre>
 
 <p>If needed, <code>ByteBuffer</code> will automatically resize its storage to accomodate your <code>set</code> request.</p>
@@ -431,19 +431,19 @@ types (non-exhaustive list):</p>
 </ol>
 
 <p>Example:</p>
-<pre class="highlight swift"><code> <span class="k">var</span> <span class="nv">buf</span> <span class="o">=</span> <span class="o">...</span>
- <span class="n">buf</span><span class="o">.</span><span class="nf">write</span><span class="p">(</span><span class="nv">string</span><span class="p">:</span> <span class="s">"Hello World"</span><span class="p">)</span>
- <span class="n">buf</span><span class="o">.</span><span class="nf">write</span><span class="p">(</span><span class="nv">integer</span><span class="p">:</span> <span class="mi">17</span> <span class="k">as</span> <span class="kt">Int</span><span class="p">)</span>
- <span class="k">let</span> <span class="nv">helloWorld</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">readString</span><span class="p">(</span><span class="nv">length</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
- <span class="k">let</span> <span class="nv">seventeen</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">readInteger</span><span class="p">()</span>
+<pre class="highlight plaintext"><code> var buf = ...
+ buf.write(string: "Hello World")
+ buf.write(integer: 17 as Int)
+ let helloWorld = buf.readString(length: 11)
+ let seventeen: Int = buf.readInteger()
 </code></pre>
 <h3 id='layout' class='heading'>Layout</h3>
-<pre class="highlight swift"><code><span class="o">+-------------------+------------------+------------------+</span>
-<span class="o">|</span> <span class="n">discardable</span> <span class="n">bytes</span> <span class="o">|</span>  <span class="n">readable</span> <span class="n">bytes</span>  <span class="o">|</span>  <span class="n">writable</span> <span class="n">bytes</span>  <span class="o">|</span>
-<span class="o">|</span>                   <span class="o">|</span>     <span class="p">(</span><span class="kt">CONTENT</span><span class="p">)</span>    <span class="o">|</span>                  <span class="o">|</span>
-<span class="o">+-------------------+------------------+------------------+</span>
-<span class="o">|</span>                   <span class="o">|</span>                  <span class="o">|</span>                  <span class="o">|</span>
-<span class="mi">0</span>      <span class="o">&lt;=</span>      <span class="n">readerIndex</span>   <span class="o">&lt;=</span>   <span class="n">writerIndex</span>    <span class="o">&lt;=</span>    <span class="n">capacity</span>
+<pre class="highlight plaintext"><code>+-------------------+------------------+------------------+
+| discardable bytes |  readable bytes  |  writable bytes  |
+|                   |     (CONTENT)    |                  |
++-------------------+------------------+------------------+
+|                   |                  |                  |
+0      &lt;=      readerIndex   &lt;=   writerIndex    &lt;=    capacity
 </code></pre>
 
 <p>The &#39;discardable bytes&rsquo; are usually bytes that have already been read, they can however still be accessed using
@@ -455,13 +455,13 @@ behaviour and might yield aribitrary bytes (<em>not</em> <code>0</code> initiali
 <p><code>ByteBuffer</code> supports slicing a <code>ByteBuffer</code> without copying the underlying storage.</p>
 
 <p>Example:</p>
-<pre class="highlight swift"><code><span class="k">var</span> <span class="nv">buf</span> <span class="o">=</span> <span class="o">...</span>
-<span class="k">let</span> <span class="nv">dataBytes</span><span class="p">:</span> <span class="p">[</span><span class="kt">UInt8</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mh">0xca</span><span class="p">,</span> <span class="mh">0xfe</span><span class="p">,</span> <span class="mh">0xba</span><span class="p">,</span> <span class="mh">0xbe</span><span class="p">]</span>
-<span class="k">let</span> <span class="nv">dataBytesLength</span> <span class="o">=</span> <span class="kt">UInt32</span><span class="p">(</span><span class="n">dataBytes</span><span class="o">.</span><span class="n">count</span><span class="p">)</span>
-<span class="n">buf</span><span class="o">.</span><span class="nf">write</span><span class="p">(</span><span class="nv">integer</span><span class="p">:</span> <span class="n">dataBytesLength</span><span class="p">)</span> <span class="cm">/* the header */</span>
-<span class="n">buf</span><span class="o">.</span><span class="nf">write</span><span class="p">(</span><span class="nv">bytes</span><span class="p">:</span> <span class="n">dataBytes</span><span class="p">)</span> <span class="cm">/* the data */</span>
-<span class="k">let</span> <span class="nv">bufDataBytesOnly</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getSlice</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="n">dataBytes</span><span class="o">.</span><span class="n">count</span><span class="p">)</span>
-<span class="cm">/* `bufDataByteOnly` and `buf` will share their storage */</span>
+<pre class="highlight plaintext"><code>var buf = ...
+let dataBytes: [UInt8] = [0xca, 0xfe, 0xba, 0xbe]
+let dataBytesLength = UInt32(dataBytes.count)
+buf.write(integer: dataBytesLength) /* the header */
+buf.write(bytes: dataBytes) /* the data */
+let bufDataBytesOnly = buf.getSlice(at: 4, length: dataBytes.count)
+/* `bufDataByteOnly` and `buf` will share their storage */
 </code></pre>
 <h3 id='important-usage-notes' class='heading'>Important usage notes</h3>
 
@@ -505,7 +505,7 @@ trigger a copy of the bytes.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">writableBytes</span><span class="p">:</span> <span class="kt">Int</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">writableBytes</span><span class="p">:</span> <span class="kt">Int</span></code></pre>
 
                         </div>
                       </div>
@@ -532,7 +532,7 @@ trigger a copy of the bytes.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">readableBytes</span><span class="p">:</span> <span class="kt">Int</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">readableBytes</span><span class="p">:</span> <span class="kt">Int</span></code></pre>
 
                         </div>
                       </div>
@@ -560,7 +560,7 @@ of bytes that have been written to this <code>ByteBuffer</code>.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">capacity</span><span class="p">:</span> <span class="kt">Int</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">capacity</span><span class="p">:</span> <span class="kt">Int</span></code></pre>
 
                         </div>
                       </div>
@@ -587,7 +587,7 @@ of bytes that have been written to this <code>ByteBuffer</code>.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">changeCapacity</span><span class="p">(</span><span class="n">to</span> <span class="nv">newCapacity</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">changeCapacity</span><span class="p">(</span><span class="n">to</span> <span class="nv">newCapacity</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -638,7 +638,7 @@ of bytes that have been written to this <code>ByteBuffer</code>.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">withUnsafeMutableReadableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">withUnsafeMutableReadableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
 
                         </div>
                       </div>
@@ -699,7 +699,7 @@ write to them otherwise you will trigger undefined behaviour. The writer index w
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">withUnsafeMutableWritableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">withUnsafeMutableWritableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
 
                         </div>
                       </div>
@@ -749,7 +749,7 @@ write to them otherwise you will trigger undefined behaviour. The writer index w
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">writeWithUnsafeMutableBytes</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">writeWithUnsafeMutableBytes</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
 
                         </div>
                       </div>
@@ -782,7 +782,7 @@ uninitialised memory and it&rsquo;s undefined behaviour to read it. In most case
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">withVeryUnsafeBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">withVeryUnsafeBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
 
                         </div>
                       </div>
@@ -814,7 +814,7 @@ uninitialised memory and it&rsquo;s undefined behaviour to read it. In most case
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">withUnsafeReadableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">withUnsafeReadableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
 
                         </div>
                       </div>
@@ -870,7 +870,7 @@ the bytes and you also must call <code>storageManagement.release()</code> if you
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">withUnsafeReadableBytesWithStorageManagement</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">,</span> <span class="kt">Unmanaged</span><span class="o">&lt;</span><span class="kt">AnyObject</span><span class="o">&gt;</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">withUnsafeReadableBytesWithStorageManagement</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">,</span> <span class="kt">Unmanaged</span><span class="o">&lt;</span><span class="kt">AnyObject</span><span class="o">&gt;</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
 
                         </div>
                       </div>
@@ -920,7 +920,7 @@ the bytes and you also must call <code>storageManagement.release()</code> if you
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">withVeryUnsafeBytesWithStorageManagement</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">,</span> <span class="kt">Unmanaged</span><span class="o">&lt;</span><span class="kt">AnyObject</span><span class="o">&gt;</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">withVeryUnsafeBytesWithStorageManagement</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">,</span> <span class="kt">Unmanaged</span><span class="o">&lt;</span><span class="kt">AnyObject</span><span class="o">&gt;</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
 
                         </div>
                       </div>
@@ -950,7 +950,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">getSlice</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">ByteBuffer</span><span class="p">?</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">getSlice</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">ByteBuffer</span><span class="p">?</span></code></pre>
 
                         </div>
                       </div>
@@ -1009,7 +1009,7 @@ at index <code>0</code> after the call returns.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">@discardableResult</span> <span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">discardReadBytes</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">@discardableResult</span> <span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">discardReadBytes</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
 
                         </div>
                       </div>
@@ -1041,7 +1041,7 @@ newly allocated <code>ByteBuffer</code>.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">readerIndex</span><span class="p">:</span> <span class="kt">Int</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">readerIndex</span><span class="p">:</span> <span class="kt">Int</span></code></pre>
 
                         </div>
                       </div>
@@ -1069,7 +1069,7 @@ newly allocated <code>ByteBuffer</code>.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">writerIndex</span><span class="p">:</span> <span class="kt">Int</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">writerIndex</span><span class="p">:</span> <span class="kt">Int</span></code></pre>
 
                         </div>
                       </div>
@@ -1104,7 +1104,7 @@ for a new use-case.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">clear</span><span class="p">()</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">clear</span><span class="p">()</span></code></pre>
 
                         </div>
                       </div>
@@ -1142,7 +1142,7 @@ for a new use-case.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">getBytes</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">[</span><span class="kt">UInt8</span><span class="p">]?</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">getBytes</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">[</span><span class="kt">UInt8</span><span class="p">]?</span></code></pre>
 
                         </div>
                       </div>
@@ -1205,7 +1205,7 @@ as <code>[UInt8]</code>.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readBytes</span><span class="p">(</span><span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">[</span><span class="kt">UInt8</span><span class="p">]?</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readBytes</span><span class="p">(</span><span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">[</span><span class="kt">UInt8</span><span class="p">]?</span></code></pre>
 
                         </div>
                       </div>
@@ -1266,7 +1266,7 @@ as <code>[UInt8]</code>.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">write</span><span class="p">(</span><span class="n">staticString</span> <span class="nv">string</span><span class="p">:</span> <span class="kt">StaticString</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">write</span><span class="p">(</span><span class="n">staticString</span> <span class="nv">string</span><span class="p">:</span> <span class="kt">StaticString</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
 
                         </div>
                       </div>
@@ -1316,7 +1316,7 @@ as <code>[UInt8]</code>.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">set</span><span class="p">(</span><span class="n">staticString</span> <span class="nv">string</span><span class="p">:</span> <span class="kt">StaticString</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">set</span><span class="p">(</span><span class="n">staticString</span> <span class="nv">string</span><span class="p">:</span> <span class="kt">StaticString</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
 
                         </div>
                       </div>
@@ -1389,7 +1389,7 @@ as <code>[UInt8]</code>.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">write</span><span class="p">(</span><span class="nv">string</span><span class="p">:</span> <span class="kt">String</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span><span class="p">?</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">write</span><span class="p">(</span><span class="nv">string</span><span class="p">:</span> <span class="kt">String</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span><span class="p">?</span></code></pre>
 
                         </div>
                       </div>
@@ -1439,7 +1439,7 @@ as <code>[UInt8]</code>.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">set</span><span class="p">(</span><span class="nv">string</span><span class="p">:</span> <span class="kt">String</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span><span class="p">?</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">set</span><span class="p">(</span><span class="nv">string</span><span class="p">:</span> <span class="kt">String</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span><span class="p">?</span></code></pre>
 
                         </div>
                       </div>
@@ -1501,7 +1501,7 @@ as <code>[UInt8]</code>.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">getString</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">String</span><span class="p">?</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">getString</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">String</span><span class="p">?</span></code></pre>
 
                         </div>
                       </div>
@@ -1563,7 +1563,7 @@ as <code>[UInt8]</code>.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readString</span><span class="p">(</span><span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">String</span><span class="p">?</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readString</span><span class="p">(</span><span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">String</span><span class="p">?</span></code></pre>
 
                         </div>
                       </div>
@@ -1630,7 +1630,7 @@ by the number of bytes returned by <code>fn</code>.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readWithUnsafeReadableBytes</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readWithUnsafeReadableBytes</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
 
                         </div>
                       </div>
@@ -1686,7 +1686,7 @@ by the number of bytes <code>fn</code> returns in the first tuple component.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">readWithUnsafeReadableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="kt">T</span><span class="p">))</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">readWithUnsafeReadableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="kt">T</span><span class="p">))</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
 
                         </div>
                       </div>
@@ -1742,7 +1742,7 @@ Will move the reader index by the number of bytes returned by <code>fn</code> bu
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readWithUnsafeMutableReadableBytes</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readWithUnsafeMutableReadableBytes</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">Int</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
 
                         </div>
                       </div>
@@ -1798,7 +1798,7 @@ Will move the reader index by the number of bytes <code>fn</code> returns in the
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">readWithUnsafeMutableReadableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="kt">T</span><span class="p">))</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">readWithUnsafeMutableReadableBytes</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeMutableRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">Int</span><span class="p">,</span> <span class="kt">T</span><span class="p">))</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
 
                         </div>
                       </div>
@@ -1848,7 +1848,7 @@ Will move the reader index by the number of bytes <code>fn</code> returns in the
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">set</span><span class="p">(</span><span class="nv">buffer</span><span class="p">:</span> <span class="kt">ByteBuffer</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">set</span><span class="p">(</span><span class="nv">buffer</span><span class="p">:</span> <span class="kt">ByteBuffer</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
 
                         </div>
                       </div>
@@ -1911,7 +1911,7 @@ Will move the reader index by the number of bytes <code>fn</code> returns in the
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">write</span><span class="p">(</span><span class="nv">buffer</span><span class="p">:</span> <span class="k">inout</span> <span class="kt">ByteBuffer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">write</span><span class="p">(</span><span class="nv">buffer</span><span class="p">:</span> <span class="k">inout</span> <span class="kt">ByteBuffer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
 
                         </div>
                       </div>
@@ -1961,7 +1961,7 @@ Will move the reader index by the number of bytes <code>fn</code> returns in the
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">write</span><span class="o">&lt;</span><span class="kt">S</span><span class="p">:</span> <span class="kt">Sequence</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">bytes</span><span class="p">:</span> <span class="kt">S</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">S</span><span class="o">.</span><span class="kt">Element</span> <span class="o">==</span> <span class="kt">UInt8</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">write</span><span class="o">&lt;</span><span class="kt">S</span><span class="p">:</span> <span class="kt">Sequence</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">bytes</span><span class="p">:</span> <span class="kt">S</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">S</span><span class="o">.</span><span class="kt">Element</span> <span class="o">==</span> <span class="kt">UInt8</span></code></pre>
 
                         </div>
                       </div>
@@ -2012,7 +2012,7 @@ This method is likely more efficient than the one operating on plain <code>Colle
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">write</span><span class="o">&lt;</span><span class="kt">S</span><span class="p">:</span> <span class="kt"><a href="../Protocols/ContiguousCollection.html">ContiguousCollection</a></span><span class="o">&gt;</span><span class="p">(</span><span class="nv">bytes</span><span class="p">:</span> <span class="kt">S</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">S</span><span class="o">.</span><span class="kt">Element</span> <span class="o">==</span> <span class="kt">UInt8</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">write</span><span class="o">&lt;</span><span class="kt">S</span><span class="p">:</span> <span class="kt"><a href="../Protocols/ContiguousCollection.html">ContiguousCollection</a></span><span class="o">&gt;</span><span class="p">(</span><span class="nv">bytes</span><span class="p">:</span> <span class="kt">S</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">S</span><span class="o">.</span><span class="kt">Element</span> <span class="o">==</span> <span class="kt">UInt8</span></code></pre>
 
                         </div>
                       </div>
@@ -2064,7 +2064,7 @@ This method is likely more efficient than the one operating on plain <code>Colle
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">slice</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">ByteBuffer</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">slice</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">ByteBuffer</span></code></pre>
 
                         </div>
                       </div>
@@ -2100,7 +2100,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readSlice</span><span class="p">(</span><span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">ByteBuffer</span><span class="p">?</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">readSlice</span><span class="p">(</span><span class="nv">length</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">ByteBuffer</span><span class="p">?</span></code></pre>
 
                         </div>
                       </div>
@@ -2148,7 +2148,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                       <div class="pointer"></div>
                       <div class="abstract">
                         <p>A <code>String</code> describing this <code>ByteBuffer</code>. Example:</p>
-<pre class="highlight swift"><code><span class="kt">ByteBuffer</span> <span class="p">{</span> <span class="nv">readerIndex</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">writerIndex</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="nv">readableBytes</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="nv">capacity</span><span class="p">:</span> <span class="mi">512</span><span class="p">,</span> <span class="nv">slice</span><span class="p">:</span> <span class="mi">256</span><span class="o">..&lt;</span><span class="mi">768</span><span class="p">,</span> <span class="nv">storage</span><span class="p">:</span> <span class="mh">0x0000000103001000</span> <span class="p">(</span><span class="mi">1024</span> <span class="n">bytes</span><span class="p">)}</span>
+<pre class="highlight plaintext"><code>ByteBuffer { readerIndex: 0, writerIndex: 4, readableBytes: 4, capacity: 512, slice: 256..&lt;768, storage: 0x0000000103001000 (1024 bytes)}
 </code></pre>
 
 <p>The format of the description is not API.</p>
@@ -2158,7 +2158,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">description</span><span class="p">:</span> <span class="kt">String</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">description</span><span class="p">:</span> <span class="kt">String</span></code></pre>
 
                         </div>
                       </div>
@@ -2183,8 +2183,8 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                       <div class="pointer"></div>
                       <div class="abstract">
                         <p>A <code>String</code> describing this <code>ByteBuffer</code> with some portion of the readable bytes dumped too. Example:</p>
-<pre class="highlight swift"><code><span class="kt">ByteBuffer</span> <span class="p">{</span> <span class="nv">readerIndex</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">writerIndex</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="nv">readableBytes</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="nv">capacity</span><span class="p">:</span> <span class="mi">512</span><span class="p">,</span> <span class="nv">slice</span><span class="p">:</span> <span class="mi">256</span><span class="o">..&lt;</span><span class="mi">768</span><span class="p">,</span> <span class="nv">storage</span><span class="p">:</span> <span class="mh">0x0000000103001000</span> <span class="p">(</span><span class="mi">1024</span> <span class="n">bytes</span><span class="p">)}</span>
-<span class="n">readable</span> <span class="nf">bytes</span> <span class="p">(</span><span class="n">max</span> <span class="mi">1</span><span class="n">k</span><span class="p">):</span> <span class="p">[</span> <span class="mo">00</span> <span class="mo">01</span> <span class="mo">02</span> <span class="mo">03</span> <span class="p">]</span>
+<pre class="highlight plaintext"><code>ByteBuffer { readerIndex: 0, writerIndex: 4, readableBytes: 4, capacity: 512, slice: 256..&lt;768, storage: 0x0000000103001000 (1024 bytes)}
+readable bytes (max 1k): [ 00 01 02 03 ]
 </code></pre>
 
 <p>The format of the description is not API.</p>
@@ -2194,7 +2194,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">debugDescription</span><span class="p">:</span> <span class="kt">String</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">debugDescription</span><span class="p">:</span> <span class="kt">String</span></code></pre>
 
                         </div>
                       </div>
@@ -2229,7 +2229,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="k">set</span><span class="o">&lt;</span><span class="kt">S</span><span class="p">:</span> <span class="kt">Sequence</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">bytes</span><span class="p">:</span> <span class="kt">S</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">S</span><span class="o">.</span><span class="kt">Element</span> <span class="o">==</span> <span class="kt">UInt8</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="k">set</span><span class="o">&lt;</span><span class="kt">S</span><span class="p">:</span> <span class="kt">Sequence</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">bytes</span><span class="p">:</span> <span class="kt">S</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">S</span><span class="o">.</span><span class="kt">Element</span> <span class="o">==</span> <span class="kt">UInt8</span></code></pre>
 
                         </div>
                       </div>
@@ -2256,7 +2256,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="k">set</span><span class="o">&lt;</span><span class="kt">S</span><span class="p">:</span> <span class="kt"><a href="../Protocols/ContiguousCollection.html">ContiguousCollection</a></span><span class="o">&gt;</span><span class="p">(</span><span class="nv">bytes</span><span class="p">:</span> <span class="kt">S</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">S</span><span class="o">.</span><span class="kt">Element</span> <span class="o">==</span> <span class="kt">UInt8</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="k">set</span><span class="o">&lt;</span><span class="kt">S</span><span class="p">:</span> <span class="kt"><a href="../Protocols/ContiguousCollection.html">ContiguousCollection</a></span><span class="o">&gt;</span><span class="p">(</span><span class="nv">bytes</span><span class="p">:</span> <span class="kt">S</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="k">where</span> <span class="kt">S</span><span class="o">.</span><span class="kt">Element</span> <span class="o">==</span> <span class="kt">UInt8</span></code></pre>
 
                         </div>
                       </div>
@@ -2283,7 +2283,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">moveReaderIndex</span><span class="p">(</span><span class="n">forwardBy</span> <span class="nv">offset</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">moveReaderIndex</span><span class="p">(</span><span class="n">forwardBy</span> <span class="nv">offset</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -2310,7 +2310,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">moveReaderIndex</span><span class="p">(</span><span class="n">to</span> <span class="nv">offset</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">moveReaderIndex</span><span class="p">(</span><span class="n">to</span> <span class="nv">offset</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -2337,7 +2337,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">moveWriterIndex</span><span class="p">(</span><span class="n">forwardBy</span> <span class="nv">offset</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">moveWriterIndex</span><span class="p">(</span><span class="n">forwardBy</span> <span class="nv">offset</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -2364,7 +2364,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">moveWriterIndex</span><span class="p">(</span><span class="n">to</span> <span class="nv">offset</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="nf">moveWriterIndex</span><span class="p">(</span><span class="n">to</span> <span class="nv">offset</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -2402,7 +2402,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="o">==</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">ByteBuffer</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">ByteBuffer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="o">==</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">ByteBuffer</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">ByteBuffer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
 
                         </div>
                       </div>
@@ -2433,7 +2433,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">readInteger</span><span class="o">&lt;</span><span class="kt">T</span><span class="p">:</span> <span class="kt">FixedWidthInteger</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">endianness</span><span class="p">:</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span> <span class="o">=</span> <span class="o">.</span><span class="n">big</span><span class="p">,</span> <span class="nv">as</span><span class="p">:</span> <span class="kt">T</span><span class="o">.</span><span class="k">Type</span> <span class="o">=</span> <span class="kt">T</span><span class="o">.</span><span class="k">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">?</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">readInteger</span><span class="o">&lt;</span><span class="kt">T</span><span class="p">:</span> <span class="kt">FixedWidthInteger</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">endianness</span><span class="p">:</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span> <span class="o">=</span> <span class="o">.</span><span class="n">big</span><span class="p">,</span> <span class="nv">as</span><span class="p">:</span> <span class="kt">T</span><span class="o">.</span><span class="k">Type</span> <span class="o">=</span> <span class="kt">T</span><span class="o">.</span><span class="k">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">?</span></code></pre>
 
                         </div>
                       </div>
@@ -2495,7 +2495,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">getInteger</span><span class="o">&lt;</span><span class="kt">T</span><span class="p">:</span> <span class="kt">FixedWidthInteger</span><span class="o">&gt;</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">endianness</span><span class="p">:</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span> <span class="o">=</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span><span class="o">.</span><span class="n">big</span><span class="p">,</span> <span class="nv">as</span><span class="p">:</span> <span class="kt">T</span><span class="o">.</span><span class="k">Type</span> <span class="o">=</span> <span class="kt">T</span><span class="o">.</span><span class="k">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">?</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">getInteger</span><span class="o">&lt;</span><span class="kt">T</span><span class="p">:</span> <span class="kt">FixedWidthInteger</span><span class="o">&gt;</span><span class="p">(</span><span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">endianness</span><span class="p">:</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span> <span class="o">=</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span><span class="o">.</span><span class="n">big</span><span class="p">,</span> <span class="nv">as</span><span class="p">:</span> <span class="kt">T</span><span class="o">.</span><span class="k">Type</span> <span class="o">=</span> <span class="kt">T</span><span class="o">.</span><span class="k">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">?</span></code></pre>
 
                         </div>
                       </div>
@@ -2569,7 +2569,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">write</span><span class="o">&lt;</span><span class="kt">T</span><span class="p">:</span> <span class="kt">FixedWidthInteger</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">integer</span><span class="p">:</span> <span class="kt">T</span><span class="p">,</span> <span class="nv">endianness</span><span class="p">:</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span> <span class="o">=</span> <span class="o">.</span><span class="n">big</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="n">write</span><span class="o">&lt;</span><span class="kt">T</span><span class="p">:</span> <span class="kt">FixedWidthInteger</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">integer</span><span class="p">:</span> <span class="kt">T</span><span class="p">,</span> <span class="nv">endianness</span><span class="p">:</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span> <span class="o">=</span> <span class="o">.</span><span class="n">big</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
 
                         </div>
                       </div>
@@ -2631,7 +2631,7 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="k">set</span><span class="o">&lt;</span><span class="kt">T</span><span class="p">:</span> <span class="kt">FixedWidthInteger</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">integer</span><span class="p">:</span> <span class="kt">T</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">endianness</span><span class="p">:</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span> <span class="o">=</span> <span class="o">.</span><span class="n">big</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">mutating</span> <span class="kd">func</span> <span class="k">set</span><span class="o">&lt;</span><span class="kt">T</span><span class="p">:</span> <span class="kt">FixedWidthInteger</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">integer</span><span class="p">:</span> <span class="kt">T</span><span class="p">,</span> <span class="n">at</span> <span class="nv">index</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">endianness</span><span class="p">:</span> <span class="kt"><a href="../Enums/Endianness.html">Endianness</a></span> <span class="o">=</span> <span class="o">.</span><span class="n">big</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span></code></pre>
 
                         </div>
                       </div>
@@ -2693,8 +2693,8 @@ The <code><a href="../Structs/ByteBuffer.html#/s:3NIO10ByteBufferV11readerIndexS
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-07)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.1</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-01)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.0</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

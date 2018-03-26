@@ -199,7 +199,7 @@ that reason, applications should try to ensure that the <code>HTTPRequestDecoder
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">HTTPRequestDecoder</span><span class="p">:</span> <span class="kt"><a href="Classes/HTTPDecoder.html">HTTPDecoder</a></span><span class="o">&lt;</span><span class="kt"><a href="Typealiases.html#/s:8NIOHTTP121HTTPServerRequestParta">HTTPServerRequestPart</a></span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">HTTPRequestDecoder</span><span class="p">:</span> <span class="kt"><a href="Classes/HTTPDecoder.html">HTTPDecoder</a></span><span class="o">&lt;</span><span class="kt"><a href="Typealiases.html#/s:8NIOHTTP121HTTPServerRequestParta">HTTPServerRequestPart</a></span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -234,7 +234,7 @@ were for accurate decoding.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">HTTPResponseDecoder</span><span class="p">:</span> <span class="kt"><a href="Classes/HTTPDecoder.html">HTTPDecoder</a></span><span class="o">&lt;</span><span class="kt"><a href="Typealiases.html#/s:8NIOHTTP122HTTPClientResponseParta">HTTPClientResponsePart</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="kt">ChannelOutboundHandler</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">HTTPResponseDecoder</span><span class="p">:</span> <span class="kt"><a href="Classes/HTTPDecoder.html">HTTPDecoder</a></span><span class="o">&lt;</span><span class="kt"><a href="Typealiases.html#/s:8NIOHTTP122HTTPClientResponseParta">HTTPClientResponsePart</a></span><span class="o">&gt;</span><span class="p">,</span> <span class="kt">ChannelOutboundHandler</span></code></pre>
 
                         </div>
                       </div>
@@ -268,7 +268,7 @@ the remote peer.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">class</span> <span class="kt">HTTPDecoder</span><span class="o">&lt;</span><span class="kt">HTTPMessageT</span><span class="o">&gt;</span><span class="p">:</span> <span class="kt">ByteToMessageDecoder</span><span class="p">,</span> <span class="kt">AnyHTTPDecoder</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="kt">HTTPDecoder</span><span class="o">&lt;</span><span class="kt">HTTPMessageT</span><span class="o">&gt;</span><span class="p">:</span> <span class="kt">ByteToMessageDecoder</span><span class="p">,</span> <span class="kt">AnyHTTPDecoder</span></code></pre>
 
                         </div>
                       </div>
@@ -303,7 +303,7 @@ the remote peer.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">HTTPRequestEncoder</span><span class="p">:</span> <span class="kt">ChannelOutboundHandler</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">HTTPRequestEncoder</span><span class="p">:</span> <span class="kt">ChannelOutboundHandler</span></code></pre>
 
                         </div>
                       </div>
@@ -334,7 +334,7 @@ the remote peer.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">HTTPResponseEncoder</span><span class="p">:</span> <span class="kt">ChannelOutboundHandler</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">HTTPResponseEncoder</span><span class="p">:</span> <span class="kt">ChannelOutboundHandler</span></code></pre>
 
                         </div>
                       </div>
@@ -376,7 +376,7 @@ highly-compressible content, which will see the biggest benefits from streaming 
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">HTTPResponseCompressor</span><span class="p">:</span> <span class="kt">ChannelInboundHandler</span><span class="p">,</span> <span class="kt">ChannelOutboundHandler</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">HTTPResponseCompressor</span><span class="p">:</span> <span class="kt">ChannelInboundHandler</span><span class="p">,</span> <span class="kt">ChannelOutboundHandler</span></code></pre>
 
                         </div>
                       </div>
@@ -416,7 +416,7 @@ the odds of someone needing to upgrade midway through the lifetime of a connecti
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">class</span> <span class="kt">HTTPServerUpgradeHandler</span><span class="p">:</span> <span class="kt">ChannelInboundHandler</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="kt">HTTPServerUpgradeHandler</span><span class="p">:</span> <span class="kt">ChannelInboundHandler</span></code></pre>
 
                         </div>
                       </div>
@@ -431,8 +431,8 @@ the odds of someone needing to upgrade midway through the lifetime of a connecti
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-07)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.1</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-01)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.0</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

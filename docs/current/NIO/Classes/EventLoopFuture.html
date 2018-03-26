@@ -374,7 +374,7 @@
             <h1>EventLoopFuture</h1>
               <div class="declaration">
                 <div class="language">
-                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+                  <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
 
                 </div>
               </div>
@@ -385,16 +385,16 @@ The recipient of such an object can then observe it to be notified when the oper
 
 <p>The provider of a <code>EventLoopFuture&lt;T&gt;</code> can create and return a placeholder object
 before the actual result is available. For example:</p>
-<pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">getNetworkData</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">NetworkResponse</span><span class="o">&gt;</span> <span class="p">{</span>
-    <span class="k">let</span> <span class="nv">promise</span><span class="p">:</span> <span class="kt">EventLoopPromise</span><span class="o">&lt;</span><span class="kt">NetworkResponse</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">eventLoop</span><span class="o">.</span><span class="nf">newPromise</span><span class="p">()</span>
-    <span class="n">queue</span><span class="o">.</span><span class="n">async</span> <span class="p">{</span>
-        <span class="o">.</span> <span class="o">.</span> <span class="o">.</span> <span class="k">do</span> <span class="n">some</span> <span class="n">work</span> <span class="o">.</span> <span class="o">.</span> <span class="o">.</span>
-        <span class="n">promise</span><span class="o">.</span><span class="nf">succeed</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
-        <span class="o">.</span> <span class="o">.</span> <span class="o">.</span> <span class="k">if</span> <span class="n">it</span> <span class="n">fails</span><span class="p">,</span> <span class="n">instead</span> <span class="o">.</span> <span class="o">.</span> <span class="o">.</span>
-        <span class="n">promise</span><span class="o">.</span><span class="nf">fail</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">return</span> <span class="n">promise</span><span class="o">.</span><span class="n">futureResult</span>
-<span class="p">}</span>
+<pre class="highlight plaintext"><code>func getNetworkData(args) -&gt; EventLoopFuture&lt;NetworkResponse&gt; {
+    let promise: EventLoopPromise&lt;NetworkResponse&gt; = eventLoop.newPromise()
+    queue.async {
+        . . . do some work . . .
+        promise.succeed(response)
+        . . . if it fails, instead . . .
+        promise.fail(error)
+    }
+    return promise.futureResult
+}
 </code></pre>
 
 <p>Note that this function returns immediately; the promise object will be given a value
@@ -414,23 +414,23 @@ with the eventual result.  Both methods returns a new <code>EventLoopFuture&lt;T
 that will receive the return value from your function, but they behave differently. If you have
 a function that can return synchronously, the <code>map</code> function will transform the result <code>T</code> to a
 the new result value <code>U</code> and return an <code>EventLoopFuture&lt;U&gt;</code>.</p>
-<pre class="highlight swift"><code><span class="k">let</span> <span class="nv">networkData</span> <span class="o">=</span> <span class="nf">getNetworkData</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+<pre class="highlight plaintext"><code>let networkData = getNetworkData(args)
 
-<span class="c1">// When network data is received, convert it.</span>
-<span class="k">let</span> <span class="nv">processedResult</span><span class="p">:</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Processed</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">networkData</span><span class="o">.</span><span class="n">map</span> <span class="p">{</span> <span class="p">(</span><span class="nv">n</span><span class="p">:</span> <span class="kt">NetworkResponse</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Processed</span> <span class="k">in</span>
-    <span class="o">...</span> <span class="n">parse</span> <span class="n">network</span> <span class="n">data</span> <span class="o">....</span>
-    <span class="k">return</span> <span class="n">processedResult</span>
-<span class="p">}</span>
+// When network data is received, convert it.
+let processedResult: EventLoopFuture&lt;Processed&gt; = networkData.map { (n: NetworkResponse) -&gt; Processed in
+    ... parse network data ....
+    return processedResult
+}
 </code></pre>
 
 <p>If however you need to do more asynchronous processing, you can call <code>then()</code>. The return value of the
 function passed to <code>then</code> must be a new <code>EventLoopFuture&lt;U&gt;</code> object: the return value of <code>then()</code> is
 a new <code>EventLoopFuture&lt;U&gt;</code> that will contain the eventual result of both the original operation and
 the subsequent one.</p>
-<pre class="highlight swift"><code><span class="c1">// When converted network data is available, begin the database operation.</span>
-<span class="k">let</span> <span class="nv">databaseResult</span><span class="p">:</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">DBResult</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">processedResult</span><span class="o">.</span><span class="n">then</span> <span class="p">{</span> <span class="p">(</span><span class="nv">p</span><span class="p">:</span> <span class="kt">Processed</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">DBResult</span><span class="o">&gt;</span> <span class="k">in</span>
-    <span class="k">return</span> <span class="nf">someDatabaseOperation</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
-<span class="p">}</span>
+<pre class="highlight plaintext"><code>// When converted network data is available, begin the database operation.
+let databaseResult: EventLoopFuture&lt;DBResult&gt; = processedResult.then { (p: Processed) -&gt; EventLoopFuture&lt;DBResult&gt; in
+    return someDatabaseOperation(p)
+}
 </code></pre>
 
 <p>In essence, future chains created via <code>then()</code> provide a form of data-driven asynchronous programming
@@ -488,7 +488,7 @@ use <code>then()</code> or <code>cascade(promise:)</code> instead.)</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">let</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">let</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span></code></pre>
 
                         </div>
                       </div>
@@ -518,7 +518,7 @@ use <code>then()</code> or <code>cascade(promise:)</code> instead.)</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="o">==</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">EventLoopFuture</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">EventLoopFuture</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="o">==</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">EventLoopFuture</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">EventLoopFuture</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
 
                         </div>
                       </div>
@@ -551,14 +551,14 @@ current <code>EventLoopFuture&lt;T&gt;</code> when determining how to dispatch t
 
 <p>This works well when you have APIs that already know how to return <code>EventLoopFuture</code>s.
 You can do something with the result of one and just return the next future:</p>
-<pre class="highlight swift"><code><span class="k">let</span> <span class="nv">d1</span> <span class="o">=</span> <span class="nf">networkRequest</span><span class="p">(</span><span class="n">args</span><span class="p">)</span><span class="o">.</span><span class="nf">future</span><span class="p">()</span>
-<span class="k">let</span> <span class="nv">d2</span> <span class="o">=</span> <span class="n">d1</span><span class="o">.</span><span class="n">then</span> <span class="p">{</span> <span class="n">t</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span> <span class="k">in</span>
-    <span class="o">.</span> <span class="o">.</span> <span class="o">.</span> <span class="n">something</span> <span class="n">with</span> <span class="n">t</span> <span class="o">.</span> <span class="o">.</span> <span class="o">.</span>
-    <span class="k">return</span> <span class="nf">netWorkRequest</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
-<span class="p">}</span>
-<span class="n">d2</span><span class="o">.</span><span class="n">whenSuccess</span> <span class="p">{</span> <span class="n">u</span> <span class="k">in</span>
-    <span class="kt">NSLog</span><span class="p">(</span><span class="s">"Result of second request: </span><span class="se">\(</span><span class="n">u</span><span class="se">)</span><span class="s">"</span><span class="p">)</span>
-<span class="p">}</span>
+<pre class="highlight plaintext"><code>let d1 = networkRequest(args).future()
+let d2 = d1.then { t -&gt; EventLoopFuture&lt;U&gt; in
+    . . . something with t . . .
+    return netWorkRequest(args)
+}
+d2.whenSuccess { u in
+    NSLog("Result of second request: \(u)")
+}
 </code></pre>
 
 <p>Note:  In a sense, the <code>EventLoopFuture&lt;U&gt;</code> is returned before it&rsquo;s created.</p>
@@ -568,7 +568,7 @@ You can do something with the result of one and just return the next future:</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">then</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">then</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -627,7 +627,7 @@ performs a simple data transformation that can potentially error.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">thenThrowing</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">T</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">U</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">thenThrowing</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">T</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">U</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -686,7 +686,7 @@ recover from errors.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">thenIfErrorThrowing</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Error</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">thenIfErrorThrowing</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Error</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -736,15 +736,15 @@ performs a synchronous computation and returns a new value of type <code>U</code
 <p>Operations performed in <code>map</code> should not block, or they will block the entire event
 loop. <code>map</code> is intended for use when you have a data-driven function that performs
 a simple data transformation that can potentially error.</p>
-<pre class="highlight swift"><code><span class="k">let</span> <span class="nv">future1</span> <span class="o">=</span> <span class="nf">eventually</span><span class="p">()</span>
-<span class="k">let</span> <span class="nv">future2</span> <span class="o">=</span> <span class="n">future1</span><span class="o">.</span><span class="n">map</span> <span class="p">{</span> <span class="kt">T</span> <span class="o">-&gt;</span> <span class="kt">U</span> <span class="k">in</span>
-    <span class="o">...</span> <span class="n">stuff</span> <span class="o">...</span>
-    <span class="k">return</span> <span class="n">u</span>
-<span class="p">}</span>
-<span class="k">let</span> <span class="nv">future3</span> <span class="o">=</span> <span class="n">future2</span><span class="o">.</span><span class="n">map</span> <span class="p">{</span> <span class="kt">U</span> <span class="o">-&gt;</span> <span class="kt">V</span> <span class="k">in</span>
-    <span class="o">...</span> <span class="n">stuff</span> <span class="o">...</span>
-    <span class="k">return</span> <span class="n">v</span>
-<span class="p">}</span>
+<pre class="highlight plaintext"><code>let future1 = eventually()
+let future2 = future1.map { T -&gt; U in
+    ... stuff ...
+    return u
+}
+let future3 = future2.map { U -&gt; V in
+    ... stuff ...
+    return v
+}
 </code></pre>
 
                       </div>
@@ -752,7 +752,7 @@ a simple data transformation that can potentially error.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">map</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">U</span><span class="p">))</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">map</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">U</span><span class="p">))</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -808,7 +808,7 @@ result.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">thenIfError</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Error</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">thenIfError</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Error</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -865,7 +865,7 @@ recover from errors.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">mapIfError</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Error</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">mapIfError</span><span class="p">(</span><span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">,</span> <span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Error</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -922,7 +922,7 @@ in the body of this function, consider using <code>cascade</code> instead.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">whenSuccess</span><span class="p">(</span><span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">whenSuccess</span><span class="p">(</span><span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">T</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -974,7 +974,7 @@ in the body of this function, consider using <code>cascade</code> instead.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">whenFailure</span><span class="p">(</span><span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Error</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">whenFailure</span><span class="p">(</span><span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt">Error</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -1025,7 +1025,7 @@ of any resources that needed to be kept open until the <code>EventLoopFuture</co
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">whenComplete</span><span class="p">(</span><span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">whenComplete</span><span class="p">(</span><span class="n">_</span> <span class="nv">callback</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">Void</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -1078,7 +1078,7 @@ the first error encountered.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">and</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">other</span><span class="p">:</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="p">(</span><span class="kt">T</span><span class="p">,</span><span class="kt">U</span><span class="p">)</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">and</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">other</span><span class="p">:</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="p">(</span><span class="kt">T</span><span class="p">,</span><span class="kt">U</span><span class="p">)</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -1106,7 +1106,7 @@ This is just syntactic sugar for <code>future.and(loop.newSucceedFuture&lt;U&gt;
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">and</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">result</span><span class="p">:</span> <span class="kt">U</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="kd">#file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="kd">#line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="p">(</span><span class="kt">T</span><span class="p">,</span><span class="kt">U</span><span class="p">)</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">and</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">result</span><span class="p">:</span> <span class="kt">U</span><span class="p">,</span> <span class="nv">file</span><span class="p">:</span> <span class="kt">StaticString</span> <span class="o">=</span> <span class="err">#</span><span class="n">file</span><span class="p">,</span> <span class="nv">line</span><span class="p">:</span> <span class="kt">UInt</span> <span class="o">=</span> <span class="err">#</span><span class="n">line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="p">(</span><span class="kt">T</span><span class="p">,</span><span class="kt">U</span><span class="p">)</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -1135,15 +1135,15 @@ This is just syntactic sugar for <code>future.and(loop.newSucceedFuture&lt;U&gt;
 <p>This is useful when allowing users to provide promises for you to fulfill, but
 when you are calling functions that return their own proimses. They allow you to
 tidy up your computational pipelines. For example:</p>
-<pre class="highlight swift"><code><span class="nf">doWork</span><span class="p">()</span><span class="o">.</span><span class="n">then</span> <span class="p">{</span>
-    <span class="nf">doMoreWork</span><span class="p">(</span><span class="nv">$0</span><span class="p">)</span>
-<span class="p">}</span><span class="o">.</span><span class="n">then</span> <span class="p">{</span>
-    <span class="nf">doYetMoreWork</span><span class="p">(</span><span class="nv">$0</span><span class="p">)</span>
-<span class="p">}</span><span class="o">.</span><span class="n">thenIfError</span> <span class="p">{</span>
-    <span class="nf">maybeRecoverFromError</span><span class="p">(</span><span class="nv">$0</span><span class="p">)</span>
-<span class="p">}</span><span class="o">.</span><span class="n">map</span> <span class="p">{</span>
-    <span class="nf">transformData</span><span class="p">(</span><span class="nv">$0</span><span class="p">)</span>
-<span class="p">}</span><span class="o">.</span><span class="nf">cascade</span><span class="p">(</span><span class="nv">promise</span><span class="p">:</span> <span class="n">userPromise</span><span class="p">)</span>
+<pre class="highlight plaintext"><code>doWork().then {
+    doMoreWork($0)
+}.then {
+    doYetMoreWork($0)
+}.thenIfError {
+    maybeRecoverFromError($0)
+}.map {
+    transformData($0)
+}.cascade(promise: userPromise)
 </code></pre>
 
                       </div>
@@ -1151,7 +1151,7 @@ tidy up your computational pipelines. For example:</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">cascade</span><span class="p">(</span><span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">cascade</span><span class="p">(</span><span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -1202,7 +1202,7 @@ more broadly useful.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">cascadeFailure</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="n">cascadeFailure</span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">(</span><span class="nv">promise</span><span class="p">:</span> <span class="kt"><a href="../Structs/EventLoopPromise.html">EventLoopPromise</a></span><span class="o">&lt;</span><span class="kt">U</span><span class="o">&gt;</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -1264,7 +1264,7 @@ and non-blocking code.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">wait</span><span class="p">()</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">wait</span><span class="p">()</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">T</span></code></pre>
 
                         </div>
                       </div>
@@ -1304,7 +1304,7 @@ only when all of them do.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="nf">andAll</span><span class="p">(</span><span class="n">_</span> <span class="nv">futures</span><span class="p">:</span> <span class="p">[</span><span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">],</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="nf">andAll</span><span class="p">(</span><span class="n">_</span> <span class="nv">futures</span><span class="p">:</span> <span class="p">[</span><span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">],</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -1354,8 +1354,8 @@ only when all of them do.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-07)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.1</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-01)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.0</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

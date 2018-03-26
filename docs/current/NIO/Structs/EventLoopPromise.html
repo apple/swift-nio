@@ -374,7 +374,7 @@
             <h1>EventLoopPromise</h1>
               <div class="declaration">
                 <div class="language">
-                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">EventLoopPromise</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+                  <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">EventLoopPromise</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
 
                 </div>
               </div>
@@ -384,16 +384,16 @@
 unfulfilled <code><a href="../Classes/EventLoopFuture.html">EventLoopFuture&lt;T&gt;</a></code> &ndash; presumably because you are interfacing to
 some asynchronous service that will return a real result later, follow this
 pattern:</p>
-<pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">someAsyncOperation</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">ResultType</span><span class="o">&gt;</span> <span class="p">{</span>
-    <span class="k">let</span> <span class="nv">promise</span><span class="p">:</span> <span class="kt">EventLoopPromise</span><span class="o">&lt;</span><span class="kt">ResultType</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">eventLoop</span><span class="o">.</span><span class="nf">newPromise</span><span class="p">()</span>
-    <span class="nf">someAsyncOperationWithACallback</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="p">{</span> <span class="n">result</span> <span class="o">-&gt;</span> <span class="kt">Void</span> <span class="k">in</span>
-        <span class="c1">// when finished...</span>
-        <span class="n">promise</span><span class="o">.</span><span class="nf">succeed</span><span class="p">(</span><span class="nv">result</span><span class="p">:</span> <span class="n">result</span><span class="p">)</span>
-        <span class="c1">// if error...</span>
-        <span class="n">promise</span><span class="o">.</span><span class="nf">fail</span><span class="p">(</span><span class="nv">error</span><span class="p">:</span> <span class="n">error</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">return</span> <span class="n">promise</span><span class="o">.</span><span class="n">futureResult</span>
-<span class="p">}</span>
+<pre class="highlight plaintext"><code>func someAsyncOperation(args) -&gt; EventLoopFuture&lt;ResultType&gt; {
+    let promise: EventLoopPromise&lt;ResultType&gt; = eventLoop.newPromise()
+    someAsyncOperationWithACallback(args) { result -&gt; Void in
+        // when finished...
+        promise.succeed(result: result)
+        // if error...
+        promise.fail(error: error)
+    }
+    return promise.futureResult
+}
 </code></pre>
 
 <p>Note that the future result is returned before the async process has provided a value.</p>
@@ -438,7 +438,7 @@ or <code>eventLoop.newFailedFuture(error:)</code>.</li>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">let</span> <span class="nv">futureResult</span><span class="p">:</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="k">let</span> <span class="nv">futureResult</span><span class="p">:</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -465,7 +465,7 @@ or <code>eventLoop.newFailedFuture(error:)</code>.</li>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">succeed</span><span class="p">(</span><span class="nv">result</span><span class="p">:</span> <span class="kt">T</span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">succeed</span><span class="p">(</span><span class="nv">result</span><span class="p">:</span> <span class="kt">T</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -511,7 +511,7 @@ or <code>eventLoop.newFailedFuture(error:)</code>.</li>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">fail</span><span class="p">(</span><span class="nv">error</span><span class="p">:</span> <span class="kt">Error</span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">fail</span><span class="p">(</span><span class="nv">error</span><span class="p">:</span> <span class="kt">Error</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -545,8 +545,8 @@ or <code>eventLoop.newFailedFuture(error:)</code>.</li>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-07)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.1</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-01)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.0</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

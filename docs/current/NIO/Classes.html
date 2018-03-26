@@ -401,7 +401,7 @@
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">BlockingIOThreadPool</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">BlockingIOThreadPool</span></code></pre>
 
                         </div>
                       </div>
@@ -462,7 +462,7 @@
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">ServerBootstrap</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">ServerBootstrap</span></code></pre>
 
                         </div>
                       </div>
@@ -508,7 +508,7 @@ This way you ensure that the same <code><a href="Protocols/EventLoop.html">Event
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">ClientBootstrap</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">ClientBootstrap</span></code></pre>
 
                         </div>
                       </div>
@@ -554,7 +554,7 @@ and servers.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">DatagramBootstrap</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">DatagramBootstrap</span></code></pre>
 
                         </div>
                       </div>
@@ -587,7 +587,7 @@ It will start reading again once pending data was written.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">class</span> <span class="kt">BackPressureHandler</span><span class="p">:</span> <span class="kt"><a href="Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a></span><span class="p">,</span> <span class="n"><a href="Protocols/_ChannelOutboundHandler.html">_ChannelOutboundHandler</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="kt">BackPressureHandler</span><span class="p">:</span> <span class="kt"><a href="Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a></span><span class="p">,</span> <span class="n"><a href="Protocols/_ChannelOutboundHandler.html">_ChannelOutboundHandler</a></span></code></pre>
 
                         </div>
                       </div>
@@ -615,7 +615,7 @@ It will start reading again once pending data was written.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">class</span> <span class="kt">IdleStateHandler</span><span class="p">:</span> <span class="kt"><a href="Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a></span><span class="p">,</span> <span class="kt"><a href="Protocols/ChannelOutboundHandler.html">ChannelOutboundHandler</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="kt">IdleStateHandler</span><span class="p">:</span> <span class="kt"><a href="Protocols/ChannelInboundHandler.html">ChannelInboundHandler</a></span><span class="p">,</span> <span class="kt"><a href="Protocols/ChannelOutboundHandler.html">ChannelOutboundHandler</a></span></code></pre>
 
                         </div>
                       </div>
@@ -653,44 +653,44 @@ An I/O event is handled by either a <code><a href="Protocols/ChannelInboundHandl
 and is forwarded to the next handler in the <code>ChannelPipeline</code> by calling the event propagation methods defined in
 <code><a href="Classes/ChannelHandlerContext.html">ChannelHandlerContext</a></code>, such as <code>ChannelHandlerContext.fireChannelRead</code> and
 <code>ChannelHandlerContext.write</code>.</p>
-<pre class="highlight swift"><code>                                                   <span class="kt">I</span><span class="o">/</span><span class="kt">O</span> <span class="kt">Request</span>
-                                                   <span class="n">via</span> <span class="p">`</span><span class="nv">Channel</span><span class="p">`</span> <span class="n">or</span>
-                                                   <span class="p">`</span><span class="nv">ChannelHandlerContext</span><span class="p">`</span>
-                                                     <span class="o">|</span>
- <span class="o">+---------------------------------------------------+---------------+</span>
- <span class="o">|</span>                           <span class="kt">ChannelPipeline</span>         <span class="o">|</span>               <span class="o">|</span>
- <span class="o">|</span>                                <span class="kt">TAIL</span>              <span class="p">\</span><span class="o">|/</span>              <span class="o">|</span>
- <span class="o">|</span>    <span class="o">+---------------------+</span>            <span class="o">+-----------+----------+</span>    <span class="o">|</span>
- <span class="o">|</span>    <span class="o">|</span> <span class="kt">Inbound</span> <span class="kt">Handler</span>  <span class="kt">N</span>  <span class="o">|</span>            <span class="o">|</span> <span class="kt">Outbound</span> <span class="kt">Handler</span>  <span class="mi">1</span>  <span class="o">|</span>    <span class="o">|</span>
- <span class="o">|</span>    <span class="o">+----------+----------+</span>            <span class="o">+-----------+----------+</span>    <span class="o">|</span>
- <span class="o">|</span>              <span class="o">/|</span><span class="p">\</span>                                  <span class="o">|</span>               <span class="o">|</span>
- <span class="o">|</span>               <span class="o">|</span>                                  <span class="p">\</span><span class="o">|/</span>              <span class="o">|</span>
- <span class="o">|</span>    <span class="o">+----------+----------+</span>            <span class="o">+-----------+----------+</span>    <span class="o">|</span>
- <span class="o">|</span>    <span class="o">|</span> <span class="kt">Inbound</span> <span class="kt">Handler</span> <span class="kt">N</span><span class="o">-</span><span class="mi">1</span> <span class="o">|</span>            <span class="o">|</span> <span class="kt">Outbound</span> <span class="kt">Handler</span>  <span class="mi">2</span>  <span class="o">|</span>    <span class="o">|</span>
- <span class="o">|</span>    <span class="o">+----------+----------+</span>            <span class="o">+-----------+----------+</span>    <span class="o">|</span>
- <span class="o">|</span>              <span class="o">/|</span><span class="p">\</span>                                  <span class="o">.</span>               <span class="o">|</span>
- <span class="o">|</span>               <span class="o">.</span>                                   <span class="o">.</span>               <span class="o">|</span>
- <span class="o">|</span> <span class="kt">ChannelHandlerContext</span><span class="o">.</span><span class="nf">fireIN_EVT</span><span class="p">()</span> <span class="kt">ChannelHandlerContext</span><span class="o">.</span><span class="kt">OUT_EVT</span><span class="p">()</span><span class="o">|</span>
- <span class="o">|</span>        <span class="p">[</span> <span class="n">method</span> <span class="n">call</span><span class="p">]</span>                       <span class="p">[</span><span class="n">method</span> <span class="n">call</span><span class="p">]</span>         <span class="o">|</span>
- <span class="o">|</span>               <span class="o">.</span>                                   <span class="o">.</span>               <span class="o">|</span>
- <span class="o">|</span>               <span class="o">.</span>                                  <span class="p">\</span><span class="o">|/</span>              <span class="o">|</span>
- <span class="o">|</span>    <span class="o">+----------+----------+</span>            <span class="o">+-----------+----------+</span>    <span class="o">|</span>
- <span class="o">|</span>    <span class="o">|</span> <span class="kt">Inbound</span> <span class="kt">Handler</span>  <span class="mi">2</span>  <span class="o">|</span>            <span class="o">|</span> <span class="kt">Outbound</span> <span class="kt">Handler</span> <span class="kt">M</span><span class="o">-</span><span class="mi">1</span> <span class="o">|</span>    <span class="o">|</span>
- <span class="o">|</span>    <span class="o">+----------+----------+</span>            <span class="o">+-----------+----------+</span>    <span class="o">|</span>
- <span class="o">|</span>              <span class="o">/|</span><span class="p">\</span>                                  <span class="o">|</span>               <span class="o">|</span>
- <span class="o">|</span>               <span class="o">|</span>                                  <span class="p">\</span><span class="o">|/</span>              <span class="o">|</span>
- <span class="o">|</span>    <span class="o">+----------+----------+</span>            <span class="o">+-----------+----------+</span>    <span class="o">|</span>
- <span class="o">|</span>    <span class="o">|</span> <span class="kt">Inbound</span> <span class="kt">Handler</span>  <span class="mi">1</span>  <span class="o">|</span>            <span class="o">|</span> <span class="kt">Outbound</span> <span class="kt">Handler</span>  <span class="kt">M</span>  <span class="o">|</span>    <span class="o">|</span>
- <span class="o">|</span>    <span class="o">+----------+----------+</span>            <span class="o">+-----------+----------+</span>    <span class="o">|</span>
- <span class="o">|</span>              <span class="o">/|</span><span class="p">\</span>             <span class="kt">HEAD</span>                 <span class="o">|</span>               <span class="o">|</span>
- <span class="o">+---------------+-----------------------------------+---------------+</span>
-                 <span class="o">|</span>                                  <span class="p">\</span><span class="o">|/</span>
- <span class="o">+---------------+-----------------------------------+---------------+</span>
- <span class="o">|</span>               <span class="o">|</span>                                   <span class="o">|</span>               <span class="o">|</span>
- <span class="o">|</span>       <span class="p">[</span> <span class="kt">Socket</span><span class="o">.</span><span class="n">read</span> <span class="p">]</span>                    <span class="p">[</span> <span class="kt">Socket</span><span class="o">.</span><span class="n">write</span> <span class="p">]</span>         <span class="o">|</span>
- <span class="o">|</span>                                                                   <span class="o">|</span>
- <span class="o">|</span>  <span class="kt">SwiftNIO</span> <span class="kt">Internal</span> <span class="kt">I</span><span class="o">/</span><span class="kt">O</span> <span class="kt">Threads</span> <span class="p">(</span><span class="kt">Transport</span> <span class="kt">Implementation</span><span class="p">)</span>           <span class="o">|</span>
- <span class="o">+-------------------------------------------------------------------+</span>
+<pre class="highlight plaintext"><code>                                                   I/O Request
+                                                   via `Channel` or
+                                                   `ChannelHandlerContext`
+                                                     |
+ +---------------------------------------------------+---------------+
+ |                           ChannelPipeline         |               |
+ |                                TAIL              \|/              |
+ |    +---------------------+            +-----------+----------+    |
+ |    | Inbound Handler  N  |            | Outbound Handler  1  |    |
+ |    +----------+----------+            +-----------+----------+    |
+ |              /|\                                  |               |
+ |               |                                  \|/              |
+ |    +----------+----------+            +-----------+----------+    |
+ |    | Inbound Handler N-1 |            | Outbound Handler  2  |    |
+ |    +----------+----------+            +-----------+----------+    |
+ |              /|\                                  .               |
+ |               .                                   .               |
+ | ChannelHandlerContext.fireIN_EVT() ChannelHandlerContext.OUT_EVT()|
+ |        [ method call]                       [method call]         |
+ |               .                                   .               |
+ |               .                                  \|/              |
+ |    +----------+----------+            +-----------+----------+    |
+ |    | Inbound Handler  2  |            | Outbound Handler M-1 |    |
+ |    +----------+----------+            +-----------+----------+    |
+ |              /|\                                  |               |
+ |               |                                  \|/              |
+ |    +----------+----------+            +-----------+----------+    |
+ |    | Inbound Handler  1  |            | Outbound Handler  M  |    |
+ |    +----------+----------+            +-----------+----------+    |
+ |              /|\             HEAD                 |               |
+ +---------------+-----------------------------------+---------------+
+                 |                                  \|/
+ +---------------+-----------------------------------+---------------+
+ |               |                                   |               |
+ |       [ Socket.read ]                    [ Socket.write ]         |
+ |                                                                   |
+ |  SwiftNIO Internal I/O Threads (Transport Implementation)           |
+ +-------------------------------------------------------------------+
 </code></pre>
 
 <p>An inbound event is handled by the inbound handlers in the head-to-tail direction as shown on the left side of the
@@ -705,17 +705,17 @@ If an outbound event goes beyond the head outbound handler, it is handled by an 
 <code><a href="Protocols/Channel.html">Channel</a></code>. The I/O thread often performs the actual output operation such as <code>Socket.write</code>.</p>
 
 <p>For example, let us assume that we created the following pipeline:</p>
-<pre class="highlight swift"><code><span class="kt">ChannelPipeline</span> <span class="n">p</span> <span class="o">=</span> <span class="o">...</span>
-<span class="k">let</span> <span class="nv">future</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="nf">add</span><span class="p">(</span><span class="nv">name</span><span class="p">:</span> <span class="s">"1"</span><span class="p">,</span> <span class="nv">handler</span><span class="p">:</span> <span class="kt">InboundHandlerA</span><span class="p">())</span><span class="o">.</span><span class="n">then</span> <span class="p">{</span>
-  <span class="n">p</span><span class="o">.</span><span class="nf">add</span><span class="p">(</span><span class="nv">name</span><span class="p">:</span> <span class="s">"2"</span><span class="p">,</span> <span class="nv">handler</span><span class="p">:</span> <span class="kt">InboundHandlerB</span><span class="p">())</span>
-<span class="p">}</span><span class="o">.</span><span class="n">then</span> <span class="p">{</span>
-  <span class="n">p</span><span class="o">.</span><span class="nf">add</span><span class="p">(</span><span class="nv">name</span><span class="p">:</span> <span class="s">"3"</span><span class="p">,</span> <span class="nv">handler</span><span class="p">:</span> <span class="kt">OutboundHandlerA</span><span class="p">())</span>
-<span class="p">}</span><span class="o">.</span><span class="n">then</span> <span class="p">{</span>
-  <span class="n">p</span><span class="o">.</span><span class="nf">add</span><span class="p">(</span><span class="nv">name</span><span class="p">:</span> <span class="s">"4"</span><span class="p">,</span> <span class="nv">handler</span><span class="p">:</span> <span class="kt">OutboundHandlerB</span><span class="p">())</span>
-<span class="p">}</span><span class="o">.</span><span class="n">then</span> <span class="p">{</span>
-  <span class="n">p</span><span class="o">.</span><span class="nf">add</span><span class="p">(</span><span class="nv">name</span><span class="p">:</span> <span class="s">"5"</span><span class="p">,</span> <span class="nv">handler</span><span class="p">:</span> <span class="kt">InboundOutboundHandlerX</span><span class="p">())</span>
-<span class="p">}</span>
-<span class="c1">// Handle the future as well ....</span>
+<pre class="highlight plaintext"><code>ChannelPipeline p = ...
+let future = p.add(name: "1", handler: InboundHandlerA()).then {
+  p.add(name: "2", handler: InboundHandlerB())
+}.then {
+  p.add(name: "3", handler: OutboundHandlerA())
+}.then {
+  p.add(name: "4", handler: OutboundHandlerB())
+}.then {
+  p.add(name: "5", handler: InboundOutboundHandlerX())
+}
+// Handle the future as well ....
 </code></pre>
 
 <p>In the example above, a class whose name starts with <code>Inbound</code> is an inbound handler.
@@ -762,7 +762,7 @@ protocol and business logic:</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">ChannelPipeline</span><span class="p">:</span> <span class="kt"><a href="Protocols.html#/s:3NIO14ChannelInvokerP">ChannelInvoker</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">ChannelPipeline</span><span class="p">:</span> <span class="kt"><a href="Protocols.html#/s:3NIO14ChannelInvokerP">ChannelInvoker</a></span></code></pre>
 
                         </div>
                       </div>
@@ -799,7 +799,7 @@ at the right point in time. Often, the right behaviour is to react to an event a
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">ChannelHandlerContext</span><span class="p">:</span> <span class="kt"><a href="Protocols.html#/s:3NIO14ChannelInvokerP">ChannelInvoker</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">ChannelHandlerContext</span><span class="p">:</span> <span class="kt"><a href="Protocols.html#/s:3NIO14ChannelInvokerP">ChannelInvoker</a></span></code></pre>
 
                         </div>
                       </div>
@@ -846,7 +846,7 @@ unsynchronized fashion.
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">class</span> <span class="kt">EmbeddedEventLoop</span><span class="p">:</span> <span class="kt"><a href="Protocols/EventLoop.html">EventLoop</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="kt">EmbeddedEventLoop</span><span class="p">:</span> <span class="kt"><a href="Protocols/EventLoop.html">EventLoop</a></span></code></pre>
 
                         </div>
                       </div>
@@ -874,7 +874,7 @@ unsynchronized fashion.
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">class</span> <span class="kt">EmbeddedChannel</span><span class="p">:</span> <span class="kt"><a href="Protocols/Channel.html">Channel</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">class</span> <span class="kt">EmbeddedChannel</span><span class="p">:</span> <span class="kt"><a href="Protocols/Channel.html">Channel</a></span></code></pre>
 
                         </div>
                       </div>
@@ -906,7 +906,7 @@ unsynchronized fashion.
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">final</span> <span class="kd">public</span> <span class="kd">class</span> <span class="kt">MultiThreadedEventLoopGroup</span><span class="p">:</span> <span class="kt"><a href="Protocols/EventLoopGroup.html">EventLoopGroup</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">final</span> <span class="kd">public</span> <span class="kd">class</span> <span class="kt">MultiThreadedEventLoopGroup</span><span class="p">:</span> <span class="kt"><a href="Protocols/EventLoopGroup.html">EventLoopGroup</a></span></code></pre>
 
                         </div>
                       </div>
@@ -937,16 +937,16 @@ The recipient of such an object can then observe it to be notified when the oper
 
 <p>The provider of a <code>EventLoopFuture&lt;T&gt;</code> can create and return a placeholder object
 before the actual result is available. For example:</p>
-<pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">getNetworkData</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">NetworkResponse</span><span class="o">&gt;</span> <span class="p">{</span>
-    <span class="k">let</span> <span class="nv">promise</span><span class="p">:</span> <span class="kt">EventLoopPromise</span><span class="o">&lt;</span><span class="kt">NetworkResponse</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">eventLoop</span><span class="o">.</span><span class="nf">newPromise</span><span class="p">()</span>
-    <span class="n">queue</span><span class="o">.</span><span class="n">async</span> <span class="p">{</span>
-        <span class="o">.</span> <span class="o">.</span> <span class="o">.</span> <span class="k">do</span> <span class="n">some</span> <span class="n">work</span> <span class="o">.</span> <span class="o">.</span> <span class="o">.</span>
-        <span class="n">promise</span><span class="o">.</span><span class="nf">succeed</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
-        <span class="o">.</span> <span class="o">.</span> <span class="o">.</span> <span class="k">if</span> <span class="n">it</span> <span class="n">fails</span><span class="p">,</span> <span class="n">instead</span> <span class="o">.</span> <span class="o">.</span> <span class="o">.</span>
-        <span class="n">promise</span><span class="o">.</span><span class="nf">fail</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">return</span> <span class="n">promise</span><span class="o">.</span><span class="n">futureResult</span>
-<span class="p">}</span>
+<pre class="highlight plaintext"><code>func getNetworkData(args) -&gt; EventLoopFuture&lt;NetworkResponse&gt; {
+    let promise: EventLoopPromise&lt;NetworkResponse&gt; = eventLoop.newPromise()
+    queue.async {
+        . . . do some work . . .
+        promise.succeed(response)
+        . . . if it fails, instead . . .
+        promise.fail(error)
+    }
+    return promise.futureResult
+}
 </code></pre>
 
 <p>Note that this function returns immediately; the promise object will be given a value
@@ -966,23 +966,23 @@ with the eventual result.  Both methods returns a new <code>EventLoopFuture&lt;T
 that will receive the return value from your function, but they behave differently. If you have
 a function that can return synchronously, the <code>map</code> function will transform the result <code>T</code> to a
 the new result value <code>U</code> and return an <code>EventLoopFuture&lt;U&gt;</code>.</p>
-<pre class="highlight swift"><code><span class="k">let</span> <span class="nv">networkData</span> <span class="o">=</span> <span class="nf">getNetworkData</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+<pre class="highlight plaintext"><code>let networkData = getNetworkData(args)
 
-<span class="c1">// When network data is received, convert it.</span>
-<span class="k">let</span> <span class="nv">processedResult</span><span class="p">:</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Processed</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">networkData</span><span class="o">.</span><span class="n">map</span> <span class="p">{</span> <span class="p">(</span><span class="nv">n</span><span class="p">:</span> <span class="kt">NetworkResponse</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Processed</span> <span class="k">in</span>
-    <span class="o">...</span> <span class="n">parse</span> <span class="n">network</span> <span class="n">data</span> <span class="o">....</span>
-    <span class="k">return</span> <span class="n">processedResult</span>
-<span class="p">}</span>
+// When network data is received, convert it.
+let processedResult: EventLoopFuture&lt;Processed&gt; = networkData.map { (n: NetworkResponse) -&gt; Processed in
+    ... parse network data ....
+    return processedResult
+}
 </code></pre>
 
 <p>If however you need to do more asynchronous processing, you can call <code>then()</code>. The return value of the
 function passed to <code>then</code> must be a new <code>EventLoopFuture&lt;U&gt;</code> object: the return value of <code>then()</code> is
 a new <code>EventLoopFuture&lt;U&gt;</code> that will contain the eventual result of both the original operation and
 the subsequent one.</p>
-<pre class="highlight swift"><code><span class="c1">// When converted network data is available, begin the database operation.</span>
-<span class="k">let</span> <span class="nv">databaseResult</span><span class="p">:</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">DBResult</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">processedResult</span><span class="o">.</span><span class="n">then</span> <span class="p">{</span> <span class="p">(</span><span class="nv">p</span><span class="p">:</span> <span class="kt">Processed</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">DBResult</span><span class="o">&gt;</span> <span class="k">in</span>
-    <span class="k">return</span> <span class="nf">someDatabaseOperation</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
-<span class="p">}</span>
+<pre class="highlight plaintext"><code>// When converted network data is available, begin the database operation.
+let databaseResult: EventLoopFuture&lt;DBResult&gt; = processedResult.then { (p: Processed) -&gt; EventLoopFuture&lt;DBResult&gt; in
+    return someDatabaseOperation(p)
+}
 </code></pre>
 
 <p>In essence, future chains created via <code>then()</code> provide a form of data-driven asynchronous programming
@@ -1012,7 +1012,7 @@ use <code>then()</code> or <code>cascade(promise:)</code> instead.)</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -1062,7 +1062,7 @@ needed you must <code>close</code> it or take back ownership of the file descrip
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">FileHandle</span><span class="p">:</span> <span class="kt"><a href="Protocols/FileDescriptor.html">FileDescriptor</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">FileHandle</span><span class="p">:</span> <span class="kt"><a href="Protocols/FileDescriptor.html">FileDescriptor</a></span></code></pre>
 
                         </div>
                       </div>
@@ -1077,8 +1077,8 @@ needed you must <code>close</code> it or take back ownership of the file descrip
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-07)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.1</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-01)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.0</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

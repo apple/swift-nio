@@ -1,33 +1,33 @@
 {
   "warnings": [
     {
-      "file": "/code/Sources/NIOTLS/SNIHandler.swift",
+      "file": "/Users/johannes/devel/swift-nio/Sources/NIOTLS/SNIHandler.swift",
       "line": 37,
       "symbol": "SniResult.fallback",
       "symbol_kind": "source.lang.swift.decl.enumelement",
       "warning": "undocumented"
     },
     {
-      "file": "/code/Sources/NIOTLS/SNIHandler.swift",
+      "file": "/Users/johannes/devel/swift-nio/Sources/NIOTLS/SNIHandler.swift",
       "line": 38,
       "symbol": "SniResult.hostname",
       "symbol_kind": "source.lang.swift.decl.enumelement",
       "warning": "undocumented"
     },
     {
-      "file": "/code/Sources/NIOTLS/SNIHandler.swift",
+      "file": "/Users/johannes/devel/swift-nio/Sources/NIOTLS/SNIHandler.swift",
       "line": 116,
       "symbol": "SniHandler.init(sniCompleteHandler:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
     },
     {
-      "file": "/code/Sources/NIOTLS/SNIHandler.swift",
+      "file": "/Users/johannes/devel/swift-nio/Sources/NIOTLS/SNIHandler.swift",
       "line": 123,
       "symbol": "SniHandler.decode(ctx:buffer:)",
       "symbol_kind": "source.lang.swift.decl.function.method.instance",
       "warning": "undocumented"
     }
   ],
-  "source_directory": "/code"
+  "source_directory": "/Users/johannes/devel/swift-nio"
 }

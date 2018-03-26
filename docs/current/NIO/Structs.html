@@ -405,7 +405,7 @@ it is going.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">AddressedEnvelope</span><span class="o">&lt;</span><span class="kt">DataType</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">AddressedEnvelope</span><span class="o">&lt;</span><span class="kt">DataType</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -463,12 +463,12 @@ types (non-exhaustive list):</p>
 </ol>
 
 <p>Example:</p>
-<pre class="highlight swift"><code><span class="k">var</span> <span class="nv">buf</span> <span class="o">=</span> <span class="o">...</span>
-<span class="n">buf</span><span class="o">.</span><span class="nf">set</span><span class="p">(</span><span class="nv">string</span><span class="p">:</span> <span class="s">"Hello World"</span><span class="p">,</span> <span class="nv">at</span><span class="p">:</span> <span class="mi">0</span><span class="p">)</span>
-<span class="k">let</span> <span class="nv">helloWorld</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getString</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
+<pre class="highlight plaintext"><code>var buf = ...
+buf.set(string: "Hello World", at: 0)
+let helloWorld = buf.getString(at: 0, length: 11)
 
-<span class="n">buf</span><span class="o">.</span><span class="nf">set</span><span class="p">(</span><span class="nv">integer</span><span class="p">:</span> <span class="mi">17</span> <span class="k">as</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">at</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
-<span class="k">let</span> <span class="nv">seventeen</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getInteger</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
+buf.set(integer: 17 as Int, at: 11)
+let seventeen: Int = buf.getInteger(at: 11)
 </code></pre>
 
 <p>If needed, <code>ByteBuffer</code> will automatically resize its storage to accomodate your <code>set</code> request.</p>
@@ -482,19 +482,19 @@ types (non-exhaustive list):</p>
 </ol>
 
 <p>Example:</p>
-<pre class="highlight swift"><code> <span class="k">var</span> <span class="nv">buf</span> <span class="o">=</span> <span class="o">...</span>
- <span class="n">buf</span><span class="o">.</span><span class="nf">write</span><span class="p">(</span><span class="nv">string</span><span class="p">:</span> <span class="s">"Hello World"</span><span class="p">)</span>
- <span class="n">buf</span><span class="o">.</span><span class="nf">write</span><span class="p">(</span><span class="nv">integer</span><span class="p">:</span> <span class="mi">17</span> <span class="k">as</span> <span class="kt">Int</span><span class="p">)</span>
- <span class="k">let</span> <span class="nv">helloWorld</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">readString</span><span class="p">(</span><span class="nv">length</span><span class="p">:</span> <span class="mi">11</span><span class="p">)</span>
- <span class="k">let</span> <span class="nv">seventeen</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">readInteger</span><span class="p">()</span>
+<pre class="highlight plaintext"><code> var buf = ...
+ buf.write(string: "Hello World")
+ buf.write(integer: 17 as Int)
+ let helloWorld = buf.readString(length: 11)
+ let seventeen: Int = buf.readInteger()
 </code></pre>
 <h3 id='layout' class='heading'>Layout</h3>
-<pre class="highlight swift"><code><span class="o">+-------------------+------------------+------------------+</span>
-<span class="o">|</span> <span class="n">discardable</span> <span class="n">bytes</span> <span class="o">|</span>  <span class="n">readable</span> <span class="n">bytes</span>  <span class="o">|</span>  <span class="n">writable</span> <span class="n">bytes</span>  <span class="o">|</span>
-<span class="o">|</span>                   <span class="o">|</span>     <span class="p">(</span><span class="kt">CONTENT</span><span class="p">)</span>    <span class="o">|</span>                  <span class="o">|</span>
-<span class="o">+-------------------+------------------+------------------+</span>
-<span class="o">|</span>                   <span class="o">|</span>                  <span class="o">|</span>                  <span class="o">|</span>
-<span class="mi">0</span>      <span class="o">&lt;=</span>      <span class="n">readerIndex</span>   <span class="o">&lt;=</span>   <span class="n">writerIndex</span>    <span class="o">&lt;=</span>    <span class="n">capacity</span>
+<pre class="highlight plaintext"><code>+-------------------+------------------+------------------+
+| discardable bytes |  readable bytes  |  writable bytes  |
+|                   |     (CONTENT)    |                  |
++-------------------+------------------+------------------+
+|                   |                  |                  |
+0      &lt;=      readerIndex   &lt;=   writerIndex    &lt;=    capacity
 </code></pre>
 
 <p>The &#39;discardable bytes&rsquo; are usually bytes that have already been read, they can however still be accessed using
@@ -506,13 +506,13 @@ behaviour and might yield aribitrary bytes (<em>not</em> <code>0</code> initiali
 <p><code>ByteBuffer</code> supports slicing a <code>ByteBuffer</code> without copying the underlying storage.</p>
 
 <p>Example:</p>
-<pre class="highlight swift"><code><span class="k">var</span> <span class="nv">buf</span> <span class="o">=</span> <span class="o">...</span>
-<span class="k">let</span> <span class="nv">dataBytes</span><span class="p">:</span> <span class="p">[</span><span class="kt">UInt8</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mh">0xca</span><span class="p">,</span> <span class="mh">0xfe</span><span class="p">,</span> <span class="mh">0xba</span><span class="p">,</span> <span class="mh">0xbe</span><span class="p">]</span>
-<span class="k">let</span> <span class="nv">dataBytesLength</span> <span class="o">=</span> <span class="kt">UInt32</span><span class="p">(</span><span class="n">dataBytes</span><span class="o">.</span><span class="n">count</span><span class="p">)</span>
-<span class="n">buf</span><span class="o">.</span><span class="nf">write</span><span class="p">(</span><span class="nv">integer</span><span class="p">:</span> <span class="n">dataBytesLength</span><span class="p">)</span> <span class="cm">/* the header */</span>
-<span class="n">buf</span><span class="o">.</span><span class="nf">write</span><span class="p">(</span><span class="nv">bytes</span><span class="p">:</span> <span class="n">dataBytes</span><span class="p">)</span> <span class="cm">/* the data */</span>
-<span class="k">let</span> <span class="nv">bufDataBytesOnly</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="nf">getSlice</span><span class="p">(</span><span class="nv">at</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="nv">length</span><span class="p">:</span> <span class="n">dataBytes</span><span class="o">.</span><span class="n">count</span><span class="p">)</span>
-<span class="cm">/* `bufDataByteOnly` and `buf` will share their storage */</span>
+<pre class="highlight plaintext"><code>var buf = ...
+let dataBytes: [UInt8] = [0xca, 0xfe, 0xba, 0xbe]
+let dataBytesLength = UInt32(dataBytes.count)
+buf.write(integer: dataBytesLength) /* the header */
+buf.write(bytes: dataBytes) /* the data */
+let bufDataBytesOnly = buf.getSlice(at: 4, length: dataBytes.count)
+/* `bufDataByteOnly` and `buf` will share their storage */
 </code></pre>
 <h3 id='important-usage-notes' class='heading'>Important usage notes</h3>
 
@@ -527,7 +527,7 @@ account, and ensuring that you have previously written into the area covered by 
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">ByteBuffer</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">ByteBuffer</span></code></pre>
 
                         </div>
                       </div>
@@ -561,7 +561,7 @@ account, and ensuring that you have previously written into the area covered by 
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">ByteBufferAllocator</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">ByteBufferAllocator</span></code></pre>
 
                         </div>
                       </div>
@@ -593,7 +593,7 @@ account, and ensuring that you have previously written into the area covered by 
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">WriteBufferWaterMark</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">WriteBufferWaterMark</span></code></pre>
 
                         </div>
                       </div>
@@ -621,7 +621,7 @@ account, and ensuring that you have previously written into the area covered by 
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">ChannelOptions</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">ChannelOptions</span></code></pre>
 
                         </div>
                       </div>
@@ -655,7 +655,7 @@ expansions from happening frequently. Expansions will always force an allocation
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">CircularBuffer</span><span class="o">&lt;</span><span class="kt">E</span><span class="o">&gt;</span><span class="p">:</span> <span class="kt">CustomStringConvertible</span><span class="p">,</span> <span class="kt"><a href="Protocols/AppendableCollection.html">AppendableCollection</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">CircularBuffer</span><span class="o">&lt;</span><span class="kt">E</span><span class="o">&gt;</span><span class="p">:</span> <span class="kt">CustomStringConvertible</span><span class="p">,</span> <span class="kt"><a href="Protocols/AppendableCollection.html">AppendableCollection</a></span></code></pre>
 
                         </div>
                       </div>
@@ -693,7 +693,7 @@ is an attempt to do so.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">NIOCompositeError</span><span class="p">:</span> <span class="kt">Error</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">NIOCompositeError</span><span class="p">:</span> <span class="kt">Error</span></code></pre>
 
                         </div>
                       </div>
@@ -728,7 +728,7 @@ will be notified once the execution is complete.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Scheduled</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">Scheduled</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -761,7 +761,7 @@ will be notified once the execution is complete.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">TimeAmount</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">TimeAmount</span></code></pre>
 
                         </div>
                       </div>
@@ -791,16 +791,16 @@ will be notified once the execution is complete.</p>
 unfulfilled <code><a href="Classes/EventLoopFuture.html">EventLoopFuture&lt;T&gt;</a></code> &ndash; presumably because you are interfacing to
 some asynchronous service that will return a real result later, follow this
 pattern:</p>
-<pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">someAsyncOperation</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">ResultType</span><span class="o">&gt;</span> <span class="p">{</span>
-    <span class="k">let</span> <span class="nv">promise</span><span class="p">:</span> <span class="kt">EventLoopPromise</span><span class="o">&lt;</span><span class="kt">ResultType</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">eventLoop</span><span class="o">.</span><span class="nf">newPromise</span><span class="p">()</span>
-    <span class="nf">someAsyncOperationWithACallback</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="p">{</span> <span class="n">result</span> <span class="o">-&gt;</span> <span class="kt">Void</span> <span class="k">in</span>
-        <span class="c1">// when finished...</span>
-        <span class="n">promise</span><span class="o">.</span><span class="nf">succeed</span><span class="p">(</span><span class="nv">result</span><span class="p">:</span> <span class="n">result</span><span class="p">)</span>
-        <span class="c1">// if error...</span>
-        <span class="n">promise</span><span class="o">.</span><span class="nf">fail</span><span class="p">(</span><span class="nv">error</span><span class="p">:</span> <span class="n">error</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">return</span> <span class="n">promise</span><span class="o">.</span><span class="n">futureResult</span>
-<span class="p">}</span>
+<pre class="highlight plaintext"><code>func someAsyncOperation(args) -&gt; EventLoopFuture&lt;ResultType&gt; {
+    let promise: EventLoopPromise&lt;ResultType&gt; = eventLoop.newPromise()
+    someAsyncOperationWithACallback(args) { result -&gt; Void in
+        // when finished...
+        promise.succeed(result: result)
+        // if error...
+        promise.fail(error: error)
+    }
+    return promise.futureResult
+}
 </code></pre>
 
 <p>Note that the future result is returned before the async process has provided a value.</p>
@@ -824,7 +824,7 @@ or <code>eventLoop.newFailedFuture(error:)</code>.</li>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">EventLoopPromise</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">EventLoopPromise</span><span class="o">&lt;</span><span class="kt">T</span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -869,7 +869,7 @@ need access to the bytes (in a <code><a href="Structs/ByteBuffer.html">ByteBuffe
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">FileRegion</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">FileRegion</span></code></pre>
 
                         </div>
                       </div>
@@ -901,7 +901,7 @@ need access to the bytes (in a <code><a href="Structs/ByteBuffer.html">ByteBuffe
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">SingleConnectionFailure</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">SingleConnectionFailure</span></code></pre>
 
                         </div>
                       </div>
@@ -930,7 +930,7 @@ to a given host and port.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">NIOConnectionError</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">NIOConnectionError</span></code></pre>
 
                         </div>
                       </div>
@@ -962,7 +962,7 @@ to a given host and port.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">IOError</span><span class="p">:</span> <span class="kt">Swift</span><span class="o">.</span><span class="kt">Error</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">IOError</span><span class="p">:</span> <span class="kt">Swift</span><span class="o">.</span><span class="kt">Error</span></code></pre>
 
                         </div>
                       </div>
@@ -998,7 +998,7 @@ safe to write.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">MarkedCircularBuffer</span><span class="o">&lt;</span><span class="kt">E</span><span class="o">&gt;</span><span class="p">:</span> <span class="kt">CustomStringConvertible</span><span class="p">,</span> <span class="kt"><a href="Protocols/AppendableCollection.html">AppendableCollection</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">MarkedCircularBuffer</span><span class="o">&lt;</span><span class="kt">E</span><span class="o">&gt;</span><span class="p">:</span> <span class="kt">CustomStringConvertible</span><span class="p">,</span> <span class="kt"><a href="Protocols/AppendableCollection.html">AppendableCollection</a></span></code></pre>
 
                         </div>
                       </div>
@@ -1038,21 +1038,21 @@ be calculated at compile time. For example:</p>
 
 <p>The abstraction that delivers a <code>NIOAny</code> to user code must provide a mechanism to unwrap a <code>NIOAny</code> as a
 certain type known at run-time. Canonical example:</p>
-<pre class="highlight swift"><code><span class="kd">class</span> <span class="kt">SandwichHandler</span><span class="p">:</span> <span class="kt">ChannelInboundHandler</span> <span class="p">{</span>
-    <span class="kd">typealias</span> <span class="kt">InboundIn</span> <span class="o">=</span> <span class="kt">Bacon</span> <span class="cm">/* we expected to be delivered `Bacon` ... */</span>
-    <span class="kd">typealias</span> <span class="kt">InboundOut</span> <span class="o">=</span> <span class="kt">Sandwich</span> <span class="cm">/* ... and we will make and deliver a `Sandwich` from that */</span>
+<pre class="highlight plaintext"><code>class SandwichHandler: ChannelInboundHandler {
+    typealias InboundIn = Bacon /* we expected to be delivered `Bacon` ... */
+    typealias InboundOut = Sandwich /* ... and we will make and deliver a `Sandwich` from that */
 
-    <span class="kd">func</span> <span class="nf">channelRead</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt">ChannelHandlerContext</span><span class="p">,</span> <span class="nv">data</span><span class="p">:</span> <span class="kt">NIOAny</span><span class="p">)</span> <span class="p">{</span>
-         <span class="cm">/* we receive the `Bacon` as a `NIOAny` as at compile-time the exact configuration of the channel
+    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+         /* we receive the `Bacon` as a `NIOAny` as at compile-time the exact configuration of the channel
             pipeline can't be computed. The pipeline can't be computed at compile time as it can change
             dynamically at run-time. Yet, we assert that in any configuration the channel handler before
             `SandwichHandler` does actually send us a stream of `Bacon`.
-         */</span>
-         <span class="k">let</span> <span class="nv">bacon</span> <span class="o">=</span> <span class="k">self</span><span class="o">.</span><span class="nf">unwrapInboundIn</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="cm">/* `Bacon` or crash */</span>
-         <span class="k">let</span> <span class="nv">sandwich</span> <span class="o">=</span> <span class="nf">makeSandwich</span><span class="p">(</span><span class="n">bacon</span><span class="p">)</span>
-         <span class="n">ctx</span><span class="o">.</span><span class="nf">fireChannelRead</span><span class="p">(</span><span class="k">self</span><span class="o">.</span><span class="nf">wrapInboundOut</span><span class="p">(</span><span class="n">sandwich</span><span class="p">))</span> <span class="cm">/* as promised we deliver a wrapped `Sandwich` */</span>
-    <span class="p">}</span>
-<span class="p">}</span>
+         */
+         let bacon = self.unwrapInboundIn(data) /* `Bacon` or crash */
+         let sandwich = makeSandwich(bacon)
+         ctx.fireChannelRead(self.wrapInboundOut(sandwich)) /* as promised we deliver a wrapped `Sandwich` */
+    }
+}
 </code></pre>
 
                         <a href="Structs/NIOAny.html" class="slightly-smaller">See more</a>
@@ -1061,7 +1061,7 @@ certain type known at run-time. Canonical example:</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">NIOAny</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">NIOAny</span></code></pre>
 
                         </div>
                       </div>
@@ -1107,7 +1107,7 @@ of blocking.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">NonBlockingFileIO</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">NonBlockingFileIO</span></code></pre>
 
                         </div>
                       </div>
@@ -1139,7 +1139,7 @@ of blocking.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">FixedSizeRecvByteBufferAllocator</span><span class="p">:</span> <span class="kt"><a href="Protocols/RecvByteBufferAllocator.html">RecvByteBufferAllocator</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">FixedSizeRecvByteBufferAllocator</span><span class="p">:</span> <span class="kt"><a href="Protocols/RecvByteBufferAllocator.html">RecvByteBufferAllocator</a></span></code></pre>
 
                         </div>
                       </div>
@@ -1167,7 +1167,7 @@ of blocking.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">AdaptiveRecvByteBufferAllocator</span><span class="p">:</span> <span class="kt"><a href="Protocols/RecvByteBufferAllocator.html">RecvByteBufferAllocator</a></span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">AdaptiveRecvByteBufferAllocator</span><span class="p">:</span> <span class="kt"><a href="Protocols/RecvByteBufferAllocator.html">RecvByteBufferAllocator</a></span></code></pre>
 
                         </div>
                       </div>
@@ -1182,8 +1182,8 @@ of blocking.</p>
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-07)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.1</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-01)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.0</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>

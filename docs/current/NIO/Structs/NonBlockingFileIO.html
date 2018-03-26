@@ -374,7 +374,7 @@
             <h1>NonBlockingFileIO</h1>
               <div class="declaration">
                 <div class="language">
-                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">NonBlockingFileIO</span></code></pre>
+                  <pre class="highlight"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">NonBlockingFileIO</span></code></pre>
 
                 </div>
               </div>
@@ -421,7 +421,7 @@ of blocking.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">let</span> <span class="nv">defaultThreadPoolSize</span> <span class="o">=</span> <span class="mi">2</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">let</span> <span class="nv">defaultThreadPoolSize</span> <span class="o">=</span> <span class="mi">2</span></code></pre>
 
                         </div>
                       </div>
@@ -448,7 +448,7 @@ of blocking.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">let</span> <span class="nv">defaultChunkSize</span> <span class="o">=</span> <span class="mf">128*</span><span class="mi">1024</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">let</span> <span class="nv">defaultChunkSize</span> <span class="o">=</span> <span class="mf">128*</span><span class="mi">1024</span></code></pre>
 
                         </div>
                       </div>
@@ -476,7 +476,7 @@ of blocking.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">enum</span> <span class="kt">Error</span><span class="p">:</span> <span class="kt">Swift</span><span class="o">.</span><span class="kt">Error</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">enum</span> <span class="kt">Error</span><span class="p">:</span> <span class="kt">Swift</span><span class="o">.</span><span class="kt">Error</span></code></pre>
 
                         </div>
                       </div>
@@ -503,7 +503,7 @@ of blocking.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="nf">init</span><span class="p">(</span><span class="nv">threadPool</span><span class="p">:</span> <span class="kt"><a href="../Classes/BlockingIOThreadPool.html">BlockingIOThreadPool</a></span><span class="p">)</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="nf">init</span><span class="p">(</span><span class="nv">threadPool</span><span class="p">:</span> <span class="kt"><a href="../Classes/BlockingIOThreadPool.html">BlockingIOThreadPool</a></span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -557,7 +557,7 @@ times, delivering <code>chunkSize</code> bytes each time. If less than <code>fil
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">readChunked</span><span class="p">(</span><span class="nv">fileRegion</span><span class="p">:</span> <span class="kt"><a href="../Structs/FileRegion.html">FileRegion</a></span><span class="p">,</span>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">readChunked</span><span class="p">(</span><span class="nv">fileRegion</span><span class="p">:</span> <span class="kt"><a href="../Structs/FileRegion.html">FileRegion</a></span><span class="p">,</span>
                         <span class="nv">chunkSize</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="kt">NonBlockingFileIO</span><span class="o">.</span><span class="n"><a href="../Structs/NonBlockingFileIO.html#/s:3NIO17NonBlockingFileIOV16defaultChunkSizeSivZ">defaultChunkSize</a></span><span class="p">,</span>
                         <span class="nv">allocator</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></span><span class="p">,</span>
                         <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">,</span>
@@ -672,7 +672,7 @@ times, delivering <code>chunkSize</code> bytes each time. If less than <code>byt
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">readChunked</span><span class="p">(</span><span class="nv">fileHandle</span><span class="p">:</span> <span class="kt"><a href="../Classes/FileHandle.html">FileHandle</a></span><span class="p">,</span>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">readChunked</span><span class="p">(</span><span class="nv">fileHandle</span><span class="p">:</span> <span class="kt"><a href="../Classes/FileHandle.html">FileHandle</a></span><span class="p">,</span>
                         <span class="nv">byteCount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span>
                         <span class="nv">chunkSize</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="kt">NonBlockingFileIO</span><span class="o">.</span><span class="n"><a href="../Structs/NonBlockingFileIO.html#/s:3NIO17NonBlockingFileIOV16defaultChunkSizeSivZ">defaultChunkSize</a></span><span class="p">,</span>
                         <span class="nv">allocator</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></span><span class="p">,</span>
@@ -799,7 +799,7 @@ case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will c
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">read</span><span class="p">(</span><span class="nv">fileRegion</span><span class="p">:</span> <span class="kt"><a href="../Structs/FileRegion.html">FileRegion</a></span><span class="p">,</span> <span class="nv">allocator</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></span><span class="p">,</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">read</span><span class="p">(</span><span class="nv">fileRegion</span><span class="p">:</span> <span class="kt"><a href="../Structs/FileRegion.html">FileRegion</a></span><span class="p">,</span> <span class="nv">allocator</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></span><span class="p">,</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -886,7 +886,7 @@ case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will c
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">read</span><span class="p">(</span><span class="nv">fileHandle</span><span class="p">:</span> <span class="kt"><a href="../Classes/FileHandle.html">FileHandle</a></span><span class="p">,</span> <span class="nv">byteCount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">allocator</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></span><span class="p">,</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="o">&gt;</span></code></pre>
+                          <pre class="highlight"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">read</span><span class="p">(</span><span class="nv">fileHandle</span><span class="p">:</span> <span class="kt"><a href="../Classes/FileHandle.html">FileHandle</a></span><span class="p">,</span> <span class="nv">byteCount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">,</span> <span class="nv">allocator</span><span class="p">:</span> <span class="kt"><a href="../Structs/ByteBufferAllocator.html">ByteBufferAllocator</a></span><span class="p">,</span> <span class="nv">eventLoop</span><span class="p">:</span> <span class="kt"><a href="../Protocols/EventLoop.html">EventLoop</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Classes/EventLoopFuture.html">EventLoopFuture</a></span><span class="o">&lt;</span><span class="kt"><a href="../Structs/ByteBuffer.html">ByteBuffer</a></span><span class="o">&gt;</span></code></pre>
 
                         </div>
                       </div>
@@ -960,8 +960,8 @@ case the <code><a href="../Structs/ByteBuffer.html">ByteBuffer</a></code> will c
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-07)</p>
-      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.1</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-03-01)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.0</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
 </div>
