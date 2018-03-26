@@ -252,7 +252,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         }
     }
 
-    override func markFlushPoint(promise: EventLoopPromise<Void>?) {
+    override func markFlushPoint() {
         // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actually written once writable() is called.
         self.pendingWrites.markFlushCheckpoint()
@@ -441,8 +441,8 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         promise?.fail(error: ChannelError.operationUnsupported)
     }
 
-    override func markFlushPoint(promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: ChannelError.operationUnsupported)
+    override func markFlushPoint() {
+        // We do nothing here: flushes are no-ops.
     }
 
     override func flushNow() -> IONotificationState {
@@ -616,7 +616,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     /// Mark a flush point. This is called when flush is received, and instructs
     /// the implementation to record the flush.
-    override func markFlushPoint(promise: EventLoopPromise<Void>?) {
+    override func markFlushPoint() {
         // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actually written once writable() is called.
         self.pendingWrites.markFlushCheckpoint()
