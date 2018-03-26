@@ -487,10 +487,8 @@ struct SelectorEvent<R> {
 internal extension Selector where R == NIORegistration {
     /// Gently close the `Selector` after all registered `Channel`s are closed.
     internal func closeGently(eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let p0: EventLoopPromise<Void> = eventLoop.newPromise()
         guard self.lifecycleState == .open else {
-            p0.fail(error: IOError(errnoCode: EBADF, reason: "can't close selector gently as it's \(self.lifecycleState)."))
-            return p0.futureResult
+            return eventLoop.newFailedFuture(error: IOError(errnoCode: EBADF, reason: "can't close selector gently as it's \(self.lifecycleState)."))
         }
 
         let futures: [EventLoopFuture<Void>] = self.registrations.map { (_, reg: NIORegistration) -> EventLoopFuture<Void> in
@@ -514,11 +512,9 @@ internal extension Selector where R == NIORegistration {
         }
 
         guard futures.count > 0 else {
-            p0.succeed(result: ())
-            return p0.futureResult
+            return eventLoop.newSucceededFuture(result: ())
         }
 
-        p0.succeed(result: ())
         return EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
     }
 }
