@@ -279,4 +279,31 @@ public class EventLoopTest : XCTestCase {
         _ = eventLoop.scheduleTask(in: .hours(1)) { }
         try group.syncShutdownGracefully()
     }
+
+    public func testCloseFutureNotifiedBeforeUnblock() throws {
+        class AssertHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+
+            let groupIsShutdown = Atomic(value: false)
+            let removed = Atomic(value: false)
+
+            public func handlerRemoved(ctx: ChannelHandlerContext) {
+                XCTAssertFalse(groupIsShutdown.load())
+                XCTAssertTrue(removed.compareAndExchange(expected: false, desired: true))
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoop = group.next()
+        let assertHandler = AssertHandler()
+        let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: AF_INET)
+        try channel.pipeline.add(handler: assertHandler).wait()
+        try channel.register().wait()
+        XCTAssertFalse(channel.closeFuture.isFulfilled)
+        try group.syncShutdownGracefully()
+        XCTAssertTrue(assertHandler.groupIsShutdown.compareAndExchange(expected: false, desired: true))
+        XCTAssertTrue(assertHandler.removed.load())
+        XCTAssertTrue(channel.closeFuture.isFulfilled)
+        XCTAssertFalse(channel.isActive)
+    }
 }

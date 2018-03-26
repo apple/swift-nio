@@ -494,13 +494,22 @@ internal extension Selector where R == NIORegistration {
         }
 
         let futures: [EventLoopFuture<Void>] = self.registrations.map { (_, reg: NIORegistration) -> EventLoopFuture<Void> in
+            // The futures will only be notified (of success) once also the closeFuture of each Channel is notified.
+            // This only happens after all other actions on the Channel is complete and all events are propagated through the
+            // ChannelPipeline. We do this to minimize the risk to left over any tasks / promises that are tied to the
+            // EventLoop itself.
+            func closeChannel(_ chan: Channel) -> EventLoopFuture<Void> {
+                chan.close(promise: nil)
+                return chan.closeFuture
+            }
+
             switch reg {
             case .serverSocketChannel(let chan, _):
-                return chan.close()
+                return closeChannel(chan)
             case .socketChannel(let chan, _):
-                return chan.close()
+                return closeChannel(chan)
             case .datagramChannel(let chan, _):
-                return chan.close()
+                return closeChannel(chan)
             }
         }
 
