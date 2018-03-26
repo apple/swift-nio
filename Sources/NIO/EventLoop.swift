@@ -658,32 +658,28 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         /* synchronised by `lock` */
         var _loop: SelectableEventLoop! = nil
 
-        if #available(OSX 10.12, *) {
-            loopUpAndRunningGroup.enter()
-            Thread.spawnAndRun(name: name) { t in
-                initializer(t)
+        loopUpAndRunningGroup.enter()
+        Thread.spawnAndRun(name: name) { t in
+            initializer(t)
 
-                do {
-                    /* we try! this as this must work (just setting up kqueue/epoll) or else there's not much we can do here */
-                    let l = try! SelectableEventLoop(thread: t)
-                    threadSpecificEventLoop.currentValue = l
-                    defer {
-                        threadSpecificEventLoop.currentValue = nil
-                    }
-                    lock.withLock {
-                        _loop = l
-                    }
-                    loopUpAndRunningGroup.leave()
-                    try l.run()
-                } catch let err {
-                    fatalError("unexpected error while executing EventLoop \(err)")
+            do {
+                /* we try! this as this must work (just setting up kqueue/epoll) or else there's not much we can do here */
+                let l = try! SelectableEventLoop(thread: t)
+                threadSpecificEventLoop.currentValue = l
+                defer {
+                    threadSpecificEventLoop.currentValue = nil
                 }
+                lock.withLock {
+                    _loop = l
+                }
+                loopUpAndRunningGroup.leave()
+                try l.run()
+            } catch let err {
+                fatalError("unexpected error while executing EventLoop \(err)")
             }
-            loopUpAndRunningGroup.wait()
-            return lock.withLock { _loop }
-        } else {
-            fatalError("Unsupported platform / OS version")
         }
+        loopUpAndRunningGroup.wait()
+        return lock.withLock { _loop }
     }
 
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numThreads`.
