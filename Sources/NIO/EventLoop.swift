@@ -443,19 +443,14 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
-    private func currentSelectorStrategy() -> SelectorStrategy {
-        // TODO: Just use an atomic
-        tasksLock.lock()
-        let scheduled = scheduledTasks.peek()
-        tasksLock.unlock()
-
-        guard let sched = scheduled else {
-            // No tasks to handle so just block
+    private func currentSelectorStrategy(nextReadyTask: ScheduledTask?) -> SelectorStrategy {
+        guard let sched = nextReadyTask else {
+            // No tasks to handle so just block. If any tasks were added in the meantime wakeup(...) was called and so this
+            // will directly unblock.
             return .block
         }
 
         let nextReady = sched.readyIn(DispatchTime.now())
-
         if nextReady <= .nanoseconds(0) {
             // Something is ready to be processed just do a non-blocking select of events.
             return .now
@@ -482,12 +477,13 @@ internal final class SelectableEventLoop: EventLoop {
                 task.fail(error: EventLoopError.shutdown)
             }
         }
+        var nextReadyTask: ScheduledTask? = nil
         while lifecycleState != .closed {
             // Block until there are events to handle or the selector was woken up
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
             try withAutoReleasePool {
 
-                try selector.whenReady(strategy: currentSelectorStrategy()) { ev in
+                try selector.whenReady(strategy: currentSelectorStrategy(nextReadyTask: nextReadyTask)) { ev in
                     switch ev.registration {
                     case .serverSocketChannel(let chan, _):
                         self.handleEvent(ev.io, channel: chan)
@@ -504,6 +500,8 @@ internal final class SelectableEventLoop: EventLoop {
                 // TODO: Better locking
                 tasksLock.lock()
                 if scheduledTasks.isEmpty {
+                    // Reset nextReadyTask to nil which means we will do a blocking select.
+                    nextReadyTask = nil
                     tasksLock.unlock()
                     break
                 }
@@ -512,16 +510,20 @@ internal final class SelectableEventLoop: EventLoop {
                 let now = DispatchTime.now()
 
                 // Make a copy of the tasks so we can execute these while not holding the lock anymore
-                while tasksCopy.count < tasksCopy.capacity, let task = scheduledTasks.peek(), task.readyIn(now) <= .nanoseconds(0) {
-                    tasksCopy.append(task.task)
-
-                    _ = scheduledTasks.pop()
+                while tasksCopy.count < tasksCopy.capacity, let task = scheduledTasks.peek() {
+                    if task.readyIn(now) <= .nanoseconds(0) {
+                        _ = scheduledTasks.pop()
+                        tasksCopy.append(task.task)
+                    } else {
+                        nextReadyTask = task
+                        break
+                    }
                 }
 
                 tasksLock.unlock()
 
                 // all pending tasks are set to occur in the future, so we can stop looping.
-                if tasksCopy.count == 0 {
+                if tasksCopy.isEmpty {
                     break
                 }
 
@@ -658,32 +660,28 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         /* synchronised by `lock` */
         var _loop: SelectableEventLoop! = nil
 
-        if #available(OSX 10.12, *) {
-            loopUpAndRunningGroup.enter()
-            Thread.spawnAndRun(name: name) { t in
-                initializer(t)
+        loopUpAndRunningGroup.enter()
+        Thread.spawnAndRun(name: name) { t in
+            initializer(t)
 
-                do {
-                    /* we try! this as this must work (just setting up kqueue/epoll) or else there's not much we can do here */
-                    let l = try! SelectableEventLoop(thread: t)
-                    threadSpecificEventLoop.currentValue = l
-                    defer {
-                        threadSpecificEventLoop.currentValue = nil
-                    }
-                    lock.withLock {
-                        _loop = l
-                    }
-                    loopUpAndRunningGroup.leave()
-                    try l.run()
-                } catch let err {
-                    fatalError("unexpected error while executing EventLoop \(err)")
+            do {
+                /* we try! this as this must work (just setting up kqueue/epoll) or else there's not much we can do here */
+                let l = try! SelectableEventLoop(thread: t)
+                threadSpecificEventLoop.currentValue = l
+                defer {
+                    threadSpecificEventLoop.currentValue = nil
                 }
+                lock.withLock {
+                    _loop = l
+                }
+                loopUpAndRunningGroup.leave()
+                try l.run()
+            } catch let err {
+                fatalError("unexpected error while executing EventLoop \(err)")
             }
-            loopUpAndRunningGroup.wait()
-            return lock.withLock { _loop }
-        } else {
-            fatalError("Unsupported platform / OS version")
         }
+        loopUpAndRunningGroup.wait()
+        return lock.withLock { _loop }
     }
 
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numThreads`.
