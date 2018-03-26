@@ -170,7 +170,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
     /// Mark a flush point. This is called when flush is received, and instructs
     /// the implementation to record the flush.
-    func markFlushPoint(promise: EventLoopPromise<Void>?) {
+    func markFlushPoint() {
         fatalError("this must be overridden by sub class")
     }
 
@@ -408,7 +408,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             return
         }
 
-        self.markFlushPoint(promise: nil)
+        self.markFlushPoint()
 
         if !isWritePending() && flushNow() == .register {
             registerForWritable()
