@@ -478,18 +478,18 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         interestedEvent = .none
         do {
             try selectableEventLoop.deregister(channel: self)
-        } catch let err {
-            pipeline.fireErrorCaught0(error: err)
+        } catch {
+            // There is not much we can do here, so just ignore
         }
 
-        let p: EventLoopPromise<Void>?
+        // We need to notify the promise after we are done failing the writes and updating the channel state to guard
+        // against re-entrance by a callback that will call close0(...) again.
+        let closeError: Error?
         do {
             try socket.close()
-            p = promise
+            closeError = nil
         } catch {
-            promise?.fail(error: error)
-            // Set p to nil as we want to ensure we pass nil to becomeInactive0(...) so we not try to notify the promise again.
-            p = nil
+            closeError = error
         }
 
         // Fail all pending writes and so ensure all pending promises are notified
@@ -498,9 +498,18 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.cancelWritesOnClose(error: error)
 
         if !self.neverActivated {
-            becomeInactive0(promise: p)
-        } else if let p = p {
-            p.succeed(result: ())
+            if let err = closeError {
+                promise?.fail(error: err)
+                becomeInactive0(promise: nil)
+            } else {
+                becomeInactive0(promise: promise)
+            }
+        } else if let promise = promise {
+            if let err = closeError {
+                promise.fail(error: err)
+            } else {
+                promise.succeed(result: ())
+            }
         }
 
         if !self.neverRegistered {
