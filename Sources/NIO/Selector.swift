@@ -398,11 +398,11 @@ final class Selector<R: Registration> {
                 break
             case EVFILT_READ:
                 if let registration = registrations[Int(ev.ident)] {
-                    try body((SelectorEvent(readable: true, writable: false, registration: registration)))
+                    try body((SelectorEvent(io: .read, registration: registration)))
                 }
             case EVFILT_WRITE:
                 if let registration = registrations[Int(ev.ident)] {
-                    try body((SelectorEvent(readable: false, writable: true, registration: registration)))
+                    try body((SelectorEvent(io: .write, registration: registration)))
                 }
             default:
                 // We only use EVFILT_USER, EVFILT_READ and EVFILT_WRITE.
@@ -469,16 +469,26 @@ struct SelectorEvent<R> {
     /// Create new instance
     ///
     /// - parameters:
+    ///     - io: The `IOEvent` that triggered this event.
+    ///     - registration: The registration that belongs to the event.
+    init(io: IOEvent, registration: R) {
+        self.io = io
+        self.registration = registration
+    }
+
+    /// Create new instance
+    ///
+    /// - parameters:
     ///     - readable: `true` if readable.
     ///     - writable: `true` if writable
     ///     - registration: The registration that belongs to the event.
     init(readable: Bool, writable: Bool, registration: R) {
         if readable {
-            io = writable ? .all : .read
+            self.io = writable ? .all : .read
         } else if writable {
-            io = .write
+            self.io = .write
         } else {
-            io = .none
+            self.io = .none
         }
         self.registration = registration
     }
