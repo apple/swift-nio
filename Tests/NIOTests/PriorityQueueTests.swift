@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import XCTest
-@testable import NIOPriorityQueue
+@testable import NIO
 
 class PriorityQueueTest: XCTestCase {
     func testSomeStringsAsc() throws {
