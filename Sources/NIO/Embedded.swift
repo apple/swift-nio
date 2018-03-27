@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
-import NIOPriorityQueue
 
 private final class EmbeddedScheduledTask {
     let task: () -> Void

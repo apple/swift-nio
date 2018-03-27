@@ -14,7 +14,6 @@
 
 import NIOConcurrencyHelpers
 import Dispatch
-import NIOPriorityQueue
 
 /// Returned once a task was scheduled on the `EventLoop` for later execution.
 ///
