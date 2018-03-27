@@ -385,9 +385,9 @@ internal final class SelectableEventLoop: EventLoop {
         },`in`)
 
         let scheduled = Scheduled(promise: promise, cancellationTask: {
-            self.tasksLock.lock()
-            self.scheduledTasks.remove(task)
-            self.tasksLock.unlock()
+            self.tasksLock.withLockVoid {
+                self.scheduledTasks.remove(task)
+            }
             self.wakeupSelector()
         })
 
@@ -403,10 +403,9 @@ internal final class SelectableEventLoop: EventLoop {
 
     /// Add the `ScheduledTask` to be executed.
     private func schedule0(_ task: ScheduledTask) {
-        tasksLock.lock()
-        scheduledTasks.push(task)
-        tasksLock.unlock()
-
+        tasksLock.withLockVoid {
+            scheduledTasks.push(task)
+        }
         wakeupSelector()
     }
 
@@ -464,13 +463,13 @@ internal final class SelectableEventLoop: EventLoop {
         precondition(self.inEventLoop, "tried to run the EventLoop on the wrong thread.")
         defer {
             var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
-            tasksLock.lock()
-            // reserve the correct capacity so we don't need to realloc later on.
-            scheduledTasksCopy.reserveCapacity(scheduledTasks.count)
-            while let sched = scheduledTasks.pop() {
-                scheduledTasksCopy.append(sched)
+            tasksLock.withLockVoid {
+                // reserve the correct capacity so we don't need to realloc later on.
+                scheduledTasksCopy.reserveCapacity(scheduledTasks.count)
+                while let sched = scheduledTasks.pop() {
+                    scheduledTasksCopy.append(sched)
+                }
             }
-            tasksLock.unlock()
 
             // Fail all the scheduled tasks.
             for task in scheduledTasksCopy {
@@ -498,29 +497,26 @@ internal final class SelectableEventLoop: EventLoop {
             // We need to ensure we process all tasks, even if a task added another task again
             while true {
                 // TODO: Better locking
-                tasksLock.lock()
-                if scheduledTasks.isEmpty {
-                    // Reset nextReadyTask to nil which means we will do a blocking select.
-                    nextReadyTask = nil
-                    tasksLock.unlock()
-                    break
-                }
+                tasksLock.withLockVoid {
+                    if !scheduledTasks.isEmpty {
+                        // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
+                        let now = DispatchTime.now()
 
-                // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
-                let now = DispatchTime.now()
-
-                // Make a copy of the tasks so we can execute these while not holding the lock anymore
-                while tasksCopy.count < tasksCopy.capacity, let task = scheduledTasks.peek() {
-                    if task.readyIn(now) <= .nanoseconds(0) {
-                        _ = scheduledTasks.pop()
-                        tasksCopy.append(task.task)
+                        // Make a copy of the tasks so we can execute these while not holding the lock anymore
+                        while tasksCopy.count < tasksCopy.capacity, let task = scheduledTasks.peek() {
+                            if task.readyIn(now) <= .nanoseconds(0) {
+                                _ = scheduledTasks.pop()
+                                tasksCopy.append(task.task)
+                            } else {
+                                nextReadyTask = task
+                                break
+                            }
+                        }
                     } else {
-                        nextReadyTask = task
-                        break
+                        // Reset nextReadyTask to nil which means we will do a blocking select.
+                        nextReadyTask = nil
                     }
                 }
-
-                tasksLock.unlock()
 
                 // all pending tasks are set to occur in the future, so we can stop looping.
                 if tasksCopy.isEmpty {

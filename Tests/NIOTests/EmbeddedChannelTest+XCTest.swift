@@ -35,6 +35,7 @@ extension EmbeddedChannelTest {
                 ("testEmbeddedLifecycle", testEmbeddedLifecycle),
                 ("testEmbeddedChannelAndPipelineAndChannelCoreShareTheEventLoop", testEmbeddedChannelAndPipelineAndChannelCoreShareTheEventLoop),
                 ("testSendingIncorrectDataOnEmbeddedChannel", testSendingIncorrectDataOnEmbeddedChannel),
+                ("testActiveWhenConnectPromiseFiresAndInactiveWhenClosePromiseFires", testActiveWhenConnectPromiseFiresAndInactiveWhenClosePromiseFires),
            ]
    }
 }
