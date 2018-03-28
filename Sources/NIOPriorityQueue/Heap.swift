@@ -18,7 +18,8 @@ import Darwin
 import Glibc
 #endif
 
-internal enum HeapType {
+@available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
+public enum HeapType {
     case maxHeap
     case minHeap
 
@@ -32,6 +33,7 @@ internal enum HeapType {
     }
 }
 
+@available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
 internal struct Heap<T: Comparable> {
     internal let type: HeapType
     internal private(set) var storage: ContiguousArray<T> = []
@@ -179,6 +181,7 @@ internal struct Heap<T: Comparable> {
     }
 }
 
+@available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
 extension Heap: CustomDebugStringConvertible {
     public var debugDescription: String {
         guard self.storage.count > 0 else {
@@ -237,6 +240,7 @@ extension Heap: CustomDebugStringConvertible {
     }
 }
 
+@available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
 struct HeapIterator<T: Comparable>: IteratorProtocol {
     typealias Element = T
 
@@ -251,6 +255,7 @@ struct HeapIterator<T: Comparable>: IteratorProtocol {
     }
 }
 
+@available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
 extension Heap: Sequence {
     typealias Element = T
 

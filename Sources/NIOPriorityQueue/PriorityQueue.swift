@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal struct PriorityQueue<Element: Comparable> {
+@available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
+public struct PriorityQueue<Element: Comparable> {
     private var heap: Heap<Element>
 
     public init(ascending: Bool = false) {
@@ -51,12 +52,14 @@ internal struct PriorityQueue<Element: Comparable> {
     }
 }
 
+@available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
 extension PriorityQueue: Equatable {
     public static func ==(lhs: PriorityQueue, rhs: PriorityQueue) -> Bool {
         return lhs.count == rhs.count && lhs.elementsEqual(rhs)
     }
 }
 
+@available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
 extension PriorityQueue: Sequence {
     public struct Iterator: IteratorProtocol {
 
@@ -75,18 +78,21 @@ extension PriorityQueue: Sequence {
     }
 }
 
-internal extension PriorityQueue {
-    var count: Int {
+@available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
+public extension PriorityQueue {
+    public var count: Int {
         return self.heap.count
     }
 }
 
+@available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
 extension PriorityQueue: CustomStringConvertible {
     public var description: String {
         return "PriorityQueue(count: \(self.underestimatedCount)): \(Array(self))"
     }
 }
 
+@available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
 extension PriorityQueue {
   @available(*, deprecated, renamed: "Element")
   public typealias T = Element
@@ -94,6 +100,7 @@ extension PriorityQueue {
   public typealias PriorityQueueIterator<T: Comparable> = PriorityQueue<T>.Iterator
 }
 
+@available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
 extension PriorityQueue.Iterator {
   @available(*, deprecated, renamed: "Element")
   public typealias T = Element
