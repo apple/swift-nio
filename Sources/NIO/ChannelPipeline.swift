@@ -1023,8 +1023,11 @@ public final class ChannelHandlerContext: ChannelInvoker {
         return try? self.channel._unsafe.localAddress0()
     }
 
+    public var eventLoop: EventLoop {
+        return self.pipeline.eventLoop
+    }
+
     public let name: String
-    public let eventLoop: EventLoop
     private let inboundHandler: _ChannelInboundHandler?
     private let outboundHandler: _ChannelOutboundHandler?
 
@@ -1032,17 +1035,8 @@ public final class ChannelHandlerContext: ChannelInvoker {
     fileprivate init(name: String, handler: ChannelHandler, pipeline: ChannelPipeline) {
         self.name = name
         self.pipeline = pipeline
-        self.eventLoop = pipeline.eventLoop
-        if let handler = handler as? _ChannelInboundHandler {
-            self.inboundHandler = handler
-        } else {
-            self.inboundHandler = nil
-        }
-        if let handler = handler as? _ChannelOutboundHandler {
-            self.outboundHandler = handler
-        } else {
-            self.outboundHandler = nil
-        }
+        self.inboundHandler = handler as? _ChannelInboundHandler
+        self.outboundHandler = handler as? _ChannelOutboundHandler
         precondition(self.inboundHandler != nil || self.outboundHandler != nil, "ChannelHandlers need to either be inbound or outbound")
     }
 
