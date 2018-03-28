@@ -154,10 +154,13 @@ internal enum Posix {
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     static let SOCK_STREAM: CInt = CInt(Darwin.SOCK_STREAM)
     static let SOCK_DGRAM: CInt = CInt(Darwin.SOCK_DGRAM)
+    static let IPPROTO_TCP: CInt = CInt(Darwin.IPPROTO_TCP)
+
     static let UIO_MAXIOV: Int = 1024
 #elseif os(Linux) || os(FreeBSD) || os(Android)
     static let SOCK_STREAM: CInt = CInt(Glibc.SOCK_STREAM.rawValue)
     static let SOCK_DGRAM: CInt = CInt(Glibc.SOCK_DGRAM.rawValue)
+    static let IPPROTO_TCP: CInt = CInt(Glibc.IPPROTO_TCP)
     static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)
 #else
     static var SOCK_STREAM: CInt {
