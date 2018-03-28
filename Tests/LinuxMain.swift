@@ -25,7 +25,6 @@ import XCTest
 #if os(Linux) || os(FreeBSD)
    @testable import NIOConcurrencyHelpersTests
    @testable import NIOHTTP1Tests
-   @testable import NIOPriorityQueueTests
    @testable import NIOTLSTests
    @testable import NIOTests
    @testable import NIOWebSocketTests
