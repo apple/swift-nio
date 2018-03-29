@@ -20,7 +20,7 @@ import CNIOLinux
         /// The ids of all the cpus.
         let cpuIds: Set<Int>
 
-        /// Create a new instace
+        /// Create a new instance
         ///
         /// - arguments:
         ///     - cpuIds: The `Set` of CPU ids. It must be non-empty and can not contain invalid ids.

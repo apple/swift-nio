@@ -498,7 +498,11 @@ let channel = try { () -> Channel in
     }
 }()
 
-print("Server started and listening on \(channel.localAddress!), htdocs path \(htdocs)")
+if let localAddress = channel.localAddress {
+    print("Server started and listening on \(localAddress), htdocs path \(htdocs)")
+} else {
+    print("Server started but the address could not be determined. htdocs path \(htdocs)")
+}
 
 // This will never unblock as we don't close the ServerChannel
 try channel.closeFuture.wait()

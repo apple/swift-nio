@@ -226,7 +226,12 @@ defer {
 
 
 let channel = try! bootstrap.bind(host: "localhost", port: 8888).wait()
-print("Server started and listening on \(channel.localAddress!)")
+
+if let localAddress = channel.localAddress {
+    print("Server started and listening on \(localAddress)")
+} else {
+    print("Server started but the address could not be determined.")
+}
 
 // This will never unblock as we don't close the ServerChannel
 try channel.closeFuture.wait()
