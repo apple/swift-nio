@@ -145,7 +145,7 @@ private func toIndex(_ value: Int) -> Index {
 /// The 'discardable bytes' are usually bytes that have already been read, they can however still be accessed using
 /// the random access methods. 'Readable bytes' are the bytes currently available to be read using the sequential
 /// access interface (`read<Type>`/`write<Type>`). Getting `writableBytes` (bytes beyond the writer index) is undefined
-/// behaviour and might yield aribitrary bytes (_not_ `0` initialised).
+/// behaviour and might yield arbitrary bytes (_not_ `0` initialised).
 ///
 /// ### Slicing
 /// `ByteBuffer` supports slicing a `ByteBuffer` without copying the underlying storage.
