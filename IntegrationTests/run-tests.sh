@@ -72,6 +72,7 @@ while getopts "f:" opt; do
     esac
 done
 
+exec 3>&1 4>&2 # copy stdout/err to fd 3/4 to we can output control messages
 cnt_ok=0
 cnt_fail=0
 for f in tests_*; do
