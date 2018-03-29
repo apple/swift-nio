@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "swift-malloc-info",
     dependencies: [
-        .package(url: "HookedFree/", .branch("master")),
+        .package(url: "HookedFunctions/", .branch("master")),
         .package(url: "swift-nio/", .branch("master")),
     ],
     targets: [
@@ -15,6 +15,6 @@ let package = Package(
             dependencies: ["NIO", "NIOHTTP1"]),
         .target(
             name: "bootstrap",
-            dependencies: ["SwiftBootstrap", "HookedFree"]),
+            dependencies: ["SwiftBootstrap", "HookedFunctions"]),
     ]
 )

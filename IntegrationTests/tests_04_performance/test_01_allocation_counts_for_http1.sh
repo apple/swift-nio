@@ -32,7 +32,7 @@ function make_git_commit_all() {
     git commit -m 'everything'
 }
 
-cd HookedFree
+cd HookedFunctions
 make_git_commit_all
 cd ..
 
@@ -57,18 +57,22 @@ cd ..
 "$swift_bin" run -c release > "$tmp/output"
 )
 
-for test in 1000_reqs_1_conn; do
-    allocs=$(grep "$test:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
+for test in 1000_reqs_1_conn 1_reqs_1000_conn; do
+    cat "$tmp/output"  # helps debugging
+    total_allocations=$(grep "^$test.total_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
+    not_freed_allocations=$(grep "^$test.remaining_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
     max_allowed_env_name="MAX_ALLOCS_ALLOWED_$test"
 
-    assert_greater_than "$allocs" 1000
+    assert_less_than "$not_freed_allocations" 5     # allow some slack
+    assert_greater_than "$not_freed_allocations" -5 # allow some slack
+    assert_greater_than "$total_allocations" 1000
     if [[ -z "${!max_allowed_env_name+x}" ]]; then
         if [[ -z "${!max_allowed_env_name+x}" ]]; then
             warn "no reference number of allocations set (set to \$$max_allowed_env_name)"
             warn "to set current number:"
-            warn "    export $max_allowed_env_name=$allocs"
+            warn "    export $max_allowed_env_name=$total_allocations"
         fi
     else
-        assert_less_than_or_equal "$allocs" "${!max_allowed_env_name}"
+        assert_less_than_or_equal "$total_allocations" "${!max_allowed_env_name}"
     fi
 done

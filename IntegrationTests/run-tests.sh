@@ -60,10 +60,14 @@ plugins_do init "$@"
 shift $plugin_opts_ind
 
 filter="."
-while getopts "f:" opt; do
+verbose=false
+while getopts "f:v" opt; do
     case $opt in
         f)
             filter="$OPTARG"
+            ;;
+        v)
+            verbose=true
             ;;
         \?)
             usage
@@ -93,6 +97,9 @@ for f in tests_*; do
         if "$here/run-single-test.sh" "$here/$f/$t" "$test_tmp" "$here/.." >> "$out" 2>&1; then
             plugins_do test_ok "$(time_diff_to_now $start)"
             suite_ok=$((suite_ok+1))
+            if $verbose; then
+                cat "$out"
+            fi
         else
             plugins_do test_fail "$(time_diff_to_now $start)" "$out"
             suite_fail=$((suite_fail+1))

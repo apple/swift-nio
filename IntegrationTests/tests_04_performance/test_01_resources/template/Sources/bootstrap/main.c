@@ -16,11 +16,21 @@
 #include <stdio.h>
 #include <dlfcn.h>
 #include <atomic-counter.h>
-#include <hooked-free.h>
+#include <hooked-functions.h>
+#include <stdlib.h>
 
 #if !__APPLE__
 void free(void *ptr) {
     replacement_free(ptr);
+}
+void *malloc(size_t size) {
+    return replacement_malloc(size);
+}
+void *calloc(size_t nmemb, size_t size) {
+    return replacement_calloc(nmemb, size);
+}
+void *realloc(void *ptr, size_t size) {
+    return replacement_realloc(ptr, size);
 }
 #endif
 

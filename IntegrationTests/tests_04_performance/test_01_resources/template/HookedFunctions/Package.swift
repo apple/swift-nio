@@ -17,14 +17,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "HookedFree",
+    name: "HookedFunctions",
     products: [
-        .library(name: "HookedFree", type: .dynamic, targets: ["HookedFree"]),
+        .library(name: "HookedFunctions", type: .dynamic, targets: ["HookedFunctions"]),
     ],
     dependencies: [
         .package(url: "../AtomicCounter/", .branch("master")),
     ],
     targets: [
-        .target(name: "HookedFree", dependencies: ["AtomicCounter"]),
+        .target(name: "HookedFunctions", dependencies: ["AtomicCounter"]),
     ]
 )
