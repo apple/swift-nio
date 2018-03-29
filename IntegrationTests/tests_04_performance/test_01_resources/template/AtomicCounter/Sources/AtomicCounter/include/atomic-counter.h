@@ -18,4 +18,8 @@ void inc_free_counter(void);
 void reset_free_counter(void);
 long read_free_counter(void);
 
+void inc_malloc_counter(void);
+void reset_malloc_counter(void);
+long read_malloc_counter(void);
+
 #endif

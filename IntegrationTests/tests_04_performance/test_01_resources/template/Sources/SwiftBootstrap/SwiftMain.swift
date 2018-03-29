@@ -96,35 +96,38 @@ public func swiftMain() -> Int {
         }
     }
 
-    func measure(_ fn: () -> Int) -> [Int] {
-        func measureOne(_ fn: () -> Int) -> Int {
+    func measure(_ fn: () -> Int) -> [[String: Int]] {
+        func measureOne(_ fn: () -> Int) -> [String: Int] {
             AtomicCounter.reset_free_counter()
-            _ = fn()
-            return AtomicCounter.read_free_counter()
+            AtomicCounter.reset_malloc_counter()
+            //autoreleasepool {
+                _ = fn()
+            //}
+            let frees = AtomicCounter.read_free_counter()
+            let mallocs = AtomicCounter.read_malloc_counter()
+            return ["total_allocations": mallocs,
+                    "remaining_allocations": mallocs - frees]
         }
 
         _ = measureOne(fn) /* pre-heat and throw away */
-        var measurements: [Int] = []
+        var measurements: [[String: Int]] = []
         for _ in 0..<10 {
             measurements.append(measureOne(fn))
         }
-
         return measurements
     }
 
     func measureAndPrint(desc: String, fn: () -> Int) -> Void {
-        print("\(desc): ", terminator: "")
         let measurements = measure(fn)
-        print(measurements.min() ?? -1)
+        for k in measurements[0].keys {
+            let vs = measurements.map { $0[k]! }
+            print("\(desc).\(k): \(vs.min() ?? -1)")
+        }
+        print("DEBUG: \(measurements)")
     }
 
-    measureAndPrint(desc: "1000_reqs_1_conn") {
-        let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
-        defer {
-            try! group.syncShutdownGracefully()
-        }
-
-        let serverChannel = try! ServerBootstrap(group: group)
+    func doRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
+        let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).then {
@@ -137,9 +140,9 @@ public func swiftMain() -> Int {
         }
 
 
-        let repeatedRequestsHandler = RepeatedRequests(numberOfRequests: 1000, eventLoop: group.next())
+        let repeatedRequestsHandler = RepeatedRequests(numberOfRequests: numberOfRequests, eventLoop: group.next())
 
-        let clientChannel = try! ClientBootstrap(group: group)
+        let clientChannel = try ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().then {
                     channel.pipeline.add(handler: repeatedRequestsHandler)
@@ -149,8 +152,29 @@ public func swiftMain() -> Int {
             .wait()
 
         clientChannel.write(NIOAny(HTTPClientRequestPart.head(RepeatedRequests.requestHead)), promise: nil)
-        try! clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
-        return try! repeatedRequestsHandler.wait()
+        try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
+        return try repeatedRequestsHandler.wait()
+    }
+
+    let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
+    defer {
+        try! group.syncShutdownGracefully()
+    }
+
+    measureAndPrint(desc: "1000_reqs_1_conn") {
+        let numberDone = try! doRequests(group: group, number: 1000)
+        precondition(numberDone == 1000)
+        return numberDone
+    }
+
+    measureAndPrint(desc: "1_reqs_1000_conn") {
+        var numberDone = 1
+        for _ in 0..<1000 {
+            let newDones = try! doRequests(group: group, number: 1)
+            precondition(newDones == 1)
+            numberDone += newDones
+        }
+        return numberDone
     }
 
     return 0

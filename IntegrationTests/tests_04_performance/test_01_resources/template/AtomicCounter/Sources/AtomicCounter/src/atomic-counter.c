@@ -29,3 +29,4 @@
 */ }
 
 MAKE_COUNTER(free)
+MAKE_COUNTER(malloc)

@@ -15,6 +15,11 @@
 #ifndef HOOKED_FREE
 #define HOOKED_FREE
 
+#include <stdlib.h>
+
+void *replacement_malloc(size_t size);
 void replacement_free(void *ptr);
+void *replacement_calloc(size_t nmemb, size_t size);
+void *replacement_realloc(void *ptr, size_t size);
 
 #endif
