@@ -823,6 +823,7 @@ public final class ChannelPipeline: ChannelInvoker {
     }
 
     func fireErrorCaught0(error: Error) {
+        assert((error as? ChannelError).map { $0 != .eof } ?? true)
         if let firstInboundCtx = firstInboundCtx {
             firstInboundCtx.invokeErrorCaught(error)
         }

@@ -61,6 +61,8 @@ extension ChannelTests {
                 ("testEOFOnlyReceivedOnceReadRequested", testEOFOnlyReceivedOnceReadRequested),
                 ("testAcceptsAfterCloseDontCauseIssues", testAcceptsAfterCloseDontCauseIssues),
                 ("testChannelReadsDoesNotHappenAfterRegistration", testChannelReadsDoesNotHappenAfterRegistration),
+                ("testAppropriateAndInappropriateOperationsForUnregisteredSockets", testAppropriateAndInappropriateOperationsForUnregisteredSockets),
+                ("testCloseSocketWhenReadErrorWasReceivedAndMakeSureNoReadCompleteArrives", testCloseSocketWhenReadErrorWasReceivedAndMakeSureNoReadCompleteArrives),
            ]
    }
 }
