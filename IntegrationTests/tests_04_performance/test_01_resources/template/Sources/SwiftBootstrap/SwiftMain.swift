@@ -100,9 +100,8 @@ public func swiftMain() -> Int {
         func measureOne(_ fn: () -> Int) -> [String: Int] {
             AtomicCounter.reset_free_counter()
             AtomicCounter.reset_malloc_counter()
-            //autoreleasepool {
-                _ = fn()
-            //}
+            _ = fn()
+            usleep(100_000) // allocs/frees happen on multiple threads, allow some cool down time
             let frees = AtomicCounter.read_free_counter()
             let mallocs = AtomicCounter.read_malloc_counter()
             return ["total_allocations": mallocs,
