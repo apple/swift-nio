@@ -28,6 +28,7 @@ echo -e 'GET /dynamic/count-to-ten HTTP/1.1\r\nConnection: close\r\n\r\n' | \
 backslash_r=$(echo -ne '\r')
 cat > "$tmp/expected" <<EOF
 HTTP/1.1 200 OK$backslash_r
+Connection: close$backslash_r
 transfer-encoding: chunked$backslash_r
 $backslash_r
 1$backslash_r
