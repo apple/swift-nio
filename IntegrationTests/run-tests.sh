@@ -76,6 +76,14 @@ while getopts "f:v" opt; do
     esac
 done
 
+function run_test() {
+    if $verbose; then
+        "$@" 2>&1 | tee -a "$out"
+    else
+        "$@" >> "$out" 2>&1
+    fi
+}
+
 exec 3>&1 4>&2 # copy stdout/err to fd 3/4 to we can output control messages
 cnt_ok=0
 cnt_fail=0
@@ -94,7 +102,7 @@ for f in tests_*; do
         test_tmp=$(mktemp -d "$tmp/test.tmp_XXXXXX")
         plugins_do test_begin "$t" "$f"
         start=$(date +%s)
-        if "$here/run-single-test.sh" "$here/$f/$t" "$test_tmp" "$here/.." >> "$out" 2>&1; then
+        if run_test "$here/run-single-test.sh" "$here/$f/$t" "$test_tmp" "$here/.."; then
             plugins_do test_ok "$(time_diff_to_now $start)"
             suite_ok=$((suite_ok+1))
             if $verbose; then
