@@ -72,15 +72,12 @@ public struct ByteBufferAllocator {
 
 }
 
-private typealias Index = UInt32
-private typealias Capacity = UInt32
-
-private func toCapacity(_ value: Int) -> Capacity {
-    return Capacity(truncatingIfNeeded: value)
+@_inlineable @_versioned func _toCapacity(_ value: Int) -> ByteBuffer.Capacity {
+    return ByteBuffer.Capacity(truncatingIfNeeded: value)
 }
 
-private func toIndex(_ value: Int) -> Index {
-    return Index(truncatingIfNeeded: value)
+@_inlineable @_versioned func _toIndex(_ value: Int) -> ByteBuffer.Index {
+    return ByteBuffer.Index(truncatingIfNeeded: value)
 }
 
 /// `ByteBuffer` stores contiguously allocated raw bytes. It is a random and sequential accessible sequence of zero or
@@ -166,18 +163,20 @@ private func toIndex(_ value: Int) -> Index {
 /// for doing so. In any case, if you use the `get` prefixed methods you are responsible for ensuring that you do not reach into uninitialized memory by taking the `readableBytes` and `readerIndex` into
 /// account, and ensuring that you have previously written into the area covered by the `index itself.
 public struct ByteBuffer {
-    private typealias Slice = Range<Index>
-    private typealias Allocator = ByteBufferAllocator
+    typealias Slice = Range<Index>
+    typealias Allocator = ByteBufferAllocator
+    typealias Index = UInt32
+    typealias Capacity = UInt32
 
-    private var _readerIndex: Index = 0
-    private var _writerIndex: Index = 0
-    private var _slice: Slice
-    private var _storage: _Storage
+    @_versioned private(set) var _readerIndex: Index = 0
+    @_versioned private(set) var _writerIndex: Index = 0
+    @_versioned private(set) var _slice: Slice
+    @_versioned private(set) var _storage: _Storage
 
     // MARK: Internal _Storage for CoW
-    private final class _Storage {
+    @_versioned final class _Storage {
         private(set) var capacity: Capacity
-        private(set) var bytes: UnsafeMutableRawPointer
+        @_versioned private(set) var bytes: UnsafeMutableRawPointer
         private(set) var fullSlice: Slice
         private let allocator: ByteBufferAllocator
 
@@ -251,26 +250,26 @@ public struct ByteBuffer {
         }
     }
 
-    private mutating func copyStorageAndRebase(capacity: Capacity, resetIndices: Bool = false) {
+    private mutating func _copyStorageAndRebase(capacity: Capacity, resetIndices: Bool = false) {
         let indexRebaseAmount = resetIndices ? self._readerIndex : 0
         let storageRebaseAmount = self._slice.lowerBound + indexRebaseAmount
-        let newSlice = Range(storageRebaseAmount ..< min(storageRebaseAmount + toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity))
+        let newSlice = Range(storageRebaseAmount ..< min(storageRebaseAmount + _toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity))
         self._storage = self._storage.reallocSlice(newSlice, capacity: capacity)
-        self.moveReaderIndex(to: self._readerIndex - indexRebaseAmount)
-        self.moveWriterIndex(to: self._writerIndex - indexRebaseAmount)
+        self._moveReaderIndex(to: self._readerIndex - indexRebaseAmount)
+        self._moveWriterIndex(to: self._writerIndex - indexRebaseAmount)
         self._slice = self._storage.fullSlice
     }
 
-    private mutating func copyStorageAndRebase(extraCapacity: Capacity = 0, resetIndices: Bool = false) {
-        self.copyStorageAndRebase(capacity: toCapacity(self._slice.count) + extraCapacity, resetIndices: resetIndices)
+    @_versioned mutating func _copyStorageAndRebase(extraCapacity: Capacity = 0, resetIndices: Bool = false) {
+        self._copyStorageAndRebase(capacity: _toCapacity(self._slice.count) + extraCapacity, resetIndices: resetIndices)
     }
 
-    private mutating func ensureAvailableCapacity(_ capacity: Capacity, at index: Index) {
+    @_versioned mutating func _ensureAvailableCapacity(_ capacity: Capacity, at index: Index) {
         assert(isKnownUniquelyReferenced(&self._storage))
 
         if self._slice.lowerBound + index + capacity > self._slice.upperBound {
             // double the capacity, we may want to use different strategies depending on the actual current capacity later on.
-            var newCapacity = max(1, toCapacity(self.capacity))
+            var newCapacity = max(1, _toCapacity(self.capacity))
 
             // double the capacity until the requested capacity can be full-filled
             repeat {
@@ -289,43 +288,46 @@ public struct ByteBuffer {
 
     // MARK: Internal API
 
-    private mutating func moveReaderIndex(to newIndex: Index) {
+    private mutating func _moveReaderIndex(to newIndex: Index) {
         assert(newIndex >= 0 && newIndex <= writerIndex)
         self._readerIndex = newIndex
     }
 
-    private mutating func moveWriterIndex(to newIndex: Index) {
-        assert(newIndex >= 0 && newIndex <= toCapacity(self._slice.count))
+    @_inlineable @_versioned
+    mutating func _moveWriterIndex(to newIndex: Index) {
+        assert(newIndex >= 0 && newIndex <= _toCapacity(self._slice.count))
         self._writerIndex = newIndex
     }
 
-    private mutating func set<S: ContiguousCollection>(bytes: S, at index: Index) -> Capacity where S.Element == UInt8 {
-        let newEndIndex: Index = index + toIndex(Int(bytes.count))
+    @_inlineable @_versioned
+    mutating func _set<S: ContiguousCollection>(bytes: S, at index: Index) -> Capacity where S.Element == UInt8 {
+        let newEndIndex: Index = index + _toIndex(Int(bytes.count))
         if !isKnownUniquelyReferenced(&self._storage) {
             let extraCapacity = newEndIndex > self._slice.upperBound ? newEndIndex - self._slice.upperBound : 0
-            self.copyStorageAndRebase(extraCapacity: extraCapacity)
+            self._copyStorageAndRebase(extraCapacity: extraCapacity)
         }
 
-        self.ensureAvailableCapacity(Capacity(bytes.count), at: index)
+        self._ensureAvailableCapacity(Capacity(bytes.count), at: index)
         let base = self._storage.bytes.advanced(by: Int(self._slice.lowerBound + index)).assumingMemoryBound(to: UInt8.self)
         bytes.withUnsafeBytes { srcPtr in
             base.assign(from: srcPtr.baseAddress!.assumingMemoryBound(to: S.Element.self), count: srcPtr.count)
         }
-        return toCapacity(Int(bytes.count))
+        return _toCapacity(Int(bytes.count))
     }
 
-    private mutating func set<S: Sequence>(bytes: S, at index: Index) -> Capacity where S.Element == UInt8 {
+    @_inlineable @_versioned
+    mutating func _set<S: Sequence>(bytes: S, at index: Index) -> Capacity where S.Element == UInt8 {
         assert(!([Array<S.Element>.self, StaticString.self, ContiguousArray<S.Element>.self, UnsafeRawBufferPointer.self, UnsafeBufferPointer<UInt8>.self].contains(where: { (t: Any.Type) -> Bool in t == type(of: bytes) })),
                "called the slower set<S: Sequence> function even though \(S.self) is a ContiguousCollection")
         func ensureCapacityAndReturnStorageBase(capacity: Int) -> UnsafeMutablePointer<UInt8> {
-            self.ensureAvailableCapacity(Capacity(capacity), at: index)
+            self._ensureAvailableCapacity(Capacity(capacity), at: index)
             return self._storage.bytes.advanced(by: Int(self._slice.lowerBound + index)).assumingMemoryBound(to: UInt8.self)
         }
         let underestimatedByteCount = bytes.underestimatedCount
-        let newPastEndIndex: Index = index + toIndex(underestimatedByteCount)
+        let newPastEndIndex: Index = index + _toIndex(underestimatedByteCount)
         if !isKnownUniquelyReferenced(&self._storage) {
             let extraCapacity = newPastEndIndex > self._slice.upperBound ? newPastEndIndex - self._slice.upperBound : 0
-            self.copyStorageAndRebase(extraCapacity: extraCapacity)
+            self._copyStorageAndRebase(extraCapacity: extraCapacity)
         }
 
         var base = ensureCapacityAndReturnStorageBase(capacity: underestimatedByteCount)
@@ -337,20 +339,20 @@ public struct ByteBuffer {
             base[idx] = b
             idx += 1
         }
-        return toCapacity(idx)
+        return _toCapacity(idx)
     }
 
     // MARK: Public Core API
 
     fileprivate init(allocator: ByteBufferAllocator, startingCapacity: Int) {
-        let startingCapacity = toCapacity(startingCapacity)
+        let startingCapacity = _toCapacity(startingCapacity)
         self._storage = _Storage.reallocated(minimumCapacity: startingCapacity, allocator: allocator)
         self._slice = self._storage.fullSlice
     }
 
     /// The number of bytes writable until `ByteBuffer` will need to grow its underlying storage which will likely
     /// trigger a copy of the bytes.
-    public var writableBytes: Int { return Int(toCapacity(self._slice.count) - self._writerIndex) }
+    public var writableBytes: Int { return Int(_toCapacity(self._slice.count) - self._writerIndex) }
 
     /// The number of bytes readable (`readableBytes` = `writerIndex` - `readerIndex`).
     public var readableBytes: Int { return Int(self._writerIndex - self._readerIndex) }
@@ -373,12 +375,12 @@ public struct ByteBuffer {
             return
         }
 
-        self.copyStorageAndRebase(capacity: toCapacity(newCapacity))
+        self._copyStorageAndRebase(capacity: _toCapacity(newCapacity))
     }
 
     private mutating func copyStorageAndRebaseIfNeeded() {
         if !isKnownUniquelyReferenced(&self._storage) {
-            self.copyStorageAndRebase()
+            self._copyStorageAndRebase()
         }
     }
 
@@ -412,9 +414,10 @@ public struct ByteBuffer {
     }
 
     @discardableResult
+    @_inlineable
     public mutating func writeWithUnsafeMutableBytes(_ body: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
         let bytesWritten = try withUnsafeMutableWritableBytes(body)
-        self.moveWriterIndex(to: self._writerIndex + toIndex(bytesWritten))
+        self._moveWriterIndex(to: self._writerIndex + _toIndex(bytesWritten))
         return bytesWritten
     }
 
@@ -422,6 +425,7 @@ public struct ByteBuffer {
     /// uninitialised memory and it's undefined behaviour to read it. In most cases you should use `withUnsafeReadableBytes`.
     ///
     /// - warning: Do not escape the pointer from the closure for later use.
+    @_inlineable
     public func withVeryUnsafeBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
         return try body(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound)),
                                              count: self._slice.count))
@@ -434,6 +438,7 @@ public struct ByteBuffer {
     /// - parameters:
     ///     - body: The closure that will accept the yielded bytes.
     /// - returns: The value returned by `fn`.
+    @_inlineable
     public func withUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
         return try body(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
                                              count: self.readableBytes))
@@ -450,6 +455,7 @@ public struct ByteBuffer {
     /// - parameters:
     ///     - body: The closure that will accept the yielded bytes and the `storageManagement`.
     /// - returns: The value returned by `fn`.
+    @_inlineable
     public func withUnsafeReadableBytesWithStorageManagement<T>(_ body: (UnsafeRawBufferPointer, Unmanaged<AnyObject>) throws -> T) rethrows -> T {
         let storageReference: Unmanaged<AnyObject> = Unmanaged.passUnretained(self._storage)
         return try body(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
@@ -457,6 +463,7 @@ public struct ByteBuffer {
     }
 
     /// See `withUnsafeReadableBytesWithStorageManagement` and `withVeryUnsafeBytes`.
+    @_inlineable
     public func withVeryUnsafeBytesWithStorageManagement<T>(_ body: (UnsafeRawBufferPointer, Unmanaged<AnyObject>) throws -> T) rethrows -> T {
         let storageReference: Unmanaged<AnyObject> = Unmanaged.passUnretained(self._storage)
         return try body(UnsafeRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound)),
@@ -477,12 +484,12 @@ public struct ByteBuffer {
         guard index <= self.capacity - length else {
             return nil
         }
-        let index = toIndex(index)
-        let length = toCapacity(length)
+        let index = _toIndex(index)
+        let length = _toCapacity(length)
         var new = self
         new._slice = self._slice.lowerBound + index ..< self._slice.lowerBound + index+length
         new.moveReaderIndex(to: 0)
-        new.moveWriterIndex(to: length)
+        new._moveWriterIndex(to: length)
         return new
     }
 
@@ -501,9 +508,9 @@ public struct ByteBuffer {
                             byteCount: self.readableBytes)
             let indexShift = self._readerIndex
             self.moveReaderIndex(to: 0)
-            self.moveWriterIndex(to: self._writerIndex - indexShift)
+            self._moveWriterIndex(to: self._writerIndex - indexShift)
         } else {
-            self.copyStorageAndRebase(extraCapacity: 0, resetIndices: true)
+            self._copyStorageAndRebase(extraCapacity: 0, resetIndices: true)
         }
         return true
     }
@@ -592,16 +599,19 @@ extension StaticString: Collection {
 extension Array: ContiguousCollection {}
 extension ContiguousArray: ContiguousCollection {}
 extension StaticString: ContiguousCollection {
+    @_inlineable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try body(UnsafeRawBufferPointer(start: self.utf8Start, count: self.utf8CodeUnitCount))
     }
 }
 extension UnsafeRawBufferPointer: ContiguousCollection {
+    @_inlineable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try body(self)
     }
 }
 extension UnsafeBufferPointer: ContiguousCollection {
+    @_inlineable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try body(UnsafeRawBufferPointer(self))
     }
@@ -611,42 +621,44 @@ extension UnsafeBufferPointer: ContiguousCollection {
 extension ByteBuffer {
     /// Copy the collection of `bytes` into the `ByteBuffer` at `index`.
     @discardableResult
+    @_inlineable
     public mutating func set<S: Sequence>(bytes: S, at index: Int) -> Int where S.Element == UInt8 {
-        return Int(self.set(bytes: bytes, at: toIndex(index)))
+        return Int(self._set(bytes: bytes, at: _toIndex(index)))
     }
 
     /// Copy the collection of `bytes` into the `ByteBuffer` at `index`.
     @discardableResult
+    @_inlineable
     public mutating func set<S: ContiguousCollection>(bytes: S, at index: Int) -> Int where S.Element == UInt8 {
-        return Int(self.set(bytes: bytes, at: toIndex(index)))
+        return Int(self._set(bytes: bytes, at: _toIndex(index)))
     }
 
     /// Move the reader index forward by `offset` bytes.
     public mutating func moveReaderIndex(forwardBy offset: Int) {
-        let newIndex = self._readerIndex + toIndex(offset)
+        let newIndex = self._readerIndex + _toIndex(offset)
         precondition(newIndex >= 0 && newIndex <= writerIndex, "new readerIndex: \(newIndex), expected: range(0, \(writerIndex))")
-        self.moveReaderIndex(to: newIndex)
+        self._moveReaderIndex(to: newIndex)
     }
 
     /// Set the reader index to `offset`.
     public mutating func moveReaderIndex(to offset: Int) {
-        let newIndex = toIndex(offset)
+        let newIndex = _toIndex(offset)
         precondition(newIndex >= 0 && newIndex <= writerIndex, "new readerIndex: \(newIndex), expected: range(0, \(writerIndex))")
-        self.moveReaderIndex(to: newIndex)
+        self._moveReaderIndex(to: newIndex)
     }
 
     /// Move the writer index forward by `offset` bytes.
     public mutating func moveWriterIndex(forwardBy offset: Int) {
-        let newIndex = self._writerIndex + toIndex(offset)
-        precondition(newIndex >= 0 && newIndex <= toCapacity(self._slice.count),"new writerIndex: \(newIndex), expected: range(0, \(toCapacity(self._slice.count)))")
-        self.moveWriterIndex(to: newIndex)
+        let newIndex = self._writerIndex + _toIndex(offset)
+        precondition(newIndex >= 0 && newIndex <= _toCapacity(self._slice.count),"new writerIndex: \(newIndex), expected: range(0, \(_toCapacity(self._slice.count)))")
+        self._moveWriterIndex(to: newIndex)
     }
 
     /// Set the writer index to `offset`.
     public mutating func moveWriterIndex(to offset: Int) {
-        let newIndex = toIndex(offset)
-        precondition(newIndex >= 0 && newIndex <= toCapacity(self._slice.count),"new writerIndex: \(newIndex), expected: range(0, \(toCapacity(self._slice.count)))")
-        self.moveWriterIndex(to: newIndex)
+        let newIndex = _toIndex(offset)
+        precondition(newIndex >= 0 && newIndex <= _toCapacity(self._slice.count),"new writerIndex: \(newIndex), expected: range(0, \(_toCapacity(self._slice.count)))")
+        self._moveWriterIndex(to: newIndex)
     }
 }
 
