@@ -224,9 +224,51 @@ defer {
     try! group.syncShutdownGracefully()
 }
 
+// First argument is the program path
+let arguments = CommandLine.arguments
+let arg1 = arguments.dropFirst().first
+let arg2 = arguments.dropFirst(2).first
 
-let channel = try! bootstrap.bind(host: "localhost", port: 8888).wait()
-print("Server started and listening on \(channel.localAddress!)")
+let defaultHost = "localhost"
+let defaultPort = 8888
+
+enum BindTo {
+    case ip(host: String, port: Int)
+    case unixDomainSocket(path: String)
+}
+
+let bindTarget: BindTo
+switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
+case (.some(let h), _ , .some(let p)):
+    /* we got two arguments, let's interpret that as host and port */
+    bindTarget = .ip(host: h, port: p)
+    
+case (let portString?, .none, _):
+    // Couldn't parse as number, expecting unix domain socket path.
+    bindTarget = .unixDomainSocket(path: portString)
+    
+case (_, let p?, _):
+    // Only one argument --> port.
+    bindTarget = .ip(host: defaultHost, port: p)
+    
+default:
+    bindTarget = .ip(host: defaultHost, port: defaultPort)
+}
+
+let channel = try { () -> Channel in
+    switch bindTarget {
+    case .ip(let host, let port):
+        return try bootstrap.bind(host: host, port: port).wait()
+    case .unixDomainSocket(let path):
+        return try bootstrap.bind(unixDomainSocketPath: path).wait()
+    }
+}()
+
+if let localAddress = channel.localAddress {
+    print("Server started and listening on \(localAddress)")
+} else {
+    print("Server started but the address could not be determined.")
+}
 
 // This will never unblock as we don't close the ServerChannel
 try channel.closeFuture.wait()

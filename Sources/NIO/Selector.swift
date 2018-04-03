@@ -127,7 +127,7 @@ final class Selector<R: Registration> {
 
         /* this is technically a bad idea as we're abusing ARC to deallocate scarce resources (a file descriptor)
          for us. However, this is used for the event loop so there shouldn't be much churn.
-         The reson we do this is because `self.wakeup()` may (and will!) be called on arbitrary threads. To not
+         The reason we do this is because `self.wakeup()` may (and will!) be called on arbitrary threads. To not
          suffer from race conditions we would need to protect waking the selector up and closing the selector. That
          is likely to cause performance problems. By abusing ARC, we get the guarantee that there won't be any future
          wakeup calls as there are no references to this selector left. 💁

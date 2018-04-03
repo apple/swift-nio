@@ -77,7 +77,7 @@ final class Thread {
     ///     - name: The name of the `Thread` or `nil` if no specific name should be set.
     ///     - body: The function to execute within the spawned `Thread`.
     static func spawnAndRun(name: String? = nil, body: @escaping (Thread) -> Void) {
-        // Unfortunally the pthread_create method take a different first argument depending on if its on linux or macOS, so ensure we use the correct one.
+        // Unfortunately the pthread_create method take a different first argument depending on if its on linux or macOS, so ensure we use the correct one.
         #if os(Linux)
             var pt: pthread_t = pthread_t()
         #else
