@@ -23,7 +23,7 @@
 ///         .serverChannelOption(ChannelOptions.backlog, value: 256)
 ///         .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 ///
-///         // Set the handlers that are appled to the accepted child `Channel`s.
+///         // Set the handlers that are applied to the accepted child `Channel`s.
 ///         .childChannelInitializer { channel in
 ///             // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
 ///             channel.pipeline.add(handler: BackPressureHandler()).then { () in

@@ -14,7 +14,7 @@
 
 /// An `Error` that represents multiple errors that occurred during an operation.
 ///
-/// Because SwiftNIO frequently does multiple jobs at once, it is possible some operatons out
+/// Because SwiftNIO frequently does multiple jobs at once, it is possible some operations out
 /// of a set of operations may fail. This is most noticeable with `Channel.flush` on the
 /// `DatagramChannel`, where some, but not all, of the datagram writes may fail. In this case
 /// the `flush` should accurately represent that set of possibilities. The `NIOCompositeError`
