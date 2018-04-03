@@ -55,7 +55,7 @@ make_git_commit_all
 cd ..
 
 "$swift_bin" package edit --path "$nio_root" swift-nio
-"$swift_bin" run -c release > "$tmp/output"
+"$swift_bin" run -c release | tee "$tmp/output"
 )
 
 for test in 1000_reqs_1_conn 1_reqs_1000_conn; do
