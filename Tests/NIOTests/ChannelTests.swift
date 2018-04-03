@@ -1370,8 +1370,15 @@ public class ChannelTests: XCTestCase {
             weakClientChannel = clientChannel
             weakServerChannel = serverChannel
             weakServerChildChannel = try serverChildChannelPromise.futureResult.wait()
-            _ = try? clientChannel.close().wait()
-            XCTAssertNoThrow(try serverChannel.close().wait())
+            _ = clientChannel.close()
+            _ = serverChannel.close()
+
+            // We need to wait for the close futures to fire before we move on. Before the
+            // close promises are hit, the channel can keep a reference to itself alive because it's running
+            // background code on the event loop. Completing the close promise should be the last thing the
+            // channel will ever do, assuming there is no work holding a ref to it anywhere.
+            XCTAssertNoThrow(try clientChannel.closeFuture.wait())
+            XCTAssertNoThrow(try serverChannel.closeFuture.wait())
         }()
         let pipeline = try promise.futureResult.wait()
         do {
