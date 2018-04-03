@@ -22,6 +22,7 @@ cp -R "test_01_resources/template"/* "$tmp/"
 nio_root="$PWD/../.."
 
 (
+set -eu
 cd "$tmp"
 
 function make_git_commit_all() {

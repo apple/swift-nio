@@ -306,4 +306,46 @@ public class EventLoopTest : XCTestCase {
         XCTAssertTrue(channel.closeFuture.isFulfilled)
         XCTAssertFalse(channel.isActive)
     }
+
+    public func testScheduleMultipleTasks() throws {
+        let nanos = DispatchTime.now().uptimeNanoseconds
+        let amount: TimeAmount = .seconds(1)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+        var array = Array<(Int, DispatchTime)>()
+        let scheduled1 = eventLoopGroup.next().scheduleTask(in: .milliseconds(500)) {
+            array.append((1, DispatchTime.now()))
+        }
+
+        let scheduled2 = eventLoopGroup.next().scheduleTask(in: .milliseconds(100)) {
+            array.append((2, DispatchTime.now()))
+        }
+
+        let scheduled3 = eventLoopGroup.next().scheduleTask(in: .milliseconds(1000)) {
+            array.append((3, DispatchTime.now()))
+        }
+
+        var result = try eventLoopGroup.next().scheduleTask(in: .milliseconds(1000)) {
+            array
+        }.futureResult.wait()
+
+        XCTAssertTrue(scheduled1.futureResult.isFulfilled)
+        XCTAssertTrue(scheduled2.futureResult.isFulfilled)
+        XCTAssertTrue(scheduled3.futureResult.isFulfilled)
+
+        let first = result.removeFirst()
+        XCTAssertEqual(2, first.0)
+        let second = result.removeFirst()
+        XCTAssertEqual(1, second.0)
+        let third = result.removeFirst()
+        XCTAssertEqual(3, third.0)
+
+        XCTAssertTrue(first.1 < second.1)
+        XCTAssertTrue(second.1 < third.1)
+
+        XCTAssertTrue(result.isEmpty)
+
+    }
 }
