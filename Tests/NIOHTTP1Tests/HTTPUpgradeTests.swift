@@ -138,7 +138,7 @@ private func setUpTestWithAutoremoval(pipelining: Bool = false,
     return (group, serverChannel, clientChannel, try connectedServerChannelFuture.wait())
 }
 
-private func assertResponseIs(response: String, expectedResponseLine: String, expectedResponseHeaders: [String]) {
+internal func assertResponseIs(response: String, expectedResponseLine: String, expectedResponseHeaders: [String]) {
     var lines = response.split(separator: "\r\n", omittingEmptySubsequences: false).map { String($0) }
 
     // We never expect a response body here. This means we need the last two entries to be empty strings.

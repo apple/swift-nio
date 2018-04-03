@@ -412,6 +412,13 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         ctx.fireChannelReadComplete()
     }
 
+    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+        // This handler parses data eagerly, so re-parsing for decodeLast is not useful.
+        // TODO(cory): We should actually add EOF handling here, because EOF can be meaningful in HTTP.
+        // See https://github.com/apple/swift-nio/issues/254
+        return .needMoreData
+    }
+
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         ctx.fireErrorCaught(error)
         if error is HTTPParserError {
