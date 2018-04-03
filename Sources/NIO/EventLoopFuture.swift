@@ -322,7 +322,7 @@ public struct EventLoopPromise<T> {
 ///
 /// This means that for any `EventLoopFuture` that your code did not create itself (via
 /// `EventLoopPromise.futureResult`), use of `hopTo` is **strongly encouraged** to help guarantee thread-safety. It
-/// should only be elided when thread-safety is provably not needed.
+/// should only be elided when thread-safety is proved to be not needed.
 ///
 /// The "thread affinity" of `EventLoopFuture`s is critical to writing safe, performant concurrent code without
 /// boilerplate. It allows you to avoid needing to write or use locks in your own code, instead using the natural
@@ -734,7 +734,7 @@ extension EventLoopFuture {
     /// Fulfill the given `EventLoopPromise` with the results from this `EventLoopFuture`.
     ///
     /// This is useful when allowing users to provide promises for you to fulfill, but
-    /// when you are calling functions that return their own proimses. They allow you to
+    /// when you are calling functions that return their own promises. They allow you to
     /// tidy up your computational pipelines. For example:
     ///
     /// ```
