@@ -36,7 +36,7 @@ function start_server() {
         port="0"
         tok_type=""
         maybe_host="localhost"
-        maybe_nio_host="$(host -4 -t a "$maybe_host" | tr ' ' '\n' | tail -1)"
+        maybe_nio_host="127.0.0.1"
     fi
 
     mkdir "$tmp/htdocs"
