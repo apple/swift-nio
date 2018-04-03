@@ -32,6 +32,19 @@
         super.init(descriptor: sock)
     }
 
+    /// Create a new instance.
+    ///
+    /// - parameters:
+    ///     - descriptor: The _Unix file descriptor_ representing the bound socket.
+    ///     - setNonBlocking: Set non-blocking mode on the socket.
+    /// - throws: An `IOError` if socket is invalid.
+    init(descriptor: CInt, setNonBlocking: Bool = false) throws {
+        super.init(descriptor: descriptor)
+        if setNonBlocking {
+            try self.setNonBlocking()
+        }
+    }
+
     /// Start to listen for new connections.
     ///
     /// - parameters:
