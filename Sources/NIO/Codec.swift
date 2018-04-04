@@ -99,7 +99,6 @@ extension ByteToMessageDecoder {
     /// Calls `decode` until there is nothing left to decode.
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         var buffer = self.unwrapInboundIn(data)
-        
         if self.cumulationBuffer != nil {
             self.cumulationBuffer!.write(buffer: &buffer)
             buffer = self.cumulationBuffer!
