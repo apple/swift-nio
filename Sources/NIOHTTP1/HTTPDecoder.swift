@@ -106,7 +106,7 @@ private struct HTTPParserState {
 
 private protocol AnyHTTPDecoder: class {
     var state: HTTPParserState { get set }
-    var pendingCallouts: [() -> Void] { get set }
+    var pendingInOut: [NIOAny] { get set }
     func popRequestMethod() -> HTTPMethod?
 }
 
@@ -177,7 +177,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     private var parser = http_parser()
     private var settings = http_parser_settings()
 
-    fileprivate var pendingCallouts: [() -> Void] = []
+    fileprivate var pendingInOut: [NIOAny] = []
     fileprivate var state = HTTPParserState()
 
     fileprivate init(type: HTTPMessageT.Type) {
@@ -227,7 +227,6 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         }
 
         settings.on_headers_complete = { parser in
-            let ctx = evacuateChannelHandlerContext(parser)
             let handler = evacuateHTTPDecoder(parser)
 
             handler.state.complete(state: handler.state.dataAwaitingState)
@@ -236,15 +235,11 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             switch handler {
             case let handler as HTTPRequestDecoder:
                 let head = handler.newRequestHead(parser)
-                handler.pendingCallouts.append {
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPServerRequestPart.head(head)))
-                }
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPServerRequestPart.head(head)))
                 return 0
             case let handler as HTTPResponseDecoder:
                 let head = handler.newResponseHead(parser)
-                handler.pendingCallouts.append {
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPClientResponsePart.head(head)))
-                }
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPClientResponsePart.head(head)))
 
                 // http_parser doesn't correctly handle responses to HEAD requests. We have to do something
                 // annoyingly opaque here, and in those cases return 1 instead of 0. This forces http_parser
@@ -264,7 +259,6 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         }
 
         settings.on_body = { parser, data, len in
-            let ctx = evacuateChannelHandlerContext(parser)
             let handler = evacuateHTTPDecoder(parser)
             assert(handler.state.dataAwaitingState == .body)
 
@@ -272,15 +266,13 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             let index = handler.state.calculateIndex(data: data!, length: len)
 
             let slice = handler.state.cumulationBuffer!.getSlice(at: index, length: len)!
-            handler.pendingCallouts.append {
-                switch handler {
-                case let handler as HTTPRequestDecoder:
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPServerRequestPart.body(slice)))
-                case let handler as HTTPResponseDecoder:
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPClientResponsePart.body(slice)))
-                default:
-                    fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
-                }
+            switch handler {
+            case let handler as HTTPRequestDecoder:
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPServerRequestPart.body(slice)))
+            case let handler as HTTPResponseDecoder:
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPClientResponsePart.body(slice)))
+            default:
+                fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
             }
 
             return 0
@@ -327,22 +319,19 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         }
 
         settings.on_message_complete = { parser in
-            let ctx = evacuateChannelHandlerContext(parser)
             let handler = evacuateHTTPDecoder(parser)
 
             handler.state.complete(state: handler.state.dataAwaitingState)
             handler.state.dataAwaitingState = .messageBegin
 
             let trailers = handler.state.currentHeaders?.count ?? 0 > 0 ? handler.state.currentHeaders : nil
-            handler.pendingCallouts.append {
-                switch handler {
-                case let handler as HTTPRequestDecoder:
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPServerRequestPart.end(trailers)))
-                case let handler as HTTPResponseDecoder:
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPClientResponsePart.end(trailers)))
-                default:
-                    fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
-                }
+            switch handler {
+            case let handler as HTTPRequestDecoder:
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPServerRequestPart.end(trailers)))
+            case let handler as HTTPResponseDecoder:
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPClientResponsePart.end(trailers)))
+            default:
+                fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
             }
             return 0
         }
@@ -406,9 +395,9 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
 
     public func channelReadComplete(ctx: ChannelHandlerContext) {
         /* call all the callbacks generated while parsing */
-        let pending = self.pendingCallouts
-        self.pendingCallouts = []
-        pending.forEach { $0() }
+        let pending = self.pendingInOut
+        self.pendingInOut = []
+        pending.forEach { ctx.fireChannelRead($0) }
         ctx.fireChannelReadComplete()
     }
 
