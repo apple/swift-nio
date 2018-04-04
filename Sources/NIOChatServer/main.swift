@@ -177,11 +177,10 @@ let channel = try { () -> Channel in
     }
 }()
 
-if let localAddress = channel.localAddress {
-    print("ChatServer started and listening on \(localAddress)")
-} else {
-    print("ChatServer started but the address could not be determined.")
+guard let localAddress = channel.localAddress else {
+    fatalError("Address was unable to bind. Please check that the socket was not closed or that the address family was understood.")
 }
+print("Server started and listening on \(localAddress)")
 
 // This will never unblock as we don't close the ServerChannel.
 try channel.closeFuture.wait()
