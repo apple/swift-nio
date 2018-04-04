@@ -18,7 +18,7 @@ set -e
 my_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 root_path="$my_path/.."
 version=$(git describe --abbrev=0 --tags || echo "0.0.0")
-modules=(NIO NIOHTTP1 NIOTLS NIOFoundationCompat)
+modules=(NIO NIOHTTP1 NIOTLS NIOFoundationCompat NIOWebSocket)
 
 if [[ "$(uname -s)" == "Linux" ]]; then
   # build code if required

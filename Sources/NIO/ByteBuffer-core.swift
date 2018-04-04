@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-let sysMalloc = malloc
-let sysRealloc = realloc
-let sysFree = free
+let sysMalloc: @convention(c) (Int) -> UnsafeMutableRawPointer? = malloc
+let sysRealloc: @convention(c) (UnsafeMutableRawPointer?, Int) -> UnsafeMutableRawPointer? = realloc
+let sysFree: @convention(c) (UnsafeMutableRawPointer?) -> Void = free
 
 #if !swift(>=4.1)
     public extension UnsafeMutableRawPointer {
@@ -45,9 +45,9 @@ public struct ByteBufferAllocator {
                   hookedMemcpy: { $0.copyMemory(from: $1, byteCount: $2) })
     }
 
-    internal init(hookedMalloc: @escaping @convention(c) (Int) -> UnsafeMutableRawPointer,
-                  hookedRealloc: @escaping @convention(c) (UnsafeMutableRawPointer, Int) -> UnsafeMutableRawPointer,
-                  hookedFree: @escaping @convention(c) (UnsafeMutableRawPointer) -> Void,
+    internal init(hookedMalloc: @escaping @convention(c) (Int) -> UnsafeMutableRawPointer?,
+                  hookedRealloc: @escaping @convention(c) (UnsafeMutableRawPointer?, Int) -> UnsafeMutableRawPointer?,
+                  hookedFree: @escaping @convention(c) (UnsafeMutableRawPointer?) -> Void,
                   hookedMemcpy: @escaping @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, Int) -> Void) {
         assert(MemoryLayout<ByteBuffer>.size <= 3 * MemoryLayout<Int>.size,
                "ByteBuffer has size \(MemoryLayout<ByteBuffer>.size) which is larger than the built-in storage of the existential containers.")
@@ -65,9 +65,9 @@ public struct ByteBufferAllocator {
         return ByteBuffer(allocator: self, startingCapacity: capacity)
     }
 
-    internal let malloc: @convention(c) (Int) -> UnsafeMutableRawPointer
-    internal let realloc: @convention(c) (UnsafeMutableRawPointer, Int) -> UnsafeMutableRawPointer
-    internal let free: @convention(c) (UnsafeMutableRawPointer) -> Void
+    internal let malloc: @convention(c) (Int) -> UnsafeMutableRawPointer?
+    internal let realloc: @convention(c) (UnsafeMutableRawPointer?, Int) -> UnsafeMutableRawPointer?
+    internal let free: @convention(c) (UnsafeMutableRawPointer?) -> Void
     internal let memcpy: @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, Int) -> Void
 
 }
@@ -194,7 +194,7 @@ public struct ByteBuffer {
 
         private static func allocateAndPrepareRawMemory(bytes: Capacity, allocator: Allocator) -> UnsafeMutableRawPointer {
             let bytes = Int(bytes)
-            let ptr = allocator.malloc(bytes)
+            let ptr = allocator.malloc(bytes)!
             /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
             ptr.bindMemory(to: UInt8.self, capacity: bytes)
             return ptr
@@ -219,7 +219,7 @@ public struct ByteBuffer {
         }
 
         public func reallocStorage(capacity: Capacity) {
-            let ptr = self.allocator.realloc(self.bytes, Int(capacity))
+            let ptr = self.allocator.realloc(self.bytes, Int(capacity))!
             /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
             ptr.bindMemory(to: UInt8.self, capacity: Int(capacity))
             self.bytes = ptr
