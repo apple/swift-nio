@@ -859,14 +859,7 @@ extension EventLoopFuture {
     ///     - eventLoop: The `EventLoop` on which the new `EventLoopFuture` callbacks will fire.
     /// - returns: A new `EventLoopFuture`.
     public static func andAll(_ futures: [EventLoopFuture<Void>], eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let p0: EventLoopPromise<Void> = eventLoop.newPromise()
-        guard futures.count > 0 else {
-            p0.succeed(result: ())
-            return p0.futureResult
-        }
-
-        let body: EventLoopFuture<Void> = futures.reduce(p0.futureResult, { (f1: EventLoopFuture<Void>, f2: EventLoopFuture<Void>) in f1.and(f2).map({ (_ : ((), ())) in }) })
-        p0.succeed(result: ())
+        let body = EventLoopFuture<Void>.reduce((), futures, eventLoop: eventLoop) { (_: (), _: ()) in }
         return body
     }
     

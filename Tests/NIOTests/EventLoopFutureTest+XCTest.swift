@@ -36,6 +36,7 @@ extension EventLoopFutureTest {
                 ("testFoldWithFailureAndAllSuccesses", testFoldWithFailureAndAllSuccesses),
                 ("testFoldWithFailureAndAllUnfulfilled", testFoldWithFailureAndAllUnfulfilled),
                 ("testFoldWithFailureAndAllFailures", testFoldWithFailureAndAllFailures),
+                ("testAndAllWithEmptyFutureList", testAndAllWithEmptyFutureList),
                 ("testAndAllWithAllSuccesses", testAndAllWithAllSuccesses),
                 ("testAndAllWithAllFailures", testAndAllWithAllFailures),
                 ("testAndAllWithOneFailure", testAndAllWithOneFailure),

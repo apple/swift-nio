@@ -227,6 +227,15 @@ class EventLoopFutureTest : XCTestCase {
             XCTFail("error of wrong type \(e)")
         }
     }
+    
+    func testAndAllWithEmptyFutureList() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let futures: [EventLoopFuture<Void>] = []
+        
+        let fN: EventLoopFuture<Void> = EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
+       
+        XCTAssert(fN.isFulfilled)
+    }
 
     func testAndAllWithAllSuccesses() throws {
         let eventLoop = EmbeddedEventLoop()
