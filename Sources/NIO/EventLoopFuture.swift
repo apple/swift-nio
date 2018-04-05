@@ -869,6 +869,32 @@ extension EventLoopFuture {
         p0.succeed(result: ())
         return body
     }
+    
+    /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
+    /// The new `EventLoopFuture` contains the result of reducing the `initialResult` with the
+    /// values of the `[EventLoopFuture<U>]`.
+    ///
+    /// The returned `EventLoopFuture` will fail as soon as a failure is encountered in any of the
+    /// `futures`. However, the failure will not occur until all preceding
+    /// `EventLoopFutures` have completed. At the point the failure is encountered, all subsequent
+    /// `EventLoopFuture` objects will no longer be waited for. This function therefore fails fast: once
+    /// a failure is encountered, it will immediately fail the overall `EventLoopFuture`.
+    ///
+    /// - parameters:
+    ///     - initialResult: An initial result to begin the reduction.
+    ///     - futures: An array of `EventLoopFuture` to wait for.
+    ///     - eventLoop: The `EventLoop` on which the new `EventLoopFuture` callbacks will fire.
+    ///     - nextPartialResult: The bifunction used to produce partial results.
+    /// - returns: A new `EventLoopFuture` with the reduced value.
+    public static func reduce<U>(_ initialResult: T, _ futures: [EventLoopFuture<U>], eventLoop: EventLoop, _ nextPartialResult: @escaping (T, U) -> T) -> EventLoopFuture<T> {
+        let f0 = eventLoop.newSucceededFuture(result: initialResult)
+        
+        let body = f0.fold(futures) { (t: T, u: U) -> EventLoopFuture<T> in
+            eventLoop.newSucceededFuture(result: nextPartialResult(t, u))
+        }
+        
+        return body
+    }
 }
 
 extension EventLoopFuture {

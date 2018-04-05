@@ -277,6 +277,98 @@ class EventLoopFutureTest : XCTestCase {
             XCTFail("error of wrong type \(e)")
         }
     }
+    
+    func testReduceWithAllSuccesses() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let promises: [EventLoopPromise<Int>] = (0..<5).map { (_: Int) in eventLoop.newPromise() }
+        let futures = promises.map { $0.futureResult }
+        
+        let fN: EventLoopFuture<[Int]> = EventLoopFuture<[Int]>.reduce([], futures, eventLoop: eventLoop) {$0 + [$1]}
+        for i in 1...5 {
+            promises[i - 1].succeed(result: (i))
+        }
+        let results = try fN.wait()
+        XCTAssertEqual(results, [1, 2, 3, 4, 5])
+        XCTAssert(fN.eventLoop === eventLoop)
+    }
+    
+    func testReduceWithOnlyInitialValue() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let futures: [EventLoopFuture<Int>] = []
+        
+        let fN: EventLoopFuture<[Int]> = EventLoopFuture<[Int]>.reduce([], futures, eventLoop: eventLoop) {$0 + [$1]}
+        
+        let results = try fN.wait()
+        XCTAssertEqual(results, [])
+        XCTAssert(fN.eventLoop === eventLoop)
+    }
+    
+    func testReduceWithAllFailures() throws {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        let promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
+        let futures = promises.map { $0.futureResult }
+        
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, eventLoop: eventLoop, +)
+        _ = promises.map { $0.fail(error: E()) }
+        XCTAssert(fN.eventLoop === eventLoop)
+        do {
+            _ = try fN.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
+    
+    func testReduceWithOneFailure() throws {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        var promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
+        _ = promises.map { $0.succeed(result: (1)) }
+        let failedPromise: EventLoopPromise<Int> = eventLoop.newPromise()
+        failedPromise.fail(error: E())
+        promises.append(failedPromise)
+        
+        let futures = promises.map { $0.futureResult }
+        
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, eventLoop: eventLoop, +)
+        XCTAssert(fN.eventLoop === eventLoop)
+        do {
+            _ = try fN.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
+    
+    func testReduceWhichDoesFailFast() throws {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        var promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
+        
+        let failedPromise: EventLoopPromise<Int> = eventLoop.newPromise()
+        promises.insert(failedPromise, at: promises.startIndex)
+        
+        let futures = promises.map { $0.futureResult }
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, eventLoop: eventLoop, +)
+        
+        failedPromise.fail(error: E())
+
+        XCTAssertTrue(fN.isFulfilled)
+        XCTAssert(fN.eventLoop === eventLoop)
+        do {
+            _ = try fN.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
 
     func testThenThrowingWhichDoesNotThrow() {
         let eventLoop = EmbeddedEventLoop()
