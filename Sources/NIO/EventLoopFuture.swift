@@ -867,6 +867,9 @@ extension EventLoopFuture {
     /// The new `EventLoopFuture` contains the result of reducing the `initialResult` with the
     /// values of the `[EventLoopFuture<U>]`.
     ///
+    /// This function makes copies of the result for each EventLoopFuture, for a version which avoids
+    /// making copies, check out `reduce<U>(into:)`.
+    ///
     /// The returned `EventLoopFuture` will fail as soon as a failure is encountered in any of the
     /// `futures`. However, the failure will not occur until all preceding
     /// `EventLoopFutures` have completed. At the point the failure is encountered, all subsequent
@@ -887,6 +890,45 @@ extension EventLoopFuture {
         }
         
         return body
+    }
+    
+    /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
+    /// The new `EventLoopFuture` contains the result of combining the `initialResult` with the
+    /// values of the `[EventLoopFuture<U>]`. This funciton is analogous to the standard library's
+    /// `reduce(into:)`, which does not make copies of the result type for each `EventLoopFuture`.
+    ///
+    /// The returned `EventLoopFuture` will fail as soon as a failure is encountered in any of the
+    /// `futures`. However, the failure will not occur until all preceding
+    /// `EventLoopFutures` have completed. At the point the failure is encountered, all subsequent
+    /// `EventLoopFuture` objects will no longer be waited for. This function therefore fails fast: once
+    /// a failure is encountered, it will immediately fail the overall `EventLoopFuture`.
+    ///
+    /// - parameters:
+    ///     - initialResult: An initial result to begin the reduction.
+    ///     - futures: An array of `EventLoopFuture` to wait for.
+    ///     - eventLoop: The `EventLoop` on which the new `EventLoopFuture` callbacks will fire.
+    ///     - updateAccumulatingResult: The bifunction used to combine partialResults with new elements.
+    /// - returns: A new `EventLoopFuture` with the combined value.
+    public static func reduce<U>(into initialResult: T, _ futures: [EventLoopFuture<U>], eventLoop: EventLoop, _ updateAccumulatingResult: @escaping (inout T, U) -> Void) -> EventLoopFuture<T> {
+        let p0: EventLoopPromise<T> = eventLoop.newPromise()
+        var result: T = initialResult
+        
+        let f0 = eventLoop.newSucceededFuture(result: ())
+        let future = f0.fold(futures) { (_: (), value: U) -> EventLoopFuture<Void> in
+            assert(eventLoop.inEventLoop)
+            updateAccumulatingResult(&result, value)
+            return eventLoop.newSucceededFuture(result: ())
+        }
+        
+        future.whenSuccess {
+            assert(eventLoop.inEventLoop)
+            p0.succeed(result: result)
+        }
+        future.whenFailure { (error) in
+            assert(eventLoop.inEventLoop)
+            p0.fail(error: error)
+        }
+        return p0.futureResult
     }
 }
 
