@@ -245,6 +245,14 @@ private final class HTTPHandler: ChannelInboundHandler {
     }
 
     func dynamicHandler(request reqHead: HTTPRequestHead) -> ((ChannelHandlerContext, HTTPServerRequestPart) -> Void)? {
+        if let howLong = reqHead.uri.chopPrefix("/dynamic/write-delay/") {
+            return { ctx, req in
+                self.handleJustWrite(ctx: ctx,
+                                     request: req, string: "Hello World\r\n",
+                                     delay: Int(howLong).map { .milliseconds($0) } ?? .seconds(0))
+            }
+        }
+
         switch reqHead.uri {
         case "/dynamic/echo":
             return self.handleEcho
@@ -447,7 +455,12 @@ private final class HTTPHandler: ChannelInboundHandler {
 }
 
 // First argument is the program path
-let arguments = CommandLine.arguments
+var arguments = CommandLine.arguments.dropFirst(0) // just to get an ArraySlice<String> from [String]
+var allowHalfClosure = true
+if arguments.dropFirst().first == .some("--disable-half-closure") {
+    allowHalfClosure = false
+    arguments = arguments.dropFirst()
+}
 let arg1 = arguments.dropFirst().first
 let arg2 = arguments.dropFirst().dropFirst().first
 let arg3 = arguments.dropFirst().dropFirst().dropFirst().first
@@ -503,7 +516,7 @@ let bootstrap = ServerBootstrap(group: group)
     .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-    .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+    .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: allowHalfClosure)
 
 defer {
     try! group.syncShutdownGracefully()

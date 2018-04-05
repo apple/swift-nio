@@ -22,6 +22,11 @@ function create_token() {
 }
 
 function start_server() {
+    local extra_args=''
+    if [[ "$1" == "--disable-half-closure" ]]; then
+        extra_args="$1"
+        shift
+    fi
     local token="$1"
     local type="--uds"
     local port="$tmp/port.sock"
@@ -41,7 +46,7 @@ function start_server() {
 
     mkdir "$tmp/htdocs"
     swift build
-    "$(swift build --show-bin-path)/NIOHTTP1Server" $maybe_nio_host "$port" "$tmp/htdocs" &
+    "$(swift build --show-bin-path)/NIOHTTP1Server" $extra_args $maybe_nio_host "$port" "$tmp/htdocs" &
     tmp_server_pid=$!
     if [[ -z "$type" ]]; then
         # TCP mode, need to wait until we found a port that we can curl
@@ -68,7 +73,7 @@ function start_server() {
     echo "curl port: $curl_port"
     echo "local token_port;   local token_htdocs;         local token_pid;"      >> "$token"
     echo "      token_port='$port'; token_htdocs='$tmp/htdocs'; token_pid='$!';" >> "$token"
-    echo "      token_type='$tok_type';" >> "$token"
+    echo "      token_type='$tok_type'; token_server_ip='$maybe_nio_host'" >> "$token"
     tmp_server_pid=$(get_server_pid "$token")
     echo "local token_open_fds" >> "$token"
     echo "token_open_fds='$(server_lsof "$tmp_server_pid" | wc -l)'" >> "$token"
@@ -119,6 +124,11 @@ function get_server_pid() {
 function get_server_port() {
     source "$1"
     echo "$token_port"
+}
+
+function get_server_ip() {
+    source "$1"
+    echo "$token_server_ip"
 }
 
 function do_curl() {
