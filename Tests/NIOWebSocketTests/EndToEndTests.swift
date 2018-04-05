@@ -127,7 +127,7 @@ class EndToEndTests: XCTestCase {
         let receivedResponse = client.readAllInboundBuffers().allAsString()
         assertResponseIs(response: receivedResponse,
                          expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                         expectedResponseHeaders: ["upgrade: websocket", "sec-websocket-accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "connection: upgrade"])
+                         expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"])
     }
 
     func testCanRejectUpgrade() throws {
@@ -267,7 +267,7 @@ class EndToEndTests: XCTestCase {
         let receivedResponse = client.readAllInboundBuffers().allAsString()
         assertResponseIs(response: receivedResponse,
                          expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                         expectedResponseHeaders: ["upgrade: websocket", "sec-websocket-accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "connection: upgrade", "testheader: TestValue"])
+                         expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade", "TestHeader: TestValue"])
     }
 
     func testMayRegisterMultipleWebSocketEndpoints() throws {
@@ -298,7 +298,7 @@ class EndToEndTests: XCTestCase {
         let receivedResponse = client.readAllInboundBuffers().allAsString()
         assertResponseIs(response: receivedResponse,
                          expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                         expectedResponseHeaders: ["upgrade: websocket", "sec-websocket-accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "connection: upgrade", "target: third"])
+                         expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade", "Target: third"])
     }
 
     func testSendAFewFrames() throws {
@@ -322,7 +322,7 @@ class EndToEndTests: XCTestCase {
         let receivedResponse = client.readAllInboundBuffers().allAsString()
         assertResponseIs(response: receivedResponse,
                          expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                         expectedResponseHeaders: ["upgrade: websocket", "sec-websocket-accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "connection: upgrade"])
+                         expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"])
 
         // Put a frame encoder in the client pipeline.
         XCTAssertNoThrow(try client.pipeline.add(handler: WebSocketFrameEncoder()).wait())
