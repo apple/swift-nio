@@ -76,12 +76,12 @@ public class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        var serverAcceptedChannel: Channel? = nil
+        let serverAcceptedChannelPromise: EventLoopPromise<Channel> = group.next().newPromise()
         let serverLifecycleHandler = ChannelLifecycleHandler()
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                serverAcceptedChannel = channel
+                serverAcceptedChannelPromise.succeed(result: channel)
                 return channel.pipeline.add(handler: serverLifecycleHandler)
             }.bind(host: "127.0.0.1", port: 0).wait()
 
@@ -94,11 +94,13 @@ public class ChannelTests: XCTestCase {
         buffer.write(string: "a")
         try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
+        let serverAcceptedChannel = try serverAcceptedChannelPromise.futureResult.wait()
+
         // Start shutting stuff down.
         try clientChannel.close().wait()
 
         // Wait for the close promises. These fire last.
-        try EventLoopFuture<Void>.andAll([clientChannel.closeFuture, serverAcceptedChannel!.closeFuture], eventLoop: group.next()).map {
+        try EventLoopFuture<Void>.andAll([clientChannel.closeFuture, serverAcceptedChannel.closeFuture], eventLoop: group.next()).map {
             XCTAssertEqual(clientLifecycleHandler.currentState, .unregistered)
             XCTAssertEqual(serverLifecycleHandler.currentState, .unregistered)
             XCTAssertEqual(clientLifecycleHandler.stateHistory, [.unregistered, .registered, .active, .inactive, .unregistered])
