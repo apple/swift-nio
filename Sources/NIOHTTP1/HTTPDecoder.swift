@@ -25,6 +25,7 @@ private struct HTTPParserState {
     var readerIndexAdjustment = 0
     // This is set before http_parser_execute(...) is called and set to nil again after it finish
     var baseAddress: UnsafePointer<UInt8>?
+    var currentError: HTTPParserError?
 
     enum DataAwaitingState {
         case messageBegin
@@ -235,10 +236,20 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             switch handler {
             case let handler as HTTPRequestDecoder:
                 let head = handler.newRequestHead(parser)
+                guard head.version.major == 1 else {
+                    handler.state.currentError = HTTPParserError.invalidVersion
+                    return -1
+                }
+
                 handler.pendingInOut.append(handler.wrapInboundOut(HTTPServerRequestPart.head(head)))
                 return 0
             case let handler as HTTPResponseDecoder:
                 let head = handler.newResponseHead(parser)
+                guard head.version.major == 1 else {
+                    handler.state.currentError = HTTPParserError.invalidVersion
+                    return -1
+                }
+
                 handler.pendingInOut.append(handler.wrapInboundOut(HTTPClientResponsePart.head(head)))
 
                 // http_parser doesn't correctly handle responses to HEAD requests. We have to do something
@@ -367,6 +378,10 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             let result = state.baseAddress!.withMemoryRebound(to: Int8.self, capacity: pointer.count, { p in
                 c_nio_http_parser_execute(&parser, &settings, p.advanced(by: buffer.readerIndex), buffer.readableBytes)
             })
+
+            if let error = state.currentError {
+                throw error
+            }
 
             state.baseAddress = nil
 
