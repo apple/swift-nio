@@ -17,6 +17,20 @@ import XCTest
 import NIOConcurrencyHelpers
 import Dispatch
 
+func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String, file: StaticString = #file, line: UInt = #line) {
+    let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
+    let endTime = DispatchTime.now().uptimeNanoseconds + UInt64(time.nanoseconds)
+
+    repeat {
+        if condition() { return }
+        usleep(UInt32(testInterval.nanoseconds / 1000))
+    } while (DispatchTime.now().uptimeNanoseconds < endTime)
+
+    if !condition() {
+        XCTFail(message)
+    }
+}
+
 class ChannelLifecycleHandler: ChannelInboundHandler {
     public typealias InboundIn = Any
 
@@ -1394,9 +1408,14 @@ public class ChannelTests: XCTestCase {
         } catch {
             XCTFail("wrong error \(error) received")
         }
-        XCTAssertNil(weakClientChannel, "weakClientChannel not nil, looks like we leaked it!")
-        XCTAssertNil(weakServerChannel, "weakServerChannel not nil, looks like we leaked it!")
-        XCTAssertNil(weakServerChildChannel, "weakServerChildChannel not nil, looks like we leaked it!")
+
+        // Annoyingly it's totally possible to get to this stage and have the channels
+        // not yet be entirely freed on the background thread. There is no way we can guarantee
+        // that this hasn't happened, so we wait for up to a second to let this happen. If it hasn't
+        // happened in one second, we assume it never will.
+        assert(weakClientChannel == nil, within: .seconds(1), "weakClientChannel not nil, looks like we leaked it!")
+        assert(weakServerChannel == nil, within: .seconds(1), "weakServerChannel not nil, looks like we leaked it!")
+        assert(weakServerChildChannel == nil, within: .seconds(1), "weakServerChildChannel not nil, looks like we leaked it!")
     }
 
     func testAskForLocalAndRemoteAddressesAfterChannelIsClosed() throws {
