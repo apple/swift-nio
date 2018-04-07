@@ -145,10 +145,7 @@ public final class ConditionLock<T: Equatable> {
     ///     to have before acquiring the lock.
     public func lock(whenValue wantedValue: T) {
         self.lock()
-        while true {
-            if self._value == wantedValue {
-                break
-            }
+        while self._value != wantedValue {
             let err = pthread_cond_wait(self.cond, self.mutex.mutex)
             precondition(err == 0, "pthread_cond_wait error \(err)")
         }
@@ -178,10 +175,7 @@ public final class ConditionLock<T: Equatable> {
                                   tv_nsec: Int(allNSecs % nsecPerSec))
         assert(timeoutAbs.tv_nsec >= 0 && timeoutAbs.tv_nsec < Int(nsecPerSec))
         assert(timeoutAbs.tv_sec >= curTime.tv_sec)
-        while true {
-            if self._value == wantedValue {
-                return true
-            }
+        while self._value != wantedValue {
             switch pthread_cond_timedwait(self.cond, self.mutex.mutex, &timeoutAbs) {
             case 0:
                 continue
@@ -192,6 +186,7 @@ public final class ConditionLock<T: Equatable> {
                 fatalError("caught error \(e) when calling pthread_cond_timedwait")
             }
         }
+        return true
     }
 
     /// Release the lock, setting the state variable to `newValue`.
@@ -199,9 +194,10 @@ public final class ConditionLock<T: Equatable> {
     /// - Parameter newValue: The value to give to the state variable when we
     ///     release the lock.
     public func unlock(withValue newValue: T) {
+        self.lock()
         self._value = newValue
-        self.unlock()
         let r = pthread_cond_broadcast(self.cond)
         precondition(r == 0)
+        self.unlock()
     }
 }
