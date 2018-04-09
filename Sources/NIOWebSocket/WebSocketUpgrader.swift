@@ -30,7 +30,7 @@ public enum NIOWebSocketUpgradeError: Error {
 
 fileprivate extension HTTPHeaders {
     fileprivate func nonListHeader(_ name: String) throws -> String {
-        let fields = self.getCanonicalForm(name)
+        let fields = self[canonicalForm: name]
         guard fields.count == 1 else {
             throw NIOWebSocketUpgradeError.invalidUpgradeHeader
         }
