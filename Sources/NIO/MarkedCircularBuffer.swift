@@ -89,7 +89,7 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
 
     // MARK: Marking
 
-    /// Marks the buffer at the current index, making the last idex in the buffer marked.
+    /// Marks the buffer at the current index, making the last index in the buffer marked.
     public mutating func mark() {
         let count = self.buffer.count
         if count > 0 {

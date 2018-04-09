@@ -80,10 +80,10 @@ class HTTPHeadersTest : XCTestCase {
                                 ("X-Something", "5")]
 
         let headers = HTTPHeaders(originalHeaders)
-        XCTAssertEqual(headers.getCanonicalForm("user-agent"), ["1"])
-        XCTAssertEqual(headers.getCanonicalForm("host"), ["2"])
-        XCTAssertEqual(headers.getCanonicalForm("x-something"), ["3", "4", "5"])
-        XCTAssertEqual(headers.getCanonicalForm("foo"), [])
+        XCTAssertEqual(headers[canonicalForm: "user-agent"], ["1"])
+        XCTAssertEqual(headers[canonicalForm: "host"], ["2"])
+        XCTAssertEqual(headers[canonicalForm: "x-something"], ["3", "4", "5"])
+        XCTAssertEqual(headers[canonicalForm: "foo"], [])
     }
 
     func testSubscriptDoesntSplitHeaders() {
@@ -106,10 +106,10 @@ class HTTPHeadersTest : XCTestCase {
                                 ("Set-Cookie", "buz=cux; expires=Fri, 13 Oct 2017 21:21:41 GMT")]
 
         let headers = HTTPHeaders(originalHeaders)
-        XCTAssertEqual(headers.getCanonicalForm("user-agent"), ["1"])
-        XCTAssertEqual(headers.getCanonicalForm("host"), ["2"])
-        XCTAssertEqual(headers.getCanonicalForm("set-cookie"), ["foo=bar; expires=Sun, 17-Mar-2013 13:49:50 GMT",
-                                                                "buz=cux; expires=Fri, 13 Oct 2017 21:21:41 GMT"])
+        XCTAssertEqual(headers[canonicalForm: "user-agent"], ["1"])
+        XCTAssertEqual(headers[canonicalForm: "host"], ["2"])
+        XCTAssertEqual(headers[canonicalForm: "set-cookie"], ["foo=bar; expires=Sun, 17-Mar-2013 13:49:50 GMT",
+                                                              "buz=cux; expires=Fri, 13 Oct 2017 21:21:41 GMT"])
     }
 
     func testTrimWhitespaceWorksOnEmptyString() {

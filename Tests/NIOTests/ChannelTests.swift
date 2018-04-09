@@ -17,6 +17,20 @@ import XCTest
 import NIOConcurrencyHelpers
 import Dispatch
 
+func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String, file: StaticString = #file, line: UInt = #line) {
+    let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
+    let endTime = DispatchTime.now().uptimeNanoseconds + UInt64(time.nanoseconds)
+
+    repeat {
+        if condition() { return }
+        usleep(UInt32(testInterval.nanoseconds / 1000))
+    } while (DispatchTime.now().uptimeNanoseconds < endTime)
+
+    if !condition() {
+        XCTFail(message)
+    }
+}
+
 class ChannelLifecycleHandler: ChannelInboundHandler {
     public typealias InboundIn = Any
 
@@ -76,12 +90,12 @@ public class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        var serverAcceptedChannel: Channel? = nil
+        let serverAcceptedChannelPromise: EventLoopPromise<Channel> = group.next().newPromise()
         let serverLifecycleHandler = ChannelLifecycleHandler()
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                serverAcceptedChannel = channel
+                serverAcceptedChannelPromise.succeed(result: channel)
                 return channel.pipeline.add(handler: serverLifecycleHandler)
             }.bind(host: "127.0.0.1", port: 0).wait()
 
@@ -94,11 +108,13 @@ public class ChannelTests: XCTestCase {
         buffer.write(string: "a")
         try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
+        let serverAcceptedChannel = try serverAcceptedChannelPromise.futureResult.wait()
+
         // Start shutting stuff down.
         try clientChannel.close().wait()
 
         // Wait for the close promises. These fire last.
-        try EventLoopFuture<Void>.andAll([clientChannel.closeFuture, serverAcceptedChannel!.closeFuture], eventLoop: group.next()).map {
+        try EventLoopFuture<Void>.andAll([clientChannel.closeFuture, serverAcceptedChannel.closeFuture], eventLoop: group.next()).map {
             XCTAssertEqual(clientLifecycleHandler.currentState, .unregistered)
             XCTAssertEqual(serverLifecycleHandler.currentState, .unregistered)
             XCTAssertEqual(clientLifecycleHandler.stateHistory, [.unregistered, .registered, .active, .inactive, .unregistered])
@@ -1370,8 +1386,15 @@ public class ChannelTests: XCTestCase {
             weakClientChannel = clientChannel
             weakServerChannel = serverChannel
             weakServerChildChannel = try serverChildChannelPromise.futureResult.wait()
-            _ = try? clientChannel.close().wait()
-            XCTAssertNoThrow(try serverChannel.close().wait())
+            _ = clientChannel.close()
+            _ = serverChannel.close()
+
+            // We need to wait for the close futures to fire before we move on. Before the
+            // close promises are hit, the channel can keep a reference to itself alive because it's running
+            // background code on the event loop. Completing the close promise should be the last thing the
+            // channel will ever do, assuming there is no work holding a ref to it anywhere.
+            XCTAssertNoThrow(try clientChannel.closeFuture.wait())
+            XCTAssertNoThrow(try serverChannel.closeFuture.wait())
         }()
         let pipeline = try promise.futureResult.wait()
         do {
@@ -1385,9 +1408,14 @@ public class ChannelTests: XCTestCase {
         } catch {
             XCTFail("wrong error \(error) received")
         }
-        XCTAssertNil(weakClientChannel, "weakClientChannel not nil, looks like we leaked it!")
-        XCTAssertNil(weakServerChannel, "weakServerChannel not nil, looks like we leaked it!")
-        XCTAssertNil(weakServerChildChannel, "weakServerChildChannel not nil, looks like we leaked it!")
+
+        // Annoyingly it's totally possible to get to this stage and have the channels
+        // not yet be entirely freed on the background thread. There is no way we can guarantee
+        // that this hasn't happened, so we wait for up to a second to let this happen. If it hasn't
+        // happened in one second, we assume it never will.
+        assert(weakClientChannel == nil, within: .seconds(1), "weakClientChannel not nil, looks like we leaked it!")
+        assert(weakServerChannel == nil, within: .seconds(1), "weakServerChannel not nil, looks like we leaked it!")
+        assert(weakServerChildChannel == nil, within: .seconds(1), "weakServerChildChannel not nil, looks like we leaked it!")
     }
 
     func testAskForLocalAndRemoteAddressesAfterChannelIsClosed() throws {

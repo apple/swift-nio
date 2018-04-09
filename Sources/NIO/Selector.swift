@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Dispatch
+
 private enum SelectorLifecycleState {
     case open
     case closing
@@ -50,6 +52,7 @@ final class Selector<R: Registration> {
     private typealias EventType = Epoll.epoll_event
     private let eventfd: Int32
     private let timerfd: Int32
+    private var earliestTimer: UInt64 = UInt64.max
     #else
     private typealias EventType = kevent
     #endif
@@ -124,7 +127,7 @@ final class Selector<R: Registration> {
 
         /* this is technically a bad idea as we're abusing ARC to deallocate scarce resources (a file descriptor)
          for us. However, this is used for the event loop so there shouldn't be much churn.
-         The reson we do this is because `self.wakeup()` may (and will!) be called on arbitrary threads. To not
+         The reason we do this is because `self.wakeup()` may (and will!) be called on arbitrary threads. To not
          suffer from race conditions we would need to protect waking the selector up and closing the selector. That
          is likely to cause performance problems. By abusing ARC, we get the guarantee that there won't be any future
          wakeup calls as there are no references to this selector left. 💁
@@ -352,9 +355,17 @@ final class Selector<R: Registration> {
         case .now:
             ready = Int(try Epoll.epoll_wait(epfd: self.fd, events: events, maxevents: Int32(eventsCapacity), timeout: 0))
         case .blockUntilTimeout(let timeAmount):
-            var ts = itimerspec()
-            ts.it_value = timespec(timeAmount: timeAmount)
-            try TimerFd.timerfd_settime(fd: timerfd, flags: 0, newValue: &ts, oldValue: nil)
+            // Only call timerfd_settime if we not already scheduled one that will cover it.
+            // This guards against calling timerfd_settime if not needed as this is generally speaking
+            // expensive.
+            let next = DispatchTime.now().uptimeNanoseconds + UInt64(timeAmount.nanoseconds)
+            if next < self.earliestTimer {
+                self.earliestTimer = next
+
+                var ts = itimerspec()
+                ts.it_value = timespec(timeAmount: timeAmount)
+                try TimerFd.timerfd_settime(fd: timerfd, flags: 0, newValue: &ts, oldValue: nil)
+            }
             fallthrough
         case .block:
             ready = Int(try Epoll.epoll_wait(epfd: self.fd, events: events, maxevents: Int32(eventsCapacity), timeout: -1))
@@ -372,6 +383,9 @@ final class Selector<R: Registration> {
                 var val: UInt = 0
                 // We are not interested in the result
                 _ = Glibc.read(timerfd, &val, MemoryLayout<UInt>.size)
+
+                // Processed the earliest set timer so reset it.
+                self.earliestTimer = UInt64.max
             default:
                 // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skip it.
                 if let registration = registrations[Int(ev.data.fd)] {

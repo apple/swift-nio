@@ -23,7 +23,7 @@ public struct Scheduled<T> {
     private let promise: EventLoopPromise<T>
     private let cancellationTask: () -> Void
 
-    init(promise: EventLoopPromise<T>, cancellationTask: @escaping () -> Void) {
+    public init(promise: EventLoopPromise<T>, cancellationTask: @escaping () -> Void) {
         self.promise = promise
         promise.futureResult.whenFailure { error in
             guard let err = error as? EventLoopError else {
@@ -86,7 +86,7 @@ public protocol EventLoop: EventLoopGroup {
     /// Submit a given task to be executed by the `EventLoop`. Once the execution is complete the returned `EventLoopFuture` is notified.
     ///
     /// - parameters:
-    ///     - task: The closure that will be submited to the `EventLoop` for execution.
+    ///     - task: The closure that will be submitted to the `EventLoop` for execution.
     /// - returns: `EventLoopFuture` that is notified once the task was executed.
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
 

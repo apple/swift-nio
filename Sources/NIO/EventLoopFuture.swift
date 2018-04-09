@@ -734,7 +734,7 @@ extension EventLoopFuture {
     /// Fulfill the given `EventLoopPromise` with the results from this `EventLoopFuture`.
     ///
     /// This is useful when allowing users to provide promises for you to fulfill, but
-    /// when you are calling functions that return their own proimses. They allow you to
+    /// when you are calling functions that return their own promises. They allow you to
     /// tidy up your computational pipelines. For example:
     ///
     /// ```
@@ -812,6 +812,37 @@ extension EventLoopFuture {
         case .failure(let error):
             throw error
         }
+    }
+}
+
+extension EventLoopFuture {
+    /// Returns a new `EventLoopFuture` that fires only when this `EventLoopFuture` and
+    /// all the provided `futures` complete. It then provides the result of folding the value of this
+    /// `EventLoopFuture` with the values of all the provided `futures`.
+    ///
+    /// This function is suited when you have APIs that already know how to return `EventLoopFuture`s.
+    ///
+    /// The returned `EventLoopFuture` will fail as soon as the a failure is encountered in any of the
+    /// `futures` (or in this one). However, the failure will not occur until all preceding
+    /// `EventLoopFutures` have completed. At the point the failure is encountered, all subsequent
+    /// `EventLoopFuture` objects will no longer be waited for. This function therefore fails fast: once
+    /// a failure is encountered, it will immediately fail the overall EventLoopFuture.
+    ///
+    /// - parameters:
+    ///     - futures: An array of `EventLoopFuture<U>` to wait for.
+    ///     - with: A function that will be used to fold the values of two `EventLoopFuture`s and return a new value wrapped in an `EventLoopFuture`.
+    /// - returns: A new `EventLoopFuture` with the folded value whose callbacks run on `self.eventLoop`.
+    public func fold<U>(_ futures: [EventLoopFuture<U>], with combiningFunction: @escaping (T, U) -> EventLoopFuture<T>) -> EventLoopFuture<T> {
+        let body = futures.reduce(self) { (f1: EventLoopFuture<T>, f2: EventLoopFuture<U>) -> EventLoopFuture<T> in
+            let newFuture = f1.and(f2).then { (args: (T, U)) -> EventLoopFuture<T> in
+                let (f1Value, f2Value) = args
+                assert(self.eventLoop.inEventLoop)
+                return combiningFunction(f1Value, f2Value)
+            }
+            assert(newFuture.eventLoop === self.eventLoop)
+            return newFuture
+        }
+        return body
     }
 }
 

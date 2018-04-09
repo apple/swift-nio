@@ -25,6 +25,7 @@ private struct HTTPParserState {
     var readerIndexAdjustment = 0
     // This is set before http_parser_execute(...) is called and set to nil again after it finish
     var baseAddress: UnsafePointer<UInt8>?
+    var currentError: HTTPParserError?
 
     enum DataAwaitingState {
         case messageBegin
@@ -106,7 +107,7 @@ private struct HTTPParserState {
 
 private protocol AnyHTTPDecoder: class {
     var state: HTTPParserState { get set }
-    var pendingCallouts: [() -> Void] { get set }
+    var pendingInOut: [NIOAny] { get set }
     func popRequestMethod() -> HTTPMethod?
 }
 
@@ -177,7 +178,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     private var parser = http_parser()
     private var settings = http_parser_settings()
 
-    fileprivate var pendingCallouts: [() -> Void] = []
+    fileprivate var pendingInOut: [NIOAny] = []
     fileprivate var state = HTTPParserState()
 
     fileprivate init(type: HTTPMessageT.Type) {
@@ -227,7 +228,6 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         }
 
         settings.on_headers_complete = { parser in
-            let ctx = evacuateChannelHandlerContext(parser)
             let handler = evacuateHTTPDecoder(parser)
 
             handler.state.complete(state: handler.state.dataAwaitingState)
@@ -236,15 +236,21 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             switch handler {
             case let handler as HTTPRequestDecoder:
                 let head = handler.newRequestHead(parser)
-                handler.pendingCallouts.append {
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPServerRequestPart.head(head)))
+                guard head.version.major == 1 else {
+                    handler.state.currentError = HTTPParserError.invalidVersion
+                    return -1
                 }
+
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPServerRequestPart.head(head)))
                 return 0
             case let handler as HTTPResponseDecoder:
                 let head = handler.newResponseHead(parser)
-                handler.pendingCallouts.append {
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPClientResponsePart.head(head)))
+                guard head.version.major == 1 else {
+                    handler.state.currentError = HTTPParserError.invalidVersion
+                    return -1
                 }
+
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPClientResponsePart.head(head)))
 
                 // http_parser doesn't correctly handle responses to HEAD requests. We have to do something
                 // annoyingly opaque here, and in those cases return 1 instead of 0. This forces http_parser
@@ -264,7 +270,6 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         }
 
         settings.on_body = { parser, data, len in
-            let ctx = evacuateChannelHandlerContext(parser)
             let handler = evacuateHTTPDecoder(parser)
             assert(handler.state.dataAwaitingState == .body)
 
@@ -272,15 +277,13 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             let index = handler.state.calculateIndex(data: data!, length: len)
 
             let slice = handler.state.cumulationBuffer!.getSlice(at: index, length: len)!
-            handler.pendingCallouts.append {
-                switch handler {
-                case let handler as HTTPRequestDecoder:
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPServerRequestPart.body(slice)))
-                case let handler as HTTPResponseDecoder:
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPClientResponsePart.body(slice)))
-                default:
-                    fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
-                }
+            switch handler {
+            case let handler as HTTPRequestDecoder:
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPServerRequestPart.body(slice)))
+            case let handler as HTTPResponseDecoder:
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPClientResponsePart.body(slice)))
+            default:
+                fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
             }
 
             return 0
@@ -327,22 +330,19 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         }
 
         settings.on_message_complete = { parser in
-            let ctx = evacuateChannelHandlerContext(parser)
             let handler = evacuateHTTPDecoder(parser)
 
             handler.state.complete(state: handler.state.dataAwaitingState)
             handler.state.dataAwaitingState = .messageBegin
 
             let trailers = handler.state.currentHeaders?.count ?? 0 > 0 ? handler.state.currentHeaders : nil
-            handler.pendingCallouts.append {
-                switch handler {
-                case let handler as HTTPRequestDecoder:
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPServerRequestPart.end(trailers)))
-                case let handler as HTTPResponseDecoder:
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPClientResponsePart.end(trailers)))
-                default:
-                    fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
-                }
+            switch handler {
+            case let handler as HTTPRequestDecoder:
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPServerRequestPart.end(trailers)))
+            case let handler as HTTPResponseDecoder:
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPClientResponsePart.end(trailers)))
+            default:
+                fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
             }
             return 0
         }
@@ -379,6 +379,10 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
                 c_nio_http_parser_execute(&parser, &settings, p.advanced(by: buffer.readerIndex), buffer.readableBytes)
             })
 
+            if let error = state.currentError {
+                throw error
+            }
+
             state.baseAddress = nil
 
             let errno = parser.http_errno
@@ -406,10 +410,17 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
 
     public func channelReadComplete(ctx: ChannelHandlerContext) {
         /* call all the callbacks generated while parsing */
-        let pending = self.pendingCallouts
-        self.pendingCallouts = []
-        pending.forEach { $0() }
+        let pending = self.pendingInOut
+        self.pendingInOut = []
+        pending.forEach { ctx.fireChannelRead($0) }
         ctx.fireChannelReadComplete()
+    }
+
+    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+        // This handler parses data eagerly, so re-parsing for decodeLast is not useful.
+        // TODO(cory): We should actually add EOF handling here, because EOF can be meaningful in HTTP.
+        // See https://github.com/apple/swift-nio/issues/254
+        return .needMoreData
     }
 
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {

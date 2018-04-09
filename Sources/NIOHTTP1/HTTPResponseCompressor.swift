@@ -104,7 +104,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         if case .head(let requestHead) = unwrapInboundIn(data) {
-            acceptQueue.append(requestHead.headers.getCanonicalForm("accept-encoding"))
+            acceptQueue.append(requestHead.headers[canonicalForm: "accept-encoding"])
         }
 
         ctx.fireChannelRead(data)

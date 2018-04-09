@@ -471,7 +471,7 @@ let bootstrap = ServerBootstrap(group: group)
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
-        channel.pipeline.configureHTTPServerPipeline().then {
+        channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).then {
             channel.pipeline.add(handler: HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
         }
     }
@@ -498,7 +498,10 @@ let channel = try { () -> Channel in
     }
 }()
 
-print("Server started and listening on \(channel.localAddress!), htdocs path \(htdocs)")
+guard let localAddress = channel.localAddress else {
+    fatalError("Address was unable to bind. Please check that the socket was not closed or that the address family was understood.")
+}
+print("Server started and listening on \(localAddress), htdocs path \(htdocs)")
 
 // This will never unblock as we don't close the ServerChannel
 try channel.closeFuture.wait()

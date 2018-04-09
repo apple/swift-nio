@@ -17,6 +17,8 @@
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <hooked-functions.h>
+#include <inttypes.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,34 +27,60 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+/* a big block of memory that we'll use for recursive mallocs */
+static char g_recursive_malloc_mem[10 * 1024 * 1024] = {0};
+/* the index of the first free byte */
+static _Atomic ptrdiff_t g_recursive_malloc_next_free_ptr = ATOMIC_VAR_INIT(0);
+
 #define DYLD_INTERPOSE(_replacement,_replacee) \
    __attribute__((used)) static struct { const void *replacement; const void *replacee; } _interpose_##_replacee \
             __attribute__ ((section("__DATA,__interpose"))) = { (const void *)(unsigned long)&_replacement, (const void *)(unsigned long)&_replacee };
 #define LIBC_SYMBOL(_fun) "" # _fun
 
-void replacement_free(void *ptr) {
-    if (ptr) {
-        inc_free_counter();
-    }
-}
-
-__thread bool g_in_malloc = false;
-__thread bool g_in_realloc = false;
-__thread void *(*g_libc_malloc)(size_t) = NULL;
-__thread void *(*g_libc_realloc)(void *, size_t) = NULL;
+static __thread bool g_in_malloc = false;
+static __thread bool g_in_realloc = false;
+static __thread bool g_in_free = false;
+static __thread void *(*g_libc_malloc)(size_t) = NULL;
+static __thread void *(*g_libc_realloc)(void *, size_t) = NULL;
+static __thread void (*g_libc_free)(void *) = NULL;
 
 // this is called if malloc is called whilst trying to resolve libc's realloc.
-static void *recursive_malloc(size_t size) {
-    /* a very cheap (as in bad) and inefficient malloc implementation that we just use
-       if malloc calls itself. */
-    int fd = open("/dev/zero", O_RDWR);
-    void *ptr = mmap(0, size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);
-    close(fd);
-    return ptr;
+// we just vend out pointers to a large block in the BSS (which we never free).
+// This block should be large enough because it's only used when malloc is
+// called from dlsym which should only happen once per thread.
+static void *recursive_malloc(size_t size_in) {
+    size_t size = size_in;
+    if ((size & 0xf) != 0) {
+        // make size 16 byte aligned
+        size = (size + 0xf) & (~(size_t)0xf);
+    }
+
+    ptrdiff_t next = atomic_fetch_add_explicit(&g_recursive_malloc_next_free_ptr,
+                                               size,
+                                               memory_order_relaxed);
+    if ((size_t)next >= sizeof(g_recursive_malloc_mem)) {
+        // we ran out of memory
+        return NULL;
+    }
+    return (void *)((intptr_t)g_recursive_malloc_mem + next);
+}
+
+static bool is_recursive_malloc_block(void *ptr) {
+    uintptr_t block_begin = (uintptr_t)g_recursive_malloc_mem;
+    uintptr_t block_end = block_begin + sizeof(g_recursive_malloc_mem);
+    uintptr_t user_ptr = (uintptr_t)ptr;
+
+    return user_ptr >= block_begin && user_ptr < block_end;
 }
 
 // this is called if realloc is called whilst trying to resolve libc's realloc.
 static void *recursive_realloc(void *ptr, size_t size) {
+    // not implemented yet...
+    abort();
+}
+
+// this is called if free is called whilst trying to resolve libc's free.
+static void recursive_free(void *ptr) {
     // not implemented yet...
     abort();
 }
@@ -90,6 +118,14 @@ static void *recursive_realloc(void *ptr, size_t size) {
 
 #endif
 
+void replacement_free(void *ptr) {
+    if (ptr) {
+        inc_free_counter();
+        if (!is_recursive_malloc_block(ptr)) {
+            JUMP_INTO_LIBC_FUN(free, ptr);
+        }
+    }
+}
 
 void *replacement_malloc(size_t size) {
     inc_malloc_counter();

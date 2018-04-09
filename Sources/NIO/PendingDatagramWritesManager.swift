@@ -339,7 +339,7 @@ extension PendingDatagramWritesState {
 /// value. The most important purpose of this object is to call `sendto` or `sendmmsg` depending on the writes held and
 /// the availability of the functions.
 final class PendingDatagramWritesManager: PendingWritesManager {
-    /// Storage for mmsghdr strutures. Only present on Linux because Darwin does not support
+    /// Storage for mmsghdr structures. Only present on Linux because Darwin does not support
     /// gathering datagram writes.
     private var msgs: UnsafeMutableBufferPointer<MMsgHdr>
 

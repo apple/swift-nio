@@ -653,7 +653,7 @@ class EchoServerClientTest : XCTestCase {
             }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
-            _ = serverChannel.close()
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
         let clientChannel = try ClientBootstrap(group: group)
@@ -666,7 +666,7 @@ class EchoServerClientTest : XCTestCase {
                 }
             }.connect(to: serverChannel.localAddress!).wait()
         defer {
-            _ = clientChannel.close()
+            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
         dpGroup.wait()
 
