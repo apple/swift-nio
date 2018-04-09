@@ -286,6 +286,11 @@ public struct HTTPHeaders: CustomStringConvertible {
             buffer.write(staticString: crlf)
         }
     }
+    
+    @available(*, deprecated, message: "getCanonicalForm has been changed to a subscript: headers[canonicalForm: name]")
+    public func getCanonicalForm(_ name: String) -> [String] {
+        return self[canonicalForm: name]
+    }
 
     /// Retrieves the header values for the given header field in "canonical form": that is,
     /// splitting them on commas as extensively as possible such that multiple values received on the
@@ -294,7 +299,7 @@ public struct HTTPHeaders: CustomStringConvertible {
     ///
     /// - Parameter name: The header field name whose values are to be retrieved.
     /// - Returns: A list of the values for that header field name.
-    public func getCanonicalForm(_ name: String) -> [String] {
+    public subscript(canonicalForm name: String) -> [String] {
         // It's not safe to split Set-Cookie on comma.
         let queryName = name.lowercased()
         if queryName == "set-cookie" {
@@ -302,7 +307,7 @@ public struct HTTPHeaders: CustomStringConvertible {
         }
 
         if let result = storage[queryName] {
-            return result.map { tuple in tuple.1.split(separator: ",").map { String($0.trimWhitespace()) } }.reduce([], +)
+            return result.flatMap { tuple in tuple.1.split(separator: ",").map { String($0.trimWhitespace()) } }
         }
         return []
     }
