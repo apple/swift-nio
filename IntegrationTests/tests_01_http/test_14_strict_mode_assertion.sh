@@ -24,11 +24,11 @@ echo -e 'GET / HTT\r\n\r\n' | nc -U "$socket" > "$tmp/actual"
 if ! grep -q 'HTTP/1.1 400 Bad Request' "$tmp/actual"; then
     fail "couldn't find status line in response"
 fi
-if ! grep -q 'content-length: 0' "$tmp/actual"; then
-    fail "couldn't find content-length in response"
+if ! grep -q 'Content-Length: 0' "$tmp/actual"; then
+    fail "couldn't find Content-Length in response"
 fi
-if ! grep -q 'connection: close' "$tmp/actual"; then
-    fail "couldn't find connection: close in response"
+if ! grep -q 'Connection: close' "$tmp/actual"; then
+    fail "couldn't find Connection: close in response"
 fi
 
 linecount=$(wc "$tmp/actual")

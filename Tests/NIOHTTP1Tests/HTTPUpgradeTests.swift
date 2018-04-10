@@ -399,7 +399,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                             expectedResponseHeaders: ["x-upgrade-complete: true", "upgrade: myproto", "connection: upgrade"])
+                             expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(result: ())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
@@ -504,7 +504,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                             expectedResponseHeaders: ["x-upgrade-complete: true", "upgrade: myproto", "connection: upgrade"])
+                             expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(result: ())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
@@ -548,7 +548,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                             expectedResponseHeaders: ["x-upgrade-complete: true", "upgrade: myproto", "connection: upgrade"])
+                             expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(result: ())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
@@ -609,7 +609,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                             expectedResponseHeaders: ["x-upgrade-complete: true", "upgrade: myproto", "connection: upgrade"])
+                             expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(result: ())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
@@ -655,7 +655,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                             expectedResponseHeaders: ["x-upgrade-complete: true", "upgrade: myproto", "connection: upgrade"])
+                             expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(result: ())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
@@ -689,7 +689,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                             expectedResponseHeaders: ["x-upgrade-complete: true", "upgrade: myproto", "connection: upgrade"])
+                             expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(result: ())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
@@ -732,7 +732,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                             expectedResponseHeaders: ["x-upgrade-complete: true", "upgrade: myproto", "connection: upgrade"])
+                             expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(result: ())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
