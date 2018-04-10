@@ -1601,6 +1601,7 @@ public class ChannelTests: XCTestCase {
 
             private let promise: EventLoopPromise<Void>
             private var readRequested = false
+            private var channelReadCalled = false
 
             init(_ promise: EventLoopPromise<Void>) {
                 self.promise = promise
@@ -1617,8 +1618,16 @@ public class ChannelTests: XCTestCase {
                 ctx.read()
             }
 
+            public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                XCTAssertFalse(channelReadCalled)
+                channelReadCalled = true
+                ctx.read()
+            }
+
             public func channelInactive(ctx: ChannelHandlerContext) {
                 XCTAssertTrue(readRequested, "Should only be called after a read was requested")
+                XCTAssertTrue(channelReadCalled, "channelRead(...) should have been called before channel became inactive")
+
                 promise.succeed(result: ())
             }
         }
@@ -1963,12 +1972,12 @@ public class ChannelTests: XCTestCase {
             }
 
             func channelReadComplete(ctx: ChannelHandlerContext) {
-                XCTFail("channelReadComplete unexpected")
+                XCTAssertEqual(.read, self.state)
                 self.state = .readComplete
             }
 
             func errorCaught(ctx: ChannelHandlerContext, error: Error) {
-                XCTAssertEqual(.read, self.state)
+                XCTAssertEqual(.readComplete, self.state)
                 self.state = .error
                 ctx.close(promise: nil)
             }
