@@ -20,13 +20,19 @@ start_server "$token"
 htdocs=$(get_htdocs "$token")
 socket=$(get_socket "$token")
 echo -e 'GET / HTT\r\n\r\n' | nc -U "$socket" > "$tmp/actual"
-backslash_r=$(echo -e '\r')
-cat > "$tmp/expected" <<EOF
-HTTP/1.0 400 Bad Request$backslash_r
-Content-Length: 0$backslash_r
-Connection: Close$backslash_r
-X-HTTPServer-Error: strict mode assertion$backslash_r
-$backslash_r
-EOF
-assert_equal_files "$tmp/expected" "$tmp/actual"
+
+if ! grep -q 'HTTP/1.1 400 Bad Request' "$tmp/actual"; then
+    fail "couldn't find status line in response"
+fi
+if ! grep -q 'Content-Length: 0' "$tmp/actual"; then
+    fail "couldn't find Content-Length in response"
+fi
+if ! grep -q 'Connection: close' "$tmp/actual"; then
+    fail "couldn't find Connection: close in response"
+fi
+
+linecount=$(wc "$tmp/actual")
+if [[ $linecount -ne 4 ]]; then
+    fail "overlong response"
+fi
 stop_server "$token"
