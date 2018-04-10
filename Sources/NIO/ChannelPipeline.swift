@@ -939,7 +939,7 @@ private extension CloseMode {
 }
 
 /// Special `ChannelInboundHandler` which will consume all inbound events.
-/* private but tests */ final class TailChannelHandler: _ChannelInboundHandler, _ChannelOutboundHandler {
+/* private but tests */ final class TailChannelHandler: _ChannelInboundHandler {
 
     static let name = "tail"
     static let sharedInstance = TailChannelHandler()
