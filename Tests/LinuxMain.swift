@@ -52,6 +52,7 @@ import XCTest
          testCase(EventLoopTest.allTests),
          testCase(FileRegionTest.allTests),
          testCase(GetaddrinfoResolverTest.allTests),
+         testCase(HTTPDecoderLengthTest.allTests),
          testCase(HTTPDecoderTest.allTests),
          testCase(HTTPHeadersTest.allTests),
          testCase(HTTPRequestEncoderTests.allTests),
