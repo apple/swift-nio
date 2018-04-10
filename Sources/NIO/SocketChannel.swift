@@ -136,12 +136,19 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
                     assert(self.isActive)
                     pipeline.fireChannelRead0(NIOAny(buffer))
-                    if mayGrow && i < maxMessagesPerRead {
+                    result = .some
+
+                    if buffer.writableBytes > 0 {
+                        // If we did not fill the whole buffer with read(...) we should stop reading and wait until we get notified again.
+                        // Otherwise chances are good that the next read(...) call will either read nothing or only a very small amount of data.
+                        // Also this will allow us to call fireChannelReadComplete() which may give the user the chance to flush out all pending
+                        // writes.
+                        return result
+                    } else if mayGrow && i < maxMessagesPerRead {
                         // if the ByteBuffer may grow on the next allocation due we used all the writable bytes we should allocate a new `ByteBuffer` to allow ramping up how much data
                         // we are able to read on the next read operation.
                         buffer = recvAllocator.buffer(allocator: allocator)
                     }
-                    result = .some
                 } else {
                     if inputShutdown {
                         // We received a EOF because we called shutdown on the fd by ourself, unregister from the Selector and return
