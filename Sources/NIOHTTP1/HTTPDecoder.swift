@@ -17,10 +17,10 @@ import CNIOHTTPParser
 
 private struct HTTPParserState {
     var dataAwaitingState: DataAwaitingState = .messageBegin
-    var currentHeaders: HTTPHeaders?
-    var currentUri: String?
+    var currentNameIndex: HTTPHeaderIndex?
+    var currentHeaders: [HTTPHeader]
+    var currentURI: URI?
     var currentStatus: String?
-    var currentHeaderName: String?
     var slice: (readerIndex: Int, length: Int)?
     var readerIndexAdjustment = 0
     // This is set before http_parser_execute(...) is called and set to nil again after it finish
@@ -36,22 +36,28 @@ private struct HTTPParserState {
         case body
     }
 
+    init() {
+        // We start with space for 16 headers.
+        self.currentHeaders = []
+        self.currentHeaders.reserveCapacity(16)
+    }
+
     mutating func reset() {
-        self.currentHeaders = nil
-        self.currentUri = nil
+        self.currentNameIndex = nil
+        self.currentHeaders.removeAll(keepingCapacity: true)
+        self.currentURI = nil
         self.currentStatus = nil
-        self.currentHeaderName = nil
         self.slice = nil
         self.readerIndexAdjustment = 0
     }
 
     var cumulationBuffer: ByteBuffer?
 
-    mutating func readCurrentString() -> String {
-        let (index, length) = self.slice!
-        let string = self.cumulationBuffer!.getString(at: index, length: length)!
-        self.slice = nil
-        return string
+    private mutating func consumeSlice() -> (readerIndex: Int, length: Int) {
+        defer {
+             self.slice = nil
+        }
+        return self.slice!
     }
 
     mutating func complete(state: DataAwaitingState) {
@@ -59,20 +65,21 @@ private struct HTTPParserState {
         case .messageBegin:
             assert(self.slice == nil, "non-empty slice on begin (\(self.slice!))")
         case .headerField:
-            assert(self.currentUri != nil || self.currentStatus != nil, "URI or Status not set before header field")
-            self.currentHeaderName = readCurrentString()
+            assert(self.currentURI != nil || self.currentStatus != nil, "URI or Status not set before header field")
+            let (index, length) = consumeSlice()
+            self.currentNameIndex = HTTPHeaderIndex(start: index, length: length)
         case .headerValue:
-            assert(self.currentUri != nil || self.currentStatus != nil, "URI or Status not set before header field")
-            if self.currentHeaders == nil {
-                self.currentHeaders = HTTPHeaders()
-            }
-            self.currentHeaders!.add(name: self.currentHeaderName!, value: readCurrentString())
+            assert(self.currentURI != nil || self.currentStatus != nil, "URI or Status not set before header field")
+            let (index, length) = consumeSlice()
+            self.currentHeaders.append(HTTPHeader(name: self.currentNameIndex!, value: HTTPHeaderIndex(start: index, length: length)))
         case .url:
-            assert(self.currentUri == nil)
-            self.currentUri = readCurrentString()
+            assert(self.currentURI == nil)
+            let (index, length) = consumeSlice()
+            self.currentURI = .byteBuffer(self.cumulationBuffer!.getSlice(at: index, length: length)!)
         case .status:
             assert(self.currentStatus == nil)
-            self.currentStatus = readCurrentString()
+            let (index, length) = consumeSlice()
+            self.currentStatus = self.cumulationBuffer!.getString(at: index, length: length)!
         case .body:
             self.slice = nil
         }
@@ -194,16 +201,16 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     private func newRequestHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPRequestHead {
         let method = HTTPMethod.from(httpParserMethod: http_method(rawValue: parser.pointee.method))
         let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
-        let request = HTTPRequestHead(version: version, method: method, uri: state.currentUri!, headers: state.currentHeaders ?? HTTPHeaders())
-        state.currentHeaders = nil
+        let request = HTTPRequestHead(version: version, method: method, rawURI: state.currentURI!, headers: HTTPHeaders(buffer: cumulationBuffer!, headers: state.currentHeaders))
+        self.state.currentHeaders.removeAll(keepingCapacity: true)
         return request
     }
 
     private func newResponseHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPResponseHead {
         let status = HTTPResponseStatus(statusCode: Int(parser.pointee.status_code), reasonPhrase: state.currentStatus!)
         let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
-        let response = HTTPResponseHead(version: version, status: status, headers: state.currentHeaders ?? HTTPHeaders())
-        state.currentHeaders = nil
+        let response = HTTPResponseHead(version: version, status: status, headers: HTTPHeaders(buffer: cumulationBuffer!, headers: state.currentHeaders))
+        self.state.currentHeaders.removeAll(keepingCapacity: true)
         return response
     }
 
@@ -335,7 +342,8 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             handler.state.complete(state: handler.state.dataAwaitingState)
             handler.state.dataAwaitingState = .messageBegin
 
-            let trailers = handler.state.currentHeaders?.count ?? 0 > 0 ? handler.state.currentHeaders : nil
+            let trailers = handler.state.currentHeaders.isEmpty ? nil : HTTPHeaders(buffer: handler.state.cumulationBuffer!, headers: handler.state.currentHeaders)
+            handler.state.currentHeaders.removeAll(keepingCapacity: true)
             switch handler {
             case let handler as HTTPRequestDecoder:
                 handler.pendingInOut.append(handler.wrapInboundOut(HTTPServerRequestPart.end(trailers)))

@@ -58,7 +58,7 @@ private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHand
         if let trailers = trailers {
             buffer = ctx.channel.allocator.buffer(capacity: 256)
             buffer.write(staticString: "0\r\n")
-            trailers.write(buffer: &buffer)  // Includes trailing CRLF.
+            trailers.write(into: &buffer)  // Includes trailing CRLF.
         } else {
             buffer = ctx.channel.allocator.buffer(capacity: 8)
             buffer.write(staticString: "0\r\n\r\n")
@@ -78,12 +78,15 @@ private func writeHead(wrapOutboundOut: (IOData) -> NIOAny, writeStartLine: (ino
 
     var buffer = ctx.channel.allocator.buffer(capacity: 256)
     writeStartLine(&buffer)
-    headers.write(buffer: &buffer)
+    headers.write(into: &buffer)
     ctx.write(wrapOutboundOut(.byteBuffer(buffer)), promise: promise)
 }
 
-private func isChunkedPart(_ headers: HTTPHeaders) -> Bool {
-    return headers["transfer-encoding"].contains("chunked")
+/// The type of framing that is used to mark the end of the body.
+private enum BodyFraming {
+    case chunked
+    case contentLength
+    case neither
 }
 
 /// Adjusts the response/request headers to ensure that the response/request will be well-framed.
@@ -95,16 +98,30 @@ private func isChunkedPart(_ headers: HTTPHeaders) -> Bool {
 ///
 /// Note that for HTTP/1.0 if there is no Content-Length then the response should be followed
 /// by connection close. We require that the user send that connection close: we don't do it.
-private func sanitizeTransportHeaders(hasBody: HTTPMethod.HasBody, headers: inout HTTPHeaders, version: HTTPVersion) {
+private func sanitizeTransportHeaders(hasBody: HTTPMethod.HasBody, headers: inout HTTPHeaders, version: HTTPVersion) -> BodyFraming {
     switch hasBody {
     case .no:
         headers.remove(name: "content-length")
         headers.remove(name: "transfer-encoding")
-    case .yes where headers["content-length"].count == 0 && version.major == 1 && version.minor >= 1:
-        headers.replaceOrAdd(name: "transfer-encoding", value: "chunked")
-    case .yes, .unlikely:
-        /* leave alone */
-        ()
+        return .neither
+    case .yes:
+        if headers.contains(name: "content-length") {
+            return .contentLength
+        }
+        if version.major == 1 && version.minor >= 1 {
+            headers.replaceOrAdd(name: "transfer-encoding", value: "chunked")
+            return .chunked
+        } else {
+            return .neither
+        }
+    case .unlikely:
+        if headers.contains(name: "content-length") {
+            return .contentLength
+        }
+        if version.major == 1 && version.minor >= 1 {
+            return headers["transfer-encoding"].first == "chunked" ? .chunked : .neither
+        }
+        return .neither
     }
 }
 
@@ -123,9 +140,8 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler {
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch self.unwrapOutboundIn(data) {
         case .head(var request):
-            sanitizeTransportHeaders(hasBody: request.method.hasRequestBody, headers: &request.headers, version: request.version)
 
-            self.isChunked = isChunkedPart(request.headers)
+            self.isChunked = sanitizeTransportHeaders(hasBody: request.method.hasRequestBody, headers: &request.headers, version: request.version) == .chunked
 
             writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
                 request.method.write(buffer: &buffer)
@@ -158,9 +174,9 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler {
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch self.unwrapOutboundIn(data) {
         case .head(var response):
-            sanitizeTransportHeaders(hasBody: response.status.mayHaveResponseBody ? .yes : .no, headers: &response.headers, version: response.version)
 
-            self.isChunked = isChunkedPart(response.headers)
+            self.isChunked = sanitizeTransportHeaders(hasBody: response.status.mayHaveResponseBody ? .yes : .no, headers: &response.headers, version: response.version) == .chunked
+
             writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
                 response.version.write(buffer: &buffer)
                 buffer.write(staticString: " ")
