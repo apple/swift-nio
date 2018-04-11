@@ -22,8 +22,8 @@ touch "$tmp/empty"
 cr=$(echo -e '\r')
 cat > "$tmp/headers_expected" <<EOF
 HTTP/1.1 400 Bad Request$cr
-Content-Length: 0$cr
-Connection: close$cr
+content-length: 0$cr
+connection: close$cr
 $cr
 EOF
 echo "FOO BAR" > "$htdocs/some_file.txt"
@@ -41,10 +41,10 @@ assert_equal_files "$tmp/empty" "$tmp/out"
 if ! grep -q 'HTTP/1.1 400 Bad Request' "$tmp/headers_actual"; then
     fail "couldn't find status line in response"
 fi
-if ! grep -q 'Content-Length: 0' "$tmp/headers_actual"; then
+if ! grep -q 'content-length: 0' "$tmp/headers_actual"; then
     fail "couldn't find content-length in response"
 fi
-if ! grep -q 'Connection: close' "$tmp/headers_actual"; then
+if ! grep -q 'connection: close' "$tmp/headers_actual"; then
     fail "couldn't find connection: close in response"
 fi
 

@@ -128,7 +128,7 @@ extension HTTPRequestHead {
     /// Whether this HTTP request is a keep-alive request: that is, whether the
     /// connection should remain open after the request is complete.
     public var isKeepAlive: Bool {
-        guard let connection = headers["connection"].first?.lowercased() else {
+        guard let connection = headers[.connection].first?.lowercased() else {
             // HTTP 1.1 use keep-alive by default if not otherwise told.
             return version.major == 1 && version.minor == 1
         }
@@ -179,17 +179,332 @@ struct HTTPHeader {
     let value: HTTPHeaderIndex
 }
 
+
+private extension UInt8 {
+    var isASCII: Bool {
+        return self <= 127
+    }
+
+    var maskedASCIILowercase: UInt8 {
+        return self & 0xdf
+    }
+}
+
+
+/// Known HTTP header name. These should be created once and re-used as instances are memory intensive and "expensive" to create.
+public struct HTTPHeaderName {
+
+    /// Box for different fields to reduce reference count overhead.
+    private final class _Storage {
+        /// Holds the bytes of the name + ': '
+        let bytesWithSeparator: ContiguousArray<UInt8>
+        /// Holds the lowercased bases (masked) of the name.
+        let lowerCaseBytes: ContiguousArray<UInt8>
+
+        let lowerCaseName: String
+
+        init(_ value: String) {
+            precondition(!value.utf8.contains(where: { !$0.isASCII }), "name must be ASCII")
+            var array = ContiguousArray(value.utf8)
+            array.append(contentsOf: ": ".utf8)
+            self.bytesWithSeparator = array
+            self.lowerCaseBytes = ContiguousArray(self.bytesWithSeparator.lazy.dropLast(2).map { $0.maskedASCIILowercase })
+            self.lowerCaseName = value.lowercased()
+        }
+    }
+
+    private let storage: _Storage
+
+    /// Holds the bytes of the name + ': '
+    fileprivate var bytesWithSeparator: ContiguousArray<UInt8> {
+        return storage.bytesWithSeparator
+    }
+
+    /// Holds the lowercased bases (masked) of the name.
+    fileprivate var lowerCaseBytes: ContiguousArray<UInt8> {
+        return storage.lowerCaseBytes
+    }
+
+    fileprivate var lowerCaseName: String {
+        return storage.lowerCaseName
+    }
+
+    /// Create a new `HTTPHeaderName`.
+    ///
+    /// - Parameter value: The value of the header.
+    public init(_ value: String) {
+        self.storage = _Storage(value)
+    }
+}
+
+extension HTTPHeaderName: Equatable {
+    public static func ==(lhs: HTTPHeaderName, rhs: HTTPHeaderName) -> Bool {
+        return lhs.lowerCaseBytes == rhs.lowerCaseBytes
+    }
+}
+
+extension HTTPHeaderName: CustomStringConvertible {
+    public var description: String {
+        return self.lowerCaseName
+    }
+}
+
+/// Defines commonly used HTTP header names.
+public extension HTTPHeaderName {
+    public static let aIM = HTTPHeaderName("a-im")
+    public static let accept = HTTPHeaderName("Accept")
+    public static let acceptAdditions = HTTPHeaderName("accept-additions")
+    public static let acceptCharset = HTTPHeaderName("accept-charset")
+    public static let acceptDatetime = HTTPHeaderName("accept-datetime")
+    public static let acceptEncoding = HTTPHeaderName("accept-encoding")
+    public static let acceptFeatures = HTTPHeaderName("accept-features")
+    public static let acceptLanguage = HTTPHeaderName("accept-language")
+    public static let acceptPatch = HTTPHeaderName("accept-patch")
+    public static let acceptPost = HTTPHeaderName("accept-post")
+    public static let acceptRanges = HTTPHeaderName("accept-ranges")
+    public static let accessControl = HTTPHeaderName("access-control")
+    public static let accessControlAllowCredentials = HTTPHeaderName("access-control-allow-credentials")
+    public static let accessControlAllowHeaders = HTTPHeaderName("access-control-allow-headers")
+    public static let accessControlAllowMethods = HTTPHeaderName("access-control-allow-methods")
+    public static let accessControlAllowOrigin = HTTPHeaderName("access-control-allow-origin")
+    public static let accessControlExpose = HTTPHeaderName("access-control-expose-headers")
+    public static let accessControlMaxAge = HTTPHeaderName("access-control-max-age")
+    public static let accessControlRequestMethod = HTTPHeaderName("access-control-request-method")
+    public static let accessControlRequestHeaders = HTTPHeaderName("access-control-request-headers")
+    public static let age = HTTPHeaderName("age")
+    public static let allow = HTTPHeaderName("allow")
+    public static let alpn = HTTPHeaderName("alpn")
+    public static let alternates = HTTPHeaderName("alternates")
+    public static let altSvc = HTTPHeaderName("alt-svc")
+    public static let altUsed = HTTPHeaderName("alt-used")
+    public static let applyToRedirectRef = HTTPHeaderName("apply-to-redirect-ref")
+    public static let authenticationControl = HTTPHeaderName("authentication-control")
+    public static let authenticationInfo = HTTPHeaderName("authentication-info")
+    public static let authorization = HTTPHeaderName("authorization")
+    public static let cacheControl = HTTPHeaderName("cache-control")
+    public static let calDAVTimezones = HTTPHeaderName("caldav-timezones")
+    public static let cExt = HTTPHeaderName("c-ext")
+    public static let close = HTTPHeaderName("close")
+    public static let cMan = HTTPHeaderName("c-man")
+    public static let cOpt = HTTPHeaderName("c-opt")
+    public static let compliance = HTTPHeaderName("compliance")
+    public static let connection = HTTPHeaderName("connection")
+    public static let contentBase = HTTPHeaderName("content-base")
+    public static let contentDisposition = HTTPHeaderName("content-disposition")
+    public static let contentEncoding = HTTPHeaderName("content-encoding")
+    public static let contentID = HTTPHeaderName("content-id")
+    public static let contentLanguage = HTTPHeaderName("content-language")
+    public static let contentLength = HTTPHeaderName("content-length")
+    public static let contentLocation = HTTPHeaderName("content-location")
+    public static let contentMD5 = HTTPHeaderName("content-md5")
+    public static let contentRange = HTTPHeaderName("content-range")
+    public static let contentScriptType = HTTPHeaderName("content-script-type")
+    public static let contentSecurityPolicy = HTTPHeaderName("content-security-policy")
+    public static let contentSecurityPolicyReportOnly = HTTPHeaderName("content-security-policy-reporty-only")
+    public static let contentStyleType = HTTPHeaderName("content-style-type")
+    public static let contentTransferEncoding = HTTPHeaderName("content-transfer-encoding")
+    public static let contentType = HTTPHeaderName("content-type")
+    public static let contentVersion = HTTPHeaderName("content-version")
+    public static let cookie = HTTPHeaderName("cookie")
+    public static let cookie2 = HTTPHeaderName("cookie2")
+    public static let cost = HTTPHeaderName("cost")
+    public static let cPEP = HTTPHeaderName("c-pep")
+    public static let cPEPInfo = HTTPHeaderName("c-pep-info")
+    public static let dasl = HTTPHeaderName("dasl")
+    public static let dav = HTTPHeaderName("dav")
+    public static let date = HTTPHeaderName("date")
+    public static let defaultStyle = HTTPHeaderName("default-style")
+    public static let deltaBase = HTTPHeaderName("delta-base")
+    public static let depth = HTTPHeaderName("depth")
+    public static let derivedFrom = HTTPHeaderName("derived-from")
+    public static let destination = HTTPHeaderName("destination")
+    public static let differentialID = HTTPHeaderName("differential-id")
+    public static let digest = HTTPHeaderName("digest")
+    public static let ediintFeatures = HTTPHeaderName("ediint-features")
+    public static let eTag = HTTPHeaderName("etag")
+    public static let expect = HTTPHeaderName("expect")
+    public static let expires = HTTPHeaderName("expires")
+    public static let ext = HTTPHeaderName("ext")
+    public static let forwarded = HTTPHeaderName("forwarded")
+    public static let from = HTTPHeaderName("from")
+    public static let getProfile = HTTPHeaderName("getprofile")
+    public static let hobareg = HTTPHeaderName("hobareg")
+    public static let host = HTTPHeaderName("host")
+    public static let http2Settings = HTTPHeaderName("http2-settings")
+    public static let im = HTTPHeaderName("im")
+    public static let `if` = HTTPHeaderName("if")
+    public static let ifMatch = HTTPHeaderName("if-match")
+    public static let ifModifiedSince = HTTPHeaderName("if-modified-since")
+    public static let ifNoneMatch = HTTPHeaderName("if-none-match")
+    public static let ifRange = HTTPHeaderName("if-range")
+    public static let ifScheduleTagMatch = HTTPHeaderName("if-schedule-tag-match")
+    public static let ifUnmodifiedSince = HTTPHeaderName("if-unmodified-since")
+    public static let keepAlive = HTTPHeaderName("keep-alive")
+    public static let label = HTTPHeaderName("label")
+    public static let lastModified = HTTPHeaderName("last-modified")
+    public static let link = HTTPHeaderName("link")
+    public static let location = HTTPHeaderName("location")
+    public static let lockToken = HTTPHeaderName("lock-token")
+    public static let man = HTTPHeaderName("man")
+    public static let maxForwards = HTTPHeaderName("max-forwards")
+    public static let mementoDatetime = HTTPHeaderName("memento-datetime")
+    public static let messageID = HTTPHeaderName("message-id")
+    public static let meter = HTTPHeaderName("meter")
+    public static let methodCheck = HTTPHeaderName("method-check")
+    public static let methodCheckExpires = HTTPHeaderName("method-check-expires")
+    public static let mimeVersion = HTTPHeaderName("mime-version")
+    public static let negotiate = HTTPHeaderName("negotiate")
+    public static let nonCompliance = HTTPHeaderName("non-compliance")
+    public static let opt = HTTPHeaderName("opt")
+    public static let optional = HTTPHeaderName("optional")
+    public static let optionalWWWAuthenticate = HTTPHeaderName("optional-ww-authenticate")
+    public static let orderingType = HTTPHeaderName("ordering-type")
+    public static let origin = HTTPHeaderName("origin")
+    public static let overwrite = HTTPHeaderName("overwrite")
+    public static let p3p = HTTPHeaderName("p3p")
+    public static let pep = HTTPHeaderName("pep")
+    public static let pepInfo = HTTPHeaderName("pep-info")
+    public static let picsLabel = HTTPHeaderName("pics-label")
+    public static let position = HTTPHeaderName("position")
+    public static let pragma = HTTPHeaderName("pragma")
+    public static let prefer = HTTPHeaderName("prefer")
+    public static let preferenceApplied = HTTPHeaderName("preference-applied")
+    public static let profileObject = HTTPHeaderName("profileobject")
+    public static let `protocol` = HTTPHeaderName("protocol")
+    public static let protocolInfo = HTTPHeaderName("protocol-info")
+    public static let protocolQuery = HTTPHeaderName("protocol-query")
+    public static let protocolRequest = HTTPHeaderName("protocol-request")
+    public static let proxyAuthenticate = HTTPHeaderName("proxy-authenticate")
+    public static let proxyAuthenticationInfo = HTTPHeaderName("proxy-authentication-info")
+    public static let proxyAuthorization = HTTPHeaderName("proxy-authorization")
+    public static let proxyFeatures = HTTPHeaderName("proxy-features")
+    public static let proxyInstruction = HTTPHeaderName("proxy-instruction")
+    public static let `public` = HTTPHeaderName("public")
+    public static let publicKeyPins = HTTPHeaderName("public-key-pins")
+    public static let publicKeyPinsReportOnly = HTTPHeaderName("public-key-pins-report-only")
+    public static let range = HTTPHeaderName("range")
+    public static let redirectRef = HTTPHeaderName("redirect-ref")
+    public static let referer = HTTPHeaderName("referer")
+    public static let refererRoot = HTTPHeaderName("referer-root")
+    public static let resolutionHint = HTTPHeaderName("resolution-hint")
+    public static let resolverLocation = HTTPHeaderName("resolver-location")
+    public static let retryAfter = HTTPHeaderName("retry-after")
+    public static let safe = HTTPHeaderName("safe")
+    public static let scheduleReply = HTTPHeaderName("schedule-reply")
+    public static let scheduleTag = HTTPHeaderName("schedule-tag")
+    public static let secWebSocketAccept = HTTPHeaderName("sec-websocket-accept")
+    public static let secWebSocketExtensions = HTTPHeaderName("sec-webSocket-extensions")
+    public static let secWebSocketKey = HTTPHeaderName("sec-websocket-key")
+    public static let secWebSocketProtocol = HTTPHeaderName("sec-websocket-protocol")
+    public static let secWebSocketVersion = HTTPHeaderName("sec-websocket-version")
+    public static let securityScheme = HTTPHeaderName("security-scheme")
+    public static let server = HTTPHeaderName("server")
+    public static let setCookie = HTTPHeaderName("set-cookie")
+    public static let setCookie2 = HTTPHeaderName("set-cookie2")
+    public static let setProfile = HTTPHeaderName("setprofile")
+    public static let slug = HTTPHeaderName("slug")
+    public static let soapAction = HTTPHeaderName("soapaction")
+    public static let statusURI = HTTPHeaderName("status-uri")
+    public static let strictTransportSecurity = HTTPHeaderName("strict-transport-security")
+    public static let subOK = HTTPHeaderName("subok")
+    public static let subst = HTTPHeaderName("subst")
+    public static let surrogateCapability = HTTPHeaderName("surrogate-capability")
+    public static let surrogateControl = HTTPHeaderName("surrogate-control")
+    public static let tcn = HTTPHeaderName("tcn")
+    public static let te = HTTPHeaderName("te")
+    public static let timeout = HTTPHeaderName("timeout")
+    public static let title = HTTPHeaderName("title")
+    public static let topic = HTTPHeaderName("topic")
+    public static let trailer = HTTPHeaderName("trailer")
+    public static let transferEncoding = HTTPHeaderName("transfer-encoding")
+    public static let ttl = HTTPHeaderName("ttl")
+    public static let uaColor = HTTPHeaderName("ua-color")
+    public static let uaMedia = HTTPHeaderName("ua-media")
+    public static let uaPixels = HTTPHeaderName("ua-pixels")
+    public static let uaResolution = HTTPHeaderName("ua-resolution")
+    public static let uaWindowpixels = HTTPHeaderName("ua-windowpixels")
+    public static let urgency = HTTPHeaderName("urgency")
+    public static let uri = HTTPHeaderName("uri")
+    public static let upgrade = HTTPHeaderName("upgrade")
+    public static let userAgent = HTTPHeaderName("user-agent")
+    public static let variantVary = HTTPHeaderName("variant-vary")
+    public static let vary = HTTPHeaderName("vary")
+    public static let version = HTTPHeaderName("version")
+    public static let via = HTTPHeaderName("via")
+    public static let wwwAuthenticate = HTTPHeaderName("www-authenticate")
+    public static let wantDigest = HTTPHeaderName("want-digest")
+    public static let warning = HTTPHeaderName("warning")
+    public static let xContentTypeOptions = HTTPHeaderName("x-content-type-options")
+    public static let xDeviceAccept = HTTPHeaderName("x-device-accept")
+    public static let xDeviceAcceptCharset = HTTPHeaderName("x-device-accept-charset")
+    public static let xDeviceAcceptEncoding = HTTPHeaderName("x-device-accept-encoding")
+    public static let xDeviceAcceptLanguage = HTTPHeaderName("x-device-accept-language")
+    public static let xDeviceUserAgent = HTTPHeaderName("x-device-user-agent")
+    public static let xFrameOptions = HTTPHeaderName("x-frame-options")
+    public static let xRequestedWith = HTTPHeaderName("x-requested-with")
+    public static let xXssProtection = HTTPHeaderName("x-xss-protection")
+}
+
+/// Different types representing HTTP header names.
+private enum HTTPHeaderNameType {
+    /// Header name represented by a `String`.
+    case string(String)
+    /// Header name represented by a `HTTPHeaderName`.
+    case headerName(HTTPHeaderName)
+}
+
+private extension HTTPHeaderNameType {
+
+    var isSetCookie: Bool {
+        switch self {
+        case .headerName(let name):
+            return name == .setCookie
+        case .string(let string):
+            return HTTPHeaderName.setCookie.equalCaseInsensitiveASCII(name: string)
+        }
+    }
+}
+
+private extension HTTPHeaderName {
+    func equalCaseInsensitiveASCII(name: String) -> Bool {
+        let utf8 = name.utf8
+        return utf8.count == self.lowerCaseBytes.count && utf8.lazy.map { $0.maskedASCIILowercase }.starts(with: self.lowerCaseBytes)
+    }
+}
+
+/// Extensions dealing with `HTTPHeaderNameType`s.
 private extension ByteBuffer {
-    func equalCaseInsensitiveASCII(view: String.UTF8View, at index: HTTPHeaderIndex) -> Bool {
-        guard view.count == index.length else {
+    /// Writes the `HTTPHeaderNameType` and also the separator (`: `). It returns the length of the name (without the separator).
+    mutating func writeWithSeparator(nameType: HTTPHeaderNameType) -> Int {
+        switch nameType {
+        case .headerName(let name):
+            return self.write(bytes: name.bytesWithSeparator) - 2
+        case .string(let s):
+            let len = self.write(string: s)!
+            self.write(staticString: headerSeparator)
+            return len
+        }
+    }
+
+    func equalCaseInsensitiveASCII(nameType: HTTPHeaderNameType, at index: HTTPHeaderIndex) -> Bool {
+        switch nameType {
+        case .headerName(let name):
+            return self.equalCaseInsensitiveASCII(collection: name.lowerCaseBytes, at: index)
+        case .string(let string):
+            return self.equalCaseInsensitiveASCII(collection: string.utf8, at: index)
+        }
+    }
+
+    private func equalCaseInsensitiveASCII<C: Collection>(collection: C, at index: HTTPHeaderIndex) -> Bool where C.Element == UInt8 {
+        guard collection.count == index.length else {
             return false
         }
         return withVeryUnsafeBytes { buffer in
             // This should never happens as we control when this is called. Adding an assert to ensure this.
             assert(index.start <= self.capacity - index.length)
             let address = buffer.baseAddress!.assumingMemoryBound(to: UInt8.self)
-            for (idx, byte) in view.enumerated() {
-                guard byte.isASCII && address.advanced(by: index.start + idx).pointee & 0xdf == byte & 0xdf else {
+            for (idx, byte) in collection.enumerated() {
+                guard byte.isASCII && address.advanced(by: index.start + idx).pointee.maskedASCIILowercase == byte.maskedASCIILowercase else {
                     return false
                 }
             }
@@ -197,14 +512,6 @@ private extension ByteBuffer {
         }
     }
 }
-
-
-private extension UInt8 {
-    var isASCII: Bool {
-        return self <= 127
-    }
-}
-
 
 /// A representation of a block of HTTP header fields.
 ///
@@ -283,6 +590,34 @@ public struct HTTPHeaders: CustomStringConvertible {
         }
     }
 
+    /// Construct a `HTTPHeaders` structure.
+    ///
+    /// - parameters
+    ///     - headers: An initial set of headers to use to populate the header block.
+    ///     - allocator: The allocator to use to allocate the underlying storage.
+    public init(_ headers: [(HTTPHeaderName, String)]) {
+        // Note: this initializer exists because of https://bugs.swift.org/browse/SR-7415.
+        // Otherwise we'd only have the one below with a default argument for `allocator`.
+        self.init(headers, allocator: ByteBufferAllocator())
+    }
+
+    /// Construct a `HTTPHeaders` structure.
+    ///
+    /// - parameters
+    ///     - headers: An initial set of headers to use to populate the header block.
+    ///     - allocator: The allocator to use to allocate the underlying storage.
+    public init(_ headers: [(HTTPHeaderName, String)], allocator: ByteBufferAllocator) {
+        // Reserve enough space in the array to hold all indices.
+        var array: [HTTPHeader] = []
+        array.reserveCapacity(headers.count)
+
+        self.init(buffer: allocator.buffer(capacity: 256), headers: array)
+
+        for (key, value) in headers {
+            self.add(name: key, value: value)
+        }
+    }
+
     /// Add a header name/value pair to the block.
     ///
     /// This method is strictly additive: if there are other values for the given header name
@@ -295,9 +630,26 @@ public struct HTTPHeaders: CustomStringConvertible {
     /// - Parameter value: The header field value to add for the given name.
     public mutating func add(name: String, value: String) {
         precondition(!name.utf8.contains(where: { !$0.isASCII }), "name must be ASCII")
+        self.add(nameType: .string(name), value: value)
+    }
+
+    /// Add a header name/value pair to the block.
+    ///
+    /// This method is strictly additive: if there are other values for the given header name
+    /// already in the block, this will add a new entry. `add` performs case-insensitive
+    /// comparisons on the header field name.
+    ///
+    /// - Parameter name: The header field `HTTPHeaderName`. For maximum compatibility this should be an
+    ///     ASCII string. For future-proofing with HTTP/2 lowercase header names are strongly
+    //      recommended.
+    /// - Parameter value: The header field value to add for the given name.
+    public mutating func add(name: HTTPHeaderName, value: String) {
+        self.add(nameType: .headerName(name), value: value)
+    }
+
+    private mutating func add(nameType: HTTPHeaderNameType, value: String) {
         let nameStart = self.buffer.writerIndex
-        let nameLength = self.buffer.write(string: name)!
-        self.buffer.write(staticString: headerSeparator)
+        let nameLength = self.buffer.writeWithSeparator(nameType: nameType)
         let valueStart = self.buffer.writerIndex
         let valueLength = self.buffer.write(string: value)!
         self.headers.append(HTTPHeader(name: HTTPHeaderIndex(start: nameStart, length: nameLength), value: HTTPHeaderIndex(start: valueStart, length: valueLength)))
@@ -322,22 +674,58 @@ public struct HTTPHeaders: CustomStringConvertible {
         self.add(name: name, value: value)
     }
 
+    /// Add a header name/value pair to the block, replacing any previous values for the
+    /// same header name that are already in the block.
+    ///
+    /// This is a supplemental method to `add` that essentially combines `remove` and `add`
+    /// in a single function. It can be used to ensure that a header block is in a
+    /// well-defined form without having to check whether the value was previously there.
+    /// Like `add`, this method performs case-insensitive comparisons of the header field
+    /// names.
+    ///
+    /// - Parameter name: The header field `HTTPHeaderName`. For maximum compatibility this should be an
+    ///     ASCII string. For future-proofing with HTTP/2 lowercase header names are strongly
+    //      recommended.
+    /// - Parameter value: The header field value to add for the given name.
+    public mutating func replaceOrAdd(name: HTTPHeaderName, value: String) {
+        self.remove(name: name)
+        self.add(name: name, value: value)
+    }
+
+    private mutating func replaceOrAdd(nameType: HTTPHeaderNameType, value: String) {
+        self.remove(nameType: nameType)
+        self.add(nameType: nameType, value: value)
+    }
+
     /// Remove all values for a given header name from the block.
     ///
     /// This method uses case-insensitive comparisons for the header field name.
     ///
     /// - Parameter name: The name of the header field to remove from the block.
     public mutating func remove(name: String) {
+        self.remove(nameType: .string(name))
+    }
+
+
+    /// Remove all values for a given header name from the block.
+    ///
+    /// This method uses case-insensitive comparisons for the header field name.
+    ///
+    /// - Parameter name: The `HTTPHeaderName` of the header field to remove from the block.
+    public mutating func remove(name: HTTPHeaderName) {
+        self.remove(nameType: .headerName(name))
+    }
+
+    private mutating func remove(nameType: HTTPHeaderNameType) {
         guard !self.headers.isEmpty else {
             return
         }
 
-        let utf8 = name.utf8
         var array: [Int] = []
         // We scan from the back to the front so we can remove the subranges with as less overhead as possible.
         for idx in stride(from: self.headers.count - 1, to: -1, by: -1) {
             let header = self.headers[idx]
-            if self.buffer.equalCaseInsensitiveASCII(view: utf8, at: header.name) {
+            if self.buffer.equalCaseInsensitiveASCII(nameType: nameType, at: header.name) {
                 array.append(idx)
             }
         }
@@ -364,14 +752,32 @@ public struct HTTPHeaders: CustomStringConvertible {
     /// - Parameter name: The header field name whose values are to be retrieved.
     /// - Returns: A list of the values for that header field name.
     public subscript(name: String) -> [String] {
+        return self[name: .string(name)]
+    }
+
+    /// Retrieve all of the values for a give header field name from the block.
+    ///
+    /// This method uses case-insensitive comparisons for the header field name. It
+    /// does not return a maximally-decomposed list of the header fields, but instead
+    /// returns them in their original representation: that means that a comma-separated
+    /// header field list may contain more than one entry, some of which contain commas
+    /// and some do not. If you want a representation of the header fields suitable for
+    /// performing computation on, consider `getCanonicalForm`.
+    ///
+    /// - Parameter name: The header field `HTTPHeaderName` whose values are to be retrieved.
+    /// - Returns: A list of the values for that header field name.
+    public subscript(name: HTTPHeaderName) -> [String] {
+        return self[name: .headerName(name)]
+    }
+
+    private subscript(name nameType: HTTPHeaderNameType) -> [String] {
         guard !self.headers.isEmpty else {
             return []
         }
 
-        let utf8 = name.utf8
         var array: [String] = []
         for header in self.headers {
-            if self.buffer.equalCaseInsensitiveASCII(view: utf8, at: header.name) {
+            if self.buffer.equalCaseInsensitiveASCII(nameType: nameType, at: header.name) {
                 array.append(self.string(idx: header.value))
             }
         }
@@ -384,13 +790,25 @@ public struct HTTPHeaders: CustomStringConvertible {
     ///     - name: The name of the header
     //  - returns: `true` if a header with the name (and value) exists, `false` otherwise.
     public func contains(name: String) -> Bool {
+        return self.contains(nameType: .string(name))
+    }
+
+    /// Checks if a header is present
+    ///
+    /// - parameters:
+    ///     - name: The `HTTPHeaderName` of the header
+    //  - returns: `true` if a header with the name (and value) exists, `false` otherwise.
+    public func contains(name: HTTPHeaderName) -> Bool {
+        return self.contains(nameType: .headerName(name))
+    }
+
+    private func contains(nameType: HTTPHeaderNameType) -> Bool {
         guard !self.headers.isEmpty else {
             return false
         }
 
-        let utf8 = name.utf8
         for header in self.headers {
-            if self.buffer.equalCaseInsensitiveASCII(view: utf8, at: header.name) {
+            if self.buffer.equalCaseInsensitiveASCII(nameType: nameType, at: header.name) {
                 return true
             }
         }
@@ -410,14 +828,29 @@ public struct HTTPHeaders: CustomStringConvertible {
     /// - Parameter name: The header field name whose values are to be retrieved.
     /// - Returns: A list of the values for that header field name.
     public subscript(canonicalForm name: String) -> [String] {
-        let result = self[name]
+        return self[canonicalForm: .string(name)]
+    }
+
+    /// Retrieves the header values for the given header field in "canonical form": that is,
+    /// splitting them on commas as extensively as possible such that multiple values received on the
+    /// one line are returned as separate entries. Also respects the fact that Set-Cookie should not
+    /// be split in this way.
+    ///
+    /// - Parameter name: The header field `HTTPHeaderName` whose values are to be retrieved.
+    /// - Returns: A list of the values for that header field name.
+    public subscript(canonicalForm name: HTTPHeaderName) -> [String] {
+        return self[canonicalForm: .headerName(name)]
+    }
+
+    private subscript(canonicalForm nameType: HTTPHeaderNameType) -> [String] {
+        let result = self[name: nameType]
 
         guard result.count > 0 else {
             return []
         }
 
         // It's not safe to split Set-Cookie on comma.
-        guard name.lowercased() != "set-cookie" else {
+        guard !nameType.isSetCookie else {
             return result
         }
 

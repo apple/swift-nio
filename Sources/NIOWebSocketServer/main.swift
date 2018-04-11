@@ -73,9 +73,9 @@ private final class HTTPHandler: ChannelInboundHandler {
         }
 
         var headers = HTTPHeaders()
-        headers.add(name: "Content-Type", value: "text/html")
-        headers.add(name: "Content-Length", value: String(self.responseBody.readableBytes))
-        headers.add(name: "Connection", value: "close")
+        headers.add(name: .contentType, value: "text/html")
+        headers.add(name: .contentLength, value: String(self.responseBody.readableBytes))
+        headers.add(name: .connection, value: "close")
         let responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1),
                                     status: .ok,
                                     headers: headers)
@@ -89,8 +89,8 @@ private final class HTTPHandler: ChannelInboundHandler {
 
     private func respond405(ctx: ChannelHandlerContext) {
         var headers = HTTPHeaders()
-        headers.add(name: "Connection", value: "close")
-        headers.add(name: "Content-Length", value: "0")
+        headers.add(name: .connection, value: "close")
+        headers.add(name: .contentLength, value: "0")
         let head = HTTPResponseHead(version: .init(major: 1, minor: 1),
                                     status: .methodNotAllowed,
                                     headers: headers)

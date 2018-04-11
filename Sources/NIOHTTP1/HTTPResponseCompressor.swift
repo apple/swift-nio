@@ -104,7 +104,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         if case .head(let requestHead) = unwrapInboundIn(data) {
-            acceptQueue.append(requestHead.headers[canonicalForm: "accept-encoding"])
+            acceptQueue.append(requestHead.headers[canonicalForm: .acceptEncoding])
         }
 
         ctx.fireChannelRead(data)
@@ -120,7 +120,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
                 return
             }
 
-            responseHead.headers.add(name: "Content-Encoding", value: algorithm!.rawValue)
+            responseHead.headers.add(name: .contentEncoding, value: algorithm!.rawValue)
             initializeEncoder(encoding: algorithm!)
             pendingResponse.bufferResponseHead(responseHead)
             chainPromise(promise)
@@ -342,11 +342,11 @@ private struct PartialHTTPResponse {
 
         let body = compressBody(compressor: &compressor, allocator: allocator, flag: flag)
         if let bodyLength = body?.readableBytes, isCompleteResponse && bodyLength > 0 {
-            head!.headers.remove(name: "transfer-encoding")
-            head!.headers.replaceOrAdd(name: "content-length", value: "\(bodyLength)")
+            head!.headers.remove(name: .transferEncoding )
+            head!.headers.replaceOrAdd(name: .contentLength, value: "\(bodyLength)")
         } else if head != nil && head!.status.mayHaveResponseBody {
-            head!.headers.remove(name: "content-length")
-            head!.headers.replaceOrAdd(name: "transfer-encoding", value: "chunked")
+            head!.headers.remove(name: .contentLength)
+            head!.headers.replaceOrAdd(name: .transferEncoding, value: "chunked")
         }
 
         let response = (head, body, end)

@@ -23,12 +23,12 @@ socket=$(get_socket "$token")
 
 kill -0 $server_pid
 
-echo -e 'GET /dynamic/count-to-ten HTTP/1.1\r\nConnection: close\r\n\r\n' | \
+echo -e 'GET /dynamic/count-to-ten HTTP/1.1\r\nconnection: close\r\n\r\n' | \
     nc -U "$socket" > "$tmp/actual"
 backslash_r=$(echo -ne '\r')
 cat > "$tmp/expected" <<EOF
 HTTP/1.1 200 OK$backslash_r
-Connection: close$backslash_r
+connection: close$backslash_r
 transfer-encoding: chunked$backslash_r
 $backslash_r
 1$backslash_r

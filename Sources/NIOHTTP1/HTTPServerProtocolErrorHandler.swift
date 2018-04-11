@@ -43,7 +43,7 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler {
         // A side note here: we cannot block or do any delayed work. ByteToMessageDecoder is going
         // to come along and close the channel right after we return from this function.
         if !self.hasUnterminatedResponse {
-            let headers = HTTPHeaders([("Connection", "close"), ("Content-Length", "0")])
+            let headers = HTTPHeaders([(.connection, "close"), (.contentLength, "0")])
             let head = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .badRequest, headers: headers)
             ctx.write(self.wrapOutboundOut(.head(head)), promise: nil)
             ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)

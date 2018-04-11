@@ -143,4 +143,18 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertTrue(headers.contains(name: "X-Header"))
         XCTAssertFalse(headers.contains(name: "X-NonExistingHeader"))
     }
+
+    func testHTTPHeaderName() {
+        var headers = HTTPHeaders()
+        headers.add(name: .contentLength, value: "1")
+        headers.add(name: "Transfer-Encoding", value: "chunked")
+
+        XCTAssertTrue(headers.contains(name: .contentLength))
+        XCTAssertTrue(headers.contains(name: "Content-Length"))
+        XCTAssertTrue(headers.contains(name: .transferEncoding))
+        XCTAssertTrue(headers.contains(name: "Transfer-Encoding"))
+
+        XCTAssertEqual(headers[.contentLength], ["1"])
+        XCTAssertEqual(headers[.transferEncoding], ["chunked"])
+    }
 }

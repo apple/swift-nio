@@ -101,25 +101,25 @@ private enum BodyFraming {
 private func sanitizeTransportHeaders(hasBody: HTTPMethod.HasBody, headers: inout HTTPHeaders, version: HTTPVersion) -> BodyFraming {
     switch hasBody {
     case .no:
-        headers.remove(name: "content-length")
-        headers.remove(name: "transfer-encoding")
+        headers.remove(name: .contentLength)
+        headers.remove(name: .transferEncoding)
         return .neither
     case .yes:
-        if headers.contains(name: "content-length") {
+        if headers.contains(name: .contentLength) {
             return .contentLength
         }
         if version.major == 1 && version.minor >= 1 {
-            headers.replaceOrAdd(name: "transfer-encoding", value: "chunked")
+            headers.replaceOrAdd(name: .transferEncoding, value: "chunked")
             return .chunked
         } else {
             return .neither
         }
     case .unlikely:
-        if headers.contains(name: "content-length") {
+        if headers.contains(name: .contentLength) {
             return .contentLength
         }
         if version.major == 1 && version.minor >= 1 {
-            return headers["transfer-encoding"].first == "chunked" ? .chunked : .neither
+            return headers[.transferEncoding].first == "chunked" ? .chunked : .neither
         }
         return .neither
     }

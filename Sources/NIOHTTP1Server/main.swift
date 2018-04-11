@@ -35,7 +35,7 @@ extension String {
 
 private func httpResponseHead(request: HTTPRequestHead, status: HTTPResponseStatus, headers: HTTPHeaders = HTTPHeaders()) -> HTTPResponseHead {
     var head = HTTPResponseHead(version: request.version, status: status, headers: headers)
-    let connectionHeaders: [String] = head.headers[canonicalForm: "connection"].map { $0.lowercased() }
+    let connectionHeaders: [String] = head.headers[canonicalForm: .connection].map { $0.lowercased() }
 
     if !connectionHeaders.contains("keep-alive") && !connectionHeaders.contains("close") {
         // the user hasn't pre-set either 'keep-alive' or 'close', so we might need to add headers
@@ -43,10 +43,10 @@ private func httpResponseHead(request: HTTPRequestHead, status: HTTPResponseStat
         switch (request.isKeepAlive, request.version.major, request.version.minor) {
         case (true, 1, 0):
             // HTTP/1.0 and the request has 'Connection: keep-alive', we should mirror that
-            head.headers.add(name: "Connection", value: "keep-alive")
+            head.headers.add(name: .connection, value: "keep-alive")
         case (false, 1, let n) where n >= 1:
             // HTTP/1.1 (or treated as such) and the request has 'Connection: close', we should mirror that
-            head.headers.add(name: "Connection", value: "close")
+            head.headers.add(name: .connection, value: "close")
         default:
             // we should match the default or are dealing with some HTTP that we don't support, let's leave as is
             ()
@@ -125,7 +125,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             self.buffer.clear()
             self.buffer.write(string: response)
             var headers = HTTPHeaders()
-            headers.add(name: "Content-Length", value: "\(response.utf8.count)")
+            headers.add(name: .contentLength, value: "\(response.utf8.count)")
             ctx.write(self.wrapOutboundOut(.head(httpResponseHead(request: self.infoSavedRequestHead!, status: .ok, headers: headers))), promise: nil)
             ctx.write(self.wrapOutboundOut(.body(.byteBuffer(self.buffer))), promise: nil)
             self.completeResponse(ctx, trailers: nil, promise: nil)
@@ -157,7 +157,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             self.state.requestComplete()
             if balloonInMemory {
                 var headers = HTTPHeaders()
-                headers.add(name: "Content-Length", value: "\(self.buffer.readableBytes)")
+                headers.add(name: .contentLength, value: "\(self.buffer.readableBytes)")
                 ctx.write(self.wrapOutboundOut(.head(httpResponseHead(request: self.infoSavedRequestHead!, status: .ok, headers: headers))), promise: nil)
                 ctx.write(self.wrapOutboundOut(.body(.byteBuffer(self.buffer))), promise: nil)
                 self.completeResponse(ctx, trailers: nil, promise: nil)
@@ -307,8 +307,8 @@ private final class HTTPHandler: ChannelInboundHandler {
 
         func responseHead(request: HTTPRequestHead, fileRegion region: FileRegion) -> HTTPResponseHead {
             var response = httpResponseHead(request: request, status: .ok)
-            response.headers.add(name: "Content-Length", value: "\(region.endIndex)")
-            response.headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
+            response.headers.add(name: .contentLength, value: "\(region.endIndex)")
+            response.headers.add(name: .contentType, value: "text/plain; charset=utf-8")
             return response
         }
 
@@ -419,7 +419,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             self.state.requestReceived()
 
             var responseHead = httpResponseHead(request: request, status: HTTPResponseStatus.ok)
-            responseHead.headers.add(name: "content-length", value: "12")
+            responseHead.headers.add(name: .contentLength, value: "12")
             let response = HTTPServerResponsePart.head(responseHead)
             ctx.write(self.wrapOutboundOut(response), promise: nil)
         case .body:

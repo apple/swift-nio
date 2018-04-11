@@ -44,7 +44,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         // Check the response.
         assertResponseIs(response: written.readString(length: written.readableBytes)!,
                          expectedResponseLine: "HTTP/1.1 400 Bad Request",
-                         expectedResponseHeaders: ["Connection: close", "Content-Length: 0"])
+                         expectedResponseHeaders: ["connection: close", "content-length: 0"])
     }
 
     func testIgnoresNonParserErrors() throws {

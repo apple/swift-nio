@@ -35,6 +35,7 @@ extension HTTPHeadersTest {
                 ("testTrimWhitespaceWorksOnOnlyWhitespace", testTrimWhitespaceWorksOnOnlyWhitespace),
                 ("testTrimWorksWithCharactersInTheMiddleAndWhitespaceAround", testTrimWorksWithCharactersInTheMiddleAndWhitespaceAround),
                 ("testContains", testContains),
+                ("testHTTPHeaderName", testHTTPHeaderName),
            ]
    }
 }
