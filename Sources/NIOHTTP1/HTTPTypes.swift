@@ -257,7 +257,18 @@ public struct HTTPHeaders: CustomStringConvertible {
     /// - parameters
     ///     - headers: An initial set of headers to use to populate the header block.
     ///     - allocator: The allocator to use to allocate the underlying storage.
-    public init(_ headers: [(String, String)] = [], allocator: ByteBufferAllocator = ByteBufferAllocator()) {
+    public init(_ headers: [(String, String)] = []) {
+        // Note: this initializer exists becuase of https://bugs.swift.org/browse/SR-7415.
+        // Otherwise we'd only have the one below with a default argument for `allocator`.
+        self.init(headers, allocator: ByteBufferAllocator())
+    }
+
+    /// Construct a `HTTPHeaders` structure.
+    ///
+    /// - parameters
+    ///     - headers: An initial set of headers to use to populate the header block.
+    ///     - allocator: The allocator to use to allocate the underlying storage.
+    public init(_ headers: [(String, String)] = [], allocator: ByteBufferAllocator) {
         // Reserve enough space in the array to hold all indices.
         var array: [HTTPHeader] = []
         array.reserveCapacity(headers.count)
