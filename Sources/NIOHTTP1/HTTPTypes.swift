@@ -16,8 +16,6 @@ import NIO
 
 let crlf: StaticString = "\r\n"
 let headerSeparator: StaticString = ": "
-let http1_1: StaticString = "HTTP/1.1"
-let status200: StaticString = "200 OK"
 
 /// A representation of the request line and header fields of a HTTP request.
 public struct HTTPRequestHead: Equatable {
@@ -218,9 +216,9 @@ private extension UInt8 {
 public struct HTTPHeaders: CustomStringConvertible {
 
     // Because we use CoW implementations HTTPHeaders is also CoW
-    private var buffer: ByteBuffer
-    private var headers: [HTTPHeader]
-    private var continuous: Bool = true
+    fileprivate var buffer: ByteBuffer
+    fileprivate var headers: [HTTPHeader]
+    fileprivate var continuous: Bool = true
 
     /// Returns the `String` for the given `HTTPHeaderIndex`.
     ///
@@ -393,28 +391,6 @@ public struct HTTPHeaders: CustomStringConvertible {
         }
         return false
     }
-
-    /// Serializes this HTTP header block to bytes suitable for writing to the wire.
-    ///
-    /// - Parameter buffer: A buffer to write the serialized bytes into. Will increment
-    ///     the writer index of this buffer.
-    func write(into: inout ByteBuffer) {
-        if self.continuous {
-            // Declare an extra variable so we not affect the readerIndex of the buffer itself.
-            var buf = self.buffer
-            into.write(buffer: &buf)
-        } else {
-            // slow-path....
-            // TODO: This can still be improved to write as many continuous data as possible and just skip over stuff that was removed.
-            for header in self.headers {
-                let fieldLength = (header.value.start + header.value.length) - header.name.start
-                var header = self.buffer.getSlice(at: header.name.start, length: fieldLength)!
-                into.write(buffer: &header)
-                into.write(staticString: crlf)
-            }
-        }
-        into.write(staticString: crlf)
-    }
     
     @available(*, deprecated, message: "getCanonicalForm has been changed to a subscript: headers[canonicalForm: name]")
     public func getCanonicalForm(_ name: String) -> [String] {
@@ -440,6 +416,30 @@ public struct HTTPHeaders: CustomStringConvertible {
     }
 }
 
+internal extension ByteBuffer {
+
+    /// Serializes this HTTP header block to bytes suitable for writing to the wire.
+    ///
+    /// - Parameter buffer: A buffer to write the serialized bytes into. Will increment
+    ///     the writer index of this buffer.
+    mutating func write(headers: HTTPHeaders) {
+        if headers.continuous {
+            // Declare an extra variable so we not affect the readerIndex of the buffer itself.
+            var buf = headers.buffer
+            self.write(buffer: &buf)
+        } else {
+            // slow-path....
+            // TODO: This can still be improved to write as many continuous data as possible and just skip over stuff that was removed.
+            for header in headers.self.headers {
+                let fieldLength = (header.value.start + header.value.length) - header.name.start
+                var header = headers.buffer.getSlice(at: header.name.start, length: fieldLength)!
+                self.write(buffer: &header)
+                self.write(staticString: crlf)
+            }
+        }
+        self.write(staticString: crlf)
+    }
+}
 extension HTTPHeaders: Sequence {
     public typealias Element = (name: String, value: String)
   
@@ -653,85 +653,6 @@ public enum HTTPMethod: Equatable {
     }
 }
 
-extension HTTPMethod {
-    /// Serializes this HTTP method bytes suitable for writing to the wire.
-    ///
-    /// - Parameter buffer: A buffer to write the serialized bytes into. Will increment
-    ///     the writer index of this buffer.
-    func write(buffer: inout ByteBuffer) {
-        switch self {
-        case .GET:
-            buffer.write(staticString: "GET")
-        case .PUT:
-            buffer.write(staticString: "PUT")
-        case .ACL:
-            buffer.write(staticString: "ACL")
-        case .HEAD:
-            buffer.write(staticString: "HEAD")
-        case .POST:
-            buffer.write(staticString: "POST")
-        case .COPY:
-            buffer.write(staticString: "COPY")
-        case .LOCK:
-            buffer.write(staticString: "LOCK")
-        case .MOVE:
-            buffer.write(staticString: "MOVE")
-        case .BIND:
-            buffer.write(staticString: "BIND")
-        case .LINK:
-            buffer.write(staticString: "LINK")
-        case .PATCH:
-            buffer.write(staticString: "PATCH")
-        case .TRACE:
-            buffer.write(staticString: "TRACE")
-        case .MKCOL:
-            buffer.write(staticString: "MKCOL")
-        case .MERGE:
-            buffer.write(staticString: "MERGE")
-        case .PURGE:
-            buffer.write(staticString: "PURGE")
-        case .NOTIFY:
-            buffer.write(staticString: "NOTIFY")
-        case .SEARCH:
-            buffer.write(staticString: "SEARCH")
-        case .UNLOCK:
-            buffer.write(staticString: "UNLOCK")
-        case .REBIND:
-            buffer.write(staticString: "REBIND")
-        case .UNBIND:
-            buffer.write(staticString: "UNBIND")
-        case .REPORT:
-            buffer.write(staticString: "REPORT")
-        case .DELETE:
-            buffer.write(staticString: "DELETE")
-        case .UNLINK:
-            buffer.write(staticString: "UNLINK")
-        case .CONNECT:
-            buffer.write(staticString: "CONNECT")
-        case .MSEARCH:
-            buffer.write(staticString: "MSEARCH")
-        case .OPTIONS:
-            buffer.write(staticString: "OPTIONS")
-        case .PROPFIND:
-            buffer.write(staticString: "PROPFIND")
-        case .CHECKOUT:
-            buffer.write(staticString: "CHECKOUT")
-        case .PROPPATCH:
-            buffer.write(staticString: "PROPPATCH")
-        case .SUBSCRIBE:
-            buffer.write(staticString: "SUBSCRIBE")
-        case .MKCALENDAR:
-            buffer.write(staticString: "MKCALENDAR")
-        case .MKACTIVITY:
-            buffer.write(staticString: "MKACTIVITY")
-        case .UNSUBSCRIBE:
-            buffer.write(staticString: "UNSUBSCRIBE")
-        case .RAW(let value):
-            buffer.write(string: value)
-        }
-    }
-}
-
 /// A structure representing a HTTP version.
 public struct HTTPVersion: Equatable {
     public static func ==(lhs: HTTPVersion, rhs: HTTPVersion) -> Bool {
@@ -752,24 +673,6 @@ public struct HTTPVersion: Equatable {
 
     /// The minor version number.
     public let minor: UInt16
-}
-
-extension HTTPVersion {
-    /// Serializes this HTTP version to bytes suitable for writing to the wire.
-    ///
-    /// - Parameter buffer: A buffer to write the serialized bytes into. Will increment
-    ///     the writer index of this buffer.
-    func write(buffer: inout ByteBuffer) {
-        if major == 1 && minor == 1 {
-            // Optimize for HTTP/1.1
-            buffer.write(staticString: http1_1)
-        } else {
-            buffer.write(staticString: "HTTP/")
-            buffer.write(string: String(major))
-            buffer.write(staticString: ".")
-            buffer.write(string: String(minor))
-        }
-    }
 }
 
 extension HTTPParserError: CustomDebugStringConvertible {
@@ -1110,21 +1013,6 @@ extension HTTPResponseStatus {
             case .custom(code: _, reasonPhrase: let phrase):
                 return phrase
             }
-        }
-    }
-
-    /// Serializes this response status to bytes suitable for writing to the wire.
-    ///
-    /// - Parameter buffer: A buffer to write the serialized bytes into. Will increment
-    ///     the writer index of this buffer.
-    func write(buffer: inout ByteBuffer) {
-        if case .ok = self {
-            // Optimize for 200 ok, which should be the most likely code (...hopefully).
-            buffer.write(staticString: status200)
-        } else {
-            buffer.write(string: String(code))
-            buffer.write(string: " ")
-            buffer.write(string: reasonPhrase)
         }
     }
 }
