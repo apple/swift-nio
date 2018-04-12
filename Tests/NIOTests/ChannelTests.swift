@@ -2019,4 +2019,81 @@ public class ChannelTests: XCTestCase {
         try allDone.futureResult.wait()
         XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
     }
+
+    func testSocketFailingAsyncCorrectlyTearsTheChannelDownAndDoesntCrash() throws {
+        // regression test for #302
+        enum DummyError: Error { case dummy }
+        class SocketFailingAsyncConnect: Socket {
+            init() throws {
+                try super.init(protocolFamily: PF_INET, type: Posix.SOCK_STREAM, setNonBlocking: true)
+            }
+
+            override func connect(to address: SocketAddress) throws -> Bool {
+                _ = try super.connect(to: address)
+                return false
+            }
+
+            override func finishConnect() throws {
+                throw DummyError.dummy
+            }
+        }
+
+        class VerifyThingsAreRightHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+            private let allDone: EventLoopPromise<Void>
+            enum State {
+                case fresh
+                case registered
+                case unregistered
+            }
+            private var state: State = .fresh
+
+            init(allDone: EventLoopPromise<Void>) {
+                self.allDone = allDone
+            }
+            deinit { XCTAssertEqual(.unregistered, self.state) }
+
+            func channelActive(ctx: ChannelHandlerContext) { XCTFail("should never become active") }
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) { XCTFail("should never read") }
+
+            func channelReadComplete(ctx: ChannelHandlerContext) { XCTFail("should never readComplete") }
+
+            func errorCaught(ctx: ChannelHandlerContext, error: Error) { XCTFail("pipeline shouldn't be told about connect error") }
+
+            func channelRegistered(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.fresh, self.state)
+                self.state = .registered
+            }
+
+            func channelUnregistered(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.registered, self.state)
+                self.state = .unregistered
+                self.allDone.succeed(result: ())
+            }
+        }
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let sc = try SocketChannel(socket: SocketFailingAsyncConnect(), eventLoop: group.next() as! SelectableEventLoop)
+
+        let serverChannel = try ServerBootstrap(group: group.next())
+            .bind(host: "127.0.0.1", port: 0)
+            .wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
+        let allDone: EventLoopPromise<Void> = group.next().newPromise()
+        XCTAssertNoThrow(try sc.eventLoop.submit {
+            sc.pipeline.add(handler: VerifyThingsAreRightHandler(allDone: allDone)).then {
+                sc.register().then {
+                    sc.connect(to: serverChannel.localAddress!)
+                }
+            }
+        }.wait())
+        XCTAssertNoThrow(try allDone.futureResult.wait())
+        XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
+    }
 }
