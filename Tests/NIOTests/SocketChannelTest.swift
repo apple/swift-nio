@@ -261,4 +261,33 @@ public class SocketChannelTest : XCTestCase {
         try serverChannel.close().wait()
     }
 
+    public func testCloseDuringWriteFailure() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+
+        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+
+        // Put a write in the channel but don't flush it. We're then going to
+        // close the channel. This should trigger an error callback that will
+        // re-close the channel, which should fail with `alreadyClosed`.
+        var buffer = clientChannel.allocator.buffer(capacity: 12)
+        buffer.write(staticString: "hello")
+        let writeFut = clientChannel.write(buffer).map {
+            XCTFail("Must not succeed")
+        }.thenIfError { error in
+            XCTAssertEqual(error as? ChannelError, ChannelError.alreadyClosed)
+            return clientChannel.close()
+        }
+        XCTAssertNoThrow(try clientChannel.close().wait())
+
+        do {
+            try writeFut.wait()
+            XCTFail("Did not throw")
+        } catch ChannelError.alreadyClosed {
+            // ok
+        } catch {
+            XCTFail("Unexpected error \(error)")
+        }
+    }
 }
