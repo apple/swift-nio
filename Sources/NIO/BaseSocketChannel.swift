@@ -735,7 +735,9 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             do {
                 try finishConnectSocket()
             } catch {
-                connectPromise.fail(error: error)
+                assert(!self.lifecycleManager.isActive)
+                // close0 fails the connectPromise itself so no need to do it here
+                self.close0(error: error, mode: .all, promise: nil)
                 return
             }
             // We already know what the local address is.
