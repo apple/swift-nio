@@ -667,9 +667,13 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
         // Fail all pending writes and so ensure all pending promises are notified
         self.unsetCachedAddressesFromSocket()
-        self.cancelWritesOnClose(error: error)
 
-        self.lifecycleManager.close(promise: p)(self.pipeline)
+        // Transition our internal state.
+        let callouts = self.lifecycleManager.close(promise: p)
+
+        // Now that our state is sensible, we can call out to user code.
+        self.cancelWritesOnClose(error: error)
+        callouts(self.pipeline)
 
         eventLoop.execute {
             // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline
