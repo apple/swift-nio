@@ -79,6 +79,8 @@ done
 function run_test() {
     if $verbose; then
         "$@" 2>&1 | tee -a "$out"
+        # we need to return the return value of the first command
+        return ${PIPESTATUS[0]}
     else
         "$@" >> "$out" 2>&1
     fi
