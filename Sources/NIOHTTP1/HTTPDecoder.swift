@@ -26,6 +26,7 @@ private struct HTTPParserState {
     // This is set before http_parser_execute(...) is called and set to nil again after it finish
     var baseAddress: UnsafePointer<UInt8>?
     var currentError: HTTPParserError?
+    var seenEOF = false
 
     enum DataAwaitingState {
         case messageBegin
@@ -263,14 +264,34 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
                 // annoyingly opaque here, and in those cases return 1 instead of 0. This forces http_parser
                 // to not expect a request body.
                 //
-                // See also: https://github.com/nodejs/http-parser/issues/251. Note that despite the text in
-                // that issue, http_parser *does* seem to handle the case of 204 and friends: it's just HEAD
-                // that doesn't work.
+                // The same logic applies to CONNECT: RFC 7230 says that regardless of what the headers say,
+                // responses to CONNECT never have HTTP-level bodies.
                 //
-                // Note that this issue is the *entire* reason this must be a duplex: we need to know what the
-                // request verb is that we're seeing a response for.
+                // Finally, we need to work around a bug in http_parser for 1XX, 204, and 304 responses.
+                // RFC 7230 says:
+                //
+                // > ... any response with a 1xx (Informational),
+                // > 204 (No Content), or 304 (Not Modified) status
+                // > code is always terminated by the first empty line after the
+                // > header fields, regardless of the header fields present in the
+                // > message, and thus cannot contain a message body.
+                //
+                // However, http_parser only does this for responses that do not contain length fields. That
+                // does not meet the requirement of RFC 7230. This is an outstanding http_parser issue:
+                // https://github.com/nodejs/http-parser/issues/251. As a result, we check for these status
+                // codes and override http_parser's handling as well.
                 let method = handler.popRequestMethod()
-                return method == .HEAD ? 1 : 0
+                if method == .HEAD || method == .CONNECT {
+                    return 1
+                }
+
+                if (head.status.code / 100 == 1 ||  // 1XX codes
+                    head.status.code == 204 ||
+                    head.status.code == 304) {
+                    return 1
+                }
+
+                return 0
             default:
                 fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
             }
@@ -393,9 +414,10 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
 
             state.baseAddress = nil
 
-            let errno = parser.http_errno
-            if errno != 0 {
-                throw HTTPParserError.httpError(fromCHTTPParserErrno: http_errno(rawValue: errno))!
+            let httpError = parser.http_errno
+            if httpError != 0 {
+                self.state.currentError = HTTPParserError.httpError(fromCHTTPParserErrno: http_errno(rawValue: httpError))!
+                throw self.state.currentError!
             }
             return result
         }
@@ -424,17 +446,66 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         ctx.fireChannelReadComplete()
     }
 
-    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        // This handler parses data eagerly, so re-parsing for decodeLast is not useful.
-        // TODO(cory): We should actually add EOF handling here, because EOF can be meaningful in HTTP.
-        // See https://github.com/apple/swift-nio/issues/254
-        return .needMoreData
+    public func channelInactive(ctx: ChannelHandlerContext) {
+        self.readEOF(ctx: ctx)
+        ctx.fireChannelInactive()
+    }
+
+    public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+        if case .some(.inputClosed) = event as? ChannelEvent {
+            self.readEOF(ctx: ctx)
+        }
+        ctx.fireUserInboundEventTriggered(event)
     }
 
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         ctx.fireErrorCaught(error)
         if error is HTTPParserError {
             ctx.close(promise: nil)
+        }
+    }
+
+    private func readEOF(ctx: ChannelHandlerContext) {
+        guard self.state.currentError == nil else {
+            // We're in readEOF because we hit an error and closed the connection.
+            // No need to do this dance again, just return.
+            return
+        }
+
+        guard !self.state.seenEOF else {
+            // We're in readEOF but we have already processed it once for this connection.
+            // Probably this is a channelInactive after half closure, but either way we
+            // shouldn't tell http_parser about this again or it'll send us on_message_complete
+            // again.
+            return
+        }
+
+        // EOF is semantic in HTTP, so we need to tell the parser that we saw it.
+        // We need to be a bit careful: the parser can call out to us, but should only
+        // ever call on_message_complete, which won't do a read. As a result, it *should*
+        // be totally safe to call this with a null data pointer. Just to make sure, though,
+        // let's store nil in the base address. Once we've called this, we've seenEOF: don't
+        // let us enter this function again.
+        self.state.baseAddress = nil
+        self.state.seenEOF = true
+        _ = c_nio_http_parser_execute(&self.parser, &self.settings, nil, 0)
+
+        // We don't need the cumulation buffer, if we're holding it.
+        self.cumulationBuffer = nil
+
+        // No check to state.currentError becuase, if we hit it before, we already threw that
+        // error. This never calls any of the callbacks that set that field anyway. Instead we
+        // just check if the errno is set and throw.
+        let httpError = parser.http_errno
+        if httpError != 0 {
+            self.state.currentError = HTTPParserError.httpError(fromCHTTPParserErrno: http_errno(rawValue: httpError))!
+            ctx.fireErrorCaught(self.state.currentError!)
+            return
+        }
+
+        // If we got here, no error was hit, but we may have a pending callout. Let's fire it if we did.
+        if self.pendingInOut.count > 0 {
+            self.channelReadComplete(ctx: ctx)
         }
     }
 }
