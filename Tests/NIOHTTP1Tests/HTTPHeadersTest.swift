@@ -61,7 +61,7 @@ class HTTPHeadersTest : XCTestCase {
         let headers = HTTPHeaders(originalHeaders)
         let channel = EmbeddedChannel()
         var buffer = channel.allocator.buffer(capacity: 1024)
-        headers.write(into: &buffer)
+        buffer.write(headers: headers)
 
         let writtenBytes = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes)!
         XCTAssertTrue(writtenBytes.contains("User-Agent: 1\r\n"))
