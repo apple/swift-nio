@@ -103,7 +103,6 @@ internal enum OverallWriteResult {
 ///  - `failAll` if for some reason all outstanding writes need to be discarded and the corresponding `EventLoopPromise` needs to be failed.
 private struct PendingStreamWritesState {
     private var pendingWrites = MarkedCircularBuffer<PendingStreamWrite>(initialRingCapacity: 16)
-    private var chunks: Int = 0
     public private(set) var bytes: Int = 0
 
     public var flushedChunks: Int {
@@ -121,7 +120,6 @@ private struct PendingStreamWritesState {
     /// - returns: The `EventLoopPromise` of the write or `nil` if none was provided. The promise needs to be fulfilled by the caller.
     ///
     private mutating func fullyWrittenFirst() -> EventLoopPromise<Void>? {
-        self.chunks -= 1
         let first = self.pendingWrites.removeFirst()
         self.subtractOutstanding(bytes: first.data.readableBytes)
         return first.promise
@@ -142,12 +140,11 @@ private struct PendingStreamWritesState {
     /// Check if there are no outstanding writes.
     public var isEmpty: Bool {
         if self.pendingWrites.isEmpty {
-            assert(self.chunks == 0)
             assert(self.bytes == 0)
             assert(!self.pendingWrites.hasMark())
             return true
         } else {
-            assert(self.chunks > 0 && self.bytes >= 0)
+            assert(self.bytes >= 0)
             return false
         }
     }
@@ -155,7 +152,6 @@ private struct PendingStreamWritesState {
     /// Add a new write and optionally the corresponding promise to the list of outstanding writes.
     public mutating func append(_ chunk: PendingStreamWrite) {
         self.pendingWrites.append(chunk)
-        self.chunks += 1
         switch chunk.data {
         case .byteBuffer(let buffer):
             self.bytes += buffer.readableBytes
