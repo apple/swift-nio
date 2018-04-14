@@ -20,6 +20,15 @@
 
 import NIO
 
+/// A utility function that runs the body code only in debug builds, without
+/// emitting compiler warnings.
+///
+/// This is currently the only way to do this in Swift: see
+/// https://forums.swift.org/t/support-debug-only-code/11037 for a discussion.
+internal func debugOnly(_ body: () -> Void) {
+    assert({ body(); return true }())
+}
+
 /// A `ChannelHandler` that handles HTTP pipelining by buffering inbound data until a
 /// response has been sent.
 ///
@@ -105,6 +114,8 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
     private enum BufferedEvent {
         /// A channelRead event.
         case channelRead(NIOAny)
+        
+        case error(HTTPParserError)
 
         /// A TCP half-close. This is buffered to ensure that subsequent channel
         /// handlers that are aware of TCP half-close are informed about it in
@@ -123,6 +134,13 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
     /// don't pipeline, so this initially allocates no space for data at all. Clients that
     /// do pipeline will cause dynamic resizing of the buffer, which is generally acceptable.
     private var eventBuffer = CircularBuffer<BufferedEvent>(initialRingCapacity: 0)
+    
+    enum NextExpectedMessageType {
+        case head
+        case bodyOrEnd
+    }
+    
+    private var nextExpectedOutboundMessage = NextExpectedMessageType.head
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         if case .responseEndPending = self.state {
@@ -151,10 +169,36 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
             ctx.fireUserInboundEventTriggered(event)
         }
     }
+    
+    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+        guard let httpError = error as? HTTPParserError else {
+            ctx.fireErrorCaught(error)
+            return
+        }
+        if case .responseEndPending = self.state {
+            self.eventBuffer.append(.error(httpError))
+            return
+        }
+        ctx.fireErrorCaught(error)
+    }
 
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         assert(self.state != .requestEndPending,
                "Received second response while waiting for first one to complete")
+        debugOnly {
+            let res = self.unwrapOutboundIn(data)
+            switch res {
+            case .head:
+                assert(self.nextExpectedOutboundMessage == .head)
+                self.nextExpectedOutboundMessage = .bodyOrEnd
+            case .body:
+                assert(self.nextExpectedOutboundMessage == .bodyOrEnd)
+            case .end:
+                assert(self.nextExpectedOutboundMessage == .bodyOrEnd)
+                self.nextExpectedOutboundMessage = .head
+            }
+        }
+
         var startReadingAgain = false
         if case .end = self.unwrapOutboundIn(data) {
             startReadingAgain = true
@@ -199,6 +243,8 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
             case .channelRead(let read):
                 self.channelRead(ctx: ctx, data: read)
                 deliveredRead = true
+            case .error(let error):
+                ctx.fireErrorCaught(error)
             case .halfClose:
                 // When we fire the half-close, we want to forget all prior reads.
                 // They will just trigger further half-close notifications we don't
