@@ -796,13 +796,14 @@ fileprivate class TaskQueue {
             scheduledTasks.push(task)
             return
         }
-        lock.lock()
-        needCoalesce.store(true)
-        pendingPushes.append(task)
-        lock.unlock()
+        lock.withLockVoid {
+            needCoalesce.store(true)
+            pendingPushes.append(task)
+        }
     }
     
     func peek() -> ScheduledTask? {
+        assert(thread.isCurrent)
         return scheduledTasks.peek()
     }
     
@@ -815,10 +816,10 @@ fileprivate class TaskQueue {
             scheduledTasks.remove(task)
             return
         }
-        lock.lock()
-        needCoalesce.store(true)
-        pendingRemoves.append(task)
-        lock.unlock()
+        lock.withLockVoid {
+            needCoalesce.store(true)
+            pendingRemoves.append(task)
+        }
     }
     
     func removeReady(_ now: DispatchTime) -> ContiguousArray<() -> Void> {
@@ -836,15 +837,15 @@ fileprivate class TaskQueue {
         guard needCoalesce.exchange(with: false) else {
             return
         }
-        lock.lock()
-        for task in pendingPushes {
-            scheduledTasks.push(task)
+        lock.withLockVoid {
+            for task in pendingPushes {
+                scheduledTasks.push(task)
+            }
+            for task in pendingRemoves {
+                scheduledTasks.remove(task)
+            }
+            pendingPushes.removeAll()
+            pendingRemoves.removeAll()
         }
-        for task in pendingRemoves {
-            scheduledTasks.remove(task)
-        }
-        pendingPushes.removeAll()
-        pendingRemoves.removeAll()
-        lock.unlock()
     }
 }
