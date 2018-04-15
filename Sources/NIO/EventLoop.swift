@@ -823,7 +823,7 @@ fileprivate class TaskQueue {
     }
     
     func removeReady(_ now: DispatchTime) -> ContiguousArray<() -> Void> {
-        precondition(thread.isCurrent)
+        assert(thread.isCurrent)
         var readyTasks = ContiguousArray<() -> Void>()
         while let task = scheduledTasks.peek(), task.readyIn(now) <= .nanoseconds(0) {
             readyTasks.append(task.task)
@@ -833,7 +833,7 @@ fileprivate class TaskQueue {
     }
     
     func coalesce() {
-        precondition(thread.isCurrent)
+        assert(thread.isCurrent)
         guard needCoalesce.exchange(with: false) else {
             return
         }
