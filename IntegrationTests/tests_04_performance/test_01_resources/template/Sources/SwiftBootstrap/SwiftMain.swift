@@ -50,6 +50,81 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
     }
 }
 
+private struct PingPongFailure: Error, CustomStringConvertible {
+    public var description: String
+
+    init(problem: String) {
+        self.description = problem
+    }
+}
+
+private final class PingHandler: ChannelInboundHandler {
+    typealias InboundIn = ByteBuffer
+    typealias OutboundOut = ByteBuffer
+
+    private var pingBuffer: ByteBuffer!
+    private let numberOfRequests: Int
+    private var remainingNumberOfRequests: Int
+    private let allDone: EventLoopPromise<Void>
+    public static let pingCode: UInt8 = 0xbe
+
+    public init(numberOfRequests: Int, eventLoop: EventLoop) {
+        self.numberOfRequests = numberOfRequests
+        self.remainingNumberOfRequests = numberOfRequests
+        self.allDone = eventLoop.newPromise()
+    }
+
+    public func channelActive(ctx: ChannelHandlerContext) {
+        self.pingBuffer = ctx.channel.allocator.buffer(capacity: 1)
+        self.pingBuffer.write(integer: PingHandler.pingCode)
+
+        ctx.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
+    }
+
+    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+        var buf = self.unwrapInboundIn(data)
+        if buf.readableBytes == 1 &&
+            buf.readInteger(as: UInt8.self) == PongHandler.pongCode {
+            if self.remainingNumberOfRequests > 0 {
+                self.remainingNumberOfRequests -= 1
+                ctx.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
+            } else {
+                ctx.close(promise: self.allDone)
+            }
+        } else {
+            ctx.close(promise: nil)
+            self.allDone.fail(error: PingPongFailure(problem: "wrong buffer received: \(buf.debugDescription)"))
+        }
+    }
+
+    public func wait() throws {
+        try self.allDone.futureResult.wait()
+    }
+}
+
+private final class PongHandler: ChannelInboundHandler {
+    typealias InboundIn = ByteBuffer
+    typealias OutboundOut = ByteBuffer
+
+    private var pongBuffer: ByteBuffer!
+    public static let pongCode: UInt8 = 0xef
+
+    public func channelActive(ctx: ChannelHandlerContext) {
+        self.pongBuffer = ctx.channel.allocator.buffer(capacity: 1)
+        self.pongBuffer.write(integer: PongHandler.pongCode)
+    }
+
+    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+        var buf = self.unwrapInboundIn(data)
+        if buf.readableBytes == 1 &&
+            buf.readInteger(as: UInt8.self) == PingHandler.pingCode {
+            ctx.writeAndFlush(self.wrapOutboundOut(self.pongBuffer), promise: nil)
+        } else {
+            ctx.close(promise: nil)
+        }
+    }
+}
+
 @_cdecl("swift_main")
 public func swiftMain() -> Int {
     final class RepeatedRequests: ChannelInboundHandler {
@@ -109,6 +184,7 @@ public func swiftMain() -> Int {
         }
 
         _ = measureOne(fn) /* pre-heat and throw away */
+        usleep(100_000) // allocs/frees happen on multiple threads, allow some cool down time
         var measurements: [[String: Int]] = []
         for _ in 0..<10 {
             measurements.append(measureOne(fn))
@@ -128,6 +204,7 @@ public func swiftMain() -> Int {
     func doRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).then {
                     channel.pipeline.add(handler: SimpleHTTPServer())
@@ -147,12 +224,40 @@ public func swiftMain() -> Int {
                     channel.pipeline.add(handler: repeatedRequestsHandler)
                 }
             }
+            .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
             .connect(to: serverChannel.localAddress!)
             .wait()
 
         clientChannel.write(NIOAny(HTTPClientRequestPart.head(RepeatedRequests.requestHead)), promise: nil)
         try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
         return try repeatedRequestsHandler.wait()
+    }
+
+    func doPingPongRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+            .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
+            .childChannelInitializer { channel in
+                channel.pipeline.add(handler: PongHandler())
+            }.bind(host: "127.0.0.1", port: 0).wait()
+
+        defer {
+            try! serverChannel.close().wait()
+        }
+
+        let pingHandler = PingHandler(numberOfRequests: numberOfRequests, eventLoop: group.next())
+        _ = try ClientBootstrap(group: group)
+            .channelInitializer { channel in
+                channel.pipeline.add(handler: pingHandler)
+            }
+            .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
+            .channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
+            .connect(to: serverChannel.localAddress!)
+            .wait()
+
+        try pingHandler.wait()
+        return numberOfRequests
     }
 
     let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
@@ -173,6 +278,12 @@ public func swiftMain() -> Int {
             precondition(newDones == 1)
             numberDone += newDones
         }
+        return numberDone
+    }
+
+    measureAndPrint(desc: "ping_pong_1000_reqs_1_conn") {
+        let numberDone = try! doPingPongRequests(group: group, number: 1000)
+        precondition(numberDone == 1000)
         return numberDone
     }
 
