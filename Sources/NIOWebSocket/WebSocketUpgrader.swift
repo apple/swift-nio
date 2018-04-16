@@ -59,6 +59,7 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
 
     private let shouldUpgrade: (HTTPRequestHead) -> HTTPHeaders?
     private let upgradePipelineHandler: (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
+    private let maxFrameSize: Int
 
     /// Create a new `WebSocketUpgrader`.
     ///
@@ -73,10 +74,21 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
     ///         websocket protocol. This only needs to add the user handlers: the
     ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
     ///         pipeline automatically.
+    ///     - maxFrameSize: The maximum frame size the decoder is willing to tolerate from the
+    ///         remote peer. WebSockets in principle allows frame sizes up to `2**64` bytes, but
+    ///         this is an objectively unreasonable maximum value (on AMD64 systems it is not
+    ///         possible to even allocate a buffer large enough to handle this size), so we
+    ///         set a lower one. The default value is the same as the default HTTP/2 max frame
+    ///         size, `2**14` bytes. Users may override this to any value up to `UInt32.max`.
+    ///         Users are strongly encouraged not to increase this value unless they absolutely
+    ///         must, as the decoder will not produce partial frames, meaning that it will hold
+    ///         on to data until the *entire* body is received.
     public init(shouldUpgrade: @escaping (HTTPRequestHead) -> HTTPHeaders?,
-                upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>) {
+                upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>, maxFrameSize: Int = 1 << 14) {
+        precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
         self.shouldUpgrade = shouldUpgrade
         self.upgradePipelineHandler = upgradePipelineHandler
+        self.maxFrameSize = maxFrameSize
     }
 
     public func buildUpgradeResponse(upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) throws -> HTTPHeaders {
@@ -111,7 +123,7 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
 
     public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         return ctx.pipeline.add(handler: WebSocketFrameEncoder()).then {
-            ctx.pipeline.add(handler: WebSocketFrameDecoder())
+            ctx.pipeline.add(handler: WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize))
         }.then {
             self.upgradePipelineHandler(ctx.channel, upgradeRequest)
         }
