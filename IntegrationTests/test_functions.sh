@@ -61,6 +61,18 @@ function assert_greater_than_or_equal() {
     fi
 }
 
+g_has_previously_infoed=false
+
+function info() {
+    if $g_show_info; then
+        if ! $g_has_previously_infoed; then
+            echo >&3 || true # echo an extra newline so it looks better
+            g_has_previously_infoed=true
+        fi
+        echo >&3 "info: $*" || true
+    fi
+}
+
 function warn() {
     echo >&4 "warning: $*"
 }

@@ -22,6 +22,7 @@ set -o pipefail
 test="$1"
 tmp="$2"
 root="$3"
+g_show_info="$4"
 here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 source "$here/test_functions.sh"
