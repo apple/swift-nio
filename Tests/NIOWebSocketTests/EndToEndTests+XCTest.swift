@@ -34,6 +34,7 @@ extension EndToEndTests {
                 ("testUpgradeMayAddCustomHeaders", testUpgradeMayAddCustomHeaders),
                 ("testMayRegisterMultipleWebSocketEndpoints", testMayRegisterMultipleWebSocketEndpoints),
                 ("testSendAFewFrames", testSendAFewFrames),
+                ("testMaxFrameSize", testMaxFrameSize),
            ]
    }
 }
