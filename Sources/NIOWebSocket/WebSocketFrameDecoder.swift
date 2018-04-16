@@ -221,7 +221,7 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
     public var cumulationBuffer: ByteBuffer? = nil
 
     /// The maximum frame size the decoder is willing to tolerate from the remote peer.
-    private let maxFrameSize: Int
+    public let maxFrameSize: Int
 
     /// Our parser state.
     private var parser = WSParser()
