@@ -15,7 +15,7 @@
 import XCTest
 import NIO
 import NIOHTTP1
-import NIOWebSocket
+@testable import NIOWebSocket
 
 extension EmbeddedChannel {
     func readAllInboundBuffers() -> ByteBuffer {
@@ -342,10 +342,10 @@ class EndToEndTests: XCTestCase {
     }
 
     func testMaxFrameSize() throws {
-        let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { head in HTTPHeaders() },
+        let basicUpgrader = WebSocketUpgrader(maxFrameSize: 16, shouldUpgrade: { head in HTTPHeaders() },
                                               upgradePipelineHandler: { (channel, req) in
             return channel.eventLoop.newSucceededFuture(result: ())
-        }, maxFrameSize: 16)
+        })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())

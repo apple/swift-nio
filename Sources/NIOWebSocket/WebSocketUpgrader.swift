@@ -83,8 +83,31 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
     ///         Users are strongly encouraged not to increase this value unless they absolutely
     ///         must, as the decoder will not produce partial frames, meaning that it will hold
     ///         on to data until the *entire* body is received.
-    public init(shouldUpgrade: @escaping (HTTPRequestHead) -> HTTPHeaders?,
-                upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>, maxFrameSize: Int = 1 << 14) {
+    public convenience init(shouldUpgrade: @escaping (HTTPRequestHead) -> HTTPHeaders?,
+                upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>) {
+        self.init(maxFrameSize: 1 << 14, shouldUpgrade: shouldUpgrade, upgradePipelineHandler: upgradePipelineHandler)
+    }
+
+
+    /// Create a new `WebSocketUpgrader`.
+    ///
+    /// - parameters:
+    ///     - maxFrameSize: The maximum frame size the decoder is willing to tolerate from the
+    ///         remote peer. WebSockets in principle allows frame sizes up to `2**64` bytes, but
+    ///         this is an objectively unreasonable maximum value (on AMD64 systems it is not
+    ///         possible to even. Users may set this to any value up to `UInt32.max`.
+    ///     - shouldUpgrade: A callback that determines whether the websocket request should be
+    ///         upgraded. This callback is responsible for creating a `HTTPHeaders` object with
+    ///         any headers that it needs on the response *except for* the `Upgrade`, `Connection`,
+    ///         and `Sec-WebSocket-Accept` headers, which this upgrader will handle. Should return
+    ///         `nil` if the upgrade should be refused.
+    ///     - upgradePipelineHandler: A function that will be called once the upgrade response is
+    ///         flushed, and that is expected to mutate the `Channel` appropriately to handle the
+    ///         websocket protocol. This only needs to add the user handlers: the
+    ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
+    ///         pipeline automatically.
+    public init(maxFrameSize: Int, shouldUpgrade: @escaping (HTTPRequestHead) -> HTTPHeaders?,
+                upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>) {
         precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
         self.shouldUpgrade = shouldUpgrade
         self.upgradePipelineHandler = upgradePipelineHandler
