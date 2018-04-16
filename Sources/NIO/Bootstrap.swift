@@ -183,9 +183,9 @@ public final class ServerBootstrap {
             }.then {
                 serverChannelOptions.applyAll(channel: serverChannel)
             }.then {
-                serverChannel.register()
-            }.then {
-                serverChannel.bind(to: address)
+                serverChannel.registerAndDoSynchronously { serverChannel in
+                    serverChannel.bind(to: address)
+                }
             }.map {
                 serverChannel
             }.cascade(promise: promise)
@@ -238,6 +238,20 @@ public final class ServerBootstrap {
                     ctx.fireErrorCaught(err)
                 }
             }
+        }
+    }
+}
+
+private extension Channel {
+    func registerAndDoSynchronously(_ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
+        // this is pretty delicate at the moment:
+        // In many cases `body` must be _synchronously_ follow `register`, otherwise in our current
+        // implementation, `epoll` will send us `EPOLLHUP`. To have it run synchronously, we need to invoke the
+        // `then` on the eventloop that the `register` will succeed on.
+        assert(self.eventLoop.inEventLoop)
+        return self.register().then {
+            assert(self.eventLoop.inEventLoop)
+            return body(self)
         }
     }
 }
@@ -387,9 +401,7 @@ public final class ClientBootstrap {
             channelInitializer(channel).then {
                 channelOptions.applyAll(channel: channel)
             }.then {
-                channel.register()
-            }.then {
-                body(channel)
+                channel.registerAndDoSynchronously(body)
             }.map {
                 channel
             }.cascade(promise: promise)

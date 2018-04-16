@@ -148,9 +148,11 @@ public class SocketChannelTest : XCTestCase {
         let serverChannel = try ServerSocketChannel(serverSocket: socket, eventLoop: group.next() as! SelectableEventLoop, group: group)
         let promise: EventLoopPromise<IOError> = serverChannel.eventLoop.newPromise()
 
-        XCTAssertNoThrow(try serverChannel.register().wait())
-        XCTAssertNoThrow(try serverChannel.pipeline.add(handler: AcceptHandler(promise)).wait())
-        XCTAssertNoThrow(try serverChannel.bind(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())
+        XCTAssertNoThrow(try serverChannel.pipeline.add(handler: AcceptHandler(promise)).then {
+            serverChannel.register()
+        }.then {
+            serverChannel.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 0))
+        }.wait())
     
         XCTAssertEqual(active, try serverChannel.eventLoop.submit {
             serverChannel.readable()
@@ -207,17 +209,22 @@ public class SocketChannelTest : XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        let socket = try ConnectSocket()
-        let channel = try SocketChannel(socket: socket, eventLoop: group.next() as! SelectableEventLoop)
+        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        }
+        let channel = try SocketChannel(eventLoop: group.next() as! SelectableEventLoop, protocolFamily: PF_INET)
         let promise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
 
-        XCTAssertNoThrow(try channel.register().wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: ActiveVerificationHandler(promise)).wait())
-        XCTAssertNoThrow(try channel.connect(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: ActiveVerificationHandler(promise)).then {
+            channel.register()
+        }.then {
+            channel.connect(to: serverChannel.localAddress!)
+        }.wait())
 
-        try channel.close().wait()
-        try channel.closeFuture.wait()
-        try promise.futureResult.wait()
+        XCTAssertNoThrow(try channel.close().wait())
+        XCTAssertNoThrow(try channel.closeFuture.wait())
+        XCTAssertNoThrow(try promise.futureResult.wait())
     }
 
     public func testWriteServerSocketChannel() throws {

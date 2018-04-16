@@ -180,7 +180,11 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     private let isActiveAtomic: Atomic<Bool> = Atomic(value: false)
     private var _pipeline: ChannelPipeline! = nil // this is really a constant (set in .init) but needs `self` to be constructed and therefore a `var`. Do not change as this needs to accessed from arbitrary threads
 
-    internal var interestedEvent: IOEvent = .none
+    internal var interestedEvent: SelectorEventSet = [.readEOF, .reset] {
+        didSet {
+            assert(self.interestedEvent.contains(.reset), "impossible to unregister for reset")
+        }
+    }
 
     var readPending = false
     var pendingConnect: EventLoopPromise<Void>?
@@ -219,6 +223,19 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
         /// Some data was read by the read operation.
         case some
+    }
+
+    /// Returned by the `private func readable0()` to inform the caller about the current state of the underlying read stream.
+    /// This is mostly useful when receiving `.readEOF` as we then need to drain the read stream fully (ie. until we receive EOF or error of course)
+    private enum ReadStreamState {
+        /// Everything seems normal.
+        case normal
+
+        /// We saw EOF.
+        case eof
+
+        /// A read error was received.
+        case error
     }
 
     // MARK: Computed Properties
@@ -288,7 +305,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     }
 
     /// Provides the registration for this selector. Must be implemented by subclasses.
-    func registrationFor(interested: IOEvent) -> NIORegistration {
+    func registrationFor(interested: SelectorEventSet) -> NIORegistration {
         fatalError("must override")
     }
 
@@ -545,26 +562,21 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     private func registerForWritable() {
         assert(eventLoop.inEventLoop)
 
-        switch interestedEvent {
-        case .read:
-            safeReregister(interested: .all)
-        case .none:
-            safeReregister(interested: .write)
-        case .write, .all:
-            break
+        guard !self.interestedEvent.contains(.write) else {
+            // nothing to do if we were previously interested in write
+            return
         }
+        self.safeReregister(interested: self.interestedEvent.union(.write))
     }
 
     func unregisterForWritable() {
         assert(eventLoop.inEventLoop)
-        switch interestedEvent {
-        case .all:
-            safeReregister(interested: .read)
-        case .write:
-            safeReregister(interested: .none)
-        case .read, .none:
-            break
+
+        guard self.interestedEvent.contains(.write) else {
+            // nothing to do if we were not previously interested in write
+            return
         }
+        self.safeReregister(interested: self.interestedEvent.subtracting(.write))
     }
 
     public final func flush0() {
@@ -611,28 +623,22 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         assert(eventLoop.inEventLoop)
         assert(self.lifecycleManager.isRegistered)
 
-        switch interestedEvent {
-        case .write:
-            safeReregister(interested: .all)
-        case .none:
-            safeReregister(interested: .read)
-        case .read, .all:
-            break
+        guard !self.interestedEvent.contains(.read) else {
+            return
         }
+
+        self.safeReregister(interested: self.interestedEvent.union(.read))
     }
 
     func unregisterForReadable() {
         assert(eventLoop.inEventLoop)
         assert(self.lifecycleManager.isRegistered)
 
-        switch interestedEvent {
-        case .read:
-            safeReregister(interested: .none)
-        case .all:
-            safeReregister(interested: .write)
-        case .write, .none:
-            break
+        guard self.interestedEvent.contains(.read) else {
+            return
         }
+
+        self.safeReregister(interested: self.interestedEvent.subtracting(.read))
     }
 
     public func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
@@ -648,7 +654,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             return
         }
 
-        interestedEvent = .none
+        self.interestedEvent = .reset
         do {
             try selectableEventLoop.deregister(channel: self)
         } catch let err {
@@ -705,7 +711,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         // Was not registered yet so do it now.
         do {
             // We always register with interested .none and will just trigger readIfNeeded0() later to re-register if needed.
-            try self.safeRegister(interested: .none)
+            try self.safeRegister(interested: [.readEOF, .reset])
             self.lifecycleManager.register(promise: promise)(self.pipeline)
         } catch {
             promise?.fail(error: error)
@@ -761,7 +767,47 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
     }
 
+    final func readEOF() {
+        if self.lifecycleManager.isRegistered {
+            // we're unregistering from `readEOF` here as we want this to be one-shot. We're then synchronously
+            // reading all input until the EOF that we're guaranteed to see. After that `readEOF` becomes uninteresting
+            // and would anyway fire constantly.
+            self.safeReregister(interested: self.interestedEvent.subtracting(.readEOF))
+
+            loop: while self.lifecycleManager.isActive {
+                switch self.readable0() {
+                case .eof:
+                    // on EOF we stop the loop and we're done with our processing for `readEOF`.
+                    // we could both be registered & active (if our channel supports half-closure) or unregistered & inactive (if it doesn't).
+                    break loop
+                case .error:
+                    // we should be unregistered and inactive now (as `readable0` would've called close).
+                    assert(!self.lifecycleManager.isActive)
+                    assert(!self.lifecycleManager.isRegistered)
+                    break loop
+                case .normal:
+                    // normal, note that there is no guarantee we're still active (as the user might have closed in callout)
+                    continue loop
+                }
+            }
+        }
+    }
+
+    // this _needs_ to synchronously cause the fd to be unregistered because we cannot unregister from `reset`. In
+    // other words: Failing to unregister the whole selector will cause NIO to spin at 100% CPU constantly delivering
+    // the `reset` event.
+    final func reset() {
+        self.readEOF()
+        self.close0(error: ChannelError.eof, mode: .all, promise: nil)
+        assert(!self.lifecycleManager.isRegistered)
+    }
+
     public final func readable() {
+        self.readable0()
+    }
+
+    @discardableResult
+    private final func readable0() -> ReadStreamState {
         assert(eventLoop.inEventLoop)
         assert(self.lifecycleManager.isActive)
 
@@ -774,11 +820,13 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         do {
             try readFromSocket()
         } catch let err {
+            let readStreamState: ReadStreamState
             // ChannelError.eof is not something we want to fire through the pipeline as it just means the remote
             // peer closed / shutdown the connection.
             if let channelErr = err as? ChannelError, channelErr == ChannelError.eof {
+                readStreamState = .eof
                 // Directly call getOption0 as we are already on the EventLoop and so not need to create an extra future.
-                if try! getOption0(option: ChannelOptions.allowRemoteHalfClosure) {
+                if self.lifecycleManager.isActive, try! getOption0(option: ChannelOptions.allowRemoteHalfClosure) {
                     // If we want to allow half closure we will just mark the input side of the Channel
                     // as closed.
                     assert(self.lifecycleManager.isActive)
@@ -787,9 +835,10 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
                         close0(error: err, mode: .input, promise: nil)
                     }
                     readPending = false
-                    return
+                    return .eof
                 }
             } else {
+                readStreamState = .error
                 self.pipeline.fireErrorCaught0(error: err)
             }
 
@@ -802,12 +851,13 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
                 self.close0(error: err, mode: .all, promise: nil)
             }
 
-            return
+            return readStreamState
         }
         if self.lifecycleManager.isActive {
             pipeline.fireChannelReadComplete0()
         }
         readIfNeeded0()
+        return .normal
     }
 
     /// Returns `true` if the `Channel` should be closed as result of the given `Error` which happened during `readFromSocket`.
@@ -881,15 +931,15 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     }
 
     private func isWritePending() -> Bool {
-        return interestedEvent == .write || interestedEvent == .all
+        return self.interestedEvent.contains(.write)
     }
 
-    private func safeReregister(interested: IOEvent) {
+    private final func safeReregister(interested: SelectorEventSet) {
         assert(eventLoop.inEventLoop)
         assert(self.lifecycleManager.isRegistered)
 
         guard self.isOpen else {
-            interestedEvent = .none
+            assert(self.interestedEvent == .reset, "interestedEvent=\(self.interestedEvent) event though we're closed")
             return
         }
         if interested == interestedEvent {
@@ -905,7 +955,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
     }
 
-    private func safeRegister(interested: IOEvent) throws {
+    private func safeRegister(interested: SelectorEventSet) throws {
         assert(eventLoop.inEventLoop)
         assert(!self.lifecycleManager.isRegistered)
 
