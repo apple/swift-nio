@@ -1181,6 +1181,7 @@ public class ChannelTests: XCTestCase {
                     channel.pipeline.add(handler: verificationHandler)
                 }
             }
+            .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             .connect(to: try! server.localAddress())
         let accepted = try server.accept()!
         defer {
@@ -1555,17 +1556,28 @@ public class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try readFuture.wait())
     }
 
-    func testNoChannelReadIfNoAutoRead() throws {
+    func testNoChannelReadBeforeEOFIfNoAutoRead() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        class NoChannelReadVerificationHandler: ChannelInboundHandler {
+        class VerifyNoReadBeforeEOFHandler: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
 
+            private var seenEOF: Bool = false
+
+            public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+                if case .some(ChannelEvent.inputClosed) = event as? ChannelEvent {
+                    self.seenEOF = true
+                }
+                ctx.fireUserInboundEventTriggered(event)
+            }
+
             public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-                XCTFail("Should not be called as autoRead is false and we did not call read(), but received \(self.unwrapInboundIn(data))")
+                if self.seenEOF {
+                    XCTFail("Should not be called before seeing the EOF as autoRead is false and we did not call read(), but received \(self.unwrapInboundIn(data))")
+                }
             }
         }
 
@@ -1573,7 +1585,7 @@ public class ChannelTests: XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { ch in
-                ch.pipeline.add(handler: NoChannelReadVerificationHandler())
+                ch.pipeline.add(handler: VerifyNoReadBeforeEOFHandler())
             }
             .bind(host: "127.0.0.1", port: 0).wait()
 
@@ -1589,7 +1601,114 @@ public class ChannelTests: XCTestCase {
         try serverChannel.close().wait()
     }
 
-    func testEOFOnlyReceivedOnceReadRequested() throws {
+    func testCloseInEOFdChannelReadBehavesCorrectly() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        class VerifyEOFReadOrderingAndCloseInChannelReadHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            private var seenEOF: Bool = false
+            private var numberOfChannelReads: Int = 0
+
+            public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+                if case .some(ChannelEvent.inputClosed) = event as? ChannelEvent {
+                    self.seenEOF = true
+                }
+                ctx.fireUserInboundEventTriggered(event)
+            }
+
+            public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                if self.seenEOF {
+                    XCTFail("Should not be called before seeing the EOF as autoRead is false and we did not call read(), but received \(self.unwrapInboundIn(data))")
+                }
+                self.numberOfChannelReads += 1
+                let buffer = self.unwrapInboundIn(data)
+                XCTAssertLessThanOrEqual(buffer.readableBytes, 8)
+                XCTAssertEqual(1, self.numberOfChannelReads)
+                ctx.close(mode: .all, promise: nil)
+            }
+        }
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelOption(ChannelOptions.autoRead, value: false)
+            .childChannelInitializer { ch in
+                ch.pipeline.add(handler: VerifyEOFReadOrderingAndCloseInChannelReadHandler())
+            }
+            .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+            .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8))
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+        var buffer = clientChannel.allocator.buffer(capacity: 8)
+        buffer.write(string: "01234567")
+        for _ in 0..<20 {
+            XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
+        }
+        XCTAssertNoThrow(try clientChannel.close().wait())
+
+        // Wait for 100 ms.
+        usleep(100 * 1000)
+        XCTAssertNoThrow(try serverChannel.close().wait())
+    }
+
+    func testCloseInSameReadThatEOFGetsDelivered() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        class CloseWhenWeGetEOFHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            private var didRead: Bool = false
+            private let allDone: EventLoopPromise<Void>
+
+            init(allDone: EventLoopPromise<Void>) {
+                self.allDone = allDone
+            }
+
+            public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                if !self.didRead {
+                    self.didRead = true
+                    // closing this here causes an interesting situation:
+                    // in readFromSocket we will spin one more iteration until we see the EOF but when we then return
+                    // to `BaseSocketChannel.readable0`, we deliver EOF with the channel already deactivated.
+                    ctx.close(mode: .all, promise: self.allDone)
+                }
+            }
+        }
+
+        let allDone: EventLoopPromise<Void> = group.next().newPromise()
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelOption(ChannelOptions.autoRead, value: false)
+            .childChannelInitializer { ch in
+                ch.pipeline.add(handler: CloseWhenWeGetEOFHandler(allDone: allDone))
+            }
+            // maxMessagesPerRead is large so that we definitely spin and seen the EOF
+            .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 10)
+            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+            // that fits the message we prepared
+            .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8))
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+        var buf = clientChannel.allocator.buffer(capacity: 16)
+        buf.write(staticString: "012345678")
+        XCTAssertNoThrow(try clientChannel.writeAndFlush(buf).wait())
+        XCTAssertNoThrow(try clientChannel.writeAndFlush(buf).wait())
+        XCTAssertNoThrow(try clientChannel.close().wait())
+        XCTAssertNoThrow(try allDone.futureResult.wait())
+
+        XCTAssertNoThrow(try serverChannel.close().wait())
+    }
+
+    func testEOFReceivedWithoutReadRequests() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -1600,34 +1719,16 @@ public class ChannelTests: XCTestCase {
             typealias OutboundIn = ByteBuffer
 
             private let promise: EventLoopPromise<Void>
-            private var readRequested = false
-            private var channelReadCalled = false
 
             init(_ promise: EventLoopPromise<Void>) {
                 self.promise = promise
             }
 
-            public func channelActive(ctx: ChannelHandlerContext) {
-                _ = ctx.eventLoop.scheduleTask(in: .milliseconds(1)) {
-                    self.read(ctx: ctx)
-                }
-            }
-
             public func read(ctx: ChannelHandlerContext) {
-                readRequested = true
-                ctx.read()
-            }
-
-            public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-                XCTAssertFalse(channelReadCalled)
-                channelReadCalled = true
-                ctx.read()
+                XCTFail("shouldn't read")
             }
 
             public func channelInactive(ctx: ChannelHandlerContext) {
-                XCTAssertTrue(readRequested, "Should only be called after a read was requested")
-                XCTAssertTrue(channelReadCalled, "channelRead(...) should have been called before channel became inactive")
-
                 promise.succeed(result: ())
             }
         }
@@ -1720,7 +1821,7 @@ public class ChannelTests: XCTestCase {
         func runTest() throws {
             let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
             defer {
-                try! group.syncShutdownGracefully()
+                XCTAssertNoThrow(try group.syncShutdownGracefully())
             }
             let collector = ChannelCollector(group: group)
             let serverBoot = ServerBootstrap(group: group)
@@ -1729,11 +1830,11 @@ public class ChannelTests: XCTestCase {
             }
             let listeningChannel = try serverBoot.bind(host: "127.0.0.1", port: 0).wait()
             let clientBoot = ClientBootstrap(group: group)
-            try clientBoot.connect(to: listeningChannel.localAddress!).wait().close().wait()
+            XCTAssertNoThrow(try clientBoot.connect(to: listeningChannel.localAddress!).wait().close().wait())
             let closeFutures = collector.closeAll()
-            let strayClient = try clientBoot.connect(to: listeningChannel.localAddress!).wait()
-            try strayClient.close().wait()
-            try listeningChannel.close().wait()
+            // a stray client
+            XCTAssertNoThrow(try clientBoot.connect(to: listeningChannel.localAddress!).wait().close().wait())
+            XCTAssertNoThrow(try listeningChannel.close().wait())
             closeFutures.forEach {
                 do {
                     try $0.wait()
@@ -1745,12 +1846,8 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        do {
-            for _ in 0..<1000 {
-                try runTest()
-            }
-        } catch {
-            XCTFail("unexpected error: \(error)")
+        for _ in 0..<1000 {
+            XCTAssertNoThrow(try runTest())
         }
     }
 
@@ -2011,12 +2108,19 @@ public class ChannelTests: XCTestCase {
 
         let allDone: EventLoopPromise<Void> = clientEL.newPromise()
 
-        try sc.register().then {
-            sc.pipeline.add(handler: VerifyThingsAreRightHandler(allDone: allDone))
-        }.then {
-            sc.connect(to: serverChannel.localAddress!)
-        }.wait()
-        try allDone.futureResult.wait()
+        XCTAssertNoThrow(_ = try sc.eventLoop.submit {
+            // this is pretty delicate at the moment:
+            // `bind` must be _synchronously_ follow `register`, otherwise in our current implementation, `epoll` will
+            // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `then` on the eventloop that the
+            // `register` will succeed.
+
+            sc.register().then {
+                sc.pipeline.add(handler: VerifyThingsAreRightHandler(allDone: allDone))
+            }.then {
+                sc.connect(to: serverChannel.localAddress!)
+            }
+        }.wait())
+        XCTAssertNoThrow(try allDone.futureResult.wait())
         XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
     }
 

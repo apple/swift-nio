@@ -223,12 +223,12 @@ extension EventLoop {
 /// `SelectorEvent` that is provided to the user when an event is ready to be consumed for a `Selectable`. As we need to have access to the `ServerSocketChannel`
 /// and `SocketChannel` (to dispatch the events) we create our own `Registration` that holds a reference to these.
 enum NIORegistration: Registration {
-    case serverSocketChannel(ServerSocketChannel, IOEvent)
-    case socketChannel(SocketChannel, IOEvent)
-    case datagramChannel(DatagramChannel, IOEvent)
+    case serverSocketChannel(ServerSocketChannel, SelectorEventSet)
+    case socketChannel(SocketChannel, SelectorEventSet)
+    case datagramChannel(DatagramChannel, SelectorEventSet)
 
-    /// The `IOEvent` in which this `NIORegistration` is interested in.
-    var interested: IOEvent {
+    /// The `SelectorEventSet` in which this `NIORegistration` is interested in.
+    var interested: SelectorEventSet {
         set {
             switch self {
             case .serverSocketChannel(let c, _):
@@ -417,27 +417,29 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
-    /// Handle the given `IOEvent` for the `SelectableChannel`.
-    private func handleEvent<C: SelectableChannel>(_ ev: IOEvent, channel: C) {
+    /// Handle the given `SelectorEventSet` for the `SelectableChannel`.
+    private func handleEvent<C: SelectableChannel>(_ ev: SelectorEventSet, channel: C) {
         guard channel.selectable.isOpen else {
             return
         }
 
-        switch ev {
-        case .write:
-            channel.writable()
-        case .read:
-            channel.readable()
-        case .all:
-            channel.writable()
+        // process resets first as they'll just cause the writes to fail anyway.
+        if ev.contains(.reset) {
+            channel.reset()
+        } else {
+            if ev.contains(.write) {
+                channel.writable()
 
-            guard channel.selectable.isOpen else {
-                return
+                guard channel.selectable.isOpen else {
+                    return
+                }
             }
-            channel.readable()
-        case .none:
-            // spurious wakeup
-            break
+
+            if ev.contains(.readEOF) {
+                channel.readEOF()
+            } else if ev.contains(.read) {
+                channel.readable()
+            }
         }
     }
 
@@ -480,7 +482,6 @@ internal final class SelectableEventLoop: EventLoop {
             // Block until there are events to handle or the selector was woken up
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
             try withAutoReleasePool {
-
                 try selector.whenReady(strategy: currentSelectorStrategy(nextReadyTask: nextReadyTask)) { ev in
                     switch ev.registration {
                     case .serverSocketChannel(let chan, _):
