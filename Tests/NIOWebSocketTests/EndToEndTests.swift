@@ -15,7 +15,7 @@
 import XCTest
 import NIO
 import NIOHTTP1
-import NIOWebSocket
+@testable import NIOWebSocket
 
 extension EmbeddedChannel {
     func readAllInboundBuffers() -> ByteBuffer {
@@ -339,5 +339,30 @@ class EndToEndTests: XCTestCase {
         interactInMemory(client, server)
 
         XCTAssertEqual(recorder.frames, [dataFrame, pingFrame])
+    }
+
+    func testMaxFrameSize() throws {
+        let basicUpgrader = WebSocketUpgrader(maxFrameSize: 16, shouldUpgrade: { head in HTTPHeaders() },
+                                              upgradePipelineHandler: { (channel, req) in
+            return channel.eventLoop.newSucceededFuture(result: ())
+        })
+        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        defer {
+            XCTAssertNoThrow(try client.finish())
+            XCTAssertNoThrow(try server.finish())
+            XCTAssertNoThrow(try loop.syncShutdownGracefully())
+        }
+
+        let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
+        XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
+        interactInMemory(client, server)
+
+        let receivedResponse = client.readAllInboundBuffers().allAsString()
+        assertResponseIs(response: receivedResponse,
+                         expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
+                         expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"])
+
+        let decoder = (try server.pipeline.context(handlerType: WebSocketFrameDecoder.self).wait()).handler as! WebSocketFrameDecoder
+        XCTAssertEqual(16, decoder.maxFrameSize)
     }
 }
