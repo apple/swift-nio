@@ -317,10 +317,6 @@ public enum ChannelError: Error {
     /// open locally.
     case eof
 
-    /// A `Channel` `write` was made with a data type not supported by the channel type: e.g. an `AddressedEnvelope`
-    /// for a stream channel.
-    case writeDataUnsupported
-
     /// A `DatagramChannel` `write` was made with a buffer that is larger than the MTU for the connection, and so the
     /// datagram was not written. Either shorten the datagram or manually fragment, and then try again.
     case writeMessageTooLarge
