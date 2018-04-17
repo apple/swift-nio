@@ -20,10 +20,10 @@ let headerSeparator: StaticString = ": "
 /// A representation of the request line and header fields of a HTTP request.
 public struct HTTPRequestHead: Equatable {
     /// The HTTP method for this request.
-    public let method: HTTPMethod
+    public var method: HTTPMethod
 
     // Internal representation of the URI.
-    private let rawURI: URI
+    private var rawURI: URI
 
     /// The URI used on this request.
     public var uri: String {
@@ -31,7 +31,7 @@ public struct HTTPRequestHead: Equatable {
     }
 
     /// The version for this HTTP request.
-    public let version: HTTPVersion
+    public var version: HTTPVersion
 
     /// The header fields for this HTTP request.
     public var headers: HTTPHeaders
@@ -138,10 +138,10 @@ extension HTTPRequestHead {
 /// A representation of the status line and header fields of a HTTP response.
 public struct HTTPResponseHead: Equatable {
     /// The HTTP response status.
-    public let status: HTTPResponseStatus
+    public var status: HTTPResponseStatus
 
     /// The HTTP version that corresponds to this response.
-    public let version: HTTPVersion
+    public var version: HTTPVersion
 
     /// The HTTP headers on this response.
     public var headers: HTTPHeaders
