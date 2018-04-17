@@ -17,7 +17,7 @@
 /// Usually a `FileRegion` will allow the underlying transport to use `sendfile` to transfer its content and so allows transferring
 /// the file content without copying it into user-space at all. If the actual transport implementation really can make use of sendfile
 /// or if it will need to copy the content to user-space first and use `write` / `writev` is an implementation detail. That said
-///  using `FileRegion` is the recommend way to transfer file content if possible.
+///  using `FileRegion` is the recommended way to transfer file content if possible.
 ///
 /// One important note, depending your `ChannelPipeline` setup it may not be possible to use a `FileRegion` as a `ChannelHandler` may
 /// need access to the bytes (in a `ByteBuffer`) to transform these.

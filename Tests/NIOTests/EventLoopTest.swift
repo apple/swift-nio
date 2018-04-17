@@ -156,11 +156,19 @@ public class EventLoopTest : XCTestCase {
         }
         let loop = group.next() as! SelectableEventLoop
 
+        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
         // We're going to create and register a channel, but not actually attempt to do anything with it.
         let wedgeHandler = WedgeOpenHandler()
         let channel = try SocketChannel(eventLoop: loop, protocolFamily: AF_INET)
         try channel.pipeline.add(handler: wedgeHandler).then {
             channel.register()
+        }.then {
+            // connecting here to stop epoll from throwing EPOLLHUP at us
+            channel.connect(to: serverChannel.localAddress!)
         }.wait()
 
         // Now we're going to start closing the event loop. This should not immediately succeed.
@@ -278,5 +286,74 @@ public class EventLoopTest : XCTestCase {
         let eventLoop = group.next()
         _ = eventLoop.scheduleTask(in: .hours(1)) { }
         try group.syncShutdownGracefully()
+    }
+
+    public func testCloseFutureNotifiedBeforeUnblock() throws {
+        class AssertHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+
+            let groupIsShutdown = Atomic(value: false)
+            let removed = Atomic(value: false)
+
+            public func handlerRemoved(ctx: ChannelHandlerContext) {
+                XCTAssertFalse(groupIsShutdown.load())
+                XCTAssertTrue(removed.compareAndExchange(expected: false, desired: true))
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoop = group.next()
+        let assertHandler = AssertHandler()
+        let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: AF_INET)
+        try channel.pipeline.add(handler: assertHandler).wait()
+        try channel.register().wait()
+        XCTAssertFalse(channel.closeFuture.isFulfilled)
+        try group.syncShutdownGracefully()
+        XCTAssertTrue(assertHandler.groupIsShutdown.compareAndExchange(expected: false, desired: true))
+        XCTAssertTrue(assertHandler.removed.load())
+        XCTAssertTrue(channel.closeFuture.isFulfilled)
+        XCTAssertFalse(channel.isActive)
+    }
+
+    public func testScheduleMultipleTasks() throws {
+        let nanos = DispatchTime.now().uptimeNanoseconds
+        let amount: TimeAmount = .seconds(1)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+        var array = Array<(Int, DispatchTime)>()
+        let scheduled1 = eventLoopGroup.next().scheduleTask(in: .milliseconds(500)) {
+            array.append((1, DispatchTime.now()))
+        }
+
+        let scheduled2 = eventLoopGroup.next().scheduleTask(in: .milliseconds(100)) {
+            array.append((2, DispatchTime.now()))
+        }
+
+        let scheduled3 = eventLoopGroup.next().scheduleTask(in: .milliseconds(1000)) {
+            array.append((3, DispatchTime.now()))
+        }
+
+        var result = try eventLoopGroup.next().scheduleTask(in: .milliseconds(1000)) {
+            array
+        }.futureResult.wait()
+
+        XCTAssertTrue(scheduled1.futureResult.isFulfilled)
+        XCTAssertTrue(scheduled2.futureResult.isFulfilled)
+        XCTAssertTrue(scheduled3.futureResult.isFulfilled)
+
+        let first = result.removeFirst()
+        XCTAssertEqual(2, first.0)
+        let second = result.removeFirst()
+        XCTAssertEqual(1, second.0)
+        let third = result.removeFirst()
+        XCTAssertEqual(3, third.0)
+
+        XCTAssertTrue(first.1 < second.1)
+        XCTAssertTrue(second.1 < third.1)
+
+        XCTAssertTrue(result.isEmpty)
+
     }
 }

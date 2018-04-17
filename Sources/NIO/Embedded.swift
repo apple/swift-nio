@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
-import NIOPriorityQueue
 
 private final class EmbeddedScheduledTask {
     let task: () -> Void
@@ -175,10 +174,10 @@ class EmbeddedChannelCore: ChannelCore {
             return
         }
         isOpen = false
+        isActive = false
         promise?.succeed(result: ())
 
         // As we called register() in the constructor of EmbeddedChannel we also need to ensure we call unregistered here.
-        isActive = false
         pipeline.fireChannelInactive0()
         pipeline.fireChannelUnregistered0()
 
@@ -194,8 +193,8 @@ class EmbeddedChannelCore: ChannelCore {
     }
 
     func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        promise?.succeed(result: ())
         isActive = true
+        promise?.succeed(result: ())
         pipeline.fireChannelActive0()
     }
 

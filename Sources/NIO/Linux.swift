@@ -72,6 +72,7 @@ internal enum Epoll {
     public static let EPOLLOUT = CNIOLinux.EPOLLOUT
     public static let EPOLLERR = CNIOLinux.EPOLLERR
     public static let EPOLLRDHUP = CNIOLinux.EPOLLRDHUP
+    public static let EPOLLHUP = CNIOLinux.EPOLLHUP
     public static let EPOLLET = CNIOLinux.EPOLLET
     public static let ENOENT = CNIOLinux.ENOENT
 

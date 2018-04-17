@@ -14,7 +14,6 @@
 
 import NIOConcurrencyHelpers
 import Dispatch
-import NIOPriorityQueue
 
 /// Returned once a task was scheduled on the `EventLoop` for later execution.
 ///
@@ -24,7 +23,7 @@ public struct Scheduled<T> {
     private let promise: EventLoopPromise<T>
     private let cancellationTask: () -> Void
 
-    init(promise: EventLoopPromise<T>, cancellationTask: @escaping () -> Void) {
+    public init(promise: EventLoopPromise<T>, cancellationTask: @escaping () -> Void) {
         self.promise = promise
         promise.futureResult.whenFailure { error in
             guard let err = error as? EventLoopError else {
@@ -87,7 +86,7 @@ public protocol EventLoop: EventLoopGroup {
     /// Submit a given task to be executed by the `EventLoop`. Once the execution is complete the returned `EventLoopFuture` is notified.
     ///
     /// - parameters:
-    ///     - task: The closure that will be submited to the `EventLoop` for execution.
+    ///     - task: The closure that will be submitted to the `EventLoop` for execution.
     /// - returns: `EventLoopFuture` that is notified once the task was executed.
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
 
@@ -224,12 +223,12 @@ extension EventLoop {
 /// `SelectorEvent` that is provided to the user when an event is ready to be consumed for a `Selectable`. As we need to have access to the `ServerSocketChannel`
 /// and `SocketChannel` (to dispatch the events) we create our own `Registration` that holds a reference to these.
 enum NIORegistration: Registration {
-    case serverSocketChannel(ServerSocketChannel, IOEvent)
-    case socketChannel(SocketChannel, IOEvent)
-    case datagramChannel(DatagramChannel, IOEvent)
+    case serverSocketChannel(ServerSocketChannel, SelectorEventSet)
+    case socketChannel(SocketChannel, SelectorEventSet)
+    case datagramChannel(DatagramChannel, SelectorEventSet)
 
-    /// The `IOEvent` in which this `NIORegistration` is interested in.
-    var interested: IOEvent {
+    /// The `SelectorEventSet` in which this `NIORegistration` is interested in.
+    var interested: SelectorEventSet {
         set {
             switch self {
             case .serverSocketChannel(let c, _):
@@ -385,9 +384,9 @@ internal final class SelectableEventLoop: EventLoop {
         },`in`)
 
         let scheduled = Scheduled(promise: promise, cancellationTask: {
-            self.tasksLock.lock()
-            self.scheduledTasks.remove(task)
-            self.tasksLock.unlock()
+            self.tasksLock.withLockVoid {
+                self.scheduledTasks.remove(task)
+            }
             self.wakeupSelector()
         })
 
@@ -403,10 +402,9 @@ internal final class SelectableEventLoop: EventLoop {
 
     /// Add the `ScheduledTask` to be executed.
     private func schedule0(_ task: ScheduledTask) {
-        tasksLock.lock()
-        scheduledTasks.push(task)
-        tasksLock.unlock()
-
+        tasksLock.withLockVoid {
+            scheduledTasks.push(task)
+        }
         wakeupSelector()
     }
 
@@ -419,43 +417,40 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
-    /// Handle the given `IOEvent` for the `SelectableChannel`.
-    private func handleEvent<C: SelectableChannel>(_ ev: IOEvent, channel: C) {
+    /// Handle the given `SelectorEventSet` for the `SelectableChannel`.
+    private func handleEvent<C: SelectableChannel>(_ ev: SelectorEventSet, channel: C) {
         guard channel.selectable.isOpen else {
             return
         }
 
-        switch ev {
-        case .write:
-            channel.writable()
-        case .read:
-            channel.readable()
-        case .all:
-            channel.writable()
+        // process resets first as they'll just cause the writes to fail anyway.
+        if ev.contains(.reset) {
+            channel.reset()
+        } else {
+            if ev.contains(.write) {
+                channel.writable()
 
-            guard channel.selectable.isOpen else {
-                return
+                guard channel.selectable.isOpen else {
+                    return
+                }
             }
-            channel.readable()
-        case .none:
-            // spurious wakeup
-            break
+
+            if ev.contains(.readEOF) {
+                channel.readEOF()
+            } else if ev.contains(.read) {
+                channel.readable()
+            }
         }
     }
 
-    private func currentSelectorStrategy() -> SelectorStrategy {
-        // TODO: Just use an atomic
-        tasksLock.lock()
-        let scheduled = scheduledTasks.peek()
-        tasksLock.unlock()
-
-        guard let sched = scheduled else {
-            // No tasks to handle so just block
+    private func currentSelectorStrategy(nextReadyTask: ScheduledTask?) -> SelectorStrategy {
+        guard let sched = nextReadyTask else {
+            // No tasks to handle so just block. If any tasks were added in the meantime wakeup(...) was called and so this
+            // will directly unblock.
             return .block
         }
 
         let nextReady = sched.readyIn(DispatchTime.now())
-
         if nextReady <= .nanoseconds(0) {
             // Something is ready to be processed just do a non-blocking select of events.
             return .now
@@ -469,25 +464,25 @@ internal final class SelectableEventLoop: EventLoop {
         precondition(self.inEventLoop, "tried to run the EventLoop on the wrong thread.")
         defer {
             var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
-            tasksLock.lock()
-            // reserve the correct capacity so we don't need to realloc later on.
-            scheduledTasksCopy.reserveCapacity(scheduledTasks.count)
-            while let sched = scheduledTasks.pop() {
-                scheduledTasksCopy.append(sched)
+            tasksLock.withLockVoid {
+                // reserve the correct capacity so we don't need to realloc later on.
+                scheduledTasksCopy.reserveCapacity(scheduledTasks.count)
+                while let sched = scheduledTasks.pop() {
+                    scheduledTasksCopy.append(sched)
+                }
             }
-            tasksLock.unlock()
 
             // Fail all the scheduled tasks.
             for task in scheduledTasksCopy {
                 task.fail(error: EventLoopError.shutdown)
             }
         }
+        var nextReadyTask: ScheduledTask? = nil
         while lifecycleState != .closed {
             // Block until there are events to handle or the selector was woken up
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
             try withAutoReleasePool {
-
-                try selector.whenReady(strategy: currentSelectorStrategy()) { ev in
+                try selector.whenReady(strategy: currentSelectorStrategy(nextReadyTask: nextReadyTask)) { ev in
                     switch ev.registration {
                     case .serverSocketChannel(let chan, _):
                         self.handleEvent(ev.io, channel: chan)
@@ -502,26 +497,29 @@ internal final class SelectableEventLoop: EventLoop {
             // We need to ensure we process all tasks, even if a task added another task again
             while true {
                 // TODO: Better locking
-                tasksLock.lock()
-                if scheduledTasks.isEmpty {
-                    tasksLock.unlock()
-                    break
+                tasksLock.withLockVoid {
+                    if !scheduledTasks.isEmpty {
+                        // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
+                        let now = DispatchTime.now()
+
+                        // Make a copy of the tasks so we can execute these while not holding the lock anymore
+                        while tasksCopy.count < tasksCopy.capacity, let task = scheduledTasks.peek() {
+                            if task.readyIn(now) <= .nanoseconds(0) {
+                                _ = scheduledTasks.pop()
+                                tasksCopy.append(task.task)
+                            } else {
+                                nextReadyTask = task
+                                break
+                            }
+                        }
+                    } else {
+                        // Reset nextReadyTask to nil which means we will do a blocking select.
+                        nextReadyTask = nil
+                    }
                 }
-
-                // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
-                let now = DispatchTime.now()
-
-                // Make a copy of the tasks so we can execute these while not holding the lock anymore
-                while tasksCopy.count < tasksCopy.capacity, let task = scheduledTasks.peek(), task.readyIn(now) <= .nanoseconds(0) {
-                    tasksCopy.append(task.task)
-
-                    _ = scheduledTasks.pop()
-                }
-
-                tasksLock.unlock()
 
                 // all pending tasks are set to occur in the future, so we can stop looping.
-                if tasksCopy.count == 0 {
+                if tasksCopy.isEmpty {
                     break
                 }
 
@@ -658,32 +656,28 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         /* synchronised by `lock` */
         var _loop: SelectableEventLoop! = nil
 
-        if #available(OSX 10.12, *) {
-            loopUpAndRunningGroup.enter()
-            Thread.spawnAndRun(name: name) { t in
-                initializer(t)
+        loopUpAndRunningGroup.enter()
+        Thread.spawnAndRun(name: name) { t in
+            initializer(t)
 
-                do {
-                    /* we try! this as this must work (just setting up kqueue/epoll) or else there's not much we can do here */
-                    let l = try! SelectableEventLoop(thread: t)
-                    threadSpecificEventLoop.currentValue = l
-                    defer {
-                        threadSpecificEventLoop.currentValue = nil
-                    }
-                    lock.withLock {
-                        _loop = l
-                    }
-                    loopUpAndRunningGroup.leave()
-                    try l.run()
-                } catch let err {
-                    fatalError("unexpected error while executing EventLoop \(err)")
+            do {
+                /* we try! this as this must work (just setting up kqueue/epoll) or else there's not much we can do here */
+                let l = try! SelectableEventLoop(thread: t)
+                threadSpecificEventLoop.currentValue = l
+                defer {
+                    threadSpecificEventLoop.currentValue = nil
                 }
+                lock.withLock {
+                    _loop = l
+                }
+                loopUpAndRunningGroup.leave()
+                try l.run()
+            } catch let err {
+                fatalError("unexpected error while executing EventLoop \(err)")
             }
-            loopUpAndRunningGroup.wait()
-            return lock.withLock { _loop }
-        } else {
-            fatalError("Unsupported platform / OS version")
         }
+        loopUpAndRunningGroup.wait()
+        return lock.withLock { _loop }
     }
 
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numThreads`.

@@ -71,7 +71,7 @@ class HTTPTest: XCTestCase {
             return s
         }
 
-        func sendAndCheckRequests(_ expecteds: [HTTPRequestHead], body: String?, trailers: HTTPHeaders?, sendStrategy: (String, EmbeddedChannel) -> EventLoopFuture<()>) throws -> String? {
+        func sendAndCheckRequests(_ expecteds: [HTTPRequestHead], body: String?, trailers: HTTPHeaders?, sendStrategy: (String, EmbeddedChannel) -> EventLoopFuture<Void>) throws -> String? {
             var step = 0
             var index = 0
             let channel = EmbeddedChannel()
@@ -103,7 +103,7 @@ class HTTPTest: XCTestCase {
                 return reqPart
             }).wait()
 
-            var writeFutures: [EventLoopFuture<()>] = []
+            var writeFutures: [EventLoopFuture<Void>] = []
             for expected in expecteds {
                 writeFutures.append(sendStrategy(httpRequestStrForRequest(expected), channel))
                 index += 1
@@ -113,7 +113,7 @@ class HTTPTest: XCTestCase {
                 bodyData = nil
             }
             channel.pipeline.flush()
-            XCTAssertNoThrow(try EventLoopFuture<()>.andAll(writeFutures, eventLoop: channel.eventLoop).wait())
+            XCTAssertNoThrow(try EventLoopFuture<Void>.andAll(writeFutures, eventLoop: channel.eventLoop).wait())
             XCTAssertEqual(2 * expecteds.count, step)
 
             if body != nil {
@@ -140,7 +140,7 @@ class HTTPTest: XCTestCase {
 
         /* send the bytes one by one */
         let bd2 = try sendAndCheckRequests(expecteds, body: body, trailers: trailers, sendStrategy: { (reqString, chan) in
-            var writeFutures: [EventLoopFuture<()>] = []
+            var writeFutures: [EventLoopFuture<Void>] = []
             for c in reqString {
                 var buf = chan.allocator.buffer(capacity: 1024)
 
@@ -149,7 +149,7 @@ class HTTPTest: XCTestCase {
                     try chan.writeInbound(buf)
                 })
             }
-            return EventLoopFuture<()>.andAll(writeFutures, eventLoop: chan.eventLoop)
+            return EventLoopFuture<Void>.andAll(writeFutures, eventLoop: chan.eventLoop)
         })
 
         XCTAssertEqual(bd1, bd2)

@@ -25,7 +25,6 @@ import XCTest
 #if os(Linux) || os(FreeBSD)
    @testable import NIOConcurrencyHelpersTests
    @testable import NIOHTTP1Tests
-   @testable import NIOPriorityQueueTests
    @testable import NIOTLSTests
    @testable import NIOTests
    @testable import NIOWebSocketTests
@@ -52,12 +51,16 @@ import XCTest
          testCase(EventLoopFutureTest.allTests),
          testCase(EventLoopTest.allTests),
          testCase(FileRegionTest.allTests),
+         testCase(GetaddrinfoResolverTest.allTests),
+         testCase(HTTPDecoderLengthTest.allTests),
+         testCase(HTTPDecoderTest.allTests),
          testCase(HTTPHeadersTest.allTests),
          testCase(HTTPRequestEncoderTests.allTests),
          testCase(HTTPResponseCompressorTest.allTests),
          testCase(HTTPResponseEncoderTests.allTests),
          testCase(HTTPServerClientTest.allTests),
          testCase(HTTPServerPipelineHandlerTest.allTests),
+         testCase(HTTPServerProtocolErrorHandlerTest.allTests),
          testCase(HTTPTest.allTests),
          testCase(HTTPUpgradeTestCase.allTests),
          testCase(HappyEyeballsTest.allTests),

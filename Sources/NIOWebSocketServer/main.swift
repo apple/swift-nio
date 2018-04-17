@@ -145,7 +145,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
         buffer.write(string: "\(theTime)")
 
         let frame = WebSocketFrame(fin: true, opcode: .text, data: buffer)
-        ctx.writeAndFlush(self.wrapOutboundOut(frame)).map { (_: Void) in
+        ctx.writeAndFlush(self.wrapOutboundOut(frame)).map {
             _ = ctx.eventLoop.scheduleTask(in: .seconds(1), { self.sendTime(ctx: ctx) })
         }.whenFailure { (_: Error) in
             ctx.close(promise: nil)
@@ -224,9 +224,50 @@ defer {
     try! group.syncShutdownGracefully()
 }
 
+// First argument is the program path
+let arguments = CommandLine.arguments
+let arg1 = arguments.dropFirst().first
+let arg2 = arguments.dropFirst(2).first
 
-let channel = try! bootstrap.bind(host: "localhost", port: 8888).wait()
-print("Server started and listening on \(channel.localAddress!)")
+let defaultHost = "localhost"
+let defaultPort = 8888
+
+enum BindTo {
+    case ip(host: String, port: Int)
+    case unixDomainSocket(path: String)
+}
+
+let bindTarget: BindTo
+switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
+case (.some(let h), _ , .some(let p)):
+    /* we got two arguments, let's interpret that as host and port */
+    bindTarget = .ip(host: h, port: p)
+    
+case (let portString?, .none, _):
+    // Couldn't parse as number, expecting unix domain socket path.
+    bindTarget = .unixDomainSocket(path: portString)
+    
+case (_, let p?, _):
+    // Only one argument --> port.
+    bindTarget = .ip(host: defaultHost, port: p)
+    
+default:
+    bindTarget = .ip(host: defaultHost, port: defaultPort)
+}
+
+let channel = try { () -> Channel in
+    switch bindTarget {
+    case .ip(let host, let port):
+        return try bootstrap.bind(host: host, port: port).wait()
+    case .unixDomainSocket(let path):
+        return try bootstrap.bind(unixDomainSocketPath: path).wait()
+    }
+}()
+
+guard let localAddress = channel.localAddress else {
+    fatalError("Address was unable to bind. Please check that the socket was not closed or that the address family was understood.")
+}
+print("Server started and listening on \(localAddress)")
 
 // This will never unblock as we don't close the ServerChannel
 try channel.closeFuture.wait()

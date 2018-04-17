@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-@testable import NIOPriorityQueue
+@testable import NIO
 
 public func getRandomNumbers(count: Int) -> [UInt8] {
     var values: [UInt8] = .init(repeating: 0, count: count)

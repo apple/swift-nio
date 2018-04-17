@@ -620,4 +620,62 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertTrue(try h1 === channel.pipeline.context(handlerType: TestHandler.self).wait().handler)
         XCTAssertFalse(try h2 === channel.pipeline.context(handlerType: TestHandler.self).wait().handler)
     }
+
+    func testContextForHeadOrTail() throws {
+        let channel = EmbeddedChannel()
+
+        defer {
+            XCTAssertFalse(try channel.finish())
+        }
+
+        do {
+            _ = try channel.pipeline.context(name: HeadChannelHandler.name).wait()
+            XCTFail()
+        } catch let err as ChannelPipelineError where err == .notFound {
+            /// expected
+        }
+
+        do {
+            _ = try channel.pipeline.context(handlerType: HeadChannelHandler.self).wait()
+            XCTFail()
+        } catch let err as ChannelPipelineError where err == .notFound {
+            /// expected
+        }
+
+        do {
+            _ = try channel.pipeline.context(name: TailChannelHandler.name).wait()
+            XCTFail()
+        } catch let err as ChannelPipelineError where err == .notFound {
+            /// expected
+        }
+
+        do {
+            _ = try channel.pipeline.context(handlerType: TailChannelHandler.self).wait()
+            XCTFail()
+        } catch let err as ChannelPipelineError where err == .notFound {
+            /// expected
+        }
+    }
+
+    func testRemoveHeadOrTail() throws {
+        let channel = EmbeddedChannel()
+
+        defer {
+            XCTAssertFalse(try channel.finish())
+        }
+
+        do {
+            _ = try channel.pipeline.remove(name: HeadChannelHandler.name).wait()
+            XCTFail()
+        } catch let err as ChannelPipelineError where err == .notFound {
+            /// expected
+        }
+
+        do {
+            _ = try channel.pipeline.remove(name: TailChannelHandler.name).wait()
+            XCTFail()
+        } catch let err as ChannelPipelineError where err == .notFound {
+            /// expected
+        }
+    }
 }

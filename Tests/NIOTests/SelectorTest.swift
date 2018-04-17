@@ -18,8 +18,16 @@ import XCTest
 class SelectorTest: XCTestCase {
 
     func testDeregisterWhileProcessingEvents() throws {
+        try assertDeregisterWhileProcessingEvents(closeAfterDeregister: false)
+    }
+
+    func testDeregisterAndCloseWhileProcessingEvents() throws {
+        try assertDeregisterWhileProcessingEvents(closeAfterDeregister: true)
+    }
+
+    private func assertDeregisterWhileProcessingEvents(closeAfterDeregister: Bool) throws {
         struct TestRegistration: Registration {
-            var interested: IOEvent
+            var interested: SelectorEventSet
             let socket: Socket
         }
 
@@ -30,13 +38,17 @@ class SelectorTest: XCTestCase {
 
         let socket1 = try Socket(protocolFamily: PF_INET, type: Posix.SOCK_STREAM)
         defer {
-            XCTAssertNoThrow(try socket1.close())
+            if socket1.isOpen {
+                XCTAssertNoThrow(try socket1.close())
+            }
         }
         try socket1.setNonBlocking()
 
         let socket2 = try Socket(protocolFamily: PF_INET, type: Posix.SOCK_STREAM)
         defer {
-            XCTAssertNoThrow(try socket2.close())
+            if socket2.isOpen {
+                XCTAssertNoThrow(try socket2.close())
+            }
         }
         try socket2.setNonBlocking()
 
@@ -57,11 +69,11 @@ class SelectorTest: XCTestCase {
         }
 
         // Register both sockets with .write. This will ensure both are ready when calling selector.whenReady.
-        try selector.register(selectable: socket1 , interested: .write, makeRegistration: { ev in
+        try selector.register(selectable: socket1 , interested: [.reset, .write], makeRegistration: { ev in
             TestRegistration(interested: ev, socket: socket1)
         })
 
-        try selector.register(selectable: socket2 , interested: .write, makeRegistration: { ev in
+        try selector.register(selectable: socket2 , interested: [.reset, .write], makeRegistration: { ev in
             TestRegistration(interested: ev, socket: socket2)
         })
 
@@ -70,8 +82,14 @@ class SelectorTest: XCTestCase {
             readyCount += 1
             if socket1 === ev.registration.socket {
                 try selector.deregister(selectable: socket2)
+                if closeAfterDeregister {
+                    try socket2.close()
+                }
             } else if socket2 === ev.registration.socket {
                 try selector.deregister(selectable: socket1)
+                if closeAfterDeregister {
+                    try socket1.close()
+                }
             } else {
                 XCTFail("ev.registration.socket was neither \(socket1) or \(socket2) but \(ev.registration.socket)")
             }

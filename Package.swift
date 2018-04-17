@@ -55,8 +55,6 @@ var targets: [PackageDescription.Target] = [
                 dependencies: ["NIO", "NIOFoundationCompat"]),
     .testTarget(name: "NIOConcurrencyHelpersTests",
                 dependencies: ["NIOConcurrencyHelpers"]),
-    .testTarget(name: "NIOPriorityQueueTests",
-                dependencies: ["NIOPriorityQueue"]),
     .testTarget(name: "NIOHTTP1Tests",
                 dependencies: ["NIOHTTP1", "NIOFoundationCompat"]),
     .testTarget(name: "NIOTLSTests",

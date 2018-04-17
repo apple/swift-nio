@@ -23,7 +23,7 @@
 ///         .serverChannelOption(ChannelOptions.backlog, value: 256)
 ///         .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 ///
-///         // Set the handlers that are appled to the accepted child `Channel`s.
+///         // Set the handlers that are applied to the accepted child `Channel`s.
 ///         .childChannelInitializer { channel in
 ///             // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
 ///             channel.pipeline.add(handler: BackPressureHandler()).then { () in
@@ -55,8 +55,8 @@ public final class ServerBootstrap {
 
     private let group: EventLoopGroup
     private let childGroup: EventLoopGroup
-    private var serverChannelInit: ((Channel) -> EventLoopFuture<()>)?
-    private var childChannelInit: ((Channel) -> EventLoopFuture<()>)?
+    private var serverChannelInit: ((Channel) -> EventLoopFuture<Void>)?
+    private var childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
     private var serverChannelOptions = ChannelOptionStorage()
     private var childChannelOptions = ChannelOptionStorage()
 
@@ -87,7 +87,7 @@ public final class ServerBootstrap {
     ///
     /// - parameters:
     ///     - initializer: A closure that initializes the provided `Channel`.
-    public func serverChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+    public func serverChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
         self.serverChannelInit = initializer
         return self
     }
@@ -99,7 +99,7 @@ public final class ServerBootstrap {
     ///
     /// - parameters:
     ///     - initializer: A closure that initializes the provided `Channel`.
-    public func childChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+    public func childChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
         self.childChannelInit = initializer
         return self
     }
@@ -183,9 +183,9 @@ public final class ServerBootstrap {
             }.then {
                 serverChannelOptions.applyAll(channel: serverChannel)
             }.then {
-                serverChannel.register()
-            }.then {
-                serverChannel.bind(to: address)
+                serverChannel.registerAndDoSynchronously { serverChannel in
+                    serverChannel.bind(to: address)
+                }
             }.map {
                 serverChannel
             }.cascade(promise: promise)
@@ -199,10 +199,10 @@ public final class ServerBootstrap {
     private class AcceptHandler: ChannelInboundHandler {
         public typealias InboundIn = SocketChannel
 
-        private let childChannelInit: ((Channel) -> EventLoopFuture<()>)?
+        private let childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
         private let childChannelOptions: ChannelOptionStorage
 
-        init(childChannelInitializer: ((Channel) -> EventLoopFuture<()>)?, childChannelOptions: ChannelOptionStorage) {
+        init(childChannelInitializer: ((Channel) -> EventLoopFuture<Void>)?, childChannelOptions: ChannelOptionStorage) {
             self.childChannelInit = childChannelInitializer
             self.childChannelOptions = childChannelOptions
         }
@@ -214,7 +214,7 @@ public final class ServerBootstrap {
             self.childChannelOptions.applyAll(channel: accepted).hopTo(eventLoop: ctx.eventLoop).then {
                 assert(ctx.eventLoop.inEventLoop)
                 return childChannelInit(accepted)
-            }.then { () -> EventLoopFuture<()> in
+            }.then { () -> EventLoopFuture<Void> in
                 assert(ctx.eventLoop.inEventLoop)
                 guard !ctx.pipeline.destroyed else {
                     return accepted.close().thenThrowing {
@@ -238,6 +238,20 @@ public final class ServerBootstrap {
                     ctx.fireErrorCaught(err)
                 }
             }
+        }
+    }
+}
+
+private extension Channel {
+    func registerAndDoSynchronously(_ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
+        // this is pretty delicate at the moment:
+        // In many cases `body` must be _synchronously_ follow `register`, otherwise in our current
+        // implementation, `epoll` will send us `EPOLLHUP`. To have it run synchronously, we need to invoke the
+        // `then` on the eventloop that the `register` will succeed on.
+        assert(self.eventLoop.inEventLoop)
+        return self.register().then {
+            assert(self.eventLoop.inEventLoop)
+            return body(self)
         }
     }
 }
@@ -268,7 +282,7 @@ public final class ServerBootstrap {
 public final class ClientBootstrap {
 
     private let group: EventLoopGroup
-    private var channelInitializer: ((Channel) -> EventLoopFuture<()>)?
+    private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
     private var channelOptions = ChannelOptionStorage()
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
     private var resolver: Resolver?
@@ -288,7 +302,7 @@ public final class ClientBootstrap {
     ///
     /// - parameters:
     ///     - handler: A closure that initializes the provided `Channel`.
-    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
         self.channelInitializer = handler
         return self
     }
@@ -329,7 +343,7 @@ public final class ClientBootstrap {
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
         let loop = self.group.next()
-        let connector = HappyEyeballsConnector(resolver: resolver ?? GetaddrinfoResolver(loop: loop),
+        let connector = HappyEyeballsConnector(resolver: resolver ?? GetaddrinfoResolver(loop: loop, aiSocktype: Posix.SOCK_STREAM, aiProtocol: Posix.IPPROTO_TCP),
                                                loop: loop,
                                                host: host,
                                                port: port,
@@ -387,9 +401,7 @@ public final class ClientBootstrap {
             channelInitializer(channel).then {
                 channelOptions.applyAll(channel: channel)
             }.then {
-                channel.register()
-            }.then {
-                body(channel)
+                channel.registerAndDoSynchronously(body)
             }.map {
                 channel
             }.cascade(promise: promise)
@@ -427,7 +439,7 @@ public final class ClientBootstrap {
 public final class DatagramBootstrap {
 
     private let group: EventLoopGroup
-    private var channelInitializer: ((Channel) -> EventLoopFuture<()>)?
+    private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
     private var channelOptions = ChannelOptionStorage()
 
     /// Create a `DatagramBootstrap` on the `EventLoopGroup` `group`.
@@ -443,7 +455,7 @@ public final class DatagramBootstrap {
     ///
     /// - parameters:
     ///     - handler: A closure that initializes the provided `Channel`.
-    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<()>) -> Self {
+    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
         self.channelInitializer = handler
         return self
     }

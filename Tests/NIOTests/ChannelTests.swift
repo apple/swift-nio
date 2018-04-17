@@ -17,6 +17,20 @@ import XCTest
 import NIOConcurrencyHelpers
 import Dispatch
 
+func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String, file: StaticString = #file, line: UInt = #line) {
+    let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
+    let endTime = DispatchTime.now().uptimeNanoseconds + UInt64(time.nanoseconds)
+
+    repeat {
+        if condition() { return }
+        usleep(UInt32(testInterval.nanoseconds / 1000))
+    } while (DispatchTime.now().uptimeNanoseconds < endTime)
+
+    if !condition() {
+        XCTFail(message)
+    }
+}
+
 class ChannelLifecycleHandler: ChannelInboundHandler {
     public typealias InboundIn = Any
 
@@ -76,12 +90,12 @@ public class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        var serverAcceptedChannel: Channel? = nil
+        let serverAcceptedChannelPromise: EventLoopPromise<Channel> = group.next().newPromise()
         let serverLifecycleHandler = ChannelLifecycleHandler()
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                serverAcceptedChannel = channel
+                serverAcceptedChannelPromise.succeed(result: channel)
                 return channel.pipeline.add(handler: serverLifecycleHandler)
             }.bind(host: "127.0.0.1", port: 0).wait()
 
@@ -94,11 +108,13 @@ public class ChannelTests: XCTestCase {
         buffer.write(string: "a")
         try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
+        let serverAcceptedChannel = try serverAcceptedChannelPromise.futureResult.wait()
+
         // Start shutting stuff down.
         try clientChannel.close().wait()
 
         // Wait for the close promises. These fire last.
-        try EventLoopFuture<Void>.andAll([clientChannel.closeFuture, serverAcceptedChannel!.closeFuture], eventLoop: group.next()).map {
+        try EventLoopFuture<Void>.andAll([clientChannel.closeFuture, serverAcceptedChannel.closeFuture], eventLoop: group.next()).map {
             XCTAssertEqual(clientLifecycleHandler.currentState, .unregistered)
             XCTAssertEqual(serverLifecycleHandler.currentState, .unregistered)
             XCTAssertEqual(clientLifecycleHandler.stateHistory, [.unregistered, .registered, .active, .inactive, .unregistered])
@@ -242,7 +258,7 @@ public class ChannelTests: XCTestCase {
     ///     - returns: The return values of the fakes write operations (both single and vector).
     ///     - promiseStates: The states of the promises _after_ the write operations are done.
     func assertExpectedWritability(pendingWritesManager pwm: PendingStreamWritesManager,
-                                   promises: [EventLoopPromise<()>],
+                                   promises: [EventLoopPromise<Void>],
                                    expectedSingleWritabilities: [Int]?,
                                    expectedVectorWritabilities: [[Int]]?,
                                    expectedFileWritabilities: [(Int, Int)]?,
@@ -365,7 +381,7 @@ public class ChannelTests: XCTestCase {
 
         try withPendingStreamWritesManager { pwm in
             buffer.clear()
-            let ps: [EventLoopPromise<()>] = (0..<2).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<2).map { (_: Int) in el.newPromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
 
             XCTAssertFalse(pwm.isEmpty)
@@ -421,7 +437,7 @@ public class ChannelTests: XCTestCase {
         _ = buffer.write(string: "1234")
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -457,7 +473,7 @@ public class ChannelTests: XCTestCase {
         _ = buffer.write(string: "1234")
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<4).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<4).map { (_: Int) in el.newPromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[2])
@@ -505,7 +521,7 @@ public class ChannelTests: XCTestCase {
             let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */)
             buffer.clear()
             buffer.write(bytes: Array<UInt8>(repeating: 0xff, count: numberOfBytes))
-            let ps: [EventLoopPromise<()>] = (0..<1).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.newPromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             pwm.markFlushCheckpoint()
 
@@ -543,8 +559,8 @@ public class ChannelTests: XCTestCase {
             let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */)
             buffer.clear()
             buffer.write(bytes: [0xff] as [UInt8])
-            let ps: [EventLoopPromise<()>] = (0..<numberOfBytes).map { (_: Int) in
-                let p: EventLoopPromise<()> = el.newPromise()
+            let ps: [EventLoopPromise<Void>] = (0..<numberOfBytes).map { (_: Int) in
+                let p: EventLoopPromise<Void> = el.newPromise()
                 _ = pwm.add(data: .byteBuffer(buffer), promise: p)
                 return p
             }
@@ -604,7 +620,7 @@ public class ChannelTests: XCTestCase {
                 XCTAssertNoThrow(try handle.takeDescriptorOwnership())
             }
             let fileRegion = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 1)
-            let ps: [EventLoopPromise<()>] = (0..<numberOfWrites).map { _ in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<numberOfWrites).map { _ in el.newPromise() }
             (0..<numberOfWrites).forEach { i in
                 _ = pwm.add(data: i % 2 == 0 ? .byteBuffer(buffer) : .fileRegion(fileRegion), promise: ps[i])
             }
@@ -636,7 +652,7 @@ public class ChannelTests: XCTestCase {
         _ = buffer.write(string: "1234")
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -671,7 +687,7 @@ public class ChannelTests: XCTestCase {
         buffer.moveWriterIndex(to: halfTheWriteVLimit)
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
             /* add 1.5x the writev limit */
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
@@ -703,7 +719,7 @@ public class ChannelTests: XCTestCase {
         buffer.moveWriterIndex(to: biggerThanWriteV)
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
             /* add 1.5x the writev limit */
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
@@ -736,7 +752,7 @@ public class ChannelTests: XCTestCase {
     func testPendingWritesFileRegion() throws {
         let el = EmbeddedEventLoop()
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<2).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<2).map { (_: Int) in el.newPromise() }
 
             let fh1 = FileHandle(descriptor: -1)
             let fh2 = FileHandle(descriptor: -2)
@@ -785,7 +801,7 @@ public class ChannelTests: XCTestCase {
     func testPendingWritesEmptyFileRegion() throws {
         let el = EmbeddedEventLoop()
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<1).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.newPromise() }
 
             let fh = FileHandle(descriptor: -1)
             let fr = FileRegion(fileHandle: fh, readerIndex: 99, endIndex: 99)
@@ -814,7 +830,7 @@ public class ChannelTests: XCTestCase {
         _ = buffer.write(string: "1234")
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<5).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<5).map { (_: Int) in el.newPromise() }
 
             let fh1 = FileHandle(descriptor: -1)
             let fh2 = FileHandle(descriptor: -1)
@@ -870,7 +886,7 @@ public class ChannelTests: XCTestCase {
         _ = buffer.write(string: "1234")
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
 
             pwm.markFlushCheckpoint()
 
@@ -921,7 +937,7 @@ public class ChannelTests: XCTestCase {
         let emptyBuffer = alloc.buffer(capacity: 12)
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
             _ = pwm.add(data: .byteBuffer(emptyBuffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(emptyBuffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -956,7 +972,7 @@ public class ChannelTests: XCTestCase {
         buffer.write(string: "1234")
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -987,7 +1003,7 @@ public class ChannelTests: XCTestCase {
         buffer.write(string: "1234")
 
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0...Socket.writevLimitIOVectors).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0...Socket.writevLimitIOVectors).map { (_: Int) in el.newPromise() }
             ps.forEach { p in
                 _ = pwm.add(data: .byteBuffer(buffer), promise: p)
             }
@@ -1016,7 +1032,7 @@ public class ChannelTests: XCTestCase {
     func testPendingWritesIsHappyWhenSendfileReturnsWouldBlockButWroteFully() throws {
         let el = EmbeddedEventLoop()
         try withPendingStreamWritesManager { pwm in
-            let ps: [EventLoopPromise<()>] = (0..<1).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.newPromise() }
 
             let fh = FileHandle(descriptor: -1)
             let fr = FileRegion(fileHandle: fh, readerIndex: 0, endIndex: 8192)
@@ -1165,6 +1181,7 @@ public class ChannelTests: XCTestCase {
                     channel.pipeline.add(handler: verificationHandler)
                 }
             }
+            .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             .connect(to: try! server.localAddress())
         let accepted = try server.accept()!
         defer {
@@ -1370,8 +1387,15 @@ public class ChannelTests: XCTestCase {
             weakClientChannel = clientChannel
             weakServerChannel = serverChannel
             weakServerChildChannel = try serverChildChannelPromise.futureResult.wait()
-            _ = try? clientChannel.close().wait()
-            XCTAssertNoThrow(try serverChannel.close().wait())
+            _ = clientChannel.close()
+            _ = serverChannel.close()
+
+            // We need to wait for the close futures to fire before we move on. Before the
+            // close promises are hit, the channel can keep a reference to itself alive because it's running
+            // background code on the event loop. Completing the close promise should be the last thing the
+            // channel will ever do, assuming there is no work holding a ref to it anywhere.
+            XCTAssertNoThrow(try clientChannel.closeFuture.wait())
+            XCTAssertNoThrow(try serverChannel.closeFuture.wait())
         }()
         let pipeline = try promise.futureResult.wait()
         do {
@@ -1385,9 +1409,14 @@ public class ChannelTests: XCTestCase {
         } catch {
             XCTFail("wrong error \(error) received")
         }
-        XCTAssertNil(weakClientChannel, "weakClientChannel not nil, looks like we leaked it!")
-        XCTAssertNil(weakServerChannel, "weakServerChannel not nil, looks like we leaked it!")
-        XCTAssertNil(weakServerChildChannel, "weakServerChildChannel not nil, looks like we leaked it!")
+
+        // Annoyingly it's totally possible to get to this stage and have the channels
+        // not yet be entirely freed on the background thread. There is no way we can guarantee
+        // that this hasn't happened, so we wait for up to a second to let this happen. If it hasn't
+        // happened in one second, we assume it never will.
+        assert(weakClientChannel == nil, within: .seconds(1), "weakClientChannel not nil, looks like we leaked it!")
+        assert(weakServerChannel == nil, within: .seconds(1), "weakServerChannel not nil, looks like we leaked it!")
+        assert(weakServerChildChannel == nil, within: .seconds(1), "weakServerChildChannel not nil, looks like we leaked it!")
     }
 
     func testAskForLocalAndRemoteAddressesAfterChannelIsClosed() throws {
@@ -1527,17 +1556,28 @@ public class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try readFuture.wait())
     }
 
-    func testNoChannelReadIfNoAutoRead() throws {
+    func testNoChannelReadBeforeEOFIfNoAutoRead() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        class NoChannelReadVerificationHandler: ChannelInboundHandler {
+        class VerifyNoReadBeforeEOFHandler: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
 
+            private var seenEOF: Bool = false
+
+            public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+                if case .some(ChannelEvent.inputClosed) = event as? ChannelEvent {
+                    self.seenEOF = true
+                }
+                ctx.fireUserInboundEventTriggered(event)
+            }
+
             public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-                XCTFail("Should not be called as autoRead is false and we did not call read(), but received \(self.unwrapInboundIn(data))")
+                if self.seenEOF {
+                    XCTFail("Should not be called before seeing the EOF as autoRead is false and we did not call read(), but received \(self.unwrapInboundIn(data))")
+                }
             }
         }
 
@@ -1545,7 +1585,7 @@ public class ChannelTests: XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { ch in
-                ch.pipeline.add(handler: NoChannelReadVerificationHandler())
+                ch.pipeline.add(handler: VerifyNoReadBeforeEOFHandler())
             }
             .bind(host: "127.0.0.1", port: 0).wait()
 
@@ -1561,7 +1601,114 @@ public class ChannelTests: XCTestCase {
         try serverChannel.close().wait()
     }
 
-    func testEOFOnlyReceivedOnceReadRequested() throws {
+    func testCloseInEOFdChannelReadBehavesCorrectly() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        class VerifyEOFReadOrderingAndCloseInChannelReadHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            private var seenEOF: Bool = false
+            private var numberOfChannelReads: Int = 0
+
+            public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+                if case .some(ChannelEvent.inputClosed) = event as? ChannelEvent {
+                    self.seenEOF = true
+                }
+                ctx.fireUserInboundEventTriggered(event)
+            }
+
+            public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                if self.seenEOF {
+                    XCTFail("Should not be called before seeing the EOF as autoRead is false and we did not call read(), but received \(self.unwrapInboundIn(data))")
+                }
+                self.numberOfChannelReads += 1
+                let buffer = self.unwrapInboundIn(data)
+                XCTAssertLessThanOrEqual(buffer.readableBytes, 8)
+                XCTAssertEqual(1, self.numberOfChannelReads)
+                ctx.close(mode: .all, promise: nil)
+            }
+        }
+
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelOption(ChannelOptions.autoRead, value: false)
+            .childChannelInitializer { ch in
+                ch.pipeline.add(handler: VerifyEOFReadOrderingAndCloseInChannelReadHandler())
+            }
+            .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+            .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8))
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+        var buffer = clientChannel.allocator.buffer(capacity: 8)
+        buffer.write(string: "01234567")
+        for _ in 0..<20 {
+            XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
+        }
+        XCTAssertNoThrow(try clientChannel.close().wait())
+
+        // Wait for 100 ms.
+        usleep(100 * 1000)
+        XCTAssertNoThrow(try serverChannel.close().wait())
+    }
+
+    func testCloseInSameReadThatEOFGetsDelivered() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        class CloseWhenWeGetEOFHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            private var didRead: Bool = false
+            private let allDone: EventLoopPromise<Void>
+
+            init(allDone: EventLoopPromise<Void>) {
+                self.allDone = allDone
+            }
+
+            public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                if !self.didRead {
+                    self.didRead = true
+                    // closing this here causes an interesting situation:
+                    // in readFromSocket we will spin one more iteration until we see the EOF but when we then return
+                    // to `BaseSocketChannel.readable0`, we deliver EOF with the channel already deactivated.
+                    ctx.close(mode: .all, promise: self.allDone)
+                }
+            }
+        }
+
+        let allDone: EventLoopPromise<Void> = group.next().newPromise()
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelOption(ChannelOptions.autoRead, value: false)
+            .childChannelInitializer { ch in
+                ch.pipeline.add(handler: CloseWhenWeGetEOFHandler(allDone: allDone))
+            }
+            // maxMessagesPerRead is large so that we definitely spin and seen the EOF
+            .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 10)
+            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+            // that fits the message we prepared
+            .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8))
+            .bind(host: "127.0.0.1", port: 0).wait()
+
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!).wait()
+        var buf = clientChannel.allocator.buffer(capacity: 16)
+        buf.write(staticString: "012345678")
+        XCTAssertNoThrow(try clientChannel.writeAndFlush(buf).wait())
+        XCTAssertNoThrow(try clientChannel.writeAndFlush(buf).wait())
+        XCTAssertNoThrow(try clientChannel.close().wait())
+        XCTAssertNoThrow(try allDone.futureResult.wait())
+
+        XCTAssertNoThrow(try serverChannel.close().wait())
+    }
+
+    func testEOFReceivedWithoutReadRequests() throws {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -1572,25 +1719,16 @@ public class ChannelTests: XCTestCase {
             typealias OutboundIn = ByteBuffer
 
             private let promise: EventLoopPromise<Void>
-            private var readRequested = false
 
             init(_ promise: EventLoopPromise<Void>) {
                 self.promise = promise
             }
 
-            public func channelActive(ctx: ChannelHandlerContext) {
-                _ = ctx.eventLoop.scheduleTask(in: .milliseconds(1)) {
-                    self.read(ctx: ctx)
-                }
-            }
-
             public func read(ctx: ChannelHandlerContext) {
-                readRequested = true
-                ctx.read()
+                XCTFail("shouldn't read")
             }
 
             public func channelInactive(ctx: ChannelHandlerContext) {
-                XCTAssertTrue(readRequested, "Should only be called after a read was requested")
                 promise.succeed(result: ())
             }
         }
@@ -1643,7 +1781,7 @@ public class ChannelTests: XCTestCase {
                 XCTAssertTrue(removed != nil)
             }
 
-            func closeAll() -> [EventLoopFuture<()>] {
+            func closeAll() -> [EventLoopFuture<Void>] {
                 return q.sync { self.channels.values }.map { channel in
                     channel.close()
                 }
@@ -1683,7 +1821,7 @@ public class ChannelTests: XCTestCase {
         func runTest() throws {
             let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
             defer {
-                try! group.syncShutdownGracefully()
+                XCTAssertNoThrow(try group.syncShutdownGracefully())
             }
             let collector = ChannelCollector(group: group)
             let serverBoot = ServerBootstrap(group: group)
@@ -1692,11 +1830,11 @@ public class ChannelTests: XCTestCase {
             }
             let listeningChannel = try serverBoot.bind(host: "127.0.0.1", port: 0).wait()
             let clientBoot = ClientBootstrap(group: group)
-            try clientBoot.connect(to: listeningChannel.localAddress!).wait().close().wait()
+            XCTAssertNoThrow(try clientBoot.connect(to: listeningChannel.localAddress!).wait().close().wait())
             let closeFutures = collector.closeAll()
-            let strayClient = try clientBoot.connect(to: listeningChannel.localAddress!).wait()
-            try strayClient.close().wait()
-            try listeningChannel.close().wait()
+            // a stray client
+            XCTAssertNoThrow(try clientBoot.connect(to: listeningChannel.localAddress!).wait().close().wait())
+            XCTAssertNoThrow(try listeningChannel.close().wait())
             closeFutures.forEach {
                 do {
                     try $0.wait()
@@ -1708,12 +1846,8 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        do {
-            for _ in 0..<1000 {
-                try runTest()
-            }
-        } catch {
-            XCTFail("unexpected error: \(error)")
+        for _ in 0..<1000 {
+            XCTAssertNoThrow(try runTest())
         }
     }
 
@@ -1732,9 +1866,9 @@ public class ChannelTests: XCTestCase {
         }
         class ReadDoesNotHappen: ChannelInboundHandler {
             typealias InboundIn = Any
-            private let hasRegisteredPromise: EventLoopPromise<()>
-            private let hasUnregisteredPromise: EventLoopPromise<()>
-            private let hasReadPromise: EventLoopPromise<()>
+            private let hasRegisteredPromise: EventLoopPromise<Void>
+            private let hasUnregisteredPromise: EventLoopPromise<Void>
+            private let hasReadPromise: EventLoopPromise<Void>
             enum State {
                 case start
                 case registered
@@ -1742,7 +1876,7 @@ public class ChannelTests: XCTestCase {
                 case read
             }
             private var state: State = .start
-            init(hasRegisteredPromise: EventLoopPromise<()>, hasUnregisteredPromise: EventLoopPromise<()>, hasReadPromise: EventLoopPromise<()>) {
+            init(hasRegisteredPromise: EventLoopPromise<Void>, hasUnregisteredPromise: EventLoopPromise<Void>, hasReadPromise: EventLoopPromise<Void>) {
                 self.hasRegisteredPromise = hasRegisteredPromise
                 self.hasUnregisteredPromise = hasUnregisteredPromise
                 self.hasReadPromise = hasReadPromise
@@ -1779,9 +1913,9 @@ public class ChannelTests: XCTestCase {
             typealias InboundIn = Any
             typealias OutboundOut = ByteBuffer
 
-            private let writeDonePromise: EventLoopPromise<()>
+            private let writeDonePromise: EventLoopPromise<Void>
 
-            init(writeDonePromise: EventLoopPromise<()>) {
+            init(writeDonePromise: EventLoopPromise<Void>) {
                 self.writeDonePromise = writeDonePromise
             }
 
@@ -1792,10 +1926,10 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        let serverWriteHappenedPromise: EventLoopPromise<()> = serverEL.next().newPromise()
-        let clientHasRegistered: EventLoopPromise<()> = serverEL.next().newPromise()
-        let clientHasUnregistered: EventLoopPromise<()> = serverEL.next().newPromise()
-        let clientHasRead: EventLoopPromise<()> = serverEL.next().newPromise()
+        let serverWriteHappenedPromise: EventLoopPromise<Void> = serverEL.next().newPromise()
+        let clientHasRegistered: EventLoopPromise<Void> = serverEL.next().newPromise()
+        let clientHasUnregistered: EventLoopPromise<Void> = serverEL.next().newPromise()
+        let clientHasRead: EventLoopPromise<Void> = serverEL.next().newPromise()
 
         let bootstrap = try ServerBootstrap(group: serverEL)
             .childChannelInitializer { channel in
@@ -1824,5 +1958,246 @@ public class ChannelTests: XCTestCase {
         try clientHasRead.futureResult.wait()
         try sc.syncCloseAcceptingAlreadyClosed()
         try clientHasUnregistered.futureResult.wait()
+    }
+
+    func testAppropriateAndInappropriateOperationsForUnregisteredSockets() throws {
+        func checkThatItThrowsInappropriateOperationForState(file: StaticString = #file, line: UInt = #line, _ body: () throws -> Void) {
+            do {
+                try body()
+                XCTFail("didn't throw", file: file, line: line)
+            } catch let error as ChannelLifecycleError where error == .inappropriateOperationForState {
+                //OK
+            } catch {
+                XCTFail("unexpected error \(error)", file: file, line: line)
+            }
+        }
+        let elg = MultiThreadedEventLoopGroup(numThreads: 1)
+
+        func withChannel(skipDatagram: Bool = false, skipStream: Bool = false, skipServerSocket: Bool = false, file: StaticString = #file, line: UInt = #line,  _ body: (Channel) throws -> Void) {
+            XCTAssertNoThrow(try {
+                let el = elg.next() as! SelectableEventLoop
+                let channels: [Channel] = (skipDatagram ? [] : [try DatagramChannel(eventLoop: el, protocolFamily: PF_INET)]) +
+                    /* Xcode need help */ (skipStream ? []: [try SocketChannel(eventLoop: el, protocolFamily: PF_INET)]) +
+                    /* Xcode need help */ (skipServerSocket ? []: [try ServerSocketChannel(eventLoop: el, group: elg, protocolFamily: PF_INET)])
+                for channel in channels {
+                    try body(channel)
+                    XCTAssertNoThrow(try channel.close().wait(), file: file, line: line)
+                }
+            }(), file: file, line: line)
+        }
+        withChannel { channel in
+            checkThatItThrowsInappropriateOperationForState {
+                try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 1234)).wait()
+            }
+        }
+        withChannel { channel in
+            checkThatItThrowsInappropriateOperationForState {
+                try channel.writeAndFlush("foo").wait()
+            }
+        }
+        withChannel { channel in
+            XCTAssertNoThrow(try channel.triggerUserOutboundEvent("foo").wait())
+        }
+        withChannel { channel in
+            XCTAssertFalse(channel.isActive)
+        }
+        withChannel(skipServerSocket: true) { channel in
+            // should probably be changed
+            XCTAssertTrue(channel.isWritable)
+        }
+        withChannel(skipDatagram: true, skipStream: true) { channel in
+            // this should probably be the default for all types
+            XCTAssertFalse(channel.isWritable)
+        }
+
+        withChannel { channel in
+            checkThatItThrowsInappropriateOperationForState {
+                XCTAssertEqual(0, channel.localAddress?.port ?? 0xffff)
+                XCTAssertNil(channel.remoteAddress)
+                try channel.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0)).wait()
+            }
+        }
+    }
+
+    func testCloseSocketWhenReadErrorWasReceivedAndMakeSureNoReadCompleteArrives() throws {
+        class SocketThatHasTheFirstReadSucceedButFailsTheNextWithECONNRESET: Socket {
+            private var firstReadHappened = false
+            init(protocolFamily: CInt) throws {
+                try super.init(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: true)
+            }
+            override func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> IOResult<Int> {
+                defer {
+                    self.firstReadHappened = true
+                }
+                XCTAssertGreaterThan(size, 0)
+                if self.firstReadHappened {
+                    // this is a copy of the exact error that'd come out of the real Socket.read
+                    throw IOError.init(errnoCode: ECONNRESET, function: "read(descriptor:pointer:size:)")
+                } else {
+                    pointer.pointee = 0xff
+                    return .processed(1)
+                }
+            }
+        }
+        class VerifyThingsAreRightHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            private let allDone: EventLoopPromise<Void>
+            enum State {
+                case fresh
+                case active
+                case read
+                case error
+                case readComplete
+                case inactive
+            }
+            private var state: State = .fresh
+
+            init(allDone: EventLoopPromise<Void>) {
+                self.allDone = allDone
+            }
+            func channelActive(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.fresh, self.state)
+                self.state = .active
+            }
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                XCTAssertEqual(.active, self.state)
+                self.state = .read
+                var buffer = self.unwrapInboundIn(data)
+                XCTAssertEqual(1, buffer.readableBytes)
+                XCTAssertEqual([0xff], buffer.readBytes(length: 1)!)
+            }
+
+            func channelReadComplete(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.read, self.state)
+                self.state = .readComplete
+            }
+
+            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+                XCTAssertEqual(.readComplete, self.state)
+                self.state = .error
+                ctx.close(promise: nil)
+            }
+
+            func channelInactive(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.error, self.state)
+                self.state = .inactive
+                self.allDone.succeed(result: ())
+            }
+        }
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let serverEL = group.next()
+        let clientEL = group.next()
+        precondition(serverEL !== clientEL)
+        let sc = try SocketChannel(socket: SocketThatHasTheFirstReadSucceedButFailsTheNextWithECONNRESET(protocolFamily: PF_INET), eventLoop: clientEL as! SelectableEventLoop)
+
+        let serverChannel = try ServerBootstrap(group: serverEL)
+            .childChannelInitializer { channel in
+                var buffer = channel.allocator.buffer(capacity: 4)
+                buffer.write(string: "foo")
+                return channel.write(NIOAny(buffer))
+            }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
+        let allDone: EventLoopPromise<Void> = clientEL.newPromise()
+
+        XCTAssertNoThrow(_ = try sc.eventLoop.submit {
+            // this is pretty delicate at the moment:
+            // `bind` must be _synchronously_ follow `register`, otherwise in our current implementation, `epoll` will
+            // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `then` on the eventloop that the
+            // `register` will succeed.
+
+            sc.register().then {
+                sc.pipeline.add(handler: VerifyThingsAreRightHandler(allDone: allDone))
+            }.then {
+                sc.connect(to: serverChannel.localAddress!)
+            }
+        }.wait())
+        XCTAssertNoThrow(try allDone.futureResult.wait())
+        XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
+    }
+
+    func testSocketFailingAsyncCorrectlyTearsTheChannelDownAndDoesntCrash() throws {
+        // regression test for #302
+        enum DummyError: Error { case dummy }
+        class SocketFailingAsyncConnect: Socket {
+            init() throws {
+                try super.init(protocolFamily: PF_INET, type: Posix.SOCK_STREAM, setNonBlocking: true)
+            }
+
+            override func connect(to address: SocketAddress) throws -> Bool {
+                _ = try super.connect(to: address)
+                return false
+            }
+
+            override func finishConnect() throws {
+                throw DummyError.dummy
+            }
+        }
+
+        class VerifyThingsAreRightHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+            private let allDone: EventLoopPromise<Void>
+            enum State {
+                case fresh
+                case registered
+                case unregistered
+            }
+            private var state: State = .fresh
+
+            init(allDone: EventLoopPromise<Void>) {
+                self.allDone = allDone
+            }
+            deinit { XCTAssertEqual(.unregistered, self.state) }
+
+            func channelActive(ctx: ChannelHandlerContext) { XCTFail("should never become active") }
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) { XCTFail("should never read") }
+
+            func channelReadComplete(ctx: ChannelHandlerContext) { XCTFail("should never readComplete") }
+
+            func errorCaught(ctx: ChannelHandlerContext, error: Error) { XCTFail("pipeline shouldn't be told about connect error") }
+
+            func channelRegistered(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.fresh, self.state)
+                self.state = .registered
+            }
+
+            func channelUnregistered(ctx: ChannelHandlerContext) {
+                XCTAssertEqual(.registered, self.state)
+                self.state = .unregistered
+                self.allDone.succeed(result: ())
+            }
+        }
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let sc = try SocketChannel(socket: SocketFailingAsyncConnect(), eventLoop: group.next() as! SelectableEventLoop)
+
+        let serverChannel = try ServerBootstrap(group: group.next())
+            .bind(host: "127.0.0.1", port: 0)
+            .wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
+        let allDone: EventLoopPromise<Void> = group.next().newPromise()
+        XCTAssertNoThrow(try sc.eventLoop.submit {
+            sc.pipeline.add(handler: VerifyThingsAreRightHandler(allDone: allDone)).then {
+                sc.register().then {
+                    sc.connect(to: serverChannel.localAddress!)
+                }
+            }
+        }.wait())
+        XCTAssertNoThrow(try allDone.futureResult.wait())
+        XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
     }
 }

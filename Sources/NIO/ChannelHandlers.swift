@@ -159,7 +159,8 @@ public class IdleStateHandler: ChannelDuplexHandler {
     public typealias OutboundIn = NIOAny
     public typealias OutboundOut = NIOAny
 
-    enum IdleStateEvent {
+    ///A user event triggered by IdleStateHandler when a Channel is idle.
+    public enum IdleStateEvent {
         /// Will be triggered when no write was performed for the specified amount of time
         case write
         /// Will be triggered when no read was performed for the specified amount of time
