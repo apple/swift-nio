@@ -27,7 +27,8 @@ public struct HTTPRequestHead: Equatable {
 
     /// The URI used on this request.
     public var uri: String {
-        return String(uri: rawURI)
+        get { return String(uri: rawURI) }
+        set { rawURI = .string(newValue) }
     }
 
     /// The version for this HTTP request.
