@@ -64,6 +64,9 @@ for test in 1000_reqs_1_conn 1_reqs_1000_conn; do
     not_freed_allocations=$(grep "^$test.remaining_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
     max_allowed_env_name="MAX_ALLOCS_ALLOWED_$test"
 
+    info "$test: allocations not freed: $not_freed_allocations"
+    info "$test: total number of mallocs: $total_allocations"
+
     assert_less_than "$not_freed_allocations" 5     # allow some slack
     assert_greater_than "$not_freed_allocations" -5 # allow some slack
     assert_greater_than "$total_allocations" 1000

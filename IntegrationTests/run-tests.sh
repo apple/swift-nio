@@ -61,13 +61,17 @@ shift $plugin_opts_ind
 
 filter="."
 verbose=false
-while getopts "f:v" opt; do
+show_info=false
+while getopts "f:vi" opt; do
     case $opt in
         f)
             filter="$OPTARG"
             ;;
         v)
             verbose=true
+            ;;
+        i)
+            show_info=true
             ;;
         \?)
             usage
@@ -104,7 +108,7 @@ for f in tests_*; do
         test_tmp=$(mktemp -d "$tmp/test.tmp_XXXXXX")
         plugins_do test_begin "$t" "$f"
         start=$(date +%s)
-        if run_test "$here/run-single-test.sh" "$here/$f/$t" "$test_tmp" "$here/.."; then
+        if run_test "$here/run-single-test.sh" "$here/$f/$t" "$test_tmp" "$here/.." "$show_info"; then
             plugins_do test_ok "$(time_diff_to_now $start)"
             suite_ok=$((suite_ok+1))
             if $verbose; then
