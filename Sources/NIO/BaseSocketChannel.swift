@@ -902,7 +902,6 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
 
         do {
-            assert(self.lifecycleManager.isRegistered)
             if try !connectSocket(to: address) {
                 // We aren't connected, we'll get the remote address later.
                 self.updateCachedAddressesFromSocket(updateLocal: true, updateRemote: false)
@@ -917,7 +916,13 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
                 becomeActive0(promise: promise)
             }
         } catch let error {
-            promise?.fail(error: error)
+            assert(self.lifecycleManager.isRegistered)
+            // We would like to have this assertion here, but we want to be able to go through this
+            // code path in cases where connect() is being called on channels that are already active.
+            //assert(!self.lifecycleManager.isActive)
+            // We're going to set the promise as the pending connect promise, and let close0 fail it for us.
+            self.pendingConnect = promise
+            self.close0(error: error, mode: .all, promise: nil)
         }
     }
 

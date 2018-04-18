@@ -262,10 +262,14 @@ public class SocketChannelTest : XCTestCase {
         let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
         do {
             try serverChannel.connect(to: serverChannel.localAddress!).wait()
+            XCTFail("Did not throw")
+            XCTAssertNoThrow(try serverChannel.close().wait())
         } catch let err as ChannelError where err == .operationUnsupported {
-            // expected
+            // expected, no close here as the channel is already closed.
+        } catch {
+            XCTFail("Unexpected error \(error)")
+            XCTAssertNoThrow(try serverChannel.close().wait())
         }
-        try serverChannel.close().wait()
     }
 
     public func testCloseDuringWriteFailure() throws {
