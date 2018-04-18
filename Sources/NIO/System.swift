@@ -31,48 +31,46 @@ let badOS = { fatalError("unsupported OS") }()
 #endif
 
 // Declare aliases to share more code and not need to repeat #if #else blocks
-private let sysClose = close
-private let sysShutdown = shutdown
-private let sysBind = bind
-private let sysFcntl: (CInt, CInt, CInt) -> CInt = fcntl
-private let sysSocket = socket
-private let sysSetsockopt = setsockopt
-private let sysGetsockopt = getsockopt
-private let sysListen = listen
-private let sysAccept = accept
-private let sysConnect = connect
-private let sysOpen: (UnsafePointer<CChar>, CInt) -> CInt = open
-private let sysOpenWithMode: (UnsafePointer<CChar>, CInt, mode_t) -> CInt = open
-private let sysWrite = write
-private let sysWritev = writev
-private let sysRead = read
-private let sysLseek = lseek
-private let sysRecvFrom = recvfrom
-private let sysSendTo = sendto
-private let sysDup = dup
-private let sysGetpeername = getpeername
-private let sysGetsockname = getsockname
-private let sysGetifaddrs = getifaddrs
-private let sysFreeifaddrs = freeifaddrs
+private let sysClose: @convention(c) (CInt) -> CInt = close
+private let sysShutdown: @convention(c) (CInt, CInt) -> CInt = shutdown
+private let sysBind: @convention(c) (CInt, UnsafePointer<sockaddr>?, socklen_t) -> CInt = bind
+private let sysFcntl: @convention(c) (CInt, CInt, CInt) -> CInt = fcntl
+private let sysSocket: @convention(c) (CInt, CInt, CInt) -> CInt = socket
+private let sysSetsockopt: @convention(c) (CInt, CInt, CInt, UnsafeRawPointer?, socklen_t) -> CInt = setsockopt
+private let sysGetsockopt: @convention(c) (CInt, CInt, CInt, UnsafeMutableRawPointer?, UnsafeMutablePointer<socklen_t>?) -> CInt = getsockopt
+private let sysListen: @convention(c) (CInt, CInt) -> CInt = listen
+private let sysAccept: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = accept
+private let sysConnect: @convention(c) (CInt, UnsafePointer<sockaddr>?, socklen_t) -> CInt = connect
+private let sysOpen: @convention(c) (UnsafePointer<CChar>, CInt) -> CInt = open
+private let sysOpenWithMode: @convention(c) (UnsafePointer<CChar>, CInt, mode_t) -> CInt = open
+private let sysWrite: @convention(c) (CInt, UnsafeRawPointer?, CLong) -> CLong = write
+private let sysWritev: @convention(c) (Int32, UnsafePointer<iovec>?, CInt) -> CLong = writev
+private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, CLong) -> CLong = read
+private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = lseek
+private let sysRecvFrom: @convention(c) (CInt, UnsafeMutableRawPointer?, CLong, CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CLong = recvfrom
+private let sysSendTo: @convention(c) (CInt, UnsafeRawPointer?, CLong, CInt, UnsafePointer<sockaddr>?, socklen_t) -> CLong = sendto
+private let sysDup: @convention(c) (CInt) -> CInt = dup
+private let sysGetpeername: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getpeername
+private let sysGetsockname: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getsockname
+private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>?) -> CInt = getifaddrs
+private let sysFreeifaddrs: @convention(c) (UnsafeMutablePointer<ifaddrs>?) -> Void = freeifaddrs
 private let sysAF_INET = AF_INET
 private let sysAF_INET6 = AF_INET6
 private let sysAF_UNIX = AF_UNIX
-private let sysInet_ntop = inet_ntop
+private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 
 #if os(Linux)
-private let sysSendMmsg = CNIOLinux_sendmmsg
-private let sysRecvMmsg = CNIOLinux_recvmmsg
+private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIOLinux_sendmmsg
+private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt  = CNIOLinux_recvmmsg
 #else
 private let sysKevent = kevent
-private let sysSendMmsg = CNIODarwin_sendmmsg
-private let sysRecvMmsg = CNIODarwin_recvmmsg
+private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIODarwin_sendmmsg
+private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIODarwin_recvmmsg
 #endif
 
 private func isBlacklistedErrno(_ code: Int32) -> Bool {
     switch code {
-    case EFAULT:
-        fallthrough
-    case EBADF:
+    case EFAULT, EBADF:
         return true
     default:
         return false
@@ -156,10 +154,13 @@ internal enum Posix {
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     static let SOCK_STREAM: CInt = CInt(Darwin.SOCK_STREAM)
     static let SOCK_DGRAM: CInt = CInt(Darwin.SOCK_DGRAM)
+    static let IPPROTO_TCP: CInt = CInt(Darwin.IPPROTO_TCP)
+
     static let UIO_MAXIOV: Int = 1024
 #elseif os(Linux) || os(FreeBSD) || os(Android)
     static let SOCK_STREAM: CInt = CInt(Glibc.SOCK_STREAM.rawValue)
     static let SOCK_DGRAM: CInt = CInt(Glibc.SOCK_DGRAM.rawValue)
+    static let IPPROTO_TCP: CInt = CInt(Glibc.IPPROTO_TCP)
     static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)
 #else
     static var SOCK_STREAM: CInt {
@@ -186,8 +187,20 @@ internal enum Posix {
 
     @inline(never)
     public static func close(descriptor: CInt) throws {
-        _ = try wrapSyscall {
-            sysClose(descriptor)
+        let res = sysClose(descriptor)
+        if res == -1 {
+            let err = errno
+
+            // There is really nothing "sane" we can do when EINTR was reported on close.
+            // So just ignore it and "assume" everything is fine == we closed the file descriptor.
+            //
+            // For more details see:
+            //     - https://bugs.chromium.org/p/chromium/issues/detail?id=269623
+            //     - https://lwn.net/Articles/576478/
+            if err != EINTR {
+                assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(strerror(err)!)")
+                throw IOError(errnoCode: err, function: "close")
+            }
         }
     }
 
@@ -260,10 +273,9 @@ internal enum Posix {
             return fd
         }
 
-        switch result {
-        case .processed(let fd):
+        if case .processed(let fd) = result {
             return fd
-        default:
+        } else {
             return nil
         }
     }
@@ -363,12 +375,12 @@ internal enum Posix {
         var written: off_t = 0
         do {
             _ = try wrapSyscall { () -> ssize_t in
-                #if os(macOS)
+                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
                     var w: off_t = off_t(count)
                     let result: CInt = Darwin.sendfile(fd, descriptor, offset, &w, nil, 0)
                     written = w
                     return ssize_t(result)
-                #else
+                #elseif os(Linux) || os(FreeBSD) || os(Android)
                     var off: off_t = offset
                     let result: ssize_t = Glibc.sendfile(descriptor, fd, &off, count)
                     if result >= 0 {
@@ -377,6 +389,8 @@ internal enum Posix {
                         written = 0
                     }
                     return result
+                #else
+                    fatalError("unsupported OS")
                 #endif
             }
             return .processed(Int(written))
@@ -440,7 +454,7 @@ internal enum KQueue {
     @inline(never)
     public static func kevent(kq: CInt, changelist: UnsafePointer<kevent>?, nchanges: CInt, eventlist: UnsafeMutablePointer<kevent>?, nevents: CInt, timeout: UnsafePointer<Darwin.timespec>?) throws -> CInt {
         return try wrapSyscall {
-            return sysKevent(kq, changelist, nchanges, eventlist, nevents, timeout)
+            sysKevent(kq, changelist, nchanges, eventlist, nevents, timeout)
         }
     }
 }

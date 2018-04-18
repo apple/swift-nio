@@ -25,17 +25,20 @@ import XCTest
 #if os(Linux) || os(FreeBSD)
    @testable import NIOConcurrencyHelpersTests
    @testable import NIOHTTP1Tests
-   @testable import NIOPriorityQueueTests
    @testable import NIOTLSTests
    @testable import NIOTests
+   @testable import NIOWebSocketTests
 
    XCTMain([
+         testCase(AcceptBackoffHandlerTest.allTests),
          testCase(AdaptiveRecvByteBufferAllocatorTest.allTests),
          testCase(ApplicationProtocolNegotiationHandlerTests.allTests),
+         testCase(Base64Test.allTests),
          testCase(BaseObjectTest.allTests),
          testCase(BlockingIOThreadPoolTest.allTests),
          testCase(ByteBufferTest.allTests),
          testCase(ByteToMessageDecoderTest.allTests),
+         testCase(ChannelNotificationTest.allTests),
          testCase(ChannelPipelineTest.allTests),
          testCase(ChannelTests.allTests),
          testCase(CircularBufferTests.allTests),
@@ -44,14 +47,20 @@ import XCTest
          testCase(EchoServerClientTest.allTests),
          testCase(EmbeddedChannelTest.allTests),
          testCase(EmbeddedEventLoopTest.allTests),
+         testCase(EndToEndTests.allTests),
          testCase(EventLoopFutureTest.allTests),
          testCase(EventLoopTest.allTests),
          testCase(FileRegionTest.allTests),
+         testCase(GetaddrinfoResolverTest.allTests),
+         testCase(HTTPDecoderLengthTest.allTests),
+         testCase(HTTPDecoderTest.allTests),
          testCase(HTTPHeadersTest.allTests),
          testCase(HTTPRequestEncoderTests.allTests),
          testCase(HTTPResponseCompressorTest.allTests),
          testCase(HTTPResponseEncoderTests.allTests),
          testCase(HTTPServerClientTest.allTests),
+         testCase(HTTPServerPipelineHandlerTest.allTests),
+         testCase(HTTPServerProtocolErrorHandlerTest.allTests),
          testCase(HTTPTest.allTests),
          testCase(HTTPUpgradeTestCase.allTests),
          testCase(HappyEyeballsTest.allTests),
@@ -63,6 +72,7 @@ import XCTest
          testCase(NonBlockingFileIOTest.allTests),
          testCase(PendingDatagramWritesManagerTests.allTests),
          testCase(PriorityQueueTest.allTests),
+         testCase(SelectorTest.allTests),
          testCase(SniHandlerTest.allTests),
          testCase(SocketAddressTest.allTests),
          testCase(SocketChannelTest.allTests),
@@ -70,5 +80,7 @@ import XCTest
          testCase(ThreadTest.allTests),
          testCase(TypeAssistedChannelHandlerTest.allTests),
          testCase(UtilitiesTest.allTests),
+         testCase(WebSocketFrameDecoderTest.allTests),
+         testCase(WebSocketFrameEncoderTest.allTests),
     ])
 #endif

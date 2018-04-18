@@ -42,6 +42,8 @@ public final class Lock {
     }
 
     deinit {
+        let err = pthread_mutex_destroy(self.mutex)
+        precondition(err == 0)
         mutex.deallocate()
     }
 
@@ -73,6 +75,7 @@ extension Lock {
     ///
     /// - Parameter body: The block to execute while holding the lock.
     /// - Returns: The value returned by the block.
+    @_inlineable
     public func withLock<T>(_ body: () throws -> T) rethrows -> T {
         self.lock()
         defer {
@@ -82,6 +85,7 @@ extension Lock {
     }
 
     // specialise Void return (for performance)
+    @_inlineable
     public func withLockVoid(_ body: () throws -> Void) rethrows -> Void {
         try self.withLock(body)
     }
@@ -107,6 +111,8 @@ public final class ConditionLock<T: Equatable> {
     }
 
     deinit {
+        let err = pthread_cond_destroy(self.cond)
+        precondition(err == 0)
         self.cond.deallocate()
     }
 

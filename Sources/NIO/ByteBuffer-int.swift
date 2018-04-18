@@ -13,7 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 extension ByteBuffer {
-    private func toEndianness<T: FixedWidthInteger> (value: T, endianness: Endianness) -> T {
+    @_inlineable @_versioned
+    func _toEndianness<T: FixedWidthInteger> (value: T, endianness: Endianness) -> T {
         switch endianness {
         case .little:
             return value.littleEndian
@@ -28,6 +29,7 @@ extension ByteBuffer {
     ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
     ///     - as: the desired `FixedWidthInteger` type (optional parameter)
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if there aren't enough bytes readable.
+    @_inlineable
     public mutating func readInteger<T: FixedWidthInteger>(endianness: Endianness = .big, as: T.Type = T.self) -> T? {
         guard self.readableBytes >= MemoryLayout<T>.size else {
             return nil
@@ -45,6 +47,7 @@ extension ByteBuffer {
     ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
     ///     - as: the desired `FixedWidthInteger` type (optional parameter)
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if the bytes of interest aren't contained in the `ByteBuffer`.
+    @_inlineable
     public func getInteger<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big, as: T.Type = T.self) -> T? {
         precondition(index >= 0, "index must not be negative")
         return self.withVeryUnsafeBytes { ptr in
@@ -56,7 +59,7 @@ extension ByteBuffer {
                 valuePtr.copyMemory(from: UnsafeRawBufferPointer(start: ptr.baseAddress!.advanced(by: index),
                                                                  count: MemoryLayout<T>.size))
             }
-            return toEndianness(value: value, endianness: endianness)
+            return _toEndianness(value: value, endianness: endianness)
         }
     }
 
@@ -67,6 +70,7 @@ extension ByteBuffer {
     ///     - endianness: The endianness to use, defaults to big endian.
     /// - returns: The number of bytes written.
     @discardableResult
+    @_inlineable
     public mutating func write<T: FixedWidthInteger>(integer: T, endianness: Endianness = .big, as: T.Type = T.self) -> Int {
         let bytesWritten = self.set(integer: integer, at: self.writerIndex, endianness: endianness)
         self.moveWriterIndex(forwardBy: bytesWritten)
@@ -81,8 +85,9 @@ extension ByteBuffer {
     ///     - endianness: The endianness to use, defaults to big endian.
     /// - returns: The number of bytes written.
     @discardableResult
+    @_inlineable
     public mutating func set<T: FixedWidthInteger>(integer: T, at index: Int, endianness: Endianness = .big, as: T.Type = T.self) -> Int {
-        var value = toEndianness(value: integer, endianness: endianness)
+        var value = _toEndianness(value: integer, endianness: endianness)
         return Swift.withUnsafeBytes(of: &value) { ptr in
             self.set(bytes: ptr, at: index)
         }

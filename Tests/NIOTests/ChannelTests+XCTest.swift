@@ -57,6 +57,15 @@ extension ChannelTests {
                 ("testAskForLocalAndRemoteAddressesAfterChannelIsClosed", testAskForLocalAndRemoteAddressesAfterChannelIsClosed),
                 ("testReceiveAddressAfterAccept", testReceiveAddressAfterAccept),
                 ("testWeDontJamSocketsInANoIOState", testWeDontJamSocketsInANoIOState),
+                ("testNoChannelReadBeforeEOFIfNoAutoRead", testNoChannelReadBeforeEOFIfNoAutoRead),
+                ("testCloseInEOFdChannelReadBehavesCorrectly", testCloseInEOFdChannelReadBehavesCorrectly),
+                ("testCloseInSameReadThatEOFGetsDelivered", testCloseInSameReadThatEOFGetsDelivered),
+                ("testEOFReceivedWithoutReadRequests", testEOFReceivedWithoutReadRequests),
+                ("testAcceptsAfterCloseDontCauseIssues", testAcceptsAfterCloseDontCauseIssues),
+                ("testChannelReadsDoesNotHappenAfterRegistration", testChannelReadsDoesNotHappenAfterRegistration),
+                ("testAppropriateAndInappropriateOperationsForUnregisteredSockets", testAppropriateAndInappropriateOperationsForUnregisteredSockets),
+                ("testCloseSocketWhenReadErrorWasReceivedAndMakeSureNoReadCompleteArrives", testCloseSocketWhenReadErrorWasReceivedAndMakeSureNoReadCompleteArrives),
+                ("testSocketFailingAsyncCorrectlyTearsTheChannelDownAndDoesntCrash", testSocketFailingAsyncCorrectlyTearsTheChannelDownAndDoesntCrash),
            ]
    }
 }

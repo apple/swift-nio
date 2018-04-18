@@ -34,6 +34,10 @@ int CNIOLinux_recvmmsg(int sockfd, CNIOLinux_mmsghdr *msgvec, unsigned int vlen,
     return recvmmsg(sockfd, (struct mmsghdr *)msgvec, vlen, flags, timeout);
 }
 
+int CNIOLinux_accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags) {
+    return accept4(sockfd, addr, addrlen, flags);
+}
+
 int CNIOLinux_pthread_setname_np(pthread_t thread, const char *name) {
     return pthread_setname_np(thread, name);
 }

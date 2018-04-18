@@ -40,7 +40,7 @@ final class LineDelimiterCodec: ByteToMessageDecoder {
 ///
 /// As we are using an `MultiThreadedEventLoopGroup` that uses more then 1 thread we need to ensure proper
 /// synchronization on the shared state in the `ChatHandler` (as the same instance is shared across
-/// child `Channel`s). For this a serial `DispatchQueue` is used when we modify the shared state (the `Dictonary`).
+/// child `Channel`s). For this a serial `DispatchQueue` is used when we modify the shared state (the `Dictionary`).
 /// As `ChannelHandlerContext` is not thread-safe we need to ensure we only operate on the `Channel` itself while
 /// `Dispatch` executed the submitted block.
 final class ChatHandler: ChannelInboundHandler {
@@ -119,7 +119,7 @@ let bootstrap = ServerBootstrap(group: group)
     .serverChannelOption(ChannelOptions.backlog, value: 256)
     .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
-    // Set the handlers that are appled to the accepted Channels
+    // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
         // Add handler that will buffer data until a \n is received
         channel.pipeline.add(handler: LineDelimiterCodec()).then { v in
@@ -152,8 +152,8 @@ enum BindTo {
 
 let bindTarget: BindTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case (let h?, _ , let p?):
-    // We got two arguments, let's interpret that as host and port.
+case (.some(let h), _ , .some(let p)):
+    /* we got two arguments, let's interpret that as host and port */
     bindTarget = .ip(host: h, port: p)
 
 case (let portString?, .none, _):
@@ -177,7 +177,10 @@ let channel = try { () -> Channel in
     }
 }()
 
-print("ChatServer started and listening on \(channel.localAddress!)")
+guard let localAddress = channel.localAddress else {
+    fatalError("Address was unable to bind. Please check that the socket was not closed or that the address family was understood.")
+}
+print("Server started and listening on \(localAddress)")
 
 // This will never unblock as we don't close the ServerChannel.
 try channel.closeFuture.wait()

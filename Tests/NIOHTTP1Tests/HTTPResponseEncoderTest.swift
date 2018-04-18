@@ -48,7 +48,7 @@ class HTTPResponseEncoderTests: XCTestCase {
     func testNoAutoHeadersForCustom1XX() throws {
         let headers = HTTPHeaders([("Link", "</styles.css>; rel=preload; as=style")])
         let writtenData = sendResponse(withStatus: .custom(code: 103, reasonPhrase: "Early Hints"), andHeaders: headers)
-        writtenData.assertContainsOnly("HTTP/1.1 103 Early Hints\r\nlink: </styles.css>; rel=preload; as=style\r\n\r\n")
+        writtenData.assertContainsOnly("HTTP/1.1 103 Early Hints\r\nLink: </styles.css>; rel=preload; as=style\r\n\r\n")
     }
 
     func testNoAutoHeadersFor204() throws {
@@ -65,7 +65,7 @@ class HTTPResponseEncoderTests: XCTestCase {
     func testNoContentLengthHeadersForCustom1XX() throws {
         let headers = HTTPHeaders([("Link", "</styles.css>; rel=preload; as=style"), ("content-length", "0")])
         let writtenData = sendResponse(withStatus: .custom(code: 103, reasonPhrase: "Early Hints"), andHeaders: headers)
-        writtenData.assertContainsOnly("HTTP/1.1 103 Early Hints\r\nlink: </styles.css>; rel=preload; as=style\r\n\r\n")
+        writtenData.assertContainsOnly("HTTP/1.1 103 Early Hints\r\nLink: </styles.css>; rel=preload; as=style\r\n\r\n")
     }
 
     func testNoContentLengthHeadersFor204() throws {
@@ -83,7 +83,7 @@ class HTTPResponseEncoderTests: XCTestCase {
     func testNoTransferEncodingHeadersForCustom1XX() throws {
         let headers = HTTPHeaders([("Link", "</styles.css>; rel=preload; as=style"), ("transfer-encoding", "chunked")])
         let writtenData = sendResponse(withStatus: .custom(code: 103, reasonPhrase: "Early Hints"), andHeaders: headers)
-        writtenData.assertContainsOnly("HTTP/1.1 103 Early Hints\r\nlink: </styles.css>; rel=preload; as=style\r\n\r\n")
+        writtenData.assertContainsOnly("HTTP/1.1 103 Early Hints\r\nLink: </styles.css>; rel=preload; as=style\r\n\r\n")
     }
 
     func testNoTransferEncodingHeadersFor204() throws {
@@ -105,7 +105,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(response)))
         let writtenData: IOData = channel.readOutbound()!
 
-        switch writtenData{
+        switch writtenData {
         case .byteBuffer(let b):
             let writtenResponse = b.getString(at: b.readerIndex, length: b.readableBytes)!
             XCTAssertEqual(writtenResponse, "HTTP/1.0 200 OK\r\n\r\n")

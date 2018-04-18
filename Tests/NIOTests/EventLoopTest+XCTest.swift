@@ -34,6 +34,10 @@ extension EventLoopTest {
                 ("testEventLoopThreads", testEventLoopThreads),
                 ("testEventLoopPinned", testEventLoopPinned),
                 ("testEventLoopPinnedCPUIdsConstructor", testEventLoopPinnedCPUIdsConstructor),
+                ("testCurrentEventLoop", testCurrentEventLoop),
+                ("testShutdownWhileScheduledTasksNotReady", testShutdownWhileScheduledTasksNotReady),
+                ("testCloseFutureNotifiedBeforeUnblock", testCloseFutureNotifiedBeforeUnblock),
+                ("testScheduleMultipleTasks", testScheduleMultipleTasks),
            ]
    }
 }

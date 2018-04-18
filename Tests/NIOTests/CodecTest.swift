@@ -18,16 +18,16 @@ import XCTest
 
 private var testDecoderIsNotQuadratic_mallocs = 0
 private var testDecoderIsNotQuadratic_reallocs = 0
-private func testDecoderIsNotQuadratic_freeHook(_ ptr: UnsafeMutableRawPointer) -> Void {
+private func testDecoderIsNotQuadratic_freeHook(_ ptr: UnsafeMutableRawPointer?) -> Void {
     free(ptr)
 }
 
-private func testDecoderIsNotQuadratic_mallocHook(_ size: Int) -> UnsafeMutableRawPointer {
+private func testDecoderIsNotQuadratic_mallocHook(_ size: Int) -> UnsafeMutableRawPointer? {
     testDecoderIsNotQuadratic_mallocs += 1
-    return malloc(size)!
+    return malloc(size)
 }
 
-private func testDecoderIsNotQuadratic_reallocHook(_ ptr: UnsafeMutableRawPointer, _ count: Int) -> UnsafeMutableRawPointer {
+private func testDecoderIsNotQuadratic_reallocHook(_ ptr: UnsafeMutableRawPointer?, _ count: Int) -> UnsafeMutableRawPointer? {
     testDecoderIsNotQuadratic_reallocs += 1
     return realloc(ptr, count)
 }
@@ -154,10 +154,10 @@ public class ByteToMessageDecoderTest: XCTestCase {
         channel.pipeline.fireChannelRead(NIOAny(buffer))
         XCTAssertEqual(Int32(1), channel.readInbound())
 
-        XCTAssertFalse(inactivePromiser.channelInactivePromise.futureResult.fulfilled)
+        XCTAssertFalse(inactivePromiser.channelInactivePromise.futureResult.isFulfilled)
 
         channel.pipeline.fireChannelInactive()
-        XCTAssertTrue(inactivePromiser.channelInactivePromise.futureResult.fulfilled)
+        XCTAssertTrue(inactivePromiser.channelInactivePromise.futureResult.isFulfilled)
     }
 
     func testDecoderIsNotQuadratic() throws {

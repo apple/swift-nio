@@ -1,11 +1,24 @@
 #!/bin/bash
+##===----------------------------------------------------------------------===##
+##
+## This source file is part of the SwiftNIO open source project
+##
+## Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+## Licensed under Apache License v2.0
+##
+## See LICENSE.txt for license information
+## See CONTRIBUTORS.txt for the list of SwiftNIO project authors
+##
+## SPDX-License-Identifier: Apache-2.0
+##
+##===----------------------------------------------------------------------===##
 
 set -e
 
 my_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 root_path="$my_path/.."
 version=$(git describe --abbrev=0 --tags || echo "0.0.0")
-modules=(NIO NIOHTTP1 NIOTLS NIOFoundationCompat)
+modules=(NIO NIOHTTP1 NIOTLS NIOFoundationCompat NIOWebSocket)
 
 if [[ "$(uname -s)" == "Linux" ]]; then
   # build code if required
@@ -76,6 +89,8 @@ if [[ $CI == true ]]; then
   git add --all docs
   echo '<html><head><meta http-equiv="refresh" content="0; url=docs/current/NIO/index.html" /></head></html>' > index.html
   git add index.html
+  touch .nojekyll
+  git add .nojekyll
   changes=$(git diff-index --name-only HEAD)
   if [[ -n "$changes" ]]; then
     git commit --author="$GIT_AUTHOR" -m "publish $version docs"

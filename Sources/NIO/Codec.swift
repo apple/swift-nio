@@ -99,7 +99,6 @@ extension ByteToMessageDecoder {
     /// Calls `decode` until there is nothing left to decode.
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         var buffer = self.unwrapInboundIn(data)
-
         if self.cumulationBuffer != nil {
             self.cumulationBuffer!.write(buffer: &buffer)
             buffer = self.cumulationBuffer!
@@ -108,7 +107,7 @@ extension ByteToMessageDecoder {
         }
 
         ctx.withThrowingToFireErrorAndClose {
-            // Running decode method until either the user returned `.needMoreData` or an error occured.
+            // Running decode method until either the user returned `.needMoreData` or an error occurred.
             while try decode(ctx: ctx, buffer: &buffer) == .`continue` && buffer.readableBytes > 0 { }
         }
 
@@ -122,11 +121,11 @@ extension ByteToMessageDecoder {
         }
     }
 
-    /// Call `decodeLast` before forward the event throught the pipeline.
+    /// Call `decodeLast` before forward the event through the pipeline.
     public func channelInactive(ctx: ChannelHandlerContext) {
         if var buffer = cumulationBuffer {
             ctx.withThrowingToFireErrorAndClose {
-                // Running decodeLast method until either the user returned `.needMoreData` or an error occured.
+                // Running decodeLast method until either the user returned `.needMoreData` or an error occurred.
                 while try decodeLast(ctx: ctx, buffer: &buffer)  == .`continue` && buffer.readableBytes > 0 { }
             }
 
