@@ -164,11 +164,13 @@ public class EventLoopTest : XCTestCase {
         // We're going to create and register a channel, but not actually attempt to do anything with it.
         let wedgeHandler = WedgeOpenHandler()
         let channel = try SocketChannel(eventLoop: loop, protocolFamily: AF_INET)
-        try channel.pipeline.add(handler: wedgeHandler).then {
-            channel.register()
-        }.then {
-            // connecting here to stop epoll from throwing EPOLLHUP at us
-            channel.connect(to: serverChannel.localAddress!)
+        _ = try channel.eventLoop.submit {
+            channel.pipeline.add(handler: wedgeHandler).then {
+                channel.register()
+            }.then {
+                // connecting here to stop epoll from throwing EPOLLHUP at us
+                channel.connect(to: serverChannel.localAddress!)
+            }
         }.wait()
 
         // Now we're going to start closing the event loop. This should not immediately succeed.
@@ -304,9 +306,14 @@ public class EventLoopTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         let eventLoop = group.next()
         let assertHandler = AssertHandler()
+        let serverSocket = try ServerBootstrap(group: group).bind(host: "localhost", port: 0).wait()
         let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: AF_INET)
         try channel.pipeline.add(handler: assertHandler).wait()
-        try channel.register().wait()
+        _ = try channel.eventLoop.submit {
+            channel.register().then {
+                channel.connect(to: serverSocket.localAddress!)
+            }
+        }.wait()
         XCTAssertFalse(channel.closeFuture.isFulfilled)
         try group.syncShutdownGracefully()
         XCTAssertTrue(assertHandler.groupIsShutdown.compareAndExchange(expected: false, desired: true))
