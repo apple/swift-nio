@@ -185,44 +185,57 @@ public struct NonBlockingFileIO {
             return eventLoop.newSucceededFuture(result: allocator.buffer(capacity: 0))
         }
 
-        let p: EventLoopPromise<ByteBuffer> = eventLoop.newPromise()
         var buf = allocator.buffer(capacity: byteCount)
-        self.threadPool.submit { shouldRun in
-            guard case shouldRun = BlockingIOThreadPool.WorkItemState.active else {
-                p.fail(error: ChannelError.ioOnClosedChannel)
-                return
-            }
-
+        return self.threadPool.runIfActive(eventLoop: eventLoop) { () -> ByteBuffer in
             var bytesRead = 0
             while bytesRead < byteCount {
-                do {
-                    let n = try buf.writeWithUnsafeMutableBytes { ptr in
-                        let res = try fileHandle.withUnsafeFileDescriptor { descriptor in
-                            try Posix.read(descriptor: descriptor,
-                                                     pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self),
-                                                     size: byteCount - bytesRead)
-                        }
-                        switch res {
-                        case .processed(let n):
-                            assert(n >= 0, "read claims to have read a negative number of bytes \(n)")
-                            return n
-                        case .wouldBlock:
-                            throw Error.descriptorSetToNonBlocking
-                        }
+                let n = try buf.writeWithUnsafeMutableBytes { ptr in
+                    let res = try fileHandle.withUnsafeFileDescriptor { descriptor in
+                        try Posix.read(descriptor: descriptor,
+                                       pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self),
+                                       size: byteCount - bytesRead)
                     }
-                    if n == 0 {
-                        // EOF
-                        break
-                    } else {
-                        bytesRead += n
+                    switch res {
+                    case .processed(let n):
+                        assert(n >= 0, "read claims to have read a negative number of bytes \(n)")
+                        return n
+                    case .wouldBlock:
+                        throw Error.descriptorSetToNonBlocking
                     }
-                } catch {
-                    p.fail(error: error)
-                    return
+                }
+                if n == 0 {
+                    // EOF
+                    break
+                } else {
+                    bytesRead += n
                 }
             }
-            p.succeed(result: buf)
+            return buf
         }
-        return p.futureResult
     }
+
+    /// Open the file at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// This function will return (a future) of the `FileHandle` associated with the file opened and a `FileRegion`
+    /// comprising of the whole file. The caller must close the returned `FileHandle` when its no longer needed.
+    ///
+    /// - note: The reason this returns the `FileHandle` and the `FileRegion` is that both the opening of a file as well as the querying of its size are blocking.
+    ///
+    /// - parameters:
+    ///     - path: The path of the file to be opened.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
+    /// - returns: An `EventLoopFuture` containing the `FileHandle` and the `FileRegion` comprising the whole file.
+    public func openFile(path: String, eventLoop: EventLoop) -> EventLoopFuture<(FileHandle, FileRegion)> {
+        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            let fh = try FileHandle(path: path)
+            do {
+                let fr = try FileRegion(fileHandle: fh)
+                return (fh, fr)
+            } catch {
+                _ = try? fh.close()
+                throw error
+            }
+        }
+    }
+
 }
