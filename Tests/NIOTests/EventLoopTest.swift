@@ -307,7 +307,7 @@ public class EventLoopTest : XCTestCase {
         let eventLoop = group.next()
         let assertHandler = AssertHandler()
         let serverSocket = try ServerBootstrap(group: group).bind(host: "localhost", port: 0).wait()
-        let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: AF_INET)
+        let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: serverSocket.localAddress!.protocolFamily)
         try channel.pipeline.add(handler: assertHandler).wait()
         _ = try channel.eventLoop.submit {
             channel.register().then {
