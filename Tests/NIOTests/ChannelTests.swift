@@ -2214,6 +2214,32 @@ public class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try sc.closeFuture.wait())
         XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
     }
+
+    func testConnectWithECONNREFUSEDGetsTheRightError() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let serverSock = try Socket(protocolFamily: PF_INET, type: Posix.SOCK_STREAM)
+        // we deliberately don't set SO_REUSEADDR
+        XCTAssertNoThrow(try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0)))
+        let serverSockAddress = try! serverSock.localAddress()
+        XCTAssertNoThrow(try serverSock.close())
+
+        // we're just looping here to get a pretty good chance we're hitting both the synchronous and the asynchronous
+        // connect path.
+        for _ in 0..<64 {
+            do {
+                _ = try ClientBootstrap(group: group).connect(to: serverSockAddress).wait()
+                XCTFail("just worked")
+            } catch let error as IOError where error.errnoCode == ECONNREFUSED {
+                // OK
+            } catch {
+                XCTFail("unexpected error: \(error)")
+            }
+        }
+    }
+
 }
 
 fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {

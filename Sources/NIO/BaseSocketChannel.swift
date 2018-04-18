@@ -798,7 +798,27 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     // the `reset` event.
     final func reset() {
         self.readEOF()
-        self.close0(error: ChannelError.eof, mode: .all, promise: nil)
+
+        if self.socket.isOpen {
+            assert(self.lifecycleManager.isRegistered)
+            let error: IOError
+            // if the socket is still registered (and therefore open), let's try to get the actual socket error from the socket
+            do {
+                let result: Int32 = try self.socket.getOption(level: SOL_SOCKET, name: SO_ERROR)
+                if result != 0 {
+                    // we have a socket error, let's forward
+                    // this path will be executed on Linux (EPOLLERR) & Darwin (ev.fflags != 0)
+                    error = IOError(errnoCode: result, reason: "connection reset (error set)")
+                } else {
+                    // we don't have a socket error, this must be connection reset without an error then
+                    // this path should only be executed on Linux (EPOLLHUP, no EPOLLERR)
+                    error = IOError(errnoCode: ECONNRESET, reason: "connection reset (no error set)")
+                }
+                self.close0(error: error, mode: .all, promise: nil)
+            } catch {
+                self.close0(error: error, mode: .all, promise: nil)
+            }
+        }
         assert(!self.lifecycleManager.isRegistered)
     }
 

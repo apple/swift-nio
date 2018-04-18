@@ -53,17 +53,17 @@ public struct IOError: Swift.Error {
 ///
 /// - parameters:
 ///       - errorCode: the `errno` that was set for the operation.
-///       - function: the function / syscall that caused the error.
+///       - reason: what failed
 /// -returns: the constructed reason.
-private func reasonForError(errnoCode: Int32, function: StaticString) -> String {
+private func reasonForError(errnoCode: Int32, reason: String) -> String {
     if let errorDescC = strerror(errnoCode) {
         let errorDescLen = strlen(errorDescC)
         return errorDescC.withMemoryRebound(to: UInt8.self, capacity: errorDescLen) { ptr in
             let errorDescPtr = UnsafeBufferPointer<UInt8>(start: ptr, count: errorDescLen)
-            return "\(function) failed: \(String(decoding: errorDescPtr, as: UTF8.self)) (errno: \(errnoCode)) "
+            return "\(reason): \(String(decoding: errorDescPtr, as: UTF8.self)) (errno: \(errnoCode)) "
         }
     } else {
-        return "\(function) failed: Broken strerror, unknown error: \(errnoCode)"
+        return "\(reason): Broken strerror, unknown error: \(errnoCode)"
     }
 }
 
@@ -75,9 +75,9 @@ extension IOError: CustomStringConvertible {
     public var localizedDescription: String {
         switch self.reason {
         case .reason(let reason):
-            return reason
+            return reasonForError(errnoCode: self.errnoCode, reason: reason)
         case .function(let function):
-            return reasonForError(errnoCode: self.errnoCode, function: function)
+            return reasonForError(errnoCode: self.errnoCode, reason: "\(function) failed")
         }
     }
 }
