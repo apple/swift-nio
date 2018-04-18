@@ -244,6 +244,28 @@ public extension Channel {
     }
 }
 
+public extension ChannelCore {
+    /// Unwraps the given `NIOAny` as a specific concrete type.
+    ///
+    /// This method is intended for use when writing custom `ChannelCore` implementations.
+    /// This can safely be called in methods like `write0` to extract data from the `NIOAny`
+    /// provided in those cases.
+    ///
+    /// Note that if the unwrap fails, this will cause a runtime trap. `ChannelCore`
+    /// implementations should be concrete about what types they support writing. If multiple
+    /// types are supported, considere using a tagged union to store the type information like
+    /// NIO's own `IOData`, which will minimise the amount of runtime type checking.
+    ///
+    /// - parameters:
+    ///     - data: The `NIOAny` to unwrap.
+    ///     - as: The type to extract from the `NIOAny`.
+    /// - returns: The content of the `NIOAny`.
+    @_inlineable
+    public func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
+        return data.forceAs()
+    }
+}
+
 /// An error that can occur on `Channel` operations.
 public enum ChannelError: Error {
     /// Tried to connect on a `Channel` that is already connecting.

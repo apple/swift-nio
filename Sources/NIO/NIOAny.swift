@@ -43,13 +43,14 @@
 ///         }
 ///     }
 public struct NIOAny {
-    private let storage: _NIOAny
+    @_versioned
+    /* private but _versioned */ let _storage: _NIOAny
 
     /// Wrap a value in a `NIOAny`. In most cases you should not create a `NIOAny` directly using this constructor.
     /// The abstraction that accepts values of type `NIOAny` must also provide a mechanism to do the wrapping. An
     /// example is a `ChannelInboundHandler` which provides `self.wrapInboundOut(aValueOfTypeInboundOut)`.
     public init<T>(_ value: T) {
-        self.storage = _NIOAny(value)
+        self._storage = _NIOAny(value)
     }
 
     enum _NIOAny {
@@ -77,8 +78,9 @@ public struct NIOAny {
     /// Try unwrapping the wrapped message as `ByteBuffer`.
     ///
     /// returns: The wrapped `ByteBuffer` or `nil` if the wrapped message is not a `ByteBuffer`.
+    @_versioned @_inlineable
     func tryAsByteBuffer() -> ByteBuffer? {
-        if case .ioData(.byteBuffer(let bb)) = self.storage {
+        if case .ioData(.byteBuffer(let bb)) = self._storage {
             return bb
         } else {
             return nil
@@ -88,19 +90,21 @@ public struct NIOAny {
     /// Force unwrapping the wrapped message as `ByteBuffer`.
     ///
     /// returns: The wrapped `ByteBuffer` or crash if the wrapped message is not a `ByteBuffer`.
+    @_versioned @_inlineable
     func forceAsByteBuffer() -> ByteBuffer {
         if let v = tryAsByteBuffer() {
             return v
         } else {
-            fatalError("tried to decode as type \(ByteBuffer.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
+            fatalError("tried to decode as type \(ByteBuffer.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType)")
         }
     }
 
     /// Try unwrapping the wrapped message as `IOData`.
     ///
     /// returns: The wrapped `IOData` or `nil` if the wrapped message is not a `IOData`.
+    @_versioned @_inlineable
     func tryAsIOData() -> IOData? {
-        if case .ioData(let data) = self.storage {
+        if case .ioData(let data) = self._storage {
             return data
         } else {
             return nil
@@ -110,19 +114,21 @@ public struct NIOAny {
     /// Force unwrapping the wrapped message as `IOData`.
     ///
     /// returns: The wrapped `IOData` or crash if the wrapped message is not a `IOData`.
+    @_versioned @_inlineable
     func forceAsIOData() -> IOData {
         if let v = tryAsIOData() {
             return v
         } else {
-            fatalError("tried to decode as type \(IOData.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
+            fatalError("tried to decode as type \(IOData.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType)")
         }
     }
 
     /// Try unwrapping the wrapped message as `FileRegion`.
     ///
     /// returns: The wrapped `FileRegion` or `nil` if the wrapped message is not a `FileRegion`.
+    @_versioned @_inlineable
     func tryAsFileRegion() -> FileRegion? {
-        if case .ioData(.fileRegion(let f)) = self.storage {
+        if case .ioData(.fileRegion(let f)) = self._storage {
             return f
         } else {
             return nil
@@ -132,19 +138,21 @@ public struct NIOAny {
     /// Force unwrapping the wrapped message as `FileRegion`.
     ///
     /// returns: The wrapped `FileRegion` or crash if the wrapped message is not a `FileRegion`.
+    @_versioned @_inlineable
     func forceAsFileRegion() -> FileRegion {
         if let v = tryAsFileRegion() {
             return v
         } else {
-            fatalError("tried to decode as type \(FileRegion.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
+            fatalError("tried to decode as type \(FileRegion.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType)")
         }
     }
 
     /// Try unwrapping the wrapped message as `AddressedEnvelope<ByteBuffer>`.
     ///
     /// returns: The wrapped `AddressedEnvelope<ByteBuffer>` or `nil` if the wrapped message is not an `AddressedEnvelope<ByteBuffer>`.
+    @_versioned @_inlineable
     func tryAsByteEnvelope() -> AddressedEnvelope<ByteBuffer>? {
-        if case .bufferEnvelope(let e) = self.storage {
+        if case .bufferEnvelope(let e) = self._storage {
             return e
         } else {
             return nil
@@ -154,19 +162,21 @@ public struct NIOAny {
     /// Force unwrapping the wrapped message as `AddressedEnvelope<ByteBuffer>`.
     ///
     /// returns: The wrapped `AddressedEnvelope<ByteBuffer>` or crash if the wrapped message is not an `AddressedEnvelope<ByteBuffer>`.
+    @_versioned @_inlineable
     func forceAsByteEnvelope() -> AddressedEnvelope<ByteBuffer> {
         if let e = tryAsByteEnvelope() {
             return e
         } else {
-            fatalError("tried to decode as type \(AddressedEnvelope<ByteBuffer>.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
+            fatalError("tried to decode as type \(AddressedEnvelope<ByteBuffer>.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType)")
         }
     }
 
     /// Try unwrapping the wrapped message as `T`.
     ///
     /// returns: The wrapped `T` or `nil` if the wrapped message is not a `T`.
+    @_versioned @_inlineable
     func tryAsOther<T>(type: T.Type = T.self) -> T? {
-        if case .other(let any) = self.storage {
+        if case .other(let any) = self._storage {
             return any as? T
         } else {
             return nil
@@ -176,17 +186,19 @@ public struct NIOAny {
     /// Force unwrapping the wrapped message as `T`.
     ///
     /// returns: The wrapped `T` or crash if the wrapped message is not a `T`.
+    @_versioned @_inlineable
     func forceAsOther<T>(type: T.Type = T.self) -> T {
         if let v = tryAsOther(type: type) {
             return v
         } else {
-            fatalError("tried to decode as type \(T.self) but found \(Mirror(reflecting: Mirror(reflecting: self.storage).children.first!.value).subjectType)")
+            fatalError("tried to decode as type \(T.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType)")
         }
     }
 
     /// Force unwrapping the wrapped message as `T`.
     ///
     /// returns: The wrapped `T` or crash if the wrapped message is not a `T`.
+    @_versioned @_inlineable
     func forceAs<T>(type: T.Type = T.self) -> T {
         switch T.self {
         case let t where t == ByteBuffer.self:
@@ -205,6 +217,7 @@ public struct NIOAny {
     /// Try unwrapping the wrapped message as `T`.
     ///
     /// returns: The wrapped `T` or `nil` if the wrapped message is not a `T`.
+    @_versioned @_inlineable
     func tryAs<T>(type: T.Type = T.self) -> T? {
         switch T.self {
         case let t where t == ByteBuffer.self:
@@ -223,8 +236,9 @@ public struct NIOAny {
     /// Unwrap the wrapped message.
     ///
     /// returns: The wrapped message.
+    @_versioned @_inlineable
     func asAny() -> Any {
-        switch self.storage {
+        switch self._storage {
         case .ioData(.byteBuffer(let bb)):
             return bb
         case .ioData(.fileRegion(let f)):
