@@ -145,7 +145,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             if balloonInMemory {
                 self.buffer.clear()
             } else {
-                ctx.writeAndFlush(self.wrapOutboundOut(.head(.init(version: request.version, status: .ok))), promise: nil)
+                ctx.writeAndFlush(self.wrapOutboundOut(.head(httpResponseHead(request: request, status: .ok))), promise: nil)
             }
         case .body(buffer: var buf):
             if balloonInMemory {
@@ -172,7 +172,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         case .head(let request):
             self.keepAlive = request.isKeepAlive
             self.state.requestReceived()
-            ctx.writeAndFlush(self.wrapOutboundOut(.head(.init(version: request.version, status: .ok))), promise: nil)
+            ctx.writeAndFlush(self.wrapOutboundOut(.head(httpResponseHead(request: request, status: .ok))), promise: nil)
         case .body(buffer: _):
             ()
         case .end:
@@ -280,6 +280,38 @@ private final class HTTPHandler: ChannelInboundHandler {
     private func handleFile(ctx: ChannelHandlerContext, request: HTTPServerRequestPart, ioMethod: FileIOMethod, path: String) {
         self.buffer.clear()
 
+        func sendErrorResponse(request: HTTPRequestHead, _ error: Error) {
+            var body = ctx.channel.allocator.buffer(capacity: 128)
+            let response = { () -> HTTPResponseHead in
+                switch error {
+                case let e as IOError where e.errnoCode == ENOENT:
+                    body.write(staticString: "IOError (not found)\r\n")
+                    return httpResponseHead(request: request, status: .notFound)
+                case let e as IOError:
+                    body.write(staticString: "IOError (other)\r\n")
+                    body.write(string: e.description)
+                    body.write(staticString: "\r\n")
+                    return httpResponseHead(request: request, status: .notFound)
+                default:
+                    body.write(string: "\(type(of: error)) error\r\n")
+                    return httpResponseHead(request: request, status: .internalServerError)
+                }
+            }()
+            body.write(string: "\(error)")
+            body.write(staticString: "\r\n")
+            ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
+            ctx.write(self.wrapOutboundOut(.body(.byteBuffer(body))), promise: nil)
+            ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+            ctx.channel.close(promise: nil)
+        }
+
+        func responseHead(request: HTTPRequestHead, fileRegion region: FileRegion) -> HTTPResponseHead {
+            var response = httpResponseHead(request: request, status: .ok)
+            response.headers.add(name: "Content-Length", value: "\(region.endIndex)")
+            response.headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
+            return response
+        }
+
         switch request {
         case .head(let request):
             self.keepAlive = request.isKeepAlive
@@ -291,28 +323,25 @@ private final class HTTPHandler: ChannelInboundHandler {
                 return
             }
             let path = self.htdocsPath + "/" + path
-            do {
-                let file = try FileHandle(path: path)
-                let region = try FileRegion(fileHandle: file)
-                var response = httpResponseHead(request: request, status: .ok)
-
-                response.headers.add(name: "Content-Length", value: "\(region.endIndex)")
-                response.headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
-
+            let fileHandleAndRegion = self.fileIO.openFile(path: path, eventLoop: ctx.eventLoop)
+            fileHandleAndRegion.whenFailure {
+                sendErrorResponse(request: request, $0)
+            }
+            fileHandleAndRegion.whenSuccess { (file, region) in
                 switch ioMethod {
                 case .nonblockingFileIO:
                     var responseStarted = false
-                    let f = self.fileIO.readChunked(fileRegion: region,
-                                            chunkSize: 32 * 1024,
-                                            allocator: ctx.channel.allocator,
-                                            eventLoop: ctx.eventLoop) { buffer in
-                                                if !responseStarted {
-                                                    responseStarted = true
-                                                    ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
-                                                }
-                                                return ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buffer))))
-                                            }
-                    f.then { () -> EventLoopFuture<Void> in
+                    let response = responseHead(request: request, fileRegion: region)
+                    return self.fileIO.readChunked(fileRegion: region,
+                                                   chunkSize: 32 * 1024,
+                                                   allocator: ctx.channel.allocator,
+                                                   eventLoop: ctx.eventLoop) { buffer in
+                                                    if !responseStarted {
+                                                        responseStarted = true
+                                                        ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
+                                                    }
+                                                    return ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buffer))))
+                    }.then { () -> EventLoopFuture<Void> in
                         let p: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
                         self.completeResponse(ctx, trailers: nil, promise: p)
                         return p.futureResult
@@ -332,9 +361,9 @@ private final class HTTPHandler: ChannelInboundHandler {
                         _ = try? file.close()
                     }
                 case .sendfile:
-                    ctx.write(self.wrapOutboundOut(.head(response))).then {
-                        ctx.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region))))
-                    }.then {
+                    let response = responseHead(request: request, fileRegion: region)
+                    ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
+                    ctx.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region)))).then {
                         let p: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
                         self.completeResponse(ctx, trailers: nil, promise: p)
                         return p.futureResult
@@ -344,30 +373,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                         _ = try? file.close()
                     }
                 }
-            } catch {
-                var body = ctx.channel.allocator.buffer(capacity: 128)
-                let response = { () -> HTTPResponseHead in
-                    switch error {
-                    case let e as IOError where e.errnoCode == ENOENT:
-                        body.write(staticString: "IOError (not found)\r\n")
-                        return httpResponseHead(request: request, status: .notFound)
-                    case let e as IOError:
-                        body.write(staticString: "IOError (other)\r\n")
-                        body.write(string: e.description)
-                        body.write(staticString: "\r\n")
-                        return httpResponseHead(request: request, status: .notFound)
-                    default:
-                        body.write(string: "\(type(of: error)) error\r\n")
-                        return httpResponseHead(request: request, status: .internalServerError)
-                    }
-                }()
-                body.write(string: "\(error)")
-                body.write(staticString: "\r\n")
-                ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
-                ctx.write(self.wrapOutboundOut(.body(.byteBuffer(body))), promise: nil)
-                ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
-                ctx.channel.close(promise: nil)
-            }
+        }
         case .end:
             self.state.requestComplete()
         default:
