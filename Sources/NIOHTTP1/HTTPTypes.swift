@@ -842,6 +842,8 @@ extension HTTPResponseStatus {
                 return 416
             case .expectationFailed:
                 return 417
+            case .imaTeapot:
+                return 418
             case .misdirectedRequest:
                 return 421
             case .unprocessableEntity:
@@ -970,6 +972,8 @@ extension HTTPResponseStatus {
                 return "Range Not Satisfiable"
             case .expectationFailed:
                 return "Expectation Failed"
+            case .imaTeapot:
+                return "I'm a teapot"
             case .misdirectedRequest:
                 return "Misdirected Request"
             case .unprocessableEntity:
@@ -1071,10 +1075,11 @@ public enum HTTPResponseStatus {
     case unsupportedMediaType
     case rangeNotSatisfiable
     case expectationFailed
+    case imaTeapot
+    case unprocessableEntity
 
     // 5xx
     case misdirectedRequest
-    case unprocessableEntity
     case locked
     case failedDependency
     case upgradeRequired
@@ -1361,6 +1366,8 @@ extension HTTPResponseStatus: Equatable {
         case (.notExtended, .notExtended):
             return true
         case (.networkAuthenticationRequired, .networkAuthenticationRequired):
+            return true
+        case (.imaTeapot, .imaTeapot):
             return true
         default:
             return false
