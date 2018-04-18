@@ -75,6 +75,8 @@ public final class BlockingIOThreadPool {
 
     /// Submit a `WorkItem` to process.
     ///
+    /// - note: This is a low-level method, in most cases the `runIfActive` method should be used.
+    ///
     /// - parameters:
     ///     - body: The `WorkItem` to process by the `BlockingIOThreadPool`.
     public func submit(_ body: @escaping WorkItem) {
@@ -150,6 +152,31 @@ public final class BlockingIOThreadPool {
                 self.process(identifier: id)
             }
         }
+    }
+}
+
+public extension BlockingIOThreadPool {
+    /// Runs the submitted closure if the thread pool is still active, otherwise fails the promise.
+    /// The closure will be run on the thread pool so can do blocking work.
+    ///
+    /// - parameters:
+    ///     - eventLoop: The `EventLoop` the returned `EventLoopFuture` will fire on.
+    ///     - body: The closure which performs some blocking work to be done on the thread pool.
+    /// - returns: The `EventLoopFuture` of `promise` fulfilled with the result (or error) of the passed closure.
+    public func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
+        let promise: EventLoopPromise<T> = eventLoop.newPromise()
+        self.submit { shouldRun in
+            guard case shouldRun = BlockingIOThreadPool.WorkItemState.active else {
+                promise.fail(error: ChannelError.ioOnClosedChannel)
+                return
+            }
+            do {
+                try promise.succeed(result: body())
+            } catch {
+                promise.fail(error: error)
+            }
+        }
+        return promise.futureResult
     }
 }
 
