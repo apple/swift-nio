@@ -1244,6 +1244,8 @@ extension HTTPResponseStatus: Equatable {
         switch (lhs, rhs) {
         case (.custom(let lcode, let lreason), .custom(let rcode, let rreason)):
             return lcode == rcode && lreason == rreason
+        case (.custom, _), (_, .custom):
+            return false
         default:
             return lhs.code == rhs.code
         }
