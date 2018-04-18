@@ -42,6 +42,7 @@ extension SocketChannelTest {
                 ("testCloseDuringWriteFailure", testCloseDuringWriteFailure),
                 ("testWithConfiguredStreamSocket", testWithConfiguredStreamSocket),
                 ("testWithConfiguredDatagramSocket", testWithConfiguredDatagramSocket),
+                ("testPendingConnectNotificationOrder", testPendingConnectNotificationOrder),
            ]
    }
 }

@@ -677,6 +677,11 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         // Transition our internal state.
         let callouts = self.lifecycleManager.close(promise: p)
 
+        if let connectPromise = self.pendingConnect {
+            self.pendingConnect = nil
+            connectPromise.fail(error: error)
+        }
+
         // Now that our state is sensible, we can call out to user code.
         self.cancelWritesOnClose(error: error)
         callouts(self.pipeline)
@@ -686,11 +691,6 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             self.pipeline.removeHandlers()
 
             self.closePromise.succeed(result: ())
-        }
-
-        if let connectPromise = pendingConnect {
-            pendingConnect = nil
-            connectPromise.fail(error: error)
         }
     }
 
