@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// A `ServerBootstrap` is an easy way to bootstrap a `ServerChannel` when creating network servers.
+/// A `ServerBootstrap` is an easy way to bootstrap a `ServerSocketChannel` when creating network servers.
 ///
 /// Example:
 ///
@@ -63,7 +63,7 @@ public final class ServerBootstrap {
     /// Create a `ServerBootstrap` for the `EventLoopGroup` `group`.
     ///
     /// - parameters:
-    ///     - group: The `EventLoopGroup` to use for the `ServerChannel`.
+    ///     - group: The `EventLoopGroup` to use for the `ServerSocketChannel`.
     public convenience init(group: EventLoopGroup) {
         self.init(group: group, childGroup: group)
     }
@@ -132,12 +132,8 @@ public final class ServerBootstrap {
     ///     - host: The host to bind on.
     ///     - port: The port to bind on.
     public func bind(host: String, port: Int) -> EventLoopFuture<Channel> {
-        let evGroup = group
-        do {
-            let address = try SocketAddress.newAddressResolving(host: host, port: port)
-            return bind0(eventLoopGroup: evGroup, to: address)
-        } catch let err {
-            return evGroup.next().newFailedFuture(error: err)
+        return bind0 {
+            return try SocketAddress.newAddressResolving(host: host, port: port)
         }
     }
 
@@ -146,7 +142,7 @@ public final class ServerBootstrap {
     /// - parameters:
     ///     - address: The `SocketAddress` to bind on.
     public func bind(to address: SocketAddress) -> EventLoopFuture<Channel> {
-        return bind0(eventLoopGroup: group, to: address)
+        return bind0 { address }
     }
 
     /// Bind the `ServerSocketChannel` to a UNIX Domain Socket.
@@ -154,46 +150,74 @@ public final class ServerBootstrap {
     /// - parameters:
     ///     - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
     public func bind(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
-        let evGroup = group
-        do {
-            let address = try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
-            return bind0(eventLoopGroup: evGroup, to: address)
-        } catch let err {
-            return evGroup.next().newFailedFuture(error: err)
+        return bind0 {
+            try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
         }
     }
 
-    private func bind0(eventLoopGroup: EventLoopGroup, to address: SocketAddress) -> EventLoopFuture<Channel> {
+    /// Use the existing bound socket file descriptor.
+    ///
+    /// - parameters:
+    ///     - descriptor: The _Unix file descriptor_ representing the bound stream socket.
+    public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup) throws -> ServerSocketChannel {
+            return try ServerSocketChannel(descriptor: descriptor, eventLoop: eventLoop, group: childEventLoopGroup)
+        }
+        return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
+            let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+            serverChannel.registerAlreadyConfigured0(promise: promise)
+            return promise.futureResult
+        }
+    }
+
+    private func bind0(_ makeSocketAddress: () throws -> SocketAddress) -> EventLoopFuture<Channel> {
+        let address: SocketAddress
+        do {
+            address = try makeSocketAddress()
+        } catch {
+            return group.next().newFailedFuture(error: error)
+        }
+        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup) throws -> ServerSocketChannel {
+            return try ServerSocketChannel(eventLoop: eventLoop,
+                                           group: childEventLoopGroup,
+                                           protocolFamily: address.protocolFamily)
+        }
+        return bind0(makeServerChannel: makeChannel) { (eventGroup, serverChannel) in
+            serverChannel.registerAndDoSynchronously { serverChannel in
+                serverChannel.bind(to: address)
+            }
+        }
+    }
+
+    private func bind0(makeServerChannel: (_ eventLoop: SelectableEventLoop, _ childGroup: EventLoopGroup) throws -> ServerSocketChannel, _ register: @escaping (EventLoop, ServerSocketChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
+        let eventLoop = self.group.next()
         let childEventLoopGroup = self.childGroup
         let serverChannelOptions = self.serverChannelOptions
-        let eventLoop = eventLoopGroup.next()
         let serverChannelInit = self.serverChannelInit ?? { _ in eventLoop.newSucceededFuture(result: ()) }
         let childChannelInit = self.childChannelInit
         let childChannelOptions = self.childChannelOptions
 
-        let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
+        let future: EventLoopFuture<Channel>
         do {
-            let serverChannel = try ServerSocketChannel(eventLoop: eventLoop as! SelectableEventLoop,
-                                                        group: childEventLoopGroup,
-                                                        protocolFamily: address.protocolFamily)
+            let serverChannel = try makeServerChannel(eventLoop as! SelectableEventLoop, childEventLoopGroup)
 
-            serverChannelInit(serverChannel).then {
+            future = serverChannelInit(serverChannel).then {
                 serverChannel.pipeline.add(handler: AcceptHandler(childChannelInitializer: childChannelInit,
                                                                   childChannelOptions: childChannelOptions))
             }.then {
                 serverChannelOptions.applyAll(channel: serverChannel)
             }.then {
-                serverChannel.registerAndDoSynchronously { serverChannel in
-                    serverChannel.bind(to: address)
-                }
+                register(eventLoop, serverChannel)
             }.map {
                 serverChannel
-            }.cascade(promise: promise)
-        } catch let err {
-            promise.fail(error: err)
+            }
+        } catch {
+            let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
+            promise.fail(error: error)
+            future = promise.futureResult
         }
 
-        return promise.futureResult
+        return future
     }
 
     private class AcceptHandler: ChannelInboundHandler {
@@ -388,6 +412,31 @@ public final class ClientBootstrap {
         }
     }
 
+    /// Use the existing connected socket file descriptor.
+    ///
+    /// - parameters:
+    ///     - descriptor: The _Unix file descriptor_ representing the connected stream socket.
+    /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel` immediately.
+    public func withConnectedSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+        let eventLoop = group.next()
+        do {
+            let channelInitializer = self.channelInitializer ?? { _ in eventLoop.newSucceededFuture(result: ()) }
+            let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, descriptor: descriptor)
+
+            return channelInitializer(channel).then {
+                self.channelOptions.applyAll(channel: channel)
+            }.then {
+                let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+                channel.registerAlreadyConfigured0(promise: promise)
+                return promise.futureResult
+            }.map {
+                channel
+            }
+        } catch {
+            return eventLoop.newFailedFuture(error: error)
+        }
+    }
+
     private func execute(eventLoop: EventLoop,
                          protocolFamily: Int32,
                          _ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
@@ -470,18 +519,29 @@ public final class DatagramBootstrap {
         return self
     }
 
+    /// Use the existing bound socket file descriptor.
+    ///
+    /// - parameters:
+    ///     - descriptor: The _Unix file descriptor_ representing the bound datagram socket.
+    public func withBoundSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
+        func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
+            return try DatagramChannel(eventLoop: eventLoop, descriptor: descriptor)
+        }
+        return bind0(makeChannel: makeChannel) { (eventLoop, channel) in
+            let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+            channel.registerAlreadyConfigured0(promise: promise)
+            return promise.futureResult
+        }
+    }
+
     /// Bind the `DatagramChannel` to `host` and `port`.
     ///
     /// - parameters:
     ///     - host: The host to bind on.
     ///     - port: The port to bind on.
     public func bind(host: String, port: Int) -> EventLoopFuture<Channel> {
-        let evGroup = group
-        do {
-            let address = try SocketAddress.newAddressResolving(host: host, port: port)
-            return bind0(eventLoopGroup: evGroup, to: address)
-        } catch let err {
-            return evGroup.next().newFailedFuture(error: err)
+        return bind0 {
+            return try SocketAddress.newAddressResolving(host: host, port: port)
         }
     }
 
@@ -490,7 +550,7 @@ public final class DatagramBootstrap {
     /// - parameters:
     ///     - address: The `SocketAddress` to bind on.
     public func bind(to address: SocketAddress) -> EventLoopFuture<Channel> {
-        return bind0(eventLoopGroup: group, to: address)
+        return bind0 { address }
     }
 
     /// Bind the `DatagramChannel` to a UNIX Domain Socket.
@@ -498,39 +558,52 @@ public final class DatagramBootstrap {
     /// - parameters:
     ///     - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. `path` must not exist, it will be created by the system.
     public func bind(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
-        let evGroup = group
-        do {
-            let address = try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
-            return bind0(eventLoopGroup: evGroup, to: address)
-        } catch let err {
-            return evGroup.next().newFailedFuture(error: err)
+        return bind0 {
+            return try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
         }
     }
 
-    private func bind0(eventLoopGroup: EventLoopGroup, to address: SocketAddress) -> EventLoopFuture<Channel> {
-        let eventLoop = eventLoopGroup.next()
+    private func bind0(_ makeSocketAddress: () throws -> SocketAddress) -> EventLoopFuture<Channel> {
+        let address: SocketAddress
+        do {
+            address = try makeSocketAddress()
+        } catch {
+            return group.next().newFailedFuture(error: error)
+        }
+        func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
+            return try DatagramChannel(eventLoop: eventLoop,
+                                       protocolFamily: address.protocolFamily)
+        }
+        return bind0(makeChannel: makeChannel) { (eventLoop, channel) in
+            channel.register().then {
+                _ in return channel.bind(to: address)
+            }
+        }
+    }
+
+    private func bind0(makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel, _ registerAndBind: @escaping (EventLoop, DatagramChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
+        let eventLoop = self.group.next()
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.newSucceededFuture(result: ()) }
         let channelOptions = self.channelOptions
 
-        let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
+        let future: EventLoopFuture<Channel>
         do {
-            let channel = try DatagramChannel(eventLoop: eventLoop as! SelectableEventLoop,
-                                                    protocolFamily: address.protocolFamily)
+            let channel = try makeChannel(eventLoop as! SelectableEventLoop)
 
-            channelInitializer(channel).then {
+            future = channelInitializer(channel).then {
                 channelOptions.applyAll(channel: channel)
             }.then {
-                channel.register()
-            }.then {
-                channel.bind(to: address)
+                registerAndBind(eventLoop, channel)
             }.map {
                 channel
-            }.cascade(promise: promise)
-        } catch let err {
-            promise.fail(error: err)
+            }
+        } catch {
+            let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
+            promise.fail(error: error)
+            future = promise.futureResult
         }
 
-        return promise.futureResult
+        return future
     }
 }
 

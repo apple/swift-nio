@@ -718,6 +718,14 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
     }
 
+    public final func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
+        assert(self.eventLoop.inEventLoop)
+        assert(self.isOpen)
+        assert(!self.lifecycleManager.isActive)
+        register0(promise: nil)
+        becomeActive0(promise: promise)
+    }
+
     public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
         promise?.succeed(result: ())
     }

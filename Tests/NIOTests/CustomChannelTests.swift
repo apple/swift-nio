@@ -37,6 +37,10 @@ private class IntChannelCore: ChannelCore {
         promise?.fail(error: NotImplementedError())
     }
 
+    func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
+        promise?.fail(error: NotImplementedError())
+    }
+
     func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?) {
         promise?.fail(error: NotImplementedError())
     }

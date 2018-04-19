@@ -59,6 +59,12 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         try super.init(socket: socket, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
 
+    init(eventLoop: SelectableEventLoop, descriptor: CInt) throws {
+        let socket = try Socket(descriptor: descriptor, setNonBlocking: true)
+        self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
+        try super.init(socket: socket, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
+    }
+
     deinit {
         // We should never have any pending writes left as otherwise we may leak callbacks
         assert(pendingWrites.isEmpty)
@@ -316,10 +322,16 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     convenience init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: Int32) throws {
         try self.init(serverSocket: try ServerSocket(protocolFamily: protocolFamily, setNonBlocking: true), eventLoop: eventLoop, group: group)
     }
-    
+
     init(serverSocket: ServerSocket, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
         self.group = group
         try super.init(socket: serverSocket, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
+    }
+
+    convenience init(descriptor: CInt, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
+        let socket = try ServerSocket(descriptor: descriptor, setNonBlocking: true)
+        try self.init(serverSocket: socket, eventLoop: eventLoop, group: group)
+        try self.socket.listen(backlog: backlog)
     }
 
     override func registrationFor(interested: SelectorEventSet) -> NIORegistration {
@@ -489,6 +501,17 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         assert(eventLoop.inEventLoop)
         assert(super.isOpen == self.pendingWrites.isOpen)
         return super.isOpen
+    }
+
+    convenience init(eventLoop: SelectableEventLoop, descriptor: CInt) throws {
+        let socket = Socket(descriptor: descriptor)
+
+        do {
+            try self.init(socket: socket, eventLoop: eventLoop)
+        } catch {
+            _ = try? socket.close()
+            throw error
+        }
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {

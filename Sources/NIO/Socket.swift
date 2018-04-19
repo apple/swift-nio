@@ -38,6 +38,19 @@ public typealias IOVector = iovec
         super.init(descriptor: sock)
     }
 
+    /// Create a new instance out of an already established socket.
+    ///
+    /// - parameters:
+    ///     - descriptor: The existing socket descriptor.
+    ///     - setNonBlocking: Set non-blocking mode on the socket.
+    /// - throws: An `IOError` if could not change the socket into non-blocking
+    init(descriptor: CInt, setNonBlocking: Bool) throws {
+        super.init(descriptor: descriptor)
+        if setNonBlocking {
+            try self.setNonBlocking()
+        }
+    }
+
     /// Create a new instance.
     ///
     /// The ownership of the passed in descriptor is transferred to this class. A user must call `close` to close the underlying
@@ -45,7 +58,7 @@ public typealias IOVector = iovec
     ///
     /// - parameters:
     ///     - descriptor: The file descriptor to wrap.
-    override init(descriptor: Int32) {
+    override init(descriptor: CInt) {
         super.init(descriptor: descriptor)
     }
 

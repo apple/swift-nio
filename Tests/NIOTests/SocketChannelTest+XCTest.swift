@@ -40,6 +40,8 @@ extension SocketChannelTest {
                 ("testWriteAndFlushServerSocketChannel", testWriteAndFlushServerSocketChannel),
                 ("testConnectServerSocketChannel", testConnectServerSocketChannel),
                 ("testCloseDuringWriteFailure", testCloseDuringWriteFailure),
+                ("testWithConfiguredStreamSocket", testWithConfiguredStreamSocket),
+                ("testWithConfiguredDatagramSocket", testWithConfiguredDatagramSocket),
            ]
    }
 }
