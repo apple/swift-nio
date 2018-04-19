@@ -210,7 +210,7 @@ let bootstrap = ServerBootstrap(group: group)
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
-        let config: HTTPUpgradeConfiguration = (upgraders: [], completionHandler: { _ in })
+        let config: HTTPUpgradeConfiguration = (upgraders: [ upgrader ], completionHandler: { _ in })
         return channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: config).then {
             channel.pipeline.add(handler: HTTPHandler())
         }
