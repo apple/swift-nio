@@ -322,16 +322,15 @@ public class SocketChannelTest : XCTestCase {
         let clientSock = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_STREAM)
         let connected = try clientSock.connect(to: serverChannel.localAddress!)
         XCTAssertEqual(connected, true)
-        let clientChannelFuture = try clientSock.withUnsafeFileDescriptor {
+        let clientChannel = try clientSock.withUnsafeFileDescriptor {
             ClientBootstrap(group: group).withConnectedSocket(descriptor: dup($0))
-        }
+        }.wait()
         try clientSock.close()
-        let clientChannel = try clientChannelFuture.wait()
 
         XCTAssertEqual(true, clientChannel.isActive)
 
-        try serverChannel.close().wait()
-        try clientChannel.close().wait()
+        XCTAssertNoThrow(try serverChannel.close().wait())
+        XCTAssertNoThrow(try clientChannel.close().wait())
     }
 
     public func testWithConfiguredDatagramSocket() throws {
@@ -340,14 +339,11 @@ public class SocketChannelTest : XCTestCase {
 
         let serverSock = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_DGRAM)
         try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
-        let serverChannelFuture = try serverSock.withUnsafeFileDescriptor {
+        let serverChannel = try serverSock.withUnsafeFileDescriptor {
             DatagramBootstrap(group: group).withBoundSocket(descriptor: dup($0))
-        }
-        try serverSock.close()
-        let serverChannel = try serverChannelFuture.wait()
-
+        }.wait()
+        XCTAssertNoThrow(try serverSock.close())
         XCTAssertEqual(true, serverChannel.isActive)
-
-        try serverChannel.close().wait()
+        XCTAssertNoThrow(try serverChannel.close().wait())
     }
 }
