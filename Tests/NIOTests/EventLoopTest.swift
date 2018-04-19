@@ -130,19 +130,30 @@ public class EventLoopTest : XCTestCase {
             typealias OutboundIn = Any
             typealias OutboundOut = Any
 
+            private let promiseRegisterCallback: (EventLoopPromise<Void>) -> Void
+
             var closePromise: EventLoopPromise<Void>? = nil
+
+            init(_ promiseRegisterCallback: @escaping (EventLoopPromise<Void>) -> Void) {
+                self.promiseRegisterCallback = promiseRegisterCallback
+            }
 
             func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
                 guard self.closePromise == nil else {
                     XCTFail("Attempted to create duplicate close promise")
                     return
                 }
+                XCTAssertTrue(ctx.channel.isActive)
                 self.closePromise = ctx.eventLoop.newPromise()
                 self.closePromise!.futureResult.whenSuccess {
                     ctx.close(mode: mode, promise: promise)
                 }
+                promiseRegisterCallback(self.closePromise!)
             }
         }
+
+        let promiseQueue = DispatchQueue(label: "promiseQueue")
+        var promises: [EventLoopPromise<Void>] = []
 
         let group = MultiThreadedEventLoopGroup(numThreads: 1)
         defer {
@@ -156,13 +167,22 @@ public class EventLoopTest : XCTestCase {
         }
         let loop = group.next() as! SelectableEventLoop
 
-        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        let serverChannel = try ServerBootstrap(group: group)
+            .childChannelInitializer { channel in
+                channel.pipeline.add(handler: WedgeOpenHandler { promise in
+                    promiseQueue.sync { promises.append(promise) }
+                })
+            }
+            .bind(host: "127.0.0.1", port: 0).wait()
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
+        let connectPromise: EventLoopPromise<Void> = loop.newPromise()
 
         // We're going to create and register a channel, but not actually attempt to do anything with it.
-        let wedgeHandler = WedgeOpenHandler()
+        let wedgeHandler = WedgeOpenHandler { promise in
+            promiseQueue.sync { promises.append(promise) }
+        }
         let channel = try SocketChannel(eventLoop: loop, protocolFamily: AF_INET)
         _ = try channel.eventLoop.submit {
             channel.pipeline.add(handler: wedgeHandler).then {
@@ -170,8 +190,11 @@ public class EventLoopTest : XCTestCase {
             }.then {
                 // connecting here to stop epoll from throwing EPOLLHUP at us
                 channel.connect(to: serverChannel.localAddress!)
-            }
+            }.cascade(promise: connectPromise)
         }.wait()
+
+        // Wait for the connect to complete.
+        XCTAssertNoThrow(try connectPromise.futureResult.wait())
 
         // Now we're going to start closing the event loop. This should not immediately succeed.
         let loopCloseFut = loop.closeGently()
@@ -192,8 +215,8 @@ public class EventLoopTest : XCTestCase {
         XCTAssertFalse(loopCloseFut.isFulfilled)
 
         // Now let it close.
-        loop.execute {
-            wedgeHandler.closePromise!.succeed(result: ())
+        promiseQueue.sync {
+            promises.forEach { $0.succeed(result: ()) }
         }
         XCTAssertNoThrow(try loopCloseFut.wait())
     }
