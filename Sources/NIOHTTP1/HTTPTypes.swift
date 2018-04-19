@@ -1372,3 +1372,21 @@ extension HTTPResponseStatus: Equatable {
         }
     }
 }
+
+extension HTTPRequestHead: CustomStringConvertible {
+    public var description: String {
+        return "HTTPRequestHead { method: \(self.method), uri: \"\(self.uri)\", version: \(self.version), headers: \(self.headers) }"
+    }
+}
+
+extension HTTPResponseHead: CustomStringConvertible {
+    public var description: String {
+        return "HTTPResponseHead { version: \(self.version), status: \(self.status), headers: \(self.headers) }"
+    }
+}
+
+extension HTTPVersion: CustomStringConvertible {
+    public var description: String {
+        return "HTTP/\(self.major).\(self.minor)"
+    }
+}
