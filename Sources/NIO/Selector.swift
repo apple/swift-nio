@@ -259,6 +259,8 @@ final class Selector<R: Registration> {
     private var eventsCapacity = 64
     private var events: UnsafeMutablePointer<EventType>
     private var registrations = [Int: R]()
+    // temporary workaround to stop us delivering outdated events; read in `whenReady`, set in `deregister`
+    private var deregistrationsHappened: Bool = false
 
     private static func allocateEventsArray(capacity: Int) -> UnsafeMutablePointer<EventType> {
         let events: UnsafeMutablePointer<EventType> = UnsafeMutablePointer.allocate(capacity: capacity)
@@ -453,6 +455,8 @@ final class Selector<R: Registration> {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't deregister from selector as it's \(self.lifecycleState).")
         }
+        // temporary workaround to stop us delivering outdated events
+        self.deregistrationsHappened = true
         try selectable.withUnsafeFileDescriptor { fd in
             guard let reg = registrations.removeValue(forKey: Int(fd)) else {
                 return
@@ -500,7 +504,10 @@ final class Selector<R: Registration> {
             ready = Int(try Epoll.epoll_wait(epfd: self.fd, events: events, maxevents: Int32(eventsCapacity), timeout: -1))
         }
 
-        for i in 0..<ready {
+        // start with no deregistrations happened
+        self.deregistrationsHappened = false
+        // temporary workaround to stop us delivering outdated events; possibly set in `deregister`
+        for i in 0..<ready where !self.deregistrationsHappened {
             let ev = events[i]
             switch ev.data.fd {
             case eventfd:
@@ -540,7 +547,10 @@ final class Selector<R: Registration> {
             Int(try KQueue.kevent(kq: self.fd, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: ts))
         }
 
-        for i in 0..<ready {
+        // start with no deregistrations happened
+        self.deregistrationsHappened = false
+        // temporary workaround to stop us delivering outdated events; possibly set in `deregister`
+        for i in 0..<ready where !self.deregistrationsHappened {
             let ev = events[i]
             let filter = Int32(ev.filter)
             guard Int32(ev.flags) & EV_ERROR == 0 else {

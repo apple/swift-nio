@@ -34,6 +34,11 @@ private struct SocketChannelLifecycleManager {
     // this is queried from the Channel, ie. must be thread-safe
     internal let isActiveAtomic: Atomic<Bool>
     // these are only to be accessed on the EventLoop
+
+    // have we seen the `.readEOF` notification
+    // note: this can be `false` on a deactivated channel, we might just have torn it down.
+    var hasSeenEOFNotification: Bool = false
+
     private var currentState: State = .fresh {
         didSet {
             assert(self.eventLoop.inEventLoop)
@@ -228,8 +233,8 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     /// Returned by the `private func readable0()` to inform the caller about the current state of the underlying read stream.
     /// This is mostly useful when receiving `.readEOF` as we then need to drain the read stream fully (ie. until we receive EOF or error of course)
     private enum ReadStreamState {
-        /// Everything seems normal.
-        case normal
+        /// Everything seems normal
+        case normal(ReadResult)
 
         /// We saw EOF.
         case eof
@@ -619,9 +624,14 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
     }
 
-    private func registerForReadable() {
+    private final func registerForReadable() {
         assert(eventLoop.inEventLoop)
         assert(self.lifecycleManager.isRegistered)
+
+        guard !self.lifecycleManager.hasSeenEOFNotification else {
+            // we have seen an EOF notification before so there's no point in registering for reads
+            return
+        }
 
         guard !self.interestedEvent.contains(.read) else {
             return
@@ -630,7 +640,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.safeReregister(interested: self.interestedEvent.union(.read))
     }
 
-    func unregisterForReadable() {
+    internal final func unregisterForReadable() {
         assert(eventLoop.inEventLoop)
         assert(self.lifecycleManager.isRegistered)
 
@@ -776,6 +786,16 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     }
 
     final func readEOF() {
+        assert(!self.lifecycleManager.hasSeenEOFNotification)
+        self.lifecycleManager.hasSeenEOFNotification = true
+
+        self.readEOF0()
+
+        assert(!self.interestedEvent.contains(.read))
+        assert(!self.interestedEvent.contains(.readEOF))
+    }
+
+    final func readEOF0() {
         if self.lifecycleManager.isRegistered {
             // we're unregistering from `readEOF` here as we want this to be one-shot. We're then synchronously
             // reading all input until the EOF that we're guaranteed to see. After that `readEOF` becomes uninteresting
@@ -793,7 +813,9 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
                     assert(!self.lifecycleManager.isActive)
                     assert(!self.lifecycleManager.isRegistered)
                     break loop
-                case .normal:
+                case .normal(.none):
+                    preconditionFailure("got .readEOF and read returned not reading any bytes, nor EOF.")
+                case .normal(.some):
                     // normal, note that there is no guarantee we're still active (as the user might have closed in callout)
                     continue loop
                 }
@@ -805,7 +827,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     // other words: Failing to unregister the whole selector will cause NIO to spin at 100% CPU constantly delivering
     // the `reset` event.
     final func reset() {
-        self.readEOF()
+        self.readEOF0()
 
         if self.socket.isOpen {
             assert(self.lifecycleManager.isRegistered)
@@ -831,6 +853,8 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     }
 
     public final func readable() {
+        assert(!self.lifecycleManager.hasSeenEOFNotification,
+               "got a read notification after having already seen .readEOF")
         self.readable0()
     }
 
@@ -845,8 +869,9 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             }
         }
 
+        let readResult: ReadResult
         do {
-            try readFromSocket()
+            readResult = try readFromSocket()
         } catch let err {
             let readStreamState: ReadStreamState
             // ChannelError.eof is not something we want to fire through the pipeline as it just means the remote
@@ -885,7 +910,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             pipeline.fireChannelReadComplete0()
         }
         readIfNeeded0()
-        return .normal
+        return .normal(readResult)
     }
 
     /// Returns `true` if the `Channel` should be closed as result of the given `Error` which happened during `readFromSocket`.
