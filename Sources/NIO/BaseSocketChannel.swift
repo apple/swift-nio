@@ -732,8 +732,15 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         assert(self.eventLoop.inEventLoop)
         assert(self.isOpen)
         assert(!self.lifecycleManager.isActive)
-        register0(promise: nil)
-        becomeActive0(promise: promise)
+        let registerPromise: EventLoopPromise<Void> = self.eventLoop.newPromise()
+        if let promise = promise {
+            registerPromise.futureResult.cascadeFailure(promise: promise)
+        }
+        register0(promise: registerPromise)
+        if self.lifecycleManager.isRegistered {
+            // if the registration worked
+            becomeActive0(promise: promise)
+        }
     }
 
     public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {

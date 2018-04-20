@@ -43,6 +43,7 @@ extension SocketChannelTest {
                 ("testWithConfiguredStreamSocket", testWithConfiguredStreamSocket),
                 ("testWithConfiguredDatagramSocket", testWithConfiguredDatagramSocket),
                 ("testPendingConnectNotificationOrder", testPendingConnectNotificationOrder),
+                ("testWithConnectedBogusSocket", testWithConnectedBogusSocket),
            ]
    }
 }
