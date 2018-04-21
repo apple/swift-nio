@@ -49,15 +49,18 @@ public struct NIOAny {
     /// Wrap a value in a `NIOAny`. In most cases you should not create a `NIOAny` directly using this constructor.
     /// The abstraction that accepts values of type `NIOAny` must also provide a mechanism to do the wrapping. An
     /// example is a `ChannelInboundHandler` which provides `self.wrapInboundOut(aValueOfTypeInboundOut)`.
+    @_inlineable
     public init<T>(_ value: T) {
         self._storage = _NIOAny(value)
     }
 
+    @_versioned
     enum _NIOAny {
         case ioData(IOData)
         case bufferEnvelope(AddressedEnvelope<ByteBuffer>)
         case other(Any)
 
+        @_inlineable @_versioned
         init<T>(_ value: T) {
             switch value {
             case let value as ByteBuffer:

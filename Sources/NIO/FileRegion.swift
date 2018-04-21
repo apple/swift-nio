@@ -28,11 +28,23 @@ public struct FileRegion {
     /// The `FileHandle` that is used by this `FileRegion`.
     public let fileHandle: FileHandle
 
+    private let _endIndex: UInt64
+    private var _readerIndex: _UInt56
+
     /// The current reader index of this `FileRegion`
-    private(set) public var readerIndex: Int
+    private(set) public var readerIndex: Int {
+        get {
+            return Int(self._readerIndex)
+        }
+        set {
+            self._readerIndex = _UInt56(newValue)
+        }
+    }
 
     /// The end index of this `FileRegion`.
-    public let endIndex: Int
+    public var endIndex: Int {
+        return Int(self._endIndex)
+    }
 
     /// Create a new `FileRegion` from an open `FileHandle`.
     ///
@@ -44,8 +56,8 @@ public struct FileRegion {
         precondition(readerIndex <= endIndex, "readerIndex(\(readerIndex) must be <= endIndex(\(endIndex).")
 
         self.fileHandle = fileHandle
-        self.readerIndex = readerIndex
-        self.endIndex = endIndex
+        self._readerIndex = _UInt56(readerIndex)
+        self._endIndex = UInt64(endIndex)
     }
 
     /// The number of readable bytes within this FileRegion (taking the `readerIndex` and `endIndex` into account).

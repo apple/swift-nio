@@ -110,6 +110,9 @@ extension ByteBufferTest {
                 ("testUnderestimatingSequenceWorks", testUnderestimatingSequenceWorks),
                 ("testZeroSizeByteBufferResizes", testZeroSizeByteBufferResizes),
                 ("testSpecifyTypesAndEndiannessForIntegerMethods", testSpecifyTypesAndEndiannessForIntegerMethods),
+                ("testByteBufferFitsInACoupleOfEnums", testByteBufferFitsInACoupleOfEnums),
+                ("testLargeSliceBegin16MBIsOkayAndDoesNotCopy", testLargeSliceBegin16MBIsOkayAndDoesNotCopy),
+                ("testLargeSliceBeginMoreThan16MBIsOkay", testLargeSliceBeginMoreThan16MBIsOkay),
            ]
    }
 }

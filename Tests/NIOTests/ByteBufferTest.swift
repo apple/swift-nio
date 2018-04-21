@@ -1214,6 +1214,108 @@ class ByteBufferTest: XCTestCase {
         self.buf.set(integer: 0xdeadbeef, at: 0, endianness: .little, as: UInt64.self)
         XCTAssertEqual(0xdeadbeef, self.buf.getInteger(at: 0, endianness: .little, as: UInt64.self))
     }
+
+    func testByteBufferFitsInACoupleOfEnums() throws {
+        enum Level4 {
+            case case1(ByteBuffer)
+            case case2(ByteBuffer)
+            case case3(ByteBuffer)
+            case case4(ByteBuffer)
+        }
+        enum Level3 {
+            case case1(Level4)
+            case case2(Level4)
+            case case3(Level4)
+            case case4(Level4)
+        }
+        enum Level2 {
+            case case1(Level3)
+            case case2(Level3)
+            case case3(Level3)
+            case case4(Level3)
+        }
+        enum Level1 {
+            case case1(Level2)
+            case case2(Level2)
+            case case3(Level2)
+            case case4(Level2)
+        }
+
+        XCTAssertLessThanOrEqual(MemoryLayout<ByteBuffer>.size, 23)
+        XCTAssertLessThanOrEqual(MemoryLayout<Level1>.size, 24)
+
+        XCTAssertLessThanOrEqual(MemoryLayout.size(ofValue: Level1.case1(.case2(.case3(.case4(self.buf))))), 24)
+        XCTAssertLessThanOrEqual(MemoryLayout.size(ofValue: Level1.case1(.case3(.case4(.case1(self.buf))))), 24)
+    }
+
+    func testLargeSliceBegin16MBIsOkayAndDoesNotCopy() throws {
+        var fourMBBuf = self.allocator.buffer(capacity: 4 * 1024 * 1024)
+        fourMBBuf.write(bytes: repeatElement(0xff, count: fourMBBuf.capacity))
+        let totalBufferSize = 5 * fourMBBuf.readableBytes
+        XCTAssertEqual(4 * 1024 * 1024, fourMBBuf.readableBytes)
+        var buf = self.allocator.buffer(capacity: totalBufferSize)
+        for _ in 0..<5 {
+            var fresh = fourMBBuf
+            buf.write(buffer: &fresh)
+        }
+
+        let offset = Int(_UInt24.max)
+
+        // mark some special bytes
+        buf.set(integer: 0xaa, at: 0, as: UInt8.self)
+        buf.set(integer: 0xbb, at: offset - 1, as: UInt8.self)
+        buf.set(integer: 0xcc, at: offset, as: UInt8.self)
+        buf.set(integer: 0xdd, at: buf.writerIndex - 1, as: UInt8.self)
+
+        XCTAssertEqual(totalBufferSize, buf.readableBytes)
+
+        let oldPtrVal = buf.withUnsafeReadableBytes {
+            UInt(bitPattern: $0.baseAddress!.advanced(by: offset))
+        }
+
+        let expectedReadableBytes = totalBufferSize - offset
+        let slice = buf.getSlice(at: offset, length: expectedReadableBytes)!
+        XCTAssertEqual(expectedReadableBytes, slice.readableBytes)
+        let newPtrVal = slice.withUnsafeReadableBytes {
+            UInt(bitPattern: $0.baseAddress!)
+        }
+        XCTAssertEqual(oldPtrVal, newPtrVal)
+
+        XCTAssertEqual(0xcc, slice.getInteger(at: 0, as: UInt8.self))
+        XCTAssertEqual(0xdd, slice.getInteger(at: slice.writerIndex - 1, as: UInt8.self))
+    }
+
+    func testLargeSliceBeginMoreThan16MBIsOkay() throws {
+        var fourMBBuf = self.allocator.buffer(capacity: 4 * 1024 * 1024)
+        fourMBBuf.write(bytes: repeatElement(0xff, count: fourMBBuf.capacity))
+        let totalBufferSize = 5 * fourMBBuf.readableBytes + 1
+        XCTAssertEqual(4 * 1024 * 1024, fourMBBuf.readableBytes)
+        var buf = self.allocator.buffer(capacity: totalBufferSize)
+        for _ in 0..<5 {
+            var fresh = fourMBBuf
+            buf.write(buffer: &fresh)
+        }
+
+        let offset = Int(_UInt24.max) + 1
+
+        // mark some special bytes
+        buf.set(integer: 0xaa, at: 0, as: UInt8.self)
+        buf.set(integer: 0xbb, at: offset - 1, as: UInt8.self)
+        buf.set(integer: 0xcc, at: offset, as: UInt8.self)
+        buf.write(integer: 0xdd, as: UInt8.self) // write extra byte so the slice is the same length as above
+        XCTAssertEqual(totalBufferSize, buf.readableBytes)
+
+        let expectedReadableBytes = totalBufferSize - offset
+        let slice = buf.getSlice(at: offset, length: expectedReadableBytes)!
+        XCTAssertEqual(expectedReadableBytes, slice.readableBytes)
+        XCTAssertEqual(0, slice.readerIndex)
+        XCTAssertEqual(expectedReadableBytes, slice.writerIndex)
+        XCTAssertEqual(Int(UInt32(expectedReadableBytes).nextPowerOf2()), slice.capacity)
+
+        XCTAssertEqual(0xcc, slice.getInteger(at: 0, as: UInt8.self))
+        XCTAssertEqual(0xdd, slice.getInteger(at: slice.writerIndex - 1, as: UInt8.self))
+    }
+
 }
 
 private enum AllocationExpectationState: Int {
