@@ -39,6 +39,9 @@ extension CircularBufferTests {
                 ("testSliceTheRing", testSliceTheRing),
                 ("testCount", testCount),
                 ("testFirst", testFirst),
+                ("testLast", testLast),
+                ("testOperateOnBothSides", testOperateOnBothSides),
+                ("testPrependExpandBuffer", testPrependExpandBuffer),
            ]
    }
 }
