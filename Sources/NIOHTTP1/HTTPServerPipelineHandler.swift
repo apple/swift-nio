@@ -63,7 +63,12 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
     public typealias OutboundIn = HTTPServerResponsePart
     public typealias OutboundOut = HTTPServerResponsePart
 
-    public init() { }
+    public init() {
+        debugOnly {
+            self.nextExpectedInboundMessage = .head
+            self.nextExpectedOutboundMessage = .head
+        }
+    }
 
     /// The state of the HTTP connection.
     private enum ConnectionState {
@@ -140,15 +145,37 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
         case bodyOrEnd
     }
     
-    private var nextExpectedOutboundMessage = NextExpectedMessageType.head
+    // always `nil` in release builds, never `nil` in debug builds
+    private var nextExpectedInboundMessage: NextExpectedMessageType?
+    // always `nil` in release builds, never `nil` in debug builds
+    private var nextExpectedOutboundMessage: NextExpectedMessageType?
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        if case .responseEndPending = self.state {
+        if self.eventBuffer.count != 0 || self.state == .responseEndPending {
             self.eventBuffer.append(.channelRead(data))
             return
+        } else {
+            self.deliverOneMessage(ctx: ctx, data: data)
+        }
+    }
+
+    private func deliverOneMessage(ctx: ChannelHandlerContext, data: NIOAny) {
+        let msg = self.unwrapInboundIn(data)
+
+        debugOnly {
+            switch msg {
+            case .head:
+                assert(self.nextExpectedInboundMessage == .head)
+                self.nextExpectedInboundMessage = .bodyOrEnd
+            case .body:
+                assert(self.nextExpectedInboundMessage == .bodyOrEnd)
+            case .end:
+                assert(self.nextExpectedInboundMessage == .bodyOrEnd)
+                self.nextExpectedInboundMessage = .head
+            }
         }
 
-        if case .end = self.unwrapInboundIn(data) {
+        if case .end = msg {
             // New request is complete. We don't want any more data from now on.
             self.state.requestEndReceived()
         }
@@ -241,7 +268,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
 
             switch event {
             case .channelRead(let read):
-                self.channelRead(ctx: ctx, data: read)
+                self.deliverOneMessage(ctx: ctx, data: read)
                 deliveredRead = true
             case .error(let error):
                 ctx.fireErrorCaught(error)
