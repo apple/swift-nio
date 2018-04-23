@@ -1437,9 +1437,16 @@ public class ChannelTests: XCTestCase {
         try serverChannel.syncCloseAcceptingAlreadyClosed()
         try clientChannel.syncCloseAcceptingAlreadyClosed()
 
-        for f in [ serverChannel.remoteAddress, serverChannel.localAddress, clientChannel.remoteAddress, clientChannel.localAddress ] {
-            XCTAssertNil(f)
-        }
+        XCTAssertNoThrow(try serverChannel.closeFuture.wait())
+        XCTAssertNoThrow(try clientChannel.closeFuture.wait())
+
+        // Schedule on the EventLoop to ensure we scheduled the cleanup of the cached addresses before.
+        XCTAssertNoThrow(try group.next().submit {
+            for f in [ serverChannel.remoteAddress, serverChannel.localAddress, clientChannel.remoteAddress, clientChannel.localAddress ] {
+                XCTAssertNil(f)
+            }
+        }.wait())
+
     }
 
     func testReceiveAddressAfterAccept() throws {

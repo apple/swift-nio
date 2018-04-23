@@ -446,4 +446,58 @@ public class SocketChannelTest : XCTestCase {
         XCTAssertNoThrow(try channel.closeFuture.wait())
         XCTAssertNoThrow(try promise.futureResult.wait())
     }
+
+    public func testLocalAndRemoteAddressNotNilInChannelInactiveAndHandlerRemoved() throws {
+
+        class AddressVerificationHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+            typealias OutboundIn = Never
+
+            enum HandlerState {
+                case created
+                case inactive
+                case removed
+            }
+
+            let promise: EventLoopPromise<Void>
+            var state = HandlerState.created
+
+            init(promise: EventLoopPromise<Void>) {
+                self.promise = promise
+            }
+
+            func channelInactive(ctx: ChannelHandlerContext) {
+                XCTAssertNotNil(ctx.localAddress)
+                XCTAssertNotNil(ctx.remoteAddress)
+                XCTAssertEqual(.created, state)
+                state = .inactive
+            }
+
+            func handlerRemoved(ctx: ChannelHandlerContext) {
+                XCTAssertNotNil(ctx.localAddress)
+                XCTAssertNotNil(ctx.remoteAddress)
+                XCTAssertEqual(.inactive, state)
+                state = .removed
+
+                ctx.channel.closeFuture.whenComplete {
+                    XCTAssertNil(ctx.localAddress)
+                    XCTAssertNil(ctx.remoteAddress)
+
+                    self.promise.succeed(result: ())
+                }
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+
+        let handler = AddressVerificationHandler(promise: group.next().newPromise())
+        let serverChannel = try ServerBootstrap(group: group).childChannelInitializer { $0.pipeline.add(handler: handler) }.bind(host: "127.0.0.1", port: 0).wait()
+        defer { XCTAssertNoThrow(try serverChannel.close().wait()) }
+
+        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+
+        XCTAssertNoThrow(try clientChannel.close().wait())
+        XCTAssertNoThrow(try handler.promise.futureResult.wait())
+    }
 }
