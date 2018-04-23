@@ -446,4 +446,26 @@ public class SocketChannelTest : XCTestCase {
         XCTAssertNoThrow(try channel.closeFuture.wait())
         XCTAssertNoThrow(try promise.futureResult.wait())
     }
+
+    func testWithConnectedBogusSocket() throws {
+        // pipes are not sockets and result in EINVAL when given to kqueue with EVFILT_EXCEPT
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        XCTAssertNoThrow(try withPipe { readFH, writeFH in
+            for fh in [readFH, writeFH] {
+                do {
+                    try ClientBootstrap(group: group).withConnectedSocket(descriptor: fh.takeDescriptorOwnership()).wait().close().wait()
+                    XCTFail("didn't throw")
+                } catch let error as IOError where error.errnoCode == EINVAL {
+                    //expected
+                } catch {
+                    XCTFail("wrong error caught: \(error)")
+                }
+            }
+            return []
+        })
+    }
 }
