@@ -681,9 +681,6 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             p = nil
         }
 
-        // Fail all pending writes and so ensure all pending promises are notified
-        self.unsetCachedAddressesFromSocket()
-
         // Transition our internal state.
         let callouts = self.lifecycleManager.close(promise: p)
 
@@ -701,6 +698,9 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             self.pipeline.removeHandlers()
 
             self.closePromise.succeed(result: ())
+
+            // Now reset the addresses as we notified all handlers / futures.
+            self.unsetCachedAddressesFromSocket()
         }
     }
 

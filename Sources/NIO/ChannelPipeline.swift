@@ -1017,11 +1017,29 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     public var remoteAddress: SocketAddress? {
-        return try? self.channel._unsafe.remoteAddress0()
+        do {
+            // Fast-path access to the remoteAddress.
+            return try self.channel._unsafe.remoteAddress0()
+        } catch ChannelError.ioOnClosedChannel {
+            // Channel was closed already but we may still have the address cached so try to access it via the Channel
+            // so we are able to use it in channelInactive(...) / handlerRemoved(...) methods.
+            return self.channel.remoteAddress
+        } catch {
+            return nil
+        }
     }
 
     public var localAddress: SocketAddress? {
-        return try? self.channel._unsafe.localAddress0()
+        do {
+            // Fast-path access to the localAddress.
+            return try self.channel._unsafe.localAddress0()
+        } catch ChannelError.ioOnClosedChannel {
+            // Channel was closed already but we may still have the address cached so try to access it via the Channel
+            // so we are able to use it in channelInactive(...) / handlerRemoved(...) methods.
+            return self.channel.localAddress
+        } catch {
+            return nil
+        }
     }
 
     public var eventLoop: EventLoop {
