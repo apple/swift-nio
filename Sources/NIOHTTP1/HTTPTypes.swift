@@ -412,6 +412,10 @@ public struct HTTPHeaders: CustomStringConvertible {
     public subscript(canonicalForm name: String) -> [String] {
         let result = self[name]
 
+        guard result.count > 0 else {
+            return []
+        }
+
         // It's not safe to split Set-Cookie on comma.
         guard name.lowercased() != "set-cookie" else {
             return result

@@ -779,4 +779,51 @@ class EchoServerClientTest : XCTestCase {
         }
         XCTAssertTrue(atLeastOneSucceeded)
     }
+
+    func testConnectingToIPv4And6ButServerOnlyWaitsOnIPv4() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let numBytes = 16 * 1024
+        let promise: EventLoopPromise<ByteBuffer> = group.next().newPromise()
+        let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: promise)
+
+        // we're binding to IPv4 only
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .childChannelInitializer { channel in
+                channel.pipeline.add(handler: countingHandler)
+            }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait()
+
+        defer {
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
+        // but we're trying to connect to (depending on the system configuration and resolver) IPv4 and IPv6
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(host: "localhost", port: Int(serverChannel.localAddress!.port!))
+            .thenIfError {
+                promise.fail(error: $0)
+                return group.next().newFailedFuture(error: $0)
+            }
+            .wait()
+
+        defer {
+            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
+        var buffer = clientChannel.allocator.buffer(capacity: numBytes)
+
+        for i in 0..<numBytes {
+            buffer.write(integer: UInt8(i % 256))
+        }
+
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
+
+        try countingHandler.assertReceived(buffer: buffer)
+    }
 }

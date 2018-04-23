@@ -28,6 +28,7 @@ extension SelectorTest {
       return [
                 ("testDeregisterWhileProcessingEvents", testDeregisterWhileProcessingEvents),
                 ("testDeregisterAndCloseWhileProcessingEvents", testDeregisterAndCloseWhileProcessingEvents),
+                ("testWeDoNotDeliverEventsForPreviouslyClosedChannels", testWeDoNotDeliverEventsForPreviouslyClosedChannels),
            ]
    }
 }
