@@ -30,6 +30,11 @@ public protocol ChannelCore: class {
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func register0(promise: EventLoopPromise<Void>?)
 
+    /// Register channel as already connected or bound socket.
+    /// - parameters:
+    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?)
+
     /// Bind to a `SocketAddress`.
     ///
     /// - parameters:
@@ -203,6 +208,10 @@ extension Channel {
 
     public func register(promise: EventLoopPromise<Void>?) {
         pipeline.register(promise: promise)
+    }
+
+    public func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
+        promise?.fail(error: ChannelError.operationUnsupported)
     }
 
     public func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {

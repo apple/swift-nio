@@ -28,6 +28,10 @@ private final class DeadChannelCore: ChannelCore {
         promise?.fail(error: ChannelError.ioOnClosedChannel)
     }
 
+    func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
+        promise?.fail(error: ChannelError.ioOnClosedChannel)
+    }
+
     func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?) {
         promise?.fail(error: ChannelError.ioOnClosedChannel)
     }
