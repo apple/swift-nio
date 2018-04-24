@@ -1,0 +1,999 @@
+{
+  "warnings": [
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPDecoder.swift",
+      "line": 132,
+      "symbol": "HTTPRequestDecoder.init()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPDecoder.swift",
+      "line": 162,
+      "symbol": "HTTPResponseDecoder.init()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPDecoder.swift",
+      "line": 396,
+      "symbol": "HTTPDecoder.decode(ctx:buffer:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPEncoder.swift",
+      "line": 138,
+      "symbol": "HTTPRequestEncoder.init()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPEncoder.swift",
+      "line": 167,
+      "symbol": "HTTPResponseEncoder.init()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPResponseCompressor.swift",
+      "line": 65,
+      "symbol": "HTTPResponseCompressor.CompressionError",
+      "symbol_kind": "source.lang.swift.decl.enum",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPResponseCompressor.swift",
+      "line": 66,
+      "symbol": "HTTPResponseCompressor.CompressionError.uncompressedWritesPending",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPResponseCompressor.swift",
+      "line": 67,
+      "symbol": "HTTPResponseCompressor.CompressionError.noDataToWrite",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPResponseCompressor.swift",
+      "line": 88,
+      "symbol": "HTTPResponseCompressor.init(initialByteBufferCapacity:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPServerPipelineHandler.swift",
+      "line": 66,
+      "symbol": "HTTPServerPipelineHandler.init()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": null,
+      "symbol": "_DeprecateHTTPHeaderIterator",
+      "symbol_kind": "source.lang.swift.decl.extension",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 95,
+      "symbol": "HTTPPart.head",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 96,
+      "symbol": "HTTPPart.body",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 97,
+      "symbol": "HTTPPart.end",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 386,
+      "symbol": "HTTPHeaders.contains(name:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 401,
+      "symbol": "HTTPHeaders.getCanonicalForm(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 474,
+      "symbol": "_DeprecateHTTPHeaderIterator",
+      "symbol_kind": "source.lang.swift.decl.protocol",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 478,
+      "symbol": "_DeprecateHTTPHeaderIterator.makeIterator()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 529,
+      "symbol": "HTTPMethod",
+      "symbol_kind": "source.lang.swift.decl.enum",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 530,
+      "symbol": "HTTPMethod.HasBody",
+      "symbol_kind": "source.lang.swift.decl.enum",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 531,
+      "symbol": "HTTPMethod.HasBody.yes",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 532,
+      "symbol": "HTTPMethod.HasBody.no",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 533,
+      "symbol": "HTTPMethod.HasBody.unlikely",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 611,
+      "symbol": "HTTPMethod.GET",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 612,
+      "symbol": "HTTPMethod.PUT",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 613,
+      "symbol": "HTTPMethod.ACL",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 614,
+      "symbol": "HTTPMethod.HEAD",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 615,
+      "symbol": "HTTPMethod.POST",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 616,
+      "symbol": "HTTPMethod.COPY",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 617,
+      "symbol": "HTTPMethod.LOCK",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 618,
+      "symbol": "HTTPMethod.MOVE",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 619,
+      "symbol": "HTTPMethod.BIND",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 620,
+      "symbol": "HTTPMethod.LINK",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 621,
+      "symbol": "HTTPMethod.PATCH",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 622,
+      "symbol": "HTTPMethod.TRACE",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 623,
+      "symbol": "HTTPMethod.MKCOL",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 624,
+      "symbol": "HTTPMethod.MERGE",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 625,
+      "symbol": "HTTPMethod.PURGE",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 626,
+      "symbol": "HTTPMethod.NOTIFY",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 627,
+      "symbol": "HTTPMethod.SEARCH",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 628,
+      "symbol": "HTTPMethod.UNLOCK",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 629,
+      "symbol": "HTTPMethod.REBIND",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 630,
+      "symbol": "HTTPMethod.UNBIND",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 631,
+      "symbol": "HTTPMethod.REPORT",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 632,
+      "symbol": "HTTPMethod.DELETE",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 633,
+      "symbol": "HTTPMethod.UNLINK",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 634,
+      "symbol": "HTTPMethod.CONNECT",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 635,
+      "symbol": "HTTPMethod.MSEARCH",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 636,
+      "symbol": "HTTPMethod.OPTIONS",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 637,
+      "symbol": "HTTPMethod.PROPFIND",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 638,
+      "symbol": "HTTPMethod.CHECKOUT",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 639,
+      "symbol": "HTTPMethod.PROPPATCH",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 640,
+      "symbol": "HTTPMethod.SUBSCRIBE",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 641,
+      "symbol": "HTTPMethod.MKCALENDAR",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 642,
+      "symbol": "HTTPMethod.MKACTIVITY",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 643,
+      "symbol": "HTTPMethod.UNSUBSCRIBE",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 644,
+      "symbol": "HTTPMethod.RAW",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 740,
+      "symbol": "HTTPParserError.invalidCharactersUsed",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 741,
+      "symbol": "HTTPParserError.trailingGarbage",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 743,
+      "symbol": "HTTPParserError.invalidEOFState",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 744,
+      "symbol": "HTTPParserError.headerOverflow",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 745,
+      "symbol": "HTTPParserError.closedConnection",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 746,
+      "symbol": "HTTPParserError.invalidVersion",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 747,
+      "symbol": "HTTPParserError.invalidStatus",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 748,
+      "symbol": "HTTPParserError.invalidMethod",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 749,
+      "symbol": "HTTPParserError.invalidURL",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 750,
+      "symbol": "HTTPParserError.invalidHost",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 751,
+      "symbol": "HTTPParserError.invalidPort",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 752,
+      "symbol": "HTTPParserError.invalidPath",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 753,
+      "symbol": "HTTPParserError.invalidQueryString",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 754,
+      "symbol": "HTTPParserError.invalidFragment",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 755,
+      "symbol": "HTTPParserError.lfExpected",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 756,
+      "symbol": "HTTPParserError.invalidHeaderToken",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 757,
+      "symbol": "HTTPParserError.invalidContentLength",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 758,
+      "symbol": "HTTPParserError.unexpectedContentLength",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 759,
+      "symbol": "HTTPParserError.invalidChunkSize",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 760,
+      "symbol": "HTTPParserError.invalidConstant",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 761,
+      "symbol": "HTTPParserError.invalidInternalState",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 762,
+      "symbol": "HTTPParserError.strictModeAssertion",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 763,
+      "symbol": "HTTPParserError.paused",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 764,
+      "symbol": "HTTPParserError.unknown",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1029,
+      "symbol": "HTTPResponseStatus.custom",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1034,
+      "symbol": "HTTPResponseStatus.continue",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1035,
+      "symbol": "HTTPResponseStatus.switchingProtocols",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1036,
+      "symbol": "HTTPResponseStatus.processing",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1039,
+      "symbol": "HTTPResponseStatus.ok",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1040,
+      "symbol": "HTTPResponseStatus.created",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1041,
+      "symbol": "HTTPResponseStatus.accepted",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1042,
+      "symbol": "HTTPResponseStatus.nonAuthoritativeInformation",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1043,
+      "symbol": "HTTPResponseStatus.noContent",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1044,
+      "symbol": "HTTPResponseStatus.resetContent",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1045,
+      "symbol": "HTTPResponseStatus.partialContent",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1048,
+      "symbol": "HTTPResponseStatus.multiStatus",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1049,
+      "symbol": "HTTPResponseStatus.alreadyReported",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1050,
+      "symbol": "HTTPResponseStatus.imUsed",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1051,
+      "symbol": "HTTPResponseStatus.multipleChoices",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1052,
+      "symbol": "HTTPResponseStatus.movedPermanently",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1053,
+      "symbol": "HTTPResponseStatus.found",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1054,
+      "symbol": "HTTPResponseStatus.seeOther",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1055,
+      "symbol": "HTTPResponseStatus.notModified",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1056,
+      "symbol": "HTTPResponseStatus.useProxy",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1057,
+      "symbol": "HTTPResponseStatus.temporaryRedirect",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1058,
+      "symbol": "HTTPResponseStatus.permanentRedirect",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1061,
+      "symbol": "HTTPResponseStatus.badRequest",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1062,
+      "symbol": "HTTPResponseStatus.unauthorized",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1063,
+      "symbol": "HTTPResponseStatus.paymentRequired",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1064,
+      "symbol": "HTTPResponseStatus.forbidden",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1065,
+      "symbol": "HTTPResponseStatus.notFound",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1066,
+      "symbol": "HTTPResponseStatus.methodNotAllowed",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1067,
+      "symbol": "HTTPResponseStatus.notAcceptable",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1068,
+      "symbol": "HTTPResponseStatus.proxyAuthenticationRequired",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1069,
+      "symbol": "HTTPResponseStatus.requestTimeout",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1070,
+      "symbol": "HTTPResponseStatus.conflict",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1071,
+      "symbol": "HTTPResponseStatus.gone",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1072,
+      "symbol": "HTTPResponseStatus.lengthRequired",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1073,
+      "symbol": "HTTPResponseStatus.preconditionFailed",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1074,
+      "symbol": "HTTPResponseStatus.payloadTooLarge",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1075,
+      "symbol": "HTTPResponseStatus.uriTooLong",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1076,
+      "symbol": "HTTPResponseStatus.unsupportedMediaType",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1077,
+      "symbol": "HTTPResponseStatus.rangeNotSatisfiable",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1078,
+      "symbol": "HTTPResponseStatus.expectationFailed",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1081,
+      "symbol": "HTTPResponseStatus.misdirectedRequest",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1082,
+      "symbol": "HTTPResponseStatus.unprocessableEntity",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1083,
+      "symbol": "HTTPResponseStatus.locked",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1084,
+      "symbol": "HTTPResponseStatus.failedDependency",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1085,
+      "symbol": "HTTPResponseStatus.upgradeRequired",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1086,
+      "symbol": "HTTPResponseStatus.preconditionRequired",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1087,
+      "symbol": "HTTPResponseStatus.tooManyRequests",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1088,
+      "symbol": "HTTPResponseStatus.requestHeaderFieldsTooLarge",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1089,
+      "symbol": "HTTPResponseStatus.unavailableForLegalReasons",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1090,
+      "symbol": "HTTPResponseStatus.internalServerError",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1091,
+      "symbol": "HTTPResponseStatus.notImplemented",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1092,
+      "symbol": "HTTPResponseStatus.badGateway",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1093,
+      "symbol": "HTTPResponseStatus.serviceUnavailable",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1094,
+      "symbol": "HTTPResponseStatus.gatewayTimeout",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1095,
+      "symbol": "HTTPResponseStatus.httpVersionNotSupported",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1096,
+      "symbol": "HTTPResponseStatus.variantAlsoNegotiates",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1097,
+      "symbol": "HTTPResponseStatus.insufficientStorage",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1098,
+      "symbol": "HTTPResponseStatus.loopDetected",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1099,
+      "symbol": "HTTPResponseStatus.notExtended",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPTypes.swift",
+      "line": 1100,
+      "symbol": "HTTPResponseStatus.networkAuthenticationRequired",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOHTTP1/HTTPUpgradeHandler.swift",
+      "line": 19,
+      "symbol": "HTTPUpgradeErrors.invalidHTTPOrdering",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    }
+  ],
+  "source_directory": "/code"
+}
