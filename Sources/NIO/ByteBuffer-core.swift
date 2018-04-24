@@ -29,6 +29,43 @@ let sysFree: @convention(c) (UnsafeMutableRawPointer?) -> Void = free
     }
 #endif
 
+extension _ByteBufferSlice: Equatable {
+    static func ==(_ lhs: _ByteBufferSlice, _ rhs: _ByteBufferSlice) -> Bool {
+        return lhs._begin == rhs._begin && lhs.upperBound == rhs.upperBound
+    }
+}
+
+/// The slice of a `ByteBuffer`, it's different from `Range<UInt32>` because the lower bound is actually only
+/// 24 bits (the upper bound is still 32). Before constructing, you need to make sure the lower bound actually
+/// fits within 24 bits, otherwise the behaviour is undefined.
+@_versioned
+struct _ByteBufferSlice {
+    @_versioned var upperBound: ByteBuffer.Index
+    @_versioned var _begin: _UInt24
+    @_versioned var lowerBound: ByteBuffer.Index {
+        return UInt32(self._begin)
+    }
+    @_inlineable @_versioned var count: Int {
+        return Int(self.upperBound - self.lowerBound)
+    }
+    init() {
+        self._begin = 0
+        self.upperBound = 0
+    }
+    static var maxSupportedLowerBound: ByteBuffer.Index {
+        return ByteBuffer.Index(_UInt24.max)
+    }
+}
+
+extension _ByteBufferSlice {
+    init(_ range: Range<UInt32>) {
+        self = _ByteBufferSlice()
+
+        self._begin = _UInt24(range.lowerBound)
+        self.upperBound = range.upperBound
+    }
+}
+
 /// The preferred allocator for `ByteBuffer` values. The allocation strategy is opaque but is currently libc's
 /// `malloc`, `realloc` and `free`.
 ///
@@ -163,15 +200,15 @@ public struct ByteBufferAllocator {
 /// for doing so. In any case, if you use the `get` prefixed methods you are responsible for ensuring that you do not reach into uninitialized memory by taking the `readableBytes` and `readerIndex` into
 /// account, and ensuring that you have previously written into the area covered by the `index itself.
 public struct ByteBuffer {
-    typealias Slice = Range<Index>
+    typealias Slice = _ByteBufferSlice
     typealias Allocator = ByteBufferAllocator
     typealias Index = UInt32
     typealias Capacity = UInt32
 
+    @_versioned private(set) var _storage: _Storage
     @_versioned private(set) var _readerIndex: Index = 0
     @_versioned private(set) var _writerIndex: Index = 0
     @_versioned private(set) var _slice: Slice
-    @_versioned private(set) var _storage: _Storage
 
     // MARK: Internal _Storage for CoW
     @_versioned final class _Storage {
@@ -184,7 +221,7 @@ public struct ByteBuffer {
             self.bytes = bytesNoCopy
             self.capacity = capacity
             self.allocator = allocator
-            self.fullSlice = 0..<self.capacity
+            self.fullSlice = _ByteBufferSlice(0..<self.capacity)
         }
 
         deinit {
@@ -210,7 +247,7 @@ public struct ByteBuffer {
                             allocator: self.allocator)
         }
 
-        public func reallocSlice(_ slice: Slice, capacity: Capacity) -> _Storage {
+        public func reallocSlice(_ slice: Range<ByteBuffer.Index>, capacity: Capacity) -> _Storage {
             assert(slice.count <= capacity)
             let new = self.allocateStorage(capacity: capacity)
             self.allocator.memcpy(new.bytes, self.bytes.advanced(by: Int(slice.lowerBound)), slice.count)
@@ -223,7 +260,7 @@ public struct ByteBuffer {
             ptr.bindMemory(to: UInt8.self, capacity: Int(capacity))
             self.bytes = ptr
             self.capacity = capacity
-            self.fullSlice = 0..<self.capacity
+            self.fullSlice = _ByteBufferSlice(0..<self.capacity)
         }
 
         private func deallocate() {
@@ -282,7 +319,7 @@ public struct ByteBuffer {
             } while newCapacity < index || newCapacity - index < capacity
 
             self._storage.reallocStorage(capacity: newCapacity)
-            self._slice = _slice.lowerBound..<_slice.lowerBound + newCapacity
+            self._slice = _ByteBufferSlice(_slice.lowerBound..<_slice.lowerBound + newCapacity)
         }
     }
 
@@ -486,8 +523,19 @@ public struct ByteBuffer {
         }
         let index = _toIndex(index)
         let length = _toCapacity(length)
+        let sliceStartIndex = self._slice.lowerBound + index
+
+        guard sliceStartIndex <= ByteBuffer.Slice.maxSupportedLowerBound else {
+            // the slice's begin is past the maximum supported slice begin value (16 MiB) so the only option we have
+            // is copy the slice into a fresh buffer. The slice begin will then be at index 0.
+            var new = self
+            new._moveWriterIndex(to: sliceStartIndex + length)
+            new._moveReaderIndex(to: sliceStartIndex)
+            new._copyStorageAndRebase(capacity: length, resetIndices: true)
+            return new
+        }
         var new = self
-        new._slice = self._slice.lowerBound + index ..< self._slice.lowerBound + index+length
+        new._slice = _ByteBufferSlice(sliceStartIndex ..< self._slice.lowerBound + index+length)
         new.moveReaderIndex(to: 0)
         new._moveWriterIndex(to: length)
         return new
