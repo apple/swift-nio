@@ -55,34 +55,53 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
 
         if self.headIdx == self.tailIdx {
             // No more room left for another append so grow the buffer now.
-            var newBacking: ContiguousArray<E?> = []
-            let newCapacity = self.buffer.count << 1 // Double the storage.
-            precondition(newCapacity > 0, "Can't double capacity of \(self.buffer.count)")
-            assert(newCapacity % 2 == 0)
-
-            newBacking.reserveCapacity(newCapacity)
-            newBacking.append(contentsOf: self.buffer[self.headIdx..<self.buffer.count])
-            if self.headIdx > 0 {
-                newBacking.append(contentsOf: self.buffer[0..<self.headIdx])
-            }
-            newBacking.append(contentsOf: repeatElement(nil, count: newCapacity - newBacking.count))
-            self.tailIdx = self.buffer.count
-            self.headIdx = 0
-            self.buffer = newBacking
+            self.doubleCapacity()
         }
+    }
+
+    /// Prepend an element to the front of the ring buffer.
+    ///
+    /// Amortized *O(1)*
+    public mutating func prepend(_ value: E) {
+        let idx = (self.headIdx - 1) & mask
+        self.buffer[idx] = value
+        self.headIdx = idx
+
+        if self.headIdx == self.tailIdx {
+            // No more room left for another append so grow the buffer now.
+            self.doubleCapacity()
+        }
+    }
+
+    /// Double the capacity of the buffer and adjust the headIdx and tailIdx.
+    private mutating func doubleCapacity() {
+        var newBacking: ContiguousArray<E?> = []
+        let newCapacity = self.buffer.count << 1 // Double the storage.
+        precondition(newCapacity > 0, "Can't double capacity of \(self.buffer.count)")
+        assert(newCapacity % 2 == 0)
+
+        newBacking.reserveCapacity(newCapacity)
+        newBacking.append(contentsOf: self.buffer[self.headIdx..<self.buffer.count])
+        if self.headIdx > 0 {
+            newBacking.append(contentsOf: self.buffer[0..<self.headIdx])
+        }
+        newBacking.append(contentsOf: repeatElement(nil, count: newCapacity - newBacking.count))
+        self.tailIdx = self.buffer.count
+        self.headIdx = 0
+        self.buffer = newBacking
     }
 
     /// Remove the front element of the ring buffer.
     ///
     /// *O(1)*
     public mutating func removeFirst() -> E {
-        precondition(!self.isEmpty)
-
-        let value = self.buffer[self.headIdx]
-        self.buffer[headIdx] = nil
+        guard let value = self.buffer[self.headIdx] else {
+            preconditionFailure("CircularBuffer is empty")
+        }
+        self.buffer[self.headIdx] = nil
         self.headIdx = (self.headIdx + 1) & self.mask
 
-        return value!
+        return value
     }
 
     /// Return the first element of the ring.
@@ -93,6 +112,31 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
             return nil
         } else {
             return self.buffer[self.headIdx]
+        }
+    }
+
+    /// Remove the last element of the ring buffer.
+    ///
+    /// *O(1)*
+    public mutating func removeLast() -> E {
+        let idx = (self.tailIdx - 1) & self.mask
+        guard let value = self.buffer[idx] else {
+            preconditionFailure("CircularBuffer is empty")
+        }
+        self.buffer[idx] = nil
+        self.tailIdx = idx
+
+        return value
+    }
+
+    /// Return the last element of the ring.
+    ///
+    /// *O(1)*
+    public var last: E? {
+        if self.isEmpty {
+            return nil
+        } else {
+            return self.buffer[(self.tailIdx - 1) & self.mask]
         }
     }
 
