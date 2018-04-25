@@ -73,9 +73,9 @@ extension ByteBuffer {
     ///     - index: The index for the first serialized byte.
     /// - returns: The number of bytes written.
     public mutating func set(staticString string: StaticString, at index: Int) -> Int {
-        return string.withUTF8Buffer { ptr -> Int in
-            self.set(bytes: UnsafeRawBufferPointer(ptr), at: index)
-        }
+        // please do not replace the code below with code that uses `string.withUTF8Buffer { ... }` (see SR-7541)
+        return self.set(bytes: UnsafeRawBufferPointer(start: string.utf8Start,
+                                                      count: string.utf8CodeUnitCount), at: index)
     }
 
     // MARK: String APIs
