@@ -19,7 +19,7 @@ private struct HTTPParserState {
     var dataAwaitingState: DataAwaitingState = .messageBegin
     var currentNameIndex: HTTPHeaderIndex?
     var currentHeaders: [HTTPHeader]
-    var currentURI: HTTPURIStorage?
+    var currentURI: HTTPURI._Storage?
     var currentStatus: String?
     var slice: (readerIndex: Int, length: Int)?
     var readerIndexAdjustment = 0

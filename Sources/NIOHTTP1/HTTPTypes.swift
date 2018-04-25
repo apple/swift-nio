@@ -127,11 +127,17 @@ public struct HTTPRequestHead: Equatable {
 /// Represents a the URI component of an `HTTPRequestHead`. Allows the URI
 /// to be accessed as a `String` or as raw bytes.
 public struct HTTPURI: ExpressibleByStringLiteral {
+    /// Internal representation of a URI
+    enum _Storage {
+        case string(String)
+        case byteBuffer(ByteBuffer)
+    }
+
     /// Internal storage.
-    var storage: HTTPURIStorage
+    private var storage: _Storage
 
     /// Internal init.
-    internal init(storage: HTTPURIStorage) {
+    internal init(storage: _Storage) {
         self.storage = storage
     }
 
@@ -165,12 +171,6 @@ public struct HTTPURI: ExpressibleByStringLiteral {
             storage = .string(newValue)
         }
     }
-}
-
-/// Internal representation of a URI
-enum HTTPURIStorage {
-    case string(String)
-    case byteBuffer(ByteBuffer)
 }
 
 /// The parts of a complete HTTP message, either request or response.
