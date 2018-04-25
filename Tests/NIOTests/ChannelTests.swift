@@ -1073,6 +1073,10 @@ public class ChannelTests: XCTestCase {
             } else {
                 XCTFail()
             }
+        } catch let err as IOError where err.errnoCode == ENETDOWN || err.errnoCode == ENETUNREACH {
+            // we need to accept those too unfortunately
+        } catch {
+            XCTFail("unexpected error \(error)")
         }
     }
 
@@ -1094,6 +1098,10 @@ public class ChannelTests: XCTestCase {
             } else {
                 XCTFail()
             }
+        } catch let err as IOError where err.errnoCode == ENETDOWN || err.errnoCode == ENETUNREACH {
+            // we need to accept those too unfortunately
+        } catch {
+            XCTFail("unexpected error \(error)")
         }
     }
 
