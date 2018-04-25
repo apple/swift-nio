@@ -19,7 +19,7 @@ private struct HTTPParserState {
     var dataAwaitingState: DataAwaitingState = .messageBegin
     var currentNameIndex: HTTPHeaderIndex?
     var currentHeaders: [HTTPHeader]
-    var currentURI: URI?
+    var currentURI: HTTPURIStorage?
     var currentStatus: String?
     var slice: (readerIndex: Int, length: Int)?
     var readerIndexAdjustment = 0
@@ -202,7 +202,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     private func newRequestHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPRequestHead {
         let method = HTTPMethod.from(httpParserMethod: http_method(rawValue: parser.pointee.method))
         let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
-        let request = HTTPRequestHead(version: version, method: method, rawURI: state.currentURI!, headers: HTTPHeaders(buffer: cumulationBuffer!, headers: state.currentHeaders))
+        let request = HTTPRequestHead(version: version, method: method, rawURI: .init(storage: state.currentURI!), headers: HTTPHeaders(buffer: cumulationBuffer!, headers: state.currentHeaders))
         self.state.currentHeaders.removeAll(keepingCapacity: true)
         return request
     }

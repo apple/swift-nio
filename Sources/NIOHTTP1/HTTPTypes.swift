@@ -21,10 +21,10 @@ let headerSeparator: StaticString = ": "
 public struct HTTPRequestHead: Equatable {
     private final class _Storage {
         var method: HTTPMethod
-        var rawURI: URI
+        var rawURI: HTTPURI
         var version: HTTPVersion
 
-        init(method: HTTPMethod, rawURI: URI, version: HTTPVersion) {
+        init(method: HTTPMethod, rawURI: HTTPURI, version: HTTPVersion) {
             self.method = method
             self.rawURI = rawURI
             self.version = version
@@ -54,8 +54,8 @@ public struct HTTPRequestHead: Equatable {
         }
     }
 
-    // Internal representation of the URI.
-    private var rawURI: URI {
+    /// The `HTTPURI` used on this request.
+    public var rawURI: HTTPURI {
         get {
             return self._storage.rawURI
         }
@@ -67,13 +67,14 @@ public struct HTTPRequestHead: Equatable {
         }
     }
 
-    /// The URI used on this request.
+    /// The URI string used on this request.
+    /// See `url`.
     public var uri: String {
         get {
-            return String(uri: rawURI)
+            return rawURI.string
         }
         set {
-            rawURI = .string(newValue) 
+            rawURI.string = newValue
         }
     }
 
@@ -96,7 +97,16 @@ public struct HTTPRequestHead: Equatable {
     /// - Parameter method: The HTTP method for this request.
     /// - Parameter uri: The URI used on this request.
     public init(version: HTTPVersion, method: HTTPMethod, uri: String) {
-        self.init(version: version, method: method, rawURI: .string(uri), headers: HTTPHeaders())
+        self.init(version: version, method: method, rawURI: HTTPURI(storage: .string(uri)), headers: HTTPHeaders())
+    }
+
+    /// Create a `HTTPRequestHead`
+    ///
+    /// - Parameter version: The version for this HTTP request.
+    /// - Parameter method: The HTTP method for this request.
+    /// - Parameter url: The HTTPURI used on this request.
+    public init(version: HTTPVersion, method: HTTPMethod, rawURI: HTTPURI) {
+        self.init(version: version, method: method, rawURI: rawURI, headers: HTTPHeaders())
     }
 
     /// Create a `HTTPRequestHead`
@@ -105,7 +115,7 @@ public struct HTTPRequestHead: Equatable {
     /// - Parameter method: The HTTP method for this request.
     /// - Parameter rawURI: The URI used on this request.
     /// - Parameter headers: The headers for this HTTP request.
-    init(version: HTTPVersion, method: HTTPMethod, rawURI: URI, headers: HTTPHeaders) {
+    init(version: HTTPVersion, method: HTTPMethod, rawURI: HTTPURI, headers: HTTPHeaders) {
         self.headers = headers
         self._storage = _Storage(method: method, rawURI: rawURI, version: version)
     }
@@ -115,21 +125,53 @@ public struct HTTPRequestHead: Equatable {
     }
 }
 
-/// Internal representation of a URI
-enum URI {
-    case string(String)
-    case byteBuffer(ByteBuffer)
-}
+/// Represents a the URI component of an `HTTPRequestHead`. Allows the URI
+/// to be accessed as a `String` or as raw bytes.
+public struct HTTPURI: ExpressibleByStringLiteral {
+    /// Internal storage.
+    var storage: HTTPURIStorage
 
-private extension String {
-    init(uri: URI) {
-        switch uri {
-        case .string(let string):
-            self = string
-        case .byteBuffer(let buffer):
-            self = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes)!
+    /// Internal init.
+    internal init(storage: HTTPURIStorage) {
+        self.storage = storage
+    }
+
+    /// See `ExpressibleByStringLiteral`.
+    public init(stringLiteral value: String) {
+        storage = .string(value)
+    }
+
+    /// Access this `HTTPURI`'s raw bytes.
+    /// - Parameter closure: A closure accepting an `UnsafeRawBufferPointer` to this URI's raw bytes.
+    public func withUnsafeBytes<T>(_ closure: (UnsafeRawBufferPointer) -> T) -> T {
+        switch storage {
+        case .string(let s):
+            // cString + utf8 codeunit count -> raw buffer pointer
+            return s.withCString { closure(.init(start: .init($0), count: s.utf8.count)) }
+        case .byteBuffer(let b):
+            /// point to readable byte region
+            return b.withUnsafeReadableBytes(closure)
         }
     }
+
+    /// Get or set the `String` representation of this `HTTPURI`.
+    public var string: String {
+        get {
+            switch storage {
+            case .string(let s): return s
+            case .byteBuffer(let b): return b.getString(at: b.readerIndex, length: b.readableBytes)!
+            }
+        }
+        set {
+            storage = .string(newValue)
+        }
+    }
+}
+
+/// Internal representation of a URI
+enum HTTPURIStorage {
+    case string(String)
+    case byteBuffer(ByteBuffer)
 }
 
 /// The parts of a complete HTTP message, either request or response.
