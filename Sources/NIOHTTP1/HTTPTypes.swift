@@ -124,7 +124,7 @@ public struct HTTPRequestHead: Equatable {
     }
 }
 
-/// Represents a the URI component of an `HTTPRequestHead`. Allows the URI
+/// Represents the URI component of an `HTTPRequestHead`. Allows the URI
 /// to be accessed as a `String` or as raw bytes.
 public struct HTTPURI: ExpressibleByStringLiteral {
     /// Internal representation of a URI
