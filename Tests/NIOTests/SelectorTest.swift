@@ -358,7 +358,7 @@ class SelectorTest: XCTestCase {
                         return channel
                     }
                 }
-        }.wait().forEach { return try! $0.wait() } as Void)
+        }.wait().forEach { XCTAssertNoThrow(try $0.wait()) } as Void)
         XCTAssertNoThrow(try everythingWasReadPromise.futureResult.wait())
         XCTAssertNoThrow(try FileManager.default.removeItem(at: URL(fileURLWithPath: tempDir)))
     }
