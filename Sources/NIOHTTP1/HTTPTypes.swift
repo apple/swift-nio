@@ -68,7 +68,6 @@ public struct HTTPRequestHead: Equatable {
     }
 
     /// The URI string used on this request.
-    /// See `url`.
     public var uri: String {
         get {
             return rawURI.string
@@ -104,7 +103,7 @@ public struct HTTPRequestHead: Equatable {
     ///
     /// - Parameter version: The version for this HTTP request.
     /// - Parameter method: The HTTP method for this request.
-    /// - Parameter url: The HTTPURI used on this request.
+    /// - Parameter rawURI: The HTTPURI used on this request.
     public init(version: HTTPVersion, method: HTTPMethod, rawURI: HTTPURI) {
         self.init(version: version, method: method, rawURI: rawURI, headers: HTTPHeaders())
     }
@@ -113,7 +112,7 @@ public struct HTTPRequestHead: Equatable {
     ///
     /// - Parameter version: The version for this HTTP request.
     /// - Parameter method: The HTTP method for this request.
-    /// - Parameter rawURI: The URI used on this request.
+    /// - Parameter rawURI: The HTTPURI used on this request.
     /// - Parameter headers: The headers for this HTTP request.
     init(version: HTTPVersion, method: HTTPMethod, rawURI: HTTPURI, headers: HTTPHeaders) {
         self.headers = headers
@@ -149,7 +148,7 @@ public struct HTTPURI: ExpressibleByStringLiteral {
             // cString + utf8 codeunit count -> raw buffer pointer
             return s.withCString { closure(.init(start: .init($0), count: s.utf8.count)) }
         case .byteBuffer(let b):
-            /// point to readable byte region
+            // point to readable byte region
             return b.withUnsafeReadableBytes(closure)
         }
     }
