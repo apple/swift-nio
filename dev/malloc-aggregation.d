@@ -28,7 +28,7 @@
     printf("=====\n");
 }
 
-pid$target::malloc:entry {
+pid$target::malloc:entry, pid$target::posix_memalign:entry, pid$target::realloc:entry, pid$target::reallocf:entry, pid$target::calloc:entry, pid$target::valloc:entry {
     @malloc_calls[ustack()] = count();
 }
 
