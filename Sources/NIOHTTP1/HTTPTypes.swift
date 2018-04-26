@@ -73,7 +73,7 @@ public struct HTTPRequestHead: Equatable {
             return String(uri: rawURI)
         }
         set {
-            rawURI = .string(newValue) 
+            rawURI = .string(newValue)
         }
     }
 
@@ -508,7 +508,7 @@ public struct HTTPHeaders: CustomStringConvertible {
         }
         return false
     }
-    
+
     @available(*, deprecated, message: "getCanonicalForm has been changed to a subscript: headers[canonicalForm: name]")
     public func getCanonicalForm(_ name: String) -> [String] {
         return self[canonicalForm: name]
@@ -563,7 +563,7 @@ internal extension ByteBuffer {
 }
 extension HTTPHeaders: Sequence {
     public typealias Element = (name: String, value: String)
-  
+
     /// An iterator of HTTP header fields.
     ///
     /// This iterator will return each value for a given header name separately. That
@@ -578,7 +578,7 @@ extension HTTPHeaders: Sequence {
         public mutating func next() -> Element? {
             return headerParts.next()
         }
-    }  
+    }
 
     public func makeIterator() -> Iterator {
         return Iterator(headerParts: headers.map { (self.string(idx: $0.name), self.string(idx: $0.value)) }.makeIterator())
@@ -593,7 +593,7 @@ public extension _DeprecateHTTPHeaderIterator {
   @available(*, deprecated, message: "Please use the HTTPHeaders.Iterator type")
   public func makeIterator() -> AnyIterator<Element> {
     return AnyIterator(makeIterator() as Iterator)
-  }  
+  }
 }
 
 /* private but tests */ internal extension Character {
@@ -1232,7 +1232,7 @@ public enum HTTPResponseStatus {
     /// Initialize a `HTTPResponseStatus` from a given status and reason.
     ///
     /// - Parameter statusCode: The integer value of the HTTP response status code
-    /// - Parameter reasonPhrase: The textual reason phrase from the response. This will be 
+    /// - Parameter reasonPhrase: The textual reason phrase from the response. This will be
     ///     discarded in favor of the default if the `statusCode` matches one that we know.
     public init(statusCode: Int, reasonPhrase: String = "") {
         switch statusCode {

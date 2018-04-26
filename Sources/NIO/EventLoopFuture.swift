@@ -687,7 +687,7 @@ extension EventLoopFuture {
         let promise = EventLoopPromise<(T,U)>(eventLoop: eventLoop, file: file, line: line)
         var tvalue: T?
         var uvalue: U?
-        
+
         assert(self.eventLoop === promise.futureResult.eventLoop)
         _whenComplete { () -> CallbackList in
             switch self.value! {
@@ -702,7 +702,7 @@ extension EventLoopFuture {
             }
             return CallbackList()
         }
-        
+
         let hopOver = other.hopTo(eventLoop: self.eventLoop)
         hopOver._whenComplete { () -> CallbackList in
             assert(self.eventLoop.inEventLoop)
@@ -718,7 +718,7 @@ extension EventLoopFuture {
             }
             return CallbackList()
         }
-        
+
         return promise.futureResult
     }
 
@@ -862,7 +862,7 @@ extension EventLoopFuture {
         let body = EventLoopFuture<Void>.reduce((), futures, eventLoop: eventLoop) { (_: (), _: ()) in }
         return body
     }
-    
+
     /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
     /// The new `EventLoopFuture` contains the result of reducing the `initialResult` with the
     /// values of the `[EventLoopFuture<U>]`.
@@ -884,14 +884,14 @@ extension EventLoopFuture {
     /// - returns: A new `EventLoopFuture` with the reduced value.
     public static func reduce<U>(_ initialResult: T, _ futures: [EventLoopFuture<U>], eventLoop: EventLoop, _ nextPartialResult: @escaping (T, U) -> T) -> EventLoopFuture<T> {
         let f0 = eventLoop.newSucceededFuture(result: initialResult)
-        
+
         let body = f0.fold(futures) { (t: T, u: U) -> EventLoopFuture<T> in
             eventLoop.newSucceededFuture(result: nextPartialResult(t, u))
         }
-        
+
         return body
     }
-    
+
     /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
     /// The new `EventLoopFuture` contains the result of combining the `initialResult` with the
     /// values of the `[EventLoopFuture<U>]`. This funciton is analogous to the standard library's
@@ -912,14 +912,14 @@ extension EventLoopFuture {
     public static func reduce<U>(into initialResult: T, _ futures: [EventLoopFuture<U>], eventLoop: EventLoop, _ updateAccumulatingResult: @escaping (inout T, U) -> Void) -> EventLoopFuture<T> {
         let p0: EventLoopPromise<T> = eventLoop.newPromise()
         var result: T = initialResult
-        
+
         let f0 = eventLoop.newSucceededFuture(result: ())
         let future = f0.fold(futures) { (_: (), value: U) -> EventLoopFuture<Void> in
             assert(eventLoop.inEventLoop)
             updateAccumulatingResult(&result, value)
             return eventLoop.newSucceededFuture(result: ())
         }
-        
+
         future.whenSuccess {
             assert(eventLoop.inEventLoop)
             p0.succeed(result: result)
