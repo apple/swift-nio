@@ -1381,11 +1381,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
         assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
-            if let promise = promise {
-                outboundHandler.write(ctx: self, data: data, promise: promise)
-            } else {
-                outboundHandler.write(ctx: self, data: data, promise: nil)
-            }
+            outboundHandler.write(ctx: self, data: data, promise: promise)
             outboundHandler.flush(ctx: self)
         } else {
             self.prev?.invokeWriteAndFlush(data, promise: promise)
