@@ -47,7 +47,7 @@ extension ByteBuffer {
             return nil
         }
         defer {
-            self.moveReaderIndex(forwardBy: length)
+            self._moveReaderIndex(forwardBy: length)
         }
         return self.getBytes(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
     }
@@ -62,7 +62,7 @@ extension ByteBuffer {
     @discardableResult
     public mutating func write(staticString string: StaticString) -> Int {
         let written = self.set(staticString: string, at: self.writerIndex)
-        self.moveWriterIndex(forwardBy: written)
+        self._moveWriterIndex(forwardBy: written)
         return written
     }
 
@@ -87,7 +87,7 @@ extension ByteBuffer {
     @discardableResult
     public mutating func write(string: String) -> Int? {
         if let written = self.set(string: string, at: self.writerIndex) {
-            self.moveWriterIndex(forwardBy: written)
+            self._moveWriterIndex(forwardBy: written)
             return written
         } else {
             return nil
@@ -134,7 +134,7 @@ extension ByteBuffer {
             return nil
         }
         defer {
-            self.moveReaderIndex(forwardBy: length)
+            self._moveReaderIndex(forwardBy: length)
         }
         return self.getString(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
     }
@@ -152,7 +152,7 @@ extension ByteBuffer {
     @_inlineable
     public mutating func readWithUnsafeReadableBytes(_ body: (UnsafeRawBufferPointer) throws -> Int) rethrows -> Int {
         let bytesRead = try self.withUnsafeReadableBytes(body)
-        self.moveReaderIndex(forwardBy: bytesRead)
+        self._moveReaderIndex(forwardBy: bytesRead)
         return bytesRead
     }
 
@@ -167,7 +167,7 @@ extension ByteBuffer {
     @_inlineable
     public mutating func readWithUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> (Int, T)) rethrows -> T {
         let (bytesRead, ret) = try self.withUnsafeReadableBytes(body)
-        self.moveReaderIndex(forwardBy: bytesRead)
+        self._moveReaderIndex(forwardBy: bytesRead)
         return ret
     }
 
@@ -182,7 +182,7 @@ extension ByteBuffer {
     @_inlineable
     public mutating func readWithUnsafeMutableReadableBytes(_ body: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
         let bytesRead = try self.withUnsafeMutableReadableBytes(body)
-        self.moveReaderIndex(forwardBy: bytesRead)
+        self._moveReaderIndex(forwardBy: bytesRead)
         return bytesRead
     }
 
@@ -197,7 +197,7 @@ extension ByteBuffer {
     @_inlineable
     public mutating func readWithUnsafeMutableReadableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> (Int, T)) rethrows -> T {
         let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes(body)
-        self.moveReaderIndex(forwardBy: bytesRead)
+        self._moveReaderIndex(forwardBy: bytesRead)
         return ret
     }
 
@@ -223,8 +223,8 @@ extension ByteBuffer {
     @discardableResult
     public mutating func write(buffer: inout ByteBuffer) -> Int {
         let written = set(buffer: buffer, at: writerIndex)
-        self.moveWriterIndex(forwardBy: written)
-        buffer.moveReaderIndex(forwardBy: written)
+        self._moveWriterIndex(forwardBy: written)
+        buffer._moveReaderIndex(forwardBy: written)
         return written
     }
 
@@ -237,7 +237,7 @@ extension ByteBuffer {
     @_inlineable
     public mutating func write<S: Sequence>(bytes: S) -> Int where S.Element == UInt8 {
         let written = set(bytes: bytes, at: self.writerIndex)
-        self.moveWriterIndex(forwardBy: written)
+        self._moveWriterIndex(forwardBy: written)
         return written
     }
 
@@ -251,7 +251,7 @@ extension ByteBuffer {
     @_inlineable
     public mutating func write<S: ContiguousCollection>(bytes: S) -> Int where S.Element == UInt8 {
         let written = set(bytes: bytes, at: self.writerIndex)
-        self.moveWriterIndex(forwardBy: written)
+        self._moveWriterIndex(forwardBy: written)
         return written
     }
 
@@ -281,7 +281,7 @@ extension ByteBuffer {
         }
 
         let buffer = self.getSlice(at: readerIndex, length: length)! /* must work, enough readable bytes */
-        self.moveReaderIndex(forwardBy: length)
+        self._moveReaderIndex(forwardBy: length)
         return buffer
     }
 }
