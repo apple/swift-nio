@@ -325,15 +325,28 @@ public struct ByteBuffer {
 
     // MARK: Internal API
 
-    private mutating func _moveReaderIndex(to newIndex: Index) {
+    @_inlineable @_versioned
+    mutating func _moveReaderIndex(to newIndex: Index) {
         assert(newIndex >= 0 && newIndex <= writerIndex)
         self._readerIndex = newIndex
+    }
+
+    @_inlineable @_versioned
+    mutating func _moveReaderIndex(forwardBy offset: Int) {
+        let newIndex = self._readerIndex + _toIndex(offset)
+        self._moveReaderIndex(to: newIndex)
     }
 
     @_inlineable @_versioned
     mutating func _moveWriterIndex(to newIndex: Index) {
         assert(newIndex >= 0 && newIndex <= _toCapacity(self._slice.count))
         self._writerIndex = newIndex
+    }
+
+    @_inlineable @_versioned
+    mutating func _moveWriterIndex(forwardBy offset: Int) {
+        let newIndex = self._writerIndex + _toIndex(offset)
+        self._moveWriterIndex(to: newIndex)
     }
 
     @_inlineable @_versioned
@@ -536,7 +549,7 @@ public struct ByteBuffer {
         }
         var new = self
         new._slice = _ByteBufferSlice(sliceStartIndex ..< self._slice.lowerBound + index+length)
-        new.moveReaderIndex(to: 0)
+        new._moveReaderIndex(to: 0)
         new._moveWriterIndex(to: length)
         return new
     }
@@ -562,7 +575,7 @@ public struct ByteBuffer {
                 .copyMemory(from: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
                             byteCount: self.readableBytes)
             let indexShift = self._readerIndex
-            self.moveReaderIndex(to: 0)
+            self._moveReaderIndex(to: 0)
             self._moveWriterIndex(to: self._writerIndex - indexShift)
         } else {
             self._copyStorageAndRebase(extraCapacity: 0, resetIndices: true)
@@ -592,8 +605,8 @@ public struct ByteBuffer {
         if !isKnownUniquelyReferenced(&self._storage) {
             self._storage = self._storage.allocateStorage()
         }
-        self.moveWriterIndex(to: 0)
-        self.moveReaderIndex(to: 0)
+        self._moveWriterIndex(to: 0)
+        self._moveReaderIndex(to: 0)
     }
 }
 
