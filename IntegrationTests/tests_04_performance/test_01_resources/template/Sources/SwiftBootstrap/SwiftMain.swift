@@ -16,6 +16,7 @@ import NIO
 import NIOHTTP1
 import Foundation
 import AtomicCounter
+import Dispatch // needed for Swift 4.0 on Linux only
 
 private final class SimpleHTTPServer: ChannelInboundHandler {
     typealias InboundIn = HTTPServerRequestPart
@@ -125,6 +126,16 @@ private final class PongHandler: ChannelInboundHandler {
     }
 }
 
+private func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
+    #if os(Linux)
+    return try execute()
+    #else
+    return try autoreleasepool {
+        try execute()
+    }
+    #endif
+}
+
 @_cdecl("swift_main")
 public func swiftMain() -> Int {
     final class RepeatedRequests: ChannelInboundHandler {
@@ -175,7 +186,9 @@ public func swiftMain() -> Int {
         func measureOne(_ fn: () -> Int) -> [String: Int] {
             AtomicCounter.reset_free_counter()
             AtomicCounter.reset_malloc_counter()
-            _ = fn()
+            withAutoReleasePool {
+                _ = fn()
+            }
             usleep(100_000) // allocs/frees happen on multiple threads, allow some cool down time
             let frees = AtomicCounter.read_free_counter()
             let mallocs = AtomicCounter.read_malloc_counter()
@@ -285,6 +298,49 @@ public func swiftMain() -> Int {
         let numberDone = try! doPingPongRequests(group: group, number: 1000)
         precondition(numberDone == 1000)
         return numberDone
+    }
+
+    measureAndPrint(desc: "bytebuffer_lots_of_rw") {
+        let dispatchData = ("A" as StaticString).withUTF8Buffer { ptr in
+            DispatchData(bytes: UnsafeRawBufferPointer(start: UnsafeRawPointer(ptr.baseAddress), count: ptr.count))
+        }
+        var buffer = ByteBufferAllocator().buffer(capacity: 7 * 1000)
+        let foundationData = "A".data(using: .utf8)!
+        @inline(never)
+        func doWrites(buffer: inout ByteBuffer) {
+            /* all of those should be 0 allocations */
+
+            // buffer.write(bytes: foundationData) // see SR-7542
+            buffer.write(bytes: [0x41])
+            buffer.write(bytes: dispatchData)
+            buffer.write(bytes: "A".utf8)
+            buffer.write(string: "A")
+            buffer.write(staticString: "A")
+            buffer.write(integer: 0x41, as: UInt8.self)
+        }
+        @inline(never)
+        func doReads(buffer: inout ByteBuffer) {
+            /* these ones are zero allocations */
+            let val = buffer.readInteger(as: UInt8.self)
+            precondition(0x41 == val, "\(val!)")
+            var slice = buffer.readSlice(length: 1)
+            let sliceVal = slice!.readInteger(as: UInt8.self)
+            precondition(0x41 == sliceVal, "\(sliceVal!)")
+            buffer.withUnsafeReadableBytes { ptr in
+                precondition(ptr[0] == 0x41)
+            }
+
+            /* those down here should be one allocation each */
+            let arr = buffer.readBytes(length: 1)
+            precondition([0x41] == arr!, "\(arr!)")
+            let str = buffer.readString(length: 1)
+            precondition("A" == str, "\(str!)")
+        }
+        for _ in 0..<1000  {
+            doWrites(buffer: &buffer)
+            doReads(buffer: &buffer)
+        }
+        return buffer.readableBytes
     }
 
     return 0

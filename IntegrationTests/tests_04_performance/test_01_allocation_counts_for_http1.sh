@@ -58,7 +58,7 @@ cd ..
 "$swift_bin" run -c release | tee "$tmp/output"
 )
 
-for test in 1000_reqs_1_conn 1_reqs_1000_conn ping_pong_1000_reqs_1_conn; do
+for test in 1000_reqs_1_conn 1_reqs_1000_conn ping_pong_1000_reqs_1_conn bytebuffer_lots_of_rw; do
     cat "$tmp/output"  # helps debugging
     total_allocations=$(grep "^$test.total_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
     not_freed_allocations=$(grep "^$test.remaining_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
