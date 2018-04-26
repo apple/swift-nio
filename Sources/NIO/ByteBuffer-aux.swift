@@ -259,6 +259,8 @@ extension ByteBuffer {
     /// `ByteBuffer` sharing the underlying storage with the `ByteBuffer` the method was invoked on. The returned
     /// `ByteBuffer` will contain the bytes in the range `readerIndex..<writerIndex` of the original `ByteBuffer`.
     ///
+    /// - note: Because `ByteBuffer` implements copy-on-write a copy of the storage will be automatically triggered when either of the `ByteBuffer`s sharing storage is written to.
+    ///
     /// - returns: A `ByteBuffer` sharing storage containing the readable bytes only.
     public func slice() -> ByteBuffer {
         return getSlice(at: self.readerIndex, length: self.readableBytes)!
@@ -270,6 +272,8 @@ extension ByteBuffer {
     /// The returned `ByteBuffer` will contain the bytes in the range `readerIndex..<(readerIndex + length)` of the
     /// original `ByteBuffer`.
     /// The `readerIndex` of the returned `ByteBuffer` will be `0`, the `writerIndex` will be `length`.
+    ///
+    /// - note: Because `ByteBuffer` implements copy-on-write a copy of the storage will be automatically triggered when either of the `ByteBuffer`s sharing storage is written to.
     ///
     /// - parameters:
     ///     - length: The number of bytes to slice off.
