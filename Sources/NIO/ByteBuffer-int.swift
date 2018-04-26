@@ -36,7 +36,7 @@ extension ByteBuffer {
         }
 
         let value: T = self.getInteger(at: self.readerIndex, endianness: endianness)! /* must work as we have enough bytes */
-        self.moveReaderIndex(forwardBy: MemoryLayout<T>.size)
+        self._moveReaderIndex(forwardBy: MemoryLayout<T>.size)
         return value
     }
 
@@ -73,7 +73,7 @@ extension ByteBuffer {
     @_inlineable
     public mutating func write<T: FixedWidthInteger>(integer: T, endianness: Endianness = .big, as: T.Type = T.self) -> Int {
         let bytesWritten = self.set(integer: integer, at: self.writerIndex, endianness: endianness)
-        self.moveWriterIndex(forwardBy: bytesWritten)
+        self._moveWriterIndex(forwardBy: bytesWritten)
         return Int(bytesWritten)
     }
 
