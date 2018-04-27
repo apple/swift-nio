@@ -38,6 +38,13 @@ public enum DecodingState {
 /// If you move the reader index forward, either manually or by using one of `buffer.read*` methods, you must ensure
 /// that you no longer need to see those bytes again as they will not be returned to you the next time `decode` is called.
 /// If you still need those bytes to come back, consider taking a local copy of buffer inside the function to perform your read operations on.
+///
+/// The `ByteBuffer` passed in as `buffer` is a slice of a larger buffer owned by the `ByteToMessageDecoder` implementation. Some aspects of this buffer are preserved across calls to `decode`, meaning that any changes to those properties you make in your `decode` method will be reflected in the next call to decode. In particular, the following operations are have the described effects:
+
+/// 1. Moving the reader index forward persists across calls. When your method returns, if the reader index has advanced, those bytes are considered "consumed" and will not be available in future calls to `decode`.
+///    Please note, however, that the numerical value of the `readerIndex` itself is not preserved, and may not be the same from one call to the next. Please do not rely on this numerical value: if you need
+///    to recall where a byte is relative to the `readerIndex`, use an offset rather than an absolute value.
+/// 2. Mutating the bytes in the buffer will cause undefined behaviour and likely crash your program
 public protocol ByteToMessageDecoder: ChannelInboundHandler where InboundIn == ByteBuffer {
     /// The cumulationBuffer which will be used to buffer any data.
     var cumulationBuffer: ByteBuffer? { get set }
@@ -96,64 +103,92 @@ private extension ChannelHandlerContext {
 
 extension ByteToMessageDecoder {
 
+    /// Decode in a loop until there is nothing more to decode.
+    private func decodeLoop(ctx: ChannelHandlerContext, decodeFunc: (ChannelHandlerContext, inout ByteBuffer) throws -> DecodingState) throws {
+        while var slice = self.cumulationBuffer?.slice(), slice.readableBytes > 0 {
+            // Needed to later calculate how much we need to advance the readerIndex of the cumulationBuffer.
+            let sliceReadable = slice.readableBytes
+            let sliceWriterIndex = slice.writerIndex
+
+            // We fetch the writerIndex of the cumulationBuffer to make a good guess about if the cumulationBuffer changed in between due re-entrant call to
+            // channelRead after we called decodeFunc(...).
+            let writerIndex = self.cumulationBuffer!.writerIndex
+            let result = try decodeFunc(ctx, &slice)
+
+            guard self.cumulationBuffer != nil else {
+                // The cumulationBuffer was set to nil by either removing the decoder or closing the channel, just break the loop.
+                break
+            }
+
+            precondition(slice.writerIndex == sliceWriterIndex, "Writing to the buffer is not allowed")
+
+            self.cumulationBuffer!.moveReaderIndex(forwardBy: sliceReadable - slice.readableBytes)
+
+            // If the user told us more data is needed we also need to ensure the writerIndex did not change in between.
+            // If the writerIndex changed we need to retry as there is more data delivered via re-entrance maybe.
+            if result == .needMoreData && self.cumulationBuffer!.writerIndex == writerIndex {
+                break
+            }
+        }
+    }
+
     /// Calls `decode` until there is nothing left to decode.
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        var buffer = self.unwrapInboundIn(data)
+        // Either merge the received data into the existing cumulationBuffer or use it as the cumulationBuffer if none exists yet.
         if self.cumulationBuffer != nil {
+            var buffer = self.unwrapInboundIn(data)
             self.cumulationBuffer!.write(buffer: &buffer)
-            buffer = self.cumulationBuffer!
         } else {
-            self.cumulationBuffer = buffer
+            self.cumulationBuffer = self.unwrapInboundIn(data)
         }
 
         ctx.withThrowingToFireErrorAndClose {
-            // Running decode method until either the user returned `.needMoreData` or an error occurred.
-            while try decode(ctx: ctx, buffer: &buffer) == .`continue` && buffer.readableBytes > 0 { }
+            try self.decodeLoop(ctx: ctx, decodeFunc: self.decode)
         }
 
-        if buffer.readableBytes > 0 {
-            if self.shouldReclaimBytes(buffer: buffer) {
-                buffer.discardReadBytes()
-            }
-            cumulationBuffer = buffer
-        } else {
-            cumulationBuffer = nil
+        // Discard the cumulationBuffer or discard read bytes if needed.
+        guard let buffer = self.cumulationBuffer, buffer.readableBytes > 0 else {
+            self.cumulationBuffer = nil
+            return
+        }
+
+        // Check if we should reclaim some bytes and if so do it.
+        if self.shouldReclaimBytes(buffer: self.cumulationBuffer!) {
+            self.cumulationBuffer!.discardReadBytes()
         }
     }
 
     /// Call `decodeLast` before forward the event through the pipeline.
     public func channelInactive(ctx: ChannelHandlerContext) {
-        if var buffer = cumulationBuffer {
+        if self.cumulationBuffer != nil {
             ctx.withThrowingToFireErrorAndClose {
-                // Running decodeLast method until either the user returned `.needMoreData` or an error occurred.
-                while try decodeLast(ctx: ctx, buffer: &buffer)  == .`continue` && buffer.readableBytes > 0 { }
+                try self.decodeLoop(ctx: ctx, decodeFunc: self.decodeLast)
             }
-
             // Once the Channel goes inactive we can just drop all previous buffered data.
-            cumulationBuffer = nil
+            self.cumulationBuffer = nil
         }
 
         ctx.fireChannelInactive()
     }
 
     public func handlerAdded(ctx: ChannelHandlerContext) {
-        decoderAdded(ctx: ctx)
+        self.decoderAdded(ctx: ctx)
     }
 
     public func handlerRemoved(ctx: ChannelHandlerContext) {
-        if let buffer = cumulationBuffer as? InboundOut {
+        if let buffer = self.cumulationBuffer as? InboundOut {
             ctx.fireChannelRead(self.wrapInboundOut(buffer))
         } else {
             /* please note that we're dropping the partially received bytes (if any) on the floor here as we can't
                send a full message to the next handler. */
         }
-        cumulationBuffer = nil
-        decoderRemoved(ctx: ctx)
+        self.cumulationBuffer = nil
+        self.decoderRemoved(ctx: ctx)
     }
 
     /// Just call `decode`. Users may implement their own logic.
     public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        return try decode(ctx: ctx, buffer: &buffer)
+        return try self.decode(ctx: ctx, buffer: &buffer)
     }
 
     /// Do nothing by default.
