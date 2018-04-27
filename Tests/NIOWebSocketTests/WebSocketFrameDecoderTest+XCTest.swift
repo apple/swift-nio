@@ -38,6 +38,7 @@ extension WebSocketFrameDecoderTest {
                 ("testDecoderRejectsFragmentedControlFrames", testDecoderRejectsFragmentedControlFrames),
                 ("testDecoderRejectsMultibyteControlFrameLengths", testDecoderRejectsMultibyteControlFrameLengths),
                 ("testIgnoresFurtherDataAfterRejectedFrame", testIgnoresFurtherDataAfterRejectedFrame),
+                ("testClosingSynchronouslyOnChannelRead", testClosingSynchronouslyOnChannelRead),
            ]
    }
 }
