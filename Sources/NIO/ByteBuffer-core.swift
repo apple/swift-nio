@@ -280,7 +280,7 @@ public struct ByteBuffer {
             for i in Int(slice.lowerBound) + offset ..< Int(slice.lowerBound) + offset + length {
                 let byte = self.bytes.advanced(by: i).assumingMemoryBound(to: UInt8.self).pointee
                 let hexByte = String(byte, radix: 16)
-                desc += " \(hexByte.count == 1 ? " " : "")\(hexByte)"
+                desc += " \(hexByte.count == 1 ? "0" : "")\(hexByte)"
             }
             desc += " ]"
             return desc
