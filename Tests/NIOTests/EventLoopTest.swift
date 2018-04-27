@@ -261,7 +261,7 @@ public class EventLoopTest : XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         #endif
     }
-    
+
     public func testCurrentEventLoop() throws {
         class EventLoopHolder {
             weak var loop: EventLoop?
@@ -269,30 +269,30 @@ public class EventLoopTest : XCTestCase {
                 self.loop = loop
             }
         }
-        
+
         func assertCurrentEventLoop0() throws -> EventLoopHolder {
             let group = MultiThreadedEventLoopGroup(numThreads: 2)
-            
+
             let loop1 = group.next()
             let currentLoop1 = try loop1.submit {
                 MultiThreadedEventLoopGroup.currentEventLoop
             }.wait()
             XCTAssertTrue(loop1 === currentLoop1)
-            
+
             let loop2 = group.next()
             let currentLoop2 = try loop2.submit {
                 MultiThreadedEventLoopGroup.currentEventLoop
             }.wait()
             XCTAssertTrue(loop2 === currentLoop2)
             XCTAssertFalse(loop1 === loop2)
-            
+
             let holder = EventLoopHolder(loop2)
             XCTAssertNotNil(holder.loop)
             XCTAssertNil(MultiThreadedEventLoopGroup.currentEventLoop)
             XCTAssertNoThrow(try group.syncShutdownGracefully())
             return holder
         }
-        
+
         let holder = try assertCurrentEventLoop0()
 
         // We loop as the Thread used by SelectableEventLoop may not be gone yet.
