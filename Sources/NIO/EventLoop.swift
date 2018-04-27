@@ -164,7 +164,7 @@ extension TimeAmount: Comparable {
     public static func < (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds < rhs.nanoseconds
     }
-    
+
     public static func == (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds == rhs.nanoseconds
     }
@@ -644,7 +644,7 @@ typealias ThreadInitializer = (Thread) -> Void
 final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
-    
+
     private let index = Atomic<Int>(value: 0)
     private let eventLoops: [SelectableEventLoop]
 
@@ -785,7 +785,7 @@ extension ScheduledTask: Comparable {
     public static func < (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs.readyTime < rhs.readyTime
     }
-    
+
     public static func == (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs === rhs
     }

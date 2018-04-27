@@ -119,7 +119,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
     private enum BufferedEvent {
         /// A channelRead event.
         case channelRead(NIOAny)
-        
+
         case error(HTTPParserError)
 
         /// A TCP half-close. This is buffered to ensure that subsequent channel
@@ -139,12 +139,12 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
     /// don't pipeline, so this initially allocates no space for data at all. Clients that
     /// do pipeline will cause dynamic resizing of the buffer, which is generally acceptable.
     private var eventBuffer = CircularBuffer<BufferedEvent>(initialRingCapacity: 0)
-    
+
     enum NextExpectedMessageType {
         case head
         case bodyOrEnd
     }
-    
+
     // always `nil` in release builds, never `nil` in debug builds
     private var nextExpectedInboundMessage: NextExpectedMessageType?
     // always `nil` in release builds, never `nil` in debug builds
@@ -196,7 +196,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
             ctx.fireUserInboundEventTriggered(event)
         }
     }
-    
+
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         guard let httpError = error as? HTTPParserError else {
             ctx.fireErrorCaught(error)
