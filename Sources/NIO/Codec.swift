@@ -52,15 +52,6 @@ public protocol ByteToMessageDecoder: ChannelInboundHandler where InboundIn == B
     //             again once more data is present in the `ByteBuffer`.
     func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState
 
-    /// This method is called once, when the `ChannelHandlerContext` goes inactive (i.e. when `channelInactive` is fired)
-    ///
-    /// - parameters:
-    ///     - ctx: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
-    ///     - buffer: The `ByteBuffer` from which we decode.
-    /// - returns: `DecodingState.continue` if we should continue calling this method or `DecodingState.needMoreData` if it should be called
-    //             again when more data is present in the `ByteBuffer`.
-    func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws  -> DecodingState
-
     /// Called once this `ByteToMessageDecoder` is removed from the `ChannelPipeline`.
     ///
     /// - parameters:
@@ -121,21 +112,6 @@ extension ByteToMessageDecoder {
         }
     }
 
-    /// Call `decodeLast` before forward the event through the pipeline.
-    public func channelInactive(ctx: ChannelHandlerContext) {
-        if var buffer = cumulationBuffer {
-            ctx.withThrowingToFireErrorAndClose {
-                // Running decodeLast method until either the user returned `.needMoreData` or an error occurred.
-                while try decodeLast(ctx: ctx, buffer: &buffer)  == .`continue` && buffer.readableBytes > 0 { }
-            }
-
-            // Once the Channel goes inactive we can just drop all previous buffered data.
-            cumulationBuffer = nil
-        }
-
-        ctx.fireChannelInactive()
-    }
-
     public func handlerAdded(ctx: ChannelHandlerContext) {
         decoderAdded(ctx: ctx)
     }
@@ -149,11 +125,6 @@ extension ByteToMessageDecoder {
         }
         cumulationBuffer = nil
         decoderRemoved(ctx: ctx)
-    }
-
-    /// Just call `decode`. Users may implement their own logic.
-    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        return try decode(ctx: ctx, buffer: &buffer)
     }
 
     /// Do nothing by default.
