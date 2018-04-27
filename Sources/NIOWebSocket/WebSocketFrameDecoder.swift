@@ -269,6 +269,11 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
         return .needMoreData
     }
 
+    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+        // EOF is not semantic in WebSocket, so ignore this.
+        return .needMoreData
+    }
+
     /// Apply a number of validations to the incremental state, ensuring that the frame we're
     /// receiving is valid.
     private func validateState() throws {

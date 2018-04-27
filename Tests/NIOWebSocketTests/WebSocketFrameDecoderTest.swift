@@ -33,6 +33,29 @@ private class CloseSwallower: ChannelOutboundHandler {
     }
 }
 
+/// A class that calls ctx.close() when it receives a decoded websocket frame, and validates that it does
+/// not receive two.
+private final class SynchronousCloser: ChannelInboundHandler {
+    typealias InboundIn = WebSocketFrame
+
+    private var closeFrame: WebSocketFrame?
+
+    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+        let frame = self.unwrapInboundIn(data)
+        guard case .connectionClose = frame.opcode else {
+            ctx.fireChannelRead(data)
+            return
+        }
+
+        // Ok, connection close. Confirm we haven't seen one before.
+        XCTAssertNil(self.closeFrame)
+        self.closeFrame = frame
+
+        // Now we're going to call close.
+        ctx.close(promise: nil)
+    }
+}
+
 public class WebSocketFrameDecoderTest: XCTestCase {
     public var decoderChannel: EmbeddedChannel!
     public var encoderChannel: EmbeddedChannel!
@@ -284,5 +307,27 @@ public class WebSocketFrameDecoderTest: XCTestCase {
 
         // Take the handler out for cleanliness.
         XCTAssertNoThrow(try self.decoderChannel.pipeline.remove(handler: swallower).wait())
+    }
+
+    public func testClosingSynchronouslyOnChannelRead() throws {
+        // We're going to send a connectionClose frame and confirm we only see it once.
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: SynchronousCloser()).wait())
+
+        var errorCodeBuffer = self.encoderChannel.allocator.buffer(capacity: 4)
+        errorCodeBuffer.write(webSocketErrorCode: .normalClosure)
+        let frame = WebSocketFrame(fin: true, opcode: .connectionClose, data: errorCodeBuffer)
+
+        // Write the frame, send it through the decoder channel. We need to do this in one go to trigger
+        // a double-parse edge case.
+        self.encoderChannel.write(frame, promise: nil)
+        var frameBuffer = self.decoderChannel.allocator.buffer(capacity: 10)
+        while case .some(.byteBuffer(var d)) = self.encoderChannel.readOutbound() {
+            frameBuffer.write(buffer: &d)
+        }
+        XCTAssertNoThrow(try self.decoderChannel.writeInbound(frameBuffer))
+
+        // No data should have been sent or received.
+        XCTAssertNil(self.decoderChannel.readOutbound())
+        XCTAssertNil(self.decoderChannel.readInbound() as WebSocketFrame?)
     }
 }
