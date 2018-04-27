@@ -208,7 +208,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
             }
             return .seconds(2)
         }, errors: [ENFILE, EMFILE])
-        
+
         XCTAssertEqual(0, try serverChannel.eventLoop.submit {
             serverChannel.readable()
             serverChannel.read()
