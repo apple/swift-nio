@@ -63,6 +63,34 @@ We require that your commit messages match our template. The easiest way to do t
 
     git config commit.template dev/git.commit.template
 
+### File Header Template
+
+Every file should have the following header:
+
+```
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the SwiftNIO open source project
+//
+// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Licensed under Apache License v2.0
+//
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftNIO project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
+```
+
+To get Xcode to insert this header automatically, we propose to first generate
+the xcodeproject using SwiftPM:
+
+    swift package generate-xcodeproj
+
+and then open `swift-nio.xcworkspace` which is an Xcode workspace referencing
+the project you just created (and not the Xcode project itself).
+
 ### Make sure Tests work on Linux
 
 SwiftNIO uses XCTest to run tests on both macOS and Linux. While the macOS version of XCTest is able to use the Objective-C runtime to discover tests at execution time, the Linux version is not. 
