@@ -563,6 +563,13 @@ public struct ByteBuffer {
             return false
         }
 
+        if self._readerIndex == self._writerIndex {
+            // If the whole buffer was consumed we can just reset the readerIndex and writerIndex to 0 and move on.
+            self._moveWriterIndex(to: 0)
+            self._moveReaderIndex(to: 0)
+            return true
+        }
+
         if isKnownUniquelyReferenced(&self._storage) {
             self._storage.bytes.advanced(by: Int(self._slice.lowerBound))
                 .copyMemory(from: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
