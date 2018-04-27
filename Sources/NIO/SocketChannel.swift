@@ -426,10 +426,10 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         }
         return result
     }
-    
+
     override func shouldCloseOnReadError(_ err: Error) -> Bool {
         guard let err = err as? IOError else { return true }
-        
+
         switch err.errnoCode {
         case ECONNABORTED,
              EMFILE,
