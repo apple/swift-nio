@@ -24,6 +24,11 @@ public protocol AppendableCollection: Collection {
 /// will automatically expand if more elements than `initialRingCapacity` are stored, it's advantageous to prevent
 /// expansions from happening frequently. Expansions will always force an allocation and a copy to happen.
 public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
+    #if swift(>=4.2)
+    public typealias RangeType = Range
+    #else
+    public typealias RangeType = CountableRange
+    #endif
     private var buffer: ContiguousArray<E?>
 
     /// The index into the buffer of the first item
@@ -168,7 +173,7 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
     }
 
     /// Return all valid indices of the ring.
-    public var indices: CountableRange<Int> {
+    public var indices: RangeType<Int> {
         return 0..<self.count
     }
 

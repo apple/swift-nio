@@ -183,6 +183,7 @@ internal struct Heap<T: Comparable> {
 
 @available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
 extension Heap: CustomDebugStringConvertible {
+    @available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
     public var debugDescription: String {
         guard self.storage.count > 0 else {
             return "<empty heap>"
@@ -266,6 +267,7 @@ extension Heap: Sequence {
         return self.storage.count
     }
 
+    @available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
     func makeIterator() -> HeapIterator<T> {
         return HeapIterator(heap: self)
     }

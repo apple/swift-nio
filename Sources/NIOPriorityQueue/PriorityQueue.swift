@@ -54,6 +54,7 @@ public struct PriorityQueue<Element: Comparable> {
 
 @available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
 extension PriorityQueue: Equatable {
+    @available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
     public static func ==(lhs: PriorityQueue, rhs: PriorityQueue) -> Bool {
         return lhs.count == rhs.count && lhs.elementsEqual(rhs)
     }
@@ -63,16 +64,21 @@ extension PriorityQueue: Equatable {
 extension PriorityQueue: Sequence {
     public struct Iterator: IteratorProtocol {
 
+        @available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
         private var queue: PriorityQueue<Element>
+        
+        @available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
         fileprivate init(queue: PriorityQueue<Element>) {
             self.queue = queue
         }
 
+        @available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
         public mutating func next() -> Element? {
             return self.queue.pop()
         }
     }
 
+    @available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
     public func makeIterator() -> Iterator {
         return Iterator(queue: self)
     }
@@ -80,6 +86,7 @@ extension PriorityQueue: Sequence {
 
 @available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
 public extension PriorityQueue {
+    @available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
     public var count: Int {
         return self.heap.count
     }
