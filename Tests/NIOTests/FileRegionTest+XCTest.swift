@@ -32,6 +32,9 @@ extension FileRegionTest {
                 ("testWholeFileFileRegion", testWholeFileFileRegion),
                 ("testWholeEmptyFileFileRegion", testWholeEmptyFileFileRegion),
                 ("testFileRegionDuplicatesShareSeekPointer", testFileRegionDuplicatesShareSeekPointer),
+                ("testMassiveFileRegionThatJustAboutWorks", testMassiveFileRegionThatJustAboutWorks),
+                ("testMassiveFileRegionReaderIndexWorks", testMassiveFileRegionReaderIndexWorks),
+                ("testFileRegionAndIODataFitsInACoupleOfEnums", testFileRegionAndIODataFitsInACoupleOfEnums),
            ]
    }
 }

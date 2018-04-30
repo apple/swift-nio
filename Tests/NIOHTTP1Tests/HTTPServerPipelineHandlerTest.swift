@@ -45,6 +45,7 @@ private final class ReadRecorder: ChannelInboundHandler {
 
     func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         self.reads.append(.channelRead(self.unwrapInboundIn(data)))
+        ctx.fireChannelRead(data)
     }
 
     func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
@@ -355,5 +356,104 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                         .channelRead(HTTPServerRequestPart.head(self.requestHead)),
                         .channelRead(HTTPServerRequestPart.end(nil)),
                         .halfClose])
+    }
+
+    func testRecursiveChannelReadInvocationsDoNotCauseIssues() throws {
+        func makeRequestHead(uri: String) -> HTTPRequestHead {
+            var requestHead = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: uri)
+            requestHead.headers.add(name: "Host", value: "example.com")
+            return requestHead
+        }
+
+        class VerifyOrderHandler: ChannelInboundHandler {
+            typealias InboundIn = HTTPServerRequestPart
+            typealias OutboundOut = HTTPServerResponsePart
+
+            enum NextExpectedMessageType {
+                case head
+                case end
+            }
+            enum State {
+                case req1HeadExpected
+                case req1EndExpected
+                case req2HeadExpected
+                case req2EndExpected
+                case req3HeadExpected
+                case req3EndExpected
+                case reqBoomHeadExpected
+                case reqBoomEndExpected
+
+                case done
+            }
+            var state: State = .req1HeadExpected
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                let req = self.unwrapInboundIn(data)
+                switch req {
+                case .head(let head):
+                    // except for "req_1", we always send the .end straight away
+                    var sendEnd = true
+                    switch head.uri {
+                    case "/req_1":
+                        XCTAssertEqual(.req1HeadExpected, self.state)
+                        self.state = .req1EndExpected
+                        // for req_1, we don't send the end straight away to force the others to be buffered
+                        sendEnd = false
+                    case "/req_2":
+                        XCTAssertEqual(.req2HeadExpected, self.state)
+                        self.state = .req2EndExpected
+                    case "/req_3":
+                        XCTAssertEqual(.req3HeadExpected, self.state)
+                        self.state = .req3EndExpected
+                    case "/req_boom":
+                        XCTAssertEqual(.reqBoomHeadExpected, self.state)
+                        self.state = .reqBoomEndExpected
+                    default:
+                        XCTFail("didn't expect \(head)")
+                    }
+                    ctx.write(self.wrapOutboundOut(.head(HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok))), promise: nil)
+                    if sendEnd {
+                        ctx.write(self.wrapOutboundOut(.end(nil)), promise: nil)
+                    }
+                    ctx.flush()
+                case .end:
+                    switch self.state {
+                    case .req1EndExpected:
+                        self.state = .req2HeadExpected
+                    case .req2EndExpected:
+                        self.state = .req3HeadExpected
+
+                        // this will cause `channelRead` to be recursively called and we need to make sure everything then still works
+                        try! (ctx.channel as! EmbeddedChannel).writeInbound(HTTPServerRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/req_boom")))
+                        try! (ctx.channel as! EmbeddedChannel).writeInbound(HTTPServerRequestPart.end(nil))
+                    case .req3EndExpected:
+                        self.state = .reqBoomHeadExpected
+                    case .reqBoomEndExpected:
+                        self.state = .done
+                    default:
+                        XCTFail("illegal state for end: \(self.state)")
+                    }
+                case .body:
+                    XCTFail("we don't send any bodies")
+                }
+            }
+        }
+
+        let handler = VerifyOrderHandler()
+        XCTAssertNoThrow(try channel.pipeline.add(handler: handler).wait())
+
+        for f in 1...3 {
+            XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(makeRequestHead(uri: "/req_\(f)"))))
+            XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+        }
+
+        // now we should have delivered the first request, with the second and third buffered because req_1's .end
+        // doesn't get sent by the handler (instead we'll do that below)
+        XCTAssertEqual(.req2HeadExpected, handler.state)
+
+        // finish 1st request, that will send through the 2nd one which will then write the 'req_boom' request
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
+
+        XCTAssertEqual(.done, handler.state)
     }
 }

@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Dispatch
+
 private enum SelectorLifecycleState {
     case open
     case closing
@@ -39,6 +41,204 @@ private extension Optional {
     }
 }
 
+/// Represents IO events NIO might be interested in. `SelectorEventSet` is used for two purposes:
+///  1. To express interest in a given event set and
+///  2. for notifications about an IO event set that has occured.
+///
+/// For example, if you were interested in reading and writing data from/to a socket and also obviously if the socket
+/// receives a connection reset, express interest with `[.read, .write, .reset]`.
+/// If then suddenly the socket becomes both readable and writable, the eventing mechanism will tell you about that
+/// fact using `[.read, .write]`.
+struct SelectorEventSet: OptionSet, Equatable {
+
+    typealias RawValue = UInt8
+
+    let rawValue: RawValue
+
+    /// It's impossible to actually register for no events, therefore `_none` should only be used to bootstrap a set
+    /// of flags or to compare against spurious wakeups.
+    static let _none = SelectorEventSet(rawValue: 0)
+
+    /// Connection reset or other errors.
+    static let reset = SelectorEventSet(rawValue: 1 << 0)
+
+    /// EOF at the read/input end of a `Selectable`.
+    static let readEOF = SelectorEventSet(rawValue: 1 << 1)
+
+    /// Interest in/availability of data to be read
+    static let read = SelectorEventSet(rawValue: 1 << 2)
+
+    /// Interest in/availability of data to be written
+    static let write = SelectorEventSet(rawValue: 1 << 3)
+
+    init(rawValue: SelectorEventSet.RawValue) {
+        self.rawValue = rawValue
+    }
+}
+
+/// Represents the `kqueue` filters we might use:
+///
+///  - `except` corresponds to `EVFILT_EXCEPT`
+///  - `read` corresponds to `EVFILT_READ`
+///  - `write` corresponds to `EVFILT_WRITE`
+private struct KQueueEventFilterSet: OptionSet, Equatable {
+    typealias RawValue = UInt8
+
+    let rawValue: RawValue
+
+    static let _none = KQueueEventFilterSet(rawValue: 0)
+    // skipping `1 << 0` because kqueue doesn't have a direct match for `.reset` (`EPOLLHUP` for epoll)
+    static let except = KQueueEventFilterSet(rawValue: 1 << 1)
+    static let read = KQueueEventFilterSet(rawValue: 1 << 2)
+    static let write = KQueueEventFilterSet(rawValue: 1 << 3)
+
+    init(rawValue: RawValue) {
+        self.rawValue = rawValue
+    }
+}
+
+/// Represents the `epoll` filters/events we might use:
+///
+///  - `hangup` corresponds to `EPOLLHUP`
+///  - `readHangup` corresponds to `EPOLLRDHUP`
+///  - `input` corresponds to `EPOLLIN`
+///  - `output` corresponds to `EPOLLOUT`
+///  - `error` corresponds to `EPOLLERR`
+private struct EpollFilterSet: OptionSet, Equatable {
+    typealias RawValue = UInt8
+
+    let rawValue: RawValue
+
+    static let _none = EpollFilterSet(rawValue: 0)
+    static let hangup = EpollFilterSet(rawValue: 1 << 0)
+    static let readHangup = EpollFilterSet(rawValue: 1 << 1)
+    static let input = EpollFilterSet(rawValue: 1 << 2)
+    static let output = EpollFilterSet(rawValue: 1 << 3)
+    static let error = EpollFilterSet(rawValue: 1 << 4)
+
+    init(rawValue: RawValue) {
+        self.rawValue = rawValue
+    }
+}
+
+extension KQueueEventFilterSet {
+    /// Convert NIO's `SelectorEventSet` set to a `KQueueEventFilterSet`
+    init(selectorEventSet: SelectorEventSet) {
+        var kqueueFilterSet: KQueueEventFilterSet = .init(rawValue: 0)
+        if selectorEventSet.contains(.read) {
+            kqueueFilterSet.formUnion(.read)
+        }
+
+        if selectorEventSet.contains(.write) {
+            kqueueFilterSet.formUnion(.write)
+        }
+
+        if selectorEventSet.contains(.readEOF) {
+            kqueueFilterSet.formUnion(.except)
+        }
+        self = kqueueFilterSet
+    }
+
+    #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+    /// Calculate the kqueue filter changes that are necessary to transition from `previousKQueueFilterSet` to `self`.
+    /// The `body` closure is then called with the changes necessary expressed as a number of `kevent`.
+    ///
+    /// - parameters:
+    ///    - previousKQueueFilterSet: The previous filter set that is currently registered with kqueue.
+    ///    - fileDescriptor: The file descriptor the `kevent`s should be generated to.
+    ///    - body: The closure that will then apply the change set.
+    func calculateKQueueFilterSetChanges(previousKQueueFilterSet: KQueueEventFilterSet,
+                                         fileDescriptor: CInt,
+                                         _ body: (UnsafeMutableBufferPointer<kevent>) throws -> Void) rethrows {
+        // we only use three filters (EVFILT_READ, EVFILT_WRITE and EVFILT_EXCEPT) so the number of changes would be 3.
+        var keventsHopefullyOnStack = (kevent(), kevent(), kevent())
+        try withUnsafeMutableBytes(of: &keventsHopefullyOnStack) { rawPtr in
+            assert(MemoryLayout<kevent>.size * 3 == rawPtr.count)
+            let keventBuffer = rawPtr.baseAddress!.bindMemory(to: kevent.self, capacity: 3)
+
+            let differences = previousKQueueFilterSet.symmetricDifference(self) // contains all the events that need a change (either need to be added or removed)
+
+            func calculateKQueueChange(event: KQueueEventFilterSet) -> UInt16? {
+                guard differences.contains(event) else {
+                    return nil
+                }
+                return UInt16(self.contains(event) ? EV_ADD : EV_DELETE)
+            }
+
+            var index: Int = 0
+            for (event, filter) in [(KQueueEventFilterSet.read, EVFILT_READ), (.write, EVFILT_WRITE), (.except, EVFILT_EXCEPT)] {
+                if let flags = calculateKQueueChange(event: event) {
+                    keventBuffer[index].ident = UInt(fileDescriptor)
+                    keventBuffer[index].filter = Int16(filter)
+                    keventBuffer[index].flags = flags
+                    index += 1
+                }
+            }
+            try body(UnsafeMutableBufferPointer(start: keventBuffer, count: index))
+        }
+    }
+    #endif
+}
+
+extension EpollFilterSet {
+    /// Convert NIO's `SelectorEventSet` set to a `EpollFilterSet`
+    init(selectorEventSet: SelectorEventSet) {
+        var thing: EpollFilterSet = [.error, .hangup]
+        if selectorEventSet.contains(.read) {
+            thing.formUnion(.input)
+        }
+        if selectorEventSet.contains(.write) {
+            thing.formUnion(.output)
+        }
+        if selectorEventSet.contains(.readEOF) {
+            thing.formUnion(.readHangup)
+        }
+        self = thing
+    }
+}
+
+extension SelectorEventSet {
+    #if os(Linux)
+    var epollEventSet: UInt32 {
+        assert(self != ._none)
+        // EPOLLERR | EPOLLHUP is always set unconditionally anyway but it's easier to understand if we explicitly ask.
+        var filter: UInt32 = Epoll.EPOLLERR.rawValue | Epoll.EPOLLHUP.rawValue
+        let epollFilters = EpollFilterSet(selectorEventSet: self)
+        if epollFilters.contains(.input) {
+            filter |= Epoll.EPOLLIN.rawValue
+        }
+        if epollFilters.contains(.output) {
+            filter |= Epoll.EPOLLOUT.rawValue
+        }
+        if epollFilters.contains(.readHangup) {
+            filter |= Epoll.EPOLLRDHUP.rawValue
+        }
+        assert(filter & Epoll.EPOLLHUP.rawValue != 0) // both of these are reported
+        assert(filter & Epoll.EPOLLERR.rawValue != 0) // always and can't be masked.
+        return filter
+    }
+
+    fileprivate init(epollEvent: Epoll.epoll_event) {
+        var selectorEventSet: SelectorEventSet = ._none
+        if epollEvent.events & Epoll.EPOLLIN.rawValue != 0 {
+            selectorEventSet.formUnion(.read)
+        }
+        if epollEvent.events & Epoll.EPOLLOUT.rawValue != 0 {
+            selectorEventSet.formUnion(.write)
+        }
+        if epollEvent.events & Epoll.EPOLLRDHUP.rawValue != 0 {
+            selectorEventSet.formUnion(.readEOF)
+        }
+        if epollEvent.events & Epoll.EPOLLHUP.rawValue != 0 || epollEvent.events & Epoll.EPOLLERR.rawValue != 0 {
+            selectorEventSet.formUnion(.reset)
+        }
+        self = selectorEventSet
+    }
+
+    #endif
+}
+
+
 ///  A `Selector` allows a user to register different `Selectable` sources to an underlying OS selector, and for that selector to notify them once IO is ready for them to process.
 ///
 /// This implementation offers an consistent API over epoll (for linux) and kqueue (for Darwin, BSD).
@@ -50,6 +250,7 @@ final class Selector<R: Registration> {
     private typealias EventType = Epoll.epoll_event
     private let eventfd: Int32
     private let timerfd: Int32
+    private var earliestTimer: UInt64 = UInt64.max
     #else
     private typealias EventType = kevent
     #endif
@@ -58,6 +259,8 @@ final class Selector<R: Registration> {
     private var eventsCapacity = 64
     private var events: UnsafeMutablePointer<EventType>
     private var registrations = [Int: R]()
+    // temporary workaround to stop us delivering outdated events; read in `whenReady`, set in `deregister`
+    private var deregistrationsHappened: Bool = false
 
     private static func allocateEventsArray(capacity: Int) -> UnsafeMutablePointer<EventType> {
         let events: UnsafeMutablePointer<EventType> = UnsafeMutablePointer.allocate(capacity: capacity)
@@ -93,7 +296,7 @@ final class Selector<R: Registration> {
         self.lifecycleState = .open
 
         var ev = Epoll.epoll_event()
-        ev.events = Selector.toEpollEvents(interested: .read)
+        ev.events = SelectorEventSet.read.epollEventSet
         ev.data.fd = eventfd
 
         _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: eventfd, event: &ev)
@@ -113,8 +316,9 @@ final class Selector<R: Registration> {
         event.data = 0
         event.udata = nil
         event.flags = UInt16(EV_ADD | EV_ENABLE | EV_CLEAR)
-
-        try keventChangeSetOnly(event: &event, numEvents: 1)
+        try withUnsafeMutablePointer(to: &event) { ptr in
+            try kqueueApplyEventChangeSet(keventBuffer: UnsafeMutableBufferPointer(start: ptr, count: 1))
+        }
 #endif
     }
 
@@ -124,7 +328,7 @@ final class Selector<R: Registration> {
 
         /* this is technically a bad idea as we're abusing ARC to deallocate scarce resources (a file descriptor)
          for us. However, this is used for the event loop so there shouldn't be much churn.
-         The reson we do this is because `self.wakeup()` may (and will!) be called on arbitrary threads. To not
+         The reason we do this is because `self.wakeup()` may (and will!) be called on arbitrary threads. To not
          suffer from race conditions we would need to protect waking the selector up and closing the selector. That
          is likely to cause performance problems. By abusing ARC, we get the guarantee that there won't be any future
          wakeup calls as there are no references to this selector left. 💁
@@ -136,23 +340,8 @@ final class Selector<R: Registration> {
 #endif
     }
 
-#if os(Linux)
 
-    private static func toEpollEvents(interested: IOEvent) -> UInt32 {
-        // Also merge EPOLLRDHUP in so we can easily detect connection-reset
-        switch interested {
-        case .read:
-            return Epoll.EPOLLIN.rawValue | Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue
-        case .write:
-            return Epoll.EPOLLOUT.rawValue | Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue
-        case .all:
-            return Epoll.EPOLLIN.rawValue | Epoll.EPOLLOUT.rawValue | Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue
-        case .none:
-            return Epoll.EPOLLERR.rawValue
-        }
-    }
-
-#else
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
     private func toKQueueTimeSpec(strategy: SelectorStrategy) -> timespec? {
         switch strategy {
         case .block:
@@ -164,9 +353,19 @@ final class Selector<R: Registration> {
         }
     }
 
-    private func keventChangeSetOnly(event: UnsafePointer<kevent>?, numEvents: Int32) throws {
+    /// Apply a kqueue changeset by calling the `kevent` function with the `kevent`s supplied in `keventBuffer`.
+    private func kqueueApplyEventChangeSet(keventBuffer: UnsafeMutableBufferPointer<kevent>) throws {
+        guard keventBuffer.count > 0 else {
+            // nothing to do
+            return
+        }
         do {
-            _ = try KQueue.kevent(kq: self.fd, changelist: event, nchanges: numEvents, eventlist: nil, nevents: 0, timeout: nil)
+            _ = try KQueue.kevent(kq: self.fd,
+                                  changelist: keventBuffer.baseAddress!,
+                                  nchanges: CInt(keventBuffer.count),
+                                  eventlist: nil,
+                                  nevents: 0,
+                                  timeout: nil)
         } catch let err as IOError {
             if err.errnoCode == EINTR {
                 // See https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
@@ -177,84 +376,17 @@ final class Selector<R: Registration> {
         }
     }
 
-    private func register_kqueue<S: Selectable>(selectable: S, interested: IOEvent, oldInterested: IOEvent?) throws {
-        // Allocated on the stack
-        var events = (kevent(), kevent())
+
+    private func kqueueUpdateEventNotifications<S: Selectable>(selectable: S, interested: SelectorEventSet, oldInterested: SelectorEventSet?) throws {
+        let oldKQueueFilters = KQueueEventFilterSet(selectorEventSet: oldInterested ?? ._none)
+        let newKQueueFilters = KQueueEventFilterSet(selectorEventSet: interested)
+        assert(interested.contains(.reset))
+        assert(oldInterested?.contains(.reset) ?? true)
+
         try selectable.withUnsafeFileDescriptor { fd in
-
-            events.0.ident = UInt(fd)
-            events.0.filter = Int16(EVFILT_READ)
-            events.0.fflags = 0
-            events.0.data = 0
-            events.0.udata = nil
-
-            events.1.ident = UInt(fd)
-            events.1.filter = Int16(EVFILT_WRITE)
-            events.1.fflags = 0
-            events.1.data = 0
-            events.1.udata = nil
-        }
-
-        switch interested {
-        case .read:
-            events.0.flags = UInt16(EV_ADD)
-            events.1.flags = UInt16(EV_DELETE)
-        case .write:
-            events.0.flags = UInt16(EV_DELETE)
-            events.1.flags = UInt16(EV_ADD)
-        case .all:
-            events.0.flags = UInt16(EV_ADD)
-            events.1.flags = UInt16(EV_ADD)
-        case .none:
-            events.0.flags = UInt16(EV_DELETE)
-            events.1.flags = UInt16(EV_DELETE)
-        }
-
-        var offset: Int = 0
-        var numEvents: Int32 = 2
-
-        if let old = oldInterested {
-            switch old {
-            case .read:
-                if events.1.flags == UInt16(EV_DELETE) {
-                    numEvents -= 1
-                }
-            case .write:
-                if events.0.flags == UInt16(EV_DELETE) {
-                    offset += 1
-                    numEvents -= 1
-                }
-            case .none:
-                // Only discard the delete events
-                if events.0.flags == UInt16(EV_DELETE) {
-                    offset += 1
-                    numEvents -= 1
-                }
-                if events.1.flags == UInt16(EV_DELETE) {
-                    numEvents -= 1
-                }
-            case .all:
-                // No need to adjust anything
-                break
-            }
-        } else {
-            // If its not reregister operation we MUST NOT include EV_DELETE as otherwise kevent will fail with ENOENT.
-            if events.0.flags == UInt16(EV_DELETE) {
-                offset += 1
-                numEvents -= 1
-            }
-            if events.1.flags == UInt16(EV_DELETE) {
-                numEvents -= 1
-            }
-        }
-
-        if numEvents > 0 {
-            try withUnsafeMutableBytes(of: &events) { event_ptr in
-                precondition(MemoryLayout<kevent>.size * 2 == event_ptr.count)
-                let ptr = event_ptr.baseAddress?.bindMemory(to: kevent.self, capacity: 2)
-
-                try keventChangeSetOnly(event: ptr!.advanced(by: offset), numEvents: numEvents)
-            }
+            try newKQueueFilters.calculateKQueueFilterSetChanges(previousKQueueFilterSet: oldKQueueFilters,
+                                                                 fileDescriptor: fd,
+                                                                 kqueueApplyEventChangeSet)
         }
     }
 #endif
@@ -263,9 +395,10 @@ final class Selector<R: Registration> {
     ///
     /// - parameters:
     ///     - selectable: The `Selectable` to register.
-    ///     - interested: The `IOEvent`s in which we are interested and want to be notified about.
-    ///     - makeRegistration: Creates the registration data for the given `IOEvent`.
-    func register<S: Selectable>(selectable: S, interested: IOEvent = .read, makeRegistration: (IOEvent) -> R) throws {
+    ///     - interested: The `SelectorEventSet` in which we are interested and want to be notified about.
+    ///     - makeRegistration: Creates the registration data for the given `SelectorEventSet`.
+    func register<S: Selectable>(selectable: S, interested: SelectorEventSet, makeRegistration: (SelectorEventSet) -> R) throws {
+        assert(interested.contains(.reset))
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't register on selector as it's \(self.lifecycleState).")
         }
@@ -274,12 +407,12 @@ final class Selector<R: Registration> {
             assert(registrations[Int(fd)] == nil)
             #if os(Linux)
                 var ev = Epoll.epoll_event()
-                ev.events = Selector.toEpollEvents(interested: interested)
+                ev.events = interested.epollEventSet
                 ev.data.fd = fd
 
                 _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: fd, event: &ev)
             #else
-                try register_kqueue(selectable: selectable, interested: interested, oldInterested: nil)
+                try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: nil)
             #endif
             registrations[Int(fd)] = makeRegistration(interested)
         }
@@ -289,22 +422,23 @@ final class Selector<R: Registration> {
     ///
     /// - parameters:
     ///     - selectable: The `Selectable` to re-register.
-    ///     - interested: The `IOEvent`s in which we are interested and want to be notified about.
-    func reregister<S: Selectable>(selectable: S, interested: IOEvent) throws {
+    ///     - interested: The `SelectorEventSet` in which we are interested and want to be notified about.
+    func reregister<S: Selectable>(selectable: S, interested: SelectorEventSet) throws {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't re-register on selector as it's \(self.lifecycleState).")
         }
+        assert(interested.contains(.reset), "must register for at least .reset but tried registering for \(interested)")
         try selectable.withUnsafeFileDescriptor { fd in
             var reg = registrations[Int(fd)]!
 
             #if os(Linux)
                 var ev = Epoll.epoll_event()
-                ev.events = Selector.toEpollEvents(interested: interested)
+                ev.events = interested.epollEventSet
                 ev.data.fd = fd
 
                 _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_MOD, fd: fd, event: &ev)
             #else
-                try register_kqueue(selectable: selectable, interested: interested, oldInterested: reg.interested)
+                try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: reg.interested)
             #endif
             reg.interested = interested
             registrations[Int(fd)] = reg
@@ -313,7 +447,7 @@ final class Selector<R: Registration> {
 
     /// Deregister `Selectable`, must be registered via `register` before.
     ///
-    /// After the `Selectable is deregistered no `IOEvent`s will be produced anymore for the `Selectable`.
+    /// After the `Selectable is deregistered no `SelectorEventSet` will be produced anymore for the `Selectable`.
     ///
     /// - parameters:
     ///     - selectable: The `Selectable` to deregister.
@@ -321,6 +455,8 @@ final class Selector<R: Registration> {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't deregister from selector as it's \(self.lifecycleState).")
         }
+        // temporary workaround to stop us delivering outdated events
+        self.deregistrationsHappened = true
         try selectable.withUnsafeFileDescriptor { fd in
             guard let reg = registrations.removeValue(forKey: Int(fd)) else {
                 return
@@ -330,7 +466,7 @@ final class Selector<R: Registration> {
                 var ev = Epoll.epoll_event()
                 _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_DEL, fd: fd, event: &ev)
             #else
-                try register_kqueue(selectable: selectable, interested: .none, oldInterested: reg.interested)
+                try kqueueUpdateEventNotifications(selectable: selectable, interested: .reset, oldInterested: reg.interested)
             #endif
         }
     }
@@ -352,15 +488,26 @@ final class Selector<R: Registration> {
         case .now:
             ready = Int(try Epoll.epoll_wait(epfd: self.fd, events: events, maxevents: Int32(eventsCapacity), timeout: 0))
         case .blockUntilTimeout(let timeAmount):
-            var ts = itimerspec()
-            ts.it_value = timespec(timeAmount: timeAmount)
-            try TimerFd.timerfd_settime(fd: timerfd, flags: 0, newValue: &ts, oldValue: nil)
+            // Only call timerfd_settime if we not already scheduled one that will cover it.
+            // This guards against calling timerfd_settime if not needed as this is generally speaking
+            // expensive.
+            let next = DispatchTime.now().uptimeNanoseconds + UInt64(timeAmount.nanoseconds)
+            if next < self.earliestTimer {
+                self.earliestTimer = next
+
+                var ts = itimerspec()
+                ts.it_value = timespec(timeAmount: timeAmount)
+                try TimerFd.timerfd_settime(fd: timerfd, flags: 0, newValue: &ts, oldValue: nil)
+            }
             fallthrough
         case .block:
             ready = Int(try Epoll.epoll_wait(epfd: self.fd, events: events, maxevents: Int32(eventsCapacity), timeout: -1))
         }
 
-        for i in 0..<ready {
+        // start with no deregistrations happened
+        self.deregistrationsHappened = false
+        // temporary workaround to stop us delivering outdated events; possibly set in `deregister`
+        for i in 0..<ready where !self.deregistrationsHappened {
             let ev = events[i]
             switch ev.data.fd {
             case eventfd:
@@ -372,14 +519,24 @@ final class Selector<R: Registration> {
                 var val: UInt = 0
                 // We are not interested in the result
                 _ = Glibc.read(timerfd, &val, MemoryLayout<UInt>.size)
+
+                // Processed the earliest set timer so reset it.
+                self.earliestTimer = UInt64.max
             default:
                 // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skip it.
                 if let registration = registrations[Int(ev.data.fd)] {
-                    try body(
-                        SelectorEvent(
-                            readable: (ev.events & Epoll.EPOLLIN.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
-                            writable: (ev.events & Epoll.EPOLLOUT.rawValue) != 0 || (ev.events & Epoll.EPOLLERR.rawValue) != 0 || (ev.events & Epoll.EPOLLRDHUP.rawValue) != 0,
-                            registration: registration))
+                    var selectorEvent = SelectorEventSet(epollEvent: ev)
+                    // we can only verify the events for i == 0 as for i > 0 the user might have changed the registrations since then.
+                    assert(i != 0 || selectorEvent.isSubset(of: registration.interested), "selectorEvent: \(selectorEvent), registration: \(registration)")
+
+                    // in any case we only want what the user is currently registered for & what we got
+                    selectorEvent = selectorEvent.intersection(registration.interested)
+
+                    guard selectorEvent != .none else {
+                        continue
+                    }
+
+                    try body((SelectorEvent(io: selectorEvent, registration: registration)))
                 }
             }
         }
@@ -390,24 +547,47 @@ final class Selector<R: Registration> {
             Int(try KQueue.kevent(kq: self.fd, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: ts))
         }
 
-        for i in 0..<ready {
+        // start with no deregistrations happened
+        self.deregistrationsHappened = false
+        // temporary workaround to stop us delivering outdated events; possibly set in `deregister`
+        for i in 0..<ready where !self.deregistrationsHappened {
             let ev = events[i]
-            switch Int32(ev.filter) {
-            case EVFILT_USER:
-                // woken-up by the user, just ignore
-                break
+            let filter = Int32(ev.filter)
+            guard Int32(ev.flags) & EV_ERROR == 0 else {
+                throw IOError(errnoCode: Int32(ev.data), reason: "kevent returned with EV_ERROR set: \(String(describing: ev))")
+            }
+            guard filter != EVFILT_USER, let registration = registrations[Int(ev.ident)] else {
+                continue
+            }
+            var selectorEvent: SelectorEventSet = ._none
+            switch filter {
             case EVFILT_READ:
-                if let registration = registrations[Int(ev.ident)] {
-                    try body((SelectorEvent(io: .read, registration: registration)))
+                selectorEvent.formUnion(.read)
+                fallthrough // falling through here as `EVFILT_READ` also delivers `EV_EOF` (meaning `.readEOF`)
+            case EVFILT_EXCEPT:
+                if Int32(ev.flags) & EV_EOF != 0 && registration.interested.contains(.readEOF) {
+                    // we only add `.readEOF` if it happened and the user asked for it
+                    selectorEvent.formUnion(.readEOF)
                 }
             case EVFILT_WRITE:
-                if let registration = registrations[Int(ev.ident)] {
-                    try body((SelectorEvent(io: .write, registration: registration)))
-                }
+                selectorEvent.formUnion(.write)
             default:
-                // We only use EVFILT_USER, EVFILT_READ and EVFILT_WRITE.
+                // We only use EVFILT_USER, EVFILT_READ, EVFILT_EXCEPT and EVFILT_WRITE.
                 fatalError("unexpected filter \(ev.filter)")
             }
+            if ev.fflags != 0 {
+                selectorEvent.formUnion(.reset)
+            }
+            // we can only verify the events for i == 0 as for i > 0 the user might have changed the registrations since then.
+            assert(i != 0 || selectorEvent.isSubset(of: registration.interested), "selectorEvent: \(selectorEvent), registration: \(registration)")
+
+            // in any case we only want what the user is currently registered for & what we got
+            selectorEvent = selectorEvent.intersection(registration.interested)
+
+            guard selectorEvent != .none else {
+                continue
+            }
+            try body((SelectorEvent(io: selectorEvent, registration: registration)))
         }
 
         growEventArrayIfNeeded(ready: ready)
@@ -450,7 +630,9 @@ final class Selector<R: Registration> {
         event.data = 0
         event.udata = nil
         event.flags = 0
-        try keventChangeSetOnly(event: &event, numEvents: 1)
+        try withUnsafeMutablePointer(to: &event) { ptr in
+            try kqueueApplyEventChangeSet(keventBuffer: UnsafeMutableBufferPointer(start: ptr, count: 1))
+        }
 #endif
     }
 }
@@ -464,32 +646,15 @@ extension Selector: CustomStringConvertible {
 /// An event that is triggered once the `Selector` was able to select something.
 struct SelectorEvent<R> {
     public let registration: R
-    public let io: IOEvent
+    public let io: SelectorEventSet
 
     /// Create new instance
     ///
     /// - parameters:
-    ///     - io: The `IOEvent` that triggered this event.
+    ///     - io: The `SelectorEventSet` that triggered this event.
     ///     - registration: The registration that belongs to the event.
-    init(io: IOEvent, registration: R) {
+    init(io: SelectorEventSet, registration: R) {
         self.io = io
-        self.registration = registration
-    }
-
-    /// Create new instance
-    ///
-    /// - parameters:
-    ///     - readable: `true` if readable.
-    ///     - writable: `true` if writable
-    ///     - registration: The registration that belongs to the event.
-    init(readable: Bool, writable: Bool, registration: R) {
-        if readable {
-            self.io = writable ? .all : .read
-        } else if writable {
-            self.io = .write
-        } else {
-            self.io = .none
-        }
         self.registration = registration
     }
 }
@@ -519,6 +684,14 @@ internal extension Selector where R == NIORegistration {
             case .datagramChannel(let chan, _):
                 return closeChannel(chan)
             }
+        }.map { future in
+            future.thenIfErrorThrowing { error in
+                if let error = error as? ChannelError, error == .alreadyClosed {
+                    return ()
+                } else {
+                    throw error
+                }
+            }
         }
 
         guard futures.count > 0 else {
@@ -542,6 +715,7 @@ enum SelectorStrategy {
 }
 
 /// The IO for which we want to be notified.
+@available(*, deprecated, message: "IOEvent was made public by accident, is no longer used internally and will be removed with SwiftNIO 2.0.0")
 public enum IOEvent {
     /// Something is ready to be read.
     case read

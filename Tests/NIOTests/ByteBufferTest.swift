@@ -1214,6 +1214,141 @@ class ByteBufferTest: XCTestCase {
         self.buf.set(integer: 0xdeadbeef, at: 0, endianness: .little, as: UInt64.self)
         XCTAssertEqual(0xdeadbeef, self.buf.getInteger(at: 0, endianness: .little, as: UInt64.self))
     }
+
+    func testByteBufferFitsInACoupleOfEnums() throws {
+        enum Level4 {
+            case case1(ByteBuffer)
+            case case2(ByteBuffer)
+            case case3(ByteBuffer)
+            case case4(ByteBuffer)
+        }
+        enum Level3 {
+            case case1(Level4)
+            case case2(Level4)
+            case case3(Level4)
+            case case4(Level4)
+        }
+        enum Level2 {
+            case case1(Level3)
+            case case2(Level3)
+            case case3(Level3)
+            case case4(Level3)
+        }
+        enum Level1 {
+            case case1(Level2)
+            case case2(Level2)
+            case case3(Level2)
+            case case4(Level2)
+        }
+
+        XCTAssertLessThanOrEqual(MemoryLayout<ByteBuffer>.size, 23)
+        XCTAssertLessThanOrEqual(MemoryLayout<Level1>.size, 24)
+
+        XCTAssertLessThanOrEqual(MemoryLayout.size(ofValue: Level1.case1(.case2(.case3(.case4(self.buf))))), 24)
+        XCTAssertLessThanOrEqual(MemoryLayout.size(ofValue: Level1.case1(.case3(.case4(.case1(self.buf))))), 24)
+    }
+
+    func testLargeSliceBegin16MBIsOkayAndDoesNotCopy() throws {
+        var fourMBBuf = self.allocator.buffer(capacity: 4 * 1024 * 1024)
+        fourMBBuf.write(bytes: repeatElement(0xff, count: fourMBBuf.capacity))
+        let totalBufferSize = 5 * fourMBBuf.readableBytes
+        XCTAssertEqual(4 * 1024 * 1024, fourMBBuf.readableBytes)
+        var buf = self.allocator.buffer(capacity: totalBufferSize)
+        for _ in 0..<5 {
+            var fresh = fourMBBuf
+            buf.write(buffer: &fresh)
+        }
+
+        let offset = Int(_UInt24.max)
+
+        // mark some special bytes
+        buf.set(integer: 0xaa, at: 0, as: UInt8.self)
+        buf.set(integer: 0xbb, at: offset - 1, as: UInt8.self)
+        buf.set(integer: 0xcc, at: offset, as: UInt8.self)
+        buf.set(integer: 0xdd, at: buf.writerIndex - 1, as: UInt8.self)
+
+        XCTAssertEqual(totalBufferSize, buf.readableBytes)
+
+        let oldPtrVal = buf.withUnsafeReadableBytes {
+            UInt(bitPattern: $0.baseAddress!.advanced(by: offset))
+        }
+
+        let expectedReadableBytes = totalBufferSize - offset
+        let slice = buf.getSlice(at: offset, length: expectedReadableBytes)!
+        XCTAssertEqual(expectedReadableBytes, slice.readableBytes)
+        let newPtrVal = slice.withUnsafeReadableBytes {
+            UInt(bitPattern: $0.baseAddress!)
+        }
+        XCTAssertEqual(oldPtrVal, newPtrVal)
+
+        XCTAssertEqual(0xcc, slice.getInteger(at: 0, as: UInt8.self))
+        XCTAssertEqual(0xdd, slice.getInteger(at: slice.writerIndex - 1, as: UInt8.self))
+    }
+
+    func testLargeSliceBeginMoreThan16MBIsOkay() throws {
+        var fourMBBuf = self.allocator.buffer(capacity: 4 * 1024 * 1024)
+        fourMBBuf.write(bytes: repeatElement(0xff, count: fourMBBuf.capacity))
+        let totalBufferSize = 5 * fourMBBuf.readableBytes + 1
+        XCTAssertEqual(4 * 1024 * 1024, fourMBBuf.readableBytes)
+        var buf = self.allocator.buffer(capacity: totalBufferSize)
+        for _ in 0..<5 {
+            var fresh = fourMBBuf
+            buf.write(buffer: &fresh)
+        }
+
+        let offset = Int(_UInt24.max) + 1
+
+        // mark some special bytes
+        buf.set(integer: 0xaa, at: 0, as: UInt8.self)
+        buf.set(integer: 0xbb, at: offset - 1, as: UInt8.self)
+        buf.set(integer: 0xcc, at: offset, as: UInt8.self)
+        buf.write(integer: 0xdd, as: UInt8.self) // write extra byte so the slice is the same length as above
+        XCTAssertEqual(totalBufferSize, buf.readableBytes)
+
+        let expectedReadableBytes = totalBufferSize - offset
+        let slice = buf.getSlice(at: offset, length: expectedReadableBytes)!
+        XCTAssertEqual(expectedReadableBytes, slice.readableBytes)
+        XCTAssertEqual(0, slice.readerIndex)
+        XCTAssertEqual(expectedReadableBytes, slice.writerIndex)
+        XCTAssertEqual(Int(UInt32(expectedReadableBytes).nextPowerOf2()), slice.capacity)
+
+        XCTAssertEqual(0xcc, slice.getInteger(at: 0, as: UInt8.self))
+        XCTAssertEqual(0xdd, slice.getInteger(at: slice.writerIndex - 1, as: UInt8.self))
+    }
+
+    func testDiscardReadBytesOnConsumedBuffer() {
+        var buffer = self.allocator.buffer(capacity: 8)
+        buffer.write(integer: 0xaa, as: UInt8.self)
+        XCTAssertEqual(1, buffer.readableBytes)
+        XCTAssertEqual(0xaa, buffer.readInteger(as: UInt8.self))
+        XCTAssertEqual(0, buffer.readableBytes)
+
+        var buffer2 = buffer
+        XCTAssertTrue(buffer.discardReadBytes())
+        XCTAssertEqual(0, buffer.readerIndex)
+        XCTAssertEqual(0, buffer.writerIndex)
+        // As we fully consumed the buffer we should only have adjusted the indices but not triggered a copy as result of CoW sematics.
+        // So we should still be able to also read the old data.
+        XCTAssertEqual(0xaa, buffer.getInteger(at: 0, as: UInt8.self))
+    }
+
+    func testDumpBytesFormat() throws {
+        self.buf.clear()
+        for f in UInt8.min...UInt8.max {
+            self.buf.write(integer: f)
+        }
+        let actual = self.buf._storage.dumpBytes(slice: self.buf._slice, offset: 0, length: self.buf.readableBytes)
+        let expected = "[ " +
+                       "00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f " +
+                       "20 21 22 23 24 25 26 27 28 29 2a 2b 2c 2d 2e 2f 30 31 32 33 34 35 36 37 38 39 3a 3b 3c 3d 3e 3f " +
+                       "40 41 42 43 44 45 46 47 48 49 4a 4b 4c 4d 4e 4f 50 51 52 53 54 55 56 57 58 59 5a 5b 5c 5d 5e 5f " +
+                       "60 61 62 63 64 65 66 67 68 69 6a 6b 6c 6d 6e 6f 70 71 72 73 74 75 76 77 78 79 7a 7b 7c 7d 7e 7f " +
+                       "80 81 82 83 84 85 86 87 88 89 8a 8b 8c 8d 8e 8f 90 91 92 93 94 95 96 97 98 99 9a 9b 9c 9d 9e 9f " +
+                       "a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa ab ac ad ae af b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 ba bb bc bd be bf " +
+                       "c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 ca cb cc cd ce cf d0 d1 d2 d3 d4 d5 d6 d7 d8 d9 da db dc dd de df " +
+                       "e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 fa fb fc fd fe ff ]"
+        XCTAssertEqual(expected, actual)
+    }
 }
 
 private enum AllocationExpectationState: Int {
@@ -1224,25 +1359,25 @@ private enum AllocationExpectationState: Int {
 }
 
 private var testAllocationOfReallyBigByteBuffer_state = AllocationExpectationState.begin
-private func testAllocationOfReallyBigByteBuffer_freeHook(_ ptr: UnsafeMutableRawPointer) -> Void {
+private func testAllocationOfReallyBigByteBuffer_freeHook(_ ptr: UnsafeMutableRawPointer?) -> Void {
     precondition(AllocationExpectationState.reallocDone == testAllocationOfReallyBigByteBuffer_state)
     testAllocationOfReallyBigByteBuffer_state = .freeDone
     /* free the pointer initially produced by malloc and then rebased by realloc offsetting it back */
-    free(ptr.advanced(by: Int(Int32.max)))
+    free(ptr?.advanced(by: Int(Int32.max)))
 }
 
-private func testAllocationOfReallyBigByteBuffer_mallocHook(_ size: Int) -> UnsafeMutableRawPointer! {
+private func testAllocationOfReallyBigByteBuffer_mallocHook(_ size: Int) -> UnsafeMutableRawPointer? {
     precondition(AllocationExpectationState.begin == testAllocationOfReallyBigByteBuffer_state)
     testAllocationOfReallyBigByteBuffer_state = .mallocDone
     /* return a 16 byte pointer here, good enough to write an integer in there */
     return malloc(16)
 }
 
-private func testAllocationOfReallyBigByteBuffer_reallocHook(_ ptr: UnsafeMutableRawPointer, _ count: Int) -> UnsafeMutableRawPointer! {
+private func testAllocationOfReallyBigByteBuffer_reallocHook(_ ptr: UnsafeMutableRawPointer?, _ count: Int) -> UnsafeMutableRawPointer? {
     precondition(AllocationExpectationState.mallocDone == testAllocationOfReallyBigByteBuffer_state)
     testAllocationOfReallyBigByteBuffer_state = .reallocDone
     /* rebase this pointer by -Int32.max so that the byte copy extending the ByteBuffer below will land at actual index 0 into this buffer ;) */
-    return ptr.advanced(by: -Int(Int32.max))
+    return ptr!.advanced(by: -Int(Int32.max))
 }
 
 private func testAllocationOfReallyBigByteBuffer_memcpyHook(_ dst: UnsafeMutableRawPointer, _ src: UnsafeRawPointer, _ count: Int) -> Void {

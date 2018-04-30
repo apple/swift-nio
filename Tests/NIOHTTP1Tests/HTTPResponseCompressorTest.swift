@@ -255,15 +255,15 @@ class HTTPResponseCompressorTest: XCTestCase {
         let compressedResponse = data.0
         var compressedChunks = data.1
         var compressedBody = compressedChunks[0].merge(compressedChunks[1...])
-        XCTAssertEqual(compressedResponse.headers.getCanonicalForm("content-encoding"), ["deflate"])
+        XCTAssertEqual(compressedResponse.headers[canonicalForm: "content-encoding"], ["deflate"])
 
         switch writeStrategy {
         case .once:
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("content-length"), ["\(compressedBody.readableBytes)"])
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("transfer-encoding"), [])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "content-length"], ["\(compressedBody.readableBytes)"])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "transfer-encoding"], [])
         case .intermittentFlushes:
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("content-length"), [])
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("transfer-encoding"), ["chunked"])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "content-length"], [])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "transfer-encoding"], ["chunked"])
         }
 
         assertDecompressedResponseMatches(responseData: &compressedBody,
@@ -292,15 +292,15 @@ class HTTPResponseCompressorTest: XCTestCase {
         let compressedResponse = data.0
         var compressedChunks = data.1
         var compressedBody = compressedChunks[0].merge(compressedChunks[1...])
-        XCTAssertEqual(compressedResponse.headers.getCanonicalForm("content-encoding"), ["gzip"])
+        XCTAssertEqual(compressedResponse.headers[canonicalForm: "content-encoding"], ["gzip"])
 
         switch writeStrategy {
         case .once:
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("content-length"), ["\(compressedBody.readableBytes)"])
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("transfer-encoding"), [])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "content-length"], ["\(compressedBody.readableBytes)"])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "transfer-encoding"], [])
         case .intermittentFlushes:
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("content-length"), [])
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("transfer-encoding"), ["chunked"])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "content-length"], [])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "transfer-encoding"], ["chunked"])
         }
 
         assertDecompressedResponseMatches(responseData: &compressedBody,
@@ -329,7 +329,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         let compressedResponse = data.0
         var compressedChunks = data.1
         let uncompressedBody = compressedChunks[0].merge(compressedChunks[1...])
-        XCTAssertEqual(compressedResponse.headers.getCanonicalForm("content-encoding"), [])
+        XCTAssertEqual(compressedResponse.headers[canonicalForm: "content-encoding"], [])
         XCTAssertEqual(uncompressedBody.readableBytes, 2048)
         XCTAssertEqual(uncompressedBody, bodyBuffer)
     }

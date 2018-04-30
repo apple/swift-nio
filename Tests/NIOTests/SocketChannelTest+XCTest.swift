@@ -39,6 +39,11 @@ extension SocketChannelTest {
                 ("testWriteServerSocketChannel", testWriteServerSocketChannel),
                 ("testWriteAndFlushServerSocketChannel", testWriteAndFlushServerSocketChannel),
                 ("testConnectServerSocketChannel", testConnectServerSocketChannel),
+                ("testCloseDuringWriteFailure", testCloseDuringWriteFailure),
+                ("testWithConfiguredStreamSocket", testWithConfiguredStreamSocket),
+                ("testWithConfiguredDatagramSocket", testWithConfiguredDatagramSocket),
+                ("testPendingConnectNotificationOrder", testPendingConnectNotificationOrder),
+                ("testLocalAndRemoteAddressNotNilInChannelInactiveAndHandlerRemoved", testLocalAndRemoteAddressNotNilInChannelInactiveAndHandlerRemoved),
            ]
    }
 }

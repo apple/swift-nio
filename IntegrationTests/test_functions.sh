@@ -36,3 +36,43 @@ function assert_equal_files() {
         fail "file '$1' not equal to '$2'"
     fi
 }
+
+function assert_less_than() {
+    if [[ ! "$1" -lt "$2" ]]; then
+        fail "assertion '$1' < '$2' failed"
+    fi
+}
+
+function assert_less_than_or_equal() {
+    if [[ ! "$1" -le "$2" ]]; then
+        fail "assertion '$1' <= '$2' failed"
+    fi
+}
+
+function assert_greater_than() {
+    if [[ ! "$1" -gt "$2" ]]; then
+        fail "assertion '$1' > '$2' failed"
+    fi
+}
+
+function assert_greater_than_or_equal() {
+    if [[ ! "$1" -ge "$2" ]]; then
+        fail "assertion '$1' >= '$2' failed"
+    fi
+}
+
+g_has_previously_infoed=false
+
+function info() {
+    if $g_show_info; then
+        if ! $g_has_previously_infoed; then
+            echo >&3 || true # echo an extra newline so it looks better
+            g_has_previously_infoed=true
+        fi
+        echo >&3 "info: $*" || true
+    fi
+}
+
+function warn() {
+    echo >&4 "warning: $*"
+}

@@ -18,7 +18,7 @@ import Darwin
 import Glibc
 #endif
 
-public enum HeapType {
+internal enum HeapType {
     case maxHeap
     case minHeap
 

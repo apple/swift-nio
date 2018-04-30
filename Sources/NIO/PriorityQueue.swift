@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-public struct PriorityQueue<Element: Comparable> {
+internal struct PriorityQueue<Element: Comparable> {
     private var heap: Heap<Element>
 
     public init(ascending: Bool = false) {
@@ -75,8 +75,8 @@ extension PriorityQueue: Sequence {
     }
 }
 
-public extension PriorityQueue {
-    public var count: Int {
+internal extension PriorityQueue {
+    var count: Int {
         return self.heap.count
     }
 }

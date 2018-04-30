@@ -33,6 +33,210 @@ class EventLoopFutureTest : XCTestCase {
         XCTAssertTrue(f.isFulfilled)
     }
 
+    func testFoldWithMultipleEventLoops() throws {
+        let nThreads = 3
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: nThreads)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let eventLoop0 = eventLoopGroup.next()
+        let eventLoop1 = eventLoopGroup.next()
+        let eventLoop2 = eventLoopGroup.next()
+
+        XCTAssert(eventLoop0 !== eventLoop1)
+        XCTAssert(eventLoop1 !== eventLoop2)
+        XCTAssert(eventLoop0 !== eventLoop2)
+
+        let f0: EventLoopFuture<[Int]> = eventLoop0.submit { [0] }
+        let f1s: [EventLoopFuture<Int>] = (1...4).map { id in eventLoop1.submit { id } }
+        let f2s: [EventLoopFuture<Int>] = (5...8).map { id in eventLoop2.submit { id } }
+
+        var fN = f0.fold(f1s) { (f1Value: [Int], f2Value: Int) -> EventLoopFuture<[Int]> in
+            XCTAssert(eventLoop0.inEventLoop)
+            return eventLoop1.newSucceededFuture(result: f1Value + [f2Value])
+        }
+
+        fN = fN.fold(f2s) { (f1Value: [Int], f2Value: Int) -> EventLoopFuture<[Int]> in
+            XCTAssert(eventLoop0.inEventLoop)
+            return eventLoop2.newSucceededFuture(result: f1Value + [f2Value])
+        }
+
+        let allValues = try fN.wait()
+        XCTAssert(fN.eventLoop === f0.eventLoop)
+        XCTAssert(fN.isFulfilled)
+        XCTAssertEqual(allValues, [0, 1, 2, 3, 4, 5, 6, 7, 8])
+    }
+
+    func testFoldWithSuccessAndAllSuccesses() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let secondEventLoop = EmbeddedEventLoop()
+        let f0 = eventLoop.newSucceededFuture(result: [0])
+
+        let futures: [EventLoopFuture<Int>] = (1...5).map { (id: Int) in secondEventLoop.newSucceededFuture(result: id) }
+
+        let fN = f0.fold(futures) { (f1Value: [Int], f2Value: Int) -> EventLoopFuture<[Int]> in
+            XCTAssert(eventLoop.inEventLoop)
+            return secondEventLoop.newSucceededFuture(result: f1Value + [f2Value])
+        }
+
+        let allValues = try fN.wait()
+        XCTAssert(fN.eventLoop === f0.eventLoop)
+        XCTAssert(fN.isFulfilled)
+        XCTAssertEqual(allValues, [0, 1, 2, 3, 4, 5])
+    }
+
+    func testFoldWithSuccessAndOneFailure() throws {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        let secondEventLoop = EmbeddedEventLoop()
+        let f0: EventLoopFuture<Int> = eventLoop.newSucceededFuture(result: 0)
+
+        let promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in secondEventLoop.newPromise() }
+        var futures = promises.map { $0.futureResult }
+        let failedFuture: EventLoopFuture<Int> = secondEventLoop.newFailedFuture(error: E())
+        futures.insert(failedFuture, at: futures.startIndex)
+
+        let fN = f0.fold(futures) { (f1Value: Int, f2Value: Int) -> EventLoopFuture<Int> in
+            XCTAssert(eventLoop.inEventLoop)
+            return secondEventLoop.newSucceededFuture(result: f1Value + f2Value)
+        }
+
+        _ = promises.map { $0.succeed(result: 0) }
+        XCTAssert(fN.isFulfilled)
+        do {
+            _ = try fN.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
+
+    func testFoldWithSuccessAndEmptyFutureList() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let f0 = eventLoop.newSucceededFuture(result: 0)
+
+        let futures: [EventLoopFuture<Int>] = []
+
+        let fN = f0.fold(futures) { (f1Value: Int, f2Value: Int) -> EventLoopFuture<Int> in
+            XCTAssert(eventLoop.inEventLoop)
+            return eventLoop.newSucceededFuture(result: f1Value + f2Value)
+        }
+
+        let summationResult = try fN.wait()
+        XCTAssert(fN.isFulfilled)
+        XCTAssertEqual(summationResult, 0)
+    }
+
+    func testFoldWithFailureAndEmptyFutureList() throws {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        let f0: EventLoopFuture<Int> = eventLoop.newFailedFuture(error: E())
+
+        let futures: [EventLoopFuture<Int>] = []
+
+        let fN = f0.fold(futures) { (f1Value: Int, f2Value: Int) -> EventLoopFuture<Int> in
+            XCTAssert(eventLoop.inEventLoop)
+            return eventLoop.newSucceededFuture(result: f1Value + f2Value)
+        }
+
+        XCTAssert(fN.isFulfilled)
+        do {
+            _ = try fN.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
+
+    func testFoldWithFailureAndAllSuccesses() throws {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        let secondEventLoop = EmbeddedEventLoop()
+        let f0: EventLoopFuture<Int> = eventLoop.newFailedFuture(error: E())
+
+        let promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in secondEventLoop.newPromise() }
+        let futures = promises.map { $0.futureResult }
+
+        let fN = f0.fold(futures) { (f1Value: Int, f2Value: Int) -> EventLoopFuture<Int> in
+            XCTAssert(eventLoop.inEventLoop)
+            return secondEventLoop.newSucceededFuture(result: f1Value + f2Value)
+        }
+
+        _ = promises.map { $0.succeed(result: 1) }
+        XCTAssert(fN.isFulfilled)
+        do {
+            _ = try fN.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
+
+    func testFoldWithFailureAndAllUnfulfilled() throws {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        let secondEventLoop = EmbeddedEventLoop()
+        let f0: EventLoopFuture<Int> = eventLoop.newFailedFuture(error: E())
+
+        let promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in secondEventLoop.newPromise() }
+        let futures = promises.map { $0.futureResult }
+
+        let fN = f0.fold(futures) { (f1Value: Int, f2Value: Int) -> EventLoopFuture<Int> in
+            XCTAssert(eventLoop.inEventLoop)
+            return secondEventLoop.newSucceededFuture(result: f1Value + f2Value)
+        }
+
+        XCTAssert(fN.isFulfilled)
+        do {
+            _ = try fN.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
+
+    func testFoldWithFailureAndAllFailures() throws {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        let secondEventLoop = EmbeddedEventLoop()
+        let f0: EventLoopFuture<Int> = eventLoop.newFailedFuture(error: E())
+
+        let futures: [EventLoopFuture<Int>] = (0..<100).map { (_: Int) in secondEventLoop.newFailedFuture(error: E()) }
+
+        let fN = f0.fold(futures) { (f1Value: Int, f2Value: Int) -> EventLoopFuture<Int> in
+            XCTAssert(eventLoop.inEventLoop)
+            return secondEventLoop.newSucceededFuture(result: f1Value + f2Value)
+        }
+
+        XCTAssert(fN.isFulfilled)
+        do {
+            _ = try fN.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
+
+    func testAndAllWithEmptyFutureList() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let futures: [EventLoopFuture<Void>] = []
+
+        let fN: EventLoopFuture<Void> = EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
+
+        XCTAssert(fN.isFulfilled)
+    }
+
     func testAndAllWithAllSuccesses() throws {
         let eventLoop = EmbeddedEventLoop()
         let promises: [EventLoopPromise<Void>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
@@ -81,6 +285,191 @@ class EventLoopFutureTest : XCTestCase {
         } catch let e {
             XCTFail("error of wrong type \(e)")
         }
+    }
+
+    func testReduceWithAllSuccesses() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let promises: [EventLoopPromise<Int>] = (0..<5).map { (_: Int) in eventLoop.newPromise() }
+        let futures = promises.map { $0.futureResult }
+
+        let fN: EventLoopFuture<[Int]> = EventLoopFuture<[Int]>.reduce([], futures, eventLoop: eventLoop) {$0 + [$1]}
+        for i in 1...5 {
+            promises[i - 1].succeed(result: (i))
+        }
+        let results = try fN.wait()
+        XCTAssertEqual(results, [1, 2, 3, 4, 5])
+        XCTAssert(fN.eventLoop === eventLoop)
+    }
+
+    func testReduceWithOnlyInitialValue() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let futures: [EventLoopFuture<Int>] = []
+
+        let fN: EventLoopFuture<[Int]> = EventLoopFuture<[Int]>.reduce([], futures, eventLoop: eventLoop) {$0 + [$1]}
+
+        let results = try fN.wait()
+        XCTAssertEqual(results, [])
+        XCTAssert(fN.eventLoop === eventLoop)
+    }
+
+    func testReduceWithAllFailures() throws {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        let promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
+        let futures = promises.map { $0.futureResult }
+
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, eventLoop: eventLoop, +)
+        _ = promises.map { $0.fail(error: E()) }
+        XCTAssert(fN.eventLoop === eventLoop)
+        do {
+            _ = try fN.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
+
+    func testReduceWithOneFailure() throws {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        var promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
+        _ = promises.map { $0.succeed(result: (1)) }
+        let failedPromise: EventLoopPromise<Int> = eventLoop.newPromise()
+        failedPromise.fail(error: E())
+        promises.append(failedPromise)
+
+        let futures = promises.map { $0.futureResult }
+
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, eventLoop: eventLoop, +)
+        XCTAssert(fN.eventLoop === eventLoop)
+        do {
+            _ = try fN.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
+
+    func testReduceWhichDoesFailFast() throws {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        var promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
+
+        let failedPromise: EventLoopPromise<Int> = eventLoop.newPromise()
+        promises.insert(failedPromise, at: promises.startIndex)
+
+        let futures = promises.map { $0.futureResult }
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, eventLoop: eventLoop, +)
+
+        failedPromise.fail(error: E())
+
+        XCTAssertTrue(fN.isFulfilled)
+        XCTAssert(fN.eventLoop === eventLoop)
+        do {
+            _ = try fN.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
+
+    func testReduceIntoWithAllSuccesses() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let futures: [EventLoopFuture<Int>] = [1, 2, 2, 3, 3, 3].map { (id: Int) in eventLoop.newSucceededFuture(result: id) }
+
+        let fN: EventLoopFuture<[Int: Int]> = EventLoopFuture<[Int: Int]>.reduce(into: [:], futures, eventLoop: eventLoop) { (freqs, elem) in
+            if let value = freqs[elem] {
+                freqs[elem] = value + 1
+            } else {
+                freqs[elem] = 1
+            }
+        }
+
+        let results = try fN.wait()
+        XCTAssertEqual(results, [1: 1, 2: 2, 3: 3])
+        XCTAssert(fN.eventLoop === eventLoop)
+    }
+
+    func testReduceIntoWithEmptyFutureList() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let futures: [EventLoopFuture<Int>] = []
+
+        let fN: EventLoopFuture<[Int: Int]> = EventLoopFuture<[Int: Int]>.reduce(into: [:], futures, eventLoop: eventLoop) { (freqs, elem) in
+            if let value = freqs[elem] {
+                freqs[elem] = value + 1
+            } else {
+                freqs[elem] = 1
+            }
+        }
+
+        let results = try fN.wait()
+        XCTAssert(results.isEmpty)
+        XCTAssert(fN.eventLoop === eventLoop)
+    }
+
+    func testReduceIntoWithAllFailure() throws {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+        let futures: [EventLoopFuture<Int>] = [1, 2, 2, 3, 3, 3].map { (id: Int) in eventLoop.newFailedFuture(error: E()) }
+
+        let fN: EventLoopFuture<[Int: Int]> = EventLoopFuture<[Int: Int]>.reduce(into: [:], futures, eventLoop: eventLoop) { (freqs, elem) in
+            if let value = freqs[elem] {
+                freqs[elem] = value + 1
+            } else {
+                freqs[elem] = 1
+            }
+        }
+
+        XCTAssert(fN.isFulfilled)
+        XCTAssert(fN.eventLoop === eventLoop)
+        do {
+            _ = try fN.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
+
+    func testReduceIntoWithMultipleEventLoops() throws {
+        let nThreads = 3
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: nThreads)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let eventLoop0 = eventLoopGroup.next()
+        let eventLoop1 = eventLoopGroup.next()
+        let eventLoop2 = eventLoopGroup.next()
+
+        XCTAssert(eventLoop0 !== eventLoop1)
+        XCTAssert(eventLoop1 !== eventLoop2)
+        XCTAssert(eventLoop0 !== eventLoop2)
+
+        let f0: EventLoopFuture<[Int:Int]> = eventLoop0.submit { [:] }
+        let f1s: [EventLoopFuture<Int>] = (1...4).map { id in eventLoop1.submit { id / 2 } }
+        let f2s: [EventLoopFuture<Int>] = (5...8).map { id in eventLoop2.submit { id / 2 } }
+
+        let fN = EventLoopFuture<[Int:Int]>.reduce(into: [:], f1s + f2s, eventLoop: eventLoop0) { (freqs, elem) in
+            XCTAssert(eventLoop0.inEventLoop)
+            if let value = freqs[elem] {
+                freqs[elem] = value + 1
+            } else {
+                freqs[elem] = 1
+            }
+        }
+
+        let allValues = try fN.wait()
+        XCTAssert(fN.eventLoop === f0.eventLoop)
+        XCTAssert(fN.isFulfilled)
+        XCTAssertEqual(allValues, [0: 1, 1: 2, 2: 2, 3: 2, 4: 1])
     }
 
     func testThenThrowingWhichDoesNotThrow() {

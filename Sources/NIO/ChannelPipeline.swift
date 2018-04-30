@@ -823,6 +823,7 @@ public final class ChannelPipeline: ChannelInvoker {
     }
 
     func fireErrorCaught0(error: Error) {
+        assert((error as? ChannelError).map { $0 != .eof } ?? true)
         if let firstInboundCtx = firstInboundCtx {
             firstInboundCtx.invokeErrorCaught(error)
         }
@@ -938,7 +939,7 @@ private extension CloseMode {
 }
 
 /// Special `ChannelInboundHandler` which will consume all inbound events.
-/* private but tests */ final class TailChannelHandler: _ChannelInboundHandler, _ChannelOutboundHandler {
+/* private but tests */ final class TailChannelHandler: _ChannelInboundHandler {
 
     static let name = "tail"
     static let sharedInstance = TailChannelHandler()
@@ -1016,11 +1017,29 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     public var remoteAddress: SocketAddress? {
-        return try? self.channel._unsafe.remoteAddress0()
+        do {
+            // Fast-path access to the remoteAddress.
+            return try self.channel._unsafe.remoteAddress0()
+        } catch ChannelError.ioOnClosedChannel {
+            // Channel was closed already but we may still have the address cached so try to access it via the Channel
+            // so we are able to use it in channelInactive(...) / handlerRemoved(...) methods.
+            return self.channel.remoteAddress
+        } catch {
+            return nil
+        }
     }
 
     public var localAddress: SocketAddress? {
-        return try? self.channel._unsafe.localAddress0()
+        do {
+            // Fast-path access to the localAddress.
+            return try self.channel._unsafe.localAddress0()
+        } catch ChannelError.ioOnClosedChannel {
+            // Channel was closed already but we may still have the address cached so try to access it via the Channel
+            // so we are able to use it in channelInactive(...) / handlerRemoved(...) methods.
+            return self.channel.localAddress
+        } catch {
+            return nil
+        }
     }
 
     public var eventLoop: EventLoop {
@@ -1362,11 +1381,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
         assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
-            if let promise = promise {
-                outboundHandler.write(ctx: self, data: data, promise: promise)
-            } else {
-                outboundHandler.write(ctx: self, data: data, promise: nil)
-            }
+            outboundHandler.write(ctx: self, data: data, promise: promise)
             outboundHandler.flush(ctx: self)
         } else {
             self.prev?.invokeWriteAndFlush(data, promise: promise)

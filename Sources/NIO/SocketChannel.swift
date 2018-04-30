@@ -49,11 +49,18 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
     override var isOpen: Bool {
         assert(eventLoop.inEventLoop)
-        return pendingWrites.isOpen
+        assert(super.isOpen == self.pendingWrites.isOpen)
+        return super.isOpen
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
         let socket = try Socket(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: true)
+        self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
+        try super.init(socket: socket, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
+    }
+
+    init(eventLoop: SelectableEventLoop, descriptor: CInt) throws {
+        let socket = try Socket(descriptor: descriptor, setNonBlocking: true)
         self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
         try super.init(socket: socket, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
@@ -105,7 +112,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         }
     }
 
-    override func registrationFor(interested: IOEvent) -> NIORegistration {
+    override func registrationFor(interested: SelectorEventSet) -> NIORegistration {
         return .socketChannel(self, interested)
     }
 
@@ -121,7 +128,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         var result = ReadResult.none
         for i in 1...maxMessagesPerRead {
             guard self.isOpen && !self.inputShutdown else {
-                return result
+                throw ChannelError.eof
             }
             // Reset reader and writerIndex and so allow to have the buffer filled again. This is better here than at
             // the end of the loop to not do an allocation when the loop exits.
@@ -133,14 +140,21 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
                     readPending = false
 
-                    assert(self.isOpen)
+                    assert(self.isActive)
                     pipeline.fireChannelRead0(NIOAny(buffer))
-                    if mayGrow && i < maxMessagesPerRead {
+                    result = .some
+
+                    if buffer.writableBytes > 0 {
+                        // If we did not fill the whole buffer with read(...) we should stop reading and wait until we get notified again.
+                        // Otherwise chances are good that the next read(...) call will either read nothing or only a very small amount of data.
+                        // Also this will allow us to call fireChannelReadComplete() which may give the user the chance to flush out all pending
+                        // writes.
+                        return result
+                    } else if mayGrow && i < maxMessagesPerRead {
                         // if the ByteBuffer may grow on the next allocation due we used all the writable bytes we should allocate a new `ByteBuffer` to allow ramping up how much data
                         // we are able to read on the next read operation.
                         buffer = recvAllocator.buffer(allocator: allocator)
                     }
-                    result = .some
                 } else {
                     if inputShutdown {
                         // We received a EOF because we called shutdown on the fd by ourself, unregister from the Selector and return
@@ -308,13 +322,19 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     convenience init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: Int32) throws {
         try self.init(serverSocket: try ServerSocket(protocolFamily: protocolFamily, setNonBlocking: true), eventLoop: eventLoop, group: group)
     }
-    
+
     init(serverSocket: ServerSocket, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
         self.group = group
         try super.init(socket: serverSocket, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
 
-    override func registrationFor(interested: IOEvent) -> NIORegistration {
+    convenience init(descriptor: CInt, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
+        let socket = try ServerSocket(descriptor: descriptor, setNonBlocking: true)
+        try self.init(serverSocket: socket, eventLoop: eventLoop, group: group)
+        try self.socket.listen(backlog: backlog)
+    }
+
+    override func registrationFor(interested: SelectorEventSet) -> NIORegistration {
         return .serverSocketChannel(self, interested)
     }
 
@@ -356,9 +376,14 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             return
         }
 
+        guard self.isRegistered else {
+            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            return
+        }
+
         let p: EventLoopPromise<Void> = eventLoop.newPromise()
         p.futureResult.map {
-            // Its important to call the methods before we actual notify the original promise for ordering reasons.
+            // Its important to call the methods before we actually notify the original promise for ordering reasons.
             self.becomeActive0(promise: promise)
         }.whenFailure{ error in
             promise?.fail(error: error)
@@ -382,13 +407,14 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         var result = ReadResult.none
         for _ in 1...maxMessagesPerRead {
             guard self.isOpen else {
-                return result
+                throw ChannelError.eof
             }
             if let accepted =  try self.socket.accept(setNonBlocking: true) {
                 readPending = false
                 result = .some
                 do {
                     let chan = try SocketChannel(socket: accepted, parent: self, eventLoop: group.next() as! SelectableEventLoop)
+                    assert(self.isActive)
                     pipeline.fireChannelRead0(NIOAny(chan))
                 } catch let err {
                     _ = try? accepted.close()
@@ -400,10 +426,10 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         }
         return result
     }
-    
+
     override func shouldCloseOnReadError(_ err: Error) -> Bool {
         guard let err = err as? IOError else { return true }
-        
+
         switch err.errnoCode {
         case ECONNABORTED,
              EMFILE,
@@ -473,7 +499,19 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     override var isOpen: Bool {
         assert(eventLoop.inEventLoop)
-        return pendingWrites.isOpen
+        assert(super.isOpen == self.pendingWrites.isOpen)
+        return super.isOpen
+    }
+
+    convenience init(eventLoop: SelectableEventLoop, descriptor: CInt) throws {
+        let socket = Socket(descriptor: descriptor)
+
+        do {
+            try self.init(socket: socket, eventLoop: eventLoop)
+        } catch {
+            _ = try? socket.close()
+            throw error
+        }
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
@@ -538,7 +576,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
     }
 
-    override func registrationFor(interested: IOEvent) -> NIORegistration {
+    override func registrationFor(interested: SelectorEventSet) -> NIORegistration {
         return .datagramChannel(self, interested)
     }
 
@@ -560,7 +598,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
         for i in 1...self.maxMessagesPerRead {
             guard self.isOpen else {
-                return readResult
+                throw ChannelError.eof
             }
             buffer.clear()
 
@@ -573,6 +611,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 readPending = false
 
                 let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(), data: buffer)
+                assert(self.isActive)
                 pipeline.fireChannelRead0(NIOAny(msg))
                 if mayGrow && i < maxMessagesPerRead {
                     buffer = recvAllocator.buffer(allocator: allocator)
@@ -610,6 +649,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
 
         if !self.pendingWrites.add(envelope: data, promise: promise) {
+            assert(self.isActive)
             pipeline.fireChannelWritabilityChanged0()
         }
     }
@@ -642,6 +682,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         })
         if result.writable {
             // writable again
+            assert(self.isActive)
             self.pipeline.fireChannelWritabilityChanged0()
         }
         return result.writeResult
@@ -651,6 +692,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         assert(self.eventLoop.inEventLoop)
+        guard self.isRegistered else {
+            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            return
+        }
         do {
             try socket.bind(to: address)
             self.updateCachedAddressesFromSocket(updateRemote: false)

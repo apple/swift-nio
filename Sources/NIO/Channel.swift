@@ -30,6 +30,11 @@ public protocol ChannelCore: class {
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func register0(promise: EventLoopPromise<Void>?)
 
+    /// Register channel as already connected or bound socket.
+    /// - parameters:
+    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?)
+
     /// Bind to a `SocketAddress`.
     ///
     /// - parameters:
@@ -148,7 +153,7 @@ internal protocol SelectableChannel: Channel {
     var selectable: SelectableType { get }
 
     /// The event(s) of interest.
-    var interestedEvent: IOEvent { get }
+    var interestedEvent: SelectorEventSet { get }
 
     /// Called when the `SelectableChannel` is ready to be written.
     func writable()
@@ -156,12 +161,18 @@ internal protocol SelectableChannel: Channel {
     /// Called when the `SelectableChannel` is ready to be read.
     func readable()
 
-    /// Creates a registration for the `interested` `IOEvent` suitable for this `Channel`.
+    /// Called when the read side of the `SelectableChannel` hit EOF.
+    func readEOF()
+
+    /// Called when the `SelectableChannel` was reset (ie. is now unusable)
+    func reset()
+
+    /// Creates a registration for the `interested` `SelectorEventSet` suitable for this `Channel`.
     ///
     /// - parameters:
     ///     - interested: The event(s) of interest.
-    /// - returns: A suitable registration for the `IOEvent` of interest.
-    func registrationFor(interested: IOEvent) -> NIORegistration
+    /// - returns: A suitable registration for the `SelectorEventSet` of interest.
+    func registrationFor(interested: SelectorEventSet) -> NIORegistration
 }
 
 /// Default implementations which will start on the head of the `ChannelPipeline`.
@@ -197,6 +208,10 @@ extension Channel {
 
     public func register(promise: EventLoopPromise<Void>?) {
         pipeline.register(promise: promise)
+    }
+
+    public func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
+        promise?.fail(error: ChannelError.operationUnsupported)
     }
 
     public func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {
@@ -235,6 +250,28 @@ public extension Channel {
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
     public func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
         self.writeAndFlush(NIOAny(any), promise: promise)
+    }
+}
+
+public extension ChannelCore {
+    /// Unwraps the given `NIOAny` as a specific concrete type.
+    ///
+    /// This method is intended for use when writing custom `ChannelCore` implementations.
+    /// This can safely be called in methods like `write0` to extract data from the `NIOAny`
+    /// provided in those cases.
+    ///
+    /// Note that if the unwrap fails, this will cause a runtime trap. `ChannelCore`
+    /// implementations should be concrete about what types they support writing. If multiple
+    /// types are supported, considere using a tagged union to store the type information like
+    /// NIO's own `IOData`, which will minimise the amount of runtime type checking.
+    ///
+    /// - parameters:
+    ///     - data: The `NIOAny` to unwrap.
+    ///     - as: The type to extract from the `NIOAny`.
+    /// - returns: The content of the `NIOAny`.
+    @_inlineable
+    public func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
+        return data.forceAs()
     }
 }
 
@@ -278,6 +315,13 @@ public enum ChannelError: Error {
 
     /// A `DatagramChannel` `write` was made with an address that was not reachable and so could not be delivered.
     case writeHostUnreachable
+}
+
+/// This should be inside of `ChannelError` but we keep it separate to not break API.
+// TODO: For 2.0: bring this inside of `ChannelError`
+public enum ChannelLifecycleError: Error {
+    /// An operation that was inappropriate given the current `Channel` state was attempted.
+    case inappropriateOperationForState
 }
 
 extension ChannelError: Equatable {

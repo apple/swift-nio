@@ -56,6 +56,20 @@ func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.FileHandle, Strin
     return try body(fileHandle, path)
 }
 
+func createTemporaryDirectory() -> String {
+    let template = "/tmp/.NIOTests-temp-dir_XXXXXX"
+    var templateBytes = template.utf8 + [0]
+    let templateBytesCount = templateBytes.count
+    templateBytes.withUnsafeMutableBufferPointer { ptr in
+        ptr.baseAddress!.withMemoryRebound(to: Int8.self, capacity: templateBytesCount) { (ptr: UnsafeMutablePointer<Int8>) in
+            let ret = mkdtemp(ptr)
+            XCTAssertNotNil(ret)
+        }
+    }
+    templateBytes.removeLast()
+    return String(decoding: templateBytes, as: UTF8.self)
+}
+
 func openTemporaryFile() -> (CInt, String) {
     let template = "/tmp/niotestXXXXXXX"
     var templateBytes = template.utf8 + [0]

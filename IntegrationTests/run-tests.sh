@@ -60,10 +60,18 @@ plugins_do init "$@"
 shift $plugin_opts_ind
 
 filter="."
-while getopts "f:" opt; do
+verbose=false
+show_info=false
+while getopts "f:vi" opt; do
     case $opt in
         f)
             filter="$OPTARG"
+            ;;
+        v)
+            verbose=true
+            ;;
+        i)
+            show_info=true
             ;;
         \?)
             usage
@@ -72,6 +80,17 @@ while getopts "f:" opt; do
     esac
 done
 
+function run_test() {
+    if $verbose; then
+        "$@" 2>&1 | tee -a "$out"
+        # we need to return the return value of the first command
+        return ${PIPESTATUS[0]}
+    else
+        "$@" >> "$out" 2>&1
+    fi
+}
+
+exec 3>&1 4>&2 # copy stdout/err to fd 3/4 to we can output control messages
 cnt_ok=0
 cnt_fail=0
 for f in tests_*; do
@@ -89,9 +108,12 @@ for f in tests_*; do
         test_tmp=$(mktemp -d "$tmp/test.tmp_XXXXXX")
         plugins_do test_begin "$t" "$f"
         start=$(date +%s)
-        if "$here/run-single-test.sh" "$here/$f/$t" "$test_tmp" "$here/.." >> "$out" 2>&1; then
+        if run_test "$here/run-single-test.sh" "$here/$f/$t" "$test_tmp" "$here/.." "$show_info"; then
             plugins_do test_ok "$(time_diff_to_now $start)"
             suite_ok=$((suite_ok+1))
+            if $verbose; then
+                cat "$out"
+            fi
         else
             plugins_do test_fail "$(time_diff_to_now $start)" "$out"
             suite_fail=$((suite_fail+1))

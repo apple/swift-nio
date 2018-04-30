@@ -156,7 +156,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
 
         // Ok, we have a HTTP request. Check if it's an upgrade. If it's not, we want to pass it on and remove ourselves
         // from the channel pipeline.
-        let requestedProtocols = request.headers.getCanonicalForm("upgrade")
+        let requestedProtocols = request.headers[canonicalForm: "upgrade"]
         guard requestedProtocols.count > 0 else {
             notUpgrading(ctx: ctx, data: data)
             return
@@ -170,7 +170,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
 
     /// The core of the upgrade handling logic.
     private func handleUpgrade(ctx: ChannelHandlerContext, request: HTTPRequestHead, requestedProtocols: [String]) -> Bool {
-        let connectionHeader = Set(request.headers.getCanonicalForm("connection").map { $0.lowercased() })
+        let connectionHeader = Set(request.headers[canonicalForm: "connection"].map { $0.lowercased() })
         let allHeaderNames = Set(request.headers.map { $0.name.lowercased() })
 
         for proto in requestedProtocols {

@@ -23,7 +23,7 @@ import struct Dispatch.DispatchTime
 public final class AcceptBackoffHandler: ChannelDuplexHandler {
     public typealias InboundIn = Channel
     public typealias OutboundIn = Channel
-    
+
     private var nextReadDeadlineNS: Int?
     private let backoffProvider: (IOError) -> TimeAmount?
     private var scheduledRead: Scheduled<Void>?
@@ -40,7 +40,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
     public init(backoffProvider: @escaping (IOError) -> TimeAmount? = AcceptBackoffHandler.defaultBackoffProvider) {
         self.backoffProvider = backoffProvider
     }
-    
+
     public func read(ctx: ChannelHandlerContext) {
         // If we already have a read scheduled there is no need to schedule another one.
         guard scheduledRead == nil else { return }
@@ -58,7 +58,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
             ctx.read()
         }
     }
-    
+
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         if let ioError = error as? IOError {
             if let amount = backoffProvider(ioError) {
@@ -71,7 +71,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
         }
         ctx.fireErrorCaught(error)
     }
-    
+
     public func channelInactive(ctx: ChannelHandlerContext) {
         if let scheduled = self.scheduledRead {
             scheduled.cancel()
@@ -80,7 +80,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
         self.nextReadDeadlineNS = nil
         ctx.fireChannelInactive()
     }
-    
+
     public func handlerRemoved(ctx: ChannelHandlerContext) {
         if let scheduled = self.scheduledRead {
             // Cancel the previous scheduled read and trigger a read directly. This is needed as otherwise we may never read again.
@@ -90,13 +90,13 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
         }
         self.nextReadDeadlineNS = nil
     }
-    
+
     private func scheduleRead(in: TimeAmount, ctx: ChannelHandlerContext) {
         self.scheduledRead = ctx.eventLoop.scheduleTask(in: `in`) {
             self.doRead(ctx)
         }
     }
-    
+
     private func doRead(_ ctx: ChannelHandlerContext) {
         /// Reset the backoff time and read.
         self.nextReadDeadlineNS = nil
@@ -159,7 +159,8 @@ public class IdleStateHandler: ChannelDuplexHandler {
     public typealias OutboundIn = NIOAny
     public typealias OutboundOut = NIOAny
 
-    enum IdleStateEvent {
+    ///A user event triggered by IdleStateHandler when a Channel is idle.
+    public enum IdleStateEvent {
         /// Will be triggered when no write was performed for the specified amount of time
         case write
         /// Will be triggered when no read was performed for the specified amount of time

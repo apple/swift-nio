@@ -17,14 +17,16 @@ import CNIOHTTPParser
 
 private struct HTTPParserState {
     var dataAwaitingState: DataAwaitingState = .messageBegin
-    var currentHeaders: HTTPHeaders?
-    var currentUri: String?
+    var currentNameIndex: HTTPHeaderIndex?
+    var currentHeaders: [HTTPHeader]
+    var currentURI: URI?
     var currentStatus: String?
-    var currentHeaderName: String?
     var slice: (readerIndex: Int, length: Int)?
     var readerIndexAdjustment = 0
     // This is set before http_parser_execute(...) is called and set to nil again after it finish
     var baseAddress: UnsafePointer<UInt8>?
+    var currentError: HTTPParserError?
+    var seenEOF = false
 
     enum DataAwaitingState {
         case messageBegin
@@ -35,22 +37,28 @@ private struct HTTPParserState {
         case body
     }
 
+    init() {
+        // We start with space for 16 headers.
+        self.currentHeaders = []
+        self.currentHeaders.reserveCapacity(16)
+    }
+
     mutating func reset() {
-        self.currentHeaders = nil
-        self.currentUri = nil
+        self.currentNameIndex = nil
+        self.currentHeaders.removeAll(keepingCapacity: true)
+        self.currentURI = nil
         self.currentStatus = nil
-        self.currentHeaderName = nil
         self.slice = nil
         self.readerIndexAdjustment = 0
     }
 
     var cumulationBuffer: ByteBuffer?
 
-    mutating func readCurrentString() -> String {
-        let (index, length) = self.slice!
-        let string = self.cumulationBuffer!.getString(at: index, length: length)!
-        self.slice = nil
-        return string
+    private mutating func consumeSlice() -> (readerIndex: Int, length: Int) {
+        defer {
+             self.slice = nil
+        }
+        return self.slice!
     }
 
     mutating func complete(state: DataAwaitingState) {
@@ -58,20 +66,21 @@ private struct HTTPParserState {
         case .messageBegin:
             assert(self.slice == nil, "non-empty slice on begin (\(self.slice!))")
         case .headerField:
-            assert(self.currentUri != nil || self.currentStatus != nil, "URI or Status not set before header field")
-            self.currentHeaderName = readCurrentString()
+            assert(self.currentURI != nil || self.currentStatus != nil, "URI or Status not set before header field")
+            let (index, length) = consumeSlice()
+            self.currentNameIndex = HTTPHeaderIndex(start: index, length: length)
         case .headerValue:
-            assert(self.currentUri != nil || self.currentStatus != nil, "URI or Status not set before header field")
-            if self.currentHeaders == nil {
-                self.currentHeaders = HTTPHeaders()
-            }
-            self.currentHeaders!.add(name: self.currentHeaderName!, value: readCurrentString())
+            assert(self.currentURI != nil || self.currentStatus != nil, "URI or Status not set before header field")
+            let (index, length) = consumeSlice()
+            self.currentHeaders.append(HTTPHeader(name: self.currentNameIndex!, value: HTTPHeaderIndex(start: index, length: length)))
         case .url:
-            assert(self.currentUri == nil)
-            self.currentUri = readCurrentString()
+            assert(self.currentURI == nil)
+            let (index, length) = consumeSlice()
+            self.currentURI = .byteBuffer(self.cumulationBuffer!.getSlice(at: index, length: length)!)
         case .status:
             assert(self.currentStatus == nil)
-            self.currentStatus = readCurrentString()
+            let (index, length) = consumeSlice()
+            self.currentStatus = self.cumulationBuffer!.getString(at: index, length: length)!
         case .body:
             self.slice = nil
         }
@@ -106,7 +115,7 @@ private struct HTTPParserState {
 
 private protocol AnyHTTPDecoder: class {
     var state: HTTPParserState { get set }
-    var pendingCallouts: [() -> Void] { get set }
+    var pendingInOut: [NIOAny] { get set }
     func popRequestMethod() -> HTTPMethod?
 }
 
@@ -177,7 +186,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     private var parser = http_parser()
     private var settings = http_parser_settings()
 
-    fileprivate var pendingCallouts: [() -> Void] = []
+    fileprivate var pendingInOut: [NIOAny] = []
     fileprivate var state = HTTPParserState()
 
     fileprivate init(type: HTTPMessageT.Type) {
@@ -193,16 +202,16 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     private func newRequestHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPRequestHead {
         let method = HTTPMethod.from(httpParserMethod: http_method(rawValue: parser.pointee.method))
         let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
-        let request = HTTPRequestHead(version: version, method: method, uri: state.currentUri!, headers: state.currentHeaders ?? HTTPHeaders())
-        state.currentHeaders = nil
+        let request = HTTPRequestHead(version: version, method: method, rawURI: state.currentURI!, headers: HTTPHeaders(buffer: cumulationBuffer!, headers: state.currentHeaders))
+        self.state.currentHeaders.removeAll(keepingCapacity: true)
         return request
     }
 
     private func newResponseHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPResponseHead {
         let status = HTTPResponseStatus(statusCode: Int(parser.pointee.status_code), reasonPhrase: state.currentStatus!)
         let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
-        let response = HTTPResponseHead(version: version, status: status, headers: state.currentHeaders ?? HTTPHeaders())
-        state.currentHeaders = nil
+        let response = HTTPResponseHead(version: version, status: status, headers: HTTPHeaders(buffer: cumulationBuffer!, headers: state.currentHeaders))
+        self.state.currentHeaders.removeAll(keepingCapacity: true)
         return response
     }
 
@@ -227,7 +236,6 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         }
 
         settings.on_headers_complete = { parser in
-            let ctx = evacuateChannelHandlerContext(parser)
             let handler = evacuateHTTPDecoder(parser)
 
             handler.state.complete(state: handler.state.dataAwaitingState)
@@ -236,35 +244,60 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             switch handler {
             case let handler as HTTPRequestDecoder:
                 let head = handler.newRequestHead(parser)
-                handler.pendingCallouts.append {
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPServerRequestPart.head(head)))
+                guard head.version.major == 1 else {
+                    handler.state.currentError = HTTPParserError.invalidVersion
+                    return -1
                 }
+
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPServerRequestPart.head(head)))
                 return 0
             case let handler as HTTPResponseDecoder:
                 let head = handler.newResponseHead(parser)
-                handler.pendingCallouts.append {
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPClientResponsePart.head(head)))
+                guard head.version.major == 1 else {
+                    handler.state.currentError = HTTPParserError.invalidVersion
+                    return -1
                 }
+
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPClientResponsePart.head(head)))
 
                 // http_parser doesn't correctly handle responses to HEAD requests. We have to do something
                 // annoyingly opaque here, and in those cases return 1 instead of 0. This forces http_parser
                 // to not expect a request body.
                 //
-                // See also: https://github.com/nodejs/http-parser/issues/251. Note that despite the text in
-                // that issue, http_parser *does* seem to handle the case of 204 and friends: it's just HEAD
-                // that doesn't work.
+                // The same logic applies to CONNECT: RFC 7230 says that regardless of what the headers say,
+                // responses to CONNECT never have HTTP-level bodies.
                 //
-                // Note that this issue is the *entire* reason this must be a duplex: we need to know what the
-                // request verb is that we're seeing a response for.
+                // Finally, we need to work around a bug in http_parser for 1XX, 204, and 304 responses.
+                // RFC 7230 says:
+                //
+                // > ... any response with a 1xx (Informational),
+                // > 204 (No Content), or 304 (Not Modified) status
+                // > code is always terminated by the first empty line after the
+                // > header fields, regardless of the header fields present in the
+                // > message, and thus cannot contain a message body.
+                //
+                // However, http_parser only does this for responses that do not contain length fields. That
+                // does not meet the requirement of RFC 7230. This is an outstanding http_parser issue:
+                // https://github.com/nodejs/http-parser/issues/251. As a result, we check for these status
+                // codes and override http_parser's handling as well.
                 let method = handler.popRequestMethod()
-                return method == .HEAD ? 1 : 0
+                if method == .HEAD || method == .CONNECT {
+                    return 1
+                }
+
+                if (head.status.code / 100 == 1 ||  // 1XX codes
+                    head.status.code == 204 ||
+                    head.status.code == 304) {
+                    return 1
+                }
+
+                return 0
             default:
                 fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
             }
         }
 
         settings.on_body = { parser, data, len in
-            let ctx = evacuateChannelHandlerContext(parser)
             let handler = evacuateHTTPDecoder(parser)
             assert(handler.state.dataAwaitingState == .body)
 
@@ -272,15 +305,13 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             let index = handler.state.calculateIndex(data: data!, length: len)
 
             let slice = handler.state.cumulationBuffer!.getSlice(at: index, length: len)!
-            handler.pendingCallouts.append {
-                switch handler {
-                case let handler as HTTPRequestDecoder:
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPServerRequestPart.body(slice)))
-                case let handler as HTTPResponseDecoder:
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPClientResponsePart.body(slice)))
-                default:
-                    fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
-                }
+            switch handler {
+            case let handler as HTTPRequestDecoder:
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPServerRequestPart.body(slice)))
+            case let handler as HTTPResponseDecoder:
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPClientResponsePart.body(slice)))
+            default:
+                fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
             }
 
             return 0
@@ -327,22 +358,20 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         }
 
         settings.on_message_complete = { parser in
-            let ctx = evacuateChannelHandlerContext(parser)
             let handler = evacuateHTTPDecoder(parser)
 
             handler.state.complete(state: handler.state.dataAwaitingState)
             handler.state.dataAwaitingState = .messageBegin
 
-            let trailers = handler.state.currentHeaders?.count ?? 0 > 0 ? handler.state.currentHeaders : nil
-            handler.pendingCallouts.append {
-                switch handler {
-                case let handler as HTTPRequestDecoder:
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPServerRequestPart.end(trailers)))
-                case let handler as HTTPResponseDecoder:
-                    ctx.fireChannelRead(handler.wrapInboundOut(HTTPClientResponsePart.end(trailers)))
-                default:
-                    fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
-                }
+            let trailers = handler.state.currentHeaders.isEmpty ? nil : HTTPHeaders(buffer: handler.state.cumulationBuffer!, headers: handler.state.currentHeaders)
+            handler.state.currentHeaders.removeAll(keepingCapacity: true)
+            switch handler {
+            case let handler as HTTPRequestDecoder:
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPServerRequestPart.end(trailers)))
+            case let handler as HTTPResponseDecoder:
+                handler.pendingInOut.append(handler.wrapInboundOut(HTTPClientResponsePart.end(trailers)))
+            default:
+                fatalError("the impossible happened: handler neither a HTTPRequestDecoder nor a HTTPResponseDecoder which should be impossible")
             }
             return 0
         }
@@ -379,11 +408,16 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
                 c_nio_http_parser_execute(&parser, &settings, p.advanced(by: buffer.readerIndex), buffer.readableBytes)
             })
 
+            if let error = state.currentError {
+                throw error
+            }
+
             state.baseAddress = nil
 
-            let errno = parser.http_errno
-            if errno != 0 {
-                throw HTTPParserError.httpError(fromCHTTPParserErrno: http_errno(rawValue: errno))!
+            let httpError = parser.http_errno
+            if httpError != 0 {
+                self.state.currentError = HTTPParserError.httpError(fromCHTTPParserErrno: http_errno(rawValue: httpError))!
+                throw self.state.currentError!
             }
             return result
         }
@@ -406,16 +440,72 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
 
     public func channelReadComplete(ctx: ChannelHandlerContext) {
         /* call all the callbacks generated while parsing */
-        let pending = self.pendingCallouts
-        self.pendingCallouts = []
-        pending.forEach { $0() }
+        let pending = self.pendingInOut
+        self.pendingInOut = []
+        pending.forEach { ctx.fireChannelRead($0) }
         ctx.fireChannelReadComplete()
+    }
+
+    public func channelInactive(ctx: ChannelHandlerContext) {
+        self.readEOF(ctx: ctx)
+        ctx.fireChannelInactive()
+    }
+
+    public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+        if case .some(.inputClosed) = event as? ChannelEvent {
+            self.readEOF(ctx: ctx)
+        }
+        ctx.fireUserInboundEventTriggered(event)
     }
 
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         ctx.fireErrorCaught(error)
         if error is HTTPParserError {
             ctx.close(promise: nil)
+        }
+    }
+
+    private func readEOF(ctx: ChannelHandlerContext) {
+        guard self.state.currentError == nil else {
+            // We're in readEOF because we hit an error and closed the connection.
+            // No need to do this dance again, just return.
+            return
+        }
+
+        guard !self.state.seenEOF else {
+            // We're in readEOF but we have already processed it once for this connection.
+            // Probably this is a channelInactive after half closure, but either way we
+            // shouldn't tell http_parser about this again or it'll send us on_message_complete
+            // again.
+            return
+        }
+
+        // EOF is semantic in HTTP, so we need to tell the parser that we saw it.
+        // We need to be a bit careful: the parser can call out to us, but should only
+        // ever call on_message_complete, which won't do a read. As a result, it *should*
+        // be totally safe to call this with a null data pointer. Just to make sure, though,
+        // let's store nil in the base address. Once we've called this, we've seenEOF: don't
+        // let us enter this function again.
+        self.state.baseAddress = nil
+        self.state.seenEOF = true
+        _ = c_nio_http_parser_execute(&self.parser, &self.settings, nil, 0)
+
+        // We don't need the cumulation buffer, if we're holding it.
+        self.cumulationBuffer = nil
+
+        // No check to state.currentError becuase, if we hit it before, we already threw that
+        // error. This never calls any of the callbacks that set that field anyway. Instead we
+        // just check if the errno is set and throw.
+        let httpError = parser.http_errno
+        if httpError != 0 {
+            self.state.currentError = HTTPParserError.httpError(fromCHTTPParserErrno: http_errno(rawValue: httpError))!
+            ctx.fireErrorCaught(self.state.currentError!)
+            return
+        }
+
+        // If we got here, no error was hit, but we may have a pending callout. Let's fire it if we did.
+        if self.pendingInOut.count > 0 {
+            self.channelReadComplete(ctx: ctx)
         }
     }
 }

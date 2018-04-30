@@ -203,6 +203,12 @@ class EmbeddedChannelCore: ChannelCore {
         pipeline.fireChannelRegistered0()
     }
 
+    func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
+        isActive = true
+        register0(promise: promise)
+        pipeline.fireChannelActive0()
+    }
+
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         guard let data = data.tryAsIOData() else {
             promise?.fail(error: ChannelError.writeDataUnsupported)
