@@ -94,13 +94,13 @@ extension ByteBuffer {
     }
 }
 
-extension UInt64 {
+extension FixedWidthInteger {
     /// Returns the next power of two.
-    public func nextPowerOf2() -> UInt64 {
-        if self == 0 {
+    public func nextPowerOf2() -> Self {
+        guard self != 0 else {
             return 1
         }
-        return 1 << (64 - (self - 1).leadingZeroBitCount)
+        return 1 << (Self.bitWidth - (self - 1).leadingZeroBitCount)
     }
 }
 
@@ -124,14 +124,6 @@ extension UInt32 {
         }
 
         return n
-    }
-
-    /// Returns the next power of two.
-    public func nextPowerOf2() -> UInt32 {
-        if self == 0 {
-            return 1
-        }
-        return 1 << (32 - (self - 1).leadingZeroBitCount)
     }
 }
 
