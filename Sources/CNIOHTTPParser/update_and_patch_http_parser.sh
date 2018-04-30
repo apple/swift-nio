@@ -26,6 +26,16 @@ case "$(uname -s)" in
         ;;
 esac
 
+if ! hash ${sed} 2>/dev/null; then
+    echo "You need sed \"${sed}\" to run this script ..."
+    exit 42
+fi
+
+for f in LICENSE-MIT AUTHORS; do
+    curl -o "${f}" \
+         -Ls "https://raw.githubusercontent.com/nodejs/http-parser/master/${f}"
+done
+
 for f in http_parser.c http_parser.h; do
     ( echo "/* Additional changes for SwiftNIO:"
       echo "    - prefixed all symbols by 'c_nio_'"
