@@ -338,7 +338,8 @@ public final class EventLoopFuture<T> {
         }
     }
 
-    fileprivate let _isFulfilled: Atomic<Bool>
+    private let _isFulfilled: UnsafeEmbeddedAtomic<Bool>
+    
     /// The `EventLoop` which is tied to the `EventLoopFuture` and is used to notify all registered callbacks.
     public let eventLoop: EventLoop
 
@@ -357,7 +358,7 @@ public final class EventLoopFuture<T> {
     private init(eventLoop: EventLoop, value: EventLoopFutureValue<T>?, file: StaticString, line: UInt) {
         self.eventLoop = eventLoop
         self.value = value
-        self._isFulfilled = Atomic(value: value != nil)
+        self._isFulfilled = UnsafeEmbeddedAtomic(value: value != nil)
 
         debugOnly {
             if let me = eventLoop as? SelectableEventLoop {
@@ -392,6 +393,8 @@ public final class EventLoopFuture<T> {
                 precondition(isFulfilled, "leaking an unfulfilled Promise")
             }
         }
+        
+        self._isFulfilled.destroy()
     }
 }
 
