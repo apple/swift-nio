@@ -18,6 +18,12 @@
 /// writes and mark how far through the buffer the user has flushed, and therefore how far through the buffer is
 /// safe to write.
 public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollection {
+    #if swift(>=4.2)
+    public typealias RangeType = Range
+    #else
+    public typealias RangeType = CountableRange
+    #endif
+
     private var buffer: CircularBuffer<E>
     private var markedIndex: Int = -1 /* negative: nothing marked */
 
@@ -71,7 +77,7 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
     }
 
     /// The valid indices into the buffer.
-    public var indices: CountableRange<Int> {
+    public var indices: RangeType<Int> {
         return self.buffer.indices
     }
 

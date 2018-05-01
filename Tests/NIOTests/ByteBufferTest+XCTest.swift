@@ -115,6 +115,7 @@ extension ByteBufferTest {
                 ("testLargeSliceBeginMoreThan16MBIsOkay", testLargeSliceBeginMoreThan16MBIsOkay),
                 ("testDiscardReadBytesOnConsumedBuffer", testDiscardReadBytesOnConsumedBuffer),
                 ("testDumpBytesFormat", testDumpBytesFormat),
+                ("testStaticStringCategorySubscript", testStaticStringCategorySubscript),
            ]
    }
 }

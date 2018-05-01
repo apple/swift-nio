@@ -658,10 +658,9 @@ extension StaticString: Collection {
     public var endIndex: Index { return self.utf8CodeUnitCount }
     public func index(after i: Index) -> Index { return i + 1 }
 
-    public subscript(position: Int) -> StaticString.Element {
-        get {
-            return self[position]
-        }
+    public subscript(position: Int) -> UInt8 {
+        precondition(position < self.utf8CodeUnitCount, "index \(position) out of bounds")
+        return self.utf8Start.advanced(by: position).pointee
     }
 }
 
