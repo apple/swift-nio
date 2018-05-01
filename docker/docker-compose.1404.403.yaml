@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: swift-nio:14.04-4.0.3
+    build:
+      args:
+        ubuntu_version : "14.04"
+        swift_version : "4.0.3"
+        install_curl_from_source: "true"
+
+  unit-tests:
+    image: swift-nio:14.04-4.0.3
+
+  integration-tests:
+    image: swift-nio:14.04-4.0.3
+
+  test:
+    image: swift-nio:14.04-4.0.3
+
+  echo:
+    image: swift-nio:14.04-4.0.3
+
+  http:
+    image: swift-nio:14.04-4.0.3
