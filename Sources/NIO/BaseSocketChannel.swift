@@ -758,7 +758,6 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
         if let connectPromise = pendingConnect {
             assert(!self.lifecycleManager.isActive)
-            pendingConnect = nil
 
             do {
                 try finishConnectSocket()
@@ -768,6 +767,8 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
                 self.close0(error: error, mode: .all, promise: nil)
                 return
             }
+            // now this has succeeded, becomeActive0 will actually fulfill this.
+            self.pendingConnect = nil
             // We already know what the local address is.
             self.updateCachedAddressesFromSocket(updateLocal: false, updateRemote: true)
             becomeActive0(promise: connectPromise)

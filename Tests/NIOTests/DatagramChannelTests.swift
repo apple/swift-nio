@@ -232,7 +232,7 @@ final class DatagramChannelTests: XCTestCase {
         var overall = self.firstChannel.eventLoop.newSucceededFuture(result: ())
         // We defer this work to the background thread because otherwise it incurs an enormous number of context
         // switches.
-        _ = try self.firstChannel.eventLoop.submit {
+        try self.firstChannel.eventLoop.submit {
             let myPromise: EventLoopPromise<Void> = self.firstChannel.eventLoop.newPromise()
             // For datagrams this buffer cannot be very large, because if it's larger than the path MTU it
             // will cause EMSGSIZE.
