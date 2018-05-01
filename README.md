@@ -169,7 +169,7 @@ Alternatively, you may want to develop or test with `docker-compose`.
 
 First make sure you have [Docker](https://www.docker.com/community-edition) installed, next run the following commands:
 
-- `docker-compose -f docker/docker-compose.yaml up test`
+- `docker-compose -f docker/docker-compose.yaml run test`
 
   Will create a base image with Swift runtime and other build and test dependencies, compile SwiftNIO and run the unit and integration tests
 
