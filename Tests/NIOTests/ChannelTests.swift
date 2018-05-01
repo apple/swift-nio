@@ -2123,7 +2123,7 @@ public class ChannelTests: XCTestCase {
 
         let allDone: EventLoopPromise<Void> = clientEL.newPromise()
 
-        XCTAssertNoThrow(_ = try sc.eventLoop.submit {
+        XCTAssertNoThrow(try sc.eventLoop.submit {
             // this is pretty delicate at the moment:
             // `bind` must be _synchronously_ follow `register`, otherwise in our current implementation, `epoll` will
             // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `then` on the eventloop that the
@@ -2134,7 +2134,7 @@ public class ChannelTests: XCTestCase {
             }.then {
                 sc.connect(to: serverChannel.localAddress!)
             }
-        }.wait())
+        }.wait().wait() as Void)
         XCTAssertNoThrow(try allDone.futureResult.wait())
         XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
     }
@@ -2171,13 +2171,21 @@ public class ChannelTests: XCTestCase {
         }
 
         let allDone: EventLoopPromise<Void> = group.next().newPromise()
-        XCTAssertNoThrow(try sc.eventLoop.submit {
+        let cf = try! sc.eventLoop.submit {
             sc.pipeline.add(handler: VerifyConnectionFailureHandler(allDone: allDone)).then {
                 sc.register().then {
                     sc.connect(to: serverChannel.localAddress!)
                 }
             }
-        }.wait())
+        }.wait()
+        do {
+            try cf.wait()
+            XCTFail("should've thrown")
+        } catch DummyError.dummy {
+            // ok
+        } catch {
+            XCTFail("unexpected error \(error)")
+        }
         XCTAssertNoThrow(try allDone.futureResult.wait())
         XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
     }
@@ -2209,7 +2217,7 @@ public class ChannelTests: XCTestCase {
         }
 
         let allDone: EventLoopPromise<Void> = group.next().newPromise()
-        XCTAssertNoThrow(try sc.eventLoop.submit {
+        try! sc.eventLoop.submit {
             let f = sc.pipeline.add(handler: VerifyConnectionFailureHandler(allDone: allDone)).then {
                 sc.register().then {
                     sc.connect(to: serverChannel.localAddress!)
@@ -2223,7 +2231,7 @@ public class ChannelTests: XCTestCase {
             }
             // We can block here because connect must have failed synchronously.
             XCTAssertTrue(f.isFulfilled)
-        }.wait())
+        }.wait() as Void
         XCTAssertNoThrow(try allDone.futureResult.wait())
 
         XCTAssertNoThrow(try sc.closeFuture.wait())
@@ -2283,11 +2291,13 @@ fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {
     func channelRegistered(ctx: ChannelHandlerContext) {
         XCTAssertEqual(.fresh, self.state)
         self.state = .registered
+        ctx.fireChannelRegistered()
     }
 
     func channelUnregistered(ctx: ChannelHandlerContext) {
         XCTAssertEqual(.registered, self.state)
         self.state = .unregistered
         self.allDone.succeed(result: ())
+        ctx.fireChannelUnregistered()
     }
 }
