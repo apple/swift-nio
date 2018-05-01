@@ -19,6 +19,10 @@ services:
       - ..:/code
     working_dir: /code
 
+  sanity:
+    <<: *common
+    command: /bin/bash -cl "./scripts/sanity.sh"
+
   unit-tests:
     <<: *common
     command: /bin/bash -cl "swift test"
