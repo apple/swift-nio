@@ -61,6 +61,9 @@ for f in http_parser.c http_parser.h; do
         -e 's/\b\(http_parser_version\)/c_nio_\1/g' \
         -e 's/\b\(http_should_keep_alive\)/c_nio_\1/g' \
         "$here/c_nio_$f"
+done
+
+mv "$here/c_nio_http_parser.h" "$here/include/c_nio_http_parser.h"
 
 tmp=$(mktemp -d /tmp/.test_compile_XXXXXX)
 
@@ -73,6 +76,4 @@ test 0 -eq $num_non_nio || {
 }
 
 rm -rf "$tmp"
-done
 
-mv "$here/c_nio_http_parser.h" "$here/include/c_nio_http_parser.h"
