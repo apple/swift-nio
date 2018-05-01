@@ -343,5 +343,72 @@ public func swiftMain() -> Int {
         return buffer.readableBytes
     }
 
+    measureAndPrint(desc: "future_lots_of_callbacks") {
+        struct MyError: Error { }
+        @inline(never)
+        func doThenAndFriends(loop: EventLoop) {
+            let p: EventLoopPromise<Int> = loop.newPromise()
+            let f = p.futureResult.then { (r: Int) -> EventLoopFuture<Int> in 
+                // This call allocates a new Future, and
+                // so does then(), so this is two Futures.
+                return loop.newSucceededFuture(result: r + 1)
+            }.thenThrowing { (r: Int) -> Int in
+                // thenThrowing allocates a new Future, and calls then
+                // which also allocates, so this is two.
+                return r + 2
+            }.map { (r: Int) -> Int in
+                // map allocates a new future, and calls then which
+                // also allocates, so this is two.
+                return r + 2
+            }.thenThrowing { (r: Int) -> Int in
+                // thenThrowing allocates a future on the error path and
+                // calls then, which also allocates, so this is two.
+                throw MyError()
+            }.thenIfError { (err: Error) -> EventLoopFuture<Int> in
+                // This call allocates a new Future, and so does thenIfError,
+                // so this is two Futures.
+                return loop.newFailedFuture(error: err)
+            }.thenIfErrorThrowing { (err: Error) -> Int in
+                // thenIfError allocates a new Future, and calls thenIfError,
+                // so this is two Futures
+                throw err
+            }.mapIfError { (err: Error) -> Int in
+                // mapIfError allocates a future, and calls thenIfError, so
+                // this is two Futures.
+                return 1
+            }
+            p.succeed(result: 0)
+            
+            // Wait also allocates a lock.
+            try! f.wait()
+        }
+        @inline(never)
+        func doAnd(loop: EventLoop) {
+            let p1: EventLoopPromise<Int> = loop.newPromise()
+            let p2: EventLoopPromise<Int> = loop.newPromise()
+            let p3: EventLoopPromise<Int> = loop.newPromise()
+
+            // Each call to and() allocates a Future. The calls to
+            // and(result:) allocate two.
+    
+            let f = p1.futureResult
+                        .and(p2.futureResult)
+                        .and(p3.futureResult)
+                        .and(result: 1)
+                        .and(result: 1)
+
+            p1.succeed(result: 1)
+            p2.succeed(result: 1)
+            p3.succeed(result: 1)
+            let r = try! f.wait()
+        }
+        let el = EmbeddedEventLoop()
+        for _ in 0..<1000  {
+            doThenAndFriends(loop: el)
+            doAnd(loop: el)
+        }
+        return 1000
+    }
+
     return 0
 }
