@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>UInt64 Extension Reference</title>
+    <title>TimeAmount Structure Reference</title>
     <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
     <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
     <meta charset="utf-8">
@@ -14,9 +14,9 @@
   </head>
   <body>
 
-    <a name="//apple_ref/swift/Extension/UInt64" class="dashAnchor"></a>
+    <a name="//apple_ref/swift/Struct/TimeAmount" class="dashAnchor"></a>
 
-    <a title="UInt64 Extension Reference"></a>
+    <a title="TimeAmount Structure Reference"></a>
 
     <header class="header">
       <p class="header-col header-col--primary">
@@ -44,7 +44,7 @@
     <p class="breadcrumbs">
       <a class="breadcrumb" href="../index.html">NIO Reference</a>
       <img class="carat" src="../img/carat.png" />
-      UInt64 Extension Reference
+      TimeAmount Structure Reference
     </p>
 
     <div class="content-wrapper">
@@ -199,6 +199,9 @@
                 <a class="nav-group-task-link" href="../Extensions/EmbeddedScheduledTask.html">EmbeddedScheduledTask</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/FixedWidthInteger.html">FixedWidthInteger</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Extensions/Heap.html">Heap</a>
               </li>
               <li class="nav-group-task">
@@ -221,9 +224,6 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Extensions/UInt32.html">UInt32</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Extensions/UInt64.html">UInt64</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Extensions/UnsafeBufferPointer.html">UnsafeBufferPointer</a>
@@ -398,14 +398,20 @@
 
         <section class="section">
           <div class="section-content">
-            <h1>UInt64</h1>
+            <h1>TimeAmount</h1>
               <div class="declaration">
                 <div class="language">
-                  <pre class="highlight swift"><code><span class="kd">struct</span> <span class="kt">UInt64</span> <span class="p">:</span> <span class="kt">FixedWidthInteger</span><span class="p">,</span> <span class="kt">UnsignedInteger</span></code></pre>
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">TimeAmount</span></code></pre>
 
                 </div>
               </div>
-            
+            <p>Represents a time <em>interval</em>.</p>
+<div class="aside aside-note">
+    <p class="aside-title">Note</p>
+    <code>TimeAmount</code> should not be used to represent a point in time.
+
+</div>
+
           </div>
         </section>
 
@@ -416,9 +422,9 @@
                 <li class="item">
                   <div>
                     <code>
-                    <a name="/s:s6UInt64V3NIOE12nextPowerOf2AByF"></a>
-                    <a name="//apple_ref/swift/Method/nextPowerOf2()" class="dashAnchor"></a>
-                    <a class="token" href="#/s:s6UInt64V3NIOE12nextPowerOf2AByF">nextPowerOf2()</a>
+                    <a name="/s:3NIO10TimeAmountV11nanosecondsSiv"></a>
+                    <a name="//apple_ref/swift/Property/nanoseconds" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10TimeAmountV11nanosecondsSiv">nanoseconds</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -426,14 +432,370 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Returns the next power of two.</p>
+                        <p>The nanoseconds representation of the <code>TimeAmount</code>.</p>
 
                       </div>
                       <div class="declaration">
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">nextPowerOf2</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">UInt64</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">let</span> <span class="nv">nanoseconds</span><span class="p">:</span> <span class="kt">Int</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10TimeAmountV11nanosecondsACSiFZ"></a>
+                    <a name="//apple_ref/swift/Method/nanoseconds(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10TimeAmountV11nanosecondsACSiFZ">nanoseconds(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Creates a new <code>TimeAmount</code> for the given amount of nanoseconds.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="nf">nanoseconds</span><span class="p">(</span><span class="n">_</span> <span class="nv">amount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">TimeAmount</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>amount</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the amount of nanoseconds this <code>TimeAmount</code> represents.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>the <code>TimeAmount</code> for the given amount.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10TimeAmountV12microsecondsACSiFZ"></a>
+                    <a name="//apple_ref/swift/Method/microseconds(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10TimeAmountV12microsecondsACSiFZ">microseconds(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Creates a new <code>TimeAmount</code> for the given amount of microseconds.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="nf">microseconds</span><span class="p">(</span><span class="n">_</span> <span class="nv">amount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">TimeAmount</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>amount</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the amount of microseconds this <code>TimeAmount</code> represents.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>the <code>TimeAmount</code> for the given amount.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10TimeAmountV12millisecondsACSiFZ"></a>
+                    <a name="//apple_ref/swift/Method/milliseconds(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10TimeAmountV12millisecondsACSiFZ">milliseconds(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Creates a new <code>TimeAmount</code> for the given amount of milliseconds.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="nf">milliseconds</span><span class="p">(</span><span class="n">_</span> <span class="nv">amount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">TimeAmount</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>amount</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the amount of milliseconds this <code>TimeAmount</code> represents.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>the <code>TimeAmount</code> for the given amount.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10TimeAmountV7secondsACSiFZ"></a>
+                    <a name="//apple_ref/swift/Method/seconds(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10TimeAmountV7secondsACSiFZ">seconds(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Creates a new <code>TimeAmount</code> for the given amount of seconds.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="nf">seconds</span><span class="p">(</span><span class="n">_</span> <span class="nv">amount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">TimeAmount</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>amount</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the amount of seconds this <code>TimeAmount</code> represents.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>the <code>TimeAmount</code> for the given amount.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10TimeAmountV7minutesACSiFZ"></a>
+                    <a name="//apple_ref/swift/Method/minutes(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10TimeAmountV7minutesACSiFZ">minutes(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Creates a new <code>TimeAmount</code> for the given amount of minutes.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="nf">minutes</span><span class="p">(</span><span class="n">_</span> <span class="nv">amount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">TimeAmount</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>amount</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the amount of minutes this <code>TimeAmount</code> represents.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>the <code>TimeAmount</code> for the given amount.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO10TimeAmountV5hoursACSiFZ"></a>
+                    <a name="//apple_ref/swift/Method/hours(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO10TimeAmountV5hoursACSiFZ">hours(_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Creates a new <code>TimeAmount</code> for the given amount of hours.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="nf">hours</span><span class="p">(</span><span class="n">_</span> <span class="nv">amount</span><span class="p">:</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">TimeAmount</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>amount</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>the amount of hours this <code>TimeAmount</code> represents.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>the <code>TimeAmount</code> for the given amount.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:s10ComparableP1loiSbx_xtFZ"></a>
+                    <a name="//apple_ref/swift/Method/&lt;(_:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:s10ComparableP1loiSbx_xtFZ">&lt;(_:_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="o">&lt;</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">TimeAmount</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">TimeAmount</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:s9EquatableP2eeoiSbx_xtFZ"></a>
+                    <a name="//apple_ref/swift/Method/==(_:_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:s9EquatableP2eeoiSbx_xtFZ">==(_:_:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="o">==</span><span class="p">(</span><span class="nv">lhs</span><span class="p">:</span> <span class="kt">TimeAmount</span><span class="p">,</span> <span class="nv">rhs</span><span class="p">:</span> <span class="kt">TimeAmount</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Bool</span></code></pre>
 
                         </div>
                       </div>
@@ -448,7 +810,7 @@
       </article>
     </div>
     <section class="footer">
-      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-04-24)</p>
+      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-05-01)</p>
       <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.2</a>, a <a class="link" href="http://realm.io" target="_blank" rel="external">Realm</a> project.</p>
     </section>
   </body>
