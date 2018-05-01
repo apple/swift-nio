@@ -184,7 +184,7 @@ public class EventLoopTest : XCTestCase {
             promiseQueue.sync { promises.append(promise) }
         }
         let channel = try SocketChannel(eventLoop: loop, protocolFamily: AF_INET)
-        _ = try channel.eventLoop.submit {
+        try channel.eventLoop.submit {
             channel.pipeline.add(handler: wedgeHandler).then {
                 channel.register()
             }.then {
@@ -332,11 +332,11 @@ public class EventLoopTest : XCTestCase {
         let serverSocket = try ServerBootstrap(group: group).bind(host: "localhost", port: 0).wait()
         let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: serverSocket.localAddress!.protocolFamily)
         try channel.pipeline.add(handler: assertHandler).wait()
-        _ = try channel.eventLoop.submit {
+        try channel.eventLoop.submit {
             channel.register().then {
                 channel.connect(to: serverSocket.localAddress!)
             }
-        }.wait()
+        }.wait().wait()
         XCTAssertFalse(channel.closeFuture.isFulfilled)
         try group.syncShutdownGracefully()
         XCTAssertTrue(assertHandler.groupIsShutdown.compareAndExchange(expected: false, desired: true))

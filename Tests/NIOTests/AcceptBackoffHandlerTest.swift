@@ -264,7 +264,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
             serverChannel.register().then { () -> EventLoopFuture<()> in
                 return serverChannel.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 0))
             }
-        }.wait())
+        }.wait().wait() as Void)
         return serverChannel
     }
 }
