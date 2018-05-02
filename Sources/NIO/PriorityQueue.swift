@@ -91,10 +91,10 @@ extension PriorityQueue {
   @available(*, deprecated, renamed: "Element")
   public typealias T = Element
   @available(*, deprecated, renamed: "PriorityQueue.Iterator")
-  public typealias PriorityQueueIterator<T: Comparable> = PriorityQueue<T>.Iterator
+  typealias PriorityQueueIterator<T: Comparable> = PriorityQueue<T>.Iterator
 }
 
 extension PriorityQueue.Iterator {
   @available(*, deprecated, renamed: "Element")
-  public typealias T = Element
+  typealias T = Element
 }
