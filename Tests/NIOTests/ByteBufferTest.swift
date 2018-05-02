@@ -1323,13 +1323,14 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(0xaa, buffer.readInteger(as: UInt8.self))
         XCTAssertEqual(0, buffer.readableBytes)
 
-        var buffer2 = buffer
+        let buffer2 = buffer
         XCTAssertTrue(buffer.discardReadBytes())
         XCTAssertEqual(0, buffer.readerIndex)
         XCTAssertEqual(0, buffer.writerIndex)
         // As we fully consumed the buffer we should only have adjusted the indices but not triggered a copy as result of CoW sematics.
         // So we should still be able to also read the old data.
         XCTAssertEqual(0xaa, buffer.getInteger(at: 0, as: UInt8.self))
+        XCTAssertEqual(0, buffer2.readableBytes)
     }
 
     func testDumpBytesFormat() throws {
