@@ -69,6 +69,8 @@ extension ChannelTests {
                 ("testSocketErroringSynchronouslyCorrectlyTearsTheChannelDown", testSocketErroringSynchronouslyCorrectlyTearsTheChannelDown),
                 ("testConnectWithECONNREFUSEDGetsTheRightError", testConnectWithECONNREFUSEDGetsTheRightError),
                 ("testCloseInUnregister", testCloseInUnregister),
+                ("testLazyRegistrationWorksForServerSockets", testLazyRegistrationWorksForServerSockets),
+                ("testLazyRegistrationWorksForClientSockets", testLazyRegistrationWorksForClientSockets),
            ]
    }
 }

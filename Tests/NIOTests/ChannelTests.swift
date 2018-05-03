@@ -2317,6 +2317,49 @@ public class ChannelTests: XCTestCase {
 
     }
 
+    func testLazyRegistrationWorksForServerSockets() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let server = try ServerSocketChannel(eventLoop: group.next() as! SelectableEventLoop,
+                                             group: group,
+                                             protocolFamily: PF_INET)
+        defer {
+            XCTAssertNoThrow(try server.close().wait())
+        }
+        XCTAssertNoThrow(try server.register().wait())
+        XCTAssertNoThrow(try server.eventLoop.submit {
+            XCTAssertFalse(server.isActive)
+        }.wait())
+        XCTAssertEqual(0, server.localAddress!.port!)
+        XCTAssertNoThrow(try server.bind(to: SocketAddress(ipAddress: "0.0.0.0", port: 0)).wait())
+        XCTAssertNotEqual(0, server.localAddress!.port!)
+    }
+
+    func testLazyRegistrationWorksForClientSockets() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .bind(host: "localhost", port: 0)
+            .wait()
+
+        let client = try SocketChannel(eventLoop: group.next() as! SelectableEventLoop,
+                                       protocolFamily: serverChannel.localAddress!.protocolFamily)
+        defer {
+            XCTAssertNoThrow(try client.close().wait())
+        }
+        XCTAssertNoThrow(try client.register().wait())
+        XCTAssertNoThrow(try client.eventLoop.submit {
+            XCTAssertFalse(client.isActive)
+        }.wait())
+        XCTAssertNoThrow(try client.connect(to: serverChannel.localAddress!).wait())
+        XCTAssertTrue(client.isActive)
+        XCTAssertEqual(serverChannel.localAddress!, client.remoteAddress!)
+    }
 }
 
 fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {
