@@ -394,7 +394,7 @@ class BaseSocket: Selectable {
     /// After the socket was closed all other methods will throw an `IOError` when called.
     ///
     /// - throws: An `IOError` if the operation failed.
-    final func close() throws {
+    func close() throws {
         try withUnsafeFileDescriptor { fd in
             try Posix.close(descriptor: fd)
         }
