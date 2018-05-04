@@ -148,11 +148,13 @@ public class SocketChannelTest : XCTestCase {
         let serverChannel = try ServerSocketChannel(serverSocket: socket, eventLoop: group.next() as! SelectableEventLoop, group: group)
         let promise: EventLoopPromise<IOError> = serverChannel.eventLoop.newPromise()
 
-        XCTAssertNoThrow(try serverChannel.pipeline.add(handler: AcceptHandler(promise)).then {
-            serverChannel.register()
-        }.then {
-            serverChannel.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 0))
-        }.wait())
+        XCTAssertNoThrow(try serverChannel.eventLoop.submit {
+            serverChannel.pipeline.add(handler: AcceptHandler(promise)).then {
+                serverChannel.register()
+            }.then {
+                serverChannel.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 0))
+            }
+        }.wait().wait() as Void)
 
         XCTAssertEqual(active, try serverChannel.eventLoop.submit {
             serverChannel.readable()

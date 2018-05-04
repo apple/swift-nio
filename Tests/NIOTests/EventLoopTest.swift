@@ -126,16 +126,23 @@ public class EventLoopTest : XCTestCase {
         // to cleanly shut down all the channels before it actually closes. We add a custom channel that we can use
         // to wedge the event loop in the "shutting down" state, ensuring that we have plenty of time to attempt the
         // registration.
-        class WedgeOpenHandler: ChannelOutboundHandler {
+        class WedgeOpenHandler: ChannelDuplexHandler {
+            typealias InboundIn = Any
             typealias OutboundIn = Any
             typealias OutboundOut = Any
 
             private let promiseRegisterCallback: (EventLoopPromise<Void>) -> Void
 
             var closePromise: EventLoopPromise<Void>? = nil
+            private let channelActivePromise: EventLoopPromise<Void>?
 
-            init(_ promiseRegisterCallback: @escaping (EventLoopPromise<Void>) -> Void) {
+            init(channelActivePromise: EventLoopPromise<Void>? = nil, _ promiseRegisterCallback: @escaping (EventLoopPromise<Void>) -> Void) {
                 self.promiseRegisterCallback = promiseRegisterCallback
+                self.channelActivePromise = channelActivePromise
+            }
+
+            func channelActive(ctx: ChannelHandlerContext) {
+                self.channelActivePromise?.succeed(result: ())
             }
 
             func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
@@ -167,9 +174,10 @@ public class EventLoopTest : XCTestCase {
         }
         let loop = group.next() as! SelectableEventLoop
 
+        let serverChannelUp: EventLoopPromise<Void> = group.next().newPromise()
         let serverChannel = try ServerBootstrap(group: group)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: WedgeOpenHandler { promise in
+                channel.pipeline.add(handler: WedgeOpenHandler(channelActivePromise: serverChannelUp) { promise in
                     promiseQueue.sync { promises.append(promise) }
                 })
             }
@@ -195,6 +203,8 @@ public class EventLoopTest : XCTestCase {
 
         // Wait for the connect to complete.
         XCTAssertNoThrow(try connectPromise.futureResult.wait())
+
+        XCTAssertNoThrow(try serverChannelUp.futureResult.wait())
 
         // Now we're going to start closing the event loop. This should not immediately succeed.
         let loopCloseFut = loop.closeGently()

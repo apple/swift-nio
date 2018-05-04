@@ -2263,6 +2263,60 @@ public class ChannelTests: XCTestCase {
         }
     }
 
+    func testCloseInUnregister() throws {
+        enum DummyError: Error { case dummy }
+        class SocketFailingClose: Socket {
+            init() throws {
+                try super.init(protocolFamily: PF_INET, type: Posix.SOCK_STREAM, setNonBlocking: true)
+            }
+
+            override func close() throws {
+                _ = try? super.close()
+                throw DummyError.dummy
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let sc = try SocketChannel(socket: SocketFailingClose(), eventLoop: group.next() as! SelectableEventLoop)
+
+        let serverChannel = try ServerBootstrap(group: group.next())
+            .bind(host: "127.0.0.1", port: 0)
+            .wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
+        XCTAssertNoThrow(try sc.eventLoop.submit {
+            sc.register().then {
+                sc.connect(to: serverChannel.localAddress!)
+            }
+        }.wait().wait() as Void)
+
+        do {
+            try sc.eventLoop.submit { () -> EventLoopFuture<Void> in
+                let p: EventLoopPromise<Void> = sc.eventLoop.newPromise()
+                // this callback must be attached before we call the close
+                let f = p.futureResult.map {
+                    XCTFail("shouldn't be reached")
+                }.thenIfError { err in
+                    XCTAssertNotNil(err as? DummyError)
+                    return sc.close()
+                }
+                sc.close(promise: p)
+                return f
+            }.wait().wait()
+            XCTFail("shouldn't be reached")
+        } catch ChannelError.alreadyClosed {
+            // ok
+        } catch {
+            XCTFail("wrong error: \(error)")
+        }
+
+    }
+
 }
 
 fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {

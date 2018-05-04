@@ -453,13 +453,15 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         assert(eventLoop.inEventLoop)
 
         let ch = data.forceAsOther() as SocketChannel
-        ch.register().thenThrowing {
-            guard ch.isOpen else {
-                throw ChannelError.ioOnClosedChannel
+        ch.eventLoop.execute {
+            ch.register().thenThrowing {
+                guard ch.isOpen else {
+                    throw ChannelError.ioOnClosedChannel
+                }
+                ch.becomeActive0(promise: nil)
+            }.whenFailure { error in
+                ch.close(promise: nil)
             }
-            ch.becomeActive0(promise: nil)
-        }.whenFailure { error in
-            ch.close(promise: nil)
         }
     }
 

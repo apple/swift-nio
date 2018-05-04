@@ -664,11 +664,18 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             return
         }
 
+        // === BEGIN: No user callouts ===
+
+        // this is to register all error callouts as all the callouts must happen after we transition out state
+        var errorCallouts: [(ChannelPipeline) -> Void] = []
+
         self.interestedEvent = .reset
         do {
             try selectableEventLoop.deregister(channel: self)
         } catch let err {
-            pipeline.fireErrorCaught0(error: err)
+            errorCallouts.append { pipeline in
+                pipeline.fireErrorCaught0(error: err)
+            }
         }
 
         let p: EventLoopPromise<Void>?
@@ -676,21 +683,32 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             try socket.close()
             p = promise
         } catch {
-            promise?.fail(error: error)
-            // Set p to nil as we want to ensure we pass nil to becomeInactive0(...) so we not try to notify the promise again.
+            errorCallouts.append { (_: ChannelPipeline) in
+                promise?.fail(error: error)
+                // Set p to nil as we want to ensure we pass nil to becomeInactive0(...) so we not try to notify the promise again.
+            }
             p = nil
         }
 
         // Transition our internal state.
         let callouts = self.lifecycleManager.close(promise: p)
 
+        // === END: No user callouts (now that our state is reconciled, we can call out to user code.) ===
+
+        // this must be the first to call out as it transitions the PendingWritesManager into the closed state
+        // and we assert elsewhere that the PendingWritesManager has the same idea of 'open' as we have in here.
+        self.cancelWritesOnClose(error: error)
+
+        // this should be a no-op as we shouldn't have any
+        errorCallouts.forEach {
+            $0(self.pipeline)
+        }
+
         if let connectPromise = self.pendingConnect {
             self.pendingConnect = nil
             connectPromise.fail(error: error)
         }
 
-        // Now that our state is sensible, we can call out to user code.
-        self.cancelWritesOnClose(error: error)
         callouts(self.pipeline)
 
         eventLoop.execute {
@@ -789,6 +807,11 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     final func readEOF() {
         assert(!self.lifecycleManager.hasSeenEOFNotification)
         self.lifecycleManager.hasSeenEOFNotification = true
+
+        // we can't be not active but still registered here; this would mean that we got a notification about a
+        // channel before we're ready to receive them.
+        assert(self.lifecycleManager.isActive || !self.lifecycleManager.isRegistered,
+               "illegal state: active: \(self.lifecycleManager.isActive), registered: \(self.lifecycleManager.isRegistered)")
 
         self.readEOF0()
 
