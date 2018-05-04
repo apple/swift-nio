@@ -474,11 +474,11 @@ extension UInt: AtomicPrimitive {
 ///
 /// It behaves very much like `Atomic<T>` but for objects, maintaining the correct retain counts.
 public class AtomicBox<T: AnyObject> {
-    private let storage: Atomic<Int>
+    private let storage: Atomic<UInt>
 
     public init(value: T) {
         let ptr = Unmanaged<T>.passRetained(value)
-        self.storage = Atomic(value: Int(bitPattern: ptr.toOpaque()))
+        self.storage = Atomic(value: UInt(bitPattern: ptr.toOpaque()))
     }
 
     deinit {
@@ -507,8 +507,8 @@ public class AtomicBox<T: AnyObject> {
             let expectedPtr = Unmanaged<T>.passUnretained(expected)
             let desiredPtr = Unmanaged<T>.passUnretained(desired)
 
-            if self.storage.compareAndExchange(expected: Int(bitPattern: expectedPtr.toOpaque()),
-                                               desired: Int(bitPattern: desiredPtr.toOpaque())) {
+            if self.storage.compareAndExchange(expected: UInt(bitPattern: expectedPtr.toOpaque()),
+                                               desired: UInt(bitPattern: desiredPtr.toOpaque())) {
                 _ = desiredPtr.retain()
                 expectedPtr.release()
                 return true
@@ -528,7 +528,7 @@ public class AtomicBox<T: AnyObject> {
     /// - Returns: The value previously held by this object.
     public func exchange(with value: T) -> T {
         let newPtr = Unmanaged<T>.passRetained(value)
-        let oldPtrBits = self.storage.exchange(with: Int(bitPattern: newPtr.toOpaque()))
+        let oldPtrBits = self.storage.exchange(with: UInt(bitPattern: newPtr.toOpaque()))
         let oldPtr = Unmanaged<T>.fromOpaque(UnsafeRawPointer(bitPattern: oldPtrBits)!)
         return oldPtr.takeRetainedValue()
     }

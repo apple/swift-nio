@@ -86,8 +86,10 @@ public struct ByteBufferAllocator {
                   hookedRealloc: @escaping @convention(c) (UnsafeMutableRawPointer?, Int) -> UnsafeMutableRawPointer?,
                   hookedFree: @escaping @convention(c) (UnsafeMutableRawPointer?) -> Void,
                   hookedMemcpy: @escaping @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, Int) -> Void) {
-        assert(MemoryLayout<ByteBuffer>.size <= 3 * MemoryLayout<Int>.size,
-               "ByteBuffer has size \(MemoryLayout<ByteBuffer>.size) which is larger than the built-in storage of the existential containers.")
+        #if !arch(arm) // only complain on 64-bit, this is unfortunate reality on 32-bit
+            assert(MemoryLayout<ByteBuffer>.size <= 3 * MemoryLayout<Int>.size,
+                   "ByteBuffer has size \(MemoryLayout<ByteBuffer>.size) which is larger than the built-in storage of the existential containers.")
+        #endif
         self.malloc = hookedMalloc
         self.realloc = hookedRealloc
         self.free = hookedFree
