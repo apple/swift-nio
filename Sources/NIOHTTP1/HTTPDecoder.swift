@@ -379,12 +379,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
 
     public func decoderRemoved(ctx: ChannelHandlerContext) {
         // Remove the stored reference to ChannelHandlerContext
-        #if arch(arm) // 32-bit
-            let veryDeadBeef : UInt = 0xdeadbeef
-            parser.data = UnsafeMutableRawPointer(bitPattern: veryDeadBeef)
-        #else
-            parser.data = UnsafeMutableRawPointer(bitPattern: 0x0000deadbeef0000)
-        #endif
+        parser.data = UnsafeMutableRawPointer(bitPattern: 0xdeadbeef as UInt)
 
         // Set the callbacks to nil as we dont need these anymore
         settings.on_body = nil
