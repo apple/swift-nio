@@ -22,7 +22,7 @@ private enum SelectorLifecycleState {
 
 private extension timespec {
     init(timeAmount amount: TimeAmount) {
-        let nsecPerSec: Int64 = 1_000_000_000
+        let nsecPerSec: TimeAmount.Value = 1_000_000_000
         let ns = amount.nanoseconds
         let sec = ns / nsecPerSec
         self = timespec(tv_sec: Int(sec), tv_nsec: Int(ns - sec * nsecPerSec))
