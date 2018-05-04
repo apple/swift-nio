@@ -344,6 +344,12 @@ internal final class SelectableEventLoop: EventLoop {
         _addresses.deallocate()
     }
 
+    /// Is this `SelectableEventLoop` still open (ie. not shutting down or shut down)
+    internal var isOpen: Bool {
+        assert(self.inEventLoop)
+        return self.lifecycleState == .open
+    }
+
     /// Register the given `SelectableChannel` with this `SelectableEventLoop`. After this point all I/O for the `SelectableChannel` will be processed by this `SelectableEventLoop` until it
     /// is deregistered by calling `deregister`.
     public func register<C: SelectableChannel>(channel: C) throws {
