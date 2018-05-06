@@ -386,7 +386,6 @@ public struct ByteBuffer {
         var (iterator, idx) = UnsafeMutableBufferPointer(start: base, count: underestimatedByteCount).initialize(from: bytes)
         assert(idx == underestimatedByteCount)
         while let b = iterator.next() {
-            assert(S.self != String.UTF8View.self)
             base = ensureCapacityAndReturnStorageBase(capacity: idx + 1)
             base[idx] = b
             idx += 1
