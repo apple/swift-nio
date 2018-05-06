@@ -1165,7 +1165,7 @@ class ByteBufferTest: XCTestCase {
 
     func testUnderestimatingSequenceWorks() throws {
         struct UnderestimatingSequence: Sequence {
-            let storage: [UInt8] = Array(0..<12)
+            let storage: [UInt8] = Array(0...255)
             typealias Element = UInt8
 
             public var indices: CountableRange<Int> {
@@ -1187,15 +1187,15 @@ class ByteBufferTest: XCTestCase {
         buf = self.allocator.buffer(capacity: 4)
         buf.clear()
         buf.write(bytes: UnderestimatingSequence())
-        XCTAssertEqual(12, buf.readableBytes)
-        for i in 0..<12 {
+        XCTAssertEqual(256, buf.readableBytes)
+        for i in 0..<256 {
             let actual = Int(buf.readInteger()! as UInt8)
             XCTAssertEqual(i, actual)
         }
         buf = self.allocator.buffer(capacity: 4)
         buf.set(bytes: UnderestimatingSequence(), at: 0)
         XCTAssertEqual(0, buf.readableBytes)
-        for i in 0..<12 {
+        for i in 0..<256 {
             let actual = Int(buf.getInteger(at: i)! as UInt8)
             XCTAssertEqual(i, actual)
         }
