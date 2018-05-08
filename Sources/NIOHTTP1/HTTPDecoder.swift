@@ -606,7 +606,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         // We don't need the cumulation buffer, if we're holding it.
         self.cumulationBuffer = nil
 
-        // No check to state.currentError becuase, if we hit it before, we already threw that
+        // No check to state.currentError because, if we hit it before, we already threw that
         // error. This never calls any of the callbacks that set that field anyway. Instead we
         // just check if the errno is set and throw.
         let httpError = self.parser.http_errno

@@ -366,7 +366,7 @@ public struct HTTPHeaders: CustomStringConvertible {
     ///     - headers: An initial set of headers to use to populate the header block.
     ///     - allocator: The allocator to use to allocate the underlying storage.
     public init(_ headers: [(String, String)] = []) {
-        // Note: this initializer exists becuase of https://bugs.swift.org/browse/SR-7415.
+        // Note: this initializer exists because of https://bugs.swift.org/browse/SR-7415.
         // Otherwise we'd only have the one below with a default argument for `allocator`.
         self.init(headers, allocator: ByteBufferAllocator())
     }
