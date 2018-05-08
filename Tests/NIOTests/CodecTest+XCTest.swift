@@ -31,6 +31,8 @@ extension ByteToMessageDecoderTest {
                 ("testDecoderIsNotQuadratic", testDecoderIsNotQuadratic),
                 ("testMemoryIsReclaimedIfMostIsConsumed", testMemoryIsReclaimedIfMostIsConsumed),
                 ("testMemoryIsReclaimedIfLotsIsAvailable", testMemoryIsReclaimedIfLotsIsAvailable),
+                ("testDecoderReentranceChannelRead", testDecoderReentranceChannelRead),
+                ("testDecoderWriteIntoCumulationBuffer", testDecoderWriteIntoCumulationBuffer),
            ]
    }
 }
