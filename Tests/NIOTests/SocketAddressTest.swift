@@ -40,7 +40,7 @@ class SocketAddressTest: XCTestCase {
         #endif
         address.sin6_family = sa_family_t(AF_INET6)
         address.sin6_addr   = sampleIn6Addr.withUnsafeBytes {
-            $0.baseAddress!.assumingMemoryBound(to: in6_addr.self).pointee
+            $0.baseAddress!.bindMemory(to: in6_addr.self, capacity: 1).pointee
         }
 
         let s = address.addressDescription()
