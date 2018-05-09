@@ -67,6 +67,7 @@ import XCTest
          testCase(HappyEyeballsTest.allTests),
          testCase(HeapTests.allTests),
          testCase(IdleStateHandlerTest.allTests),
+         testCase(IntegerTypesTest.allTests),
          testCase(MarkedCircularBufferTests.allTests),
          testCase(MessageToByteEncoderTest.allTests),
          testCase(NIOConcurrencyHelpersTests.allTests),

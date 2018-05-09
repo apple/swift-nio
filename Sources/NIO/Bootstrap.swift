@@ -231,6 +231,13 @@ public final class ServerBootstrap {
             self.childChannelOptions = childChannelOptions
         }
 
+        func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+            if event is ChannelShouldQuiesceEvent {
+                ctx.channel.close(promise: nil)
+            }
+            ctx.fireUserInboundEventTriggered(event)
+        }
+
         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             let accepted = self.unwrapInboundIn(data)
             let childChannelInit = self.childChannelInit ?? { (_: Channel) in ctx.eventLoop.newSucceededFuture(result: ()) }

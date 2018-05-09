@@ -362,3 +362,13 @@ public enum ChannelEvent: Equatable {
     /// Output portion of the `Channel` was closed.
     case outputClosed
 }
+
+/// A `Channel` user event that is sent when the `Channel` has been asked to quiesce.
+///
+/// The action(s) that should be taken after receiving this event are both application and protocol dependent. If the
+/// protocol supports a notion of requests and responses, it might make sense to stop accepting new requests but finish
+/// processing the request currently in flight.
+public struct ChannelShouldQuiesceEvent {
+    public init() {
+    }
+}

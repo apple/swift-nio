@@ -58,6 +58,18 @@ private final class ReadRecorder: ChannelInboundHandler {
     }
 }
 
+private final class WriteRecorder: ChannelOutboundHandler {
+    typealias OutboundIn = HTTPServerResponsePart
+
+    public var writes: [HTTPServerResponsePart] = []
+
+    func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        self.writes.append(self.unwrapOutboundIn(data))
+
+        ctx.write(data, promise: promise)
+    }
+}
+
 private final class ReadCountingHandler: ChannelOutboundHandler {
     typealias OutboundIn = Any
     typealias OutboundOut = Any
@@ -77,13 +89,16 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
     var responseHead: HTTPResponseHead! = nil
     fileprivate var readRecorder: ReadRecorder! = nil
     fileprivate var readCounter: ReadCountingHandler! = nil
+    fileprivate var writeRecorder: WriteRecorder! = nil
 
     override func setUp() {
         self.channel = EmbeddedChannel()
         self.readRecorder = ReadRecorder()
         self.readCounter = ReadCountingHandler()
+        self.writeRecorder = WriteRecorder()
         XCTAssertNoThrow(try channel.pipeline.add(handler: self.readCounter).wait())
         XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: self.writeRecorder).wait())
         XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPServerPipelineHandler()).wait())
         XCTAssertNoThrow(try channel.pipeline.add(handler: self.readRecorder).wait())
 
@@ -92,15 +107,20 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         self.responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok)
         self.responseHead.headers.add(name: "Server", value: "SwiftNIO")
+
+        // this activates the channel
+        XCTAssertNoThrow(try self.channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 1)).wait())
     }
 
     override func tearDown() {
-        XCTAssertNoThrow(try self.channel.finish())
+        if let channel = self.channel {
+            XCTAssertNoThrow(try channel.finish())
+            self.channel = nil
+        }
         self.requestHead = nil
         self.responseHead = nil
         self.readCounter = nil
         self.readRecorder = nil
-        self.channel = nil
     }
 
     func testBasicBufferingBehaviour() throws {
@@ -455,5 +475,235 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
 
         XCTAssertEqual(.done, handler.state)
+    }
+
+    func testQuiescingEventWhenInitiallyIdle() throws {
+        XCTAssertTrue(self.channel.isActive)
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertFalse(self.channel.isActive)
+        self.channel = nil
+    }
+
+    func testQuiescingEventWhenIdleAfterARequest() throws {
+        // Send through one request.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        // The request should have made it through.
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+
+        // Now send a response.
+        XCTAssertNoThrow(try channel.write(HTTPServerResponsePart.head(self.responseHead)).wait())
+        XCTAssertNoThrow(try channel.write(HTTPServerResponsePart.end(nil)).wait())
+
+        // No further events should have happened.
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+
+        XCTAssertTrue(self.channel.isActive)
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertFalse(self.channel.isActive)
+        self.channel = nil
+    }
+
+    func testQuiescingInTheMiddleOfARequestNoResponseBitsYet() throws {
+        // Send through only the head.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead))])
+
+        XCTAssertTrue(self.channel.isActive)
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertTrue(self.channel.isActive)
+
+        // Now send a response.
+        XCTAssertNoThrow(try channel.write(HTTPServerResponsePart.head(self.responseHead)).wait())
+        XCTAssertNoThrow(try channel.write(HTTPServerResponsePart.end(nil)).wait())
+
+        // still missing the request .end
+        XCTAssertTrue(self.channel.isActive)
+
+        var reqWithConnectionClose: HTTPResponseHead = self.responseHead
+        reqWithConnectionClose.headers.add(name: "connection", value: "close")
+        XCTAssertEqual([HTTPServerResponsePart.head(reqWithConnectionClose),
+                        HTTPServerResponsePart.end(nil)],
+                       self.writeRecorder.writes)
+
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        XCTAssertFalse(self.channel.isActive)
+        self.channel = nil
+    }
+
+    func testQuiescingAfterHavingReceivedRequestButBeforeResponseWasSent() throws {
+        // Send through a full request.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+
+        XCTAssertTrue(self.channel.isActive)
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertTrue(self.channel.isActive)
+
+        // Now send a response.
+        XCTAssertNoThrow(try channel.write(HTTPServerResponsePart.head(self.responseHead)).wait())
+        XCTAssertNoThrow(try channel.write(HTTPServerResponsePart.end(nil)).wait())
+
+        XCTAssertFalse(self.channel.isActive)
+
+        var reqWithConnectionClose: HTTPResponseHead = self.responseHead
+        reqWithConnectionClose.headers.add(name: "connection", value: "close")
+        XCTAssertEqual([HTTPServerResponsePart.head(reqWithConnectionClose),
+                        HTTPServerResponsePart.end(nil)],
+                       self.writeRecorder.writes)
+
+        XCTAssertFalse(self.channel.isActive)
+        self.channel = nil
+    }
+
+    func testQuiescingAfterHavingReceivedRequestAndResponseHeadButNoResponseEndYet() throws {
+        // Send through a full request.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+
+        // Now send the response .head.
+        XCTAssertNoThrow(try channel.write(HTTPServerResponsePart.head(self.responseHead)).wait())
+
+        XCTAssertTrue(self.channel.isActive)
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertTrue(self.channel.isActive)
+
+        // Now send the response .end.
+        XCTAssertNoThrow(try channel.write(HTTPServerResponsePart.end(nil)).wait())
+        XCTAssertFalse(self.channel.isActive)
+
+        XCTAssertEqual([HTTPServerResponsePart.head(self.responseHead),
+                        HTTPServerResponsePart.end(nil)],
+                       self.writeRecorder.writes)
+
+        XCTAssertFalse(self.channel.isActive)
+        self.channel = nil
+    }
+
+    func testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndBeforeResponseEnd() throws {
+        // Send through a request .head.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead))])
+
+        // Now send the response .head.
+        XCTAssertNoThrow(try channel.write(HTTPServerResponsePart.head(self.responseHead)).wait())
+
+        XCTAssertTrue(self.channel.isActive)
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertTrue(self.channel.isActive)
+
+        // Request .end.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertTrue(self.channel.isActive)
+
+        // Response .end.
+        XCTAssertNoThrow(try channel.write(HTTPServerResponsePart.end(nil)).wait())
+        XCTAssertFalse(self.channel.isActive)
+
+        XCTAssertEqual([HTTPServerResponsePart.head(self.responseHead),
+                        HTTPServerResponsePart.end(nil)],
+                       self.writeRecorder.writes)
+
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        XCTAssertFalse(self.channel.isActive)
+        self.channel = nil
+    }
+
+    func testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndAfterResponseEnd() throws {
+        // Send through a request .head.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead))])
+
+        // Now send the response .head.
+        XCTAssertNoThrow(try channel.write(HTTPServerResponsePart.head(self.responseHead)).wait())
+
+        XCTAssertTrue(self.channel.isActive)
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertTrue(self.channel.isActive)
+
+        // Response .end.
+        XCTAssertNoThrow(try channel.write(HTTPServerResponsePart.end(nil)).wait())
+        XCTAssertTrue(self.channel.isActive)
+
+        // Request .end.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+
+        XCTAssertFalse(self.channel.isActive)
+
+        XCTAssertEqual([HTTPServerResponsePart.head(self.responseHead),
+                        HTTPServerResponsePart.end(nil)],
+                       self.writeRecorder.writes)
+
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        XCTAssertFalse(self.channel.isActive)
+        self.channel = nil
+    }
+
+    func testQuiescingAfterHavingReceivedOneRequestButBeforeResponseWasSentWithMoreRequestsInTheBuffer() throws {
+        // Send through a full request and buffer a few more
+        for _ in 0..<3 {
+            XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+            XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+        }
+
+        // Check that only one request came through
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+
+        XCTAssertTrue(self.channel.isActive)
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertTrue(self.channel.isActive)
+
+        // Now send a response.
+        XCTAssertNoThrow(try channel.write(HTTPServerResponsePart.head(self.responseHead)).wait())
+        XCTAssertNoThrow(try channel.write(HTTPServerResponsePart.end(nil)).wait())
+
+        XCTAssertFalse(self.channel.isActive)
+
+        var reqWithConnectionClose: HTTPResponseHead = self.responseHead
+        reqWithConnectionClose.headers.add(name: "connection", value: "close")
+
+        // check that only one response (with connection: close) came through
+        XCTAssertEqual([HTTPServerResponsePart.head(reqWithConnectionClose),
+                        HTTPServerResponsePart.end(nil)],
+                       self.writeRecorder.writes)
+
+        // Check that only one request came through
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+
+        XCTAssertFalse(self.channel.isActive)
+        self.channel = nil
     }
 }
