@@ -143,4 +143,40 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertTrue(headers.contains(name: "X-Header"))
         XCTAssertFalse(headers.contains(name: "X-NonExistingHeader"))
     }
+    
+    func testKeepAliveStateStartsWithClose() {
+        var buffer = ByteBufferAllocator().buffer(capacity: 32)
+        buffer.write(string: "Connection: close\r\n")
+        var headers = HTTPHeaders(buffer: buffer, headers: [HTTPHeader(name: HTTPHeaderIndex(start: 0, length: 10), value: HTTPHeaderIndex(start: 12, length: 5))], keepAliveState: .close)
+        
+        XCTAssertEqual("close", headers["connection"].first)
+        XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
+        
+        headers.replaceOrAdd(name: "connection", value: "keep-alive")
+        
+        XCTAssertEqual("keep-alive", headers["connection"].first)
+        XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
+        
+        headers.remove(name: "connection")
+        XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
+        XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 0)))
+    }
+    
+    func testKeepAliveStateStartsWithKeepAlive() {
+        var buffer = ByteBufferAllocator().buffer(capacity: 32)
+        buffer.write(string: "Connection: keep-alive\r\n")
+        var headers = HTTPHeaders(buffer: buffer, headers: [HTTPHeader(name: HTTPHeaderIndex(start: 0, length: 10), value: HTTPHeaderIndex(start: 12, length: 10))], keepAliveState: .keepAlive)
+        
+        XCTAssertEqual("keep-alive", headers["connection"].first)
+        XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
+        
+        headers.replaceOrAdd(name: "connection", value: "close")
+        
+        XCTAssertEqual("close", headers["connection"].first)
+        XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
+        
+        headers.remove(name: "connection")
+        XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
+        XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 0)))
+    }
 }

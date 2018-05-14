@@ -15,6 +15,13 @@
 import NIO
 import CNIOHTTPParser
 
+private extension UnsafeMutablePointer where Pointee == http_parser {
+    /// Returns the `KeepAliveState` for the current message that is parsed.
+    var keepAliveState: KeepAliveState {
+        return c_nio_http_should_keep_alive(self) == 0 ? .close : .keepAlive
+    }
+}
+
 private struct HTTPParserState {
     var dataAwaitingState: DataAwaitingState = .messageBegin
     var currentNameIndex: HTTPHeaderIndex?
@@ -214,7 +221,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     private func newRequestHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPRequestHead {
         let method = HTTPMethod.from(httpParserMethod: http_method(rawValue: parser.pointee.method))
         let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
-        let request = HTTPRequestHead(version: version, method: method, rawURI: state.currentURI!, headers: HTTPHeaders(buffer: cumulationBuffer!, headers: state.currentHeaders))
+        let request = HTTPRequestHead(version: version, method: method, rawURI: state.currentURI!, headers: HTTPHeaders(buffer: cumulationBuffer!, headers: state.currentHeaders, keepAliveState: parser.keepAliveState))
         self.state.currentHeaders.removeAll(keepingCapacity: true)
         return request
     }
@@ -222,7 +229,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     private func newResponseHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPResponseHead {
         let status = HTTPResponseStatus(statusCode: Int(parser.pointee.status_code), reasonPhrase: state.currentStatus!)
         let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
-        let response = HTTPResponseHead(version: version, status: status, headers: HTTPHeaders(buffer: cumulationBuffer!, headers: state.currentHeaders))
+        let response = HTTPResponseHead(version: version, status: status, headers: HTTPHeaders(buffer: cumulationBuffer!, headers: state.currentHeaders, keepAliveState: parser.keepAliveState))
         self.state.currentHeaders.removeAll(keepingCapacity: true)
         return response
     }
@@ -383,7 +390,8 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             handler.state.complete(state: handler.state.dataAwaitingState)
             handler.state.dataAwaitingState = .messageBegin
 
-            let trailers = handler.state.currentHeaders.isEmpty ? nil : HTTPHeaders(buffer: handler.state.cumulationBuffer!, headers: handler.state.currentHeaders)
+            // Just use unknown for trailers as there is no point for anything else.
+            let trailers = handler.state.currentHeaders.isEmpty ? nil : HTTPHeaders(buffer: handler.state.cumulationBuffer!, headers: handler.state.currentHeaders, keepAliveState: .unknown)
             handler.state.currentHeaders.removeAll(keepingCapacity: true)
             switch handler {
             case let handler as HTTPRequestDecoder:
