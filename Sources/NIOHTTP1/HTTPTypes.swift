@@ -17,7 +17,6 @@ import NIO
 let crlf: StaticString = "\r\n"
 let headerSeparator: StaticString = ": "
 
-private let connectionUtf8 = "connection".utf8
 
 // Keep track of keep alive state.
 internal enum KeepAliveState {
@@ -298,15 +297,16 @@ private extension UInt8 {
         case .keepAlive:
             return true
         case .unknown:
-            guard let connection = self["connection"].first?.lowercased() else {
-                // HTTP 1.1 use keep-alive by default if not otherwise told.
-                return version.major == 1 && version.minor == 1
+            for header in self.headers {
+                if self.buffer.equalCaseInsensitiveASCII(view: "connection".utf8, at: header.name) {
+                    if self.buffer.equalCaseInsensitiveASCII(view: "close".utf8, at: header.value) {
+                        return false
+                    }
+                    return self.buffer.equalCaseInsensitiveASCII(view: "keep-alive".utf8, at: header.value)
+                }
             }
-            
-            if connection == "close" {
-                return false
-            }
-            return connection == "keep-alive"
+            // HTTP 1.1 use keep-alive by default if not otherwise told.
+            return version.major == 1 && version.minor >= 1
         }
     }
 }
@@ -415,7 +415,7 @@ public struct HTTPHeaders: CustomStringConvertible {
     }
     
     private func isConnectionHeader(_ header: HTTPHeaderIndex) -> Bool {
-         return self.buffer.equalCaseInsensitiveASCII(view: connectionUtf8, at: header)
+         return self.buffer.equalCaseInsensitiveASCII(view: "connection".utf8, at: header)
     }
     
     /// Add a header name/value pair to the block.
