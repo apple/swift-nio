@@ -100,7 +100,7 @@ public enum SocketAddress: CustomStringConvertible {
     }
 
     /// Returns the protocol family as defined in `man 2 socket` of this `SocketAddress`.
-    public var protocolFamily: Int32 {
+    public var protocolFamily: CInt {
         switch self {
         case .v4:
             return PF_INET
@@ -112,12 +112,12 @@ public enum SocketAddress: CustomStringConvertible {
     }
 
     /// Get the port associated with the address, if defined.
-    public var port: UInt16? {
+    public var port: Int? {
         switch self {
         case .v4(let addr):
-            return UInt16(bigEndian: addr.address.sin_port)
+            return Int(in_port_t(bigEndian: addr.address.sin_port))
         case .v6(let addr):
-            return UInt16(bigEndian: addr.address.sin6_port)
+            return Int(in_port_t(bigEndian: addr.address.sin6_port))
         case .unixDomainSocket:
             return nil
         }

@@ -99,16 +99,10 @@ public protocol EventLoop: EventLoopGroup {
 /// - note: `TimeAmount` should not be used to represent a point in time.
 public struct TimeAmount {
   
-    #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
-        public typealias Value = Int64
-    #else // 64-bit, keeping that at Int for SemVer in the 1.x line.
-        public typealias Value = Int
-    #endif
-
     /// The nanoseconds representation of the `TimeAmount`.
-    public let nanoseconds: Value
+    public let nanoseconds: Int64
 
-    private init(_ nanoseconds: Value) {
+    private init(_ nanoseconds: Int64) {
         self.nanoseconds = nanoseconds
     }
 
@@ -117,7 +111,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of nanoseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func nanoseconds(_ amount: Value) -> TimeAmount {
+    public static func nanoseconds(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount)
     }
 
@@ -126,7 +120,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of microseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func microseconds(_ amount: Value) -> TimeAmount {
+    public static func microseconds(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * 1000)
     }
 
@@ -135,7 +129,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of milliseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func milliseconds(_ amount: Value) -> TimeAmount {
+    public static func milliseconds(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000)
     }
 
@@ -144,7 +138,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of seconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func seconds(_ amount: Value) -> TimeAmount {
+    public static func seconds(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000 * 1000)
     }
 
@@ -153,7 +147,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of minutes this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func minutes(_ amount: Value) -> TimeAmount {
+    public static func minutes(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000 * 1000 * 60)
     }
 
@@ -162,7 +156,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of hours this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func hours(_ amount: Value) -> TimeAmount {
+    public static func hours(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000 * 1000 * 60 * 60)
     }
 }
@@ -768,19 +762,19 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 private final class ScheduledTask {
     let task: () -> Void
     private let failFn: (Error) ->()
-    private let readyTime: TimeAmount.Value
+    private let readyTime: Int64
 
     init(_ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: TimeAmount) {
         self.task = task
         self.failFn = failFn
-        self.readyTime = time.nanoseconds + TimeAmount.Value(DispatchTime.now().uptimeNanoseconds)
+        self.readyTime = time.nanoseconds + Int64(DispatchTime.now().uptimeNanoseconds)
     }
 
     func readyIn(_ t: DispatchTime) -> TimeAmount {
         if readyTime < t.uptimeNanoseconds {
             return .nanoseconds(0)
         }
-        return .nanoseconds(readyTime - TimeAmount.Value(t.uptimeNanoseconds))
+        return .nanoseconds(readyTime - Int64(t.uptimeNanoseconds))
     }
 
     func fail(error: Error) {

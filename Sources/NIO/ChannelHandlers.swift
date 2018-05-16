@@ -24,7 +24,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
     public typealias InboundIn = Channel
     public typealias OutboundIn = Channel
 
-    private var nextReadDeadlineNS: TimeAmount.Value?
+    private var nextReadDeadlineNS: Int64?
     private let backoffProvider: (IOError) -> TimeAmount?
     private var scheduledRead: Scheduled<Void>?
 
@@ -46,7 +46,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
         guard scheduledRead == nil else { return }
 
         if let deadline = self.nextReadDeadlineNS {
-            let now = TimeAmount.Value(DispatchTime.now().uptimeNanoseconds)
+            let now = Int64(DispatchTime.now().uptimeNanoseconds)
             if now >= deadline {
                 // The backoff already expired, just do a read.
                 doRead(ctx)
@@ -62,7 +62,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         if let ioError = error as? IOError {
             if let amount = backoffProvider(ioError) {
-                self.nextReadDeadlineNS = TimeAmount.Value(DispatchTime.now().uptimeNanoseconds) + amount.nanoseconds
+                self.nextReadDeadlineNS = Int64(DispatchTime.now().uptimeNanoseconds) + amount.nanoseconds
                 if let scheduled = self.scheduledRead {
                     scheduled.cancel()
                     scheduleRead(in: amount, ctx: ctx)
@@ -246,7 +246,7 @@ public class IdleStateHandler: ChannelDuplexHandler {
                 return
             }
 
-            let diff = TimeAmount.Value(DispatchTime.now().uptimeNanoseconds) - TimeAmount.Value(self.lastReadTime.uptimeNanoseconds)
+            let diff = Int64(DispatchTime.now().uptimeNanoseconds) - Int64(self.lastReadTime.uptimeNanoseconds)
             if diff >= timeout.nanoseconds {
                 // Reader is idle - set a new timeout and trigger an event through the pipeline
                 self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newReadTimeoutTask(ctx, timeout))
@@ -275,7 +275,7 @@ public class IdleStateHandler: ChannelDuplexHandler {
                 ctx.fireUserInboundEventTriggered(IdleStateEvent.write)
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledWriterTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(TimeAmount.Value(timeout.nanoseconds) - TimeAmount.Value(diff)), self.newWriteTimeoutTask(ctx, timeout))
+                self.scheduledWriterTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(Int64(timeout.nanoseconds) - Int64(diff)), self.newWriteTimeoutTask(ctx, timeout))
             }
         }
     }
@@ -293,7 +293,7 @@ public class IdleStateHandler: ChannelDuplexHandler {
             let lastRead = self.lastReadTime
             let lastWrite = self.lastWriteCompleteTime
 
-            let diff = TimeAmount.Value(DispatchTime.now().uptimeNanoseconds) - TimeAmount.Value((lastRead > lastWrite ? lastRead : lastWrite).uptimeNanoseconds)
+            let diff = Int64(DispatchTime.now().uptimeNanoseconds) - Int64((lastRead > lastWrite ? lastRead : lastWrite).uptimeNanoseconds)
             if diff >= timeout.nanoseconds {
                 // Reader is idle - set a new timeout and trigger an event through the pipeline
                 self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newAllTimeoutTask(ctx, timeout))
@@ -301,7 +301,7 @@ public class IdleStateHandler: ChannelDuplexHandler {
                 ctx.fireUserInboundEventTriggered(IdleStateEvent.all)
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(TimeAmount.Value(timeout.nanoseconds) - diff), self.newAllTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(Int64(timeout.nanoseconds) - diff), self.newAllTimeoutTask(ctx, timeout))
             }
         }
     }

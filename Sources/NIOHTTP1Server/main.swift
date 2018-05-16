@@ -249,7 +249,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             return { ctx, req in
                 self.handleJustWrite(ctx: ctx,
                                      request: req, string: "Hello World\r\n",
-                                     delay: TimeAmount.Value(howLong).map { .milliseconds($0) } ?? .seconds(0))
+                                     delay: Int64(howLong).map { .milliseconds($0) } ?? .seconds(0))
             }
         }
 

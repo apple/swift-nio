@@ -110,7 +110,7 @@ public class EmbeddedEventLoopTest: XCTestCase {
         var sentinel = 0
         let loop = EmbeddedEventLoop()
         for index in 1...10 {
-            _ = loop.scheduleTask(in: .nanoseconds(index)) {
+            _ = loop.scheduleTask(in: .nanoseconds(Int64(index))) {
                 sentinel = index
             }
         }
