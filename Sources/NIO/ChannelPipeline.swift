@@ -499,7 +499,10 @@ public final class ChannelPipeline: ChannelInvoker {
         return name
     }
 
-    /// Remove all the `ChannelHandler`s from the `ChannelPipeline` and destroy these. This method must only be called from within the `EventLoop`.
+    /// Remove all the `ChannelHandler`s from the `ChannelPipeline` and destroy these.
+    ///
+    /// This method must only be called from within the `EventLoop`. It should only be called from a `ChannelCore`
+    /// implementation. Once called, the `ChannelPipeline` is no longer active and cannot be used again.
     func removeHandlers() {
         assert(eventLoop.inEventLoop)
 
