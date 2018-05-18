@@ -187,6 +187,11 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
         return (self.tailIdx - self.headIdx) & self.mask
     }
 
+    /// The total number of elements that the ring can contain without allocating new storage.
+    public var capacity: Int {
+        return self.buffer.count
+    }
+
     /// Returns the index of the first element of the ring.
     public var startIndex: Int {
         return 0
@@ -202,6 +207,13 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
         let nextIndex = after + 1
         precondition(nextIndex <= self.endIndex)
         return nextIndex
+    }
+
+    /// Removes all members from the circular buffer whist keeping the capacity.
+    public mutating func removeAll(keepingCapacity: Bool = false) {
+        self.headIdx = 0
+        self.tailIdx = 0
+        self.buffer = ContiguousArray<E?>(repeating: nil, count: keepingCapacity ? self.buffer.count : 1)
     }
 
     // MARK: CustomStringConvertible implementation

@@ -299,4 +299,40 @@ class CircularBufferTests: XCTestCase {
         XCTAssertTrue(ring.isEmpty)
         XCTAssertEqual(0, ring.count)
     }
+
+    func testRemoveAllKeepingCapacity() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 2)
+        XCTAssertEqual(ring.capacity, 2)
+        ring.append(1)
+        ring.append(2)
+        // we're full so it will have doubled
+        XCTAssertEqual(ring.capacity, 4)
+        XCTAssertEqual(ring.count, 2)
+        ring.removeAll(keepingCapacity: true)
+        XCTAssertEqual(ring.capacity, 4)
+        XCTAssertEqual(ring.count, 0)
+    }
+
+    func testRemoveAllNotKeepingCapacity() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 2)
+        XCTAssertGreaterThanOrEqual(ring.capacity, 2)
+        ring.append(1)
+        ring.append(2)
+        // we're full so it will have doubled
+        XCTAssertEqual(ring.capacity, 4)
+        XCTAssertEqual(ring.count, 2)
+        ring.removeAll(keepingCapacity: false)
+        // 1 is the smallest capacity we have
+        XCTAssertEqual(ring.capacity, 1)
+        XCTAssertEqual(ring.count, 0)
+        ring.append(1)
+        XCTAssertEqual(ring.capacity, 2)
+        XCTAssertEqual(ring.count, 1)
+        ring.append(2)
+        XCTAssertEqual(ring.capacity, 4)
+        XCTAssertEqual(ring.count, 2)
+        ring.removeAll() // default should not keep capacity
+        XCTAssertEqual(ring.capacity, 1)
+        XCTAssertEqual(ring.count, 0)
+    }
 }
