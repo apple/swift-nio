@@ -145,13 +145,14 @@ public final class ChannelPipeline: ChannelInvoker {
 
     /// The `Channel` that this `ChannelPipeline` belongs to.
     ///
-    /// - warning: This is unsafe as it's only valid if the `Channel` is still open
-    private unowned let _channel: Channel
+    /// - note: This will be nil after the channel has closed
+    private var _channel: Channel?
 
     /// The `Channel` that this `ChannelPipeline` belongs to.
     internal var channel: Channel {
         assert(self.eventLoop.inEventLoop)
-        return !self.destroyed ? self._channel : DeadChannel(pipeline: self)
+        assert(self._channel != nil || self.destroyed)
+        return self._channel ?? DeadChannel(pipeline: self)
     }
 
     /// Add a `ChannelHandler` to the `ChannelPipeline`.
@@ -515,7 +516,8 @@ public final class ChannelPipeline: ChannelInvoker {
         self.head = nil
         self.tail = nil
 
-        destroyed = true
+        self.destroyed = true
+        self._channel = nil
     }
 
     // Just delegate to the head and tail context
