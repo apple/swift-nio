@@ -17,6 +17,39 @@ import NIO
 let crlf: StaticString = "\r\n"
 let headerSeparator: StaticString = ": "
 
+/* private but tests */ internal struct HTTPKeepAliveHeader {
+    private static let comma              = UInt8(",".utf8CString[0])
+    private static let whiteSpacesAndCRLF = [" ", "\t", "\n", "\r"]
+                                                 .map( {UInt8($0.utf8CString[0])} )
+
+    static let keepAliveString = "keep-alive".asUpperCaseContiguousUTF8UIntArray
+    static let closeString     =      "close".asUpperCaseContiguousUTF8UIntArray
+    
+    static func parse(_ header: ByteBuffer, from: Int, length: Int) ->
+        (keepAlive: Bool, close: Bool) {
+            
+        var keepAlive = false
+        var close = false
+        
+        var tokenizer = ByteBufferSliceSplitIterator(byteBuffer: header,
+                                                     separator: comma,
+                                                     start: from,
+                                                     length: length)
+        print(header.getString(at: from, length: length))
+        while let nextToken = tokenizer.next(), nextToken.readableBytes > 0 {
+            let tokenTrimmed = nextToken.sliceByTrimming(whiteSpaces: whiteSpacesAndCRLF,
+                                                         start: 0,
+                                                         length: nextToken.readableBytes)
+            keepAlive = keepAlive ||
+                (tokenTrimmed?.compareReadingToCaseInsensitiveCString(
+                    HTTPKeepAliveHeader.keepAliveString) ?? false)
+            close = close ||
+                (tokenTrimmed?.compareReadingToCaseInsensitiveCString(
+                    HTTPKeepAliveHeader.closeString) ?? false)
+        }
+        return (keepAlive: keepAlive, close: close)
+    }
+}
 
 // Keep track of keep alive state.
 internal enum KeepAliveState {
@@ -297,18 +330,27 @@ private extension UInt8 {
         case .keepAlive:
             return true
         case .unknown:
+            var keepAlive: Bool = false
+            var close: Bool = false
             for header in self.headers {
+                print(self.buffer.getString(at: header.name.start, length: header.name.length))
+                print(self.buffer.getString(at: header.value.start, length: header.value.length))
                 if self.buffer.equalCaseInsensitiveASCII(view: "connection".utf8, at: header.name) {
-                    let states = self.buffer.extractCaseInsensitiveConstantStrings(
-                        ["keep-alive", "close"],
-                        startingWith: header.value.start,
-                        length: header.value.length)
                     
-                    if states[0] { return true }
-                    if states[1] { return false }
-                    if states[0] && states[1] { fatalError("Couldn't be keep-alive and close at the same time") }
+                    let (isThisKeepAlive, isThisClose) = HTTPKeepAliveHeader.parse(
+                        self.buffer, from: header.value.start, length: header.value.length)
+                    keepAlive = keepAlive || isThisKeepAlive
+                    close = close || isThisClose
                 }
             }
+            
+            if keepAlive && close {
+                fatalError("Couldn't be close and keep-alive at the same time")
+            }
+            
+            if keepAlive { return true }
+            if close { return false }
+            
             // HTTP 1.1 use keep-alive by default if not otherwise told.
             return version.major == 1 && version.minor >= 1
         }

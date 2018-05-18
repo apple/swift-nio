@@ -264,4 +264,5 @@ class HTTPTest: XCTestCase {
         modHeaders.headers.add(name: "foo", value: "bar")
         XCTAssertEqual(httpRes, modHeaders)
     }
+
 }

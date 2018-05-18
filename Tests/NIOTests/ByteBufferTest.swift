@@ -1360,46 +1360,142 @@ class ByteBufferTest: XCTestCase {
     func testCommaSeparated() {
         var someByteBuffer: ByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
         someByteBuffer.write(string: "first,second,third,fourth,fifth")
-        XCTAssertEqual(someByteBuffer.tokens(startingWith: 0, length: someByteBuffer.readableBytes).map({[$0.start, $0.length]}),
-                       [(start:  0, length: 5),
-                        (start:  6, length: 6),
-                        (start: 13, length: 5),
-                        (start: 19, length: 6),
-                        (start: 26, length: 5)
-                        ].map({[$0.start, $0.length]}))
+        
+        var byteBufferSlice = ByteBufferSliceSplitIterator(byteBuffer: someByteBuffer,
+                                                           separator: UInt8(",".utf8CString[0]))
+        
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "first")
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "second")
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "third")
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "fourth")
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "fifth")
+        
+        let token = byteBufferSlice.next(); let length = token?.readableBytes ?? 0
+        XCTAssertEqual(length, 0)
+
         someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
         someByteBuffer.write(string: "first,second,third,fourth,fifth")
-        XCTAssertEqual(someByteBuffer.tokens(startingWith: 8, length: someByteBuffer.readableBytes - 8).map({[$0.start, $0.length]}),
-                       [(start:  0, length: 4),
-                        (start:  5, length: 5),
-                        (start: 11, length: 6),
-                        (start: 18, length: 5)
-                        ].map({[$0.start, $0.length]}))
-        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
-        someByteBuffer.write(string: "first,second,third,fourth,fifth")
-        XCTAssertEqual(someByteBuffer.tokens(startingWith: 8, length: someByteBuffer.readableBytes - 8 - 7).map({[$0.start, $0.length]}),
-                       [(start:  0, length: 4),
-                        (start:  5, length: 5),
-                        (start: 11, length: 5)
-                        ].map({[$0.start, $0.length]}))
+        
+        byteBufferSlice = ByteBufferSliceSplitIterator(byteBuffer: someByteBuffer,
+                                                       separator: UInt8(",".utf8CString[0]),
+                                                       start: 6, length: 20)
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "second")
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "third")
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "fourth")
     }
     
-    func testParseCommaSeparatedForConstantWords() {
+    func testTrimmer() {
         var someByteBuffer: ByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
-        someByteBuffer.write(string: "first,second,third,fourth,fifth")
-        XCTAssertEqual(someByteBuffer.extractCaseInsensitiveConstantStrings(["first", "second", "third", "fourth", "fifth"]), [true, true, true, true, true])
-        someByteBuffer.clear()
-        someByteBuffer.write(string: "first,second,third,fourth,fifth")
-        XCTAssertEqual(someByteBuffer.extractCaseInsensitiveConstantStrings(["second", "fourth", "unexistant"]), [true, true, false])
-        someByteBuffer.clear()
-        someByteBuffer.write(string: "first  ,  second,third,  fourth  ,fifth,unexi st ant")
-        XCTAssertEqual(someByteBuffer.extractCaseInsensitiveConstantStrings(["first", "second", "fourth", "unexistant"]), [true, true, true, false])
-        someByteBuffer.clear()
-        someByteBuffer.write(string: "fiRst  ,  sEcONd,third,  fouRTH  ,fifth              ")
-        XCTAssertEqual(someByteBuffer.extractCaseInsensitiveConstantStrings(["first", "second", "fourth", "unexistant"]), [true, true, true, false])
-        someByteBuffer.clear()
-        someByteBuffer.write(string: "fiRst  ,  sEcONd,third,  fouRTH  ,fif                 ")
-        XCTAssertEqual(someByteBuffer.extractCaseInsensitiveConstantStrings(["first", "second", "fifth", "unexistant"]), [true, true, false, false])
+        someByteBuffer.write(string: "  first   ")
+        XCTAssertEqual(
+            readAllTheStringFromBuffer(byteBuffer: someByteBuffer.sliceByTrimmingWhitespaces()), "first")
+        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 4)
+        someByteBuffer.write(string: " \t \tfirst\t\t")
+        XCTAssertEqual(
+            readAllTheStringFromBuffer(byteBuffer: someByteBuffer.sliceByTrimmingWhitespaces()), "first")
+        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 4)
+        someByteBuffer.write(string: " \t \tfirst")
+        XCTAssertEqual(
+            readAllTheStringFromBuffer(byteBuffer: someByteBuffer.sliceByTrimmingWhitespaces()), "first")
+        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 4)
+        someByteBuffer.write(string: "first")
+        XCTAssertEqual(
+            readAllTheStringFromBuffer(byteBuffer: someByteBuffer.sliceByTrimmingWhitespaces()), "first")
+        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 4)
+        someByteBuffer.write(string: "first\t\t")
+        XCTAssertEqual(
+            readAllTheStringFromBuffer(byteBuffer: someByteBuffer.sliceByTrimmingWhitespaces()), "first")
+        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 4)
+        someByteBuffer.write(string: "      ")
+        XCTAssertEqual(
+            someByteBuffer.sliceByTrimmingWhitespaces()?.readableBytes ?? 0, 0)
+        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 4)
+        someByteBuffer.write(string: "   Something    more  than  one  word  ")
+        XCTAssertEqual(
+            readAllTheStringFromBuffer(byteBuffer: someByteBuffer.sliceByTrimmingWhitespaces()), "Something    more  than  one  word")
+        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 4)
+        someByteBuffer.write(string: "   Something    more  than  one  word  ")
+        XCTAssertEqual(
+            readAllTheStringFromBuffer(byteBuffer: someByteBuffer.sliceByTrimmingWhitespaces(length: 15)), "Something")
+        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 4)
+        someByteBuffer.write(string: "   Something    more  than  one  word  ")
+        XCTAssertEqual(
+            readAllTheStringFromBuffer(byteBuffer: someByteBuffer.sliceByTrimmingWhitespaces(from: 15, length: 17)), "more  than  one")
+        
+        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 4)
+        someByteBuffer.write(string: "   Something    ")
+        XCTAssertEqual(
+            someByteBuffer.sliceByTrimmingWhitespaces(from: 16)?.readableBytes, 0)
+
+        // This test case must produce an assertion fail.
+        // Didn't make extra release time checks inside the function, only an assertion (for performance)
+        
+//        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 4)
+//        someByteBuffer.write(string: "   Something    ")
+//        XCTAssertThrowsError(
+//            someByteBuffer.sliceByTrimmingWhitespaces(from: 3, length: 50)?.readableBytes)
+        
+    }
+    
+    func testComparators() {
+        var someByteBuffer: ByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
+        someByteBuffer.write(string: "first")
+        XCTAssert(
+            someByteBuffer.compareReadingToCaseSensitiveCString("first".asContiguousUTF8UIntArray))
+        XCTAssertFalse(
+            someByteBuffer.compareReadingToCaseSensitiveCString("firSt".asContiguousUTF8UIntArray))
+        XCTAssertFalse(
+            someByteBuffer.compareReadingToCaseSensitiveCString("firt".asContiguousUTF8UIntArray))
+        XCTAssertFalse(
+            someByteBuffer.compareReadingToCaseSensitiveCString("firsta".asContiguousUTF8UIntArray))
+        XCTAssertFalse(
+            someByteBuffer.compareReadingToCaseSensitiveCString("afirst".asContiguousUTF8UIntArray))
+        XCTAssertFalse(
+            someByteBuffer.compareReadingToCaseSensitiveCString("eirst".asContiguousUTF8UIntArray))
+        XCTAssertFalse(
+            someByteBuffer.compareReadingToCaseSensitiveCString("firso".asContiguousUTF8UIntArray))
+        XCTAssertFalse(
+            someByteBuffer.compareReadingToCaseSensitiveCString("firot".asContiguousUTF8UIntArray))
+
+        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
+        someByteBuffer.write(string: "fiRSt")
+        XCTAssert(
+            someByteBuffer.compareReadingToCaseInsensitiveCString(
+                "first".asUpperCaseContiguousUTF8UIntArray))
+        XCTAssert(
+            someByteBuffer.compareReadingToCaseInsensitiveCString(
+                "fiRSt".asUpperCaseContiguousUTF8UIntArray))
+        XCTAssert(
+            someByteBuffer.compareReadingToCaseInsensitiveCString(
+                "fIrst".asUpperCaseContiguousUTF8UIntArray))
+        XCTAssertFalse(
+            someByteBuffer.compareReadingToCaseInsensitiveCString(
+                "fIrt".asUpperCaseContiguousUTF8UIntArray))
+        XCTAssertFalse(
+            someByteBuffer.compareReadingToCaseInsensitiveCString(
+                "firsta".asUpperCaseContiguousUTF8UIntArray))
+        XCTAssertFalse(
+            someByteBuffer.compareReadingToCaseInsensitiveCString(
+                "afirst".asUpperCaseContiguousUTF8UIntArray))
+        XCTAssertFalse(
+            someByteBuffer.compareReadingToCaseInsensitiveCString(
+                "eiRSt".asUpperCaseContiguousUTF8UIntArray))
+        XCTAssertFalse(
+            someByteBuffer.compareReadingToCaseInsensitiveCString(
+                "fIrso".asUpperCaseContiguousUTF8UIntArray))
+        XCTAssertFalse(
+            someByteBuffer.compareReadingToCaseInsensitiveCString(
+                "firot".asUpperCaseContiguousUTF8UIntArray))
+
+    }
+
+}
+
+extension ByteBufferTest {
+    func readAllTheStringFromBuffer(byteBuffer: ByteBuffer?) -> String {
+        var token = byteBuffer
+        let length = token?.readableBytes ?? 0
+        return token?.readString(length: length) ?? ""
     }
 }
 
