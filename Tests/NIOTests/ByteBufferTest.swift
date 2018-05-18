@@ -1356,6 +1356,24 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("h".utf8.first!, s[0])
         XCTAssertEqual("o".utf8.first!, s[4])
     }
+    
+    func testParseCommaSeparatedForConstantWords() {
+        var someByteBuffer: ByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
+        someByteBuffer.write(string: "first,second,third,fourth,fifth")
+        XCTAssertEqual(someByteBuffer.extractCaseInsensitiveConstantStrings(["first", "second", "third", "fourth", "fifth"]), [true, true, true, true, true])
+        someByteBuffer.clear()
+        someByteBuffer.write(string: "first,second,third,fourth,fifth")
+        XCTAssertEqual(someByteBuffer.extractCaseInsensitiveConstantStrings(["second", "fourth", "unexistant"]), [true, true, false])
+        someByteBuffer.clear()
+        someByteBuffer.write(string: "first  ,  second,third,  fourth  ,fifth,unexi st ant")
+        XCTAssertEqual(someByteBuffer.extractCaseInsensitiveConstantStrings(["first", "second", "fourth", "unexistant"]), [true, true, true, false])
+        someByteBuffer.clear()
+        someByteBuffer.write(string: "fiRst  ,  sEcONd,third,  fouRTH  ,fifth              ")
+        XCTAssertEqual(someByteBuffer.extractCaseInsensitiveConstantStrings(["first", "second", "fourth", "unexistant"]), [true, true, true, false])
+        someByteBuffer.clear()
+        someByteBuffer.write(string: "fiRst  ,  sEcONd,third,  fouRTH  ,fif                 ")
+        XCTAssertEqual(someByteBuffer.extractCaseInsensitiveConstantStrings(["first", "second", "fifth", "unexistant"]), [true, true, false, false])
+    }
 }
 
 private enum AllocationExpectationState: Int {
