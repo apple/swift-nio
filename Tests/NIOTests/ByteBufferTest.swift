@@ -1357,6 +1357,33 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("o".utf8.first!, s[4])
     }
     
+    func testCommaSeparated() {
+        var someByteBuffer: ByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
+        someByteBuffer.write(string: "first,second,third,fourth,fifth")
+        XCTAssertEqual(someByteBuffer.tokens(startingWith: 0, length: someByteBuffer.readableBytes).map({[$0.start, $0.length]}),
+                       [(start:  0, length: 5),
+                        (start:  6, length: 6),
+                        (start: 13, length: 5),
+                        (start: 19, length: 6),
+                        (start: 26, length: 5)
+                        ].map({[$0.start, $0.length]}))
+        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
+        someByteBuffer.write(string: "first,second,third,fourth,fifth")
+        XCTAssertEqual(someByteBuffer.tokens(startingWith: 8, length: someByteBuffer.readableBytes - 8).map({[$0.start, $0.length]}),
+                       [(start:  0, length: 4),
+                        (start:  5, length: 5),
+                        (start: 11, length: 6),
+                        (start: 18, length: 5)
+                        ].map({[$0.start, $0.length]}))
+        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
+        someByteBuffer.write(string: "first,second,third,fourth,fifth")
+        XCTAssertEqual(someByteBuffer.tokens(startingWith: 8, length: someByteBuffer.readableBytes - 8 - 7).map({[$0.start, $0.length]}),
+                       [(start:  0, length: 4),
+                        (start:  5, length: 5),
+                        (start: 11, length: 5)
+                        ].map({[$0.start, $0.length]}))
+    }
+    
     func testParseCommaSeparatedForConstantWords() {
         var someByteBuffer: ByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
         someByteBuffer.write(string: "first,second,third,fourth,fifth")

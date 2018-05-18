@@ -299,10 +299,14 @@ private extension UInt8 {
         case .unknown:
             for header in self.headers {
                 if self.buffer.equalCaseInsensitiveASCII(view: "connection".utf8, at: header.name) {
-                    if self.buffer.equalCaseInsensitiveASCII(view: "close".utf8, at: header.value) {
-                        return false
-                    }
-                    return self.buffer.equalCaseInsensitiveASCII(view: "keep-alive".utf8, at: header.value)
+                    let states = self.buffer.extractCaseInsensitiveConstantStrings(
+                        ["keep-alive", "close"],
+                        startingWith: header.value.start,
+                        length: header.value.length)
+                    
+                    if states[0] { return true }
+                    if states[1] { return false }
+                    if states[0] && states[1] { fatalError("Couldn't be keep-alive and close at the same time") }
                 }
             }
             // HTTP 1.1 use keep-alive by default if not otherwise told.
