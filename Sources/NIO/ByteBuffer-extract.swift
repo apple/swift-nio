@@ -27,28 +27,26 @@ public struct ByteBufferSliceSplitIterator: IteratorProtocol {
         
         let slicingParameters = byteBuffer.withVeryUnsafeBytes { pointer -> (start: Int, length: Int) in
             
-            let startPoint = pointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
-                                    .advanced(by: self.start)
+            let allBuffer = pointer.bindMemory(to: UInt8.self)
+                .dropFirst(self.start)
+                .prefix(length)
             
-            var address = startPoint.advanced(by: currentIndex)
-            let finalAddress = startPoint.advanced(by: length)
-            
-            let initialPointer = address
+            let remaining = allBuffer.dropFirst(self.currentIndex)
 
-            while address < finalAddress {
-                
-                if address.pointee == separator {
+            var index: Int = remaining.count
+            
+            for pointee in remaining.enumerated() {
+                if pointee.element == separator {
+                    index = pointee.offset
                     break
                 }
-                address = address.advanced(by: 1)
             }
             
             let start = currentIndex
-            let tokenLength = address - initialPointer
             // For the next time, with skipping the separator
-            currentIndex += tokenLength + 1
+            currentIndex += index + 1
             
-            return (start: start, length: tokenLength)
+            return (start: start, length: index)
         }
         return byteBuffer.getSlice(at: slicingParameters.start + self.start,
                                    length: slicingParameters.length)
@@ -79,23 +77,37 @@ extension ByteBuffer {
     
     public func sliceByTrimming(whiteSpaces: [UInt8], start: Int, length: Int) -> ByteBuffer? {
         return withVeryUnsafeBytes { pointer -> ByteBuffer? in
-            assert(start <= self.capacity - length)
+            precondition(start <= self.capacity - length)
             
-            let firstPtr = pointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
+            let buffer = pointer.bindMemory(to: UInt8.self)
+                                .dropFirst(start)
+                                .prefix(length)
 
-            var startPtr = firstPtr.advanced(by: start)
-            var endPtr   = startPtr.advanced(by: length - 1)
-            
-            // Advance startPtr until not a whiteSpace
-            while startPtr < endPtr && startPtr.pointee != 0 && whiteSpaces.contains(startPtr.pointee) {
-                startPtr = startPtr.advanced(by: 1)
+            // Assume that all are whitespaces in the beginning
+            var startIndex = buffer.count
+            // Advance from the start until not a whiteSpace
+            for pointee in buffer.enumerated() {
+                if pointee.element == 0 || !(whiteSpaces.contains(pointee.element)) {
+                    startIndex = pointee.offset
+                    break
+                }
             }
             
-            // Retreat endPtr until not a whiteSpace, null is considered a whiteSpace
-            while endPtr >= startPtr && (whiteSpaces.contains(endPtr.pointee) || endPtr.pointee == 0) {
-                endPtr = endPtr.advanced(by: -1)
+            let leadingTrimmedBuffer = buffer.dropFirst(startIndex)
+            
+            // Assume that all are whitespaces
+            var endIndex = leadingTrimmedBuffer.count
+            // Retreat the ending until not a whiteSpace, null is considered a whiteSpace
+            for pointee in leadingTrimmedBuffer.reversed().enumerated() {
+                if !(whiteSpaces.contains(pointee.element) || pointee.element == 0) {
+                    endIndex = buffer.count - pointee.offset
+                    break
+                }
             }
-            return self.getSlice(at: startPtr - firstPtr, length: endPtr - startPtr + 1)
+            // Validate, i.e. end >= start, then return null if invalid
+            return endIndex >= startIndex ?
+                        self.getSlice(at: startIndex + start, length: endIndex - startIndex) :
+                        nil
         }
     }
     
