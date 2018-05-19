@@ -119,7 +119,7 @@ The core SwiftNIO repository will contain a few extremely important protocol imp
 The following projects contain useful protocol implementations that do not live in-tree in SwiftNIO:
 
 - [swift-nio-ssl](https://github.com/apple/swift-nio-ssl)
-- swift-nio-http2 (coming soon)
+- [swift-nio-http2](https://github.com/apple/swift-nio-http2)
 
 ## Documentation
 
