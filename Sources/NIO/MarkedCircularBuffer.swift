@@ -19,9 +19,9 @@
 /// safe to write.
 public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollection {
     #if swift(>=4.2)
-    public typealias RangeType = Range
+    public typealias RangeType<Bound> = Range<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
     #else
-    public typealias RangeType = CountableRange
+    public typealias RangeType<Bound> = CountableRange<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
     #endif
 
     private var buffer: CircularBuffer<E>
