@@ -37,6 +37,9 @@ extension HTTPHeadersTest {
                 ("testContains", testContains),
                 ("testKeepAliveStateStartsWithClose", testKeepAliveStateStartsWithClose),
                 ("testKeepAliveStateStartsWithKeepAlive", testKeepAliveStateStartsWithKeepAlive),
+                ("testKeepAliveStateHasKeepAlive", testKeepAliveStateHasKeepAlive),
+                ("testKeepAliveStateHasClose", testKeepAliveStateHasClose),
+                ("testResolveNonContiguousHeaders", testResolveNonContiguousHeaders),
            ]
    }
 }

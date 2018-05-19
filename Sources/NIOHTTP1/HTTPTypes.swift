@@ -17,37 +17,98 @@ import NIO
 let crlf: StaticString = "\r\n"
 let headerSeparator: StaticString = ": "
 
-/* private but tests */ internal struct HTTPKeepAliveHeader {
-    private static let comma              = UInt8(",".utf8CString[0])
-    private static let whiteSpacesAndCRLF = [" ", "\t", "\n", "\r"]
-                                                 .map( {UInt8($0.utf8CString[0])} )
-
-    static let keepAliveString = "keep-alive".asUpperCaseContiguousUTF8UIntArray
-    static let closeString     =      "close".asUpperCaseContiguousUTF8UIntArray
+/* private but tests */ internal struct HTTPNonContiguousHeaderCommaSeparatedValuedFieldHandler
+: IteratorProtocol {
     
-    static func parse(_ header: ByteBuffer, from: Int, length: Int) ->
+    typealias Element = ByteBuffer
+    
+    fileprivate static let comma       = UInt8(",".utf8CString[0])
+    fileprivate static let whiteSpaces = [" ", "\t"]
+                                         .map( {UInt8($0.utf8CString[0])} )
+    
+    private var isNowOnAField = false
+    private var currentHeaderIndex: Int = -1
+    private var singleValueParser: ByteBufferSliceSplitIterator
+    private var byteBuffer: ByteBuffer
+    private let headerName: ContiguousArray<UInt8>
+    private let headers: [HTTPHeader]
+
+    mutating func next() -> ByteBuffer? {
+        // Still not reading a specific field
+        if !isNowOnAField {
+            // Try to get next match
+            currentHeaderIndex += 1
+            while currentHeaderIndex < headers.count {
+                let currentHeader = headers[currentHeaderIndex]
+                if byteBuffer.getSlice(at: currentHeader.name.start,
+                                       length: currentHeader.name.length)?
+                    .compareReadingToCaseInsensitiveCString(headerName) ?? false {
+                    // Use this index
+                    singleValueParser = ByteBufferSliceSplitIterator(
+                        byteBuffer: byteBuffer,
+                        separator: HTTPNonContiguousHeaderCommaSeparatedValuedFieldHandler.comma,
+                        start: currentHeader.value.start,
+                        length: currentHeader.value.length)
+                    isNowOnAField = true
+                    break
+                }
+                currentHeaderIndex += 1
+            }
+        }
+        // Current index is out of bounds = the iterator ends
+        if currentHeaderIndex >= headers.count { return nil }
+        
+        let next = singleValueParser.next()
+        // Null or empty buffer?
+        if (next?.readableBytes ?? 0) == 0 {
+            // Try again
+            isNowOnAField = false
+            return self.next()
+        }
+        return next?.sliceByTrimmingWhitespaces()
+    }
+    
+    init(fromHeaderName headerName: ContiguousArray<UInt8>,
+         fromHeaders: [HTTPHeader],
+         in byteBuffer: ByteBuffer) {
+        
+        singleValueParser = ByteBufferSliceSplitIterator(
+            byteBuffer: byteBuffer,
+            separator: HTTPNonContiguousHeaderCommaSeparatedValuedFieldHandler.comma)
+        headers = fromHeaders
+        self.headerName = headerName
+        
+        self.byteBuffer = byteBuffer
+    }
+
+}
+
+/* private but tests */ internal struct HTTPKeepAliveHandler {
+    
+    static let connectionString = "connection".asUpperCaseContiguousUTF8UIntArray
+    
+    static let keepAliveString  = "keep-alive".asUpperCaseContiguousUTF8UIntArray
+    static let closeString      =      "close".asUpperCaseContiguousUTF8UIntArray
+    
+    internal static func parse(_ header: ByteBuffer, headers: [HTTPHeader]) ->
         (keepAlive: Bool, close: Bool) {
             
-        var keepAlive = false
-        var close = false
-        
-        var tokenizer = ByteBufferSliceSplitIterator(byteBuffer: header,
-                                                     separator: comma,
-                                                     start: from,
-                                                     length: length)
-        print(header.getString(at: from, length: length))
-        while let nextToken = tokenizer.next(), nextToken.readableBytes > 0 {
-            let tokenTrimmed = nextToken.sliceByTrimming(whiteSpaces: whiteSpacesAndCRLF,
-                                                         start: 0,
-                                                         length: nextToken.readableBytes)
-            keepAlive = keepAlive ||
-                (tokenTrimmed?.compareReadingToCaseInsensitiveCString(
-                    HTTPKeepAliveHeader.keepAliveString) ?? false)
-            close = close ||
-                (tokenTrimmed?.compareReadingToCaseInsensitiveCString(
-                    HTTPKeepAliveHeader.closeString) ?? false)
-        }
-        return (keepAlive: keepAlive, close: close)
+            var keepAlive = false
+            var close = false
+            
+            var tokenizer = HTTPNonContiguousHeaderCommaSeparatedValuedFieldHandler(
+                fromHeaderName: connectionString, fromHeaders: headers, in: header)
+            
+            while let nextToken = tokenizer.next() {
+                let tokenTrimmed = nextToken
+                keepAlive = keepAlive ||
+                    (tokenTrimmed.compareReadingToCaseInsensitiveCString(
+                        HTTPKeepAliveHandler.keepAliveString))
+                close = close ||
+                    (tokenTrimmed.compareReadingToCaseInsensitiveCString(
+                        HTTPKeepAliveHandler.closeString))
+            }
+            return (keepAlive: keepAlive, close: close)
     }
 }
 
@@ -332,21 +393,10 @@ private extension UInt8 {
         case .unknown:
             var keepAlive: Bool = false
             var close: Bool = false
-            for header in self.headers {
-                print(self.buffer.getString(at: header.name.start, length: header.name.length))
-                print(self.buffer.getString(at: header.value.start, length: header.value.length))
-                if self.buffer.equalCaseInsensitiveASCII(view: "connection".utf8, at: header.name) {
-                    
-                    let (isThisKeepAlive, isThisClose) = HTTPKeepAliveHeader.parse(
-                        self.buffer, from: header.value.start, length: header.value.length)
-                    keepAlive = keepAlive || isThisKeepAlive
-                    close = close || isThisClose
-                }
-            }
+            (keepAlive, close) = HTTPKeepAliveHandler.parse(
+                self.buffer, headers: self.headers)
             
-            if keepAlive && close {
-                fatalError("Couldn't be close and keep-alive at the same time")
-            }
+            // TODO: Handle the case where both keep-alive and close are used
             
             if keepAlive { return true }
             if close { return false }

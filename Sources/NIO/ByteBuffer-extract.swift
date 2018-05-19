@@ -15,8 +15,8 @@
 /// A base ByteBuffer "Slicer", this base one just splits by a separator.
 public struct ByteBufferSliceSplitIterator: IteratorProtocol {
     
-    var byteBuffer: ByteBuffer
-    var separator: UInt8
+    let byteBuffer: ByteBuffer
+    let separator: UInt8
     let start: Int
     let length: Int
     
@@ -25,16 +25,17 @@ public struct ByteBufferSliceSplitIterator: IteratorProtocol {
     public typealias Element = ByteBuffer
     mutating public func next() -> ByteBuffer? {
         
-        return byteBuffer.withVeryUnsafeBytes { pointer -> ByteBuffer? in
+        let slicingParameters = byteBuffer.withVeryUnsafeBytes { pointer -> (start: Int, length: Int) in
             
-            let startPoint   = pointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
+            let startPoint = pointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                                    .advanced(by: self.start)
             
-            var address      = startPoint.advanced(by: currentIndex)
-            let finalAddress =    address.advanced(by: length)
+            var address = startPoint.advanced(by: currentIndex)
+            let finalAddress = startPoint.advanced(by: length)
             
             let initialPointer = address
 
-            while address < finalAddress && address.pointee != 0 {
+            while address < finalAddress {
                 
                 if address.pointee == separator {
                     break
@@ -42,25 +43,26 @@ public struct ByteBufferSliceSplitIterator: IteratorProtocol {
                 address = address.advanced(by: 1)
             }
             
+            let start = currentIndex
             let tokenLength = address - initialPointer
-            let ret = byteBuffer.getSlice(at: currentIndex, length: tokenLength)
             // For the next time, with skipping the separator
             currentIndex += tokenLength + 1
             
-            return ret
+            return (start: start, length: tokenLength)
         }
+        return byteBuffer.getSlice(at: slicingParameters.start + self.start,
+                                   length: slicingParameters.length)
 
     }
     
     public init(byteBuffer: ByteBuffer, separator: UInt8, start: Int, length: Int) {
-        // This should never happens as we control when this is called. Adding an assert to ensure this.
-        assert(start <= byteBuffer.capacity - length)
+        precondition(start <= byteBuffer.capacity - length)
         
         self.byteBuffer = byteBuffer
         self.separator = separator
         self.start = start
         self.length = length
-        self.currentIndex = self.start
+        self.currentIndex = 0
     }
 
     public init(byteBuffer: ByteBuffer,
@@ -72,6 +74,8 @@ public struct ByteBufferSliceSplitIterator: IteratorProtocol {
 }
 
 extension ByteBuffer {
+    
+    static var defaultWhitespaces = [" ", "\t"].map({UInt8($0.utf8CString[0])})
     
     public func sliceByTrimming(whiteSpaces: [UInt8], start: Int, length: Int) -> ByteBuffer? {
         return withVeryUnsafeBytes { pointer -> ByteBuffer? in
@@ -96,17 +100,17 @@ extension ByteBuffer {
     }
     
     public func sliceByTrimmingWhitespaces() -> ByteBuffer? {
-        return sliceByTrimming(whiteSpaces: [" ", "\t"].map({UInt8($0.utf8CString[0])}),
+        return sliceByTrimming(whiteSpaces: ByteBuffer.defaultWhitespaces,
                                start: 0, length: self.readableBytes)
     }
     
     public func sliceByTrimmingWhitespaces(from start: Int = 0, length: Int) -> ByteBuffer? {
-        return sliceByTrimming(whiteSpaces: [" ", "\t"].map({UInt8($0.utf8CString[0])}),
+        return sliceByTrimming(whiteSpaces: ByteBuffer.defaultWhitespaces,
                                start: start, length: length)
     }
     
     public func sliceByTrimmingWhitespaces(from start: Int) -> ByteBuffer? {
-        return sliceByTrimming(whiteSpaces: [" ", "\t"].map({UInt8($0.utf8CString[0])}),
+        return sliceByTrimming(whiteSpaces: ByteBuffer.defaultWhitespaces,
                                start: start, length: self.readableBytes - start)
     }
     
@@ -121,7 +125,8 @@ extension ByteBuffer {
     ///
     /// - Parameter constant: The string constant in the form of contiguous array _IN UPPER CASE_.
     /// - Returns: Whether the ByteBuffer contains **EXACTLY** this array or no, but by ignoring case.
-    public func compareReadingToCaseInsensitiveCString(_ constant: ContiguousArray<UInt8>) -> Bool {
+    public func compareReadingToCaseInsensitiveCString<T: Collection>(_ constant: T) -> Bool
+        where T.Element == UInt8 {
         
         let length = self.readableBytes
         // If available is not equal the string length itself, it can't be equal
@@ -151,8 +156,9 @@ extension ByteBuffer {
     ///
     /// - Parameter constant: The string constant in the form of contiguous array.
     /// - Returns: Whether the ByteBuffer contains **EXACTLY** this array or no.
-    public func compareReadingToCaseSensitiveCString(_ constant: ContiguousArray<UInt8>) -> Bool {
-        
+    public func compareReadingToCaseSensitiveCString<T: Collection>(_ constant: T) -> Bool
+        where T.Element == UInt8 {
+
         let length = self.readableBytes
         // If available is not equal the string length itself, it can't be equal
         if self.readableBytes != constant.count { return false }

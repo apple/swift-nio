@@ -116,6 +116,9 @@ extension ByteBufferTest {
                 ("testDiscardReadBytesOnConsumedBuffer", testDiscardReadBytesOnConsumedBuffer),
                 ("testDumpBytesFormat", testDumpBytesFormat),
                 ("testStaticStringCategorySubscript", testStaticStringCategorySubscript),
+                ("testCommaSeparated", testCommaSeparated),
+                ("testTrimmer", testTrimmer),
+                ("testComparators", testComparators),
            ]
    }
 }

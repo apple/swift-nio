@@ -1361,27 +1361,27 @@ class ByteBufferTest: XCTestCase {
         var someByteBuffer: ByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
         someByteBuffer.write(string: "first,second,third,fourth,fifth")
         
-        var byteBufferSlice = ByteBufferSliceSplitIterator(byteBuffer: someByteBuffer,
-                                                           separator: UInt8(",".utf8CString[0]))
+        var byteBufferSlicer = ByteBufferSliceSplitIterator(byteBuffer: someByteBuffer,
+                                                            separator: UInt8(",".utf8CString[0]))
         
-        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "first")
-        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "second")
-        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "third")
-        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "fourth")
-        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "fifth")
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "first")
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "second")
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "third")
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "fourth")
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "fifth")
         
-        let token = byteBufferSlice.next(); let length = token?.readableBytes ?? 0
+        let token = byteBufferSlicer.next(); let length = token?.readableBytes ?? 0
         XCTAssertEqual(length, 0)
 
         someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
         someByteBuffer.write(string: "first,second,third,fourth,fifth")
         
-        byteBufferSlice = ByteBufferSliceSplitIterator(byteBuffer: someByteBuffer,
-                                                       separator: UInt8(",".utf8CString[0]),
-                                                       start: 6, length: 20)
-        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "second")
-        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "third")
-        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlice.next()), "fourth")
+        byteBufferSlicer = ByteBufferSliceSplitIterator(byteBuffer: someByteBuffer,
+                                                        separator: UInt8(",".utf8CString[0]),
+                                                        start: 6, length: 20)
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "second")
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "third")
+        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "fourth")
     }
     
     func testTrimmer() {
