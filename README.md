@@ -106,8 +106,6 @@ If you had to poll the future to detect when it completed that would be quite in
 
 Another important topic for consideration is the difference between how the promise passed to `close` works as opposed to  `closeFuture`  on a `Channel`.  For example, the promise passed into `close` will succeed after the `Channel` is closed down but before the `ChannelPipeline` is completely cleared out.  This will allow you to take action on the `ChannelPipeline` before it is completely cleared out, if needed.  If it is desired to wait for the `Channel` to close down and the `ChannelPipeline` to be cleared out without any futher action, then the better option would be to wait for the `closeFuture` to succeed.
 
-Another important topic for consideration is the difference between the  `close()`  method and the `closeFuture: EventLoopFuture` property on a `Channel`.  For example, when the `close()` method is called from a `Channel` an I/O request is put into the `ChannelPipeline` to forward this request to the next `ChannelHandler` in the pipeline or complete the `promise: EventLoopPromise` on a `Channel`.  Completing this promise on the `Channel` should then fulfill the `closeFuture: EventLoopFuture` property and code can be executed based upon the  completion of this event.
-
 There are several functions for applying callbacks to `EventLoopFuture<T>`, depending on how and when you want them to execute. Details of these functions is left to the API documentation.
 
 ### Design Philosophy
