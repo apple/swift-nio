@@ -113,6 +113,7 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     ///     - ctx: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     ///     - mode: The `CloseMode` to apply
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    ///                Once the `EventLoopPromise` is notified the corresponding `EventLoopFuture: closeFuture` can then be fulfilled on a `Channel` as a result.
     func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?)
 
     /// Called when an user outbound event is triggered.

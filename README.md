@@ -104,6 +104,8 @@ An `EventLoopFuture<T>` is essentially a container for the return value of a fun
 
 If you had to poll the future to detect when it completed that would be quite inefficient, so `EventLoopFuture<T>` is designed to have managed callbacks. Essentially, you can hang callbacks off the future that will be executed when a result is available. The `EventLoopFuture<T>` will even carefully arrange the scheduling to ensure that these callbacks always execute on the event loop that initially created the promise, which helps ensure that you don't need too much synchronization around `EventLoopFuture<T>` callbacks.
 
+Another important topic for consideration is the difference between the  `close()`  method and the `closeFuture: EventLoopFuture` property on a `Channel`.  For example, when the `close()` method is called from a `Channel` an I/O request is put into the `ChannelPipeline` to forward this request to the next `ChannelHandler` in the pipeline or complete the `promise: EventLoopPromise` on a `Channel`.  Completing this promise on the `Channel` should then fulfill the `closeFuture: EventLoopFuture` property and code can be executed based upon the  completion of this event.
+
 There are several functions for applying callbacks to `EventLoopFuture<T>`, depending on how and when you want them to execute. Details of these functions is left to the API documentation.
 
 ### Design Philosophy
