@@ -68,7 +68,6 @@ public protocol ChannelCore: class {
     ///     - error: The `Error` which will be used to fail any pending writes.
     ///     - mode: The `CloseMode` to apply.
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
-    ///                Once the `EventLoopPromise` is notified so the corresponding `EventLoopFuture` (closeFuture) can then be fulfilled as a result.
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?)
 
     /// Trigger an outbound event.
@@ -105,7 +104,7 @@ public protocol Channel: class, ChannelOutboundInvoker {
     /// The `Channel`'s `ByteBuffer` allocator. This is _the only_ supported way of allocating `ByteBuffer`s to be used with this `Channel`.
     var allocator: ByteBufferAllocator { get }
 
-    /// The `closeFuture` is fired as a result of the a `Channel` closing down and an `EventLoopPromise` being notified.
+    /// The `closeFuture` will fire when the `Channel` has been closed.
     var closeFuture: EventLoopFuture<Void> { get }
 
     /// The `ChannelPipeline` which handles all I/O events and requests associated with this `Channel`.
@@ -203,7 +202,6 @@ extension Channel {
         pipeline.read()
     }
 
-    // Called as an I/O request in the ChannelPipeline to notify the ChannelHandler that the promise needs to be completed.
     public func close(mode: CloseMode = .all, promise: EventLoopPromise<Void>?) {
         pipeline.close(mode: mode, promise: promise)
     }

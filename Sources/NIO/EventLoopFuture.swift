@@ -224,7 +224,6 @@ public struct EventLoopPromise<T> {
 ///         . . . if it fails, instead . . .
 ///         promise.fail(error)
 ///     }
-///     // Returns the promise immediately to be observed until the promise is notified to take action.
 ///     return promise.futureResult
 /// }
 /// ```
