@@ -1413,27 +1413,6 @@ class ByteBufferTest: XCTestCase {
         someByteBuffer.write(string: "   Something    more  than  one  word  ")
         XCTAssertEqual(
             readAllTheStringFromBuffer(byteBuffer: someByteBuffer.sliceByTrimmingWhitespaces()), "Something    more  than  one  word")
-        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 4)
-        someByteBuffer.write(string: "   Something    more  than  one  word  ")
-        XCTAssertEqual(
-            readAllTheStringFromBuffer(byteBuffer: someByteBuffer.sliceByTrimmingWhitespaces(length: 15)), "Something")
-        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 4)
-        someByteBuffer.write(string: "   Something    more  than  one  word  ")
-        XCTAssertEqual(
-            readAllTheStringFromBuffer(byteBuffer: someByteBuffer.sliceByTrimmingWhitespaces(from: 15, length: 17)), "more  than  one")
-        
-        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 4)
-        someByteBuffer.write(string: "   Something    ")
-        XCTAssertEqual(
-            someByteBuffer.sliceByTrimmingWhitespaces(from: 16)?.readableBytes, 0)
-
-        // This test case must produce an assertion fail.
-        // Didn't make extra release time checks inside the function, only an assertion (for performance)
-        
-//        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 4)
-//        someByteBuffer.write(string: "   Something    ")
-//        XCTAssertThrowsError(
-//            someByteBuffer.sliceByTrimmingWhitespaces(from: 3, length: 50)?.readableBytes)
         
     }
     

@@ -116,16 +116,6 @@ extension ByteBuffer {
                                start: 0, length: self.readableBytes)
     }
     
-    public func sliceByTrimmingWhitespaces(from start: Int = 0, length: Int) -> ByteBuffer? {
-        return sliceByTrimming(whiteSpaces: ByteBuffer.defaultWhitespaces,
-                               start: start, length: length)
-    }
-    
-    public func sliceByTrimmingWhitespaces(from start: Int) -> ByteBuffer? {
-        return sliceByTrimming(whiteSpaces: ByteBuffer.defaultWhitespaces,
-                               start: start, length: self.readableBytes - start)
-    }
-    
     /// Compares the buffer to a case insensitive `ContiguousArray<UInt8>`.
     ///
     /// This `ContiguousArray` could be get from applying the `asUpperCaseContiguousUTF8UIntArray`
