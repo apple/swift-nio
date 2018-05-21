@@ -529,7 +529,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         try sendRequest(acceptEncoding: nil, channel: channel)
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
         let writePromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
-        channel.write(NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
+        channel.writeAndFlush(NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
         channel.pipeline.removeHandlers()
         try writePromise.futureResult.wait()
     }

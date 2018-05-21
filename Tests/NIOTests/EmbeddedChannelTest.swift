@@ -145,7 +145,7 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
 
         do {
-            try channel.write(NIOAny(5)).wait()
+            try channel.writeAndFlush(NIOAny(5)).wait()
             XCTFail("Did not throw")
         } catch ChannelError.writeDataUnsupported {
             // All good
@@ -173,5 +173,19 @@ class EmbeddedChannelTest: XCTestCase {
 
         channel.close(promise: closePromise)
         try closePromise.futureResult.wait()
+    }
+
+    func testWriteWithoutFlushDoesNotWrite() throws {
+        let channel = EmbeddedChannel()
+
+        var buf = ByteBufferAllocator().buffer(capacity: 1)
+        buf.write(bytes: [1])
+        let writeFuture = channel.write(buf)
+        XCTAssertNil(channel.readOutbound())
+        XCTAssertFalse(writeFuture.isFulfilled)
+        channel.flush()
+        XCTAssertNotNil(channel.readOutbound())
+        XCTAssertTrue(writeFuture.isFulfilled)
+        XCTAssertNoThrow(try XCTAssertFalse(channel.finish()))
     }
 }

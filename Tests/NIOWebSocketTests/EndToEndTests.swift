@@ -38,7 +38,7 @@ extension EmbeddedChannel {
     func writeString(_ string: String) -> EventLoopFuture<Void> {
         var buffer = self.allocator.buffer(capacity: string.utf8.count)
         buffer.write(string: string)
-        return self.write(buffer)
+        return self.writeAndFlush(buffer)
     }
 }
 
@@ -332,10 +332,10 @@ class EndToEndTests: XCTestCase {
 
         // Let's send a frame or two, to confirm that this works.
         let dataFrame = WebSocketFrame(fin: true, opcode: .binary, data: data)
-        XCTAssertNoThrow(try client.write(dataFrame).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(dataFrame).wait())
 
         let pingFrame = WebSocketFrame(fin: true, opcode: .ping, data: client.allocator.buffer(capacity: 0))
-        XCTAssertNoThrow(try client.write(pingFrame).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(pingFrame).wait())
         interactInMemory(client, server)
 
         XCTAssertEqual(recorder.frames, [dataFrame, pingFrame])

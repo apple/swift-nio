@@ -265,7 +265,7 @@ class ChannelPipelineTest: XCTestCase {
 
             func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
                 let data = self.unwrapInboundIn(data)
-                ctx.write(self.wrapOutboundOut(data.map { $0 * -1 }), promise: nil)
+                ctx.writeAndFlush(self.wrapOutboundOut(data.map { $0 * -1 }), promise: nil)
                 ctx.fireChannelRead(self.wrapInboundOut(data))
             }
         }
