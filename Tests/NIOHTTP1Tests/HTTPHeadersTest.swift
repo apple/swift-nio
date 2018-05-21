@@ -228,9 +228,8 @@ class HTTPHeadersTest : XCTestCase {
              HTTPHeader(name: HTTPHeaderIndex(start: 56, length: 10),
                         value: HTTPHeaderIndex(start: 68, length: 17))]
         
-        var tokenSource = HTTPNonContiguousHeaderCommaSeparatedValuedFieldHandler(
-            fromHeaderName: "Connection".asUpperCaseContiguousUTF8UIntArray, fromHeaders: headers,
-            in: buffer)
+        var tokenSource = HTTPListHeaderIterator(
+            fromHeaderName: "Connection".asUpperCaseContiguousUTF8UIntArray, fromHeaders: HTTPHeaders.init(buffer: buffer, headers: headers, keepAliveState: .unknown))
         
         var currentToken = tokenSource.next()
         XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: currentToken), "x-options")

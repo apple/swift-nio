@@ -1367,7 +1367,9 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "first")
         XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "second")
         XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "third")
+        XCTAssertEqual(byteBufferSlicer.length, 12)
         XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "fourth")
+        XCTAssertEqual(byteBufferSlicer.length, 5)
         XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "fifth")
         
         let token = byteBufferSlicer.next(); let length = token?.readableBytes ?? 0
@@ -1380,6 +1382,7 @@ class ByteBufferTest: XCTestCase {
                                                         separator: UInt8(",".utf8CString[0]),
                                                         start: 6, length: 20)
         XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "second")
+        XCTAssertEqual(byteBufferSlicer.length, 13)
         XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "third")
         XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: byteBufferSlicer.next()), "fourth")
     }
@@ -1418,53 +1421,34 @@ class ByteBufferTest: XCTestCase {
     
     func testComparators() {
         var someByteBuffer: ByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
-        someByteBuffer.write(string: "first")
-        XCTAssert(
-            someByteBuffer.compareReadingToCaseSensitiveCString("first".asContiguousUTF8UIntArray))
-        XCTAssertFalse(
-            someByteBuffer.compareReadingToCaseSensitiveCString("firSt".asContiguousUTF8UIntArray))
-        XCTAssertFalse(
-            someByteBuffer.compareReadingToCaseSensitiveCString("firt".asContiguousUTF8UIntArray))
-        XCTAssertFalse(
-            someByteBuffer.compareReadingToCaseSensitiveCString("firsta".asContiguousUTF8UIntArray))
-        XCTAssertFalse(
-            someByteBuffer.compareReadingToCaseSensitiveCString("afirst".asContiguousUTF8UIntArray))
-        XCTAssertFalse(
-            someByteBuffer.compareReadingToCaseSensitiveCString("eirst".asContiguousUTF8UIntArray))
-        XCTAssertFalse(
-            someByteBuffer.compareReadingToCaseSensitiveCString("firso".asContiguousUTF8UIntArray))
-        XCTAssertFalse(
-            someByteBuffer.compareReadingToCaseSensitiveCString("firot".asContiguousUTF8UIntArray))
-
-        someByteBuffer = ByteBuffer.Allocator.init().buffer(capacity: 16)
         someByteBuffer.write(string: "fiRSt")
         XCTAssert(
-            someByteBuffer.compareReadingToCaseInsensitiveCString(
-                "first".asUpperCaseContiguousUTF8UIntArray))
+            someByteBuffer.compareReadableBytes(
+                to: "first".asUpperCaseContiguousUTF8UIntArray))
         XCTAssert(
-            someByteBuffer.compareReadingToCaseInsensitiveCString(
-                "fiRSt".asUpperCaseContiguousUTF8UIntArray))
+            someByteBuffer.compareReadableBytes(
+                to: "fiRSt".asUpperCaseContiguousUTF8UIntArray))
         XCTAssert(
-            someByteBuffer.compareReadingToCaseInsensitiveCString(
-                "fIrst".asUpperCaseContiguousUTF8UIntArray))
+            someByteBuffer.compareReadableBytes(
+                to: "fIrst".asUpperCaseContiguousUTF8UIntArray))
         XCTAssertFalse(
-            someByteBuffer.compareReadingToCaseInsensitiveCString(
-                "fIrt".asUpperCaseContiguousUTF8UIntArray))
+            someByteBuffer.compareReadableBytes(
+                to: "fIrt".asUpperCaseContiguousUTF8UIntArray))
         XCTAssertFalse(
-            someByteBuffer.compareReadingToCaseInsensitiveCString(
-                "firsta".asUpperCaseContiguousUTF8UIntArray))
+            someByteBuffer.compareReadableBytes(
+                to: "firsta".asUpperCaseContiguousUTF8UIntArray))
         XCTAssertFalse(
-            someByteBuffer.compareReadingToCaseInsensitiveCString(
-                "afirst".asUpperCaseContiguousUTF8UIntArray))
+            someByteBuffer.compareReadableBytes(
+                to: "afirst".asUpperCaseContiguousUTF8UIntArray))
         XCTAssertFalse(
-            someByteBuffer.compareReadingToCaseInsensitiveCString(
-                "eiRSt".asUpperCaseContiguousUTF8UIntArray))
+            someByteBuffer.compareReadableBytes(
+                to: "eiRSt".asUpperCaseContiguousUTF8UIntArray))
         XCTAssertFalse(
-            someByteBuffer.compareReadingToCaseInsensitiveCString(
-                "fIrso".asUpperCaseContiguousUTF8UIntArray))
+            someByteBuffer.compareReadableBytes(
+                to: "fIrso".asUpperCaseContiguousUTF8UIntArray))
         XCTAssertFalse(
-            someByteBuffer.compareReadingToCaseInsensitiveCString(
-                "firot".asUpperCaseContiguousUTF8UIntArray))
+            someByteBuffer.compareReadableBytes(
+                to: "firot".asUpperCaseContiguousUTF8UIntArray))
 
     }
 

@@ -15,24 +15,27 @@
 /// A base ByteBuffer "Slicer", this base one just splits by a separator.
 public struct ByteBufferSliceSplitIterator: IteratorProtocol {
     
+    private(set) var currentIndex: Int
+    
+    let endIndex: Int
     let byteBuffer: ByteBuffer
     let separator: UInt8
-    let start: Int
-    let length: Int
     
-    private var currentIndex: Int
+    var length: Int {
+        get {
+            return endIndex - currentIndex
+        }
+    }
     
     public typealias Element = ByteBuffer
     mutating public func next() -> ByteBuffer? {
         
         let slicingParameters = byteBuffer.withVeryUnsafeBytes { pointer -> (start: Int, length: Int) in
             
-            let allBuffer = pointer.bindMemory(to: UInt8.self)
-                .dropFirst(self.start)
-                .prefix(length)
+            let remaining = pointer.bindMemory(to: UInt8.self)
+                .prefix(self.endIndex)
+                .dropFirst(self.currentIndex)
             
-            let remaining = allBuffer.dropFirst(self.currentIndex)
-
             var index: Int = remaining.count
             
             for pointee in remaining.enumerated() {
@@ -48,7 +51,7 @@ public struct ByteBufferSliceSplitIterator: IteratorProtocol {
             
             return (start: start, length: index)
         }
-        return byteBuffer.getSlice(at: slicingParameters.start + self.start,
+        return byteBuffer.getSlice(at: slicingParameters.start,
                                    length: slicingParameters.length)
 
     }
@@ -58,9 +61,8 @@ public struct ByteBufferSliceSplitIterator: IteratorProtocol {
         
         self.byteBuffer = byteBuffer
         self.separator = separator
-        self.start = start
-        self.length = length
-        self.currentIndex = 0
+        self.currentIndex = start
+        self.endIndex = start + length
     }
 
     public init(byteBuffer: ByteBuffer,
@@ -116,70 +118,34 @@ extension ByteBuffer {
                                start: 0, length: self.readableBytes)
     }
     
-    /// Compares the buffer to a case insensitive `ContiguousArray<UInt8>`.
+    /// Compares the buffer to a case insensitive collection.
     ///
-    /// This `ContiguousArray` could be get from applying the `asUpperCaseContiguousUTF8UIntArray`
+    /// This array could be get from applying the `asUpperCaseContiguousUTF8UIntArray`
     ///   property on the string protocol.
     ///
     /// **WARNING:** MAKE SURE THAT THE STRING YOU PASS IS UPPERCASE
     ///
     /// This function doesn't change the indices of the buffer
     ///
-    /// - Parameter constant: The string constant in the form of contiguous array _IN UPPER CASE_.
+    /// - Parameter bytes: The string constant in the form of a collection of `UInt8` _IN
+    ///                     UPPER CASE_.
     /// - Returns: Whether the ByteBuffer contains **EXACTLY** this array or no, but by ignoring case.
-    public func compareReadingToCaseInsensitiveCString<T: Collection>(_ constant: T) -> Bool
+    public func compareReadableBytes<T: Collection>(to bytes: T) -> Bool
         where T.Element == UInt8 {
         
-        let length = self.readableBytes
         // If available is not equal the string length itself, it can't be equal
-        if self.readableBytes != constant.count { return false }
+        if self.readableBytes != bytes.count { return false }
 
-        return withVeryUnsafeBytes { pointer -> Bool in
-            var pointer = pointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
-            
-            for (idx, char) in constant.enumerated() {
-                
-                guard idx < length else { return true }
-                if (pointer.pointee & 0xdf) != char { return false }
-                pointer = pointer.advanced(by: 1)
-
+        return withUnsafeReadableBytes{ pointer -> Bool in
+            let pointer = pointer.bindMemory(to: UInt8.self)
+            for (idx, char) in bytes.enumerated() {
+                if (pointer[idx] & 0xdf) != char { return false }
             }
             return true
         }
         
     }
     
-    /// Compares the buffer to a case sensitive `ContiguousArray<UInt8>`.
-    ///
-    /// This `ContiguousArray` could be get from applying the `asContiguousUTF8UIntArray` property
-    /// on a string protocol.
-    ///
-    /// This function doesn't change the indices of the buffer
-    ///
-    /// - Parameter constant: The string constant in the form of contiguous array.
-    /// - Returns: Whether the ByteBuffer contains **EXACTLY** this array or no.
-    public func compareReadingToCaseSensitiveCString<T: Collection>(_ constant: T) -> Bool
-        where T.Element == UInt8 {
-
-        let length = self.readableBytes
-        // If available is not equal the string length itself, it can't be equal
-        if self.readableBytes != constant.count { return false }
-        
-        return withVeryUnsafeBytes { pointer -> Bool in
-            var pointer = pointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
-
-            for (idx, char) in constant.enumerated() {
-            
-                guard idx < length else { return true }
-                if (pointer.pointee) != char { return false }
-                pointer = pointer.advanced(by: 1)
-                
-            }
-            return true
-        }
-        
-    }
-
 }
 
 public extension StringProtocol {
