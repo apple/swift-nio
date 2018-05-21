@@ -240,7 +240,8 @@ public class SocketChannelTest : XCTestCase {
 
         let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
         do {
-            try serverChannel.write("test").wait()
+            try serverChannel.writeAndFlush("test").wait()
+            XCTFail("did not throw")
         } catch let err as ChannelError where err == .operationUnsupported {
             // expected
         }

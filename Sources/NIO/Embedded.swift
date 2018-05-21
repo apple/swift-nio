@@ -158,6 +158,7 @@ class EmbeddedChannelCore: ChannelCore {
     }
 
     var outboundBuffer: [IOData] = []
+    var pendingOutboundBuffer: [(IOData, EventLoopPromise<Void>?)] = []
     var inboundBuffer: [NIOAny] = []
 
     func localAddress0() throws -> SocketAddress {
@@ -215,11 +216,16 @@ class EmbeddedChannelCore: ChannelCore {
             return
         }
 
-        addToBuffer(buffer: &outboundBuffer, data: data)
-        promise?.succeed(result: ())
+        self.pendingOutboundBuffer.append((data, promise))
     }
 
     func flush0() {
+        let pendings = self.pendingOutboundBuffer
+        self.pendingOutboundBuffer.removeAll()
+        for dataAndPromise in pendings {
+            self.addToBuffer(buffer: &self.outboundBuffer, data: dataAndPromise.0)
+            dataAndPromise.1?.succeed(result: ())
+        }
     }
 
     func read0() {
@@ -268,7 +274,7 @@ public class EmbeddedChannel: Channel {
         try close().wait()
         (self.eventLoop as! EmbeddedEventLoop).run()
         try throwIfErrorCaught()
-        return !channelcore.outboundBuffer.isEmpty || !channelcore.inboundBuffer.isEmpty
+        return !channelcore.outboundBuffer.isEmpty || !channelcore.inboundBuffer.isEmpty || !channelcore.pendingOutboundBuffer.isEmpty
     }
 
     private var _pipeline: ChannelPipeline!

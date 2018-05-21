@@ -1410,7 +1410,7 @@ public class ChannelTests: XCTestCase {
             try pipeline.eventLoop.submit { () -> Channel in
                 XCTAssertTrue(pipeline.channel is DeadChannel)
                 return pipeline.channel
-            }.wait().write(NIOAny(())).wait()
+            }.wait().writeAndFlush(NIOAny(())).wait()
             XCTFail("shouldn't have been reached")
         } catch let e as ChannelError where e == .ioOnClosedChannel {
             // OK
