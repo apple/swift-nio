@@ -205,18 +205,22 @@ public final class ServerBootstrap {
             return eventLoop.newFailedFuture(error: error)
         }
 
-        return serverChannelInit(serverChannel).then {
-            serverChannel.pipeline.add(handler: AcceptHandler(childChannelInitializer: childChannelInit,
-                                                              childChannelOptions: childChannelOptions))
+        return eventLoop.submit {
+            return serverChannelInit(serverChannel).then {
+                serverChannel.pipeline.add(handler: AcceptHandler(childChannelInitializer: childChannelInit,
+                                                                  childChannelOptions: childChannelOptions))
+            }.then {
+                serverChannelOptions.applyAll(channel: serverChannel)
+            }.then {
+                register(eventLoop, serverChannel)
+            }.map {
+                serverChannel as Channel
+            }.thenIfError { error in
+                serverChannel.close0(error: error, mode: .all, promise: nil)
+                return eventLoop.newFailedFuture(error: error)
+            }
         }.then {
-            serverChannelOptions.applyAll(channel: serverChannel)
-        }.then {
-            register(eventLoop, serverChannel)
-        }.map {
-            serverChannel
-        }.thenIfError { error in
-            serverChannel.close0(error: error, mode: .all, promise: nil)
-            return eventLoop.newFailedFuture(error: error)
+            $0
         }
     }
 
@@ -240,23 +244,42 @@ public final class ServerBootstrap {
 
         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
             let accepted = self.unwrapInboundIn(data)
-            let childChannelInit = self.childChannelInit ?? { (_: Channel) in ctx.eventLoop.newSucceededFuture(result: ()) }
+            let ctxEventLoop = ctx.eventLoop
+            let childEventLoop = accepted.eventLoop
+            let childChannelInit = self.childChannelInit ?? { (_: Channel) in childEventLoop.newSucceededFuture(result: ()) }
 
-            self.childChannelOptions.applyAll(channel: accepted).hopTo(eventLoop: ctx.eventLoop).then {
-                assert(ctx.eventLoop.inEventLoop)
-                return childChannelInit(accepted)
-            }.then { () -> EventLoopFuture<Void> in
-                assert(ctx.eventLoop.inEventLoop)
-                guard !ctx.pipeline.destroyed else {
-                    return accepted.close().thenThrowing {
-                        throw ChannelError.ioOnClosedChannel
-                    }
+            @inline(__always)
+            func setupChildChannel() -> EventLoopFuture<Void> {
+                return self.childChannelOptions.applyAll(channel: accepted).then { () -> EventLoopFuture<Void> in
+                    assert(childEventLoop.inEventLoop)
+                    return childChannelInit(accepted)
                 }
-                ctx.fireChannelRead(data)
-                return ctx.eventLoop.newSucceededFuture(result: ())
-            }.whenFailure { error in
-                assert(ctx.eventLoop.inEventLoop)
-                self.closeAndFire(ctx: ctx, accepted: accepted, err: error)
+            }
+
+            @inline(__always)
+            func fireThroughPipeline(_ future: EventLoopFuture<Void>) {
+                assert(ctxEventLoop.inEventLoop)
+                future.then { (_) -> EventLoopFuture<Void> in
+                    assert(ctxEventLoop.inEventLoop)
+                    guard !ctx.pipeline.destroyed else {
+                        return accepted.close().thenThrowing {
+                            throw ChannelError.ioOnClosedChannel
+                        }
+                    }
+                    ctx.fireChannelRead(data)
+                    return ctx.eventLoop.newSucceededFuture(result: ())
+                }.whenFailure { error in
+                    assert(ctx.eventLoop.inEventLoop)
+                    self.closeAndFire(ctx: ctx, accepted: accepted, err: error)
+                }
+            }
+
+            if childEventLoop === ctxEventLoop {
+                fireThroughPipeline(setupChildChannel())
+            } else {
+                fireThroughPipeline(childEventLoop.submit {
+                    return setupChildChannel()
+                }.then { $0 }.hopTo(eventLoop: ctxEventLoop))
             }
         }
 
@@ -463,18 +486,27 @@ public final class ClientBootstrap {
             return promise.futureResult
         }
 
-        channelInitializer(channel).then {
-            channelOptions.applyAll(channel: channel)
-        }.then {
-            channel.registerAndDoSynchronously(body)
-        }.map {
-            channel
-        }.thenIfError { error in
-            channel.close0(error: error, mode: .all, promise: nil)
-            return channel.eventLoop.newFailedFuture(error: error)
-        }.cascade(promise: promise)
+        @inline(__always)
+        func setupChannel() -> EventLoopFuture<Channel> {
+            assert(eventLoop.inEventLoop)
+            channelInitializer(channel).then {
+                channelOptions.applyAll(channel: channel)
+            }.then {
+                channel.registerAndDoSynchronously(body)
+            }.map {
+                channel
+            }.thenIfError { error in
+                channel.close0(error: error, mode: .all, promise: nil)
+                return channel.eventLoop.newFailedFuture(error: error)
+            }.cascade(promise: promise)
+            return promise.futureResult
+        }
 
-        return promise.futureResult
+        if eventLoop.inEventLoop {
+            return setupChannel()
+        } else {
+            return eventLoop.submit(setupChannel).then { $0 }
+        }
     }
 }
 
