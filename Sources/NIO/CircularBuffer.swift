@@ -24,6 +24,7 @@ public protocol AppendableCollection: Collection {
 /// will automatically expand if more elements than `initialRingCapacity` are stored, it's advantageous to prevent
 /// expansions from happening frequently. Expansions will always force an allocation and a copy to happen.
 public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
+    // this typealias is so complicated because of SR-6963, when that's fixed we can drop the generic parameters and the where clause
     #if swift(>=4.2)
     public typealias RangeType<Bound> = Range<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
     #else
