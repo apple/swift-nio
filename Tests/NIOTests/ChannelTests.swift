@@ -2373,12 +2373,12 @@ public class ChannelTests: XCTestCase {
         do {
             let clientChannel = try ClientBootstrap(group: group)
                 .channelInitializer { channel in
-                    channel.pipeline.add(handler: FailRegistrationHandler())
+                    channel.pipeline.add(handler: FailRegistrationAndDelayCloseHandler())
                 }
                 .connect(to: serverChannel.localAddress!)
                 .wait()
             XCTFail("shouldn't have reached this but got \(clientChannel)")
-        } catch FailRegistrationHandler.RegistrationFailedError.error {
+        } catch FailRegistrationAndDelayCloseHandler.RegistrationFailedError.error {
             // ok
         } catch {
             XCTFail("unexpected error \(error)")
@@ -2392,7 +2392,7 @@ public class ChannelTests: XCTestCase {
         }
         let serverChannel = try ServerBootstrap(group: group)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: FailRegistrationHandler())
+                channel.pipeline.add(handler: FailRegistrationAndDelayCloseHandler())
             }
             .bind(host: "localhost", port: 0).wait()
         defer {
@@ -2412,12 +2412,12 @@ public class ChannelTests: XCTestCase {
         do {
             let serverChannel = try ServerBootstrap(group: group)
                 .serverChannelInitializer { channel in
-                    channel.pipeline.add(handler: FailRegistrationHandler())
+                    channel.pipeline.add(handler: FailRegistrationAndDelayCloseHandler())
                 }
                 .bind(host: "localhost", port: 0).wait()
             XCTFail("shouldn't be reached")
             XCTAssertNoThrow(try serverChannel.close().wait())
-        } catch FailRegistrationHandler.RegistrationFailedError.error {
+        } catch FailRegistrationAndDelayCloseHandler.RegistrationFailedError.error {
             // ok
         } catch {
             XCTFail("unexpected error \(error)")
@@ -2452,13 +2452,20 @@ public class ChannelTests: XCTestCase {
     }
 }
 
-fileprivate final class FailRegistrationHandler: ChannelOutboundHandler {
+fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler {
     enum RegistrationFailedError: Error { case error }
 
     typealias OutboundIn = Never
 
     func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         promise!.fail(error: RegistrationFailedError.error)
+    }
+
+    func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        /* for extra nastiness, let's delay close. This makes sure the ChannelPipeline correctly retains the Channel */
+        _ = ctx.eventLoop.scheduleTask(in: .milliseconds(10)) {
+            ctx.close(mode: mode, promise: promise)
+        }
     }
 }
 
