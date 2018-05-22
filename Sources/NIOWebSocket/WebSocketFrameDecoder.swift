@@ -312,8 +312,8 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
         let frame = WebSocketFrame(fin: true,
                                    opcode: .connectionClose,
                                    data: data)
-        _ = ctx.write(self.wrapOutboundOut(frame)).then {
-            ctx.close()
+        ctx.writeAndFlush(self.wrapOutboundOut(frame)).whenComplete {
+            ctx.close(promise: nil)
         }
         ctx.fireErrorCaught(error)
     }

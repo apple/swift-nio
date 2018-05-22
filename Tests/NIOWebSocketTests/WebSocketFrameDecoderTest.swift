@@ -77,7 +77,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
     }
 
     private func frameForFrame(_ frame: WebSocketFrame) -> WebSocketFrame? {
-        self.encoderChannel.write(frame, promise: nil)
+        self.encoderChannel.writeAndFlush(frame, promise: nil)
 
         while case .some(.byteBuffer(let d)) = self.encoderChannel.readOutbound() {
             XCTAssertNoThrow(try self.decoderChannel.writeInbound(d))
