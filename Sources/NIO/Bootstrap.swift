@@ -205,7 +205,7 @@ public final class ServerBootstrap {
             return eventLoop.newFailedFuture(error: error)
         }
 
-        return eventLoop.submit {
+        return eventLoop.submitAsync {
             return serverChannelInit(serverChannel).then {
                 serverChannel.pipeline.add(handler: AcceptHandler(childChannelInitializer: childChannelInit,
                                                                   childChannelOptions: childChannelOptions))
@@ -219,8 +219,6 @@ public final class ServerBootstrap {
                 serverChannel.close0(error: error, mode: .all, promise: nil)
                 return eventLoop.newFailedFuture(error: error)
             }
-        }.then {
-            $0
         }
     }
 
@@ -277,9 +275,9 @@ public final class ServerBootstrap {
             if childEventLoop === ctxEventLoop {
                 fireThroughPipeline(setupChildChannel())
             } else {
-                fireThroughPipeline(childEventLoop.submit {
+                fireThroughPipeline(childEventLoop.submitAsync {
                     return setupChildChannel()
-                }.then { $0 }.hopTo(eventLoop: ctxEventLoop))
+                }.hopTo(eventLoop: ctxEventLoop))
             }
         }
 
@@ -505,7 +503,7 @@ public final class ClientBootstrap {
         if eventLoop.inEventLoop {
             return setupChannel()
         } else {
-            return eventLoop.submit(setupChannel).then { $0 }
+            return eventLoop.submitAsync(setupChannel)
         }
     }
 }
