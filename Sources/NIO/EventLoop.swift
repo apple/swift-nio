@@ -89,6 +89,13 @@ public protocol EventLoop: EventLoopGroup {
     ///     - task: The closure that will be submitted to the `EventLoop` for execution.
     /// - returns: `EventLoopFuture` that is notified once the task was executed.
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
+    
+    /// Submit a given async task to start execution. Once the execution is complete the given async task has been started and the returned `EventLoopFuture` will be notified with the result of execution once the task is finished.
+    ///
+    /// - parameters:
+    ///     - asyncTask: The closure that will be submitted to the `EventLoop` to start execution.
+    /// - returns: `EventLoopFuture` that is notified once the task was executed.
+    func submitAsync<T>(_ asyncTask: @escaping () throws -> EventLoopFuture<T>) -> EventLoopFuture<T>
 
     /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
@@ -190,6 +197,10 @@ extension EventLoop {
         }
 
         return promise.futureResult
+    }
+    
+    public func submitAsync<T>(_ asyncTask: @escaping () throws -> EventLoopFuture<T>) -> EventLoopFuture<T> {
+        return submit(asyncTask).then { $0 }
     }
 
     /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `Thread`.

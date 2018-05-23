@@ -396,4 +396,42 @@ public class EventLoopTest : XCTestCase {
         XCTAssertTrue(result.isEmpty)
 
     }
+    
+    public func testSubmitAsyncTaskSuccess() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 2)
+        let taskEventLoop = eventLoopGroup.next()
+        let submissionEventLoop = eventLoopGroup.next()
+        
+        let asyncTask = {
+            taskEventLoop.submit { 42 }
+        }
+        
+        let future = submissionEventLoop.submitAsync(asyncTask)
+        
+        let result = try future.wait()
+        XCTAssert(future.isFulfilled)
+        XCTAssertEqual(result, 42)
+    }
+    
+    public func testSubmitAsyncTaskFailure() throws {
+        struct E: Error { }
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 2)
+        let taskEventLoop = eventLoopGroup.next()
+        let submissionEventLoop = eventLoopGroup.next()
+        
+        let asyncTask: () -> EventLoopFuture<Int> = {
+            taskEventLoop.submit { throw E() }
+        }
+        
+        let future = submissionEventLoop.submitAsync(asyncTask)
+        
+        do {
+            _ = try future.wait()
+            XCTFail("should've thrown an error")
+        } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
 }
