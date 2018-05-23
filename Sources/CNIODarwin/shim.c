@@ -39,7 +39,7 @@ int CNIODarwin_sendmmsg(int sockfd, CNIODarwin_mmsghdr *msgvec, unsigned int vle
         }
 
         // Send succeeded, save off the bytes written.
-        msgvec->msg_len = sendAmount;
+        msgvec[i].msg_len = sendAmount;
     }
 
     // If we dropped out, we sent everything.
