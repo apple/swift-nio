@@ -422,4 +422,24 @@ final class DatagramChannelTests: XCTestCase {
     public func testSetGetOptionClosedDatagramChannel() throws {
         try assertSetGetOptionOnOpenAndClosed(channel: firstChannel, option: ChannelOptions.maxMessagesPerRead, value: 1)
     }
+
+    func testWritesAreAccountedCorrectly() throws {
+        var buffer = firstChannel.allocator.buffer(capacity: 256)
+        buffer.write(staticString: "hello, world!")
+        let firstWrite = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer.getSlice(at: buffer.readerIndex, length: 5)!)
+        let secondWrite = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        self.firstChannel.write(NIOAny(firstWrite), promise: nil)
+        self.firstChannel.write(NIOAny(secondWrite), promise: nil)
+        self.firstChannel.flush()
+
+        let reads = try self.secondChannel.waitForDatagrams(count: 2)
+
+        // These datagrams should not have been dropped by the kernel.
+        XCTAssertEqual(reads.count, 2)
+
+        XCTAssertEqual(reads[0].data, buffer.getSlice(at: buffer.readerIndex, length: 5)!)
+        XCTAssertEqual(reads[0].remoteAddress, self.firstChannel.localAddress!)
+        XCTAssertEqual(reads[1].data, buffer)
+        XCTAssertEqual(reads[1].remoteAddress, self.firstChannel.localAddress!)
+    }
 }
