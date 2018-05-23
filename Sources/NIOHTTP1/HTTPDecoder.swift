@@ -145,7 +145,15 @@ private protocol AnyHTTPDecoder: class {
 /// Rather than set this up manually, consider using `ChannelPipeline.addHTTPServerHandlers`.
 public final class HTTPRequestDecoder: HTTPDecoder<HTTPServerRequestPart> {
     public convenience init() {
-        self.init(type: HTTPServerRequestPart.self)
+        self.init(leftOverBytesStrategy: .dropBytes)
+    }
+
+    /// Creates a new instance of `HttpRequestDecoder`.
+    ///
+    /// - parameters:
+    ///     - leftOverBytesStrategy: the strategy to use when removing the decoder from the pipeline and an upgrade was detected
+    convenience init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy) {
+        self.init(type: HTTPServerRequestPart.self, leftOverBytesStrategy: leftOverBytesStrategy)
     }
 }
 
@@ -175,7 +183,7 @@ public final class HTTPResponseDecoder: HTTPDecoder<HTTPClientResponsePart>, Cha
     }
 
     public convenience init() {
-        self.init(type: HTTPClientResponsePart.self)
+        self.init(type: HTTPClientResponsePart.self, leftOverBytesStrategy: .dropBytes)
     }
 
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
@@ -185,6 +193,14 @@ public final class HTTPResponseDecoder: HTTPDecoder<HTTPClientResponsePart>, Cha
 
         ctx.write(data, promise: promise)
     }
+}
+
+/// Strategy to use when a HTTPDecoder is removed from a pipeline after a HTTP upgrade was detected.
+enum RemoveAfterUpgradeStrategy {
+    /// Forward all the remaining bytes that are currently buffered in the deccoder to the next handler in the pipeline.
+    case forwardBytes
+    /// Discard all the remaining bytes that are currently buffered in the decoder.
+    case dropBytes
 }
 
 /// A `ChannelInboundHandler` that parses HTTP/1-style messages, converting them from
@@ -198,14 +214,16 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = HTTPMessageT
 
+    private let leftOverBytesStrategy: RemoveAfterUpgradeStrategy
     private var parser = http_parser()
     private var settings = http_parser_settings()
 
     fileprivate var state = HTTPParserState()
 
-    fileprivate init(type: HTTPMessageT.Type) {
+    fileprivate init(type: HTTPMessageT.Type, leftOverBytesStrategy: RemoveAfterUpgradeStrategy) {
         /* this is a private init, the public versions only allow HTTPClientResponsePart and HTTPServerRequestPart */
         assert(HTTPMessageT.self == HTTPClientResponsePart.self || HTTPMessageT.self == HTTPServerRequestPart.self)
+        self.leftOverBytesStrategy = leftOverBytesStrategy
     }
 
     deinit {
@@ -238,7 +256,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     }
 
     private func bytesToForwardOnRemoval(ctx: ChannelHandlerContext) -> ByteBuffer? {
-        guard self.parser.upgrade == 1 && ctx.channel.isActive else {
+        guard self.leftOverBytesStrategy == .forwardBytes && self.parser.upgrade == 1 && ctx.channel.isActive else {
             return nil
         }
         // We take a slice of the cumulationBuffer so the next handler in the pipeline will just see the readable portion of the buffer.

@@ -58,7 +58,7 @@ public extension ChannelPipeline {
                                                   upgraders: [HTTPProtocolUpgrader],
                                                   _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) -> EventLoopFuture<Void> {
         let responseEncoder = HTTPResponseEncoder()
-        let requestDecoder = HTTPRequestDecoder()
+        let requestDecoder = HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes)
         let upgrader = HTTPServerUpgradeHandler(upgraders: upgraders,
                                                 httpEncoder: responseEncoder,
                                                 extraHTTPHandlers: [requestDecoder],
@@ -98,7 +98,7 @@ public extension ChannelPipeline {
                                             withServerUpgrade upgrade: HTTPUpgradeConfiguration? = nil,
                                             withErrorHandling errorHandling: Bool = false) -> EventLoopFuture<Void> {
         let responseEncoder = HTTPResponseEncoder()
-        let requestDecoder = HTTPRequestDecoder()
+        let requestDecoder = HTTPRequestDecoder(leftOverBytesStrategy: upgrade == nil ? .dropBytes : .forwardBytes)
 
         var handlers: [ChannelHandler] = [responseEncoder, requestDecoder]
 

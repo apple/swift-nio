@@ -140,15 +140,15 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
 
         if let upgrade = self.upgrade {
             switch requestPart {
-            case .head(_):
+            case .head:
                 ctx.fireErrorCaught(HTTPUpgradeErrors.invalidHTTPOrdering)
                 notUpgrading(ctx: ctx, data: data)
                 return
-            case .body(_):
+            case .body:
                 // TODO: In the future way may want to add some API to also allow special handling of the body during the
                 //       upgrade. For now just ignore it.
                 break
-            case .end(_):
+            case .end:
                 self.seenFirstRequest = true
 
                 // The request is complete now trigger the upgrade.
