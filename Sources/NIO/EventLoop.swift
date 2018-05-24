@@ -210,7 +210,7 @@ extension EventLoop {
     ///
     /// - parameters:
     ///     - result: the value that is used by the `EventLoopFuture`.
-    /// - returns: a failed `EventLoopFuture`.
+    /// - returns: a succeeded `EventLoopFuture`.
     public func newSucceededFuture<T>(result: T) -> EventLoopFuture<T> {
         return EventLoopFuture<T>(eventLoop: self, result: result, file: "n/a", line: 0)
     }
