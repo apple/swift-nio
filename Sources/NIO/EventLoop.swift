@@ -90,12 +90,12 @@ public protocol EventLoop: EventLoopGroup {
     /// - returns: `EventLoopFuture` that is notified once the task was executed.
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
     
-    /// Submit a given async task to start execution. Once the execution is complete the given async task has been started and the returned `EventLoopFuture` will be notified with the result of execution once the task is finished.
+    /// Submit a given task to start execution. The submitted task returns an `EventLoopFuture` which will be used to cascade the `EventLoopFuture` returned from this function once the execution is complete.
     ///
     /// - parameters:
-    ///     - asyncTask: The closure that will be submitted to the `EventLoop` to start execution.
-    /// - returns: `EventLoopFuture` that is notified once the task was executed.
-    func submitAsync<T>(_ asyncTask: @escaping () throws -> EventLoopFuture<T>) -> EventLoopFuture<T>
+    ///     - task: The closure that will be submitted to the `EventLoop` to start execution.
+    /// - returns: `EventLoopFuture` that is notified once the task's returned `EventLoopFuture` has been fullfilled.
+    func submitFuture<T>(_ task: @escaping () throws -> EventLoopFuture<T>) -> EventLoopFuture<T>
 
     /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
@@ -199,8 +199,13 @@ extension EventLoop {
         return promise.futureResult
     }
     
-    public func submitAsync<T>(_ asyncTask: @escaping () throws -> EventLoopFuture<T>) -> EventLoopFuture<T> {
-        return submit(asyncTask).then { $0 }
+    /// Submit a given task to start execution. The submitted task returns an `EventLoopFuture` which will be used to cascade the `EventLoopFuture` returned from this function once the execution is complete.
+    ///
+    /// - parameters:
+    ///     - task: The closure that will be submitted to the `EventLoop` to start execution.
+    /// - returns: `EventLoopFuture` that is notified once the task's returned `EventLoopFuture` has been fullfilled.
+    public func submitFuture<T>(_ task: @escaping () throws -> EventLoopFuture<T>) -> EventLoopFuture<T> {
+        return self.submit(task).then { $0 }
     }
 
     /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `Thread`.

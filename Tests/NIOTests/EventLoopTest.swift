@@ -406,7 +406,7 @@ public class EventLoopTest : XCTestCase {
             taskEventLoop.submit { 42 }
         }
         
-        let future = submissionEventLoop.submitAsync(asyncTask)
+        let future = submissionEventLoop.submitFuture(asyncTask)
         
         let result = try future.wait()
         XCTAssert(future.isFulfilled)
@@ -423,7 +423,7 @@ public class EventLoopTest : XCTestCase {
             taskEventLoop.submit { throw E() }
         }
         
-        let future = submissionEventLoop.submitAsync(asyncTask)
+        let future = submissionEventLoop.submitFuture(asyncTask)
         
         do {
             _ = try future.wait()
