@@ -15,7 +15,7 @@
 import XCTest
 import Dispatch
 import NIO
-@testable import NIOHTTP1
+import NIOHTTP1
 
 class HTTPDecoderTest: XCTestCase {
     private var channel: EmbeddedChannel!

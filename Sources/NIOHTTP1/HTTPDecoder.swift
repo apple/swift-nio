@@ -152,7 +152,7 @@ public final class HTTPRequestDecoder: HTTPDecoder<HTTPServerRequestPart> {
     ///
     /// - parameters:
     ///     - leftOverBytesStrategy: the strategy to use when removing the decoder from the pipeline and an upgrade was detected
-    convenience init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy) {
+    public convenience init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy) {
         self.init(type: HTTPServerRequestPart.self, leftOverBytesStrategy: leftOverBytesStrategy)
     }
 }
@@ -196,7 +196,7 @@ public final class HTTPResponseDecoder: HTTPDecoder<HTTPClientResponsePart>, Cha
 }
 
 /// Strategy to use when a HTTPDecoder is removed from a pipeline after a HTTP upgrade was detected.
-enum RemoveAfterUpgradeStrategy {
+public enum RemoveAfterUpgradeStrategy {
     /// Forward all the remaining bytes that are currently buffered in the deccoder to the next handler in the pipeline.
     case forwardBytes
     /// Discard all the remaining bytes that are currently buffered in the decoder.
