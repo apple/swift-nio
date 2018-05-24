@@ -262,9 +262,7 @@ public final class ServerBootstrap {
                 future.then { (_) -> EventLoopFuture<Void> in
                     assert(ctxEventLoop.inEventLoop)
                     guard !ctx.pipeline.destroyed else {
-                        return accepted.close().thenThrowing {
-                            throw ChannelError.ioOnClosedChannel
-                        }
+                        return ctx.eventLoop.newFailedFuture(error: ChannelError.ioOnClosedChannel)
                     }
                     ctx.fireChannelRead(data)
                     return ctx.eventLoop.newSucceededFuture(result: ())
@@ -284,7 +282,7 @@ public final class ServerBootstrap {
         }
 
         private func closeAndFire(ctx: ChannelHandlerContext, accepted: SocketChannel, err: Error) {
-            _ = accepted.close()
+            accepted.close(promise: nil)
             if ctx.eventLoop.inEventLoop {
                 ctx.fireErrorCaught(err)
             } else {
@@ -418,7 +416,7 @@ public final class ClientBootstrap {
             channel.connect(to: address, promise: connectPromise)
             let cancelTask = channel.eventLoop.scheduleTask(in: self.connectTimeout) {
                 connectPromise.fail(error: ChannelError.connectTimeout(self.connectTimeout))
-                _ = channel.close()
+                channel.close(promise: nil)
             }
 
             connectPromise.futureResult.whenComplete {
