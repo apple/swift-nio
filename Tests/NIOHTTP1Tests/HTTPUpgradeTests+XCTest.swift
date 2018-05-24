@@ -41,6 +41,7 @@ extension HTTPUpgradeTestCase {
                 ("testBuffersInboundDataDuringDelayedUpgrade", testBuffersInboundDataDuringDelayedUpgrade),
                 ("testRemovesAllHTTPRelatedHandlersAfterUpgrade", testRemovesAllHTTPRelatedHandlersAfterUpgrade),
                 ("testBasicUpgradePipelineMutation", testBasicUpgradePipelineMutation),
+                ("testUpgradeWithUpgradePayloadInlineWithRequestWorks", testUpgradeWithUpgradePayloadInlineWithRequestWorks),
            ]
    }
 }

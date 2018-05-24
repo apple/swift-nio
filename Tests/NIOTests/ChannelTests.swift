@@ -2360,6 +2360,113 @@ public class ChannelTests: XCTestCase {
         XCTAssertTrue(client.isActive)
         XCTAssertEqual(serverChannel.localAddress!, client.remoteAddress!)
     }
+
+    func testFailedRegistrationOfClientSocket() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let serverChannel = try ServerBootstrap(group: group).bind(host: "localhost", port: 0).wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        }
+        do {
+            let clientChannel = try ClientBootstrap(group: group)
+                .channelInitializer { channel in
+                    channel.pipeline.add(handler: FailRegistrationAndDelayCloseHandler())
+                }
+                .connect(to: serverChannel.localAddress!)
+                .wait()
+            XCTFail("shouldn't have reached this but got \(clientChannel)")
+        } catch FailRegistrationAndDelayCloseHandler.RegistrationFailedError.error {
+            // ok
+        } catch {
+            XCTFail("unexpected error \(error)")
+        }
+    }
+
+    func testFailedRegistrationOfAcceptedSocket() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let serverChannel = try ServerBootstrap(group: group)
+            .childChannelInitializer { channel in
+                channel.pipeline.add(handler: FailRegistrationAndDelayCloseHandler())
+            }
+            .bind(host: "localhost", port: 0).wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        }
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!)
+            .wait()
+        try clientChannel.closeFuture.wait()
+    }
+
+    func testFailedRegistrationOfServerSocket() throws {
+        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        do {
+            let serverChannel = try ServerBootstrap(group: group)
+                .serverChannelInitializer { channel in
+                    channel.pipeline.add(handler: FailRegistrationAndDelayCloseHandler())
+                }
+                .bind(host: "localhost", port: 0).wait()
+            XCTFail("shouldn't be reached")
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        } catch FailRegistrationAndDelayCloseHandler.RegistrationFailedError.error {
+            // ok
+        } catch {
+            XCTFail("unexpected error \(error)")
+        }
+    }
+
+    func testTryingToBindOnPortThatIsAlreadyBoundFailsButDoesNotCrash() throws {
+        // this is a regression test for #417
+
+        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let serverChannel1 = try! ServerBootstrap(group: group)
+            .bind(host: "localhost", port: 0)
+            .wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel1.close().wait())
+        }
+
+        do {
+            let serverChannel2 = try ServerBootstrap(group: group)
+                .bind(to: serverChannel1.localAddress!)
+                .wait()
+            XCTFail("shouldn't have succeeded, got two server channels on the same port: \(serverChannel1) and \(serverChannel2)")
+        } catch let e as IOError where e.errnoCode == EADDRINUSE {
+            // OK
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+}
+
+fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler {
+    enum RegistrationFailedError: Error { case error }
+
+    typealias OutboundIn = Never
+
+    func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+        promise!.fail(error: RegistrationFailedError.error)
+    }
+
+    func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        /* for extra nastiness, let's delay close. This makes sure the ChannelPipeline correctly retains the Channel */
+        _ = ctx.eventLoop.scheduleTask(in: .milliseconds(10)) {
+            ctx.close(mode: mode, promise: promise)
+        }
+    }
 }
 
 fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {
