@@ -85,7 +85,7 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
 
 public class ChannelTests: XCTestCase {
     func testBasicLifecycle() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -123,7 +123,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testManyManyWrites() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -152,7 +152,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testWritevLotsOfData() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -183,7 +183,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testParentsOfSocketChannels() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1056,7 +1056,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testSpecificConnectTimeout() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1081,7 +1081,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testGeneralConnectTimeout() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1106,7 +1106,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testCloseOutput() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1162,7 +1162,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testCloseInput() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1225,7 +1225,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testHalfClosure() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1329,7 +1329,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testRejectsInvalidData() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1369,7 +1369,7 @@ public class ChannelTests: XCTestCase {
         weak var weakServerChannel: Channel? = nil
         weak var weakServerChildChannel: Channel? = nil
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1428,7 +1428,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testAskForLocalAndRemoteAddressesAfterChannelIsClosed() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1458,7 +1458,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testReceiveAddressAfterAccept() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1531,7 +1531,7 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1572,7 +1572,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testNoChannelReadBeforeEOFIfNoAutoRead() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1617,7 +1617,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testCloseInEOFdChannelReadBehavesCorrectly() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1672,7 +1672,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testCloseInSameReadThatEOFGetsDelivered() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1724,7 +1724,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testEOFReceivedWithoutReadRequests() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1834,7 +1834,7 @@ public class ChannelTests: XCTestCase {
         }
 
         func runTest() throws {
-            let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
+            let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
             defer {
                 XCTAssertNoThrow(try group.syncShutdownGracefully())
             }
@@ -1915,7 +1915,7 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1986,7 +1986,7 @@ public class ChannelTests: XCTestCase {
                 XCTFail("unexpected error \(error)", file: file, line: line)
             }
         }
-        let elg = MultiThreadedEventLoopGroup(numThreads: 1)
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
         func withChannel(skipDatagram: Bool = false, skipStream: Bool = false, skipServerSocket: Bool = false, file: StaticString = #file, line: UInt = #line,  _ body: (Channel) throws -> Void) {
             XCTAssertNoThrow(try {
@@ -2100,7 +2100,7 @@ public class ChannelTests: XCTestCase {
                 self.allDone.succeed(result: ())
             }
         }
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -2157,7 +2157,7 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -2203,7 +2203,7 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -2239,7 +2239,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testConnectWithECONNREFUSEDGetsTheRightError() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -2276,7 +2276,7 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -2318,7 +2318,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testLazyRegistrationWorksForServerSockets() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -2338,7 +2338,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testLazyRegistrationWorksForClientSockets() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -2362,7 +2362,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testFailedRegistrationOfClientSocket() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -2386,7 +2386,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testFailedRegistrationOfAcceptedSocket() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -2405,7 +2405,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testFailedRegistrationOfServerSocket() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -2427,7 +2427,7 @@ public class ChannelTests: XCTestCase {
     func testTryingToBindOnPortThatIsAlreadyBoundFailsButDoesNotCrash() throws {
         // this is a regression test for #417
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }

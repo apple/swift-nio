@@ -128,7 +128,7 @@ private func setUpTestWithAutoremoval(pipelining: Bool = false,
                                       upgraders: [HTTPProtocolUpgrader],
                                       extraHandlers: [ChannelHandler],
                                       _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) throws -> (EventLoopGroup, Channel, Channel, Channel) {
-    let group = MultiThreadedEventLoopGroup(numThreads: 1)
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     let (serverChannel, connectedServerChannelFuture) = try serverHTTPChannelWithAutoremoval(group: group,
                                                                                              pipelining: pipelining,
                                                                                              upgraders: upgraders,

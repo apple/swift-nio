@@ -30,7 +30,7 @@ private extension Array {
 public class SocketChannelTest : XCTestCase {
     /// Validate that channel options are applied asynchronously.
     public func testAsyncSetOption() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         // Create two channels with different event loops.
@@ -63,7 +63,7 @@ public class SocketChannelTest : XCTestCase {
     }
 
     public func testDelayedConnectSetsUpRemotePeerAddress() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         let serverChannel = try ServerBootstrap(group: group)
@@ -140,7 +140,7 @@ public class SocketChannelTest : XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -170,7 +170,7 @@ public class SocketChannelTest : XCTestCase {
     }
 
     public func testSetGetOptionClosedServerSocketChannel() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         // Create two channels with different event loops.
@@ -197,7 +197,7 @@ public class SocketChannelTest : XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -235,7 +235,7 @@ public class SocketChannelTest : XCTestCase {
     }
 
     public func testWriteServerSocketChannel() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
@@ -250,7 +250,7 @@ public class SocketChannelTest : XCTestCase {
 
 
     public func testWriteAndFlushServerSocketChannel() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
@@ -264,7 +264,7 @@ public class SocketChannelTest : XCTestCase {
 
 
     public func testConnectServerSocketChannel() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
@@ -281,7 +281,7 @@ public class SocketChannelTest : XCTestCase {
     }
 
     public func testCloseDuringWriteFailure() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
@@ -311,7 +311,7 @@ public class SocketChannelTest : XCTestCase {
     }
 
     public func testWithConfiguredStreamSocket() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         let serverSock = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_STREAM)
@@ -338,7 +338,7 @@ public class SocketChannelTest : XCTestCase {
     }
 
     public func testWithConfiguredDatagramSocket() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         let serverSock = try Socket(protocolFamily: AF_INET, type: Posix.SOCK_DGRAM)
@@ -389,7 +389,7 @@ public class SocketChannelTest : XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
@@ -491,7 +491,7 @@ public class SocketChannelTest : XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         let handler = AddressVerificationHandler(promise: group.next().newPromise())

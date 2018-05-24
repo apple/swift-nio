@@ -693,13 +693,22 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         return lock.withLock { _loop }
     }
 
+    /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numberOfThreads`.
+    ///
+    /// - arguments:
+    ///     - numberOfThreads: The number of `Threads` to use.
+    public convenience init(numberOfThreads: Int) {
+        let initializers: [ThreadInitializer] = Array(repeating: { _ in }, count: numberOfThreads)
+        self.init(threadInitializers: initializers)
+    }
+    
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numThreads`.
     ///
     /// - arguments:
     ///     - numThreads: The number of `Threads` to use.
+    @available(*, deprecated, renamed: "init(numberOfThreads:)")
     public convenience init(numThreads: Int) {
-        let initializers: [ThreadInitializer] = Array(repeating: { _ in }, count: numThreads)
-        self.init(threadInitializers: initializers)
+        self.init(numberOfThreads: numThreads)
     }
 
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses the given `ThreadInitializer`s. One `Thread` per `ThreadInitializer` is created and used.

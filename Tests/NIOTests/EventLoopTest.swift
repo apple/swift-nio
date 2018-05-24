@@ -21,7 +21,7 @@ public class EventLoopTest : XCTestCase {
     public func testSchedule() throws {
         let nanos = DispatchTime.now().uptimeNanoseconds
         let amount: TimeAmount = .seconds(1)
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
@@ -36,7 +36,7 @@ public class EventLoopTest : XCTestCase {
     public func testScheduleWithDelay() throws {
         let smallAmount: TimeAmount = .milliseconds(100)
         let longAmount: TimeAmount = .seconds(1)
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
@@ -69,7 +69,7 @@ public class EventLoopTest : XCTestCase {
     }
 
     public func testScheduleCancelled() throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
@@ -96,7 +96,7 @@ public class EventLoopTest : XCTestCase {
         // Do not ignore intermittent failures in this test!
         let threads = 8
         let numBytes = 256
-        let group = MultiThreadedEventLoopGroup(numThreads: threads)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: threads)
 
         // Create a server channel.
         let serverChannel = try ServerBootstrap(group: group)
@@ -162,7 +162,7 @@ public class EventLoopTest : XCTestCase {
         let promiseQueue = DispatchQueue(label: "promiseQueue")
         var promises: [EventLoopPromise<Void>] = []
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             do {
                 try group.syncShutdownGracefully()
@@ -281,7 +281,7 @@ public class EventLoopTest : XCTestCase {
         }
 
         func assertCurrentEventLoop0() throws -> EventLoopHolder {
-            let group = MultiThreadedEventLoopGroup(numThreads: 2)
+            let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
 
             let loop1 = group.next()
             let currentLoop1 = try loop1.submit {
@@ -317,7 +317,7 @@ public class EventLoopTest : XCTestCase {
     }
 
     public func testShutdownWhileScheduledTasksNotReady() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let eventLoop = group.next()
         _ = eventLoop.scheduleTask(in: .hours(1)) { }
         try group.syncShutdownGracefully()
@@ -336,7 +336,7 @@ public class EventLoopTest : XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let eventLoop = group.next()
         let assertHandler = AssertHandler()
         let serverSocket = try ServerBootstrap(group: group).bind(host: "localhost", port: 0).wait()
@@ -358,7 +358,7 @@ public class EventLoopTest : XCTestCase {
     public func testScheduleMultipleTasks() throws {
         let nanos = DispatchTime.now().uptimeNanoseconds
         let amount: TimeAmount = .seconds(1)
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }

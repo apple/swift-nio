@@ -98,7 +98,7 @@ final class DatagramChannelTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        self.group = MultiThreadedEventLoopGroup(numThreads: 1)
+        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         self.firstChannel = try! buildChannel(group: group)
         self.secondChannel = try! buildChannel(group: group)
     }
@@ -380,7 +380,7 @@ final class DatagramChannelTests: XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }

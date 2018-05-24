@@ -111,7 +111,7 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
 }
 
 
-let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
+let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 defer {
     try! group.syncShutdownGracefully()
 }
