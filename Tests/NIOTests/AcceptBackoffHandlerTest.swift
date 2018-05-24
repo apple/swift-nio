@@ -256,7 +256,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
             serverChannel.pipeline.add(name: self.acceptHandlerName, handler: AcceptBackoffHandler(backoffProvider: backoffProvider))
         }.wait())
 
-        XCTAssertNoThrow(try eventLoop.submit {
+        XCTAssertNoThrow(try eventLoop.submitFuture {
             // this is pretty delicate at the moment:
             // `bind` must be _synchronously_ follow `register`, otherwise in our current implementation, `epoll` will
             // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `then` on the eventloop that the
@@ -264,7 +264,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
             serverChannel.register().then { () -> EventLoopFuture<()> in
                 return serverChannel.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 0))
             }
-        }.wait().wait() as Void)
+        }.wait() as Void)
         return serverChannel
     }
 }

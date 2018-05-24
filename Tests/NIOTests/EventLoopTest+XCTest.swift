@@ -38,6 +38,9 @@ extension EventLoopTest {
                 ("testShutdownWhileScheduledTasksNotReady", testShutdownWhileScheduledTasksNotReady),
                 ("testCloseFutureNotifiedBeforeUnblock", testCloseFutureNotifiedBeforeUnblock),
                 ("testScheduleMultipleTasks", testScheduleMultipleTasks),
+                ("testSubmitFutureTaskSuccess", testSubmitFutureTaskSuccess),
+                ("testSubmitFutureTaskFailure", testSubmitFutureTaskFailure),
+                ("testSubmitFutureWhichDoesFailOnEventLoopShutdown", testSubmitFutureWhichDoesFailOnEventLoopShutdown),
            ]
    }
 }

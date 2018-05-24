@@ -2123,7 +2123,7 @@ public class ChannelTests: XCTestCase {
 
         let allDone: EventLoopPromise<Void> = clientEL.newPromise()
 
-        XCTAssertNoThrow(try sc.eventLoop.submit {
+        XCTAssertNoThrow(try sc.eventLoop.submitFuture {
             // this is pretty delicate at the moment:
             // `bind` must be _synchronously_ follow `register`, otherwise in our current implementation, `epoll` will
             // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `then` on the eventloop that the
@@ -2134,7 +2134,7 @@ public class ChannelTests: XCTestCase {
             }.then {
                 sc.connect(to: serverChannel.localAddress!)
             }
-        }.wait().wait() as Void)
+        }.wait() as Void)
         XCTAssertNoThrow(try allDone.futureResult.wait())
         XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
     }
@@ -2289,14 +2289,14 @@ public class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        XCTAssertNoThrow(try sc.eventLoop.submit {
+        XCTAssertNoThrow(try sc.eventLoop.submitFuture {
             sc.register().then {
                 sc.connect(to: serverChannel.localAddress!)
             }
-        }.wait().wait() as Void)
+        }.wait() as Void)
 
         do {
-            try sc.eventLoop.submit { () -> EventLoopFuture<Void> in
+            try sc.eventLoop.submitFuture { () -> EventLoopFuture<Void> in
                 let p: EventLoopPromise<Void> = sc.eventLoop.newPromise()
                 // this callback must be attached before we call the close
                 let f = p.futureResult.map {
@@ -2307,7 +2307,7 @@ public class ChannelTests: XCTestCase {
                 }
                 sc.close(promise: p)
                 return f
-            }.wait().wait()
+            }.wait()
             XCTFail("shouldn't be reached")
         } catch ChannelError.alreadyClosed {
             // ok

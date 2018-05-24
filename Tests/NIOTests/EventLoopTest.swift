@@ -342,11 +342,11 @@ public class EventLoopTest : XCTestCase {
         let serverSocket = try ServerBootstrap(group: group).bind(host: "localhost", port: 0).wait()
         let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: serverSocket.localAddress!.protocolFamily)
         try channel.pipeline.add(handler: assertHandler).wait()
-        try channel.eventLoop.submit {
+        try channel.eventLoop.submitFuture {
             channel.register().then {
                 channel.connect(to: serverSocket.localAddress!)
             }
-        }.wait().wait()
+        }.wait()
         XCTAssertFalse(channel.closeFuture.isFulfilled)
         try group.syncShutdownGracefully()
         XCTAssertTrue(assertHandler.groupIsShutdown.compareAndExchange(expected: false, desired: true))
@@ -397,38 +397,62 @@ public class EventLoopTest : XCTestCase {
 
     }
     
-    public func testSubmitAsyncTaskSuccess() throws {
+    public func testSubmitFutureTaskSuccess() throws {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 2)
         let taskEventLoop = eventLoopGroup.next()
         let submissionEventLoop = eventLoopGroup.next()
         
-        let asyncTask = {
+        let futureTask = {
             taskEventLoop.submit { 42 }
         }
         
-        let future = submissionEventLoop.submitFuture(asyncTask)
+        let future = submissionEventLoop.submitFuture(futureTask)
         
         let result = try future.wait()
         XCTAssert(future.isFulfilled)
         XCTAssertEqual(result, 42)
     }
     
-    public func testSubmitAsyncTaskFailure() throws {
+    public func testSubmitFutureTaskFailure() throws {
         struct E: Error { }
         let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 2)
         let taskEventLoop = eventLoopGroup.next()
         let submissionEventLoop = eventLoopGroup.next()
         
-        let asyncTask: () -> EventLoopFuture<Int> = {
+        let futureTask: () -> EventLoopFuture<Int> = {
             taskEventLoop.submit { throw E() }
         }
         
-        let future = submissionEventLoop.submitFuture(asyncTask)
+        let future = submissionEventLoop.submitFuture(futureTask)
         
         do {
             _ = try future.wait()
             XCTFail("should've thrown an error")
         } catch _ as E {
+            /* good */
+        } catch let e {
+            XCTFail("error of wrong type \(e)")
+        }
+    }
+    
+    public func testSubmitFutureWhichDoesFailOnEventLoopShutdown() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 2)
+        let taskEventLoop = eventLoopGroup.next()
+        let submissionEventLoop = eventLoopGroup.next()
+        
+        let futureTask = {
+            taskEventLoop.scheduleTask(in: .hours(1)) {
+                return 0
+            }.futureResult
+        }
+        
+        let future = submissionEventLoop.submitFuture(futureTask)
+        _ = submissionEventLoop.scheduleTask(in: .milliseconds(10)) {
+            try taskEventLoop.syncShutdownGracefully()
+        }
+        do {
+            _ = try future.wait()
+        } catch EventLoopError.shutdown {
             /* good */
         } catch let e {
             XCTFail("error of wrong type \(e)")
