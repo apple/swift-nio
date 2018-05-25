@@ -25,7 +25,9 @@ private extension timespec {
         let nsecPerSec: TimeAmount.Value = 1_000_000_000
         let ns = amount.nanoseconds
         let sec = ns / nsecPerSec
-        self = timespec(tv_sec: Int(sec), tv_nsec: Int(ns - sec * nsecPerSec))
+        // Limit to 999999999 so it works for epoll and kqueue.
+        // See http://www.man7.org/linux/man-pages/man2/timerfd_create.2.html
+        self = timespec(tv_sec: Int(sec), tv_nsec: min(999999999, Int(ns - sec * nsecPerSec)))
     }
 }
 
