@@ -17,7 +17,7 @@
 /// Example:
 ///
 /// ```swift
-///     let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
+///     let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 ///     let bootstrap = ServerBootstrap(group: group)
 ///         // Specify backlog and enable SO_REUSEADDR for the server itself
 ///         .serverChannelOption(ChannelOptions.backlog, value: 256)
@@ -316,7 +316,7 @@ private extension Channel {
 /// Example:
 ///
 /// ```swift
-///     let group = MultiThreadedEventLoopGroup(numThreads: 1)
+///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 ///     let bootstrap = ClientBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
 ///         .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -514,7 +514,7 @@ public final class ClientBootstrap {
 /// Example:
 ///
 /// ```swift
-///     let group = MultiThreadedEventLoopGroup(numThreads: 1)
+///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 ///     let bootstrap = DatagramBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
 ///         .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)

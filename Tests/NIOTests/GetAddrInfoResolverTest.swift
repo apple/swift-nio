@@ -18,7 +18,7 @@ import XCTest
 class GetaddrinfoResolverTest: XCTestCase {
 
     func testResolveNoDuplicatesV4() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -35,7 +35,7 @@ class GetaddrinfoResolverTest: XCTestCase {
     }
 
     func testResolveNoDuplicatesV6() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }

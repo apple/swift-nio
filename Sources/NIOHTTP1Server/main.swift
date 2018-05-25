@@ -501,7 +501,7 @@ default:
     bindTarget = BindTo.ip(host: defaultHost, port: defaultPort)
 }
 
-let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
+let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 let threadPool = BlockingIOThreadPool(numberOfThreads: 6)
 threadPool.start()
 

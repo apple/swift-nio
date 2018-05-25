@@ -20,7 +20,7 @@ class BootstrapTest: XCTestCase {
         for numThreads in [1 /* everything on one event loop */,
                            2 /* some stuff has shared event loops */,
                            5 /* everything on a different event loop */] {
-            let group = MultiThreadedEventLoopGroup(numThreads: numThreads)
+            let group = MultiThreadedEventLoopGroup(numberOfThreads: numThreads)
             defer {
                 XCTAssertNoThrow(try group.syncShutdownGracefully())
             }

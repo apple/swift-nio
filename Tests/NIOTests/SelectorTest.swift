@@ -328,7 +328,7 @@ class SelectorTest: XCTestCase {
                 }
             }
         }
-        let el = MultiThreadedEventLoopGroup(numThreads: 1).next()
+        let el = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
         defer {
             XCTAssertNoThrow(try el.syncShutdownGracefully())
         }
