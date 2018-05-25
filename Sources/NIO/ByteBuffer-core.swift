@@ -217,12 +217,13 @@ public struct ByteBuffer {
             return new
         }
 
-        public func reallocStorage(capacity: Capacity) {
-            let ptr = self.allocator.realloc(self.bytes, Int(capacity))!
+        public func reallocStorage(capacity minimumNeededCapacity: Capacity) {
+            let newCapacity = minimumNeededCapacity.nextPowerOf2ClampedToMax()
+            let ptr = self.allocator.realloc(self.bytes, Int(newCapacity))!
             /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
-            ptr.bindMemory(to: UInt8.self, capacity: Int(capacity))
+            ptr.bindMemory(to: UInt8.self, capacity: Int(newCapacity))
             self.bytes = ptr
-            self.capacity = capacity
+            self.capacity = newCapacity
             self.fullSlice = 0..<self.capacity
         }
 
@@ -267,23 +268,28 @@ public struct ByteBuffer {
     @_versioned mutating func _ensureAvailableCapacity(_ capacity: Capacity, at index: Index) {
         assert(isKnownUniquelyReferenced(&self._storage))
 
-        if self._slice.lowerBound + index + capacity > self._slice.upperBound {
-            // double the capacity, we may want to use different strategies depending on the actual current capacity later on.
-            var newCapacity = max(1, _toCapacity(self.capacity))
-
-            // double the capacity until the requested capacity can be full-filled
-            repeat {
-                precondition(newCapacity != Capacity.max, "cannot make ByteBuffers larger than \(newCapacity)")
-                if newCapacity < (Capacity.max >> 1) {
-                    newCapacity = newCapacity << 1
+        let totalNeededCapacityWhenKeepingSlice = self._slice.lowerBound + index + capacity
+        if totalNeededCapacityWhenKeepingSlice > self._slice.upperBound {
+            // we need to at least adjust the slice's upper bound which we can do as we're the unique owner of the storage,
+            // let's see if adjusting the slice's upper bound buys us enough storage
+            if totalNeededCapacityWhenKeepingSlice > self._storage.capacity {
+                let newStorageMinCapacity = index + capacity
+                // nope, we need to actually re-allocate again. If our slice does not start at 0, let's also rebase
+                if self._slice.lowerBound == 0 {
+                    self._storage.reallocStorage(capacity: newStorageMinCapacity)
                 } else {
-                    newCapacity = Capacity.max
+                    self._storage = self._storage.reallocSlice(self._slice.lowerBound ..< self._slice.upperBound,
+                                                               capacity: newStorageMinCapacity)
                 }
-            } while newCapacity < index || newCapacity - index < capacity
-
-            self._storage.reallocStorage(capacity: newCapacity)
-            self._slice = _slice.lowerBound..<_slice.lowerBound + newCapacity
+                self._slice = self._storage.fullSlice
+            } else {
+                // yes, let's just extend the slice until the end of the buffer
+                self._slice = _slice.lowerBound ..< self._storage.capacity
+            }
         }
+        assert(self._slice.lowerBound + index + capacity <= self._slice.upperBound)
+        assert(self._slice.lowerBound >= 0, "illegal slice: negative lower bound: \(self._slice.lowerBound)")
+        assert(self._slice.upperBound <= self._storage.capacity, "illegal slice: upper bound (\(self._slice.upperBound)) exceeds capacity: \(self._storage.capacity)")
     }
 
     // MARK: Internal API
