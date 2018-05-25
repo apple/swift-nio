@@ -816,6 +816,7 @@ class HTTPUpgradeTestCase: XCTestCase {
     }
     
     func testUpgradeWithUpgradePayloadInlineWithRequestWorks() throws {
+        enum ReceivedTheWrongThingError: Error { case error }
         var upgradeRequest: HTTPRequestHead? = nil
         var upgradeHandlerCbFired = false
         var upgraderCbFired = false
@@ -833,10 +834,16 @@ class HTTPUpgradeTestCase: XCTestCase {
                 case closed
             }
             
+            private let firstByteDonePromise: EventLoopPromise<Void>
+            private let secondByteDonePromise: EventLoopPromise<Void>
             private let allDonePromise: EventLoopPromise<Void>
             private var state = State.fresh
             
-            init(allDonePromise: EventLoopPromise<Void>) {
+            init(firstByteDonePromise: EventLoopPromise<Void>,
+                 secondByteDonePromise: EventLoopPromise<Void>,
+                 allDonePromise: EventLoopPromise<Void>) {
+                self.firstByteDonePromise = firstByteDonePromise
+                self.secondByteDonePromise = secondByteDonePromise
                 self.allDonePromise = allDonePromise
             }
             
@@ -853,10 +860,20 @@ class HTTPUpgradeTestCase: XCTestCase {
                 case .added:
                     XCTAssertEqual("A", stringRead)
                     self.state = .inlineDataRead
+                    if stringRead == .some("A") {
+                        self.firstByteDonePromise.succeed(result: ())
+                    } else {
+                        self.firstByteDonePromise.fail(error: ReceivedTheWrongThingError.error)
+                    }
                 case .inlineDataRead:
                     XCTAssertEqual("B", stringRead)
                     self.state = .extraDataRead
                     ctx.channel.close(promise: nil)
+                    if stringRead == .some("B") {
+                        self.secondByteDonePromise.succeed(result: ())
+                    } else {
+                        self.secondByteDonePromise.fail(error: ReceivedTheWrongThingError.error)
+                    }
                 default:
                     XCTFail("channel read in wrong state \(self.state)")
                 }
@@ -867,7 +884,7 @@ class HTTPUpgradeTestCase: XCTestCase {
                 self.state = .closed
                 ctx.close(mode: mode, promise: promise)
                 
-                allDonePromise.succeed(result: ())
+                self.allDonePromise.succeed(result: ())
             }
         }
         
@@ -877,6 +894,8 @@ class HTTPUpgradeTestCase: XCTestCase {
             upgraderCbFired = true
         }
         
+        let firstByteDonePromise: EventLoopPromise<Void> = EmbeddedEventLoop().newPromise()
+        let secondByteDonePromise: EventLoopPromise<Void> = EmbeddedEventLoop().newPromise()
         let allDonePromise: EventLoopPromise<Void> = EmbeddedEventLoop().newPromise()
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
                                                                                     extraHandlers: []) { (ctx) in
@@ -884,7 +903,9 @@ class HTTPUpgradeTestCase: XCTestCase {
                                                                                         XCTAssertNil(upgradeRequest)
                                                                                         upgradeHandlerCbFired = true
                                                                                         
-                                                                                        _ = ctx.channel.pipeline.add(handler: CheckWeReadInlineAndExtraData(allDonePromise: allDonePromise))
+                                                                                        _ = ctx.channel.pipeline.add(handler: CheckWeReadInlineAndExtraData(firstByteDonePromise: firstByteDonePromise,
+                                                                                                                                                            secondByteDonePromise: secondByteDonePromise,
+                                                                                                                                                            allDonePromise: allDonePromise))
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -905,8 +926,14 @@ class HTTPUpgradeTestCase: XCTestCase {
         request += "A"
         XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString(request))).wait())
 
+        XCTAssertNoThrow(try firstByteDonePromise.futureResult.wait() as Void)
+
         XCTAssertNoThrow(try client.writeAndFlush(NIOAny(ByteBuffer.forString("B"))).wait())
         
+        XCTAssertNoThrow(try secondByteDonePromise.futureResult.wait() as Void)
+
+        XCTAssertNoThrow(try allDonePromise.futureResult.wait() as Void)
+
         // Let the machinery do its thing.
         XCTAssertNoThrow(try completePromise.futureResult.wait())
         
