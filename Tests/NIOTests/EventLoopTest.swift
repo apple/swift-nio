@@ -430,8 +430,8 @@ public class EventLoopTest : XCTestCase {
             XCTFail("should've thrown an error")
         } catch _ as E {
             /* good */
-        } catch let e {
-            XCTFail("error of wrong type \(e)")
+        } catch {
+            XCTFail("error of wrong type \(error)")
         }
     }
     
@@ -454,8 +454,8 @@ public class EventLoopTest : XCTestCase {
             _ = try future.wait()
         } catch EventLoopError.shutdown {
             /* good */
-        } catch let e {
-            XCTFail("error of wrong type \(e)")
+        } catch {
+            XCTFail("error of wrong type \(error)")
         }
     }
 }
