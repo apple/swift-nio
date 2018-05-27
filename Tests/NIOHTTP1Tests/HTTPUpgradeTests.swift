@@ -894,9 +894,13 @@ class HTTPUpgradeTestCase: XCTestCase {
             upgraderCbFired = true
         }
         
-        let firstByteDonePromise: EventLoopPromise<Void> = EmbeddedEventLoop().newPromise()
-        let secondByteDonePromise: EventLoopPromise<Void> = EmbeddedEventLoop().newPromise()
-        let allDonePromise: EventLoopPromise<Void> = EmbeddedEventLoop().newPromise()
+        let promiseGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try promiseGroup.syncShutdownGracefully())
+        }
+        let firstByteDonePromise: EventLoopPromise<Void> = promiseGroup.next().newPromise()
+        let secondByteDonePromise: EventLoopPromise<Void> = promiseGroup.next().newPromise()
+        let allDonePromise: EventLoopPromise<Void> = promiseGroup.next().newPromise()
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
                                                                                     extraHandlers: []) { (ctx) in
                                                                                         // This is called before the upgrader gets called.
