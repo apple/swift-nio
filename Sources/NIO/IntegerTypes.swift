@@ -72,6 +72,12 @@ extension _UInt24: Equatable {
     }
 }
 
+extension _UInt24: CustomStringConvertible {
+    var description: String {
+        return Int(self).description
+    }
+}
+
 // MARK: _UInt56
 
 /// A 56-bit unsigned integer value type.
@@ -133,5 +139,11 @@ extension Int {
 extension _UInt56: Equatable {
     static func ==(_ lhs: _UInt56, _ rhs: _UInt56) -> Bool {
         return lhs.b1234 == rhs.b1234 && lhs.b56 == rhs.b56 && lhs.b7 == rhs.b7
+    }
+}
+
+extension _UInt56: CustomStringConvertible {
+    var description: String {
+        return UInt64(self).description
     }
 }
