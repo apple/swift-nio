@@ -1390,6 +1390,53 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("h".utf8.first!, s[0])
         XCTAssertEqual("o".utf8.first!, s[4])
     }
+
+    func testReadableBytesView() throws {
+        self.buf.clear()
+        self.buf.write(string: "hello world 012345678")
+        XCTAssertEqual("hello ", self.buf.readString(length: 6))
+        self.buf.moveWriterIndex(to: self.buf.writerIndex - 10)
+        XCTAssertEqual("world", String(decoding: self.buf.readableBytesView, as: UTF8.self))
+        XCTAssertEqual("world", self.buf.readString(length: self.buf.readableBytes))
+    }
+
+    func testReadableBytesViewNoReadableBytes() throws {
+        self.buf.clear()
+        let view = self.buf.readableBytesView
+        XCTAssertEqual(0, view.count)
+    }
+
+    func testBytesView() throws {
+        self.buf.clear()
+        self.buf.write(string: "hello world 012345678")
+
+        XCTAssertEqual(String(decoding: self.buf.viewBytes(at: self.buf.readerIndex,
+                                                           length: self.buf.writerIndex - self.buf.readerIndex),
+                              as: UTF8.self),
+                       self.buf.getString(at: self.buf.readerIndex, length: self.buf.readableBytes))
+        XCTAssertEqual(Array(self.buf.viewBytes(at: 0, length: 0)), [])
+        XCTAssertEqual(Array("hello world 012345678".utf8),
+                       Array(self.buf.viewBytes(at: 0, length: self.buf.readableBytes)))
+    }
+
+    func testViewsStartIndexIsStable() throws {
+        self.buf.write(string: "hello")
+        let view = self.buf.viewBytes(at: 1, length: 3)
+        XCTAssertEqual(1, view.startIndex)
+        XCTAssertEqual(3, view.count)
+        XCTAssertEqual(4, view.endIndex)
+        XCTAssertEqual("ell", String(decoding: view, as: UTF8.self))
+    }
+
+    func testSlicesOfByteBufferViewsAreByteBufferViews() throws {
+        self.buf.write(string: "hello")
+        let view: ByteBufferView = self.buf.viewBytes(at: 1, length: 3)
+        XCTAssertEqual("ell", String(decoding: view, as: UTF8.self))
+        let viewSlice: ByteBufferView = view[view.startIndex + 1 ..< view.endIndex]
+        XCTAssertEqual("ll", String(decoding: viewSlice, as: UTF8.self))
+        XCTAssertEqual("l", String(decoding: viewSlice.dropFirst(), as: UTF8.self))
+        XCTAssertEqual("", String(decoding: viewSlice.dropFirst().dropLast(), as: UTF8.self))
+    }
 }
 
 private enum AllocationExpectationState: Int {
