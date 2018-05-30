@@ -865,8 +865,8 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
         // we can't be not active but still registered here; this would mean that we got a notification about a
         // channel before we're ready to receive them.
-        assert(self.lifecycleManager.isActive || !self.lifecycleManager.isPreRegistered,
-               "illegal state: \(self): active: \(self.lifecycleManager.isActive), pre-registered: \(self.lifecycleManager.isPreRegistered)")
+        assert(self.lifecycleManager.isRegisteredFully,
+               "illegal state: \(self): active: \(self.lifecycleManager.isActive), registered: \(self.lifecycleManager.isRegisteredFully)")
 
         self.readEOF0()
 
