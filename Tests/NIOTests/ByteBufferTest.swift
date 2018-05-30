@@ -94,6 +94,40 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(6, buf.readableBytes)
     }
 
+    func makeSliceToBufferWhichIsDeallocated() -> ByteBuffer {
+        var buf = self.allocator.buffer(capacity: 16)
+        let oldCapacity = buf.capacity
+        buf.write(bytes: 0..<16)
+        XCTAssertEqual(oldCapacity, buf.capacity)
+        return buf.getSlice(at: 15, length: 1)!
+    }
+
+    func testMakeSureUniquelyOwnedSliceDoesNotGetReallocatedOnWrite() {
+        var slice = self.makeSliceToBufferWhichIsDeallocated()
+        XCTAssertEqual(1, slice.capacity)
+        let oldStorageBegin = slice.withUnsafeReadableBytes { ptr in
+            return UInt(bitPattern: ptr.baseAddress!)
+        }
+        slice.set(integer: 1, at: 0, as: UInt8.self)
+        let newStorageBegin = slice.withUnsafeReadableBytes { ptr in
+            return UInt(bitPattern: ptr.baseAddress!)
+        }
+        XCTAssertEqual(oldStorageBegin, newStorageBegin)
+    }
+
+    func testWriteToUniquelyOwnedSliceWhichTriggersAReallocation() {
+        var slice = self.makeSliceToBufferWhichIsDeallocated()
+        XCTAssertEqual(1, slice.capacity)
+        // this will cause a re-allocation, the whole buffer should be 32 bytes then, the slice having 17 of that.
+        // this fills 16 bytes so will still fit
+        slice.write(bytes: Array(16..<32))
+        XCTAssertEqual(Array(15..<32), slice.readBytes(length: slice.readableBytes)!)
+
+        // and this will need another re-allocation
+        slice.write(bytes: Array(32..<47))
+    }
+
+
     func testReadWrite() {
         buf.write(string: "X")
         buf.write(string: "Y")
@@ -491,7 +525,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(16, buf.writerIndex)
         XCTAssertEqual(0, buf.readerIndex)
         buf.write(bytes: "X".data(using: .utf8)!)
-        XCTAssertEqual(32, buf.capacity)
+        XCTAssertGreaterThan(buf.capacity, 16)
         XCTAssertEqual(17, buf.writerIndex)
         XCTAssertEqual(0, buf.readerIndex)
         buf.withUnsafeReadableBytes { ptr in
