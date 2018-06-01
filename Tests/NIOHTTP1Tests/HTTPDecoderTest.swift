@@ -23,7 +23,7 @@ class HTTPDecoderTest: XCTestCase {
 
     override func setUp() {
         self.channel = EmbeddedChannel()
-        self.loop = channel.eventLoop as! EmbeddedEventLoop
+        self.loop = (channel.eventLoop as! EmbeddedEventLoop)
     }
 
     override func tearDown() {
