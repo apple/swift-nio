@@ -30,6 +30,8 @@ extension ByteBufferTest {
                 ("testEqualsComparesReadBuffersOnly", testEqualsComparesReadBuffersOnly),
                 ("testSimpleReadTest", testSimpleReadTest),
                 ("testSimpleWrites", testSimpleWrites),
+                ("testMakeSureUniquelyOwnedSliceDoesNotGetReallocatedOnWrite", testMakeSureUniquelyOwnedSliceDoesNotGetReallocatedOnWrite),
+                ("testWriteToUniquelyOwnedSliceWhichTriggersAReallocation", testWriteToUniquelyOwnedSliceWhichTriggersAReallocation),
                 ("testReadWrite", testReadWrite),
                 ("testStaticStringReadTests", testStaticStringReadTests),
                 ("testString", testString),
