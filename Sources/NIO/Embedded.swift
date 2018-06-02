@@ -251,6 +251,37 @@ class EmbeddedChannelCore: ChannelCore {
     }
 }
 
+/// `EmbeddedChannel` is a `Channel` implementation that does neither any
+/// actual IO nor has a proper eventing mechanism. The prime use-case for
+/// `EmbeddedChannel` is in unit tests when you want to feed the inbound events
+/// and check the outbound events manually.
+///
+/// To feed events through an `EmbeddedChannel`'s `ChannelPipeline` use
+/// `EmbeddedChannel.writeInbound` which accepts data of any type. It will then
+/// forward that data through the `ChannelPipeline` and the subsequent
+/// `ChannelInboundHandler` will receive it through the usual `channelRead`
+/// event. The user is responsible for making sure the first
+/// `ChannelInboundHandler` expects data of that type.
+///
+/// `EmbeddedChannel` automatically collects arriving outbound data and makes it
+/// available one-by-one through `readOutbound`.
+///
+/// - note: Due to [#243](https://github.com/apple/swift-nio/issues/243)
+///   `EmbeddedChannel` expects outbound data to be of `IOData` type. This is an
+///   incorrect and unfortunate assumption that will be fixed with the next
+///   major NIO release when we can change the public API again. If you do need
+///   to collect outbound data that is not `IOData` you can create a custom
+///   `ChannelOutboundHandler`, insert it at the very beginning of the
+///   `ChannelPipeline` and collect the outbound data there. Just don't forward
+///   it using `ctx.write`.
+/// - note: `EmbeddedChannel` is currently only compatible with
+///   `EmbeddedEventLoop`s and cannot be used with `SelectableEventLoop`s from
+///   for example `MultiThreadedEventLoopGroup`.
+/// - warning: Unlike other `Channel`s, `EmbeddedChannel` **is not thread-safe**. This
+///     is because it is intended to be run in the thread that instantiated it. Users are
+///     responsible for ensuring they never call into an `EmbeddedChannel` in an
+///     unsynchronized fashion. `EmbeddedEventLoop`s notes also apply as
+///     `EmbeddedChannel` uses an `EmbeddedEventLoop` as its `EventLoop`.
 public class EmbeddedChannel: Channel {
 
     public var isActive: Bool { return channelcore.isActive }
