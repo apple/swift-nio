@@ -51,6 +51,17 @@ class CircularBufferTests: XCTestCase {
         XCTAssertTrue(ring.isEmpty)
     }
 
+    func testRemoveAt() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<7 {
+            ring.prepend(idx)
+        }
+        XCTAssertEqual(7, ring.count)
+        _ = ring.remove(at: 1)
+        XCTAssertEqual(6, ring.count)
+        XCTAssertEqual(0, ring.last)
+    }
+
     func testHarderExpansion() {
         var ring = CircularBuffer<Int>(initialRingCapacity: 3)
         XCTAssertEqual(ring.indices, 0..<0)
@@ -125,10 +136,28 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(ring.endIndex, 5)
 
         XCTAssertEqual(ring.index(after: 1), 2)
-
+        XCTAssertEqual(ring.index(before: 3), 2)
+        
         let actualValues = [Int](ring)
         let expectedValues = [0, 1, 2, 3, 4]
         XCTAssertEqual(expectedValues, actualValues)
+    }
+
+    func testReplacingSubrangeOfElements() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<50 {
+            ring.prepend(idx)
+        }
+        XCTAssertEqual(50, ring.count)
+        let newElements = ContiguousArray<Int>(arrayLiteral: 99)
+        ring.replaceSubrange(20..<25, with: newElements)
+
+        XCTAssertEqual(ring.count, 46)
+        XCTAssertEqual(ring[19], 30)
+        XCTAssertEqual(ring[20], 99)
+        XCTAssertEqual(ring[21], 24)
+        ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: [])
+        XCTAssertTrue(ring.isEmpty)
     }
 
     func testWeCanDistinguishBetweenEmptyAndFull() {
@@ -266,6 +295,20 @@ class CircularBufferTests: XCTestCase {
         XCTAssertNil(ring.last)
         XCTAssertEqual(0, ring.count)
         XCTAssertTrue(ring.isEmpty)
+        ring.prepend(9)
+        ring.prepend(5)
+        XCTAssertEqual(9, ring.last)
+        XCTAssertEqual(ring.dropLast().last, ring.dropLast().first)
+        XCTAssertEqual(5, ring.dropLast().first)
+        XCTAssertFalse(ring.isEmpty)
+        XCTAssertEqual(2, ring.count)
+        XCTAssertTrue(ring.dropLast(2).isEmpty)
+        ring.prepend(1)
+        ring.prepend(2)
+        XCTAssertEqual(4, ring.count)
+        ring.removeLast(3)
+        XCTAssertEqual(1, ring.count)
+        XCTAssertEqual(2, ring.last)
     }
 
     func testOperateOnBothSides() {

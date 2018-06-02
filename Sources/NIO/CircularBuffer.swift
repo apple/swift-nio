@@ -23,7 +23,8 @@ public protocol AppendableCollection: Collection {
 /// An automatically expanding ring buffer implementation backed by a `ContiguousArray`. Even though this implementation
 /// will automatically expand if more elements than `initialRingCapacity` are stored, it's advantageous to prevent
 /// expansions from happening frequently. Expansions will always force an allocation and a copy to happen.
-public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
+public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, BidirectionalCollection, RandomAccessCollection, RangeReplaceableCollection
+{
     // this typealias is so complicated because of SR-6963, when that's fixed we can drop the generic parameters and the where clause
     #if swift(>=4.2)
     public typealias RangeType<Bound> = Range<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
@@ -50,6 +51,11 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
         let capacity = Int(UInt32(initialRingCapacity).nextPowerOf2())
         self.buffer = ContiguousArray<E?>(repeating: nil, count: capacity)
         assert(self.buffer.count == capacity)
+    }
+
+    /// Allocates an empty buffer.
+    public init() {
+        self.buffer = ContiguousArray<E?>()
     }
 
     /// Append an element to the end of the ring buffer.
@@ -79,6 +85,87 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
         }
     }
 
+    /// Replaces the specified subrange of elements with the given collection.
+    ///
+    /// - Parameter subrange:
+    /// The subrange of the collection to replace. The bounds of the range must be valid indices of the collection.
+    ///
+    /// - Parameter newElements:
+    /// The new elements to add to the collection.
+    ///
+    /// *O(n)* where _n_ is the lenght of the new elements collection if the subrange equals to _n_
+    ///
+    /// *O(m)* where _m_ is the combined length of the collection and _newElements_
+    public mutating func replaceSubrange(_ subrange: RangeType<Int>, with newElements: ContiguousArray<E>) {
+        guard subrange.lowerBound >= self.startIndex && subrange.upperBound <= self.endIndex else {
+            preconditionFailure("Subrange out of bounds")
+        }
+
+        let lowerBound = bufferIndex(ofIndex: subrange.lowerBound)
+        let upperBound = bufferIndex(ofIndex: subrange.upperBound == self.endIndex ? subrange.upperBound - 1 : subrange.upperBound)
+
+        if subrange.count == newElements.count {
+            for (index, element) in zip(subrange.indices, newElements) {
+                self.buffer[self.bufferIndex(ofIndex: index)] = element
+            }
+        } else if subrange.count == self.count && newElements.isEmpty {
+            self.removeSubrange(subrange)
+        } else {
+            var newBuffer: ContiguousArray<E?> = []
+            newBuffer.reserveCapacity(self.buffer.count)
+            var index = self.headIdx
+            while index != self.tailIdx {
+                if index == lowerBound {
+                    for element in newElements {
+                        newBuffer.append(element)
+                    }
+                    while index != upperBound {
+                        index = self.index(after: index)
+                    }
+                } else {
+                    newBuffer.append(self.buffer[index])
+                    index = self.index(after: index)
+                }
+            }
+
+            self.tailIdx = newBuffer.count
+            let repetitionCount = self.buffer.count - newBuffer.count
+            if repetitionCount > 0 {
+                newBuffer.append(contentsOf: repeatElement(nil, count: repetitionCount))
+            }
+            self.headIdx = 0
+            self.buffer = newBuffer
+        }
+    }
+
+    public mutating func replaceSubrange<C, R>(_ subrange: R, with newElements: C) where C : Collection, R : RangeExpression, E == C.Element, Int == R.Bound {
+        let range = subrange.relative(to: self)
+        self.replaceSubrange(RangeType<Int>(range), with: ContiguousArray<E>(newElements))
+    }
+
+    public mutating func removeSubrange(_ bounds: Range<Int>) {
+        if bounds.count == 1 {
+            _ = remove(at: bounds.lowerBound)
+        } else if bounds.count == self.count {
+            var newBuffer: ContiguousArray<E?> = []
+            newBuffer.reserveCapacity(self.buffer.count)
+            newBuffer.append(contentsOf: repeatElement(nil, count: self.count))
+            self.headIdx = 0
+            self.tailIdx = 0
+            self.buffer = newBuffer
+        } else {
+            replaceSubrange(bounds, with: [])
+        }
+    }
+
+    public mutating func removeLast(_ n: Int) {
+        let end = self.tailIdx
+        self.tailIdx = (self.tailIdx - n) & self.mask
+        for index in end - n ..< end {
+            self.buffer[index] = nil
+        }
+    }
+
     /// Double the capacity of the buffer and adjust the headIdx and tailIdx.
     private mutating func doubleCapacity() {
         var newBacking: ContiguousArray<E?> = []
@@ -97,17 +184,36 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
         self.buffer = newBacking
     }
 
-    /// Remove the front element of the ring buffer.
+    /// Removes & returns the item at `position` from the buffer
     ///
-    /// *O(1)*
-    public mutating func removeFirst() -> E {
-        guard let value = self.buffer[self.headIdx] else {
-            preconditionFailure("CircularBuffer is empty")
-        }
-        self.buffer[self.headIdx] = nil
-        self.headIdx = (self.headIdx + 1) & self.mask
+    /// - Parameter position: The index of the item to be removed from the buffer.
+    ///
+    /// *O(1)* if the position is `headIdx` or `tailIdx`.
+    /// otherwise
+    /// *O(n)* where *n* is the number of elements between `position` and `tailIdx`.
+    public mutating func remove(at position: Int) -> E {
+        var bufferIndex = self.bufferIndex(ofIndex: position)
+        let element = self.buffer[bufferIndex]!
 
-        return value
+        switch bufferIndex {
+        case self.headIdx:
+            self.headIdx = (self.headIdx + 1) & self.mask
+            self.buffer[bufferIndex] = nil
+        case self.tailIdx - 1:
+            self.tailIdx = (self.tailIdx - 1) & self.mask
+            self.buffer[bufferIndex] = nil
+        default:
+            var nextIndex = index(after: bufferIndex)
+            while nextIndex != self.tailIdx {
+                self.buffer[bufferIndex] = self.buffer[nextIndex]
+                bufferIndex = nextIndex
+                nextIndex = index(after: bufferIndex)
+            }
+            self.buffer[nextIndex] = nil
+            self.tailIdx = (self.tailIdx - 1) & self.mask
+        }
+
+        return element
     }
 
     /// Return the first element of the ring.
@@ -119,20 +225,6 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
         } else {
             return self.buffer[self.headIdx]
         }
-    }
-
-    /// Remove the last element of the ring buffer.
-    ///
-    /// *O(1)*
-    public mutating func removeLast() -> E {
-        let idx = (self.tailIdx - 1) & self.mask
-        guard let value = self.buffer[idx] else {
-            preconditionFailure("CircularBuffer is empty")
-        }
-        self.buffer[idx] = nil
-        self.tailIdx = idx
-
-        return value
     }
 
     /// Return the last element of the ring.
@@ -205,9 +297,14 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
 
     /// Returns the next index after `index`.
     public func index(after: Int) -> Int {
-        let nextIndex = after + 1
-        precondition(nextIndex <= self.endIndex)
+        let nextIndex = (after + 1) >= self.capacity ? 0 : (after + 1)
         return nextIndex
+    }
+
+    /// Returns the index before `index`.
+    public func index(before: Int) -> Int {
+        let previousIndex = (before - 1) < 0 ? self.tailIdx : (before - 1)
+        return previousIndex
     }
 
     /// Removes all members from the circular buffer whist keeping the capacity.
