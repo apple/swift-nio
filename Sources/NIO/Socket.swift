@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 /// The container used for writing multiple buffers via `writev`.
-public typealias IOVector = iovec
+typealias IOVector = iovec
 
 // TODO: scattering support
 /* final but tests */ class Socket: BaseSocket {

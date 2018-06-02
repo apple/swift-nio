@@ -96,7 +96,7 @@ extension ByteBuffer {
 
 extension FixedWidthInteger {
     /// Returns the next power of two.
-    public func nextPowerOf2() -> Self {
+    func nextPowerOf2() -> Self {
         guard self != 0 else {
             return 1
         }
@@ -106,7 +106,7 @@ extension FixedWidthInteger {
 
 extension UInt32 {
     /// Returns the next power of two unless that would overflow in which case UInt32.max is returned.
-    public func nextPowerOf2ClampedToMax() -> UInt32 {
+    func nextPowerOf2ClampedToMax() -> UInt32 {
         guard self > 0 else {
             return 1
         }
