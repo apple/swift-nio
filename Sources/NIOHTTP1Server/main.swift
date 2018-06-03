@@ -249,7 +249,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             return { ctx, req in
                 self.handleJustWrite(ctx: ctx,
                                      request: req, string: "Hello World\r\n",
-                                     delay: Int(howLong).map { .milliseconds($0) } ?? .seconds(0))
+                                     delay: TimeAmount.Value(howLong).map { .milliseconds($0) } ?? .seconds(0))
             }
         }
 
@@ -501,7 +501,7 @@ default:
     bindTarget = BindTo.ip(host: defaultHost, port: defaultPort)
 }
 
-let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
+let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 let threadPool = BlockingIOThreadPool(numberOfThreads: 6)
 threadPool.start()
 

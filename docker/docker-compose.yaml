@@ -1,58 +1,48 @@
+# this file is not designed to be run directly
+# instead, use the docker-compose.<os>.<swift> files
+# eg docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.1604.41.yaml run test
 version: "3"
 
 services:
 
-    swift-nio:
-        image: swift-nio:latest
-        build:
-            context: .
-            dockerfile: Dockerfile
+  runtime-setup:
+    image: swift-nio:default
+    build:
+      context: .
+      dockerfile: Dockerfile
 
-    unit-tests:
-        depends_on: [swift-nio]
-        image: swift-nio:latest
-        command: /bin/bash -cl "swift test"
-        volumes:
-            - ~/.ssh:/root/.ssh
-            - ..:/code
-        working_dir: /code
+  common: &common
+    image: swift-nio:default
+    depends_on: [runtime-setup]
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ..:/code
+    working_dir: /code
 
-    integration-tests:
-        depends_on: [swift-nio]
-        image: swift-nio:latest
-        command: /bin/bash -cl "./scripts/integration_tests.sh"
-        volumes:
-            - ~/.ssh:/root/.ssh
-            - ..:/code
-        working_dir: /code
+  sanity:
+    <<: *common
+    command: /bin/bash -cl "./scripts/sanity.sh"
 
-    test:
-        depends_on: [swift-nio]
-        image: swift-nio:latest
-        command: /bin/bash -cl "swift test && ./scripts/integration_tests.sh"
-        volumes:
-            - ~/.ssh:/root/.ssh
-            - ..:/code
-        working_dir: /code
+  unit-tests:
+    <<: *common
+    command: /bin/bash -cl "swift test"
 
-    echo:
-        depends_on: [swift-nio]
-        image: swift-nio:latest
-        ports:
-            - "9999:9999"
-        command: /bin/bash -cl "swift run NIOEchoServer 0.0.0.0 9999"
-        volumes:
-            - ~/.ssh:/root/.ssh
-            - ..:/code
-        working_dir: /code
+  integration-tests:
+    <<: *common
+    command: /bin/bash -cl "./scripts/integration_tests.sh"
 
-    http:
-        depends_on: [swift-nio]
-        image: swift-nio:latest
-        ports:
-            - "8888:8888"
-        command: /bin/bash -cl "swift run NIOHTTP1Server 0.0.0.0 8888"
-        volumes:
-            - ~/.ssh:/root/.ssh
-            - ..:/code
-        working_dir: /code
+  test:
+    <<: *common
+    command: /bin/bash -cl "swift test && ./scripts/integration_tests.sh"
+
+  echo:
+    <<: *common
+    ports:
+      - "9999:9999"
+    command: /bin/bash -cl "swift run NIOEchoServer 0.0.0.0 9999"
+
+  http:
+    <<: *common
+    ports:
+      - "8888:8888"
+    command: /bin/bash -cl "swift run NIOHTTP1Server 0.0.0.0 8888"

@@ -85,7 +85,7 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
 
 public class ChannelTests: XCTestCase {
     func testBasicLifecycle() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -123,7 +123,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testManyManyWrites() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -152,7 +152,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testWritevLotsOfData() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -183,7 +183,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testParentsOfSocketChannels() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1056,7 +1056,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testSpecificConnectTimeout() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1081,7 +1081,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testGeneralConnectTimeout() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1106,7 +1106,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testCloseOutput() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1162,7 +1162,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testCloseInput() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1225,7 +1225,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testHalfClosure() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1329,7 +1329,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testRejectsInvalidData() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1369,7 +1369,7 @@ public class ChannelTests: XCTestCase {
         weak var weakServerChannel: Channel? = nil
         weak var weakServerChildChannel: Channel? = nil
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1410,7 +1410,7 @@ public class ChannelTests: XCTestCase {
             try pipeline.eventLoop.submit { () -> Channel in
                 XCTAssertTrue(pipeline.channel is DeadChannel)
                 return pipeline.channel
-            }.wait().write(NIOAny(())).wait()
+            }.wait().writeAndFlush(NIOAny(())).wait()
             XCTFail("shouldn't have been reached")
         } catch let e as ChannelError where e == .ioOnClosedChannel {
             // OK
@@ -1428,7 +1428,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testAskForLocalAndRemoteAddressesAfterChannelIsClosed() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1458,7 +1458,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testReceiveAddressAfterAccept() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1531,7 +1531,7 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1572,7 +1572,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testNoChannelReadBeforeEOFIfNoAutoRead() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1617,7 +1617,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testCloseInEOFdChannelReadBehavesCorrectly() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1672,7 +1672,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testCloseInSameReadThatEOFGetsDelivered() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1724,7 +1724,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testEOFReceivedWithoutReadRequests() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1834,7 +1834,7 @@ public class ChannelTests: XCTestCase {
         }
 
         func runTest() throws {
-            let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
+            let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
             defer {
                 XCTAssertNoThrow(try group.syncShutdownGracefully())
             }
@@ -1915,7 +1915,7 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1986,7 +1986,7 @@ public class ChannelTests: XCTestCase {
                 XCTFail("unexpected error \(error)", file: file, line: line)
             }
         }
-        let elg = MultiThreadedEventLoopGroup(numThreads: 1)
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
         func withChannel(skipDatagram: Bool = false, skipStream: Bool = false, skipServerSocket: Bool = false, file: StaticString = #file, line: UInt = #line,  _ body: (Channel) throws -> Void) {
             XCTAssertNoThrow(try {
@@ -2100,7 +2100,7 @@ public class ChannelTests: XCTestCase {
                 self.allDone.succeed(result: ())
             }
         }
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -2123,7 +2123,7 @@ public class ChannelTests: XCTestCase {
 
         let allDone: EventLoopPromise<Void> = clientEL.newPromise()
 
-        XCTAssertNoThrow(_ = try sc.eventLoop.submit {
+        XCTAssertNoThrow(try sc.eventLoop.submit {
             // this is pretty delicate at the moment:
             // `bind` must be _synchronously_ follow `register`, otherwise in our current implementation, `epoll` will
             // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `then` on the eventloop that the
@@ -2134,7 +2134,7 @@ public class ChannelTests: XCTestCase {
             }.then {
                 sc.connect(to: serverChannel.localAddress!)
             }
-        }.wait())
+        }.wait().wait() as Void)
         XCTAssertNoThrow(try allDone.futureResult.wait())
         XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
     }
@@ -2157,7 +2157,7 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -2171,13 +2171,21 @@ public class ChannelTests: XCTestCase {
         }
 
         let allDone: EventLoopPromise<Void> = group.next().newPromise()
-        XCTAssertNoThrow(try sc.eventLoop.submit {
+        let cf = try! sc.eventLoop.submit {
             sc.pipeline.add(handler: VerifyConnectionFailureHandler(allDone: allDone)).then {
                 sc.register().then {
                     sc.connect(to: serverChannel.localAddress!)
                 }
             }
-        }.wait())
+        }.wait()
+        do {
+            try cf.wait()
+            XCTFail("should've thrown")
+        } catch DummyError.dummy {
+            // ok
+        } catch {
+            XCTFail("unexpected error \(error)")
+        }
         XCTAssertNoThrow(try allDone.futureResult.wait())
         XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
     }
@@ -2195,7 +2203,7 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -2209,7 +2217,7 @@ public class ChannelTests: XCTestCase {
         }
 
         let allDone: EventLoopPromise<Void> = group.next().newPromise()
-        XCTAssertNoThrow(try sc.eventLoop.submit {
+        try! sc.eventLoop.submit {
             let f = sc.pipeline.add(handler: VerifyConnectionFailureHandler(allDone: allDone)).then {
                 sc.register().then {
                     sc.connect(to: serverChannel.localAddress!)
@@ -2223,7 +2231,7 @@ public class ChannelTests: XCTestCase {
             }
             // We can block here because connect must have failed synchronously.
             XCTAssertTrue(f.isFulfilled)
-        }.wait())
+        }.wait() as Void
         XCTAssertNoThrow(try allDone.futureResult.wait())
 
         XCTAssertNoThrow(try sc.closeFuture.wait())
@@ -2231,7 +2239,7 @@ public class ChannelTests: XCTestCase {
     }
 
     func testConnectWithECONNREFUSEDGetsTheRightError() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -2255,6 +2263,210 @@ public class ChannelTests: XCTestCase {
         }
     }
 
+    func testCloseInUnregister() throws {
+        enum DummyError: Error { case dummy }
+        class SocketFailingClose: Socket {
+            init() throws {
+                try super.init(protocolFamily: PF_INET, type: Posix.SOCK_STREAM, setNonBlocking: true)
+            }
+
+            override func close() throws {
+                _ = try? super.close()
+                throw DummyError.dummy
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let sc = try SocketChannel(socket: SocketFailingClose(), eventLoop: group.next() as! SelectableEventLoop)
+
+        let serverChannel = try ServerBootstrap(group: group.next())
+            .bind(host: "127.0.0.1", port: 0)
+            .wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
+        XCTAssertNoThrow(try sc.eventLoop.submit {
+            sc.register().then {
+                sc.connect(to: serverChannel.localAddress!)
+            }
+        }.wait().wait() as Void)
+
+        do {
+            try sc.eventLoop.submit { () -> EventLoopFuture<Void> in
+                let p: EventLoopPromise<Void> = sc.eventLoop.newPromise()
+                // this callback must be attached before we call the close
+                let f = p.futureResult.map {
+                    XCTFail("shouldn't be reached")
+                }.thenIfError { err in
+                    XCTAssertNotNil(err as? DummyError)
+                    return sc.close()
+                }
+                sc.close(promise: p)
+                return f
+            }.wait().wait()
+            XCTFail("shouldn't be reached")
+        } catch ChannelError.alreadyClosed {
+            // ok
+        } catch {
+            XCTFail("wrong error: \(error)")
+        }
+
+    }
+
+    func testLazyRegistrationWorksForServerSockets() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let server = try ServerSocketChannel(eventLoop: group.next() as! SelectableEventLoop,
+                                             group: group,
+                                             protocolFamily: PF_INET)
+        defer {
+            XCTAssertNoThrow(try server.close().wait())
+        }
+        XCTAssertNoThrow(try server.register().wait())
+        XCTAssertNoThrow(try server.eventLoop.submit {
+            XCTAssertFalse(server.isActive)
+        }.wait())
+        XCTAssertEqual(0, server.localAddress!.port!)
+        XCTAssertNoThrow(try server.bind(to: SocketAddress(ipAddress: "0.0.0.0", port: 0)).wait())
+        XCTAssertNotEqual(0, server.localAddress!.port!)
+    }
+
+    func testLazyRegistrationWorksForClientSockets() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let serverChannel = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .bind(host: "localhost", port: 0)
+            .wait()
+
+        let client = try SocketChannel(eventLoop: group.next() as! SelectableEventLoop,
+                                       protocolFamily: serverChannel.localAddress!.protocolFamily)
+        defer {
+            XCTAssertNoThrow(try client.close().wait())
+        }
+        XCTAssertNoThrow(try client.register().wait())
+        XCTAssertNoThrow(try client.eventLoop.submit {
+            XCTAssertFalse(client.isActive)
+        }.wait())
+        XCTAssertNoThrow(try client.connect(to: serverChannel.localAddress!).wait())
+        XCTAssertTrue(client.isActive)
+        XCTAssertEqual(serverChannel.localAddress!, client.remoteAddress!)
+    }
+
+    func testFailedRegistrationOfClientSocket() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let serverChannel = try ServerBootstrap(group: group).bind(host: "localhost", port: 0).wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        }
+        do {
+            let clientChannel = try ClientBootstrap(group: group)
+                .channelInitializer { channel in
+                    channel.pipeline.add(handler: FailRegistrationAndDelayCloseHandler())
+                }
+                .connect(to: serverChannel.localAddress!)
+                .wait()
+            XCTFail("shouldn't have reached this but got \(clientChannel)")
+        } catch FailRegistrationAndDelayCloseHandler.RegistrationFailedError.error {
+            // ok
+        } catch {
+            XCTFail("unexpected error \(error)")
+        }
+    }
+
+    func testFailedRegistrationOfAcceptedSocket() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let serverChannel = try ServerBootstrap(group: group)
+            .childChannelInitializer { channel in
+                channel.pipeline.add(handler: FailRegistrationAndDelayCloseHandler())
+            }
+            .bind(host: "localhost", port: 0).wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        }
+        let clientChannel = try ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!)
+            .wait()
+        try clientChannel.closeFuture.wait()
+    }
+
+    func testFailedRegistrationOfServerSocket() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        do {
+            let serverChannel = try ServerBootstrap(group: group)
+                .serverChannelInitializer { channel in
+                    channel.pipeline.add(handler: FailRegistrationAndDelayCloseHandler())
+                }
+                .bind(host: "localhost", port: 0).wait()
+            XCTFail("shouldn't be reached")
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        } catch FailRegistrationAndDelayCloseHandler.RegistrationFailedError.error {
+            // ok
+        } catch {
+            XCTFail("unexpected error \(error)")
+        }
+    }
+
+    func testTryingToBindOnPortThatIsAlreadyBoundFailsButDoesNotCrash() throws {
+        // this is a regression test for #417
+
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let serverChannel1 = try! ServerBootstrap(group: group)
+            .bind(host: "localhost", port: 0)
+            .wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel1.close().wait())
+        }
+
+        do {
+            let serverChannel2 = try ServerBootstrap(group: group)
+                .bind(to: serverChannel1.localAddress!)
+                .wait()
+            XCTFail("shouldn't have succeeded, got two server channels on the same port: \(serverChannel1) and \(serverChannel2)")
+        } catch let e as IOError where e.errnoCode == EADDRINUSE {
+            // OK
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+}
+
+fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler {
+    enum RegistrationFailedError: Error { case error }
+
+    typealias OutboundIn = Never
+
+    func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+        promise!.fail(error: RegistrationFailedError.error)
+    }
+
+    func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        /* for extra nastiness, let's delay close. This makes sure the ChannelPipeline correctly retains the Channel */
+        _ = ctx.eventLoop.scheduleTask(in: .milliseconds(10)) {
+            ctx.close(mode: mode, promise: promise)
+        }
+    }
 }
 
 fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {
@@ -2283,11 +2495,13 @@ fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {
     func channelRegistered(ctx: ChannelHandlerContext) {
         XCTAssertEqual(.fresh, self.state)
         self.state = .registered
+        ctx.fireChannelRegistered()
     }
 
     func channelUnregistered(ctx: ChannelHandlerContext) {
         XCTAssertEqual(.registered, self.state)
         self.state = .unregistered
         self.allDone.succeed(result: ())
+        ctx.fireChannelUnregistered()
     }
 }

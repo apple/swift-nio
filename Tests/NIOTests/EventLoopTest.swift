@@ -21,7 +21,7 @@ public class EventLoopTest : XCTestCase {
     public func testSchedule() throws {
         let nanos = DispatchTime.now().uptimeNanoseconds
         let amount: TimeAmount = .seconds(1)
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
@@ -36,7 +36,7 @@ public class EventLoopTest : XCTestCase {
     public func testScheduleWithDelay() throws {
         let smallAmount: TimeAmount = .milliseconds(100)
         let longAmount: TimeAmount = .seconds(1)
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
@@ -69,7 +69,7 @@ public class EventLoopTest : XCTestCase {
     }
 
     public func testScheduleCancelled() throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
@@ -96,7 +96,7 @@ public class EventLoopTest : XCTestCase {
         // Do not ignore intermittent failures in this test!
         let threads = 8
         let numBytes = 256
-        let group = MultiThreadedEventLoopGroup(numThreads: threads)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: threads)
 
         // Create a server channel.
         let serverChannel = try ServerBootstrap(group: group)
@@ -126,16 +126,23 @@ public class EventLoopTest : XCTestCase {
         // to cleanly shut down all the channels before it actually closes. We add a custom channel that we can use
         // to wedge the event loop in the "shutting down" state, ensuring that we have plenty of time to attempt the
         // registration.
-        class WedgeOpenHandler: ChannelOutboundHandler {
+        class WedgeOpenHandler: ChannelDuplexHandler {
+            typealias InboundIn = Any
             typealias OutboundIn = Any
             typealias OutboundOut = Any
 
             private let promiseRegisterCallback: (EventLoopPromise<Void>) -> Void
 
             var closePromise: EventLoopPromise<Void>? = nil
+            private let channelActivePromise: EventLoopPromise<Void>?
 
-            init(_ promiseRegisterCallback: @escaping (EventLoopPromise<Void>) -> Void) {
+            init(channelActivePromise: EventLoopPromise<Void>? = nil, _ promiseRegisterCallback: @escaping (EventLoopPromise<Void>) -> Void) {
                 self.promiseRegisterCallback = promiseRegisterCallback
+                self.channelActivePromise = channelActivePromise
+            }
+
+            func channelActive(ctx: ChannelHandlerContext) {
+                self.channelActivePromise?.succeed(result: ())
             }
 
             func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
@@ -155,7 +162,7 @@ public class EventLoopTest : XCTestCase {
         let promiseQueue = DispatchQueue(label: "promiseQueue")
         var promises: [EventLoopPromise<Void>] = []
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             do {
                 try group.syncShutdownGracefully()
@@ -167,9 +174,10 @@ public class EventLoopTest : XCTestCase {
         }
         let loop = group.next() as! SelectableEventLoop
 
+        let serverChannelUp: EventLoopPromise<Void> = group.next().newPromise()
         let serverChannel = try ServerBootstrap(group: group)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: WedgeOpenHandler { promise in
+                channel.pipeline.add(handler: WedgeOpenHandler(channelActivePromise: serverChannelUp) { promise in
                     promiseQueue.sync { promises.append(promise) }
                 })
             }
@@ -184,7 +192,7 @@ public class EventLoopTest : XCTestCase {
             promiseQueue.sync { promises.append(promise) }
         }
         let channel = try SocketChannel(eventLoop: loop, protocolFamily: AF_INET)
-        _ = try channel.eventLoop.submit {
+        try channel.eventLoop.submit {
             channel.pipeline.add(handler: wedgeHandler).then {
                 channel.register()
             }.then {
@@ -195,6 +203,8 @@ public class EventLoopTest : XCTestCase {
 
         // Wait for the connect to complete.
         XCTAssertNoThrow(try connectPromise.futureResult.wait())
+
+        XCTAssertNoThrow(try serverChannelUp.futureResult.wait())
 
         // Now we're going to start closing the event loop. This should not immediately succeed.
         let loopCloseFut = loop.closeGently()
@@ -261,7 +271,7 @@ public class EventLoopTest : XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         #endif
     }
-    
+
     public func testCurrentEventLoop() throws {
         class EventLoopHolder {
             weak var loop: EventLoop?
@@ -269,30 +279,30 @@ public class EventLoopTest : XCTestCase {
                 self.loop = loop
             }
         }
-        
+
         func assertCurrentEventLoop0() throws -> EventLoopHolder {
-            let group = MultiThreadedEventLoopGroup(numThreads: 2)
-            
+            let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+
             let loop1 = group.next()
             let currentLoop1 = try loop1.submit {
                 MultiThreadedEventLoopGroup.currentEventLoop
             }.wait()
             XCTAssertTrue(loop1 === currentLoop1)
-            
+
             let loop2 = group.next()
             let currentLoop2 = try loop2.submit {
                 MultiThreadedEventLoopGroup.currentEventLoop
             }.wait()
             XCTAssertTrue(loop2 === currentLoop2)
             XCTAssertFalse(loop1 === loop2)
-            
+
             let holder = EventLoopHolder(loop2)
             XCTAssertNotNil(holder.loop)
             XCTAssertNil(MultiThreadedEventLoopGroup.currentEventLoop)
             XCTAssertNoThrow(try group.syncShutdownGracefully())
             return holder
         }
-        
+
         let holder = try assertCurrentEventLoop0()
 
         // We loop as the Thread used by SelectableEventLoop may not be gone yet.
@@ -307,7 +317,7 @@ public class EventLoopTest : XCTestCase {
     }
 
     public func testShutdownWhileScheduledTasksNotReady() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let eventLoop = group.next()
         _ = eventLoop.scheduleTask(in: .hours(1)) { }
         try group.syncShutdownGracefully()
@@ -326,17 +336,17 @@ public class EventLoopTest : XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let eventLoop = group.next()
         let assertHandler = AssertHandler()
         let serverSocket = try ServerBootstrap(group: group).bind(host: "localhost", port: 0).wait()
         let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: serverSocket.localAddress!.protocolFamily)
         try channel.pipeline.add(handler: assertHandler).wait()
-        _ = try channel.eventLoop.submit {
+        try channel.eventLoop.submit {
             channel.register().then {
                 channel.connect(to: serverSocket.localAddress!)
             }
-        }.wait()
+        }.wait().wait()
         XCTAssertFalse(channel.closeFuture.isFulfilled)
         try group.syncShutdownGracefully()
         XCTAssertTrue(assertHandler.groupIsShutdown.compareAndExchange(expected: false, desired: true))
@@ -348,7 +358,7 @@ public class EventLoopTest : XCTestCase {
     public func testScheduleMultipleTasks() throws {
         let nanos = DispatchTime.now().uptimeNanoseconds
         let amount: TimeAmount = .seconds(1)
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: 1)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }

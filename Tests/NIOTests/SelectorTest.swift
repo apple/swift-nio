@@ -328,7 +328,7 @@ class SelectorTest: XCTestCase {
                 }
             }
         }
-        let el = MultiThreadedEventLoopGroup(numThreads: 1).next()
+        let el = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
         defer {
             XCTAssertNoThrow(try el.syncShutdownGracefully())
         }
@@ -358,7 +358,7 @@ class SelectorTest: XCTestCase {
                         return channel
                     }
                 }
-        }.wait().forEach { return try! $0.wait() } as Void)
+        }.wait().forEach { XCTAssertNoThrow(try $0.wait()) } as Void)
         XCTAssertNoThrow(try everythingWasReadPromise.futureResult.wait())
         XCTAssertNoThrow(try FileManager.default.removeItem(at: URL(fileURLWithPath: tempDir)))
     }

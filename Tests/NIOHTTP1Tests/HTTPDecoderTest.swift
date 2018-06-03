@@ -23,7 +23,7 @@ class HTTPDecoderTest: XCTestCase {
 
     override func setUp() {
         self.channel = EmbeddedChannel()
-        self.loop = channel.eventLoop as! EmbeddedEventLoop
+        self.loop = (channel.eventLoop as! EmbeddedEventLoop)
     }
 
     override func tearDown() {
@@ -187,6 +187,123 @@ class HTTPDecoderTest: XCTestCase {
         buffer.write(staticString: "HTTP/1.3 200 OK\r\nServer: whatever\r\n\r\n")
 
         XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(try channel.finish())
+    }
+
+    func testCorrectlyMaintainIndicesWhenDiscardReadBytes() throws {
+        class Receiver: ChannelInboundHandler {
+            typealias InboundIn = HTTPServerRequestPart
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                let part = self.unwrapInboundIn(data)
+                switch part {
+                case .head(let h):
+                    XCTAssertEqual("/SomeURL", h.uri)
+                    for h in h.headers {
+                        XCTAssertEqual("X-Header", h.name)
+                        XCTAssertEqual("value", h.value)
+                    }
+                default:
+                    break
+                }
+            }
+        }
+
+        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: Receiver()).wait())
+
+        // This is a hypothetical HTTP/2.0 protocol response, assuming it is
+        // byte for byte identical (which such a protocol would never be).
+        var buffer = channel.allocator.buffer(capacity: 16)
+        buffer.write(staticString: "GET /SomeURL HTTP/1.1\r\n")
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+
+        var written = 0
+        repeat {
+            var buffer2 = channel.allocator.buffer(capacity: 16)
+
+            written += buffer2.write(staticString: "X-Header: value\r\n")
+            try channel.writeInbound(buffer2)
+        } while written < 8192 // Use a value that w
+
+        var buffer3 = channel.allocator.buffer(capacity: 2)
+        buffer3.write(staticString: "\r\n")
+
+        XCTAssertNoThrow(try channel.writeInbound(buffer3))
+        XCTAssertNoThrow(try channel.finish())
+    }
+
+    func testDropExtraBytes() throws {
+        class Receiver: ChannelInboundHandler {
+            typealias InboundIn = HTTPServerRequestPart
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                let part = self.unwrapInboundIn(data)
+                switch part {
+                case .end:
+                    // ignore
+                    _ = ctx.pipeline.remove(name: "decoder")
+                default:
+                    break
+                }
+            }
+        }
+        XCTAssertNoThrow(try channel.pipeline.add(name: "decoder", handler: HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: Receiver()).wait())
+
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.write(staticString: "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\nXXXX")
+
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(try channel.pipeline.assertDoesNotContain(handlerType: HTTPRequestDecoder.self))
+        XCTAssertNoThrow(try channel.finish())
+    }
+
+    func testDontDropExtraBytes() throws {
+        class ByteCollector: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            var called: Bool = false
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                var buffer = self.unwrapInboundIn(data)
+                XCTAssertEqual("XXXX", buffer.readString(length: buffer.readableBytes)!)
+                self.called = true
+            }
+
+            func handlerAdded(ctx: ChannelHandlerContext) {
+                _ = ctx.pipeline.remove(name: "decoder")
+            }
+        }
+
+        class Receiver: ChannelInboundHandler {
+            typealias InboundIn = HTTPServerRequestPart
+            let collector = ByteCollector()
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                let part = self.unwrapInboundIn(data)
+                switch part {
+                case .end:
+                    _ = ctx.pipeline.remove(handler: self).then { _ in
+                        ctx.pipeline.add(handler: self.collector)
+                    }
+                default:
+                    // ignore
+                    break
+                }
+            }
+
+            func channelInactive(ctx: ChannelHandlerContext) {
+                XCTAssertTrue(collector.called)
+            }
+        }
+        XCTAssertNoThrow(try channel.pipeline.add(name: "decoder", handler: HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes)).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: Receiver()).wait())
+
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.write(staticString: "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\nXXXX")
+
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(try channel.pipeline.assertDoesNotContain(handlerType: HTTPRequestDecoder.self))
         XCTAssertNoThrow(try channel.finish())
     }
 }

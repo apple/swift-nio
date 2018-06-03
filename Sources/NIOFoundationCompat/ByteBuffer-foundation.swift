@@ -30,6 +30,7 @@ import struct Foundation.Data
  */
 
 extension Data: ContiguousCollection {
+    @_inlineable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try self.withUnsafeBytes { (ptr: UnsafePointer<UInt8>) -> R in
             try body(UnsafeRawBufferPointer(start: ptr, count: self.count))

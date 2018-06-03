@@ -14,7 +14,12 @@
 
 import CNIOAtomics
 
-/// An encapsulation of an atomic primitive object.
+/// An atomic primitive object.
+///
+/// Before using `UnsafeEmbeddedAtomic`, please consider whether your needs can be met by `Atomic` instead.
+/// `UnsafeEmbeddedAtomic` is a value type, but atomics are heap-allocated. Thus, it is only safe to
+/// use `UnsafeEmbeddedAtomic` in situations where the atomic can be guaranteed to be cleaned up (via calling `destroy`).
+/// If you cannot make these guarantees, use `Atomic` instead, which manages this for you.
 ///
 /// Atomic objects support a wide range of atomic operations:
 ///
@@ -28,11 +33,7 @@ import CNIOAtomics
 /// Atomic primitives are useful when building constructs that need to
 /// communicate or cooperate across multiple threads. In the case of
 /// SwiftNIO this usually involves communicating across multiple event loops.
-///
-/// By necessity, all atomic values are references: after all, it makes no
-/// sense to talk about managing an atomic value when each time it's modified
-/// the thread that modified it gets a local copy!
-public final class Atomic<T: AtomicPrimitive> {
+public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     private let value: OpaquePointer
 
     /// Create an atomic object with `value`.
@@ -166,8 +167,169 @@ public final class Atomic<T: AtomicPrimitive> {
         T.atomic_store(self.value, value)
     }
 
-    deinit {
+    /// Destroy the atomic value.
+    ///
+    /// This method is the source of the unsafety of this structure. This *must* be called, or you will leak memory with each
+    /// atomic.
+    public func destroy() {
         T.atomic_destroy(self.value)
+    }
+}
+
+/// An encapsulation of an atomic primitive object.
+///
+/// Atomic objects support a wide range of atomic operations:
+///
+/// - Compare and swap
+/// - Add
+/// - Subtract
+/// - Exchange
+/// - Load current value
+/// - Store current value
+///
+/// Atomic primitives are useful when building constructs that need to
+/// communicate or cooperate across multiple threads. In the case of
+/// SwiftNIO this usually involves communicating across multiple event loops.
+///
+/// By necessity, all atomic values are references: after all, it makes no
+/// sense to talk about managing an atomic value when each time it's modified
+/// the thread that modified it gets a local copy!
+public final class Atomic<T: AtomicPrimitive> {
+    private let embedded: UnsafeEmbeddedAtomic<T>
+
+    /// Create an atomic object with `value`.
+    @_specialize(where T == Int)
+    @_specialize(where T == Bool)
+    @_specialize(where T == UInt64)
+    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
+    // FIXME: Bring back when we require Swift >= 4.0.2
+    // @_specialize(where T == UInt)
+    // @_specialize(where T == Int64)
+    public init(value: T) {
+        self.embedded = UnsafeEmbeddedAtomic(value: value)
+    }
+
+    /// Atomically compares the value against `expected` and, if they are equal,
+    /// replaces the value with `desired`.
+    ///
+    /// This implementation conforms to C11's `atomic_compare_exchange_strong`. This
+    /// means that the compare-and-swap will always succeed if `expected` is equal to
+    /// value. Additionally, it uses a *sequentially consistent ordering*. For more
+    /// details on atomic memory models, check the documentation for C11's
+    /// `stdatomic.h`.
+    ///
+    /// - Parameter expected: The value that this object must currently hold for the
+    ///     compare-and-swap to succeed.
+    /// - Parameter desired: The new value that this object will hold if the compare
+    ///     succeeds.
+    /// - Returns: `True` if the exchange occurred, or `False` if `expected` did not
+    ///     match the current value and so no exchange occurred.
+    @_specialize(where T == Int)
+    @_specialize(where T == Bool)
+    @_specialize(where T == UInt64)
+    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
+    // FIXME: Bring back when we require Swift >= 4.0.2
+    // @_specialize(where T == UInt)
+    // @_specialize(where T == Int64)
+    public func compareAndExchange(expected: T, desired: T) -> Bool {
+        return self.embedded.compareAndExchange(expected: expected, desired: desired)
+    }
+
+    /// Atomically adds `rhs` to this object.
+    ///
+    /// This implementation uses a *relaxed* memory ordering. This guarantees nothing
+    /// more than that this operation is atomic: there is no guarantee that any other
+    /// event will be ordered before or after this one.
+    ///
+    /// - Parameter rhs: The value to add to this object.
+    /// - Returns: The previous value of this object, before the addition occurred.
+    @_specialize(where T == Int)
+    @_specialize(where T == Bool)
+    @_specialize(where T == UInt64)
+    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
+    // FIXME: Bring back when we require Swift >= 4.0.2
+    // @_specialize(where T == UInt)
+    // @_specialize(where T == Int64)
+    public func add(_ rhs: T) -> T {
+        return self.embedded.add(rhs)
+    }
+
+    /// Atomically subtracts `rhs` from this object.
+    ///
+    /// This implementation uses a *relaxed* memory ordering. This guarantees nothing
+    /// more than that this operation is atomic: there is no guarantee that any other
+    /// event will be ordered before or after this one.
+    ///
+    /// - Parameter rhs: The value to subtract from this object.
+    /// - Returns: The previous value of this object, before the subtraction occurred.
+    @_specialize(where T == Int)
+    @_specialize(where T == Bool)
+    @_specialize(where T == UInt64)
+    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
+    // FIXME: Bring back when we require Swift >= 4.0.2
+    // @_specialize(where T == UInt)
+    // @_specialize(where T == Int64)
+    public func sub(_ rhs: T) -> T {
+        return self.embedded.sub(rhs)
+    }
+
+    /// Atomically exchanges `value` for the current value of this object.
+    ///
+    /// This implementation uses a *relaxed* memory ordering. This guarantees nothing
+    /// more than that this operation is atomic: there is no guarantee that any other
+    /// event will be ordered before or after this one.
+    ///
+    /// - Parameter value: The new value to set this object to.
+    /// - Returns: The value previously held by this object.
+    @_specialize(where T == Int)
+    @_specialize(where T == Bool)
+    @_specialize(where T == UInt64)
+    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
+    // FIXME: Bring back when we require Swift >= 4.0.2
+    // @_specialize(where T == UInt)
+    // @_specialize(where T == Int64)
+    public func exchange(with value: T) -> T {
+        return self.embedded.exchange(with: value)
+    }
+
+    /// Atomically loads and returns the value of this object.
+    ///
+    /// This implementation uses a *relaxed* memory ordering. This guarantees nothing
+    /// more than that this operation is atomic: there is no guarantee that any other
+    /// event will be ordered before or after this one.
+    ///
+    /// - Returns: The value of this object
+    @_specialize(where T == Int)
+    @_specialize(where T == Bool)
+    @_specialize(where T == UInt64)
+    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
+    // FIXME: Bring back when we require Swift >= 4.0.2
+    // @_specialize(where T == UInt)
+    // @_specialize(where T == Int64)
+    public func load() -> T {
+        return self.embedded.load()
+    }
+
+    /// Atomically replaces the value of this object with `value`.
+    ///
+    /// This implementation uses a *relaxed* memory ordering. This guarantees nothing
+    /// more than that this operation is atomic: there is no guarantee that any other
+    /// event will be ordered before or after this one.
+    ///
+    /// - Parameter value: The new value to set the object to.
+    @_specialize(where T == Int)
+    @_specialize(where T == Bool)
+    @_specialize(where T == UInt64)
+    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
+    // FIXME: Bring back when we require Swift >= 4.0.2
+    // @_specialize(where T == UInt)
+    // @_specialize(where T == Int64)
+    public func store(_ value: T) -> Void {
+        self.embedded.store(value)
+    }
+
+    deinit {
+        self.embedded.destroy()
     }
 }
 
@@ -312,11 +474,11 @@ extension UInt: AtomicPrimitive {
 ///
 /// It behaves very much like `Atomic<T>` but for objects, maintaining the correct retain counts.
 public class AtomicBox<T: AnyObject> {
-    private let storage: Atomic<Int>
+    private let storage: Atomic<UInt>
 
     public init(value: T) {
         let ptr = Unmanaged<T>.passRetained(value)
-        self.storage = Atomic(value: Int(bitPattern: ptr.toOpaque()))
+        self.storage = Atomic(value: UInt(bitPattern: ptr.toOpaque()))
     }
 
     deinit {
@@ -345,8 +507,8 @@ public class AtomicBox<T: AnyObject> {
             let expectedPtr = Unmanaged<T>.passUnretained(expected)
             let desiredPtr = Unmanaged<T>.passUnretained(desired)
 
-            if self.storage.compareAndExchange(expected: Int(bitPattern: expectedPtr.toOpaque()),
-                                               desired: Int(bitPattern: desiredPtr.toOpaque())) {
+            if self.storage.compareAndExchange(expected: UInt(bitPattern: expectedPtr.toOpaque()),
+                                               desired: UInt(bitPattern: desiredPtr.toOpaque())) {
                 _ = desiredPtr.retain()
                 expectedPtr.release()
                 return true
@@ -366,7 +528,7 @@ public class AtomicBox<T: AnyObject> {
     /// - Returns: The value previously held by this object.
     public func exchange(with value: T) -> T {
         let newPtr = Unmanaged<T>.passRetained(value)
-        let oldPtrBits = self.storage.exchange(with: Int(bitPattern: newPtr.toOpaque()))
+        let oldPtrBits = self.storage.exchange(with: UInt(bitPattern: newPtr.toOpaque()))
         let oldPtr = Unmanaged<T>.fromOpaque(UnsafeRawPointer(bitPattern: oldPtrBits)!)
         return oldPtr.takeRetainedValue()
     }

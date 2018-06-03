@@ -145,13 +145,14 @@ public final class ChannelPipeline: ChannelInvoker {
 
     /// The `Channel` that this `ChannelPipeline` belongs to.
     ///
-    /// - warning: This is unsafe as it's only valid if the `Channel` is still open
-    private unowned let _channel: Channel
+    /// - note: This will be nil after the channel has closed
+    private var _channel: Channel?
 
     /// The `Channel` that this `ChannelPipeline` belongs to.
     internal var channel: Channel {
         assert(self.eventLoop.inEventLoop)
-        return !self.destroyed ? self._channel : DeadChannel(pipeline: self)
+        assert(self._channel != nil || self.destroyed)
+        return self._channel ?? DeadChannel(pipeline: self)
     }
 
     /// Add a `ChannelHandler` to the `ChannelPipeline`.
@@ -499,7 +500,10 @@ public final class ChannelPipeline: ChannelInvoker {
         return name
     }
 
-    /// Remove all the `ChannelHandler`s from the `ChannelPipeline` and destroy these. This method must only be called from within the `EventLoop`.
+    /// Remove all the `ChannelHandler`s from the `ChannelPipeline` and destroy these.
+    ///
+    /// This method must only be called from within the `EventLoop`. It should only be called from a `ChannelCore`
+    /// implementation. Once called, the `ChannelPipeline` is no longer active and cannot be used again.
     func removeHandlers() {
         assert(eventLoop.inEventLoop)
 
@@ -512,7 +516,8 @@ public final class ChannelPipeline: ChannelInvoker {
         self.head = nil
         self.tail = nil
 
-        destroyed = true
+        self.destroyed = true
+        self._channel = nil
     }
 
     // Just delegate to the head and tail context
@@ -1381,11 +1386,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
         assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
-            if let promise = promise {
-                outboundHandler.write(ctx: self, data: data, promise: promise)
-            } else {
-                outboundHandler.write(ctx: self, data: data, promise: nil)
-            }
+            outboundHandler.write(ctx: self, data: data, promise: promise)
             outboundHandler.flush(ctx: self)
         } else {
             self.prev?.invokeWriteAndFlush(data, promise: promise)

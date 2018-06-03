@@ -30,6 +30,8 @@ extension ByteBufferTest {
                 ("testEqualsComparesReadBuffersOnly", testEqualsComparesReadBuffersOnly),
                 ("testSimpleReadTest", testSimpleReadTest),
                 ("testSimpleWrites", testSimpleWrites),
+                ("testMakeSureUniquelyOwnedSliceDoesNotGetReallocatedOnWrite", testMakeSureUniquelyOwnedSliceDoesNotGetReallocatedOnWrite),
+                ("testWriteToUniquelyOwnedSliceWhichTriggersAReallocation", testWriteToUniquelyOwnedSliceWhichTriggersAReallocation),
                 ("testReadWrite", testReadWrite),
                 ("testStaticStringReadTests", testStaticStringReadTests),
                 ("testString", testString),
@@ -113,6 +115,14 @@ extension ByteBufferTest {
                 ("testByteBufferFitsInACoupleOfEnums", testByteBufferFitsInACoupleOfEnums),
                 ("testLargeSliceBegin16MBIsOkayAndDoesNotCopy", testLargeSliceBegin16MBIsOkayAndDoesNotCopy),
                 ("testLargeSliceBeginMoreThan16MBIsOkay", testLargeSliceBeginMoreThan16MBIsOkay),
+                ("testDiscardReadBytesOnConsumedBuffer", testDiscardReadBytesOnConsumedBuffer),
+                ("testDumpBytesFormat", testDumpBytesFormat),
+                ("testStaticStringCategorySubscript", testStaticStringCategorySubscript),
+                ("testReadableBytesView", testReadableBytesView),
+                ("testReadableBytesViewNoReadableBytes", testReadableBytesViewNoReadableBytes),
+                ("testBytesView", testBytesView),
+                ("testViewsStartIndexIsStable", testViewsStartIndexIsStable),
+                ("testSlicesOfByteBufferViewsAreByteBufferViews", testSlicesOfByteBufferViewsAreByteBufferViews),
            ]
    }
 }

@@ -42,6 +42,8 @@ extension CircularBufferTests {
                 ("testLast", testLast),
                 ("testOperateOnBothSides", testOperateOnBothSides),
                 ("testPrependExpandBuffer", testPrependExpandBuffer),
+                ("testRemoveAllKeepingCapacity", testRemoveAllKeepingCapacity),
+                ("testRemoveAllNotKeepingCapacity", testRemoveAllNotKeepingCapacity),
            ]
    }
 }

@@ -25,7 +25,7 @@ class NonBlockingFileIOTest: XCTestCase {
     override func setUp() {
         super.setUp()
         self.allocator = ByteBufferAllocator()
-        self.group = MultiThreadedEventLoopGroup(numThreads: 1)
+        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         self.threadPool = BlockingIOThreadPool(numberOfThreads: 6)
         self.threadPool.start()
         self.fileIO = NonBlockingFileIO(threadPool: threadPool)

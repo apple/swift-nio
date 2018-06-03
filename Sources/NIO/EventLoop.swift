@@ -98,10 +98,17 @@ public protocol EventLoop: EventLoopGroup {
 ///
 /// - note: `TimeAmount` should not be used to represent a point in time.
 public struct TimeAmount {
-    /// The nanoseconds representation of the `TimeAmount`.
-    public let nanoseconds: Int
+  
+    #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
+        public typealias Value = Int64
+    #else // 64-bit, keeping that at Int for SemVer in the 1.x line.
+        public typealias Value = Int
+    #endif
 
-    private init(_ nanoseconds: Int) {
+    /// The nanoseconds representation of the `TimeAmount`.
+    public let nanoseconds: Value
+
+    private init(_ nanoseconds: Value) {
         self.nanoseconds = nanoseconds
     }
 
@@ -110,7 +117,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of nanoseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func nanoseconds(_ amount: Int) -> TimeAmount {
+    public static func nanoseconds(_ amount: Value) -> TimeAmount {
         return TimeAmount(amount)
     }
 
@@ -119,7 +126,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of microseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func microseconds(_ amount: Int) -> TimeAmount {
+    public static func microseconds(_ amount: Value) -> TimeAmount {
         return TimeAmount(amount * 1000)
     }
 
@@ -128,7 +135,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of milliseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func milliseconds(_ amount: Int) -> TimeAmount {
+    public static func milliseconds(_ amount: Value) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000)
     }
 
@@ -137,7 +144,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of seconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func seconds(_ amount: Int) -> TimeAmount {
+    public static func seconds(_ amount: Value) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000 * 1000)
     }
 
@@ -146,7 +153,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of minutes this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func minutes(_ amount: Int) -> TimeAmount {
+    public static func minutes(_ amount: Value) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000 * 1000 * 60)
     }
 
@@ -155,7 +162,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of hours this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func hours(_ amount: Int) -> TimeAmount {
+    public static func hours(_ amount: Value) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000 * 1000 * 60 * 60)
     }
 }
@@ -164,7 +171,7 @@ extension TimeAmount: Comparable {
     public static func < (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds < rhs.nanoseconds
     }
-    
+
     public static func == (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds == rhs.nanoseconds
     }
@@ -203,7 +210,7 @@ extension EventLoop {
     ///
     /// - parameters:
     ///     - result: the value that is used by the `EventLoopFuture`.
-    /// - returns: a failed `EventLoopFuture`.
+    /// - returns: a succeeded `EventLoopFuture`.
     public func newSucceededFuture<T>(result: T) -> EventLoopFuture<T> {
         return EventLoopFuture<T>(eventLoop: self, result: result, file: "n/a", line: 0)
     }
@@ -335,6 +342,12 @@ internal final class SelectableEventLoop: EventLoop {
         _storageRefs.deallocate()
         _msgs.deallocate()
         _addresses.deallocate()
+    }
+
+    /// Is this `SelectableEventLoop` still open (ie. not shutting down or shut down)
+    internal var isOpen: Bool {
+        assert(self.inEventLoop)
+        return self.lifecycleState == .open
     }
 
     /// Register the given `SelectableChannel` with this `SelectableEventLoop`. After this point all I/O for the `SelectableChannel` will be processed by this `SelectableEventLoop` until it
@@ -644,7 +657,7 @@ typealias ThreadInitializer = (Thread) -> Void
 final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
-    
+
     private let index = Atomic<Int>(value: 0)
     private let eventLoops: [SelectableEventLoop]
 
@@ -680,13 +693,22 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         return lock.withLock { _loop }
     }
 
+    /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numberOfThreads`.
+    ///
+    /// - arguments:
+    ///     - numberOfThreads: The number of `Threads` to use.
+    public convenience init(numberOfThreads: Int) {
+        let initializers: [ThreadInitializer] = Array(repeating: { _ in }, count: numberOfThreads)
+        self.init(threadInitializers: initializers)
+    }
+    
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numThreads`.
     ///
     /// - arguments:
     ///     - numThreads: The number of `Threads` to use.
+    @available(*, deprecated, renamed: "init(numberOfThreads:)")
     public convenience init(numThreads: Int) {
-        let initializers: [ThreadInitializer] = Array(repeating: { _ in }, count: numThreads)
-        self.init(threadInitializers: initializers)
+        self.init(numberOfThreads: numThreads)
     }
 
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses the given `ThreadInitializer`s. One `Thread` per `ThreadInitializer` is created and used.
@@ -755,19 +777,19 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 private final class ScheduledTask {
     let task: () -> Void
     private let failFn: (Error) ->()
-    private let readyTime: Int
+    private let readyTime: TimeAmount.Value
 
     init(_ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: TimeAmount) {
         self.task = task
         self.failFn = failFn
-        self.readyTime = time.nanoseconds + Int(DispatchTime.now().uptimeNanoseconds)
+        self.readyTime = time.nanoseconds + TimeAmount.Value(DispatchTime.now().uptimeNanoseconds)
     }
 
     func readyIn(_ t: DispatchTime) -> TimeAmount {
         if readyTime < t.uptimeNanoseconds {
             return .nanoseconds(0)
         }
-        return .nanoseconds(readyTime - Int(t.uptimeNanoseconds))
+        return .nanoseconds(readyTime - TimeAmount.Value(t.uptimeNanoseconds))
     }
 
     func fail(error: Error) {
@@ -785,7 +807,7 @@ extension ScheduledTask: Comparable {
     public static func < (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs.readyTime < rhs.readyTime
     }
-    
+
     public static func == (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs === rhs
     }

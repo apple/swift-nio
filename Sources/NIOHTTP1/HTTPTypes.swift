@@ -17,6 +17,17 @@ import NIO
 let crlf: StaticString = "\r\n"
 let headerSeparator: StaticString = ": "
 
+
+// Keep track of keep alive state.
+internal enum KeepAliveState {
+    // We know keep alive should be used.
+    case keepAlive
+    // We know we should close the connection.
+    case close
+    // We need to scan the headers to find out if keep alive is used or not
+    case unknown
+}
+
 /// A representation of the request line and header fields of a HTTP request.
 public struct HTTPRequestHead: Equatable {
     private final class _Storage {
@@ -73,7 +84,7 @@ public struct HTTPRequestHead: Equatable {
             return String(uri: rawURI)
         }
         set {
-            rawURI = .string(newValue) 
+            rawURI = .string(newValue)
         }
     }
 
@@ -175,15 +186,15 @@ extension HTTPRequestHead {
     /// Whether this HTTP request is a keep-alive request: that is, whether the
     /// connection should remain open after the request is complete.
     public var isKeepAlive: Bool {
-        guard let connection = headers["connection"].first?.lowercased() else {
-            // HTTP 1.1 use keep-alive by default if not otherwise told.
-            return version.major == 1 && version.minor == 1
-        }
+        return headers.isKeepAlive(version: version)
+    }
+}
 
-        if connection == "close" {
-            return false
-        }
-        return connection == "keep-alive"
+extension HTTPResponseHead {
+    /// Whether this HTTP response is a keep-alive request: that is, whether the
+    /// connection should remain open after the request is complete.
+    public var isKeepAlive: Bool {
+        return self.headers.isKeepAlive(version: self.version)
     }
 }
 
@@ -286,6 +297,27 @@ private extension UInt8 {
     }
 }
 
+/* private but tests */ internal extension HTTPHeaders {
+    func isKeepAlive(version: HTTPVersion) -> Bool {
+        switch self._storage.keepAliveState {
+        case .close:
+            return false
+        case .keepAlive:
+            return true
+        case .unknown:
+            for header in self.headers {
+                if self.buffer.equalCaseInsensitiveASCII(view: "connection".utf8, at: header.name) {
+                    if self.buffer.equalCaseInsensitiveASCII(view: "close".utf8, at: header.value) {
+                        return false
+                    }
+                    return self.buffer.equalCaseInsensitiveASCII(view: "keep-alive".utf8, at: header.value)
+                }
+            }
+            // HTTP 1.1 use keep-alive by default if not otherwise told.
+            return version.major == 1 && version.minor >= 1
+        }
+    }
+}
 
 /// A representation of a block of HTTP header fields.
 ///
@@ -304,16 +336,18 @@ public struct HTTPHeaders: CustomStringConvertible {
     private final class _Storage {
         var buffer: ByteBuffer
         var headers: [HTTPHeader]
-        var continuous: Bool = true
+        var continuous: Bool
+        var keepAliveState: KeepAliveState
 
-        init(buffer: ByteBuffer, headers: [HTTPHeader], continuous: Bool) {
+        init(buffer: ByteBuffer, headers: [HTTPHeader], continuous: Bool, keepAliveState: KeepAliveState) {
             self.buffer = buffer
             self.headers = headers
             self.continuous = continuous
+            self.keepAliveState = keepAliveState
         }
 
         func copy() -> _Storage {
-            return .init(buffer: self.buffer, headers: self.headers, continuous: self.continuous)
+            return .init(buffer: self.buffer, headers: self.headers, continuous: self.continuous, keepAliveState: self.keepAliveState)
         }
     }
     private var _storage: _Storage
@@ -356,8 +390,8 @@ public struct HTTPHeaders: CustomStringConvertible {
     }
 
     /// Constructor used by our decoder to construct headers without the need of converting bytes to string.
-    init(buffer: ByteBuffer, headers: [HTTPHeader]) {
-        self._storage = _Storage(buffer: buffer, headers: headers, continuous: true)
+    init(buffer: ByteBuffer, headers: [HTTPHeader], keepAliveState: KeepAliveState) {
+        self._storage = _Storage(buffer: buffer, headers: headers, continuous: true, keepAliveState: keepAliveState)
     }
 
     /// Construct a `HTTPHeaders` structure.
@@ -366,7 +400,7 @@ public struct HTTPHeaders: CustomStringConvertible {
     ///     - headers: An initial set of headers to use to populate the header block.
     ///     - allocator: The allocator to use to allocate the underlying storage.
     public init(_ headers: [(String, String)] = []) {
-        // Note: this initializer exists becuase of https://bugs.swift.org/browse/SR-7415.
+        // Note: this initializer exists because of https://bugs.swift.org/browse/SR-7415.
         // Otherwise we'd only have the one below with a default argument for `allocator`.
         self.init(headers, allocator: ByteBufferAllocator())
     }
@@ -381,13 +415,17 @@ public struct HTTPHeaders: CustomStringConvertible {
         var array: [HTTPHeader] = []
         array.reserveCapacity(headers.count)
 
-        self.init(buffer: allocator.buffer(capacity: 256), headers: array)
+        self.init(buffer: allocator.buffer(capacity: 256), headers: array, keepAliveState: .unknown)
 
         for (key, value) in headers {
             self.add(name: key, value: value)
         }
     }
-
+    
+    private func isConnectionHeader(_ header: HTTPHeaderIndex) -> Bool {
+         return self.buffer.equalCaseInsensitiveASCII(view: "connection".utf8, at: header)
+    }
+    
     /// Add a header name/value pair to the block.
     ///
     /// This method is strictly additive: if there are other values for the given header name
@@ -408,8 +446,14 @@ public struct HTTPHeaders: CustomStringConvertible {
         self._storage.buffer.write(staticString: headerSeparator)
         let valueStart = self.buffer.writerIndex
         let valueLength = self._storage.buffer.write(string: value)!
-        self._storage.headers.append(HTTPHeader(name: HTTPHeaderIndex(start: nameStart, length: nameLength), value: HTTPHeaderIndex(start: valueStart, length: valueLength)))
+        
+        let nameIdx = HTTPHeaderIndex(start: nameStart, length: nameLength)
+        self._storage.headers.append(HTTPHeader(name: nameIdx, value: HTTPHeaderIndex(start: valueStart, length: valueLength)))
         self._storage.buffer.write(staticString: crlf)
+        
+        if self.isConnectionHeader(nameIdx) {
+            self._storage.keepAliveState = .unknown
+        }
     }
 
     /// Add a header name/value pair to the block, replacing any previous values for the
@@ -447,6 +491,10 @@ public struct HTTPHeaders: CustomStringConvertible {
             let header = self.headers[idx]
             if self.buffer.equalCaseInsensitiveASCII(view: utf8, at: header.name) {
                 array.append(idx)
+                
+                if self.isConnectionHeader(header.name) {
+                    self._storage.keepAliveState = .unknown
+                }
             }
         }
 
@@ -508,7 +556,7 @@ public struct HTTPHeaders: CustomStringConvertible {
         }
         return false
     }
-    
+
     @available(*, deprecated, message: "getCanonicalForm has been changed to a subscript: headers[canonicalForm: name]")
     public func getCanonicalForm(_ name: String) -> [String] {
         return self[canonicalForm: name]
@@ -563,7 +611,7 @@ internal extension ByteBuffer {
 }
 extension HTTPHeaders: Sequence {
     public typealias Element = (name: String, value: String)
-  
+
     /// An iterator of HTTP header fields.
     ///
     /// This iterator will return each value for a given header name separately. That
@@ -578,7 +626,7 @@ extension HTTPHeaders: Sequence {
         public mutating func next() -> Element? {
             return headerParts.next()
         }
-    }  
+    }
 
     public func makeIterator() -> Iterator {
         return Iterator(headerParts: headers.map { (self.string(idx: $0.name), self.string(idx: $0.value)) }.makeIterator())
@@ -593,7 +641,7 @@ public extension _DeprecateHTTPHeaderIterator {
   @available(*, deprecated, message: "Please use the HTTPHeaders.Iterator type")
   public func makeIterator() -> AnyIterator<Element> {
     return AnyIterator(makeIterator() as Iterator)
-  }  
+  }
 }
 
 /* private but tests */ internal extension Character {
@@ -1232,7 +1280,7 @@ public enum HTTPResponseStatus {
     /// Initialize a `HTTPResponseStatus` from a given status and reason.
     ///
     /// - Parameter statusCode: The integer value of the HTTP response status code
-    /// - Parameter reasonPhrase: The textual reason phrase from the response. This will be 
+    /// - Parameter reasonPhrase: The textual reason phrase from the response. This will be
     ///     discarded in favor of the default if the `statusCode` matches one that we know.
     public init(statusCode: Int, reasonPhrase: String = "") {
         switch statusCode {

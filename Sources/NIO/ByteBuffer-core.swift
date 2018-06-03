@@ -86,8 +86,10 @@ public struct ByteBufferAllocator {
                   hookedRealloc: @escaping @convention(c) (UnsafeMutableRawPointer?, Int) -> UnsafeMutableRawPointer?,
                   hookedFree: @escaping @convention(c) (UnsafeMutableRawPointer?) -> Void,
                   hookedMemcpy: @escaping @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, Int) -> Void) {
-        assert(MemoryLayout<ByteBuffer>.size <= 3 * MemoryLayout<Int>.size,
-               "ByteBuffer has size \(MemoryLayout<ByteBuffer>.size) which is larger than the built-in storage of the existential containers.")
+        #if !arch(arm) // only complain on 64-bit, this is unfortunate reality on 32-bit
+            assert(MemoryLayout<ByteBuffer>.size <= 3 * MemoryLayout<Int>.size,
+                   "ByteBuffer has size \(MemoryLayout<ByteBuffer>.size) which is larger than the built-in storage of the existential containers.")
+        #endif
         self.malloc = hookedMalloc
         self.realloc = hookedRealloc
         self.free = hookedFree
@@ -254,12 +256,13 @@ public struct ByteBuffer {
             return new
         }
 
-        public func reallocStorage(capacity: Capacity) {
-            let ptr = self.allocator.realloc(self.bytes, Int(capacity))!
+        public func reallocStorage(capacity minimumNeededCapacity: Capacity) {
+            let newCapacity = minimumNeededCapacity.nextPowerOf2ClampedToMax()
+            let ptr = self.allocator.realloc(self.bytes, Int(newCapacity))!
             /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
-            ptr.bindMemory(to: UInt8.self, capacity: Int(capacity))
+            ptr.bindMemory(to: UInt8.self, capacity: Int(newCapacity))
             self.bytes = ptr
-            self.capacity = capacity
+            self.capacity = newCapacity
             self.fullSlice = _ByteBufferSlice(0..<self.capacity)
         }
 
@@ -280,7 +283,7 @@ public struct ByteBuffer {
             for i in Int(slice.lowerBound) + offset ..< Int(slice.lowerBound) + offset + length {
                 let byte = self.bytes.advanced(by: i).assumingMemoryBound(to: UInt8.self).pointee
                 let hexByte = String(byte, radix: 16)
-                desc += " \(hexByte.count == 1 ? " " : "")\(hexByte)"
+                desc += " \(hexByte.count == 1 ? "0" : "")\(hexByte)"
             }
             desc += " ]"
             return desc
@@ -290,7 +293,13 @@ public struct ByteBuffer {
     private mutating func _copyStorageAndRebase(capacity: Capacity, resetIndices: Bool = false) {
         let indexRebaseAmount = resetIndices ? self._readerIndex : 0
         let storageRebaseAmount = self._slice.lowerBound + indexRebaseAmount
-        let newSlice = Range(storageRebaseAmount ..< min(storageRebaseAmount + _toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity))
+        let _newSlice = storageRebaseAmount ..< min(storageRebaseAmount + _toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity)
+        #if swift(>=4.2)
+        // no need for the conversion anymore
+        let newSlice = _newSlice
+        #else
+        let newSlice = Range(_newSlice)
+        #endif
         self._storage = self._storage.reallocSlice(newSlice, capacity: capacity)
         self._moveReaderIndex(to: self._readerIndex - indexRebaseAmount)
         self._moveWriterIndex(to: self._writerIndex - indexRebaseAmount)
@@ -304,36 +313,54 @@ public struct ByteBuffer {
     @_versioned mutating func _ensureAvailableCapacity(_ capacity: Capacity, at index: Index) {
         assert(isKnownUniquelyReferenced(&self._storage))
 
-        if self._slice.lowerBound + index + capacity > self._slice.upperBound {
-            // double the capacity, we may want to use different strategies depending on the actual current capacity later on.
-            var newCapacity = max(1, _toCapacity(self.capacity))
-
-            // double the capacity until the requested capacity can be full-filled
-            repeat {
-                precondition(newCapacity != Capacity.max, "cannot make ByteBuffers larger than \(newCapacity)")
-                if newCapacity < (Capacity.max >> 1) {
-                    newCapacity = newCapacity << 1
+        let totalNeededCapacityWhenKeepingSlice = self._slice.lowerBound + index + capacity
+        if totalNeededCapacityWhenKeepingSlice > self._slice.upperBound {
+            // we need to at least adjust the slice's upper bound which we can do as we're the unique owner of the storage,
+            // let's see if adjusting the slice's upper bound buys us enough storage
+            if totalNeededCapacityWhenKeepingSlice > self._storage.capacity {
+                let newStorageMinCapacity = index + capacity
+                // nope, we need to actually re-allocate again. If our slice does not start at 0, let's also rebase
+                if self._slice.lowerBound == 0 {
+                    self._storage.reallocStorage(capacity: newStorageMinCapacity)
                 } else {
-                    newCapacity = Capacity.max
+                    self._storage = self._storage.reallocSlice(self._slice.lowerBound ..< self._slice.upperBound,
+                                                               capacity: newStorageMinCapacity)
                 }
-            } while newCapacity < index || newCapacity - index < capacity
-
-            self._storage.reallocStorage(capacity: newCapacity)
-            self._slice = _ByteBufferSlice(_slice.lowerBound..<_slice.lowerBound + newCapacity)
+                self._slice = self._storage.fullSlice
+            } else {
+                // yes, let's just extend the slice until the end of the buffer
+                self._slice = _ByteBufferSlice(_slice.lowerBound ..< self._storage.capacity)
+            }
         }
+        assert(self._slice.lowerBound + index + capacity <= self._slice.upperBound)
+        assert(self._slice.lowerBound >= 0, "illegal slice: negative lower bound: \(self._slice.lowerBound)")
+        assert(self._slice.upperBound <= self._storage.capacity, "illegal slice: upper bound (\(self._slice.upperBound)) exceeds capacity: \(self._storage.capacity)")
     }
 
     // MARK: Internal API
 
-    private mutating func _moveReaderIndex(to newIndex: Index) {
+    @_inlineable @_versioned
+    mutating func _moveReaderIndex(to newIndex: Index) {
         assert(newIndex >= 0 && newIndex <= writerIndex)
         self._readerIndex = newIndex
+    }
+
+    @_inlineable @_versioned
+    mutating func _moveReaderIndex(forwardBy offset: Int) {
+        let newIndex = self._readerIndex + _toIndex(offset)
+        self._moveReaderIndex(to: newIndex)
     }
 
     @_inlineable @_versioned
     mutating func _moveWriterIndex(to newIndex: Index) {
         assert(newIndex >= 0 && newIndex <= _toCapacity(self._slice.count))
         self._writerIndex = newIndex
+    }
+
+    @_inlineable @_versioned
+    mutating func _moveWriterIndex(forwardBy offset: Int) {
+        let newIndex = self._writerIndex + _toIndex(offset)
+        self._moveWriterIndex(to: newIndex)
     }
 
     @_inlineable @_versioned
@@ -368,11 +395,10 @@ public struct ByteBuffer {
         }
 
         var base = ensureCapacityAndReturnStorageBase(capacity: underestimatedByteCount)
-        var idx = 0
-        for b in bytes {
-            if idx >= underestimatedByteCount {
-                base = ensureCapacityAndReturnStorageBase(capacity: idx + 1)
-            }
+        var (iterator, idx) = UnsafeMutableBufferPointer(start: base, count: underestimatedByteCount).initialize(from: bytes)
+        assert(idx == underestimatedByteCount)
+        while let b = iterator.next() {
+            base = ensureCapacityAndReturnStorageBase(capacity: idx + 1)
             base[idx] = b
             idx += 1
         }
@@ -536,7 +562,7 @@ public struct ByteBuffer {
         }
         var new = self
         new._slice = _ByteBufferSlice(sliceStartIndex ..< self._slice.lowerBound + index+length)
-        new.moveReaderIndex(to: 0)
+        new._moveReaderIndex(to: 0)
         new._moveWriterIndex(to: length)
         return new
     }
@@ -550,12 +576,19 @@ public struct ByteBuffer {
             return false
         }
 
+        if self._readerIndex == self._writerIndex {
+            // If the whole buffer was consumed we can just reset the readerIndex and writerIndex to 0 and move on.
+            self._moveWriterIndex(to: 0)
+            self._moveReaderIndex(to: 0)
+            return true
+        }
+
         if isKnownUniquelyReferenced(&self._storage) {
             self._storage.bytes.advanced(by: Int(self._slice.lowerBound))
                 .copyMemory(from: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
                             byteCount: self.readableBytes)
             let indexShift = self._readerIndex
-            self.moveReaderIndex(to: 0)
+            self._moveReaderIndex(to: 0)
             self._moveWriterIndex(to: self._writerIndex - indexShift)
         } else {
             self._copyStorageAndRebase(extraCapacity: 0, resetIndices: true)
@@ -585,8 +618,8 @@ public struct ByteBuffer {
         if !isKnownUniquelyReferenced(&self._storage) {
             self._storage = self._storage.allocateStorage()
         }
-        self.moveWriterIndex(to: 0)
-        self.moveReaderIndex(to: 0)
+        self._moveWriterIndex(to: 0)
+        self._moveReaderIndex(to: 0)
     }
 }
 
@@ -624,6 +657,7 @@ extension ByteBuffer: CustomStringConvertible {
 
 /// A `Collection` that is contiguously layed out in memory and can therefore be duplicated using `memcpy`.
 public protocol ContiguousCollection: Collection {
+    @_inlineable
     func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R
 }
 
@@ -637,10 +671,9 @@ extension StaticString: Collection {
     public var endIndex: Index { return self.utf8CodeUnitCount }
     public func index(after i: Index) -> Index { return i + 1 }
 
-    public subscript(position: Int) -> StaticString.Element {
-        get {
-            return self[position]
-        }
+    public subscript(position: Int) -> UInt8 {
+        precondition(position < self.utf8CodeUnitCount, "index \(position) out of bounds")
+        return self.utf8Start.advanced(by: position).pointee
     }
 }
 

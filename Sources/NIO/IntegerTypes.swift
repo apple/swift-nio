@@ -18,25 +18,25 @@
 @_versioned
 struct _UInt24: ExpressibleByIntegerLiteral {
     typealias IntegerLiteralType = UInt16
-    
+
     @_versioned var b12: UInt16
     @_versioned var b3: UInt8
-    
+
     private init(b12: UInt16, b3: UInt8) {
         self.b12 = b12
         self.b3 = b3
     }
-    
+
     init(integerLiteral value: UInt16) {
         self.init(b12: value, b3: 0)
     }
-    
+
     static let bitWidth: Int = 24
-    
+
     static var max: _UInt24 {
         return .init(b12: .max, b3: .max)
     }
-    
+
     static let min: _UInt24 = 0
 }
 
@@ -72,32 +72,38 @@ extension _UInt24: Equatable {
     }
 }
 
+extension _UInt24: CustomStringConvertible {
+    var description: String {
+        return Int(self).description
+    }
+}
+
 // MARK: _UInt56
 
 /// A 56-bit unsigned integer value type.
 struct _UInt56: ExpressibleByIntegerLiteral {
     typealias IntegerLiteralType = UInt32
-    
+
     @_versioned var b1234: UInt32
     @_versioned var b56: UInt16
     @_versioned var b7: UInt8
-    
+
     private init(b1234: UInt32, b56: UInt16, b7: UInt8) {
         self.b1234 = b1234
         self.b56 = b56
         self.b7 = b7
     }
-    
+
     init(integerLiteral value: UInt32) {
         self.init(b1234: value, b56: 0, b7: 0)
     }
-    
+
     static let bitWidth: Int = 56
-    
+
     static var max: _UInt56 {
         return .init(b1234: .max, b56: .max, b7: .max)
     }
-    
+
     static let min: _UInt56 = 0
 }
 
@@ -108,7 +114,7 @@ extension _UInt56 {
                   b56:   UInt16(truncatingIfNeeded: (value &    0xff_ff_00_00_00_00) >> 32),
                   b7:     UInt8(                     value                           >> 48))
     }
-    
+
     init(_ value: Int) {
         self.init(UInt64(value))
     }
@@ -133,5 +139,11 @@ extension Int {
 extension _UInt56: Equatable {
     static func ==(_ lhs: _UInt56, _ rhs: _UInt56) -> Bool {
         return lhs.b1234 == rhs.b1234 && lhs.b56 == rhs.b56 && lhs.b7 == rhs.b7
+    }
+}
+
+extension _UInt56: CustomStringConvertible {
+    var description: String {
+        return UInt64(self).description
     }
 }
