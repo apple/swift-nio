@@ -138,7 +138,7 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
 
     public mutating func replaceSubrange<C, R>(_ subrange: R, with newElements: C) where C : Collection, R : RangeExpression, E == C.Element, Int == R.Bound {
         let range = subrange.relative(to: self)
-        self.replaceSubrange(RangeType<Int>(range), with: ContiguousArray<E>(newElements))
+        self.replaceSubrange(RangeType<Int>(range), with: newElements)
     }
 
     public mutating func removeSubrange(_ bounds: Range<Int>) {
