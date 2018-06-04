@@ -255,6 +255,20 @@ extension ByteBuffer {
         return written
     }
 
+    /// Write `compositeBytes`, a `CompositeCollection` of `UInt8` into this `ByteBuffer`. Moves the writer index forward by the number of bytes written.
+    /// This method is likely more efficient than the one operating on plain `Collection` as it will use `memcpy` to copy as many bytes as possible in one go.
+    ///
+    /// - parameters:
+    ///     - bytes: A `CompositeCollection` of `UInt8` to be written.
+    /// - returns: The number of bytes written or `bytes.count`.
+    @discardableResult
+    @_inlineable
+    public mutating func write<S: CompositeCollection>(compositeBytes: S) -> Int where S.Element == UInt8 {
+        let written = self.set(compositeBytes: compositeBytes, at: self.writerIndex)
+        self._moveWriterIndex(forwardBy: written)
+        return written
+    }
+
     /// Slice the readable bytes off this `ByteBuffer` without modifying the reader index. This method will return a
     /// `ByteBuffer` sharing the underlying storage with the `ByteBuffer` the method was invoked on. The returned
     /// `ByteBuffer` will contain the bytes in the range `readerIndex..<writerIndex` of the original `ByteBuffer`.

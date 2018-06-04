@@ -14,6 +14,7 @@
 
 import NIO
 import struct Foundation.Data
+import struct Dispatch.DispatchData
 
 /*
  * This is NIO's `NIOFoundationCompat` module which at the moment only adds `ByteBuffer` utility methods
@@ -35,6 +36,20 @@ extension Data: ContiguousCollection {
         return try self.withUnsafeBytes { (ptr: UnsafePointer<UInt8>) -> R in
             try body(UnsafeRawBufferPointer(start: ptr, count: self.count))
         }
+    }
+}
+
+extension Data: CompositeCollection {
+    @_inlineable
+    public func forEachContiguousByteChunk(_ block: (UnsafeBufferPointer<UInt8>) -> Void) {
+        self.enumerateBytes { srcPtr, _, _ in block(srcPtr) }
+    }
+}
+
+extension DispatchData: CompositeCollection {
+    @_inlineable
+    public func forEachContiguousByteChunk(_ block: (UnsafeBufferPointer<UInt8>) -> Void) {
+        self.enumerateBytes { srcPtr, _, _ in block(srcPtr) }
     }
 }
 

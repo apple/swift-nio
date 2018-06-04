@@ -405,6 +405,23 @@ public struct ByteBuffer {
         return _toCapacity(idx)
     }
 
+    @_inlineable @_versioned
+    mutating func _set<S: CompositeCollection>(compositeBytes container: S, at index: Index) -> Capacity where S.Element == UInt8 {
+        let newEndIndex: Index = index + _toIndex(Int(container.count))
+        if !isKnownUniquelyReferenced(&self._storage) {
+            let extraCapacity = newEndIndex > self._slice.upperBound ? newEndIndex - self._slice.upperBound : 0
+            self._copyStorageAndRebase(extraCapacity: extraCapacity)
+        }
+
+        self._ensureAvailableCapacity(Capacity(container.count), at: index)
+        var base = self._storage.bytes.advanced(by: Int(self._slice.lowerBound + index)).assumingMemoryBound(to: UInt8.self)
+        container.forEachContiguousByteChunk { srcPtr in
+            base.assign(from: srcPtr.baseAddress!, count: srcPtr.count)
+            base = base.advanced(by: srcPtr.count)
+        }
+        return _toCapacity(Int(container.count))
+    }
+
     // MARK: Public Core API
 
     fileprivate init(allocator: ByteBufferAllocator, startingCapacity: Int) {
@@ -661,6 +678,26 @@ public protocol ContiguousCollection: Collection {
     func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R
 }
 
+
+/// CompositeCollection is a protocol that covers data containers that potentially include multiple
+/// discontiguous regions of contiguous bytes. This covers data types like `DispatchData`, and any
+/// `Data` object bridged to `DispatchData`.
+///
+/// In general, any object that is this kind of wrapper should prefer to implement `CompositeCollection`
+/// instead of `ContiguousCollection`, even if they are capable of making themselves contiguous. This is
+/// because `CompositeCollection` implicitly uses `ContiguousCollection` for the sub-region copies, and so
+/// the case of a `CopositeCollection` containing only a single contiguous region of memory incurs almost no
+/// overhead compared to the `CompositeCollection` case.
+///
+/// An eagle-eyed reader may notice that this protocol is intended for `Data` and `DispatchData`, but does
+/// not use the existing `enumerateBytes` method on those types. That is because these two types have subtly
+/// different signatures for the `enumerateBytes` method (specifically, whether it takes a label). This can be
+/// fixed when https://bugs.swift.org/browse/SR-7868 is resolved.
+public protocol CompositeCollection: Collection {
+    @_inlineable
+    func forEachContiguousByteChunk(_ block: (UnsafeBufferPointer<UInt8>) -> Void)
+}
+
 extension StaticString: Collection {
     public typealias Element = UInt8
     public typealias SubSequence = ArraySlice<UInt8>
@@ -712,6 +749,13 @@ extension ByteBuffer {
     @_inlineable
     public mutating func set<S: ContiguousCollection>(bytes: S, at index: Int) -> Int where S.Element == UInt8 {
         return Int(self._set(bytes: bytes, at: _toIndex(index)))
+    }
+
+    /// Copy the composite collection of `compositeBytes` into the `ByteBuffer` at `index`.
+    @discardableResult
+    @_inlineable
+    public mutating func set<S: CompositeCollection>(compositeBytes container: S, at index: Int) -> Int where S.Element == UInt8 {
+        return Int(self._set(compositeBytes: container, at: _toIndex(index)))
     }
 
     /// Move the reader index forward by `offset` bytes.

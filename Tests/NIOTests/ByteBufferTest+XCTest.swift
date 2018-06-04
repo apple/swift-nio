@@ -123,6 +123,8 @@ extension ByteBufferTest {
                 ("testBytesView", testBytesView),
                 ("testViewsStartIndexIsStable", testViewsStartIndexIsStable),
                 ("testSlicesOfByteBufferViewsAreByteBufferViews", testSlicesOfByteBufferViewsAreByteBufferViews),
+                ("testCopyingDispatchDatas", testCopyingDispatchDatas),
+                ("testCopyingContiguousDataAsIfItWereDiscontiguous", testCopyingContiguousDataAsIfItWereDiscontiguous),
            ]
    }
 }

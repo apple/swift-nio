@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import struct Foundation.Data
+import struct Dispatch.DispatchData
 import XCTest
 @testable import NIO
 import NIOFoundationCompat
@@ -1436,6 +1437,45 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("ll", String(decoding: viewSlice, as: UTF8.self))
         XCTAssertEqual("l", String(decoding: viewSlice.dropFirst(), as: UTF8.self))
         XCTAssertEqual("", String(decoding: viewSlice.dropFirst().dropLast(), as: UTF8.self))
+    }
+
+    func testCopyingDispatchDatas() throws {
+        let simplePointer = UnsafeMutableRawBufferPointer(start: UnsafeMutableRawPointer.allocate(byteCount: 1, alignment: 1), count: 1)
+        simplePointer[0] = 8
+        let pointerAlias = UnsafeRawBufferPointer(simplePointer)
+
+        var d = DispatchData(bytes: pointerAlias)
+        for _ in 0..<100 {
+            d.append(pointerAlias)
+        }
+
+        // Just sanity-check that this is a multi-chunk DispatchData.
+        var bufferCount = 0
+        d.enumerateBytes { _, _, _ in bufferCount += 1}
+        XCTAssertEqual(bufferCount, 101)
+
+        let rc = self.buf.write(compositeBytes: d)
+        XCTAssertEqual(rc, 101)
+
+        let rc2 = self.buf.set(compositeBytes: d, at: self.buf.writerIndex)
+        XCTAssertEqual(rc2, 101)
+        XCTAssertEqual(self.buf.readableBytes, 101)
+
+        let expectedBytes = Array(d) + Array(d)
+        let actualBytes = self.buf.getBytes(at: self.buf.readerIndex, length: 202)!
+        XCTAssertEqual(expectedBytes, actualBytes)
+    }
+
+    func testCopyingContiguousDataAsIfItWereDiscontiguous() throws {
+        let d = Data([1, 2, 3, 4, 5, 6])
+        let rc = self.buf.write(compositeBytes: d)
+        XCTAssertEqual(rc, 6)
+
+        let rc2 = self.buf.set(compositeBytes: d, at: self.buf.writerIndex)
+        XCTAssertEqual(rc2, 6)
+
+        XCTAssertEqual(d, self.buf.getData(at: self.buf.readerIndex, length: 6)!)
+        XCTAssertEqual(d, self.buf.getData(at: self.buf.readerIndex + 6, length: 6)!)
     }
 }
 
