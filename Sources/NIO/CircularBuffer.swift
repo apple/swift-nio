@@ -96,14 +96,14 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
     /// *O(n)* where _n_ is the length of the new elements collection if the subrange equals to _n_
     ///
     /// *O(m)* where _m_ is the combined length of the collection and _newElements_
-    public mutating func replaceSubrange<C>(_ subrange: RangeType<Int>, with newElements: C) where C : Collection, E == C.Element {
+    public mutating func replaceSubrange<C>(_ subrange: Range<Index>, with newElements: C) where C : Collection, E == C.Element {
         precondition(subrange.lowerBound >= self.startIndex && subrange.upperBound <= self.endIndex, "Subrange out of bounds")
 
         let lowerBound = bufferIndex(ofIndex: subrange.lowerBound)
         let upperBound = bufferIndex(ofIndex: subrange.upperBound == self.endIndex ? subrange.upperBound - 1 : subrange.upperBound)
 
         if subrange.count == newElements.count {
-            for (index, element) in zip(subrange.indices, newElements) {
+            for (index, element) in zip(stride(from: subrange.lowerBound, to: subrange.upperBound, by: 1), newElements) {
                 self.buffer[self.bufferIndex(ofIndex: index)] = element
             }
         } else if subrange.count == self.count && newElements.isEmpty {
