@@ -118,11 +118,11 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
                         newBuffer.append(element)
                     }
                     while index != upperBound {
-                        index = self.index(after: index)
+                        index = self.bufferIndex(after: index)
                     }
                 } else {
                     newBuffer.append(self.buffer[index])
-                    index = self.index(after: index)
+                    index = self.bufferIndex(after: index)
                 }
             }
 
@@ -201,11 +201,11 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
             self.tailIdx = (self.tailIdx - 1) & self.mask
             self.buffer[bufferIndex] = nil
         default:
-            var nextIndex = index(after: bufferIndex)
+            var nextIndex = self.bufferIndex(after: bufferIndex)
             while nextIndex != self.tailIdx {
                 self.buffer[bufferIndex] = self.buffer[nextIndex]
                 bufferIndex = nextIndex
-                nextIndex = index(after: bufferIndex)
+                nextIndex = self.bufferIndex(after: bufferIndex)
             }
             self.buffer[nextIndex] = nil
             self.tailIdx = (self.tailIdx - 1) & self.mask
@@ -239,6 +239,18 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
     private func bufferIndex(ofIndex index: Int) -> Int {
         precondition(index < self.count, "index out of range")
         return (self.headIdx + index) & self.mask
+    }
+
+    /// Returns the internal buffer next index after `index`.
+    private func bufferIndex(after: Int) -> Int {
+        let nextIndex = (after + 1) >= self.capacity ? 0 : (after + 1)
+        return nextIndex
+    }
+
+    /// Returns the internal buffer index before `index`.
+    private func bufferIndex(before: Int) -> Int {
+        let previousIndex = (before - 1) < 0 ? self.tailIdx : (before - 1)
+        return previousIndex
     }
 
     // MARK: Collection implementation
