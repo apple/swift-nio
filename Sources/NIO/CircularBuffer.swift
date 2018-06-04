@@ -110,6 +110,8 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
             self.removeSubrange(subrange)
         } else {
             var newBuffer: ContiguousArray<E?> = []
+            let capacityDelta = (newElements.count - subrange.count)
+            let newCapacity = Int(UInt32(self.buffer.count + capacityDelta).nextPowerOf2())
             newBuffer.reserveCapacity(self.buffer.count)
             var index = self.headIdx
             while index != self.tailIdx {
