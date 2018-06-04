@@ -93,7 +93,7 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
     /// - Parameter newElements:
     /// The new elements to add to the collection.
     ///
-    /// *O(n)* where _n_ is the lenght of the new elements collection if the subrange equals to _n_
+    /// *O(n)* where _n_ is the length of the new elements collection if the subrange equals to _n_
     ///
     /// *O(m)* where _m_ is the combined length of the collection and _newElements_
     public mutating func replaceSubrange(_ subrange: RangeType<Int>, with newElements: ContiguousArray<E>) {
