@@ -235,13 +235,13 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
 
     /// Returns the internal buffer next index after `index`.
     private func bufferIndex(after: Int) -> Int {
-        let nextIndex = (after + 1) >= self.capacity ? 0 : (after + 1)
+        let nextIndex = (after + 1) & self.mask
         return nextIndex
     }
 
     /// Returns the internal buffer index before `index`.
     private func bufferIndex(before: Int) -> Int {
-        let previousIndex = (before - 1) < 0 ? self.tailIdx : (before - 1)
+        let previousIndex = (before - 1) & self.mask
         return previousIndex
     }
 
@@ -300,7 +300,7 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
     /// Returns the next index after `index`.
     public func index(after: Int) -> Int {
         let nextIndex = after + 1
-    	precondition(nextIndex <= self.endIndex)
+        precondition(nextIndex <= self.endIndex)
         return nextIndex
     }
 

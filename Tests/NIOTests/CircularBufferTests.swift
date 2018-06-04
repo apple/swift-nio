@@ -149,8 +149,7 @@ class CircularBufferTests: XCTestCase {
             ring.prepend(idx)
         }
         XCTAssertEqual(50, ring.count)
-        let newElements = ContiguousArray<Int>(arrayLiteral: 99)
-        ring.replaceSubrange(20..<25, with: newElements)
+        ring.replaceSubrange(20..<25, with: [99])
 
         XCTAssertEqual(ring.count, 46)
         XCTAssertEqual(ring[19], 30)
