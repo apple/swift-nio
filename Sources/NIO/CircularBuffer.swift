@@ -138,21 +138,11 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
         }
     }
 
-    public mutating func replaceSubrange<C, R>(_ subrange: R, with newElements: C) where C : Collection, R : RangeExpression, E == C.Element, Int == R.Bound {
-        let range = subrange.relative(to: self)
-        self.replaceSubrange(RangeType<Int>(range), with: newElements)
-    }
-
     public mutating func removeSubrange(_ bounds: Range<Int>) {
         if bounds.count == 1 {
             _ = remove(at: bounds.lowerBound)
         } else if bounds.count == self.count {
-            var newBuffer: ContiguousArray<E?> = []
-            newBuffer.reserveCapacity(self.buffer.count)
-            newBuffer.append(contentsOf: repeatElement(nil, count: self.count))
-            self.headIdx = 0
-            self.tailIdx = 0
-            self.buffer = newBuffer
+            self = .init(initialRingCapacity: self.buffer.count)
         } else {
             replaceSubrange(bounds, with: [])
         }
