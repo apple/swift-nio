@@ -99,9 +99,6 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
     public mutating func replaceSubrange<C>(_ subrange: Range<Index>, with newElements: C) where C : Collection, E == C.Element {
         precondition(subrange.lowerBound >= self.startIndex && subrange.upperBound <= self.endIndex, "Subrange out of bounds")
 
-        let lowerBound = bufferIndex(ofIndex: subrange.lowerBound)
-        let upperBound = bufferIndex(ofIndex: subrange.upperBound == self.endIndex ? subrange.upperBound - 1 : subrange.upperBound)
-
         if subrange.count == newElements.count {
             for (index, element) in zip(stride(from: subrange.lowerBound, to: subrange.upperBound, by: 1), newElements) {
                 self.buffer[self.bufferIndex(ofIndex: index)] = element
@@ -113,20 +110,10 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
             let capacityDelta = (newElements.count - subrange.count)
             let newCapacity = Int(UInt32(self.buffer.count + capacityDelta).nextPowerOf2())
             newBuffer.reserveCapacity(newCapacity)
-            var index = self.headIdx
-            while index != self.tailIdx {
-                if index == lowerBound {
-                    for element in newElements {
-                        newBuffer.append(element)
-                    }
-                    while index < upperBound {
-                        index = self.bufferIndex(after: index)
-                    }
-                } else {
-                    newBuffer.append(self.buffer[index])
-                    index = self.bufferIndex(after: index)
-                }
-            }
+
+            newBuffer.append(contentsOf: self[0..<subrange.lowerBound].map { $0 })
+            newBuffer.append(contentsOf: newElements.map { $0 })
+            newBuffer.append(contentsOf: self[subrange.upperBound..<self.endIndex].map { $0 })
 
             self.tailIdx = newBuffer.count
             let repetitionCount = self.buffer.count - newBuffer.count
@@ -138,7 +125,11 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
         }
     }
 
+    /// Removes the elements in the specified subrange from the circular buffer.
+    ///
+    /// - Parameter bounds: The range of the circular buffer to be removed. The bounds of the range must be valid indices of the collection.
     public mutating func removeSubrange(_ bounds: Range<Int>) {
+        precondition(bounds.upperBound >= self.startIndex && bounds.upperBound <= self.endIndex, "Invalid bounds.")
         if bounds.count == 1 {
             _ = remove(at: bounds.lowerBound)
         } else if bounds.count == self.count {
@@ -148,12 +139,17 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
         }
     }
 
+    /// Removes the given number of elements from the end of the collection.
+    ///
+    /// - Parameter n: The number of elements to remove from the tail of the buffer.
     public mutating func removeLast(_ n: Int) {
-        let end = self.tailIdx
-        self.tailIdx = (self.tailIdx - n) & self.mask
-        for index in end - n ..< end {
-            self.buffer[index] = nil
+        precondition(n <= self.count, "Number of elements to drop bigger than the amount of elements in the buffer.")
+        var indx = self.tailIdx
+        for _ in 0 ..< n {
+            self.buffer[indx] = nil
+            indx = self.bufferIndex(before: indx)
         }
+        self.tailIdx = (self.tailIdx - n) & self.mask
     }
 
     /// Double the capacity of the buffer and adjust the headIdx and tailIdx.
@@ -182,6 +178,7 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
     /// otherwise
     /// *O(n)* where *n* is the number of elements between `position` and `tailIdx`.
     public mutating func remove(at position: Int) -> E {
+        precondition(self.indices.contains(position), "Position out of bounds.")
         var bufferIndex = self.bufferIndex(ofIndex: position)
         let element = self.buffer[bufferIndex]!
 

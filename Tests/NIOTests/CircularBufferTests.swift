@@ -56,10 +56,19 @@ class CircularBufferTests: XCTestCase {
         for idx in 0..<7 {
             ring.prepend(idx)
         }
+
         XCTAssertEqual(7, ring.count)
         _ = ring.remove(at: 1)
         XCTAssertEqual(6, ring.count)
         XCTAssertEqual(0, ring.last)
+
+        let last = ring.remove(at: ring.endIndex - 1)
+        XCTAssertEqual(0, last)
+        XCTAssertEqual(1, ring.last)
+
+        let first = ring.remove(at: 0)
+        XCTAssertEqual(6, first)
+        XCTAssertEqual(4, ring.first)
     }
 
     func testHarderExpansion() {
@@ -157,6 +166,24 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(ring[21], 24)
         ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: [])
         XCTAssertTrue(ring.isEmpty)
+
+        ring.prepend(1)
+        ring.prepend(2)
+        XCTAssertEqual(2, ring.count)
+        XCTAssertEqual(2, ring.first)
+        XCTAssertEqual(1, ring.last)
+        ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: [3,4])
+        XCTAssertEqual(2, ring.count)
+        XCTAssertEqual(3, ring.first)
+        XCTAssertEqual(4, ring.last)
+
+        ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: [0,1,2,3,4,5,6,7,8,9])
+        XCTAssertEqual(10, ring.count)
+        XCTAssertEqual(0, ring.first)
+        XCTAssertEqual(9, ring.last)
+
+        ring.replaceSubrange(0..<0, with: [])
+        XCTAssertEqual(10, ring.count)
     }
 
     func testWeCanDistinguishBetweenEmptyAndFull() {
@@ -308,6 +335,14 @@ class CircularBufferTests: XCTestCase {
         ring.removeLast(3)
         XCTAssertEqual(1, ring.count)
         XCTAssertEqual(2, ring.last)
+
+        ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        ring.append(9)
+        ring.prepend(0)
+        ring.prepend(1)
+        XCTAssertEqual(3, ring.count)
+        ring.removeLast(3)
+        XCTAssertTrue(ring.isEmpty)
     }
 
     func testOperateOnBothSides() {
