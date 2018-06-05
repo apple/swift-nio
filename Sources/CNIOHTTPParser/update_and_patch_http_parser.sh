@@ -60,6 +60,7 @@ for f in http_parser.c http_parser.h; do
         -e 's/\b\(http_parser_url_init\)/c_nio_\1/g' \
         -e 's/\b\(http_parser_version\)/c_nio_\1/g' \
         -e 's/\b\(http_should_keep_alive\)/c_nio_\1/g' \
+        -e 's/\b\(http_status_str\)/c_nio_\1/g' \
         "$here/c_nio_$f"
 done
 

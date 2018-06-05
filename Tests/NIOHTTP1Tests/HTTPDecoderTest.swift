@@ -306,4 +306,62 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.assertDoesNotContain(handlerType: HTTPRequestDecoder.self))
         XCTAssertNoThrow(try channel.finish())
     }
+
+    func testExtraCRLF() throws {
+        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+
+        // This is a simple HTTP/1.1 request with a few too many CRLFs before it, to trigger
+        // https://github.com/nodejs/http-parser/pull/432.
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.write(staticString: "\r\nGET / HTTP/1.1\r\nHost: example.com\r\n\r\n")
+        try channel.writeInbound(buffer)
+
+        let message: HTTPServerRequestPart? = self.channel.readInbound()
+        guard case .some(.head(let head)) = message else {
+            XCTFail("Invalid message: \(String(describing: message))")
+            return
+        }
+
+        XCTAssertEqual(head.method, .GET)
+        XCTAssertEqual(head.uri, "/")
+        XCTAssertEqual(head.version, .init(major: 1, minor: 1))
+        XCTAssertEqual(head.headers, HTTPHeaders([("Host", "example.com")]))
+
+        let secondMessage: HTTPServerRequestPart? = self.channel.readInbound()
+        guard case .some(.end(.none)) = secondMessage else {
+            XCTFail("Invalid second message: \(String(describing: secondMessage))")
+            return
+        }
+
+        XCTAssertNoThrow(try channel.finish())
+    }
+
+    func testSOURCEDoesntExplodeUs() throws {
+        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+
+        // This is a simple HTTP/1.1 request with the SOURCE verb which is newly added to
+        // http_parser.
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.write(staticString: "SOURCE / HTTP/1.1\r\nHost: example.com\r\n\r\n")
+        try channel.writeInbound(buffer)
+
+        let message: HTTPServerRequestPart? = self.channel.readInbound()
+        guard case .some(.head(let head)) = message else {
+            XCTFail("Invalid message: \(String(describing: message))")
+            return
+        }
+
+        XCTAssertEqual(head.method, .RAW(value: "SOURCE"))
+        XCTAssertEqual(head.uri, "/")
+        XCTAssertEqual(head.version, .init(major: 1, minor: 1))
+        XCTAssertEqual(head.headers, HTTPHeaders([("Host", "example.com")]))
+
+        let secondMessage: HTTPServerRequestPart? = self.channel.readInbound()
+        guard case .some(.end(.none)) = secondMessage else {
+            XCTFail("Invalid second message: \(String(describing: secondMessage))")
+            return
+        }
+
+        XCTAssertNoThrow(try channel.finish())
+    }
 }
