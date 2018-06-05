@@ -258,15 +258,6 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
         }
     }
 
-    /// Slice out a range of the ring.
-    ///
-    /// *O(1)*
-    public subscript(bounds: Range<Int>) -> Slice<CircularBuffer<E>> {
-        get {
-            return Slice(base: self, bounds: bounds)
-        }
-    }
-
     /// Return all valid indices of the ring.
     public var indices: RangeType<Int> {
         return 0..<self.count
