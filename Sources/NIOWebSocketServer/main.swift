@@ -125,7 +125,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
         case .text:
             var data = frame.unmaskedData
             let text = data.readString(length: data.readableBytes) ?? ""
-            self.printToConsole(text: text)
+            print(text)
         default:
             // We ignore all other frames.
             break
@@ -154,12 +154,6 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
         }.whenFailure { (_: Error) in
             ctx.close(promise: nil)
         }
-    }
-  
-    public func printToConsole(text: String) {
-        // We can receive message.
-        // example will print message to terminal.
-        print(text)
     }
 
     private func receivedClose(ctx: ChannelHandlerContext, frame: WebSocketFrame) {
@@ -213,8 +207,6 @@ let upgrader = WebSocketUpgrader(shouldUpgrade: { (head: HTTPRequestHead) in HTT
                                     channel.pipeline.add(handler: WebSocketTimeHandler())
                                  })
 
-private let httpHandler = HTTPHandler()
-
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .serverChannelOption(ChannelOptions.backlog, value: 256)
@@ -222,6 +214,7 @@ let bootstrap = ServerBootstrap(group: group)
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
+        let httpHandler = HTTPHandler()
         let config: HTTPUpgradeConfiguration = (
                         upgraders: [ upgrader ], 
                         completionHandler: { _ in 
