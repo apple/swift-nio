@@ -184,10 +184,10 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
 
         switch bufferIndex {
         case self.headIdx:
-            self.headIdx = (self.headIdx + 1) & self.mask
+            self.headIdx = self.bufferIndex(after: self.headIdx)
             self.buffer[bufferIndex] = nil
         case self.tailIdx - 1:
-            self.tailIdx = (self.tailIdx - 1) & self.mask
+            self.tailIdx = self.bufferIndex(before: self.tailIdx)
             self.buffer[bufferIndex] = nil
         default:
             var nextIndex = self.bufferIndex(after: bufferIndex)
@@ -197,7 +197,7 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
                 nextIndex = self.bufferIndex(after: bufferIndex)
             }
             self.buffer[nextIndex] = nil
-            self.tailIdx = (self.tailIdx - 1) & self.mask
+            self.tailIdx = self.bufferIndex(before: self.tailIdx)
         }
 
         return element
