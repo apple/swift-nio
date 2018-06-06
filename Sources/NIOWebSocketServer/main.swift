@@ -122,6 +122,10 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
             self.pong(ctx: ctx, frame: frame)
         case .unknownControl, .unknownNonControl:
             self.closeOnError(ctx: ctx)
+        case .text:
+            var data = frame.unmaskedData
+            let text = data.readString(length: data.readableBytes) ?? ""
+            print(text)
         default:
             // We ignore all other frames.
             break
@@ -210,9 +214,15 @@ let bootstrap = ServerBootstrap(group: group)
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
-        let config: HTTPUpgradeConfiguration = (upgraders: [ upgrader ], completionHandler: { _ in })
+        let httpHandler = HTTPHandler()
+        let config: HTTPUpgradeConfiguration = (
+                        upgraders: [ upgrader ], 
+                        completionHandler: { _ in 
+                            _ = channel.pipeline.remove(handler: httpHandler)
+                        }
+                    )
         return channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: config).then {
-            channel.pipeline.add(handler: HTTPHandler())
+            channel.pipeline.add(handler: httpHandler)
         }
     }
 
