@@ -111,7 +111,7 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
             let newCapacity = Int(UInt32(self.buffer.count + capacityDelta).nextPowerOf2())
             newBuffer.reserveCapacity(newCapacity)
 
-            // This is required due to an inconsistent ability to append sequences of non-optional
+            // This mapping is required due to an inconsistent ability to append sequences of non-optional
             // to optional sequences.
             // https://bugs.swift.org/browse/SR-7921
             newBuffer.append(contentsOf: self[0..<subrange.lowerBound].map { $0 })
