@@ -168,7 +168,7 @@ If all goes well, you'll see the message echoed back to you.
 To generate an xcodeproj to work on SwiftNIO from Xcode 
 ```bash
 swift package generate-xcodeproj
-```bash
+```
 
 ### An alternative: using `docker-compose`
 
