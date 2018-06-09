@@ -21,8 +21,8 @@ import Dispatch
 /// data is already available in the kernel's memory. In other words, a `read` from a file can still block even if
 /// reported as readable. This behaviour is also documented behaviour:
 ///
-///  - [`poll`](pubs.opengroup.org/onlinepubs/009695399/functions/poll.html): "Regular files shall always poll TRUE for reading and writing."
-///  - [`epoll`](man7.org/linux/man-pages/man7/epoll.7.html): "epoll is simply a faster poll(2), and can be used wherever the latter is used since it shares the same semantics."
+///  - [`poll`](http://pubs.opengroup.org/onlinepubs/009695399/functions/poll.html): "Regular files shall always poll TRUE for reading and writing."
+///  - [`epoll`](http://man7.org/linux/man-pages/man7/epoll.7.html): "epoll is simply a faster poll(2), and can be used wherever the latter is used since it shares the same semantics."
 ///  - [`kqueue`](https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2): "Returns when the file pointer is not at the end of file."
 ///
 /// `NonBlockingFileIO` helps to work around this issue by maintaining its own thread pool that is used to read the data
