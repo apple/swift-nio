@@ -18,7 +18,7 @@ public struct ByteBufferSliceSplitIterator: IteratorProtocol {
     private(set) var currentIndex: Int
     
     let endIndex: Int
-    let byteBufferView: ByteBufferView
+    let byteBuffer: ByteBuffer
     let separator: UInt8
     
     var length: Int {
@@ -27,34 +27,34 @@ public struct ByteBufferSliceSplitIterator: IteratorProtocol {
         }
     }
     
-    public typealias Element = ByteBufferView
-    mutating public func next() -> ByteBufferView? {
+    public typealias Element = ByteBuffer
+    mutating public func next() -> ByteBuffer? {
         
-        let remaining = self.byteBufferView
+        let remaining = self.byteBuffer.readableBytesView
             .prefix(self.endIndex)
             .dropFirst(self.currentIndex)
         
-        var index: Int = remaining.count
+        guard remaining.count > 0 else { return nil }
         
-        for pointee in remaining.enumerated() {
-            if pointee.element == separator {
-                index = pointee.offset
-                break
-            }
-        }
+        // First separator, or end of byte buffer
+        let separatorIndex = remaining.enumerated().first(where: { $0.element == separator })?.offset
+            ?? remaining.count
         
+        // Save the previous current index
         let start = currentIndex
-        // For the next time, with skipping the separator
-        currentIndex += index + 1
         
-        return byteBufferView[start..<(start+length)]
+        // For the next time, with skipping the separator
+        currentIndex += separatorIndex + 1
+        
+        return byteBuffer.getSlice(at: start,
+                                   length: separatorIndex)
 
     }
     
-    public init(byteBufferView: ByteBufferView, separator: UInt8, start: Int, length: Int) {
-        precondition(start <= byteBufferView.count - length)
+    public init(byteBuffer: ByteBuffer, separator: UInt8, start: Int, length: Int) {
+        precondition(start <= byteBuffer.capacity - length)
         
-        self.byteBufferView = byteBufferView
+        self.byteBuffer = byteBuffer
         self.separator = separator
         self.currentIndex = start
         self.endIndex = start + length
@@ -63,20 +63,8 @@ public struct ByteBufferSliceSplitIterator: IteratorProtocol {
     public init(byteBuffer: ByteBuffer,
                 separator: UInt8) {
         
-        self.init(byteBufferView: byteBuffer.readableBytesView, separator: separator,
-                  start: 0, length: byteBuffer.readableBytes)
-    }
-
-    public init(byteBuffer: ByteBuffer, separator: UInt8, start: Int, length: Int) {
-        self.init(byteBufferView: byteBuffer.readableBytesView, separator: separator,
-                  start: start, length: length)
-    }
-    
-    public init(byteBufferView: ByteBufferView,
-                separator: UInt8) {
-        
-        self.init(byteBufferView: byteBufferView, separator: separator,
-                  start: 0, length: byteBufferView.count)
+        self.init(byteBuffer: byteBuffer, separator: separator,
+                  start: byteBuffer.readerIndex, length: byteBuffer.readableBytes)
     }
 }
 
@@ -91,27 +79,9 @@ extension ByteBuffer {
                          .dropFirst(start)
                          .prefix(length)
 
-        // Assume that all are whitespaces in the beginning
-        var startIndex = buffer.count
-        // Advance from the start until not a whiteSpace
-        for pointee in buffer.enumerated() {
-            if pointee.element == 0 || !(whiteSpaces.contains(pointee.element)) {
-                startIndex = pointee.offset
-                break
-            }
-        }
-        
-        let leadingTrimmedBuffer = buffer.dropFirst(startIndex)
-        
-        // Assume that all are whitespaces
-        var endIndex = leadingTrimmedBuffer.count
-        // Retreat the ending until not a whiteSpace, null is considered a whiteSpace
-        for pointee in leadingTrimmedBuffer.reversed().enumerated() {
-            if !(whiteSpaces.contains(pointee.element) || pointee.element == 0) {
-                endIndex = buffer.count - pointee.offset
-                break
-            }
-        }
+        let startIndex = buffer.enumerated().first(where: { !ByteBuffer.defaultWhitespaces.contains($0.element) })?.offset ?? length
+        let endIndex = length - (buffer.reversed().enumerated().first(where: { !ByteBuffer.defaultWhitespaces.contains($0.element) })?.offset ?? length)
+
         // Validate, i.e. end >= start, then return null if invalid
         return endIndex >= startIndex ?
                     self.getSlice(at: startIndex + start, length: endIndex - startIndex) :
@@ -138,6 +108,7 @@ extension ByteBuffer {
     public func compareReadableBytes<T: Collection>(to bytes: T) -> Bool
         where T.Element == UInt8 {
             
+        if self.readableBytes <= 0 { return bytes.count == 0 }
         return self.readableBytesView.map({$0 & 0xdf}) == bytes
     }
     
