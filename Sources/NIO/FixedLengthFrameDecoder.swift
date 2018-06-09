@@ -14,31 +14,30 @@
 
 
 ///
-/// A decoder that splits the received ByteBuffer by a fixed number
+/// A decoder that splits the received `ByteBuffer` by a fixed number
 /// of bytes. For example, if you received the following four fragmented packets:
 ///
 /// +---+----+------+----+
 /// | A | BC | DEFG | HI |
 /// +---+----+------+----+
 /// 
-/// A LengthDelimitedInboundHandler will decode them into the
+/// A `FixedLengthFrameDecoder` will decode them into the
 /// following three packets with the fixed length:
 ///
 /// +-----+-----+-----+
 /// | ABC | DEF | GHI |
 /// +-----+-----+-----+
 ///
-
-public final class LengthDelimitedInboundHandler: ByteToMessageDecoder {
+public final class FixedLengthFrameDecoder: ByteToMessageDecoder {
 
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
 
     public var cumulationBuffer: ByteBuffer?
 
-    let frameLength: Int
+    private let frameLength: Int
 
-    /// Create `LengthDelimitedInboundHandler` with a given frame length.
+    /// Create `FixedLengthFrameDecoder` with a given frame length.
     ///
     /// - parameters:
     ///    - frameLength: The length of a frame.
