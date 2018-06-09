@@ -35,7 +35,7 @@ class EventLoopFutureTest : XCTestCase {
 
     func testFoldWithMultipleEventLoops() throws {
         let nThreads = 3
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: nThreads)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: nThreads)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
@@ -440,7 +440,7 @@ class EventLoopFutureTest : XCTestCase {
 
     func testReduceIntoWithMultipleEventLoops() throws {
         let nThreads = 3
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numThreads: nThreads)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: nThreads)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
@@ -579,7 +579,7 @@ class EventLoopFutureTest : XCTestCase {
 
     func testEventLoopHoppingInThen() throws {
         let n = 20
-        let elg = MultiThreadedEventLoopGroup(numThreads: n)
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: n)
         var prev: EventLoopFuture<Int> = elg.next().newSucceededFuture(result: 0)
         (1..<20).forEach { (i: Int) in
             let p: EventLoopPromise<Int> = elg.next().newPromise()
@@ -601,7 +601,7 @@ class EventLoopFutureTest : XCTestCase {
             case dummy
         }
         let n = 20
-        let elg = MultiThreadedEventLoopGroup(numThreads: n)
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: n)
         var prev: EventLoopFuture<Int> = elg.next().newSucceededFuture(result: 0)
         (1..<n).forEach { (i: Int) in
             let p: EventLoopPromise<Int> = elg.next().newPromise()
@@ -634,7 +634,7 @@ class EventLoopFutureTest : XCTestCase {
 
     func testEventLoopHoppingAndAll() throws {
         let n = 20
-        let elg = MultiThreadedEventLoopGroup(numThreads: n)
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: n)
         let ps = (0..<n).map { (_: Int) -> EventLoopPromise<Void> in
             elg.next().newPromise()
         }
@@ -651,8 +651,8 @@ class EventLoopFutureTest : XCTestCase {
     func testEventLoopHoppingAndAllWithFailures() throws {
         enum DummyError: Error { case dummy }
         let n = 20
-        let fireBackEl = MultiThreadedEventLoopGroup(numThreads: 1)
-        let elg = MultiThreadedEventLoopGroup(numThreads: n)
+        let fireBackEl = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: n)
         let ps = (0..<n).map { (_: Int) -> EventLoopPromise<Void> in
             elg.next().newPromise()
         }
@@ -680,7 +680,7 @@ class EventLoopFutureTest : XCTestCase {
 
     func testFutureInVariousScenarios() throws {
         enum DummyError: Error { case dummy0; case dummy1 }
-        let elg = MultiThreadedEventLoopGroup(numThreads: 2)
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         let el1 = elg.next()
         let el2 = elg.next()
         precondition(el1 !== el2)
@@ -772,7 +772,7 @@ class EventLoopFutureTest : XCTestCase {
     }
 
     func testLoopHoppingHelperSuccess() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -791,7 +791,7 @@ class EventLoopFutureTest : XCTestCase {
     }
 
     func testLoopHoppingHelperFailure() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -815,7 +815,7 @@ class EventLoopFutureTest : XCTestCase {
     }
 
     func testLoopHoppingHelperNoHopping() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }

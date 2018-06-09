@@ -36,6 +36,7 @@ extension EmbeddedChannelTest {
                 ("testEmbeddedChannelAndPipelineAndChannelCoreShareTheEventLoop", testEmbeddedChannelAndPipelineAndChannelCoreShareTheEventLoop),
                 ("testSendingIncorrectDataOnEmbeddedChannel", testSendingIncorrectDataOnEmbeddedChannel),
                 ("testActiveWhenConnectPromiseFiresAndInactiveWhenClosePromiseFires", testActiveWhenConnectPromiseFiresAndInactiveWhenClosePromiseFires),
+                ("testWriteWithoutFlushDoesNotWrite", testWriteWithoutFlushDoesNotWrite),
            ]
    }
 }

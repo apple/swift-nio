@@ -43,7 +43,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
     }
 
     private func assertBackoffRead(error: Int32) throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -79,7 +79,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
     }
 
     private func assertRemoval(read: Bool) throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -113,7 +113,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
     }
 
     public func testNotScheduleReadIfAlreadyScheduled() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -145,7 +145,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
     }
 
     public func testChannelInactiveCancelScheduled() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -194,7 +194,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
     }
 
     public func testSecondErrorUpdateScheduledRead() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }

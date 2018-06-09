@@ -396,7 +396,8 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     }
 
     deinit {
-        assert(self.lifecycleManager.canBeDestroyed, "leak of open Channel")
+        assert(self.lifecycleManager.canBeDestroyed,
+               "leak of open Channel, state: \(String(describing: self.lifecycleManager))")
     }
 
     public final func localAddress0() throws -> SocketAddress {
@@ -791,7 +792,15 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         assert(self.eventLoop.inEventLoop)
         assert(self.isOpen)
         assert(!self.lifecycleManager.isActive)
-        register0(promise: nil)
+        let registerPromise: EventLoopPromise<Void> = self.eventLoop.newPromise()
+        register0(promise: registerPromise)
+        registerPromise.futureResult.whenFailure { (_: Error) in
+            self.close(promise: nil)
+        }
+        if let promise = promise {
+            registerPromise.futureResult.cascadeFailure(promise: promise)
+        }
+
         if self.lifecycleManager.isPreRegistered {
             try! becomeFullyRegistered0()
             if self.lifecycleManager.isRegisteredFully {
@@ -856,8 +865,8 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
         // we can't be not active but still registered here; this would mean that we got a notification about a
         // channel before we're ready to receive them.
-        assert(self.lifecycleManager.isActive || !self.lifecycleManager.isPreRegistered,
-               "illegal state: \(self): active: \(self.lifecycleManager.isActive), pre-registered: \(self.lifecycleManager.isPreRegistered)")
+        assert(self.lifecycleManager.isRegisteredFully,
+               "illegal state: \(self): active: \(self.lifecycleManager.isActive), registered: \(self.lifecycleManager.isRegisteredFully)")
 
         self.readEOF0()
 

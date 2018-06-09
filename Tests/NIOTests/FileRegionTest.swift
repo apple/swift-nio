@@ -18,7 +18,7 @@ import XCTest
 class FileRegionTest : XCTestCase {
 
     func testWriteFileRegion() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -62,7 +62,7 @@ class FileRegionTest : XCTestCase {
     }
 
     func testWriteEmptyFileRegionDoesNotHang() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -101,7 +101,7 @@ class FileRegionTest : XCTestCase {
     }
 
     func testOutstandingFileRegionsWork() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }

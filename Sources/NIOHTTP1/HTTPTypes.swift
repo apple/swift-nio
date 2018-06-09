@@ -302,6 +302,14 @@ extension HTTPRequestHead {
     }
 }
 
+extension HTTPResponseHead {
+    /// Whether this HTTP response is a keep-alive request: that is, whether the
+    /// connection should remain open after the request is complete.
+    public var isKeepAlive: Bool {
+        return self.headers.isKeepAlive(version: self.version)
+    }
+}
+
 /// A representation of the status line and header fields of a HTTP response.
 public struct HTTPResponseHead: Equatable {
     private final class _Storage {

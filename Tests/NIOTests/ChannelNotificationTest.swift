@@ -286,7 +286,7 @@ class ChannelNotificationTest: XCTestCase {
     }
 
     func testNotificationOrder() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -328,7 +328,7 @@ class ChannelNotificationTest: XCTestCase {
 
     func testActiveBeforeChannelRead() throws {
         // Use two EventLoops to ensure the ServerSocketChannel and the SocketChannel are on different threads.
-        let group = MultiThreadedEventLoopGroup(numThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }

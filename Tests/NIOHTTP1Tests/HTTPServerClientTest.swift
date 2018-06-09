@@ -346,7 +346,7 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     private func testSimpleGet(_ mode: SendMode) throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -404,7 +404,7 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     private func testSimpleGetChunkedEncoding(_ mode: SendMode) throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -461,7 +461,7 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     private func testSimpleGetTrailers(_ mode: SendMode) throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -520,7 +520,7 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     func testMassiveResponse(_ mode: SendMode) throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -567,7 +567,7 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     func testHead() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -613,7 +613,7 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     func test204() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -659,7 +659,7 @@ class HTTPServerClientTest : XCTestCase {
 
     @available(*, deprecated, message: "Tests deprecated function addHTTPServerHandlers")
     func testDeprecatedPipelineConstruction() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }

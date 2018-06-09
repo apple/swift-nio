@@ -104,6 +104,8 @@ An `EventLoopFuture<T>` is essentially a container for the return value of a fun
 
 If you had to poll the future to detect when it completed that would be quite inefficient, so `EventLoopFuture<T>` is designed to have managed callbacks. Essentially, you can hang callbacks off the future that will be executed when a result is available. The `EventLoopFuture<T>` will even carefully arrange the scheduling to ensure that these callbacks always execute on the event loop that initially created the promise, which helps ensure that you don't need too much synchronization around `EventLoopFuture<T>` callbacks.
 
+Another important topic for consideration is the difference between how the promise passed to `close` works as opposed to `closeFuture` on a `Channel`. For example, the promise passed into `close` will succeed after the `Channel` is closed down but before the `ChannelPipeline` is completely cleared out. This will allow you to take action on the `ChannelPipeline` before it is completely cleared out, if needed. If it is desired to wait for the `Channel` to close down and the `ChannelPipeline` to be cleared out without any futher action, then the better option would be to wait for the `closeFuture` to succeed.
+
 There are several functions for applying callbacks to `EventLoopFuture<T>`, depending on how and when you want them to execute. Details of these functions is left to the API documentation.
 
 ### Design Philosophy
@@ -119,7 +121,7 @@ The core SwiftNIO repository will contain a few extremely important protocol imp
 The following projects contain useful protocol implementations that do not live in-tree in SwiftNIO:
 
 - [swift-nio-ssl](https://github.com/apple/swift-nio-ssl)
-- swift-nio-http2 (coming soon)
+- [swift-nio-http2](https://github.com/apple/swift-nio-http2)
 
 ## Documentation
 
