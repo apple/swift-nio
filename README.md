@@ -170,7 +170,8 @@ To generate an Xcode project to work on SwiftNIO in Xcode:
 $shell
 \`\`\`
 
-```bash
+```
+bash
 swift package generate-xcodeproj
 ```
 \`\`\`bash
@@ -182,7 +183,8 @@ This generates an Xcode project using SwiftPM. You can open the project with:
 $shell
 \`\`\`
 
-```bash
+```
+bash
 open swift-nio.xcodeproj
 ```
 \`\`\`bash
