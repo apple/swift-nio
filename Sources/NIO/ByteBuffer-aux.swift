@@ -149,7 +149,7 @@ extension ByteBuffer {
     /// - parameters:
     ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed.
     /// - returns: The number of bytes read.
-    @_inlineable
+    @inlinable
     public mutating func readWithUnsafeReadableBytes(_ body: (UnsafeRawBufferPointer) throws -> Int) rethrows -> Int {
         let bytesRead = try self.withUnsafeReadableBytes(body)
         self._moveReaderIndex(forwardBy: bytesRead)
@@ -164,7 +164,7 @@ extension ByteBuffer {
     /// - parameters:
     ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
     /// - returns: The value `fn` returned in the second tuple component.
-    @_inlineable
+    @inlinable
     public mutating func readWithUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> (Int, T)) rethrows -> T {
         let (bytesRead, ret) = try self.withUnsafeReadableBytes(body)
         self._moveReaderIndex(forwardBy: bytesRead)
@@ -179,7 +179,7 @@ extension ByteBuffer {
     /// - parameters:
     ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed.
     /// - returns: The number of bytes read.
-    @_inlineable
+    @inlinable
     public mutating func readWithUnsafeMutableReadableBytes(_ body: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
         let bytesRead = try self.withUnsafeMutableReadableBytes(body)
         self._moveReaderIndex(forwardBy: bytesRead)
@@ -194,7 +194,7 @@ extension ByteBuffer {
     /// - parameters:
     ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
     /// - returns: The value `fn` returned in the second tuple component.
-    @_inlineable
+    @inlinable
     public mutating func readWithUnsafeMutableReadableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> (Int, T)) rethrows -> T {
         let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes(body)
         self._moveReaderIndex(forwardBy: bytesRead)
@@ -234,7 +234,7 @@ extension ByteBuffer {
     ///     - bytes: A `Collection` of `UInt8` to be written.
     /// - returns: The number of bytes written or `bytes.count`.
     @discardableResult
-    @_inlineable
+    @inlinable
     public mutating func write<S: Sequence>(bytes: S) -> Int where S.Element == UInt8 {
         let written = set(bytes: bytes, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
@@ -248,7 +248,7 @@ extension ByteBuffer {
     ///     - bytes: A `ContiguousCollection` of `UInt8` to be written.
     /// - returns: The number of bytes written or `bytes.count`.
     @discardableResult
-    @_inlineable
+    @inlinable
     public mutating func write<S: ContiguousCollection>(bytes: S) -> Int where S.Element == UInt8 {
         let written = set(bytes: bytes, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
