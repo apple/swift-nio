@@ -165,9 +165,13 @@ echo "Hello SwiftNIO" | nc localhost 9999
 
 If all goes well, you'll see the message echoed back to you.
 
-To generate an xcodeproj to work on SwiftNIO from Xcode 
+To generate an Xcode project to work on SwiftNIO in Xcode: 
 ```bash
 swift package generate-xcodeproj
+```
+This generates an Xcode project using SwiftPM. You can open the project with:
+```bash
+open swift-nio.xcodeproj
 ```
 
 ### An alternative: using `docker-compose`
