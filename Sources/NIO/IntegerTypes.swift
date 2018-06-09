@@ -15,12 +15,12 @@
 // MARK: _UInt24
 
 /// A 24-bit unsigned integer value type.
-@_versioned
+@usableFromInline
 struct _UInt24: ExpressibleByIntegerLiteral {
     typealias IntegerLiteralType = UInt16
 
-    @_versioned var b12: UInt16
-    @_versioned var b3: UInt8
+    @usableFromInline var b12: UInt16
+    @usableFromInline var b3: UInt8
 
     private init(b12: UInt16, b3: UInt8) {
         self.b12 = b12
@@ -84,9 +84,9 @@ extension _UInt24: CustomStringConvertible {
 struct _UInt56: ExpressibleByIntegerLiteral {
     typealias IntegerLiteralType = UInt32
 
-    @_versioned var b1234: UInt32
-    @_versioned var b56: UInt16
-    @_versioned var b7: UInt8
+    @usableFromInline var b1234: UInt32
+    @usableFromInline var b56: UInt16
+    @usableFromInline var b7: UInt8
 
     private init(b1234: UInt32, b56: UInt16, b7: UInt8) {
         self.b1234 = b1234
