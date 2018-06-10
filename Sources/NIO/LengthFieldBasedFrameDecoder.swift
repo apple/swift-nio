@@ -12,6 +12,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+/// A `ChannelInboundHandler` used to decode length-delimited frames.
+///
+/// This is a protocol that has messages prefixed with an encoding of their length.
+/// Such a protocol would look like this:
+/// ````
+///     <fixed width integer n in network byte order><n bytes>
+/// ````
+/// ````
+///  BEFORE DECODE (14 bytes)         AFTER DECODE (12 bytes)
+/// +--------+----------------+      +----------------+
+/// | Length | Actual Content |----->| Actual Content |
+/// | 0x000C | "HELLO, WORLD" |      | "HELLO, WORLD" |
+/// +--------+----------------+      +----------------+
+/// ````
 public final class LengthFieldBasedFrameDecoder<T: FixedWidthInteger>: ByteToMessageDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
