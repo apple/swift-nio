@@ -28,18 +28,18 @@ public final class LengthFieldBasedFrameDecoder<T: FixedWidthInteger>: ByteToMes
     public init() { }
     
     public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
-        switch state {
+        switch self.state {
         case .len:
             guard let integer = buffer.readInteger(as: T.self) else {
                 return .needMoreData
             }
-            state = .data(Int(integer))
+            self.state = .data(Int(integer))
             return .continue
         case .data(let dataLength):
             guard let bytes = buffer.readSlice(length: dataLength) else {
                 return .needMoreData
             }
-            state = .len
+            self.state = .len
             ctx.fireChannelRead(self.wrapInboundOut(bytes))
             return .continue
         }
