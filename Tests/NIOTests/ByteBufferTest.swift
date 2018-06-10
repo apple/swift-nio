@@ -1437,6 +1437,14 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("l", String(decoding: viewSlice.dropFirst(), as: UTF8.self))
         XCTAssertEqual("", String(decoding: viewSlice.dropFirst().dropLast(), as: UTF8.self))
     }
+    
+    func testReadableBufferViewRangeEqualCapacity() throws {
+        self.buf.clear()
+        self.buf.moveWriterIndex(forwardBy: buf.capacity)
+        let view = self.buf.readableBytesView
+        let viewSlice: ByteBufferView = view[view.startIndex ..< view.endIndex]
+        XCTAssertEqual(buf.readableBytes, viewSlice.count)
+    }
 }
 
 private enum AllocationExpectationState: Int {
