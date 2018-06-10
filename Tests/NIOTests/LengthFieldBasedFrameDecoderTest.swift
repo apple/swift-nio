@@ -27,7 +27,7 @@ struct fixedLengthFrameDecoderHelper<T: FixedWidthInteger> {
         }
         
         for testString in testStrings {
-            channel.pipeline.fireChannelRead(NIOAny(buffer))
+            XCTAssertTrue(try channel.writeInbound(buffer))
             
             guard var result: ByteBuffer = channel.readInbound() else {
                 XCTFail("Failed to read buffer for \(T.self)")
