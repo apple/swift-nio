@@ -39,8 +39,8 @@ public final class LengthFieldBasedFrameDecoder<T: FixedWidthInteger>: ByteToMes
             guard let bytes = buffer.readSlice(length: dataLength) else {
                 return .needMoreData
             }
-            ctx.fireChannelRead(self.wrapInboundOut(bytes))
             state = .len
+            ctx.fireChannelRead(self.wrapInboundOut(bytes))
             return .continue
         }
     }
