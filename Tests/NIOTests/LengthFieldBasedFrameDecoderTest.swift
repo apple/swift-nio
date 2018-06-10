@@ -34,7 +34,7 @@ struct fixedLengthFrameDecoderHelper<T: FixedWidthInteger> {
                 return
             }
             let testResult = result.readString(length: (result.readableBytes))
-            XCTAssert(testResult == testString, "String doesn't match.")
+            XCTAssertEqual(testResult, testString)
         }
     }
 }
