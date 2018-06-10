@@ -36,6 +36,7 @@ struct fixedLengthFrameDecoderHelper<T: FixedWidthInteger> {
             let testResult = result.readString(length: (result.readableBytes))
             XCTAssertEqual(testResult, testString)
         }
+        XCTAssertFalse(try channel.finish())
     }
 }
 
