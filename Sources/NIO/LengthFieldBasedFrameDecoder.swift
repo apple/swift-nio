@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-public final class FixedLengthFrameDecoder<T: FixedWidthInteger>: ByteToMessageDecoder {
+public final class LengthFieldBasedFrameDecoder<T: FixedWidthInteger>: ByteToMessageDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
     
