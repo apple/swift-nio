@@ -1082,7 +1082,7 @@ class ByteBufferTest: XCTestCase {
         #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
             let reallyBigSize = Int(Int16.max) // well, but Int32 is too big (1GB RAM, no swap)
         #else
-            let reallyBigSize = Int32.max
+            let reallyBigSize = Int(Int32.max)
         #endif
         XCTAssertEqual(AllocationExpectationState.begin, testAllocationOfReallyBigByteBuffer_state)
         var buf = alloc.buffer(capacity: reallyBigSize)

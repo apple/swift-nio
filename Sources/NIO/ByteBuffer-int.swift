@@ -116,7 +116,7 @@ extension UInt32 {
         #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
             let max = UInt32(Int32.max)
         #else
-            let max = .max
+            let max = UInt32.max
         #endif
 
         n -= 1
