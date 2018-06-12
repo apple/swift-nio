@@ -25,7 +25,7 @@ public struct ByteBufferView: ContiguousCollection, RandomAccessCollection {
     private let range: Range<Index>
 
     internal init(buffer: ByteBuffer, range: Range<Index>) {
-        precondition(range.lowerBound >= 0 && range.upperBound < buffer.capacity)
+        precondition(range.lowerBound >= 0 && range.upperBound <= buffer.capacity)
         self.buffer = buffer
         self.range = range
     }
