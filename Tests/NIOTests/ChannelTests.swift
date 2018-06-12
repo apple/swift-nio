@@ -169,9 +169,15 @@ public class ChannelTests: XCTestCase {
         for _ in 0..<bufferSize {
             buffer.write(staticString: "a")
         }
+        
 
+        #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
+            let lotsOfData = Int(Int32.max / 8)
+        #else
+            let lotsOfData = Int(INT32_MAX) // TBD(hh): should that be Int32.max?
+        #endif
         var written = 0
-        while written <= Int(INT32_MAX) {
+        while written <= lotsOfData {
             clientChannel.write(NIOAny(buffer), promise: nil)
             written += bufferSize
         }

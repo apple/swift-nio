@@ -244,8 +244,13 @@ final class DatagramChannelTests: XCTestCase {
             }
             let envelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
 
+            #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
+                let lotsOfData = Int(Int32.max / 8)
+            #else
+                let lotsOfData = Int(INT32_MAX) // TBD(hh): should that be Int32.max?
+            #endif
             var written = 0
-            while written <= Int(INT32_MAX) {
+            while written <= lotsOfData {
                 self.firstChannel.write(NIOAny(envelope), promise: myPromise)
                 overall = EventLoopFuture<Void>.andAll([overall, myPromise.futureResult], eventLoop: self.firstChannel.eventLoop)
                 written += bufferSize

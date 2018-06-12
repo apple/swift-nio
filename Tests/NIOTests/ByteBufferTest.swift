@@ -1073,6 +1073,7 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testAllocationOfReallyBigByteBuffer() throws {
+        #if !arch(arm) // !32-bit, Raspi/AppleWatch/etc
         let alloc = ByteBufferAllocator(hookedMalloc: { testAllocationOfReallyBigByteBuffer_mallocHook($0) },
                                         hookedRealloc: { testAllocationOfReallyBigByteBuffer_reallocHook($0, $1) },
                                         hookedFree: { testAllocationOfReallyBigByteBuffer_freeHook($0) },
@@ -1098,6 +1099,10 @@ class ByteBufferTest: XCTestCase {
             XCTAssertGreaterThanOrEqual(buf.capacity, reallyBigSize)
         #else
             XCTAssertEqual(buf.capacity, Int(UInt32.max))
+        #endif
+        #else
+            // fails hard on Raspi
+            XCTAssertTrue(false, "testAllocationOfReallyBigByteBuffer fails on 32-bit Raspi")
         #endif
     }
 
