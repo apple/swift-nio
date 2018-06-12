@@ -113,13 +113,19 @@ extension UInt32 {
 
         var n = self
 
+        #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
+            let max = UInt32(Int32.max)
+        #else
+            let max = .max
+        #endif
+
         n -= 1
         n |= n >> 1
         n |= n >> 2
         n |= n >> 4
         n |= n >> 8
         n |= n >> 16
-        if n != .max {
+        if n != max {
             n += 1
         }
 

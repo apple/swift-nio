@@ -231,7 +231,7 @@ public struct ByteBuffer {
         }
 
         private static func allocateAndPrepareRawMemory(bytes: Capacity, allocator: Allocator) -> UnsafeMutableRawPointer {
-            let bytes = Int(bytes)
+            let bytes = Int(bytes) /* Note(hh): this can fail on 32-bit (Int32 vs UInt32 Capacity)) */
             let ptr = allocator.malloc(bytes)!
             /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
             ptr.bindMemory(to: UInt8.self, capacity: bytes)
@@ -332,7 +332,7 @@ public struct ByteBuffer {
                 self._slice = _ByteBufferSlice(_slice.lowerBound ..< self._storage.capacity)
             }
         }
-        assert(self._slice.lowerBound + index + capacity <= self._slice.upperBound)
+        assert(self._slice.lowerBound + index + capacity <= self._slice.upperBound) // TODO(hh): fails on 32-bit
         assert(self._slice.lowerBound >= 0, "illegal slice: negative lower bound: \(self._slice.lowerBound)")
         assert(self._slice.upperBound <= self._storage.capacity, "illegal slice: upper bound (\(self._slice.upperBound)) exceeds capacity: \(self._storage.capacity)")
     }
