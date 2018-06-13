@@ -72,7 +72,7 @@ func runSystemCallWrapperPerformanceTest(testAssertFunction: (@autoclosure () ->
     }
 
     let iterations = isDebugMode ? 100_000 : 1_000_000
-    let pointer = UnsafePointer<UInt8>(bitPattern: 0x1337beef)!
+    let pointer = UnsafePointer<UInt8>(bitPattern: 0xdeadbeef as UInt)!
 
     let directCallTime = try measureRunTime { () -> Int in
         /* imitate what the system call wrappers do to have a fair comparison */
