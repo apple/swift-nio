@@ -240,8 +240,7 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
 
     /// Returns the internal buffer index before `index`.
     private func bufferIndex(before: Int) -> Int {
-        let previousIndex = (before - 1) & self.mask
-        return previousIndex
+        return (before - 1) & self.mask
     }
 
     // MARK: Collection implementation
