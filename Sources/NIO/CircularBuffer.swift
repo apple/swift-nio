@@ -147,10 +147,10 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
     /// - Parameter n: The number of elements to remove from the tail of the buffer.
     public mutating func removeLast(_ n: Int) {
         precondition(n <= self.count, "Number of elements to drop bigger than the amount of elements in the buffer.")
-        var indx = self.tailIdx
+        var idx = self.tailIdx
         for _ in 0 ..< n {
-            self.buffer[indx] = nil
-            indx = self.bufferIndex(before: indx)
+            self.buffer[idx] = nil
+            idx = self.bufferIndex(before: idx)
         }
         self.tailIdx = (self.tailIdx - n) & self.mask
     }
@@ -235,8 +235,7 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
 
     /// Returns the internal buffer next index after `index`.
     private func bufferIndex(after: Int) -> Int {
-        let nextIndex = (after + 1) & self.mask
-        return nextIndex
+        return (after + 1) & self.mask
     }
 
     /// Returns the internal buffer index before `index`.
@@ -297,9 +296,8 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection, 
 
     /// Returns the index before `index`.
     public func index(before: Int) -> Int {
-        let previousIndex = before - 1
-        precondition(previousIndex >= 0)
-        return previousIndex
+        precondition(before > 0)
+        return (before - 1)
     }
 
     /// Removes all members from the circular buffer whist keeping the capacity.
