@@ -17,6 +17,10 @@ import NIO
 let crlf: StaticString = "\r\n"
 let headerSeparator: StaticString = ": "
 
+fileprivate let comma = UInt8(",".utf8CString[0])
+fileprivate let whiteSpaces = [" ", "\t"]
+                              .map( {UInt8($0.utf8CString[0])} )
+
 /// An `IteratorProtocol` that can iterate through comma separated list of values for a certain
 /// header
 ///
@@ -31,39 +35,33 @@ let headerSeparator: StaticString = ": "
 /// You can iterate using this struct on those headers, for values of `Connection`, to get
 /// `keep-alive`, then `x-server`, then `other`
 ///
-public struct HTTPListHeaderIterator: IteratorProtocol {
+public struct HTTPListHeaderIterator<T: Collection>: IteratorProtocol where T.Element == UInt8 {
     
-    public typealias Element = ByteBuffer
-    
-    fileprivate static let comma = UInt8(",".utf8CString[0])
-    fileprivate static let whiteSpaces = [" ", "\t"]
-                                             .map( {UInt8($0.utf8CString[0])} )
+    public typealias Element = ByteBufferView
     
     private var isNowOnAField = false
     private var currentHeaderIndex: Int = -1
-    private var singleValueParser: ByteBufferSliceSplitIterator
     private var byteBuffer: ByteBuffer
-    private let headerName: ContiguousArray<UInt8>
+    private var singleValueViewIterator: Array<ByteBufferView>.Iterator
+    private let headerName: T
     private let headers: [HTTPHeader]
     
     /// Returns next index in headers
     ///
     /// - Parameter current: The index to begin iteration at
     /// - Returns: The next index of the header in header array, or `nil` if not found
-    public func nextHeaderIndex(ifCurrentIs current: Int) -> Int? {
-        var ret: Int? = nil
+    internal func nextHeaderIndex(ifCurrentIs current: Int) -> Int? {
         for (idx, currentHeader) in headers.enumerated().dropFirst(current + 1) {
             if byteBuffer.getSlice(at: currentHeader.name.start,
-                                   length: currentHeader.name.length)?
+                                   length: currentHeader.name.length)?.readableBytesView
                 .compareReadableBytes(to: headerName) ?? false {
-                ret = idx
-                break
+                return idx
             }
         }
-        return ret
+        return nil
     }
 
-    mutating public func next() -> ByteBuffer? {
+    mutating public func next() -> ByteBufferView? {
         // Still not reading a specific field
         if !isNowOnAField {
             // Try to get next match
@@ -71,29 +69,28 @@ public struct HTTPListHeaderIterator: IteratorProtocol {
             // If succeeded, prepare for parsing it
             currentHeaderIndex = index
             isNowOnAField = true
-            singleValueParser = ByteBufferSliceSplitIterator(
-                byteBuffer: byteBuffer,
-                separator: HTTPListHeaderIterator.comma,
-                start: headers[currentHeaderIndex].value.start,
-                length: headers[currentHeaderIndex].value.length)
+            singleValueViewIterator =
+                byteBuffer.viewBytes(at: headers[currentHeaderIndex].value.start,
+                                     length: headers[currentHeaderIndex].value.length)
+                    .split(separator: comma).makeIterator()
         }
         
-        let next = singleValueParser.next()
+        let next = singleValueViewIterator.next()
         // Null or empty buffer?
-        if (next?.readableBytes ?? 0) == 0 {
+        if (next?.count ?? 0) == 0 {
             // Try again
             isNowOnAField = false
             return self.next()
         }
-        return next?.sliceByTrimmingWhitespaces()
+        return next?.trimSpaces
     }
     
-    init(fromHeaderName headerName: ContiguousArray<UInt8>,
+    init(fromHeaderName headerName: T,
          fromHeaders headers: HTTPHeaders) {
         
-        singleValueParser = ByteBufferSliceSplitIterator(
-            byteBuffer: headers.buffer,
-            separator: HTTPListHeaderIterator.comma)
+        singleValueViewIterator = headers.buffer.readableBytesView.split(
+            separator: comma).makeIterator()
+        
         self.headers = headers.headers
         self.headerName = headerName
         
@@ -118,13 +115,10 @@ extension HTTPHeaders {
                 fromHeaderName: HTTPHeaders.connectionString, fromHeaders: self)
             
             while let nextToken = tokenizer.next() {
-                let tokenTrimmed = nextToken
                 keepAlive = keepAlive ||
-                    (tokenTrimmed.compareReadableBytes(
-                        to: HTTPHeaders.keepAliveString))
+                    (nextToken.compareReadableBytes(to: HTTPHeaders.keepAliveString))
                 close = close ||
-                    (tokenTrimmed.compareReadableBytes(
-                        to: HTTPHeaders.closeString))
+                    (nextToken.compareReadableBytes(to: HTTPHeaders.closeString))
             }
             return (keepAlive: keepAlive, close: close)
     }

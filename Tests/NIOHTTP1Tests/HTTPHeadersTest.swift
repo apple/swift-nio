@@ -183,7 +183,7 @@ class HTTPHeadersTest : XCTestCase {
 
     func testKeepAliveStateHasKeepAlive() {
         var buffer = ByteBufferAllocator().buffer(capacity: 32)
-        buffer.write(string: "Connection: other, keep-alive\r\n" +
+        buffer.write(string: "Connection: other, keEP-alive\r\n" +
                              "Content-Type: text/html\r\n" +
                              "Connection: server, x-options")
         let headers = HTTPHeaders(buffer: buffer, headers:
@@ -202,7 +202,7 @@ class HTTPHeadersTest : XCTestCase {
         var buffer = ByteBufferAllocator().buffer(capacity: 32)
         buffer.write(string: "Connection: x-options,  other\r\n" +
                              "Content-Type: text/html\r\n" +
-                             "Connection: server,     close")
+                             "Connection: server,     clOse")
         let headers = HTTPHeaders(buffer: buffer, headers:
             [HTTPHeader(name: HTTPHeaderIndex(start: 0, length: 10),
                         value: HTTPHeaderIndex(start: 12, length: 17)),
@@ -232,23 +232,21 @@ class HTTPHeadersTest : XCTestCase {
             fromHeaderName: "Connection".asUpperCaseContiguousUTF8UIntArray, fromHeaders: HTTPHeaders.init(buffer: buffer, headers: headers, keepAliveState: .unknown))
         
         var currentToken = tokenSource.next()
-        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: currentToken), "x-options")
+        XCTAssertEqual(readAllTheStringFromCollection(currentToken), "x-options")
         currentToken = tokenSource.next()
-        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: currentToken), "other")
+        XCTAssertEqual(readAllTheStringFromCollection(currentToken), "other")
         currentToken = tokenSource.next()
-        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: currentToken), "server")
+        XCTAssertEqual(readAllTheStringFromCollection(currentToken), "server")
         currentToken = tokenSource.next()
-        XCTAssertEqual(readAllTheStringFromBuffer(byteBuffer: currentToken), "close")
+        XCTAssertEqual(readAllTheStringFromCollection(currentToken), "close")
         currentToken = tokenSource.next()
-        XCTAssertEqual(currentToken, nil)
+        XCTAssertNil(currentToken)
     }
 
 }
 
 extension HTTPHeadersTest {
-    func readAllTheStringFromBuffer(byteBuffer: ByteBuffer?) -> String {
-        var token = byteBuffer
-        let length = token?.readableBytes ?? 0
-        return token?.readString(length: length) ?? ""
+    func readAllTheStringFromCollection<T: Collection>(_ collection: T?) -> String where T.Element == UInt8 {
+        return String.init(cString: (collection?.map({CChar($0)}) ?? []) + [CChar(0)], encoding: .utf8) ?? "<NIL>"
     }
 }
