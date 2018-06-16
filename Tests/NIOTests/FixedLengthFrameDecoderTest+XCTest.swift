@@ -26,8 +26,10 @@ extension FixedLengthFrameDecoderTest {
 
    static var allTests : [(String, (FixedLengthFrameDecoderTest) -> () throws -> Void)] {
       return [
-                ("testDecodeIfLessBytesAreSend", testDecodeIfLessBytesAreSend),
-                ("testDecodeIfMoreBytesAreSend", testDecodeIfMoreBytesAreSend),
+                ("testDecodeIfFewerBytesAreSent", testDecodeIfFewerBytesAreSent),
+                ("testDecodeIfMoreBytesAreSent", testDecodeIfMoreBytesAreSent),
+                ("testRemoveHandlerWhenBufferIsNotEmpty", testRemoveHandlerWhenBufferIsNotEmpty),
+                ("testRemoveHandlerWhenBufferIsEmpty", testRemoveHandlerWhenBufferIsEmpty),
            ]
    }
 }

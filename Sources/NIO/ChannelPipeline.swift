@@ -989,11 +989,13 @@ private extension CloseMode {
 }
 
 /// `Error` that is used by the `ChannelPipeline` to inform the user of an error.
-public enum ChannelPipelineError: Error {
+public enum ChannelPipelineError: Error, Equatable {
     /// `ChannelHandler` was already removed.
     case alreadyRemoved
     /// `ChannelHandler` was not found.
     case notFound
+    /// `ChannelHandler` was removed while unused bytes are left in the buffer.
+    case removedWithLeftOverBytes(ByteBuffer)
 }
 
 /// Every `ChannelHandler` has -- when added to a `ChannelPipeline` -- a corresponding `ChannelHandlerContext` which is

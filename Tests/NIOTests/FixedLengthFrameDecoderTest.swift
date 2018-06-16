@@ -17,11 +17,11 @@ import NIO
 
 class FixedLengthFrameDecoderTest: XCTestCase {
 
-    public func testDecodeIfLessBytesAreSend() throws {
+    public func testDecodeIfFewerBytesAreSent() throws {
         let channel = EmbeddedChannel()
 
         let frameLength = 8
-        _ = try channel.pipeline.add(handler: FixedLengthFrameDecoder(frameLength: frameLength)).wait()
+        try channel.pipeline.add(handler: FixedLengthFrameDecoder(frameLength: frameLength)).wait()
 
         var buffer = channel.allocator.buffer(capacity: frameLength)
         buffer.write(string: "xxxx")
@@ -30,13 +30,14 @@ class FixedLengthFrameDecoderTest: XCTestCase {
 
         var outputBuffer: ByteBuffer? = channel.readInbound()
         XCTAssertEqual("xxxxxxxx", outputBuffer?.readString(length: frameLength))
+        XCTAssertFalse(try channel.finish())
     }
 
-    public func testDecodeIfMoreBytesAreSend() throws {
+    public func testDecodeIfMoreBytesAreSent() throws {
         let channel = EmbeddedChannel()
 
         let frameLength = 8
-        _ = try channel.pipeline.add(handler: FixedLengthFrameDecoder(frameLength: frameLength)).wait()
+        try channel.pipeline.add(handler: FixedLengthFrameDecoder(frameLength: frameLength)).wait()
 
         var buffer = channel.allocator.buffer(capacity: 19)
         buffer.write(string: "xxxxxxxxaaaaaaaabbb")
@@ -50,6 +51,51 @@ class FixedLengthFrameDecoderTest: XCTestCase {
 
         outputBuffer = channel.readInbound()
         XCTAssertNil(outputBuffer?.readString(length: frameLength))
+        XCTAssertFalse(try channel.finish())
     }
 
+    public func testRemoveHandlerWhenBufferIsNotEmpty() throws {
+        let channel = EmbeddedChannel()
+
+        let frameLength = 8
+        let handler = FixedLengthFrameDecoder(frameLength: frameLength)
+        try channel.pipeline.add(handler: handler).wait()
+
+        var buffer = channel.allocator.buffer(capacity: 15)
+        buffer.write(string: "xxxxxxxxxxxxxxx")
+        XCTAssertTrue(try channel.writeInbound(buffer))
+
+        var outputBuffer: ByteBuffer? = channel.readInbound()
+        XCTAssertEqual("xxxxxxxx", outputBuffer?.readString(length: frameLength))
+
+        _ = try channel.pipeline.remove(handler: handler).wait()
+        XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
+            guard case let ChannelPipelineError.removedWithLeftOverBytes(leftOverBuffer) = error else {
+                XCTFail()
+                return
+            }
+
+            var expectedBuffer = channel.allocator.buffer(capacity: 7)
+            expectedBuffer.write(string: "xxxxxxx")
+            XCTAssertEqual(leftOverBuffer, expectedBuffer)
+        }
+    }
+
+    public func testRemoveHandlerWhenBufferIsEmpty() throws {
+        let channel = EmbeddedChannel()
+
+        let frameLength = 8
+        let handler = FixedLengthFrameDecoder(frameLength: frameLength)
+        try channel.pipeline.add(handler: handler).wait()
+
+        var buffer = channel.allocator.buffer(capacity: 6)
+        buffer.write(string: "xxxxxxxx")
+        XCTAssertTrue(try channel.writeInbound(buffer))
+
+        var outputBuffer: ByteBuffer? = channel.readInbound()
+        XCTAssertEqual("xxxxxxxx", outputBuffer?.readString(length: frameLength))
+
+        _ = try channel.pipeline.remove(handler: handler).wait()
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+    }
 }

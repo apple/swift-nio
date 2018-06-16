@@ -54,4 +54,12 @@ public final class FixedLengthFrameDecoder: ByteToMessageDecoder {
         return .continue
     }
 
+    public func handlerRemoved(ctx: ChannelHandlerContext) {
+        guard let buffer = cumulationBuffer, buffer.readableBytes > 0 else {
+            return
+        }
+
+        ctx.fireErrorCaught(ChannelPipelineError.removedWithLeftOverBytes(buffer))
+    }
+
 }
