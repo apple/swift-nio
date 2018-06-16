@@ -832,6 +832,9 @@ extension HTTPMethod {
             return .LINK
         case HTTP_UNLINK:
             return .UNLINK
+        case HTTP_SOURCE:
+            // This isn't ideal really.
+            return .RAW(value: "SOURCE")
         default:
             fatalError("Unexpected http_method \(httpParserMethod)")
         }
