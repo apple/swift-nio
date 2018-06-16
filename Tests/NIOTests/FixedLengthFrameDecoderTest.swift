@@ -79,6 +79,7 @@ class FixedLengthFrameDecoderTest: XCTestCase {
             expectedBuffer.write(string: "xxxxxxx")
             XCTAssertEqual(leftOverBuffer, expectedBuffer)
         }
+        XCTAssertFalse(try channel.finish())
     }
 
     public func testRemoveHandlerWhenBufferIsEmpty() throws {
@@ -97,5 +98,6 @@ class FixedLengthFrameDecoderTest: XCTestCase {
 
         _ = try channel.pipeline.remove(handler: handler).wait()
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
+        XCTAssertFalse(try channel.finish())
     }
 }
