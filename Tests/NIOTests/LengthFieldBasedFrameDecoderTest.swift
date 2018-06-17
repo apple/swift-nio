@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-//
 import XCTest
 
 public class LengthFieldBasedFrameDecoderTest: XCTestCase {
