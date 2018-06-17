@@ -34,7 +34,7 @@ public final class LengthFieldBasedFrameDecoder<T: FixedWidthInteger>: ByteToMes
     
     private var state: State = .len
     
-    enum State {
+    private enum State {
         case len
         case data(Int)
     }
