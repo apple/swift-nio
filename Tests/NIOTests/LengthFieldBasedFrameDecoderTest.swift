@@ -16,56 +16,42 @@ import XCTest
 
 public class LengthFieldBasedFrameDecoderTest: XCTestCase {
     func testFixedLengthFrameDecoderInt8() throws {
-        let channel = EmbeddedChannel()
-        
-        try FixedLengthFrameDecoderHelper<Int8>.fixedLengthFrameHelper(channel)
+        try FixedLengthFrameDecoderHelper<Int8>.fixedLengthFrameHelper()
     }
     
     func testFixedLengthFrameDecoderInt16() throws {
-        let channel = EmbeddedChannel()
-        
-        try FixedLengthFrameDecoderHelper<Int16>.fixedLengthFrameHelper(channel)
+        try FixedLengthFrameDecoderHelper<Int16>.fixedLengthFrameHelper()
     }
     
     func testFixedLengthFrameDecoderInt32() throws {
-        let channel = EmbeddedChannel()
-        
-        try FixedLengthFrameDecoderHelper<Int32>.fixedLengthFrameHelper(channel)
+        try FixedLengthFrameDecoderHelper<Int32>.fixedLengthFrameHelper()
     }
     
     func testFixedLengthFrameDecoderInt64() throws {
-        let channel = EmbeddedChannel()
-        
-        try FixedLengthFrameDecoderHelper<Int64>.fixedLengthFrameHelper(channel)
+        try FixedLengthFrameDecoderHelper<Int64>.fixedLengthFrameHelper()
     }
     
     func testFixedLengthFrameDecoderUInt8() throws {
-        let channel = EmbeddedChannel()
-        
-        try FixedLengthFrameDecoderHelper<UInt8>.fixedLengthFrameHelper(channel)
+        try FixedLengthFrameDecoderHelper<UInt8>.fixedLengthFrameHelper()
     }
     
     func testFixedLengthFrameDecoderUInt16() throws {
-        let channel = EmbeddedChannel()
-        
-        try FixedLengthFrameDecoderHelper<UInt16>.fixedLengthFrameHelper(channel)
+        try FixedLengthFrameDecoderHelper<UInt16>.fixedLengthFrameHelper()
     }
     
     func testFixedLengthFrameDecoderUInt32() throws {
-        let channel = EmbeddedChannel()
-        
-        try FixedLengthFrameDecoderHelper<UInt32>.fixedLengthFrameHelper(channel)
+        try FixedLengthFrameDecoderHelper<UInt32>.fixedLengthFrameHelper()
     }
     
     func testFixedLengthFrameDecoderUInt64() throws {
-        let channel = EmbeddedChannel()
-        
-        try FixedLengthFrameDecoderHelper<Int64>.fixedLengthFrameHelper(channel)
+        try FixedLengthFrameDecoderHelper<Int64>.fixedLengthFrameHelper()
     }
 }
 
 struct FixedLengthFrameDecoderHelper<T: FixedWidthInteger> {
-    static fileprivate func fixedLengthFrameHelper(_ channel: EmbeddedChannel) throws {
+    static fileprivate func fixedLengthFrameHelper() throws {
+        let channel = EmbeddedChannel()
+
         XCTAssertNoThrow(_ = try channel.pipeline.add(handler: LengthFieldBasedFrameDecoder<T>(upperBound: 15)).wait())
         
         let testStrings = ["try", "swift", "san", "jose"]
