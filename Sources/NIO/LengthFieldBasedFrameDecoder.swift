@@ -35,6 +35,16 @@ public final class LengthFieldBasedFrameDecoder<T: FixedWidthInteger>: ByteToMes
     private var upperBound: T
     private var state: State = .waitingForLength
     
+    /// Errors thrown by the NIO LengthFieldBasedFrameDecoder module.
+    public enum NIOLengthFieldBasedFrameDecoderError: Error {
+        /// The frame being sent is negative length or larger than the configured maximum
+        /// acceptable frame size
+        case invalidFrameLength
+        
+        /// when the handler is removed and buffer is non-empty
+        case bytesLeftOver
+    }
+    
     private enum State {
         case waitingForLength
         case waitingForPayload(Int)
@@ -44,14 +54,15 @@ public final class LengthFieldBasedFrameDecoder<T: FixedWidthInteger>: ByteToMes
         self.upperBound = upperBound
     }
     
-    public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
+    public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         switch self.state {
         case .waitingForLength:
             guard let integer = buffer.readInteger(as: T.self) else {
                 return .needMoreData
             }
-            assert(integer > 0)
-            assert(integer <= self.upperBound)
+            guard integer > 0 && integer <= self.upperBound else {
+                throw NIOLengthFieldBasedFrameDecoderError.invalidFrameLength
+            }
             self.state = .waitingForPayload(Int(integer))
             return .continue
         case .waitingForPayload(let dataLength):
@@ -62,5 +73,13 @@ public final class LengthFieldBasedFrameDecoder<T: FixedWidthInteger>: ByteToMes
             ctx.fireChannelRead(self.wrapInboundOut(bytes))
             return .continue
         }
+    }
+    
+    public func handlerRemoved(ctx: ChannelHandlerContext) {
+        guard let buffer = cumulationBuffer, buffer.readableBytes > 0 else {
+            return
+        }
+        
+        ctx.fireErrorCaught(NIOLengthFieldBasedFrameDecoderError.bytesLeftOver)
     }
 }

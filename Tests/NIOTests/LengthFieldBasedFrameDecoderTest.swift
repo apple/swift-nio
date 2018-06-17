@@ -15,6 +15,66 @@
 import XCTest
 
 public class LengthFieldBasedFrameDecoderTest: XCTestCase {
+    func testNegativeLengths() throws {
+        let channel = EmbeddedChannel()
+        
+        XCTAssertNoThrow(_ = try channel.pipeline.add(handler: LengthFieldBasedFrameDecoder<Int8>(upperBound: 5)).wait())
+        
+        var buffer = channel.allocator.buffer(capacity:1024)
+        buffer.write(integer: Int8(-1))
+        buffer.write(string: "hello")
+        
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { (error) -> Void in
+            XCTAssertEqual(error as? LengthFieldBasedFrameDecoder<Int8>.NIOLengthFieldBasedFrameDecoderError, LengthFieldBasedFrameDecoder<Int8>.NIOLengthFieldBasedFrameDecoderError.invalidFrameLength)
+        }
+        XCTAssertThrowsError(try channel.finish())
+    }
+    
+    func testAbsurdlyLargeLengths() throws {
+        let channel = EmbeddedChannel()
+        
+        XCTAssertNoThrow(_ = try channel.pipeline.add(handler: LengthFieldBasedFrameDecoder<Int8>(upperBound: 15)).wait())
+        
+        var buffer = channel.allocator.buffer(capacity:1024)
+        buffer.write(integer: Int8(127))
+        buffer.write(string: "hello")
+        
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { (error) -> Void in
+            XCTAssertEqual(error as? LengthFieldBasedFrameDecoder<Int8>.NIOLengthFieldBasedFrameDecoderError, LengthFieldBasedFrameDecoder<Int8>.NIOLengthFieldBasedFrameDecoderError.invalidFrameLength)
+        }
+        XCTAssertThrowsError(try channel.finish())
+    }
+    
+    func testEOFBeforeReceivingAppropriateNumberOfBytes() throws {
+        let channel = EmbeddedChannel()
+        
+        XCTAssertNoThrow(_ = try channel.pipeline.add(handler: LengthFieldBasedFrameDecoder<Int8>(upperBound: 15)).wait())
+        
+        var buffer = channel.allocator.buffer(capacity:1024)
+        buffer.write(integer: Int8(10))
+        buffer.write(string: "hello")
+
+        XCTAssertFalse(try channel.writeInbound(buffer))
+        XCTAssertNil(channel.readInbound())
+        XCTAssertThrowsError(try channel.finish()) { (error) -> Void in
+            XCTAssertEqual(error as? LengthFieldBasedFrameDecoder<Int8>.NIOLengthFieldBasedFrameDecoderError, LengthFieldBasedFrameDecoder<Int8>.NIOLengthFieldBasedFrameDecoderError.bytesLeftOver)
+        }
+    }
+    
+    func testEOFWhileWaitingForLength() throws {
+        let channel = EmbeddedChannel()
+        
+        XCTAssertNoThrow(_ = try channel.pipeline.add(handler: LengthFieldBasedFrameDecoder<Int8>(upperBound: 15)).wait())
+
+        let buffer = channel.allocator.buffer(capacity:1024)
+        XCTAssertFalse(try channel.writeInbound(buffer))
+        XCTAssertNil(channel.readInbound())
+
+        XCTAssertThrowsError(try channel.finish()) { (error) -> Void in
+            XCTAssertEqual(error as? LengthFieldBasedFrameDecoder<Int8>.NIOLengthFieldBasedFrameDecoderError, LengthFieldBasedFrameDecoder<Int8>.NIOLengthFieldBasedFrameDecoderError.bytesLeftOver)
+        }
+    }
+    
     func testFixedLengthFrameDecoderInt8() throws {
         try FixedLengthFrameDecoderHelper<Int8>.fixedLengthFrameHelper()
     }
@@ -52,7 +112,8 @@ struct FixedLengthFrameDecoderHelper<T: FixedWidthInteger> {
     static fileprivate func fixedLengthFrameHelper() throws {
         let channel = EmbeddedChannel()
 
-        XCTAssertNoThrow(_ = try channel.pipeline.add(handler: LengthFieldBasedFrameDecoder<T>(upperBound: 15)).wait())
+        let handler = LengthFieldBasedFrameDecoder<T>(upperBound: 15)
+        XCTAssertNoThrow(_ = try channel.pipeline.add(handler: handler).wait())
         
         let testStrings = ["try", "swift", "san", "jose"]
         var buffer = channel.allocator.buffer(capacity:1024)
