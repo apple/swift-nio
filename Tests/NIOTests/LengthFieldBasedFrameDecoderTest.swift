@@ -17,7 +17,7 @@ import XCTest
 
 struct fixedLengthFrameDecoderHelper<T: FixedWidthInteger> {
     static fileprivate func fixedLengthFrameHelper(_ channel: EmbeddedChannel) throws {
-        XCTAssertNoThrow(_ = try channel.pipeline.add(handler: LengthFieldBasedFrameDecoder<T>()).wait())
+        XCTAssertNoThrow(_ = try channel.pipeline.add(handler: LengthFieldBasedFrameDecoder<T>(upperBound: 15)).wait())
         
         let testStrings = ["try", "swift", "san", "jose"]
         var buffer = channel.allocator.buffer(capacity:1024)
@@ -36,7 +36,7 @@ struct fixedLengthFrameDecoderHelper<T: FixedWidthInteger> {
             let testResult = result.readString(length: (result.readableBytes))
             XCTAssertEqual(testResult, testString)
         }
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish())
     }
 }
 
