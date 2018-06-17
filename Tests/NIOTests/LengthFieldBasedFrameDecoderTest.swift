@@ -15,31 +15,6 @@
 //
 import XCTest
 
-struct FixedLengthFrameDecoderHelper<T: FixedWidthInteger> {
-    static fileprivate func fixedLengthFrameHelper(_ channel: EmbeddedChannel) throws {
-        XCTAssertNoThrow(_ = try channel.pipeline.add(handler: LengthFieldBasedFrameDecoder<T>(upperBound: 15)).wait())
-        
-        let testStrings = ["try", "swift", "san", "jose"]
-        var buffer = channel.allocator.buffer(capacity:1024)
-        for testString in testStrings {
-            buffer.write(integer: T(testString.count))
-            buffer.write(string: testString)
-        }
-        
-        for testString in testStrings {
-            XCTAssertTrue(try channel.writeInbound(buffer))
-            
-            guard var result: ByteBuffer = channel.readInbound() else {
-                XCTFail("Failed to read buffer for \(T.self)")
-                return
-            }
-            let testResult = result.readString(length: (result.readableBytes))
-            XCTAssertEqual(testResult, testString)
-        }
-        XCTAssertTrue(try channel.finish())
-    }
-}
-
 public class LengthFieldBasedFrameDecoderTest: XCTestCase {
     func testFixedLengthFrameDecoderInt8() throws {
         let channel = EmbeddedChannel()
@@ -87,5 +62,30 @@ public class LengthFieldBasedFrameDecoderTest: XCTestCase {
         let channel = EmbeddedChannel()
         
         try FixedLengthFrameDecoderHelper<Int64>.fixedLengthFrameHelper(channel)
+    }
+}
+
+struct FixedLengthFrameDecoderHelper<T: FixedWidthInteger> {
+    static fileprivate func fixedLengthFrameHelper(_ channel: EmbeddedChannel) throws {
+        XCTAssertNoThrow(_ = try channel.pipeline.add(handler: LengthFieldBasedFrameDecoder<T>(upperBound: 15)).wait())
+        
+        let testStrings = ["try", "swift", "san", "jose"]
+        var buffer = channel.allocator.buffer(capacity:1024)
+        for testString in testStrings {
+            buffer.write(integer: T(testString.count))
+            buffer.write(string: testString)
+        }
+        
+        for testString in testStrings {
+            XCTAssertTrue(try channel.writeInbound(buffer))
+            
+            guard var result: ByteBuffer = channel.readInbound() else {
+                XCTFail("Failed to read buffer for \(T.self)")
+                return
+            }
+            let testResult = result.readString(length: (result.readableBytes))
+            XCTAssertEqual(testResult, testString)
+        }
+        XCTAssertTrue(try channel.finish())
     }
 }
