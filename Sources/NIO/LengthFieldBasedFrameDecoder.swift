@@ -32,28 +32,28 @@ public final class LengthFieldBasedFrameDecoder<T: FixedWidthInteger>: ByteToMes
     
     public var cumulationBuffer: ByteBuffer?
     
-    private var state: State = .len
+    private var state: State = .waitingForLength
     
     private enum State {
-        case len
-        case data(Int)
+        case waitingForLength
+        case waitingForPayload(Int)
     }
     
     public init() { }
     
     public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
         switch self.state {
-        case .len:
+        case .waitingForLength:
             guard let integer = buffer.readInteger(as: T.self) else {
                 return .needMoreData
             }
-            self.state = .data(Int(integer))
+            self.state = .waitingForPayload(Int(integer))
             return .continue
-        case .data(let dataLength):
+        case .waitingForPayload(let dataLength):
             guard let bytes = buffer.readSlice(length: dataLength) else {
                 return .needMoreData
             }
-            self.state = .len
+            self.state = .waitingForLength
             ctx.fireChannelRead(self.wrapInboundOut(bytes))
             return .continue
         }

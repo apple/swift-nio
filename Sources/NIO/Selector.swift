@@ -297,13 +297,13 @@ final class Selector<R: Registration> {
 
         var ev = Epoll.epoll_event()
         ev.events = SelectorEventSet.read.epollEventSet
-        ev.data.fd = eventfd
+        ev.waitingForPayload.fd = eventfd
 
         _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: eventfd, event: &ev)
 
         var timerev = Epoll.epoll_event()
         timerev.events = Epoll.EPOLLIN.rawValue | Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue | Epoll.EPOLLET.rawValue
-        timerev.data.fd = timerfd
+        timerev.waitingForPayload.fd = timerfd
         _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: timerfd, event: &timerev)
 #else
         fd = try KQueue.kqueue()
@@ -408,7 +408,7 @@ final class Selector<R: Registration> {
             #if os(Linux)
                 var ev = Epoll.epoll_event()
                 ev.events = interested.epollEventSet
-                ev.data.fd = fd
+                ev.waitingForPayload.fd = fd
 
                 _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: fd, event: &ev)
             #else
@@ -434,7 +434,7 @@ final class Selector<R: Registration> {
             #if os(Linux)
                 var ev = Epoll.epoll_event()
                 ev.events = interested.epollEventSet
-                ev.data.fd = fd
+                ev.waitingForPayload.fd = fd
 
                 _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_MOD, fd: fd, event: &ev)
             #else
@@ -509,7 +509,7 @@ final class Selector<R: Registration> {
         // temporary workaround to stop us delivering outdated events; possibly set in `deregister`
         for i in 0..<ready where !self.deregistrationsHappened {
             let ev = events[i]
-            switch ev.data.fd {
+            switch ev.waitingForPayload.fd {
             case eventfd:
                 var val = EventFd.eventfd_t()
                 // Consume event
@@ -524,7 +524,7 @@ final class Selector<R: Registration> {
                 self.earliestTimer = UInt64.max
             default:
                 // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skip it.
-                if let registration = registrations[Int(ev.data.fd)] {
+                if let registration = registrations[Int(ev.waitingForPayload.fd)] {
                     var selectorEvent = SelectorEventSet(epollEvent: ev)
                     // we can only verify the events for i == 0 as for i > 0 the user might have changed the registrations since then.
                     assert(i != 0 || selectorEvent.isSubset(of: registration.interested), "selectorEvent: \(selectorEvent), registration: \(registration)")

@@ -103,9 +103,9 @@ internal enum Linux {
     static let SOCK_NONBLOCK = Int32(bitPattern: Glibc.SOCK_NONBLOCK.rawValue)
 
     @inline(never)
-    public static func accept4(descriptor: CInt, addr: UnsafeMutablePointer<sockaddr>, len: UnsafeMutablePointer<socklen_t>, flags: Int32) throws -> CInt? {
+    public static func accept4(descriptor: CInt, addr: UnsafeMutablePointer<sockaddr>, waitingForLength: UnsafeMutablePointer<socklen_t>, flags: Int32) throws -> CInt? {
         let result: IOResult<CInt> = try wrapSyscallMayBlock {
-            CNIOLinux.CNIOLinux_accept4(descriptor, addr, len, flags)
+            CNIOLinux.CNIOLinux_accept4(descriptor, addr, waitingForLength, flags)
         }
         switch result {
         case .processed(let fd):
