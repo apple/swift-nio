@@ -989,7 +989,7 @@ private extension CloseMode {
 }
 
 /// `Error` that is used by the `ChannelPipeline` to inform the user of an error.
-public enum ChannelPipelineError: Error, Equatable {
+public enum ChannelPipelineError: Error {
     /// `ChannelHandler` was already removed.
     case alreadyRemoved
     /// `ChannelHandler` was not found.
