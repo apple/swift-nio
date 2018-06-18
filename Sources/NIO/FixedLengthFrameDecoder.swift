@@ -59,7 +59,7 @@ public final class FixedLengthFrameDecoder: ByteToMessageDecoder {
             return
         }
 
-        ctx.fireErrorCaught(LeftOverBytesChannelPipelineError(leftOverBytes: buffer))
+        ctx.fireErrorCaught(LeftOverBytesError(leftOverBytes: buffer))
     }
 
 }

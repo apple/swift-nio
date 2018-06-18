@@ -996,8 +996,8 @@ public enum ChannelPipelineError: Error {
     case notFound
 }
 
-/// Error indicating that a `ChannelHandler` was removed while unused bytes are left in the buffer.
-public struct LeftOverBytesChannelPipelineError: Error {
+/// Error indicating that after an operation some unused bytes are left.
+public struct LeftOverBytesError: Error {
     public let leftOverBytes: ByteBuffer
 }
 
