@@ -70,14 +70,14 @@ class FixedLengthFrameDecoderTest: XCTestCase {
 
         _ = try channel.pipeline.remove(handler: handler).wait()
         XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
-            guard case let ChannelPipelineError.removedWithLeftOverBytes(leftOverBuffer) = error else {
+            guard let error = error as? LeftOverBytesChannelPipelineError else {
                 XCTFail()
                 return
             }
 
             var expectedBuffer = channel.allocator.buffer(capacity: 7)
             expectedBuffer.write(string: "xxxxxxx")
-            XCTAssertEqual(leftOverBuffer, expectedBuffer)
+            XCTAssertEqual(error.leftOverBytes, expectedBuffer)
         }
         XCTAssertFalse(try channel.finish())
     }

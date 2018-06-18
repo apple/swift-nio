@@ -994,8 +994,11 @@ public enum ChannelPipelineError: Error, Equatable {
     case alreadyRemoved
     /// `ChannelHandler` was not found.
     case notFound
-    /// `ChannelHandler` was removed while unused bytes are left in the buffer.
-    case removedWithLeftOverBytes(ByteBuffer)
+}
+
+/// Error indicating that a `ChannelHandler` was removed while unused bytes are left in the buffer.
+public struct LeftOverBytesChannelPipelineError: Error {
+    public let leftOverBytes: ByteBuffer
 }
 
 /// Every `ChannelHandler` has -- when added to a `ChannelPipeline` -- a corresponding `ChannelHandlerContext` which is

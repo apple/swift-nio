@@ -17,16 +17,16 @@
 /// A decoder that splits the received `ByteBuffer` by a fixed number
 /// of bytes. For example, if you received the following four fragmented packets:
 ///
-/// +---+----+------+----+
-/// | A | BC | DEFG | HI |
-/// +---+----+------+----+
+///     +---+----+------+----+
+///     | A | BC | DEFG | HI |
+///     +---+----+------+----+
 /// 
 /// A `FixedLengthFrameDecoder` will decode them into the
 /// following three packets with the fixed length:
 ///
-/// +-----+-----+-----+
-/// | ABC | DEF | GHI |
-/// +-----+-----+-----+
+///     +-----+-----+-----+
+///     | ABC | DEF | GHI |
+///     +-----+-----+-----+
 ///
 public final class FixedLengthFrameDecoder: ByteToMessageDecoder {
 
@@ -59,7 +59,7 @@ public final class FixedLengthFrameDecoder: ByteToMessageDecoder {
             return
         }
 
-        ctx.fireErrorCaught(ChannelPipelineError.removedWithLeftOverBytes(buffer))
+        ctx.fireErrorCaught(LeftOverBytesChannelPipelineError(leftOverBytes: buffer))
     }
 
 }
