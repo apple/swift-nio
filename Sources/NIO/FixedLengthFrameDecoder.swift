@@ -29,7 +29,6 @@
 ///     +-----+-----+-----+
 ///
 public final class FixedLengthFrameDecoder: ByteToMessageDecoder {
-
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
 
@@ -55,11 +54,9 @@ public final class FixedLengthFrameDecoder: ByteToMessageDecoder {
     }
 
     public func handlerRemoved(ctx: ChannelHandlerContext) {
-        guard let buffer = cumulationBuffer, buffer.readableBytes > 0 else {
-            return
+        if let buffer = cumulationBuffer, buffer.readableBytes > 0 {
+            ctx.fireErrorCaught(LeftOverBytesError(leftOverBytes: buffer))
         }
-
-        ctx.fireErrorCaught(LeftOverBytesError(leftOverBytes: buffer))
     }
 
 }
