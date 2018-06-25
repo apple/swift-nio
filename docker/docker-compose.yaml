@@ -37,12 +37,14 @@ services:
 
   echo:
     <<: *common
+    tty: true
     ports:
       - "9999:9999"
     command: /bin/bash -cl "swift run NIOEchoServer 0.0.0.0 9999"
 
   http:
     <<: *common
+    tty: true
     ports:
       - "8888:8888"
     command: /bin/bash -cl "swift run NIOHTTP1Server 0.0.0.0 8888"
