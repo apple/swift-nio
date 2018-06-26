@@ -421,11 +421,11 @@ public struct HTTPHeaders: CustomStringConvertible {
             self.add(name: key, value: value)
         }
     }
-    
+
     private func isConnectionHeader(_ header: HTTPHeaderIndex) -> Bool {
          return self.buffer.equalCaseInsensitiveASCII(view: "connection".utf8, at: header)
     }
-    
+
     /// Add a header name/value pair to the block.
     ///
     /// This method is strictly additive: if there are other values for the given header name
@@ -446,11 +446,11 @@ public struct HTTPHeaders: CustomStringConvertible {
         self._storage.buffer.write(staticString: headerSeparator)
         let valueStart = self.buffer.writerIndex
         let valueLength = self._storage.buffer.write(string: value)!
-        
+
         let nameIdx = HTTPHeaderIndex(start: nameStart, length: nameLength)
         self._storage.headers.append(HTTPHeader(name: nameIdx, value: HTTPHeaderIndex(start: valueStart, length: valueLength)))
         self._storage.buffer.write(staticString: crlf)
-        
+
         if self.isConnectionHeader(nameIdx) {
             self._storage.keepAliveState = .unknown
         }
@@ -491,7 +491,7 @@ public struct HTTPHeaders: CustomStringConvertible {
             let header = self.headers[idx]
             if self.buffer.equalCaseInsensitiveASCII(view: utf8, at: header.name) {
                 array.append(idx)
-                
+
                 if self.isConnectionHeader(header.name) {
                     self._storage.keepAliveState = .unknown
                 }
@@ -1011,6 +1011,8 @@ extension HTTPResponseStatus {
                 return 416
             case .expectationFailed:
                 return 417
+            case .amTeapot:
+                return 418
             case .misdirectedRequest:
                 return 421
             case .unprocessableEntity:
@@ -1139,6 +1141,8 @@ extension HTTPResponseStatus {
                 return "Range Not Satisfiable"
             case .expectationFailed:
                 return "Expectation Failed"
+            case .amTeapot:
+                return "I'm a Teapot"
             case .misdirectedRequest:
                 return "Misdirected Request"
             case .unprocessableEntity:
@@ -1240,6 +1244,7 @@ public enum HTTPResponseStatus {
     case unsupportedMediaType
     case rangeNotSatisfiable
     case expectationFailed
+    case amTeapot
 
     // 5xx
     case misdirectedRequest
@@ -1362,6 +1367,8 @@ public enum HTTPResponseStatus {
             self = .rangeNotSatisfiable
         case 417:
             self = .expectationFailed
+        case 418:
+            self = .amTeapot
         case 421:
             self = .misdirectedRequest
         case 422:

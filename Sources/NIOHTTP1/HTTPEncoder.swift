@@ -275,6 +275,8 @@ private extension ByteBuffer {
             self.write(staticString: "HTTP/1.0 416 Range Not Satisfiable\r\n")
         case (1, 0, .expectationFailed):
             self.write(staticString: "HTTP/1.0 417 Expectation Failed\r\n")
+        case (1, 0, .amTeapot):
+            self.write(staticString: "HTTP/1.0 418 I'm a Teapot\r\n")
         case (1, 0, .misdirectedRequest):
             self.write(staticString: "HTTP/1.0 421 Misdirected Request\r\n")
         case (1, 0, .unprocessableEntity):
@@ -399,6 +401,8 @@ private extension ByteBuffer {
             self.write(staticString: "HTTP/1.1 416 Request Range Not Satisified\r\n")
         case (1, 1, .expectationFailed):
             self.write(staticString: "HTTP/1.1 417 Expectation Failed\r\n")
+        case (1, 1, .amTeapot):
+            self.write(staticString: "HTTP/1.1 418 Expectation Failed\r\n")
         case (1, 1, .misdirectedRequest):
             self.write(staticString: "HTTP/1.1 421 Misdirected Request\r\n")
         case (1, 1, .unprocessableEntity):
