@@ -1244,7 +1244,7 @@ public enum HTTPResponseStatus {
     case unsupportedMediaType
     case rangeNotSatisfiable
     case expectationFailed
-    case isTeapot
+    case amTeapot
 
     // 5xx
     case misdirectedRequest
