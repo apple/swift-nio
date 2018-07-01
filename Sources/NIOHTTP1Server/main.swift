@@ -388,6 +388,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         if !self.keepAlive {
             promise!.futureResult.whenComplete { ctx.close(promise: nil) }
         }
+        self.handler = nil
 
         ctx.writeAndFlush(self.wrapOutboundOut(.end(trailers)), promise: promise)
     }

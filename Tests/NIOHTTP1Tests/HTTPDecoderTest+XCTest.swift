@@ -37,6 +37,8 @@ extension HTTPDecoderTest {
                 ("testCorrectlyMaintainIndicesWhenDiscardReadBytes", testCorrectlyMaintainIndicesWhenDiscardReadBytes),
                 ("testDropExtraBytes", testDropExtraBytes),
                 ("testDontDropExtraBytes", testDontDropExtraBytes),
+                ("testExtraCRLF", testExtraCRLF),
+                ("testSOURCEDoesntExplodeUs", testSOURCEDoesntExplodeUs),
            ]
    }
 }
