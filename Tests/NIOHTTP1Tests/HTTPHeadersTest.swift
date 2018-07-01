@@ -229,7 +229,7 @@ class HTTPHeadersTest : XCTestCase {
                         value: HTTPHeaderIndex(start: 68, length: 17))]
         
         var tokenSource = HTTPListHeaderIterator(
-            fromHeaderName: "Connection".asUpperCaseContiguousUTF8UIntArray, fromHeaders: HTTPHeaders.init(buffer: buffer, headers: headers, keepAliveState: .unknown))
+            headerName: "Connection".utf8, headers: HTTPHeaders.init(buffer: buffer, headers: headers, keepAliveState: .unknown))
         
         var currentToken = tokenSource.next()
         XCTAssertEqual(readAllTheStringFromCollection(currentToken), "x-options")

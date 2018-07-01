@@ -17,10 +17,6 @@ import NIO
 let crlf: StaticString = "\r\n"
 let headerSeparator: StaticString = ": "
 
-fileprivate let comma = UInt8(",".utf8CString[0])
-fileprivate let whiteSpaces = [" ", "\t"]
-                              .map( {UInt8($0.utf8CString[0])} )
-
 /// An `IteratorProtocol` that can iterate through comma separated list of values for a certain
 /// header
 ///
@@ -39,22 +35,23 @@ public struct HTTPListHeaderIterator<T: Collection>: IteratorProtocol where T.El
     
     public typealias Element = ByteBufferView
     
-    private var isNowOnAField = false
     private var currentHeaderIndex: Int = -1
     private var byteBuffer: ByteBuffer
-    private var singleValueViewIterator: Array<ByteBufferView>.Iterator
+    private var singleValueViewIterator: Array<ByteBufferView>.Iterator?
     private let headerName: T
     private let headers: [HTTPHeader]
+    
+    fileprivate let comma = UInt8(",".utf8CString[0])
     
     /// Returns next index in headers
     ///
     /// - Parameter current: The index to begin iteration at
     /// - Returns: The next index of the header in header array, or `nil` if not found
-    internal func nextHeaderIndex(ifCurrentIs current: Int) -> Int? {
+    internal func headerIndex(after current: Int) -> Int? {
         for (idx, currentHeader) in headers.enumerated().dropFirst(current + 1) {
-            if byteBuffer.getSlice(at: currentHeader.name.start,
-                                   length: currentHeader.name.length)?.readableBytesView
-                .compareReadableBytes(to: headerName) ?? false {
+            if byteBuffer.viewBytes(at: currentHeader.name.start,
+                                    length: currentHeader.name.length)
+                .compareReadableBytes(to: headerName) {
                 return idx
             }
         }
@@ -62,34 +59,27 @@ public struct HTTPListHeaderIterator<T: Collection>: IteratorProtocol where T.El
     }
 
     mutating public func next() -> ByteBufferView? {
-        // Still not reading a specific field
-        if !isNowOnAField {
-            // Try to get next match
-            guard let index = nextHeaderIndex(ifCurrentIs: currentHeaderIndex) else { return nil }
-            // If succeeded, prepare for parsing it
-            currentHeaderIndex = index
-            isNowOnAField = true
-            singleValueViewIterator =
-                byteBuffer.viewBytes(at: headers[currentHeaderIndex].value.start,
-                                     length: headers[currentHeaderIndex].value.length)
-                    .split(separator: comma).makeIterator()
-        }
-        
-        let next = singleValueViewIterator.next()
-        // Null or empty buffer?
-        if (next?.count ?? 0) == 0 {
-            // Try again
-            isNowOnAField = false
+        if let next = self.singleValueViewIterator?.next() {
+            return next.trimSpaces
+        } else {
+            // End of this buffer. Let's try to grab the next one.
+            guard let index = self.headerIndex(after: currentHeaderIndex) else {
+                // No more buffers left.
+                return nil
+            }
+            self.currentHeaderIndex = index
+            self.singleValueViewIterator = byteBuffer
+                .viewBytes(at: headers[currentHeaderIndex].value.start,
+                           length: headers[currentHeaderIndex].value.length)
+                .split(separator: comma)
+                .makeIterator()
             return self.next()
         }
-        return next?.trimSpaces
+        
     }
     
-    init(fromHeaderName headerName: T,
-         fromHeaders headers: HTTPHeaders) {
-        
-        singleValueViewIterator = headers.buffer.readableBytesView.split(
-            separator: comma).makeIterator()
+    init(headerName: T,
+         headers: HTTPHeaders) {
         
         self.headers = headers.headers
         self.headerName = headerName
@@ -101,18 +91,18 @@ public struct HTTPListHeaderIterator<T: Collection>: IteratorProtocol where T.El
 
 extension HTTPHeaders {
     
-    internal static let connectionString = "connection".asUpperCaseContiguousUTF8UIntArray
+    private static let connectionString = "connection".utf8
     
-    internal static let keepAliveString = "keep-alive".asUpperCaseContiguousUTF8UIntArray
-    internal static let closeString = "close".asUpperCaseContiguousUTF8UIntArray
+    private static let keepAliveString = "keep-alive".utf8
+    private static let closeString = "close".utf8
     
-    internal func parseKeepAliveAndClose() -> (keepAlive: Bool, close: Bool) {
-            
+    internal var isKeepAlive: Bool? {
+        get {
             var keepAlive = false
             var close = false
             
             var tokenizer = HTTPListHeaderIterator(
-                fromHeaderName: HTTPHeaders.connectionString, fromHeaders: self)
+                headerName: HTTPHeaders.connectionString, headers: self)
             
             while let nextToken = tokenizer.next() {
                 keepAlive = keepAlive ||
@@ -120,7 +110,13 @@ extension HTTPHeaders {
                 close = close ||
                     (nextToken.compareReadableBytes(to: HTTPHeaders.closeString))
             }
-            return (keepAlive: keepAlive, close: close)
+            
+            // TODO: Handle the case where both keep-alive and close are used
+            if keepAlive { return true }
+            if close { return false }
+            
+            return nil
+        }
     }
 }
 
@@ -411,14 +407,7 @@ private extension UInt8 {
         case .keepAlive:
             return true
         case .unknown:
-            var keepAlive: Bool = false
-            var close: Bool = false
-            (keepAlive, close) = self.parseKeepAliveAndClose()
-            
-            // TODO: Handle the case where both keep-alive and close are used
-            
-            if keepAlive { return true }
-            if close { return false }
+            if let keepAliveStatus = self.isKeepAlive { return keepAliveStatus }
             
             // HTTP 1.1 use keep-alive by default if not otherwise told.
             return version.major == 1 && version.minor >= 1
