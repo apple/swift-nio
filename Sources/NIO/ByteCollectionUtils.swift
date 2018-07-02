@@ -15,10 +15,14 @@
 fileprivate let defaultWhitespaces = [" ", "\t"].map({UInt8($0.utf8CString[0])})
 
 extension Sequence where Self.Element: Equatable {
+    public func dropLast(while: (Self.Element) throws -> (Bool)) rethrows -> Self.SubSequence {
+        let numLastTrimmedElements = try self.reversed().enumerated().first(where: {try !`while`($0.element)})?.offset ?? 0
+        return self.dropLast(numLastTrimmedElements)
+    }
+    
     public func trim(limitingElements: [Self.Element]) -> Self.SubSequence {
-        let numLastTrimmedElements = self.reversed().enumerated().first(where: {!limitingElements.contains($0.element)})?.offset ?? 0
-        let trimmingLast = self.dropLast(numLastTrimmedElements)
-        return trimmingLast.drop(while: {limitingElements.contains($0)})
+        return dropLast(while: {limitingElements.contains($0)})
+                  .drop(while: {limitingElements.contains($0)})
     }
 }
 

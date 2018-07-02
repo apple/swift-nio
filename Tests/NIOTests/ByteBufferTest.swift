@@ -1515,4 +1515,17 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(String.init(cString: "f i  rs  t".utf8.trimSpaces.map({CChar($0)}) + [CChar(0)], encoding: .utf8), "f i  rs  t")
     }
     
+    enum DummyError: Error {
+        case err
+    }
+    
+    func testDropLast() {
+        let array = [1, 2, 3, 4, 5, 6, 7, 1, 4, 5, 6, 7]
+        XCTAssertEqual(array.dropLast(while: {$0 >= 4}), [1, 2, 3, 4, 5, 6, 7, 1])
+        let array2 = [1, 2, 3, 4, 5, 6, 7, 1, 4, 5, 6, 7]
+        XCTAssertEqual(array2.dropLast(while: {$0 >= 8}), [1, 2, 3, 4, 5, 6, 7, 1, 4, 5, 6, 7])
+        let array3 = [1, 2, 3, 4, 5, 6, 7, 1, 4, 5, 6, 7]
+        XCTAssertThrowsError(try array3.dropLast(while: { _ in throw DummyError.err }))
+    }
+    
 }
