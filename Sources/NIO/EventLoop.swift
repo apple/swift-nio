@@ -650,6 +650,42 @@ extension EventLoopGroup {
     }
 }
 
+/// An iterator over the `EventLoop`s of an `EventLoopGroup`.
+///
+/// Conforming to `Sequence`, the `EventLoopIterator` enables iterating over the `EventLoop`s of an `EventLoopGroup` using the `for-in` style.
+/// A common use-case of this is in performing per-`EventLoop` initializations before `BootStrap`ing.
+/// Example:
+///     ```swift
+///         let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+///         for eventLoop in EventLoopIterator(group: group) {
+///             //do something on eventLoop
+///         }
+public struct EventLoopIterator: Sequence, IteratorProtocol {
+
+    private var eventLoopsIterator: IndexingIterator<[EventLoop]>
+
+    /// Create an `EventLoopIterator` for the `EventLoopGroup` `group`.
+    ///
+    /// - parameters:
+    ///     - group: The `EventLoopGroup` whose `EventLoop`s are to be iterated.
+    public init(group: EventLoopGroup) {
+        var eventLoops: [EventLoop] = []
+        let firstEventLoop = group.next()
+        eventLoops.append(firstEventLoop)
+        while true {
+            let nextEventLoop = group.next()
+            if nextEventLoop === firstEventLoop {
+                break
+            }
+            eventLoops.append(nextEventLoop)
+        }
+        self.eventLoopsIterator = eventLoops.makeIterator()
+    }
+
+    mutating public func next() -> EventLoop? {
+        return self.eventLoopsIterator.next()
+    }
+}
 /// Called per `Thread` that is created for an EventLoop to do custom initialization of the `Thread` before the actual `EventLoop` is run on it.
 typealias ThreadInitializer = (Thread) -> Void
 
