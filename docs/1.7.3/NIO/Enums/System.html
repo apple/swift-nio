@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>UInt64 Extension Reference</title>
+    <title>System Enumeration Reference</title>
     <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
     <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
     <meta charset="utf-8">
@@ -14,9 +14,9 @@
   </head>
   <body>
 
-    <a name="//apple_ref/swift/Extension/UInt64" class="dashAnchor"></a>
+    <a name="//apple_ref/swift/Enum/System" class="dashAnchor"></a>
 
-    <a title="UInt64 Extension Reference"></a>
+    <a title="System Enumeration Reference"></a>
 
     <header class="header">
       <p class="header-col header-col--primary">
@@ -44,7 +44,7 @@
     <p class="breadcrumbs">
       <a class="breadcrumb" href="../index.html">NIO Reference</a>
       <img class="carat" src="../img/carat.png" />
-      UInt64 Extension Reference
+      System Enumeration Reference
     </p>
 
     <div class="content-wrapper">
@@ -91,6 +91,9 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Classes/IdleStateHandler.html">IdleStateHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/IdleStateHandler/IdleStateEvent.html">– IdleStateEvent</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a>
@@ -196,6 +199,9 @@
                 <a class="nav-group-task-link" href="../Extensions/EmbeddedScheduledTask.html">EmbeddedScheduledTask</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/FixedWidthInteger.html">FixedWidthInteger</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Extensions/Heap.html">Heap</a>
               </li>
               <li class="nav-group-task">
@@ -218,9 +224,6 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Extensions/UInt32.html">UInt32</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Extensions/UInt64.html">UInt64</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Extensions/UnsafeBufferPointer.html">UnsafeBufferPointer</a>
@@ -323,6 +326,9 @@
                 <a class="nav-group-task-link" href="../Structs/ChannelOptions.html">ChannelOptions</a>
               </li>
               <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/ChannelShouldQuiesceEvent.html">ChannelShouldQuiesceEvent</a>
+              </li>
+              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/CircularBuffer.html">CircularBuffer</a>
               </li>
               <li class="nav-group-task">
@@ -395,14 +401,15 @@
 
         <section class="section">
           <div class="section-content">
-            <h1>UInt64</h1>
+            <h1>System</h1>
               <div class="declaration">
                 <div class="language">
-                  <pre class="highlight swift"><code><span class="kd">struct</span> <span class="kt">UInt64</span> <span class="p">:</span> <span class="kt">FixedWidthInteger</span><span class="p">,</span> <span class="kt">UnsignedInteger</span></code></pre>
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">enum</span> <span class="kt">System</span></code></pre>
 
                 </div>
               </div>
-            
+            <p>Undocumented</p>
+
           </div>
         </section>
 
@@ -413,9 +420,9 @@
                 <li class="item">
                   <div>
                     <code>
-                    <a name="/s:s6UInt64V3NIOE12nextPowerOf2AByF"></a>
-                    <a name="//apple_ref/swift/Method/nextPowerOf2()" class="dashAnchor"></a>
-                    <a class="token" href="#/s:s6UInt64V3NIOE12nextPowerOf2AByF">nextPowerOf2()</a>
+                    <a name="/s:3NIO6SystemO9coreCountSivZ"></a>
+                    <a name="//apple_ref/swift/Variable/coreCount" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO6SystemO9coreCountSivZ">coreCount</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -423,16 +430,66 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Returns the next power of two.</p>
+                        <p>A utility function that returns an estimate of the number of <em>logical</em> cores
+on the system.</p>
+
+<p>This value can be used to help provide an estimate of how many threads to use with
+the <code><a href="../Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a></code>. The exact ratio between this number and the number
+of threads to use is a matter for the programmer, and can be determined based on the
+specific execution behaviour of the program.</p>
 
                       </div>
                       <div class="declaration">
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">nextPowerOf2</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kt">UInt64</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="k">var</span> <span class="nv">coreCount</span><span class="p">:</span> <span class="kt">Int</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
 
                         </div>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>The logical core count on the system.</p>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO6SystemO19enumerateInterfacesSayAA19NIONetworkInterfaceCGyKFZ"></a>
+                    <a name="//apple_ref/swift/Method/enumerateInterfaces()" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO6SystemO19enumerateInterfacesSayAA19NIONetworkInterfaceCGyKFZ">enumerateInterfaces()</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>A utility function that enumerates the available network interfaces on this machine.</p>
+
+<p>This function returns values that are true for a brief snapshot in time. These results can
+change, and the returned values will not change to reflect them. This function must be called
+again to get new results.</p>
+<div class="aside aside-throws">
+    <p class="aside-title">Throws</p>
+    If an error is encountered while enumerating interfaces.
+
+</div>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">func</span> <span class="nf">enumerateInterfaces</span><span class="p">()</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="p">[</span><span class="kt"><a href="../Classes/NIONetworkInterface.html">NIONetworkInterface</a></span><span class="p">]</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Return Value</h4>
+                        <p>An array of network interfaces available on this machine.</p>
                       </div>
                     </section>
                   </div>
