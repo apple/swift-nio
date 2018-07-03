@@ -247,7 +247,7 @@ final class DatagramChannelTests: XCTestCase {
             #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
                 let lotsOfData = Int(Int32.max / 8)
             #else
-                let lotsOfData = Int(INT32_MAX) // TBD(hh): should that be Int32.max?
+                let lotsOfData = Int(Int32.max)
             #endif
             var written = 0
             while written <= lotsOfData {
