@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>IdleStateEvent Enumeration Reference</title>
+    <title>FailureDescription Enumeration Reference</title>
     <link rel="stylesheet" type="text/css" href="../../css/jazzy.css" />
     <link rel="stylesheet" type="text/css" href="../../css/highlight.css" />
     <meta charset="utf-8">
@@ -14,9 +14,9 @@
   </head>
   <body>
 
-    <a name="//apple_ref/swift/Enum/IdleStateEvent" class="dashAnchor"></a>
+    <a name="//apple_ref/swift/Enum/FailureDescription" class="dashAnchor"></a>
 
-    <a title="IdleStateEvent Enumeration Reference"></a>
+    <a title="FailureDescription Enumeration Reference"></a>
 
     <header class="header">
       <p class="header-col header-col--primary">
@@ -44,7 +44,7 @@
     <p class="breadcrumbs">
       <a class="breadcrumb" href="../../index.html">NIO Reference</a>
       <img class="carat" src="../../img/carat.png" />
-      IdleStateEvent Enumeration Reference
+      FailureDescription Enumeration Reference
     </p>
 
     <div class="content-wrapper">
@@ -91,9 +91,6 @@
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../../Classes/IdleStateHandler.html">IdleStateHandler</a>
-              </li>
-              <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../../Classes/IdleStateHandler/IdleStateEvent.html">– IdleStateEvent</a>
               </li>
               <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../../Classes/MultiThreadedEventLoopGroup.html">MultiThreadedEventLoopGroup</a>
@@ -398,14 +395,14 @@
 
         <section class="section">
           <div class="section-content">
-            <h1>IdleStateEvent</h1>
+            <h1>FailureDescription</h1>
               <div class="declaration">
                 <div class="language">
-                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">enum</span> <span class="kt">IdleStateEvent</span></code></pre>
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">enum</span> <span class="kt">FailureDescription</span></code></pre>
 
                 </div>
               </div>
-            <p>A user event triggered by IdleStateHandler when a Channel is idle.</p>
+            <p>Undocumented</p>
 
           </div>
         </section>
@@ -417,9 +414,9 @@
                 <li class="item">
                   <div>
                     <code>
-                    <a name="/s:3NIO16IdleStateHandlerC0bC5EventO5writeA2EmF"></a>
-                    <a name="//apple_ref/swift/Element/write" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO16IdleStateHandlerC0bC5EventO5writeA2EmF">write</a>
+                    <a name="/s:3NIO7IOErrorV18FailureDescriptionO8functionAEs12StaticStringVcAEmF"></a>
+                    <a name="//apple_ref/swift/Element/function" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO7IOErrorV18FailureDescriptionO8functionAEs12StaticStringVcAEmF">function</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -427,14 +424,14 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Will be triggered when no write was performed for the specified amount of time</p>
+                        <p>Undocumented</p>
 
                       </div>
                       <div class="declaration">
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="k">case</span> <span class="n">write</span></code></pre>
+                          <pre class="highlight swift"><code><span class="k">case</span> <span class="nf">function</span><span class="p">(</span><span class="kt">StaticString</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
@@ -444,9 +441,9 @@
                 <li class="item">
                   <div>
                     <code>
-                    <a name="/s:3NIO16IdleStateHandlerC0bC5EventO4readA2EmF"></a>
-                    <a name="//apple_ref/swift/Element/read" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO16IdleStateHandlerC0bC5EventO4readA2EmF">read</a>
+                    <a name="/s:3NIO7IOErrorV18FailureDescriptionO6reasonAESScAEmF"></a>
+                    <a name="//apple_ref/swift/Element/reason" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO7IOErrorV18FailureDescriptionO6reasonAESScAEmF">reason</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -454,41 +451,14 @@
                     <section class="section">
                       <div class="pointer"></div>
                       <div class="abstract">
-                        <p>Will be triggered when no read was performed for the specified amount of time</p>
+                        <p>Undocumented</p>
 
                       </div>
                       <div class="declaration">
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="k">case</span> <span class="n">read</span></code></pre>
-
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </li>
-                <li class="item">
-                  <div>
-                    <code>
-                    <a name="/s:3NIO16IdleStateHandlerC0bC5EventO3allA2EmF"></a>
-                    <a name="//apple_ref/swift/Element/all" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO16IdleStateHandlerC0bC5EventO3allA2EmF">all</a>
-                    </code>
-                  </div>
-                  <div class="height-container">
-                    <div class="pointer-container"></div>
-                    <section class="section">
-                      <div class="pointer"></div>
-                      <div class="abstract">
-                        <p>Will be triggered when neither read nor write was performed for the specified amount of time</p>
-
-                      </div>
-                      <div class="declaration">
-                        <h4>Declaration</h4>
-                        <div class="language">
-                          <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="k">case</span> <span class="n">all</span></code></pre>
+                          <pre class="highlight swift"><code><span class="k">case</span> <span class="nf">reason</span><span class="p">(</span><span class="kt">String</span><span class="p">)</span></code></pre>
 
                         </div>
                       </div>
