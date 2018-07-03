@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>ApplicationProtocolNegotiationHandler Class Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Class/ApplicationProtocolNegotiationHandler" class="dashAnchor"></a>
+
+    <a title="ApplicationProtocolNegotiationHandler Class Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          NIOTLS Docs
+        </a>
+         (80% documented)
+      </p>
+    
+      <p class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="../img/gh.png"/>
+            View on GitHub
+          </a>
+        </p>
+    
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">NIOTLS Reference</a>
+      <img class="carat" src="../img/carat.png" />
+      ApplicationProtocolNegotiationHandler Class Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/ApplicationProtocolNegotiationHandler.html">ApplicationProtocolNegotiationHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/SniHandler.html">SniHandler</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Enums.html">Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/ALPNResult.html">ALPNResult</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/SniResult.html">SniResult</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/TLSUserEvent.html">TLSUserEvent</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content">
+            <h1>ApplicationProtocolNegotiationHandler</h1>
+              <div class="declaration">
+                <div class="language">
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">class</span> <span class="kt">ApplicationProtocolNegotiationHandler</span> <span class="p">:</span> <span class="kt">ChannelInboundHandler</span></code></pre>
+
+                </div>
+              </div>
+            <p>A helper <code>ChannelInboundHandler</code> that makes it easy to swap channel pipelines
+based on the result of an ALPN negotiation.</p>
+
+<p>The standard pattern used by applications that want to use ALPN is to select
+an application protocol based on the result, optionally falling back to some
+default protocol. To do this in SwiftNIO requires that the channel pipeline be
+reconfigured based on the result of the ALPN negotiation. This channel handler
+encapsulates that logic in a generic form that doesn&rsquo;t depend on the specific
+TLS implementation in use by using <code><a href="../Enums/TLSUserEvent.html">TLSUserEvent</a></code></p>
+
+<p>The user of this channel handler provides a single closure that is called with
+an <code><a href="../Enums/ALPNResult.html">ALPNResult</a></code> when the ALPN negotiation is complete. Based on that result
+the user is free to reconfigure the <code>ChannelPipeline</code> as required, and should
+return an <code>EventLoopFuture</code> that will complete when the pipeline is reconfigured.</p>
+
+<p>Until the <code>EventLoopFuture</code> completes, this channel handler will buffer inbound
+data. When the <code>EventLoopFuture</code> completes, the buffered data will be replayed
+down the channel. Then, finally, this channel handler will automatically remove
+itself from the channel pipeline, leaving the pipeline in its final
+configuration.</p>
+
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:6NIOTLS37ApplicationProtocolNegotiationHandlerCAC3NIO15EventLoopFutureCyytGAA10ALPNResultOc012alpnCompleteE0_tcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(alpnCompleteHandler:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:6NIOTLS37ApplicationProtocolNegotiationHandlerCAC3NIO15EventLoopFutureCyytGAA10ALPNResultOc012alpnCompleteE0_tcfc">init(alpnCompleteHandler:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Create an <code>ApplicationProtocolNegotiationHandler</code> with the given completion
+callback.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="nf">init</span><span class="p">(</span><span class="nv">alpnCompleteHandler</span><span class="p">:</span> <span class="kd">@escaping</span> <span class="p">(</span><span class="kt"><a href="../Enums/ALPNResult.html">ALPNResult</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>alpnCompleteHandler</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The closure that will fire when ALPN
+negotiation has completed.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22_ChannelInboundHandlerP04userC14EventTriggeredyAA0bD7ContextC3ctx_yp5eventtF"></a>
+                    <a name="//apple_ref/swift/Method/userInboundEventTriggered(ctx:event:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22_ChannelInboundHandlerP04userC14EventTriggeredyAA0bD7ContextC3ctx_yp5eventtF">userInboundEventTriggered(ctx:event:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">userInboundEventTriggered</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt">ChannelHandlerContext</span><span class="p">,</span> <span class="nv">event</span><span class="p">:</span> <span class="kt">Any</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO22_ChannelInboundHandlerP11channelReadyAA0bD7ContextC3ctx_AA6NIOAnyV4datatF"></a>
+                    <a name="//apple_ref/swift/Method/channelRead(ctx:data:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO22_ChannelInboundHandlerP11channelReadyAA0bD7ContextC3ctx_AA6NIOAnyV4datatF">channelRead(ctx:data:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">channelRead</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt">ChannelHandlerContext</span><span class="p">,</span> <span class="nv">data</span><span class="p">:</span> <span class="kt">NIOAny</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-07-03)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.3</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+    </section>
+  </body>
+</div>
+</html>

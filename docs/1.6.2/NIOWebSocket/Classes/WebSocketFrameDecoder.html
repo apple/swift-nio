@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>WebSocketFrameDecoder Class Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Class/WebSocketFrameDecoder" class="dashAnchor"></a>
+
+    <a title="WebSocketFrameDecoder Class Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          NIOWebSocket Docs
+        </a>
+         (86% documented)
+      </p>
+    
+      <p class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="../img/gh.png"/>
+            View on GitHub
+          </a>
+        </p>
+    
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">NIOWebSocket Reference</a>
+      <img class="carat" src="../img/carat.png" />
+      WebSocketFrameDecoder Class Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/WebSocketFrameDecoder.html">WebSocketFrameDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/WebSocketFrameEncoder.html">WebSocketFrameEncoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/WebSocketUpgrader.html">WebSocketUpgrader</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Enums.html">Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/NIOWebSocketError.html">NIOWebSocketError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/NIOWebSocketUpgradeError.html">NIOWebSocketUpgradeError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/WebSocketErrorCode.html">WebSocketErrorCode</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/WebSocketOpcode.html">WebSocketOpcode</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Extensions.html">Extensions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/ByteBuffer.html">ByteBuffer</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UInt16.html">UInt16</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/UInt8.html">UInt8</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Structs.html">Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WebSocketFrame.html">WebSocketFrame</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/WebSocketMaskingKey.html">WebSocketMaskingKey</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content">
+            <h1>WebSocketFrameDecoder</h1>
+              <div class="declaration">
+                <div class="language">
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="kt">WebSocketFrameDecoder</span> <span class="p">:</span> <span class="kt">ByteToMessageDecoder</span></code></pre>
+
+                </div>
+              </div>
+            <p>An inbound <code>ChannelHandler</code> that deserializes websocket frames into a structured
+format for further processing.</p>
+
+<p>This decoder has limited enforcement of compliance to RFC 6455. In particular, to guarantee
+that the decoder can handle arbitrary extensions, only normative MUST/MUST NOTs that do not
+relate to extensions (e.g. the requirement that control frames not have lengths larger than
+125 bytes) are enforced by this decoder.</p>
+
+<p>This decoder does not have any support for decoding extensions. If you wish to support
+extensions, you should implement a message-to-message decoder that performs the appropriate
+frame transformation as needed. All the frame data is assumed to be application data by this
+parser.</p>
+
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:3NIO20ByteToMessageDecoderP16cumulationBufferAA0bG0VSgv"></a>
+                    <a name="//apple_ref/swift/Property/cumulationBuffer" class="dashAnchor"></a>
+                    <a class="token" href="#/s:3NIO20ByteToMessageDecoderP16cumulationBufferAA0bG0VSgv">cumulationBuffer</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="k">var</span> <span class="nv">cumulationBuffer</span><span class="p">:</span> <span class="kt">ByteBuffer</span><span class="p">?</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:12NIOWebSocket03WebB12FrameDecoderCACSi03maxD4Size_tcfc"></a>
+                    <a name="//apple_ref/swift/Method/init(maxFrameSize:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:12NIOWebSocket03WebB12FrameDecoderCACSi03maxD4Size_tcfc">init(maxFrameSize:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Construct a new <code>WebSocketFrameDecoder</code></p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="nf">init</span><span class="p">(</span><span class="nv">maxFrameSize</span><span class="p">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="mi">14</span><span class="p">)</span></code></pre>
+
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Parameters</h4>
+                        <table class="graybox">
+                          <tbody>
+                            <tr>
+                              <td>
+                                <code>
+                                <em>maxFrameSize</em>
+                                </code>
+                              </td>
+                              <td>
+                                <div>
+                                  <p>The maximum frame size the decoder is willing to tolerate from the
+remote peer. WebSockets in principle allows frame sizes up to <code>2**64</code> bytes, but
+this is an objectively unreasonable maximum value (on AMD64 systems it is not
+possible to even allocate a buffer large enough to handle this size), so we
+set a lower one. The default value is the same as the default HTTP/2 max frame
+size, <code>2**14</code> bytes. Users may override this to any value up to <code>UInt32.max</code>.
+Users are strongly encouraged not to increase this value unless they absolutely
+must, as the decoder will not produce partial frames, meaning that it will hold
+on to data until the <em>entire</em> body is received.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:12NIOWebSocket03WebB12FrameDecoderC6decode3NIO13DecodingStateOAE21ChannelHandlerContextC3ctx_AE10ByteBufferVz6buffertF"></a>
+                    <a name="//apple_ref/swift/Method/decode(ctx:buffer:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:12NIOWebSocket03WebB12FrameDecoderC6decode3NIO13DecodingStateOAE21ChannelHandlerContextC3ctx_AE10ByteBufferVz6buffertF">decode(ctx:buffer:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">decode</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt">ChannelHandlerContext</span><span class="p">,</span> <span class="nv">buffer</span><span class="p">:</span> <span class="k">inout</span> <span class="kt">ByteBuffer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">DecodingState</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:12NIOWebSocket03WebB12FrameDecoderC10decodeLast3NIO13DecodingStateOAE21ChannelHandlerContextC3ctx_AE10ByteBufferVz6buffertKF"></a>
+                    <a name="//apple_ref/swift/Method/decodeLast(ctx:buffer:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:12NIOWebSocket03WebB12FrameDecoderC10decodeLast3NIO13DecodingStateOAE21ChannelHandlerContextC3ctx_AE10ByteBufferVz6buffertKF">decodeLast(ctx:buffer:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Undocumented</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">func</span> <span class="nf">decodeLast</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt">ChannelHandlerContext</span><span class="p">,</span> <span class="nv">buffer</span><span class="p">:</span> <span class="k">inout</span> <span class="kt">ByteBuffer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">DecodingState</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2018 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2018-07-03)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.3</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+    </section>
+  </body>
+</div>
+</html>

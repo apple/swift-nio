@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>ChannelShouldQuiesceEvent Structure Reference</title>
+    <title>UnsafeBufferPointer Extension Reference</title>
     <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
     <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
     <meta charset="utf-8">
@@ -14,9 +14,9 @@
   </head>
   <body>
 
-    <a name="//apple_ref/swift/Struct/ChannelShouldQuiesceEvent" class="dashAnchor"></a>
+    <a name="//apple_ref/swift/Extension/UnsafeBufferPointer" class="dashAnchor"></a>
 
-    <a title="ChannelShouldQuiesceEvent Structure Reference"></a>
+    <a title="UnsafeBufferPointer Extension Reference"></a>
 
     <header class="header">
       <p class="header-col header-col--primary">
@@ -44,7 +44,7 @@
     <p class="breadcrumbs">
       <a class="breadcrumb" href="../index.html">NIO Reference</a>
       <img class="carat" src="../img/carat.png" />
-      ChannelShouldQuiesceEvent Structure Reference
+      UnsafeBufferPointer Extension Reference
     </p>
 
     <div class="content-wrapper">
@@ -326,9 +326,6 @@
                 <a class="nav-group-task-link" href="../Structs/ChannelOptions.html">ChannelOptions</a>
               </li>
               <li class="nav-group-task">
-                <a class="nav-group-task-link" href="../Structs/ChannelShouldQuiesceEvent.html">ChannelShouldQuiesceEvent</a>
-              </li>
-              <li class="nav-group-task">
                 <a class="nav-group-task-link" href="../Structs/CircularBuffer.html">CircularBuffer</a>
               </li>
               <li class="nav-group-task">
@@ -401,19 +398,14 @@
 
         <section class="section">
           <div class="section-content">
-            <h1>ChannelShouldQuiesceEvent</h1>
+            <h1>UnsafeBufferPointer</h1>
               <div class="declaration">
                 <div class="language">
-                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">struct</span> <span class="kt">ChannelShouldQuiesceEvent</span></code></pre>
+                  <pre class="highlight swift"><code><span class="kd">struct</span> <span class="kt">UnsafeBufferPointer</span><span class="o">&lt;</span><span class="kt">Element</span><span class="o">&gt;</span> <span class="p">:</span> <span class="n">_Indexable</span><span class="p">,</span> <span class="kt">Collection</span><span class="p">,</span> <span class="kt">RandomAccessCollection</span></code></pre>
 
                 </div>
               </div>
-            <p>A <code><a href="../Protocols/Channel.html">Channel</a></code> user event that is sent when the <code><a href="../Protocols/Channel.html">Channel</a></code> has been asked to quiesce.</p>
-
-<p>The action(s) that should be taken after receiving this event are both application and protocol dependent. If the
-protocol supports a notion of requests and responses, it might make sense to stop accepting new requests but finish
-processing the request currently in flight.</p>
-
+            
           </div>
         </section>
 
@@ -424,9 +416,9 @@ processing the request currently in flight.</p>
                 <li class="item">
                   <div>
                     <code>
-                    <a name="/s:3NIO25ChannelShouldQuiesceEventVACycfc"></a>
-                    <a name="//apple_ref/swift/Method/init()" class="dashAnchor"></a>
-                    <a class="token" href="#/s:3NIO25ChannelShouldQuiesceEventVACycfc">init()</a>
+                    <a name="/s:SR3NIOE15withUnsafeBytesqd__qd__s0C16RawBufferPointerVKcKlF"></a>
+                    <a name="//apple_ref/swift/Method/withUnsafeBytes(_:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:SR3NIOE15withUnsafeBytesqd__qd__s0C16RawBufferPointerVKcKlF">withUnsafeBytes(_:)</a>
                     </code>
                   </div>
                   <div class="height-container">
@@ -441,7 +433,8 @@ processing the request currently in flight.</p>
                         <h4>Declaration</h4>
                         <div class="language">
                           <p class="aside-title">Swift</p>
-                          <pre class="highlight swift"><code><span class="kd">public</span> <span class="nf">init</span><span class="p">()</span></code></pre>
+                          <pre class="highlight swift"><code><span class="kd">@_inlineable</span>
+<span class="kd">public</span> <span class="kd">func</span> <span class="n">withUnsafeBytes</span><span class="o">&lt;</span><span class="kt">R</span><span class="o">&gt;</span><span class="p">(</span><span class="n">_</span> <span class="nv">body</span><span class="p">:</span> <span class="p">(</span><span class="kt">UnsafeRawBufferPointer</span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt">R</span><span class="p">)</span> <span class="k">rethrows</span> <span class="o">-&gt;</span> <span class="kt">R</span></code></pre>
 
                         </div>
                       </div>
