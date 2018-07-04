@@ -369,18 +369,21 @@ public struct ByteBuffer {
 
     @_inlineable @_versioned
     mutating func _set<S: ContiguousCollection>(bytes: S, at index: _Index) -> _Capacity where S.Element == UInt8 {
-        let newEndIndex: _Index = index + _toIndex(Int(bytes.count))
+        let bytesCount = bytes.count
+        let newEndIndex: _Index = index + _toIndex(Int(bytesCount))
         if !isKnownUniquelyReferenced(&self._storage) {
             let extraCapacity = newEndIndex > self._slice.upperBound ? newEndIndex - self._slice.upperBound : 0
             self._copyStorageAndRebase(extraCapacity: extraCapacity)
         }
 
-        self._ensureAvailableCapacity(_Capacity(bytes.count), at: index)
+        self._ensureAvailableCapacity(_Capacity(bytesCount), at: index)
         let base = self._storage.bytes.advanced(by: Int(self._slice.lowerBound + index)).assumingMemoryBound(to: UInt8.self)
         bytes.withUnsafeBytes { srcPtr in
-            base.assign(from: srcPtr.baseAddress!.assumingMemoryBound(to: S.Element.self), count: srcPtr.count)
+            precondition(srcPtr.count >= bytesCount,
+                         "collection \(bytes) claims count \(bytesCount) but withUnsafeBytes only offers \(srcPtr.count) bytes")
+            base.assign(from: srcPtr.baseAddress!.assumingMemoryBound(to: S.Element.self), count: Int(bytesCount))
         }
-        return _toCapacity(Int(bytes.count))
+        return _toCapacity(Int(bytesCount))
     }
 
     @_inlineable @_versioned

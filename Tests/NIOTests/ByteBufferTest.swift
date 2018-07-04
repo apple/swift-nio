@@ -1445,6 +1445,57 @@ class ByteBufferTest: XCTestCase {
         let viewSlice: ByteBufferView = view[view.startIndex ..< view.endIndex]
         XCTAssertEqual(buf.readableBytes, viewSlice.count)
     }
+
+    func testWeDontWriteTooMuchForUnderreportingContiguousCollection() throws {
+        // this is an illegal contiguous collection but we should still be able to deal with this
+        struct UnderreportingContiguousCollection: ContiguousCollection {
+            let storage: [UInt8] = Array(repeating: 0xff, count: 4096)
+            typealias Element = UInt8
+            typealias Index = Array<UInt8>.Index
+            typealias SubSequence = Array<UInt8>.SubSequence
+            typealias Indices = Array<UInt8>.Indices
+
+            public var count: Int {
+                // we're reporting 3 elements
+                return 3
+            }
+
+            public var indices: Indices {
+                return CountableRange(0...2)
+            }
+
+            public subscript(bounds: Range<Index>) -> SubSequence {
+                return self.storage[bounds]
+            }
+
+            public subscript(position: Index) -> Element {
+                /* this is wrong but we need to check that we don't access this */
+                XCTFail("shouldn't have been called")
+                return 0xff
+            }
+
+            public var startIndex: Index {
+                return self.storage.startIndex
+            }
+
+            public var endIndex: Index {
+                return self.storage.endIndex
+            }
+
+            func index(after i: Index) -> Index {
+                return self.storage.index(after: i)
+            }
+
+            func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+                // we're giving access to 4096 elements despite the fact we claim to only have 3 available
+                return try self.storage.withUnsafeBytes(body)
+            }
+        }
+        buf.clear()
+        buf.write(bytes: UnderreportingContiguousCollection())
+        XCTAssertEqual(3, buf.readableBytes)
+        XCTAssertEqual([0xff, 0xff, 0xff], buf.readBytes(length: buf.readableBytes)!)
+    }
 }
 
 private enum AllocationExpectationState: Int {
