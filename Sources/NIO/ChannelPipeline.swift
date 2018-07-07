@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// "A list of `ChannelHandler`s that handle or intercept inbound events and outbound operations of a
+/// A list of `ChannelHandler`s that handle or intercept inbound events and outbound operations of a
 /// `Channel`. `ChannelPipeline` implements an advanced form of the Intercepting Filter pattern
 /// to give a user full control over how an event is handled and how the `ChannelHandler`s in a pipeline
 /// interact with each other.
@@ -66,7 +66,7 @@
 ///  |               |                                   |               |
 ///  |       [ Socket.read ]                    [ Socket.write ]         |
 ///  |                                                                   |
-///  |  SwiftNIO Internal I/O Threads (Transport Implementation)           |
+///  |  SwiftNIO Internal I/O Threads (Transport Implementation)         |
 ///  +-------------------------------------------------------------------+
 /// ```
 ///
