@@ -20,7 +20,7 @@ let headerSeparator: StaticString = ": "
 /// An `IteratorProtocol` that can iterate through comma separated list of values for a certain
 /// header
 ///
-///  **Example:**
+/// **Example:**
 ///
 /// Suppose you have this headers:
 ///
@@ -36,10 +36,9 @@ public struct HTTPListHeaderIterator<T: Collection>: IteratorProtocol where T.El
     public typealias Element = ByteBufferView
     
     private var currentHeaderIndex: Int = -1
-    private var byteBuffer: ByteBuffer
     private var singleValueViewIterator: Array<ByteBufferView>.Iterator?
     private let headerName: T
-    private let headers: [HTTPHeader]
+    private let headers: HTTPHeaders
     
     fileprivate let comma = UInt8(",".utf8CString[0])
     
@@ -48,9 +47,9 @@ public struct HTTPListHeaderIterator<T: Collection>: IteratorProtocol where T.El
     /// - Parameter current: The index to begin iteration at
     /// - Returns: The next index of the header in header array, or `nil` if not found
     internal func headerIndex(after current: Int) -> Int? {
-        for (idx, currentHeader) in headers.enumerated().dropFirst(current + 1) {
-            if byteBuffer.viewBytes(at: currentHeader.name.start,
-                                    length: currentHeader.name.length)
+        for (idx, currentHeader) in headers.headers.enumerated().dropFirst(current + 1) {
+            if headers.buffer.viewBytes(at: currentHeader.name.start,
+                                        length: currentHeader.name.length)
                 .compareReadableBytes(to: headerName) {
                 return idx
             }
@@ -60,7 +59,7 @@ public struct HTTPListHeaderIterator<T: Collection>: IteratorProtocol where T.El
 
     mutating public func next() -> ByteBufferView? {
         if let next = self.singleValueViewIterator?.next() {
-            return next.trimSpaces
+            return next.trimSpaces()
         } else {
             // End of this buffer. Let's try to grab the next one.
             guard let index = self.headerIndex(after: currentHeaderIndex) else {
@@ -68,9 +67,9 @@ public struct HTTPListHeaderIterator<T: Collection>: IteratorProtocol where T.El
                 return nil
             }
             self.currentHeaderIndex = index
-            self.singleValueViewIterator = byteBuffer
-                .viewBytes(at: headers[currentHeaderIndex].value.start,
-                           length: headers[currentHeaderIndex].value.length)
+            self.singleValueViewIterator = headers.buffer
+                .viewBytes(at: headers.headers[currentHeaderIndex].value.start,
+                           length: headers.headers[currentHeaderIndex].value.length)
                 .split(separator: comma)
                 .makeIterator()
             return self.next()
@@ -81,10 +80,8 @@ public struct HTTPListHeaderIterator<T: Collection>: IteratorProtocol where T.El
     init(headerName: T,
          headers: HTTPHeaders) {
         
-        self.headers = headers.headers
+        self.headers = headers
         self.headerName = headerName
-        
-        self.byteBuffer = headers.buffer
     }
 
 }

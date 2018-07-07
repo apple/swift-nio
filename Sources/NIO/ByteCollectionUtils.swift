@@ -14,20 +14,15 @@
 
 fileprivate let defaultWhitespaces = [" ", "\t"].map({UInt8($0.utf8CString[0])})
 
-extension Sequence where Self.Element: Equatable {
-    public func dropLast(while: (Self.Element) throws -> (Bool)) rethrows -> Self.SubSequence {
-        let numLastTrimmedElements = try self.reversed().enumerated().first(where: {try !`while`($0.element)})?.offset ?? 0
-        return self.dropLast(numLastTrimmedElements)
+extension ByteBufferView {
+    public func trim(limitingElements: [UInt8]) -> ByteBufferView {
+        let lastNonWhitespaceIndex = self.lastIndex { !limitingElements.contains($0) }
+        let firstNonWhitespaceIndex = self.firstIndex { !limitingElements.contains($0) }
+
+        return self[Range.init(uncheckedBounds: (firstNonWhitespaceIndex, lastNonWhitespaceIndex))]
     }
     
-    public func trim(limitingElements: [Self.Element]) -> Self.SubSequence {
-        return dropLast(while: {limitingElements.contains($0)})
-                  .drop(while: {limitingElements.contains($0)})
-    }
-}
-
-extension Sequence where Self.Element == UInt8 {
-    public var trimSpaces: Self.SubSequence {
+    public func trimSpaces() -> ByteBufferView {
         return trim(limitingElements: defaultWhitespaces)
     }
 }
@@ -38,10 +33,9 @@ extension Sequence where Self.Element == UInt8 {
     /// This collection could be get from applying the `UTF8View`
     ///   property on the string protocol.
     ///
-    /// - Parameter bytes: The string constant in the form of a collection of `UInt8` _IN
-    ///                     UPPER CASE_.
+    /// - Parameter bytes: The string constant in the form of a collection of `UInt8`
     /// - Returns: Whether the collection contains **EXACTLY** this array or no, but by ignoring case.
-    public func compareReadableBytes<T: Collection>(to bytes: T) -> Bool
+    public func compareReadableBytes<T: Sequence>(to bytes: T) -> Bool
         where T.Element == UInt8 {
             return self.elementsEqual(bytes, by: {return ($0 & 0xdf) == ($1 & 0xdf)})
     }
