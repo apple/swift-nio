@@ -30,6 +30,8 @@ extension CircularBufferTests {
                 ("testAddRemoveInALoop", testAddRemoveInALoop),
                 ("testAddAllRemoveAll", testAddAllRemoveAll),
                 ("testRemoveAt", testRemoveAt),
+                ("testRemoveAtLastPosition", testRemoveAtLastPosition),
+                ("testRemoveAtFirstPosition", testRemoveAtFirstPosition),
                 ("testHarderExpansion", testHarderExpansion),
                 ("testCollection", testCollection),
                 ("testReplacingSubrangeOfElements", testReplacingSubrangeOfElements),
@@ -46,6 +48,7 @@ extension CircularBufferTests {
                 ("testPrependExpandBuffer", testPrependExpandBuffer),
                 ("testRemoveAllKeepingCapacity", testRemoveAllKeepingCapacity),
                 ("testRemoveAllNotKeepingCapacity", testRemoveAllNotKeepingCapacity),
+                ("testBufferManaged", testBufferManaged),
            ]
    }
 }
