@@ -245,7 +245,7 @@ extension CircularBuffer: BidirectionalCollection, RandomAccessCollection, Range
             newBuffer.append(contentsOf: self[subrange.upperBound..<self.endIndex].lazy.map { $0 })
 
             self.tailIdx = newBuffer.count
-            let repetitionCount = self.buffer.count - newBuffer.count
+            let repetitionCount = newCapacity - newBuffer.count
             if repetitionCount > 0 {
                 newBuffer.append(contentsOf: repeatElement(nil, count: repetitionCount))
             }

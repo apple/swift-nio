@@ -412,4 +412,15 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(ring.capacity, 1)
         XCTAssertEqual(ring.count, 0)
     }
+
+    func testBufferManaged() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 2)
+        ring.append(1)
+        XCTAssertEqual(ring.capacity, 2)
+
+        // Now we want to replace the last subrange with two elements. This should
+        // force an increase in size.
+        ring.replaceSubrange(0..<1, with: [3, 4])
+        XCTAssertEqual(ring.capacity, 4)
+    }
 }
