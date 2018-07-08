@@ -55,7 +55,7 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection
 
     /// Allocates an empty buffer.
     public init() {
-        self.buffer = ContiguousArray<E?>()
+        self.init(initialRingCapacity: 16)
     }
 
     /// Append an element to the end of the ring buffer.
