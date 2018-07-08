@@ -61,14 +61,28 @@ class CircularBufferTests: XCTestCase {
         _ = ring.remove(at: 1)
         XCTAssertEqual(6, ring.count)
         XCTAssertEqual(0, ring.last)
+    }
+
+    func testRemoveAtLastPosition() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<7 {
+            ring.prepend(idx)
+        }
 
         let last = ring.remove(at: ring.endIndex - 1)
         XCTAssertEqual(0, last)
         XCTAssertEqual(1, ring.last)
+    }
+
+    func testRemoveAtFirstPosition() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<7 {
+            ring.prepend(idx)
+        }
 
         let first = ring.remove(at: 0)
         XCTAssertEqual(6, first)
-        XCTAssertEqual(4, ring.first)
+        XCTAssertEqual(5, ring.first)
     }
 
     func testHarderExpansion() {
