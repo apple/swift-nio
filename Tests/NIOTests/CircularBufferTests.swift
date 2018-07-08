@@ -335,30 +335,8 @@ class CircularBufferTests: XCTestCase {
         XCTAssertNil(ring.last)
         XCTAssertEqual(0, ring.count)
         XCTAssertTrue(ring.isEmpty)
-        ring.prepend(9)
-        ring.prepend(5)
-        XCTAssertEqual(9, ring.last)
-        XCTAssertEqual(ring.dropLast().last, ring.dropLast().first)
-        XCTAssertEqual(5, ring.dropLast().first)
-        XCTAssertFalse(ring.isEmpty)
-        XCTAssertEqual(2, ring.count)
-        XCTAssertTrue(ring.dropLast(2).isEmpty)
-        ring.prepend(1)
-        ring.prepend(2)
-        XCTAssertEqual(4, ring.count)
-        ring.removeLast(3)
-        XCTAssertEqual(1, ring.count)
-        XCTAssertEqual(2, ring.last)
-
-        ring = CircularBuffer<Int>(initialRingCapacity: 4)
-        ring.append(9)
-        ring.prepend(0)
-        ring.prepend(1)
-        XCTAssertEqual(3, ring.count)
-        ring.removeLast(3)
-        XCTAssertTrue(ring.isEmpty)
     }
-
+    
     func testOperateOnBothSides() {
         var ring = CircularBuffer<Int>(initialRingCapacity: 3)
         XCTAssertNil(ring.last)
