@@ -166,7 +166,7 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(expectedValues, actualValues)
     }
 
-    func testReplacingSubrangeOfElements() {
+    func testReplaceSubrange5ElementsWith1() {
         var ring = CircularBuffer<Int>(initialRingCapacity: 4)
         for idx in 0..<50 {
             ring.prepend(idx)
@@ -178,26 +178,43 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(ring[19], 30)
         XCTAssertEqual(ring[20], 99)
         XCTAssertEqual(ring[21], 24)
-        ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: [])
-        XCTAssertTrue(ring.isEmpty)
+    }
 
-        ring.prepend(1)
-        ring.prepend(2)
-        XCTAssertEqual(2, ring.count)
-        XCTAssertEqual(2, ring.first)
-        XCTAssertEqual(1, ring.last)
+    func testReplaceSubrangeAllElementsWithFewerElements() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<50 {
+            ring.prepend(idx)
+        }
+        XCTAssertEqual(50, ring.count)
+
         ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: [3,4])
         XCTAssertEqual(2, ring.count)
         XCTAssertEqual(3, ring.first)
         XCTAssertEqual(4, ring.last)
+    }
 
-        ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: [0,1,2,3,4,5,6,7,8,9])
-        XCTAssertEqual(10, ring.count)
-        XCTAssertEqual(0, ring.first)
-        XCTAssertEqual(9, ring.last)
+    func testReplaceSubrangeEmptyRange() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<50 {
+            ring.prepend(idx)
+        }
+        XCTAssertEqual(50, ring.count)
 
         ring.replaceSubrange(0..<0, with: [])
+        XCTAssertEqual(50, ring.count)
+    }
+
+    func testReplaceSubrangeWithSubrangeLargerThanTargetRange() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<5 {
+            ring.prepend(idx)
+        }
+        XCTAssertEqual(5, ring.count)
+
+        ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: [10,11,12,13,14,15,16,17,18,19])
         XCTAssertEqual(10, ring.count)
+        XCTAssertEqual(10, ring.first)
+        XCTAssertEqual(19, ring.last)
     }
 
     func testWeCanDistinguishBetweenEmptyAndFull() {
