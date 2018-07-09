@@ -102,28 +102,6 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
         self.buffer = newBacking
     }
 
-    /// Return the first element of the ring.
-    ///
-    /// *O(1)*
-    public var first: E? {
-        if self.isEmpty {
-            return nil
-        } else {
-            return self.buffer[self.headIdx]
-        }
-    }
-
-    /// Return the last element of the ring.
-    ///
-    /// *O(1)*
-    public var last: E? {
-        if self.isEmpty {
-            return nil
-        } else {
-            return self.buffer[(self.tailIdx - 1) & self.mask]
-        }
-    }
-
     // MARK: Collection implementation
     /// Return element `index` of the ring.
     ///
