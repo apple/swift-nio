@@ -75,10 +75,15 @@ class CircularBufferTests: XCTestCase {
     }
 
     func testRemoveAtTailIdx0() {
-        var ring = CircularBuffer<Int>(initialRingCapacity: 2)
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
         ring.prepend(99)
+        ring.prepend(98)
+        XCTAssertEqual(2, ring.count)
         XCTAssertEqual(99, ring.remove(at: ring.endIndex - 1))
-        XCTAssertTrue(ring.isEmpty)
+        XCTAssertFalse(ring.isEmpty)
+        XCTAssertEqual(1, ring.count)
+        XCTAssertEqual(98, ring.last)
+        XCTAssertEqual(98, ring.first)
     }
 
     func testRemoveAtFirstPosition() {
