@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-let sysMalloc: @convention(c) (Int) -> UnsafeMutableRawPointer? = malloc
-let sysRealloc: @convention(c) (UnsafeMutableRawPointer?, Int) -> UnsafeMutableRawPointer? = realloc
+let sysMalloc: @convention(c) (size_t) -> UnsafeMutableRawPointer? = malloc
+let sysRealloc: @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer? = realloc
 let sysFree: @convention(c) (UnsafeMutableRawPointer?) -> Void = free
 
 #if !swift(>=4.1)
@@ -82,10 +82,10 @@ public struct ByteBufferAllocator {
                   hookedMemcpy: { $0.copyMemory(from: $1, byteCount: $2) })
     }
 
-    internal init(hookedMalloc: @escaping @convention(c) (Int) -> UnsafeMutableRawPointer?,
-                  hookedRealloc: @escaping @convention(c) (UnsafeMutableRawPointer?, Int) -> UnsafeMutableRawPointer?,
+    internal init(hookedMalloc: @escaping @convention(c) (size_t) -> UnsafeMutableRawPointer?,
+                  hookedRealloc: @escaping @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer?,
                   hookedFree: @escaping @convention(c) (UnsafeMutableRawPointer?) -> Void,
-                  hookedMemcpy: @escaping @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, Int) -> Void) {
+                  hookedMemcpy: @escaping @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, size_t) -> Void) {
         #if !arch(arm) // only complain on 64-bit, this is unfortunate reality on 32-bit
             assert(MemoryLayout<ByteBuffer>.size <= 3 * MemoryLayout<Int>.size,
                    "ByteBuffer has size \(MemoryLayout<ByteBuffer>.size) which is larger than the built-in storage of the existential containers.")
@@ -104,10 +104,10 @@ public struct ByteBufferAllocator {
         return ByteBuffer(allocator: self, startingCapacity: capacity)
     }
 
-    internal let malloc: @convention(c) (Int) -> UnsafeMutableRawPointer?
-    internal let realloc: @convention(c) (UnsafeMutableRawPointer?, Int) -> UnsafeMutableRawPointer?
+    internal let malloc: @convention(c) (size_t) -> UnsafeMutableRawPointer?
+    internal let realloc: @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer?
     internal let free: @convention(c) (UnsafeMutableRawPointer?) -> Void
-    internal let memcpy: @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, Int) -> Void
+    internal let memcpy: @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, size_t) -> Void
 
 }
 
@@ -236,10 +236,9 @@ public struct ByteBuffer {
         }
 
         private static func allocateAndPrepareRawMemory(bytes: _Capacity, allocator: Allocator) -> UnsafeMutableRawPointer {
-            let bytes = Int(bytes)
-            let ptr = allocator.malloc(bytes)!
+            let ptr = allocator.malloc(size_t(bytes))!
             /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
-            ptr.bindMemory(to: UInt8.self, capacity: bytes)
+            ptr.bindMemory(to: UInt8.self, capacity: Int(bytes))
             return ptr
         }
 
@@ -257,13 +256,13 @@ public struct ByteBuffer {
         public func reallocSlice(_ slice: Range<ByteBuffer._Index>, capacity: _Capacity) -> _Storage {
             assert(slice.count <= capacity)
             let new = self.allocateStorage(capacity: capacity)
-            self.allocator.memcpy(new.bytes, self.bytes.advanced(by: Int(slice.lowerBound)), slice.count)
+            self.allocator.memcpy(new.bytes, self.bytes.advanced(by: Int(slice.lowerBound)), size_t(slice.count))
             return new
         }
 
         public func reallocStorage(capacity minimumNeededCapacity: _Capacity) {
             let newCapacity = minimumNeededCapacity.nextPowerOf2ClampedToMax()
-            let ptr = self.allocator.realloc(self.bytes, Int(newCapacity))!
+            let ptr = self.allocator.realloc(self.bytes, size_t(newCapacity))!
             /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
             ptr.bindMemory(to: UInt8.self, capacity: Int(newCapacity))
             self.bytes = ptr
