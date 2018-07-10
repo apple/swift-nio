@@ -104,7 +104,7 @@ extension ByteBufferTest {
                 ("testGetIntegerBeyondCapacity", testGetIntegerBeyondCapacity),
                 ("testSetStringBeyondCapacity", testSetStringBeyondCapacity),
                 ("testGetStringBeyondCapacity", testGetStringBeyondCapacity),
-//                ("testAllocationOfReallyBigByteBuffer", testAllocationOfReallyBigByteBuffer),
+                ("testAllocationOfReallyBigByteBuffer", testAllocationOfReallyBigByteBuffer),
                 ("testWritableBytesAccountsForSlicing", testWritableBytesAccountsForSlicing),
                 ("testClearDupesStorageIfTheresTwoBuffersSharingStorage", testClearDupesStorageIfTheresTwoBuffersSharingStorage),
                 ("testClearDoesNotDupeStorageIfTheresOnlyOneBuffer", testClearDoesNotDupeStorageIfTheresOnlyOneBuffer),
