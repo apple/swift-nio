@@ -738,7 +738,7 @@ public protocol EventLoopGroup: class {
     /// instead.
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void)
 
-    /// `EventLoop`s of the group
+    /// The internal `EventLoop`s of the group. This array can be used to iterate over every `EventLoop`.
     var eventLoops: [EventLoop]? { get }
 }
 
@@ -781,10 +781,10 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
     private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
 
     private let index = Atomic<Int>(value: 0)
-    private let _eventLoops: [SelectableEventLoop]
+    private let selectableEventLoops: [SelectableEventLoop]
     
     public var eventLoops: [EventLoop] {
-        return _eventLoops
+        return selectableEventLoops
     }
 
     private static func setupThreadAndEventLoop(name: String, initializer: @escaping ThreadInitializer)  -> SelectableEventLoop {
@@ -843,7 +843,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///     - threadInitializers: The `ThreadInitializer`s to use.
     internal init(threadInitializers: [ThreadInitializer]) {
         var idx = 0
-        self._eventLoops = threadInitializers.map { initializer in
+        self.selectableEventLoops = threadInitializers.map { initializer in
             // Maximum name length on linux is 16 by default.
             let ev = MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name: "NIO-ELT-#\(idx)", initializer: initializer)
             idx += 1
@@ -859,11 +859,11 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
     }
 
     public func next() -> EventLoop {
-        return _eventLoops[abs(index.add(1) % _eventLoops.count)]
+        return selectableEventLoops[abs(index.add(1) % selectableEventLoops.count)]
     }
 
     internal func unsafeClose() throws {
-        for loop in _eventLoops {
+        for loop in selectableEventLoops {
             // TODO: Should we log this somehow or just rethrow the first error ?
             _ = try loop.close0()
         }
@@ -877,7 +877,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         let q = DispatchQueue(label: "nio.shutdownGracefullyQueue", target: queue)
         var error: Error? = nil
 
-        for loop in self._eventLoops {
+        for loop in self.selectableEventLoops {
             g.enter()
             loop.closeGently().mapIfError { err in
                 q.sync { error = err }
@@ -887,7 +887,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         }
 
         g.notify(queue: q) {
-            let failure = self._eventLoops.map { try? $0.close0() }.filter { $0 == nil }.count > 0
+            let failure = self.selectableEventLoops.map { try? $0.close0() }.filter { $0 == nil }.count > 0
 
             // TODO: In the next major release we should join in the Thread used by the EventLoop before invoking the callback to ensure
             //       it is really gone.
