@@ -91,6 +91,88 @@ public class EventLoopTest : XCTestCase {
         XCTAssertFalse(ran.load())
     }
 
+    public func testScheduleRepeatedTask() throws {
+        let nanos = DispatchTime.now().uptimeNanoseconds
+        let initialDelay: TimeAmount = .milliseconds(5)
+        let delay: TimeAmount = .milliseconds(10)
+        let count = 5
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let expect = expectation(description: "Is cancelling RepatedTask")
+        let counter = Atomic<Int>(value: 0)
+        var repeatedTask: RepeatedTask?
+        repeatedTask = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in
+            if counter.load() == 0 {
+                XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds)
+            } else if counter.load() == count {
+                expect.fulfill()
+                repeatedTask?.cancel()
+            }
+            counter.store(counter.load() + 1)
+        }
+
+        waitForExpectations(timeout: 1) { _ in
+            XCTAssertEqual(counter.load(), count + 1)
+            XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds + count * delay.nanoseconds)
+        }
+    }
+
+    public func testScheduleRepeatedTaskCancelFromDifferentThread() throws {
+        let nanos = DispatchTime.now().uptimeNanoseconds
+        let initialDelay: TimeAmount = .milliseconds(5)
+        let delay: TimeAmount = .milliseconds(10)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let expect = expectation(description: "Is cancelling RepatedTask")
+        var repeatedTask: RepeatedTask?
+        repeatedTask = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in
+            DispatchQueue(label: "nio.repeatedtask.test").async {
+                repeatedTask?.cancel()
+                expect.fulfill()
+            }
+        }
+
+        waitForExpectations(timeout: 1) { _ in
+            XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds)
+        }
+    }
+
+    public func testScheduleRepeatedTaskToNotRetainRepeatedTask() throws {
+        let initialDelay: TimeAmount = .milliseconds(5)
+        let delay: TimeAmount = .milliseconds(10)
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+
+        var repeated: RepeatedTask?
+        weak var weakRepeated: RepeatedTask?
+        repeated = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in }
+        weakRepeated = repeated
+        XCTAssertNotNil(weakRepeated)
+        repeated?.cancel()
+        XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        repeated = nil
+        XCTAssertNil(weakRepeated)
+    }
+
+    public func testScheduleRepeatedTaskToNotRetainEventLoop() throws {
+        let initialDelay: TimeAmount = .milliseconds(5)
+        let delay: TimeAmount = .milliseconds(10)
+        var eventLoopGroup: EventLoopGroup? = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        weak var weakEventLoop = eventLoopGroup?.next()
+
+        eventLoopGroup?.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in }
+        XCTAssertNoThrow(try eventLoopGroup?.syncShutdownGracefully())
+        XCTAssertNotNil(weakEventLoop)
+        eventLoopGroup = nil
+        Thread.sleep(forTimeInterval: 0.01)
+        XCTAssertNil(weakEventLoop)
+    }
+
     public func testMultipleShutdown() throws {
         // This test catches a regression that causes it to intermittently fail: it reveals bugs in synchronous shutdown.
         // Do not ignore intermittent failures in this test!
