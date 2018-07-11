@@ -236,11 +236,12 @@ extension CircularBuffer: BidirectionalCollection, RandomAccessCollection, Range
     /// - Parameter bounds: The range of the circular buffer to be removed. The bounds of the range must be valid indices of the collection.
     public mutating func removeSubrange(_ bounds: Range<Int>) {
         precondition(bounds.upperBound >= self.startIndex && bounds.upperBound <= self.endIndex, "Invalid bounds.")
-        if bounds.count == 1 {
+        switch bounds.count {
+        case 1:
             _ = remove(at: bounds.lowerBound)
-        } else if bounds.count == self.count {
+        case self.count:
             self = .init(initialRingCapacity: self.buffer.count)
-        } else {
+        default:
             replaceSubrange(bounds, with: [])
         }
     }
