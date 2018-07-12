@@ -132,7 +132,6 @@ public final class RepeatedTask {
 ///
 /// Usually returned by an `EventLoopGroup`'s `makeIterator()` method.
 ///
-///
 ///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 ///     group.makeIterator()?.forEach { loop in
 ///         // Do something with each loop
@@ -140,7 +139,6 @@ public final class RepeatedTask {
 ///
 public struct EventLoopIterator: Sequence, IteratorProtocol {
     public typealias Element = EventLoop
-    public typealias Iterator = EventLoopIterator
     private var eventLoops: IndexingIterator<[EventLoop]>
 
     internal init(_ eventLoops: [EventLoop]) {
