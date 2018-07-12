@@ -127,6 +127,34 @@ public final class RepeatedTask {
         self.reschedule()
     }
 }
+
+/// An iterator over an array of 'EventLoop's.
+///
+/// Usually returned by an `EventLoopGroup`'s `makeIterator()` method.
+///
+///
+///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+///     group.makeIterator()?.forEach { loop in
+///         // Do something with each loop
+///     }
+///
+public struct EventLoopIterator: Sequence, IteratorProtocol {
+    public typealias Element = EventLoop
+    public typealias Iterator = EventLoopIterator
+    private var eventLoops: IndexingIterator<[EventLoop]>
+
+    internal init(_ eventLoops: [EventLoop]) {
+        self.eventLoops = eventLoops.makeIterator()
+    }
+
+    /// Advances to the next `EventLoop` and returns it, or `nil` if no next element exists.
+    ///
+    /// - returns: The next `EventLoop` if a next element exists; otherwise, `nil`.
+    public mutating func next() -> EventLoop? {
+        return self.eventLoops.next()
+    }
+}
+
 /// An EventLoop processes IO / tasks in an endless loop for `Channel`s until it's closed.
 ///
 /// Usually multiple `Channel`s share the same `EventLoop` for processing IO / tasks and so share the same processing `Thread`.
@@ -300,10 +328,6 @@ extension EventLoop {
         // Do nothing
     }
 
-    public var eventLoops: [EventLoop]? {
-        return [self]
-    }
-
     /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each task.
     ///
     /// - parameters:
@@ -336,6 +360,13 @@ extension EventLoop {
         let repeated = RepeatedTask(interval: delay, eventLoop: self, task: task)
         repeated.begin(in: initialDelay)
         return repeated
+    }
+
+    /// Returns an `EventLoopIterator` over this `EventLoop`.
+    ///
+    /// - returns: `EventLoopIterator`
+    public func makeIterator() -> EventLoopIterator? {
+        return EventLoopIterator([self])
     }
 }
 
@@ -738,8 +769,10 @@ public protocol EventLoopGroup: class {
     /// instead.
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void)
 
-    /// The internal `EventLoop`s of the group. This array can be used to iterate over every `EventLoop`.
-    var eventLoops: [EventLoop]? { get }
+    /// Returns an `EventLoopIterator` over the `EventLoop`s in this `EventLoopGroup`.
+    ///
+    /// - returns: `EventLoopIterator`
+    func makeIterator() -> EventLoopIterator?
 }
 
 extension EventLoopGroup {
@@ -767,7 +800,7 @@ extension EventLoopGroup {
         }
     }
 
-    public var eventLoops: [EventLoop]? {
+    public func makeIterator() -> EventLoopIterator? {
         return nil
     }
 }
@@ -781,11 +814,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
     private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
 
     private let index = Atomic<Int>(value: 0)
-    private let selectableEventLoops: [SelectableEventLoop]
-    
-    public var eventLoops: [EventLoop] {
-        return selectableEventLoops
-    }
+    private let eventLoops: [SelectableEventLoop]
 
     private static func setupThreadAndEventLoop(name: String, initializer: @escaping ThreadInitializer)  -> SelectableEventLoop {
         let lock = Lock()
@@ -843,7 +872,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///     - threadInitializers: The `ThreadInitializer`s to use.
     internal init(threadInitializers: [ThreadInitializer]) {
         var idx = 0
-        self.selectableEventLoops = threadInitializers.map { initializer in
+        self.eventLoops = threadInitializers.map { initializer in
             // Maximum name length on linux is 16 by default.
             let ev = MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name: "NIO-ELT-#\(idx)", initializer: initializer)
             idx += 1
@@ -858,12 +887,19 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         return threadSpecificEventLoop.currentValue
     }
 
+    /// Returns an `EventLoopIterator` over the `EventLoop`s in this `MultiThreadedEventLoopGroup`.
+    ///
+    /// - returns: `EventLoopIterator`
+    public func makeIterator() -> EventLoopIterator? {
+        return EventLoopIterator(self.eventLoops)
+    }
+
     public func next() -> EventLoop {
-        return selectableEventLoops[abs(index.add(1) % selectableEventLoops.count)]
+        return eventLoops[abs(index.add(1) % eventLoops.count)]
     }
 
     internal func unsafeClose() throws {
-        for loop in selectableEventLoops {
+        for loop in eventLoops {
             // TODO: Should we log this somehow or just rethrow the first error ?
             _ = try loop.close0()
         }
@@ -877,7 +913,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         let q = DispatchQueue(label: "nio.shutdownGracefullyQueue", target: queue)
         var error: Error? = nil
 
-        for loop in self.selectableEventLoops {
+        for loop in self.eventLoops {
             g.enter()
             loop.closeGently().mapIfError { err in
                 q.sync { error = err }
@@ -887,7 +923,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         }
 
         g.notify(queue: q) {
-            let failure = self.selectableEventLoops.map { try? $0.close0() }.filter { $0 == nil }.count > 0
+            let failure = self.eventLoops.map { try? $0.close0() }.filter { $0 == nil }.count > 0
 
             // TODO: In the next major release we should join in the Thread used by the EventLoop before invoking the callback to ensure
             //       it is really gone.
