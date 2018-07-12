@@ -54,6 +54,8 @@ class BootstrapTest: XCTestCase {
             defer {
                 XCTAssertNoThrow(try client.syncCloseAcceptingAlreadyClosed())
             }
+            XCTAssertNoThrow(try childChannelDone.futureResult.wait())
+            XCTAssertNoThrow(try serverChannelDone.futureResult.wait())
         }
     }
 }
