@@ -103,15 +103,27 @@ public class EventLoopTest : XCTestCase {
 
         let expect = expectation(description: "Is cancelling RepatedTask")
         let counter = Atomic<Int>(value: 0)
-        var repeatedTask: RepeatedTask?
-        repeatedTask = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in
+        let lock = Lock()
+        var repeatedTask: RepeatedTask? = nil // protected by `lock`
+        let task = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in
             if counter.load() == 0 {
                 XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds)
             } else if counter.load() == count {
                 expect.fulfill()
-                repeatedTask?.cancel()
+                while true {
+                    let mTask = lock.withLock { repeatedTask }
+                    guard let task = mTask else {
+                        usleep(10_000)
+                        continue
+                    }
+                    task.cancel()
+                    break
+                }
             }
             counter.store(counter.load() + 1)
+        }
+        lock.withLock {
+            repeatedTask = task
         }
 
         waitForExpectations(timeout: 1) { _ in
@@ -130,12 +142,14 @@ public class EventLoopTest : XCTestCase {
         }
 
         let expect = expectation(description: "Is cancelling RepatedTask")
-        var repeatedTask: RepeatedTask?
-        repeatedTask = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in
-            DispatchQueue(label: "nio.repeatedtask.test").async {
-                repeatedTask?.cancel()
-                expect.fulfill()
-            }
+        let group = DispatchGroup()
+        group.enter()
+        let repeatedTask = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in
+            group.leave()
+            expect.fulfill()
+        }
+        group.notify(queue: DispatchQueue.global()) {
+            repeatedTask.cancel()
         }
 
         waitForExpectations(timeout: 1) { _ in
