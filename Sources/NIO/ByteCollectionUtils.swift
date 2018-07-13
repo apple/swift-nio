@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-fileprivate let defaultWhitespaces = [" ", "\t"].map({UInt8($0.utf8CString[0])})
+fileprivate let defaultWhitespaces = [" ", "\t"].map({UInt8($0.utf8CString.first!)})
 
 extension ByteBufferView {
     public func trim(limitingElements: [UInt8]) -> ByteBufferView {
