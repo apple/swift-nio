@@ -118,8 +118,6 @@ extension ByteBufferTest {
                 ("testDiscardReadBytesOnConsumedBuffer", testDiscardReadBytesOnConsumedBuffer),
                 ("testDumpBytesFormat", testDumpBytesFormat),
                 ("testStaticStringCategorySubscript", testStaticStringCategorySubscript),
-                ("testTrimming", testTrimming),
-                ("testComparators", testComparators),
                 ("testReadableBytesView", testReadableBytesView),
                 ("testReadableBytesViewNoReadableBytes", testReadableBytesViewNoReadableBytes),
                 ("testBytesView", testBytesView),
