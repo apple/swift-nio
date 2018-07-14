@@ -128,7 +128,7 @@ public final class RepeatedTask {
     }
 }
 
-/// An iterator over an array of 'EventLoop's.
+/// An iterator over the `EventLoop`s forming an `EventLoopGroup`.
 ///
 /// Usually returned by an `EventLoopGroup`'s `makeIterator()` method.
 ///
@@ -362,6 +362,7 @@ extension EventLoop {
 
     /// Returns an `EventLoopIterator` over this `EventLoop`.
     ///
+    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
     /// - returns: `EventLoopIterator`
     public func makeIterator() -> EventLoopIterator? {
         return EventLoopIterator([self])
@@ -769,6 +770,7 @@ public protocol EventLoopGroup: class {
 
     /// Returns an `EventLoopIterator` over the `EventLoop`s in this `EventLoopGroup`.
     ///
+    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
     /// - returns: `EventLoopIterator`
     func makeIterator() -> EventLoopIterator?
 }
@@ -887,6 +889,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     /// Returns an `EventLoopIterator` over the `EventLoop`s in this `MultiThreadedEventLoopGroup`.
     ///
+    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
     /// - returns: `EventLoopIterator`
     public func makeIterator() -> EventLoopIterator? {
         return EventLoopIterator(self.eventLoops)
