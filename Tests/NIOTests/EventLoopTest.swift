@@ -180,7 +180,7 @@ public class EventLoopTest : XCTestCase {
         }
 
         var counter = 0
-        eventLoopGroup.makeIterator()?.forEach { _ in
+        eventLoopGroup.makeIterator().forEach { _ in
             counter += 1
         }
 
@@ -195,7 +195,7 @@ public class EventLoopTest : XCTestCase {
         }
 
         var counter = 0
-        iterator?.forEach { loop in
+        iterator.forEach { loop in
             XCTAssertTrue(loop === eventLoop)
             counter += 1
         }

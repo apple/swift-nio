@@ -133,7 +133,7 @@ public final class RepeatedTask {
 /// Usually returned by an `EventLoopGroup`'s `makeIterator()` method.
 ///
 ///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-///     group.makeIterator()?.forEach { loop in
+///     group.makeIterator().forEach { loop in
 ///         // Do something with each loop
 ///     }
 ///
@@ -362,9 +362,8 @@ extension EventLoop {
 
     /// Returns an `EventLoopIterator` over this `EventLoop`.
     ///
-    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
     /// - returns: `EventLoopIterator`
-    public func makeIterator() -> EventLoopIterator? {
+    public func makeIterator() -> EventLoopIterator {
         return EventLoopIterator([self])
     }
 }
@@ -769,10 +768,8 @@ public protocol EventLoopGroup: class {
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void)
 
     /// Returns an `EventLoopIterator` over the `EventLoop`s in this `EventLoopGroup`.
-    ///
-    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
     /// - returns: `EventLoopIterator`
-    func makeIterator() -> EventLoopIterator?
+    func makeIterator() -> EventLoopIterator
 }
 
 extension EventLoopGroup {
@@ -798,10 +795,6 @@ extension EventLoopGroup {
                 throw error
             }
         }
-    }
-
-    public func makeIterator() -> EventLoopIterator? {
-        return nil
     }
 }
 
@@ -891,7 +884,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///
     /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
     /// - returns: `EventLoopIterator`
-    public func makeIterator() -> EventLoopIterator? {
+    public func makeIterator() -> EventLoopIterator {
         return EventLoopIterator(self.eventLoops)
     }
 
