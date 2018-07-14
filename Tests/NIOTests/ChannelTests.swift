@@ -2390,18 +2390,18 @@ public class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .childChannelInitializer { channel in
                 channel.pipeline.add(handler: FailRegistrationAndDelayCloseHandler())
             }
-            .bind(host: "localhost", port: 0).wait()
+            .bind(host: "localhost", port: 0).wait())
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
-        let clientChannel = try ClientBootstrap(group: group)
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .connect(to: serverChannel.localAddress!)
-            .wait()
-        try clientChannel.closeFuture.wait()
+            .wait())
+        XCTAssertNoThrow(try clientChannel.closeFuture.wait() as Void)
     }
 
     func testFailedRegistrationOfServerSocket() throws {
