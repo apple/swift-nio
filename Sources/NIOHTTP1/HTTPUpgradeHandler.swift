@@ -94,7 +94,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     public init(upgraders: [HTTPProtocolUpgrader], httpEncoder: HTTPResponseEncoder?, httpDecoder: HTTPRequestDecoder?, upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) {
         var upgraderMap = [String: HTTPProtocolUpgrader]()
         for upgrader in upgraders {
-            upgraderMap[upgrader.supportedProtocol] = upgrader
+            upgraderMap[upgrader.supportedProtocol.lowercased()] = upgrader
         }
         self.upgraders = upgraderMap
         self.upgradeCompletionHandler = upgradeCompletionHandler
@@ -121,7 +121,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     public init(upgraders: [HTTPProtocolUpgrader], httpEncoder: HTTPResponseEncoder, extraHTTPHandlers: [ChannelHandler], upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) {
         var upgraderMap = [String: HTTPProtocolUpgrader]()
         for upgrader in upgraders {
-            upgraderMap[upgrader.supportedProtocol] = upgrader
+            upgraderMap[upgrader.supportedProtocol.lowercased()] = upgrader
         }
         self.upgraders = upgraderMap
         self.upgradeCompletionHandler = upgradeCompletionHandler
