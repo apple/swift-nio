@@ -187,7 +187,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
         let allHeaderNames = Set(request.headers.map { $0.name.lowercased() })
 
         for proto in requestedProtocols {
-            guard let upgrader = upgraders[proto] else {
+            guard let upgrader = upgraders[proto.lowercased()] else {
                 continue
             }
 
