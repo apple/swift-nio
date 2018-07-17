@@ -105,9 +105,9 @@ class EndToEndTests: XCTestCase {
         return (loop: loop, serverChannel: serverChannel, clientChannel: clientChannel)
     }
 
-    func upgradeRequest(path: String = "/", extraHeaders: [String: String]) -> String {
+    func upgradeRequest(path: String = "/", extraHeaders: [String: String], protocolName: String = "websocket") -> String {
         let extraHeaderString = extraHeaders.map { hdr in "\(hdr.key): \(hdr.value)" }.joined(separator: "\r\n")
-        return "GET \(path) HTTP/1.1\r\nHost: example.com\r\nConnection: upgrade\r\nUpgrade: websocket\r\n" + extraHeaderString + "\r\n\r\n"
+        return "GET \(path) HTTP/1.1\r\nHost: example.com\r\nConnection: upgrade\r\nUpgrade: \(protocolName)\r\n" + extraHeaderString + "\r\n\r\n"
     }
 
     func testBasicUpgradeDance() throws {
@@ -121,6 +121,26 @@ class EndToEndTests: XCTestCase {
         }
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
+        XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
+        interactInMemory(client, server)
+
+        let receivedResponse = client.readAllInboundBuffers().allAsString()
+        assertResponseIs(response: receivedResponse,
+                         expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
+                         expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"])
+    }
+
+    func testUpgradeWithProtocolName() throws {
+        let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { head in HTTPHeaders() },
+                                              upgradePipelineHandler: { (channel, req) in channel.eventLoop.newSucceededFuture(result: ()) })
+        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        defer {
+            XCTAssertNoThrow(try client.finish())
+            XCTAssertNoThrow(try server.finish())
+            XCTAssertNoThrow(try loop.syncShutdownGracefully())
+        }
+
+        let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="], protocolName: "WebSocket")
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
         interactInMemory(client, server)
 
