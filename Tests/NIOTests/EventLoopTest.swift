@@ -103,27 +103,14 @@ public class EventLoopTest : XCTestCase {
 
         let expect = expectation(description: "Is cancelling RepatedTask")
         let counter = Atomic<Int>(value: 0)
-        let lock = Lock()
-        var repeatedTask: RepeatedTask? = nil // protected by `lock`
-        let task = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in
+        eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { repeatedTask -> Void in
             if counter.load() == 0 {
                 XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds)
             } else if counter.load() == count {
                 expect.fulfill()
-                while true {
-                    let mTask = lock.withLock { repeatedTask }
-                    guard let task = mTask else {
-                        usleep(10_000)
-                        continue
-                    }
-                    task.cancel()
-                    break
-                }
+                repeatedTask.cancel()
             }
             counter.store(counter.load() + 1)
-        }
-        lock.withLock {
-            repeatedTask = task
         }
 
         waitForExpectations(timeout: 1) { _ in
@@ -144,7 +131,7 @@ public class EventLoopTest : XCTestCase {
         let expect = expectation(description: "Is cancelling RepatedTask")
         let group = DispatchGroup()
         group.enter()
-        let repeatedTask = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in
+        let repeatedTask = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { (_: RepeatedTask) -> Void in
             group.leave()
             expect.fulfill()
         }
@@ -164,7 +151,7 @@ public class EventLoopTest : XCTestCase {
 
         var repeated: RepeatedTask?
         weak var weakRepeated: RepeatedTask?
-        repeated = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in }
+        repeated = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { (_: RepeatedTask) -> Void in }
         weakRepeated = repeated
         XCTAssertNotNil(weakRepeated)
         repeated?.cancel()
@@ -179,7 +166,7 @@ public class EventLoopTest : XCTestCase {
         var eventLoopGroup: EventLoopGroup? = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         weak var weakEventLoop = eventLoopGroup?.next()
 
-        eventLoopGroup?.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in }
+        eventLoopGroup?.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { (_: RepeatedTask) -> Void in }
         XCTAssertNoThrow(try eventLoopGroup?.syncShutdownGracefully())
         XCTAssertNotNil(weakEventLoop)
         eventLoopGroup = nil

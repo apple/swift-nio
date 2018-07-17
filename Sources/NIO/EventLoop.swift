@@ -57,9 +57,9 @@ public final class RepeatedTask {
     private let delay: TimeAmount
     private let eventLoop: EventLoop
     private var scheduled: Scheduled<EventLoopFuture<Void>>?
-    private var task: (() -> EventLoopFuture<Void>)?
+    private var task: ((RepeatedTask) -> EventLoopFuture<Void>)?
 
-    internal init(interval: TimeAmount, eventLoop: EventLoop, task: @escaping () -> EventLoopFuture<Void>) {
+    internal init(interval: TimeAmount, eventLoop: EventLoop, task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) {
         self.delay = interval
         self.eventLoop = eventLoop
         self.task = task
@@ -80,7 +80,9 @@ public final class RepeatedTask {
         guard let task = self.task else {
             return
         }
-        self.scheduled = eventLoop.scheduleTask(in: delay, task)
+        self.scheduled = eventLoop.scheduleTask(in: delay) {
+            task(self)
+        }
         self.reschedule()
     }
 
@@ -88,6 +90,8 @@ public final class RepeatedTask {
     ///
     /// Whether the execution of the task is immediately canceled depends on whether the execution of a task has already begun.
     ///  This means immediate cancellation is not guaranteed.
+    ///
+    /// The safest way to cancel is by using the passed reference of `RepeatedTask` inside the task closure.
     public func cancel() {
         if self.eventLoop.inEventLoop {
             self.cancel0()
@@ -116,6 +120,10 @@ public final class RepeatedTask {
                 self.reschedule0()
             }
         }
+
+        scheduled.futureResult.whenFailure { (_: Error) in
+            self.cancel0()
+        }
     }
 
     private func reschedule0() {
@@ -123,7 +131,9 @@ public final class RepeatedTask {
         guard let task = self.task else {
             return
         }
-        self.scheduled = self.eventLoop.scheduleTask(in: self.delay, task)
+        self.scheduled = self.eventLoop.scheduleTask(in: self.delay) {
+            task(self)
+        }
         self.reschedule()
     }
 }
@@ -308,10 +318,10 @@ extension EventLoop {
     ///     - task: The closure that will be executed.
     /// - return: `RepeatedTask`
     @discardableResult
-    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping () throws -> Void) -> RepeatedTask {
-        let futureTask: () -> EventLoopFuture<Void> = {
+    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping (RepeatedTask) throws -> Void) -> RepeatedTask {
+        let futureTask: (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
             do {
-                try task()
+                try task(repeatedTask)
                 return self.newSucceededFuture(result: ())
             } catch {
                 return self.newFailedFuture(error: error)
@@ -328,7 +338,7 @@ extension EventLoop {
     ///     - task: The closure that will be executed.
     /// - return: `RepeatedTask`
     @discardableResult
-    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping () -> EventLoopFuture<Void>) -> RepeatedTask {
+    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask {
         let repeated = RepeatedTask(interval: delay, eventLoop: self, task: task)
         repeated.begin(in: initialDelay)
         return repeated
