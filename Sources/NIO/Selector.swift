@@ -584,7 +584,7 @@ final class Selector<R: Registration> {
             // in any case we only want what the user is currently registered for & what we got
             selectorEvent = selectorEvent.intersection(registration.interested)
 
-            guard selectorEvent != .none else {
+            guard selectorEvent != ._none else {
                 continue
             }
             try body((SelectorEvent(io: selectorEvent, registration: registration)))
