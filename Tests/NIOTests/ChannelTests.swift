@@ -1580,27 +1580,24 @@ public class ChannelTests: XCTestCase {
         class VerifyNoReadBeforeEOFHandler: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
 
-            private var seenEOF: Bool = false
-
-            public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
-                if case .some(ChannelEvent.inputClosed) = event as? ChannelEvent {
-                    self.seenEOF = true
-                }
-                ctx.fireUserInboundEventTriggered(event)
-            }
+            var expectingData: Bool = false
 
             public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-                if self.seenEOF {
-                    XCTFail("Should not be called before seeing the EOF as autoRead is false and we did not call read(), but received \(self.unwrapInboundIn(data))")
+                if !self.expectingData {
+                    XCTFail("Received data before we expected it.")
+                } else {
+                    let data = self.unwrapInboundIn(data)
+                    XCTAssertEqual(data.getString(at: data.readerIndex, length: data.readableBytes), "test")
                 }
             }
         }
 
+        let handler = VerifyNoReadBeforeEOFHandler()
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { ch in
-                ch.pipeline.add(handler: VerifyNoReadBeforeEOFHandler())
+                ch.pipeline.add(handler: handler)
             }
             .bind(host: "127.0.0.1", port: 0).wait()
 
@@ -1609,10 +1606,15 @@ public class ChannelTests: XCTestCase {
         var buffer = clientChannel.allocator.buffer(capacity: 8)
         buffer.write(string: "test")
         try clientChannel.writeAndFlush(buffer).wait()
-        try clientChannel.close().wait()
 
-        // Wait for 100 ms.
+        // Wait for 100 ms. No data should be delivered.
         usleep(100 * 1000);
+
+        // Now we send close. This should deliver data.
+        try clientChannel.eventLoop.submit { () -> EventLoopFuture<Void> in
+            handler.expectingData = true
+            return clientChannel.close()
+        }.wait().wait()
         try serverChannel.close().wait()
     }
 
