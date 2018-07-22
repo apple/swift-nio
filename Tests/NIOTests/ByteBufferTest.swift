@@ -472,7 +472,7 @@ class ByteBufferTest: XCTestCase {
                 XCTAssertEqual(string.utf8.count, ptr.count)
 
                 for (idx, expected) in zip(0..<string.utf8.count, string.utf8) {
-                    let actual = ptr.baseAddress!.advanced(by: idx).assumingMemoryBound(to: UInt8.self).pointee
+                    let actual = ptr[idx]
                     XCTAssertEqual(expected, actual, "character at index \(idx) is \(actual) but should be \(expected)")
                 }
             }
@@ -636,7 +636,7 @@ class ByteBufferTest: XCTestCase {
         otherBuf?.withUnsafeReadableBytes { ptr in
             XCTAssertEqual(cap, ptr.count)
             for i in 0..<cap {
-                XCTAssertEqual(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)[i], UInt8(truncatingIfNeeded: i))
+                XCTAssertEqual(ptr[i], UInt8(truncatingIfNeeded: i))
             }
         }
     }
@@ -675,13 +675,13 @@ class ByteBufferTest: XCTestCase {
         buf!.withUnsafeReadableBytes { ptr in
             XCTAssertEqual(cap, ptr.count)
             for i in 0..<cap {
-                XCTAssertEqual(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)[i], 0)
+                XCTAssertEqual(ptr[i], 0)
             }
         }
         otherBuf!.withUnsafeReadableBytes { ptr in
             XCTAssertEqual(cap, ptr.count)
             for i in 0..<cap {
-                XCTAssertEqual(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)[i], UInt8(truncatingIfNeeded: i))
+                XCTAssertEqual(ptr[i], UInt8(truncatingIfNeeded: i))
             }
         }
     }
