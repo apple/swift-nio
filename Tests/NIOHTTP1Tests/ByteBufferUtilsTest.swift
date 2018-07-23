@@ -29,31 +29,31 @@ class ByteBufferUtilsTest: XCTestCase {
         var someByteBuffer: ByteBuffer = ByteBufferAllocator.init().buffer(capacity: 16)
         someByteBuffer.write(string: "fiRSt")
         XCTAssert(
-            someByteBuffer.readableBytesView.compareReadableBytes(
+            someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
                 to: "first".utf8))
         XCTAssert(
-            someByteBuffer.readableBytesView.compareReadableBytes(
+            someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
                 to: "fiRSt".utf8))
         XCTAssert(
-            someByteBuffer.readableBytesView.compareReadableBytes(
+            someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
                 to: "fIrst".utf8))
         XCTAssertFalse(
-            someByteBuffer.readableBytesView.compareReadableBytes(
+            someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
                 to: "fIrt".utf8))
         XCTAssertFalse(
-            someByteBuffer.readableBytesView.compareReadableBytes(
+            someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
                 to: "firsta".utf8))
         XCTAssertFalse(
-            someByteBuffer.readableBytesView.compareReadableBytes(
+            someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
                 to: "afirst".utf8))
         XCTAssertFalse(
-            someByteBuffer.readableBytesView.compareReadableBytes(
+            someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
                 to: "eiRSt".utf8))
         XCTAssertFalse(
-            someByteBuffer.readableBytesView.compareReadableBytes(
+            someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
                 to: "fIrso".utf8))
         XCTAssertFalse(
-            someByteBuffer.readableBytesView.compareReadableBytes(
+            someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
                 to: "firot".utf8))
         
     }

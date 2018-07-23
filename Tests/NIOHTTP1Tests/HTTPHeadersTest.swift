@@ -179,74 +179,39 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
         XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 0)))
     }
-    
 
     func testKeepAliveStateHasKeepAlive() {
-        var buffer = ByteBufferAllocator().buffer(capacity: 32)
-        buffer.write(string: "Connection: other, keEP-alive\r\n" +
-                             "Content-Type: text/html\r\n" +
-                             "Connection: server, x-options")
-        let headers = HTTPHeaders(buffer: buffer, headers:
-            [HTTPHeader(name: HTTPHeaderIndex(start: 0, length: 10),
-                        value: HTTPHeaderIndex(start: 12, length: 17)),
-             HTTPHeader(name: HTTPHeaderIndex(start: 32, length: 12),
-                        value: HTTPHeaderIndex(start: 46, length: 9)),
-             HTTPHeader(name: HTTPHeaderIndex(start: 57, length: 10),
-                        value: HTTPHeaderIndex(start: 69, length: 17))],
-                                  keepAliveState: .unknown)
+        let headers = HTTPHeaders([("Connection", "other, keEP-alive"),
+                                   ("Content-Type", "text/html"),
+                                   ("Connection", "server, x-options")])
         
         XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
     }
 
     func testKeepAliveStateHasClose() {
-        var buffer = ByteBufferAllocator().buffer(capacity: 32)
-        buffer.write(string: "Connection: x-options,  other\r\n" +
-                             "Content-Type: text/html\r\n" +
-                             "Connection: server,     clOse")
-        let headers = HTTPHeaders(buffer: buffer, headers:
-            [HTTPHeader(name: HTTPHeaderIndex(start: 0, length: 10),
-                        value: HTTPHeaderIndex(start: 12, length: 17)),
-             HTTPHeader(name: HTTPHeaderIndex(start: 32, length: 12),
-                        value: HTTPHeaderIndex(start: 46, length: 9)),
-             HTTPHeader(name: HTTPHeaderIndex(start: 56, length: 10),
-                        value: HTTPHeaderIndex(start: 68, length: 17))],
-                                  keepAliveState: .unknown)
+        let headers = HTTPHeaders([("Connection", "x-options,  other"),
+                                   ("Content-Type", "text/html"),
+                                   ("Connection", "server,     clOse")])
         
         XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
     }
     
     func testResolveNonContiguousHeaders() {
-        var buffer = ByteBufferAllocator().buffer(capacity: 32)
-        buffer.write(string: "Connection: x-options,  other\r\n" +
-                             "Content-Type: text/html\r\n" +
-                             "Connection: server,     close")
-        let headers =
-            [HTTPHeader(name: HTTPHeaderIndex(start: 0, length: 10),
-                        value: HTTPHeaderIndex(start: 12, length: 17)),
-             HTTPHeader(name: HTTPHeaderIndex(start: 32, length: 12),
-                        value: HTTPHeaderIndex(start: 46, length: 9)),
-             HTTPHeader(name: HTTPHeaderIndex(start: 56, length: 10),
-                        value: HTTPHeaderIndex(start: 68, length: 17))]
-        
+        let headers = HTTPHeaders([("Connection", "x-options,  other"),
+                                   ("Content-Type", "text/html"),
+                                   ("Connection", "server,     close")])
         var tokenSource = HTTPListHeaderIterator(
-            headerName: "Connection".utf8, headers: HTTPHeaders.init(buffer: buffer, headers: headers, keepAliveState: .unknown))
+            headerName: "Connection".utf8, headers: headers)
         
         var currentToken = tokenSource.next()
-        XCTAssertEqual(readAllTheStringFromCollection(currentToken), "x-options")
+        XCTAssertEqual(String.init(decoding: currentToken!, as: UTF8.self), "x-options")
         currentToken = tokenSource.next()
-        XCTAssertEqual(readAllTheStringFromCollection(currentToken), "other")
+        XCTAssertEqual(String.init(decoding: currentToken!, as: UTF8.self), "other")
         currentToken = tokenSource.next()
-        XCTAssertEqual(readAllTheStringFromCollection(currentToken), "server")
+        XCTAssertEqual(String.init(decoding: currentToken!, as: UTF8.self), "server")
         currentToken = tokenSource.next()
-        XCTAssertEqual(readAllTheStringFromCollection(currentToken), "close")
+        XCTAssertEqual(String.init(decoding: currentToken!, as: UTF8.self), "close")
         currentToken = tokenSource.next()
         XCTAssertNil(currentToken)
-    }
-
-}
-
-extension HTTPHeadersTest {
-    func readAllTheStringFromCollection<T: Collection>(_ collection: T?) -> String where T.Element == UInt8 {
-        return String.init(cString: (collection?.map({CChar($0)}) ?? []) + [CChar(0)], encoding: .utf8) ?? "<NIL>"
     }
 }

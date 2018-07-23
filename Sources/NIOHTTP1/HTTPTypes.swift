@@ -18,11 +18,11 @@ let crlf: StaticString = "\r\n"
 let headerSeparator: StaticString = ": "
 
 /// An `IteratorProtocol` that can iterate through comma separated list of values for a certain
-/// header
+/// header.
 ///
 /// **Example:**
 ///
-/// Suppose you have this headers:
+/// Suppose you have these headers:
 ///
 ///      Connection: keep-alive, x-server
 ///      Content-Type: text/html
@@ -30,17 +30,16 @@ let headerSeparator: StaticString = ": "
 ///
 /// You can iterate using this struct on those headers, for values of `Connection`, to get
 /// `keep-alive`, then `x-server`, then `other`
-///
-public struct HTTPListHeaderIterator<T: Collection>: IteratorProtocol where T.Element == UInt8 {
+public struct HTTPListHeaderIterator<Name: Collection>: IteratorProtocol where Name.Element == UInt8 {
     
     public typealias Element = ByteBufferView
     
     private var currentHeaderIndex: Int = -1
     private var singleValueViewIterator: Array<ByteBufferView>.Iterator?
-    private let headerName: T
+    private let headerName: Name
     private let headers: HTTPHeaders
     
-    fileprivate let comma = UInt8(",".utf8CString[0])
+    fileprivate let comma = ",".utf8.first!
     
     /// Returns next index in headers
     ///
@@ -48,9 +47,9 @@ public struct HTTPListHeaderIterator<T: Collection>: IteratorProtocol where T.El
     /// - Returns: The next index of the header in header array, or `nil` if not found
     internal func headerIndex(after current: Int) -> Int? {
         for (idx, currentHeader) in headers.headers.enumerated().dropFirst(current + 1) {
-            if headers.buffer.viewBytes(at: currentHeader.name.start,
-                                        length: currentHeader.name.length)
-                .compareReadableBytes(to: headerName) {
+            let view = headers.buffer.viewBytes(at: currentHeader.name.start,
+                                                length: currentHeader.name.length)
+            if view.compareCaseInsensitiveASCIIBytes(to: headerName) {
                 return idx
             }
         }
@@ -77,7 +76,7 @@ public struct HTTPListHeaderIterator<T: Collection>: IteratorProtocol where T.El
         
     }
     
-    init(headerName: T,
+    init(headerName: Name,
          headers: HTTPHeaders) {
         
         self.headers = headers
@@ -87,32 +86,28 @@ public struct HTTPListHeaderIterator<T: Collection>: IteratorProtocol where T.El
 }
 
 extension HTTPHeaders {
-    
     private static let connectionString = "connection".utf8
-    
     private static let keepAliveString = "keep-alive".utf8
     private static let closeString = "close".utf8
     
-    internal var isKeepAlive: Bool? {
+    internal enum ConnectionHeaderValue {
+        case keepAlive
+        case close
+        case unspecified
+    }
+    
+    internal var isKeepAlive: ConnectionHeaderValue {
         get {
-            var keepAlive = false
-            var close = false
-            
             var tokenizer = HTTPListHeaderIterator(
                 headerName: HTTPHeaders.connectionString, headers: self)
             
+            // TODO: Handle the case where both keep-alive and close are used
             while let nextToken = tokenizer.next() {
-                keepAlive = keepAlive ||
-                    (nextToken.compareReadableBytes(to: HTTPHeaders.keepAliveString))
-                close = close ||
-                    (nextToken.compareReadableBytes(to: HTTPHeaders.closeString))
+                if nextToken.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.keepAliveString) { return .keepAlive }
+                else if nextToken.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.closeString) { return .close }
             }
             
-            // TODO: Handle the case where both keep-alive and close are used
-            if keepAlive { return true }
-            if close { return false }
-            
-            return nil
+            return .unspecified
         }
     }
 }
@@ -404,8 +399,10 @@ private extension UInt8 {
         case .keepAlive:
             return true
         case .unknown:
-            if let keepAliveStatus = self.isKeepAlive { return keepAliveStatus }
-            
+            let keepAliveStatus = self.isKeepAlive
+            if keepAliveStatus == .keepAlive { return true }
+            if keepAliveStatus == .close { return false }
+
             // HTTP 1.1 use keep-alive by default if not otherwise told.
             return version.major == 1 && version.minor >= 1
         }
