@@ -18,10 +18,12 @@ fileprivate let defaultWhitespaces = [" ", "\t"].map({$0.utf8.first!})
 
 extension ByteBufferView {
     internal func trim(limitingElements: [UInt8]) -> ByteBufferView {
-        let lastNonWhitespaceIndex = self.lastIndex { !limitingElements.contains($0) }
-        let firstNonWhitespaceIndex = self.firstIndex { !limitingElements.contains($0) }
-
-        return self[firstNonWhitespaceIndex!..<index(after: lastNonWhitespaceIndex!)]
+        guard let lastNonWhitespaceIndex = self.lastIndex(where: { !limitingElements.contains($0) }),
+              let firstNonWhitespaceIndex = self.firstIndex(where: { !limitingElements.contains($0) }) else {
+                // This buffer is entirely trimmed elements, so trim it to nothing.
+                return self[self.startIndex..<self.startIndex]
+        }
+        return self[firstNonWhitespaceIndex..<index(after: lastNonWhitespaceIndex)]
     }
     
     internal func trimSpaces() -> ByteBufferView {
