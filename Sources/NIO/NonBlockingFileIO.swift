@@ -192,7 +192,7 @@ public struct NonBlockingFileIO {
                 let n = try buf.writeWithUnsafeMutableBytes { ptr in
                     let res = try fileHandle.withUnsafeFileDescriptor { descriptor in
                         try Posix.read(descriptor: descriptor,
-                                       pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self),
+                                       pointer: ptr.baseAddress!,
                                        size: byteCount - bytesRead)
                     }
                     switch res {

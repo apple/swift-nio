@@ -314,7 +314,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func write(descriptor: CInt, pointer: UnsafePointer<UInt8>, size: Int) throws -> IOResult<Int> {
+    public static func write(descriptor: CInt, pointer: UnsafeRawPointer, size: Int) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
             sysWrite(descriptor, pointer, size)
         }
@@ -328,7 +328,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func sendto(descriptor: CInt, pointer: UnsafePointer<UInt8>, size: size_t,
+    public static func sendto(descriptor: CInt, pointer: UnsafeRawPointer, size: size_t,
                               destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
             sysSendTo(descriptor, pointer, size, 0, destinationPtr, destinationSize)
@@ -336,14 +336,14 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func read(descriptor: CInt, pointer: UnsafeMutablePointer<UInt8>, size: size_t) throws -> IOResult<Int> {
+    public static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
             sysRead(descriptor, pointer, size)
         }
     }
 
     @inline(never)
-    public static func recvfrom(descriptor: CInt, pointer: UnsafeMutablePointer<UInt8>, len: size_t, addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) throws -> IOResult<ssize_t> {
+    public static func recvfrom(descriptor: CInt, pointer: UnsafeMutableRawPointer, len: size_t, addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) throws -> IOResult<ssize_t> {
         return try wrapSyscallMayBlock {
             sysRecvFrom(descriptor, pointer, len, 0, addr, addrlen)
         }
