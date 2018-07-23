@@ -55,7 +55,6 @@ class ByteBufferUtilsTest: XCTestCase {
         XCTAssertFalse(
             someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
                 to: "firot".utf8))
-        
     }
 
     private func byteBufferView(string: String) -> ByteBufferView {
@@ -74,6 +73,8 @@ class ByteBufferUtilsTest: XCTestCase {
         XCTAssertEqual(byteBufferView(string: "   firs  t \t ").trimSpaces().map({CChar($0)}), byteBufferView(string: "firs  t").map({CChar($0)}))
         XCTAssertEqual(byteBufferView(string: "f\t  irst  ").trimSpaces().map({CChar($0)}), byteBufferView(string: "f\t  irst").map({CChar($0)}))
         XCTAssertEqual(byteBufferView(string: "f i  rs  t").trimSpaces().map({CChar($0)}), byteBufferView(string: "f i  rs  t").map({CChar($0)}))
+        XCTAssertEqual(byteBufferView(string: "   \t \t ").trimSpaces().map({CChar($0)}),
+            byteBufferView(string: "").map({CChar($0)}))
     }
 
 }
