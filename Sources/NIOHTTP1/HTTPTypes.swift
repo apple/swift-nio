@@ -30,7 +30,7 @@ let headerSeparator: StaticString = ": "
 ///
 /// You can iterate using this struct on those headers, for values of `Connection`, to get
 /// `keep-alive`, then `x-server`, then `other`
-public struct HTTPListHeaderIterator<Name: Collection>: IteratorProtocol where Name.Element == UInt8 {
+public struct HTTPListHeaderIterator<Name: Collection>: Sequence, IteratorProtocol where Name.Element == UInt8 {
     
     public typealias Element = ByteBufferView
     
@@ -76,6 +76,10 @@ public struct HTTPListHeaderIterator<Name: Collection>: IteratorProtocol where N
         
     }
     
+    public func makeIterator() -> HTTPListHeaderIterator<Name> {
+        return self
+    }
+    
     init(headerName: Name,
          headers: HTTPHeaders) {
         
@@ -96,15 +100,15 @@ extension HTTPHeaders {
         case unspecified
     }
     
-    internal var isKeepAlive: ConnectionHeaderValue {
+    internal var keepAliveFromHeaders: ConnectionHeaderValue {
         get {
-            var tokenizer = HTTPListHeaderIterator(
+            let tokenizer = HTTPListHeaderIterator(
                 headerName: HTTPHeaders.connectionString, headers: self)
             
             // TODO: Handle the case where both keep-alive and close are used
-            while let nextToken = tokenizer.next() {
-                if nextToken.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.keepAliveString) { return .keepAlive }
-                else if nextToken.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.closeString) { return .close }
+            for token in tokenizer {
+                if token.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.keepAliveString) { return .keepAlive }
+                else if token.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.closeString) { return .close }
             }
             
             return .unspecified
@@ -399,12 +403,15 @@ private extension UInt8 {
         case .keepAlive:
             return true
         case .unknown:
-            let keepAliveStatus = self.isKeepAlive
-            if keepAliveStatus == .keepAlive { return true }
-            if keepAliveStatus == .close { return false }
-
-            // HTTP 1.1 use keep-alive by default if not otherwise told.
-            return version.major == 1 && version.minor >= 1
+            switch self.keepAliveFromHeaders {
+            case .keepAlive:
+                return true
+            case .close:
+                return false
+            case .unspecified:
+                // HTTP 1.1 use keep-alive by default if not otherwise told.
+                return version.major == 1 && version.minor >= 1
+            }
         }
     }
 }
