@@ -21,7 +21,7 @@ extension ByteBufferView {
         let lastNonWhitespaceIndex = self.lastIndex { !limitingElements.contains($0) }
         let firstNonWhitespaceIndex = self.firstIndex { !limitingElements.contains($0) }
 
-        return self[firstNonWhitespaceIndex..<lastNonWhitespaceIndex]
+        return self[firstNonWhitespaceIndex!..<index(after: lastNonWhitespaceIndex!)]
     }
     
     internal func trimSpaces() -> ByteBufferView {
