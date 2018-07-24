@@ -39,13 +39,13 @@ public struct HTTPListHeaderIterator<Name: Collection>: Sequence, IteratorProtoc
     private let headerName: Name
     private let headers: HTTPHeaders
     
-    fileprivate let comma = ",".utf8.first!
+    private let comma = ",".utf8.first!
     
     /// Returns next index in headers
     ///
     /// - Parameter current: The index to begin iteration at
     /// - Returns: The next index of the header in header array, or `nil` if not found
-    internal func headerIndex(after current: Int) -> Int? {
+    private func headerIndex(after current: Int) -> Int? {
         for (idx, currentHeader) in headers.headers.enumerated().dropFirst(current + 1) {
             let view = headers.buffer.viewBytes(at: currentHeader.name.start,
                                                 length: currentHeader.name.length)
@@ -80,9 +80,8 @@ public struct HTTPListHeaderIterator<Name: Collection>: Sequence, IteratorProtoc
         return self
     }
     
-    init(headerName: Name,
-         headers: HTTPHeaders) {
-        
+    public init(headerName: Name,
+                headers: HTTPHeaders) {
         self.headers = headers
         self.headerName = headerName
     }
