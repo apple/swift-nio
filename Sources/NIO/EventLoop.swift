@@ -50,6 +50,93 @@ public struct Scheduled<T> {
     }
 }
 
+/// Returned once a task was scheduled to be repeatedly executed on the `EventLoop`.
+///
+/// A `RepeatedTask` allows the user to `cancel()` the repeated scheduling of further tasks.
+public final class RepeatedTask {
+    private let delay: TimeAmount
+    private let eventLoop: EventLoop
+    private var scheduled: Scheduled<EventLoopFuture<Void>>?
+    private var task: ((RepeatedTask) -> EventLoopFuture<Void>)?
+
+    internal init(interval: TimeAmount, eventLoop: EventLoop, task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) {
+        self.delay = interval
+        self.eventLoop = eventLoop
+        self.task = task
+    }
+
+    internal func begin(in delay: TimeAmount) {
+        if self.eventLoop.inEventLoop {
+            self.begin0(in: delay)
+        } else {
+            self.eventLoop.execute {
+                self.begin0(in: delay)
+            }
+        }
+    }
+
+    private func begin0(in delay: TimeAmount) {
+        assert(self.eventLoop.inEventLoop)
+        guard let task = self.task else {
+            return
+        }
+        self.scheduled = eventLoop.scheduleTask(in: delay) {
+            task(self)
+        }
+        self.reschedule()
+    }
+
+    /// Try to cancel the execution of the repeated task.
+    ///
+    /// Whether the execution of the task is immediately canceled depends on whether the execution of a task has already begun.
+    ///  This means immediate cancellation is not guaranteed.
+    ///
+    /// The safest way to cancel is by using the passed reference of `RepeatedTask` inside the task closure.
+    public func cancel() {
+        if self.eventLoop.inEventLoop {
+            self.cancel0()
+        } else {
+            self.eventLoop.execute {
+                self.cancel0()
+            }
+        }
+    }
+
+    private func cancel0() {
+        assert(self.eventLoop.inEventLoop)
+        self.scheduled?.cancel()
+        self.scheduled = nil
+        self.task = nil
+    }
+
+    private func reschedule() {
+        assert(self.eventLoop.inEventLoop)
+        guard let scheduled = self.scheduled else {
+            return
+        }
+
+        scheduled.futureResult.whenSuccess { future in
+            future.whenComplete {
+                self.reschedule0()
+            }
+        }
+
+        scheduled.futureResult.whenFailure { (_: Error) in
+            self.cancel0()
+        }
+    }
+
+    private func reschedule0() {
+        assert(self.eventLoop.inEventLoop)
+        guard let task = self.task else {
+            return
+        }
+        self.scheduled = self.eventLoop.scheduleTask(in: self.delay) {
+            task(self)
+        }
+        self.reschedule()
+    }
+}
 /// An EventLoop processes IO / tasks in an endless loop for `Channel`s until it's closed.
 ///
 /// Usually multiple `Channel`s share the same `EventLoop` for processing IO / tasks and so share the same processing `Thread`.
@@ -221,6 +308,40 @@ extension EventLoop {
 
     public func close() throws {
         // Do nothing
+    }
+
+    /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each task.
+    ///
+    /// - parameters:
+    ///     - initialDelay: The delay after which the first task is executed.
+    ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - task: The closure that will be executed.
+    /// - return: `RepeatedTask`
+    @discardableResult
+    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping (RepeatedTask) throws -> Void) -> RepeatedTask {
+        let futureTask: (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
+            do {
+                try task(repeatedTask)
+                return self.newSucceededFuture(result: ())
+            } catch {
+                return self.newFailedFuture(error: error)
+            }
+        }
+        return self.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, futureTask)
+    }
+
+    /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each task.
+    ///
+    /// - parameters:
+    ///     - initialDelay: The delay after which the first task is executed.
+    ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - task: The closure that will be executed.
+    /// - return: `RepeatedTask`
+    @discardableResult
+    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask {
+        let repeated = RepeatedTask(interval: delay, eventLoop: self, task: task)
+        repeated.begin(in: initialDelay)
+        return repeated
     }
 }
 

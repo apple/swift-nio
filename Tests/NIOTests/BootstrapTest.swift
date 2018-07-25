@@ -27,7 +27,7 @@ class BootstrapTest: XCTestCase {
 
             let childChannelDone: EventLoopPromise<Void> = group.next().newPromise()
             let serverChannelDone: EventLoopPromise<Void> = group.next().newPromise()
-            let serverChannel = try ServerBootstrap(group: group)
+            let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
                 .childChannelInitializer { channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
                     childChannelDone.succeed(result: ())
@@ -39,21 +39,23 @@ class BootstrapTest: XCTestCase {
                     return channel.eventLoop.newSucceededFuture(result: ())
                 }
                 .bind(host: "localhost", port: 0)
-                .wait()
+                .wait())
             defer {
                 XCTAssertNoThrow(try serverChannel.close().wait())
             }
 
-            let client = try ClientBootstrap(group: group)
+            let client = try assertNoThrowWithValue(ClientBootstrap(group: group)
                 .channelInitializer { channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
                     return channel.eventLoop.newSucceededFuture(result: ())
                 }
                 .connect(to: serverChannel.localAddress!)
-                .wait()
+                .wait())
             defer {
                 XCTAssertNoThrow(try client.syncCloseAcceptingAlreadyClosed())
             }
+            XCTAssertNoThrow(try childChannelDone.futureResult.wait())
+            XCTAssertNoThrow(try serverChannelDone.futureResult.wait())
         }
     }
 }

@@ -12,22 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(Linux)
-import func CNIOLinux.get_nprocs
-
-private func linuxCoreCount() -> Int {
-    return Int(get_nprocs())
-}
-#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-private func darwinCoreCount() -> Int {
-    var cores: CInt = 0
-    var coresLen: size_t = MemoryLayout.size(ofValue: cores)
-    let rc = sysctlbyname("hw.logicalcpu", &cores, &coresLen, nil, 0)
-    precondition(rc == 0)
-    return Int(cores)
-}
-#endif
-
 /// A utility function that runs the body code only in debug builds, without
 /// emitting compiler warnings.
 ///
@@ -54,11 +38,7 @@ public enum System {
     ///
     /// - returns: The logical core count on the system.
     public static var coreCount: Int {
-        #if os(Linux)
-        return linuxCoreCount()
-        #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-        return darwinCoreCount()
-        #endif
+        return sysconf(CInt(_SC_NPROCESSORS_ONLN))
     }
 
     /// A utility function that enumerates the available network interfaces on this machine.
