@@ -27,6 +27,7 @@ extension EndToEndTests {
    static var allTests : [(String, (EndToEndTests) -> () throws -> Void)] {
       return [
                 ("testBasicUpgradeDance", testBasicUpgradeDance),
+                ("testUpgradeWithProtocolName", testUpgradeWithProtocolName),
                 ("testCanRejectUpgrade", testCanRejectUpgrade),
                 ("testRequiresVersion13", testRequiresVersion13),
                 ("testRequiresVersionHeader", testRequiresVersionHeader),

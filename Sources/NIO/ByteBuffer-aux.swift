@@ -30,8 +30,7 @@ extension ByteBuffer {
         }
 
         return self.withVeryUnsafeBytes { ptr in
-            Array.init(UnsafeBufferPointer<UInt8>(start: ptr.baseAddress?.advanced(by: index).assumingMemoryBound(to: UInt8.self),
-                                                  count: length))
+            Array<UInt8>(ptr[index..<(index+length)])
         }
     }
 
@@ -118,8 +117,7 @@ extension ByteBuffer {
             guard index <= pointer.count - length else {
                 return nil
             }
-            return String(decoding: UnsafeBufferPointer(start: pointer.baseAddress?.assumingMemoryBound(to: UInt8.self).advanced(by: index), count: length),
-                          as: UTF8.self)
+            return String(decoding: pointer[index..<(index+length)], as: UTF8.self)
         }
     }
 

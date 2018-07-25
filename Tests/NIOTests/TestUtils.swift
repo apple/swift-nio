@@ -165,3 +165,16 @@ func assertSetGetOptionOnOpenAndClosed<T: ChannelOption>(channel: Channel, optio
         // expected
     }
 }
+
+func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T, defaultValue: T? = nil, file: StaticString = #file, line: UInt = #line) throws -> T {
+    do {
+        return try body()
+    } catch {
+        XCTFail("unexpected error \(error) thrown", file: file, line: line)
+        if let defaultValue = defaultValue {
+            return defaultValue
+        } else {
+            throw error
+        }
+    }
+}

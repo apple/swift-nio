@@ -124,6 +124,7 @@ extension ByteBufferTest {
                 ("testViewsStartIndexIsStable", testViewsStartIndexIsStable),
                 ("testSlicesOfByteBufferViewsAreByteBufferViews", testSlicesOfByteBufferViewsAreByteBufferViews),
                 ("testReadableBufferViewRangeEqualCapacity", testReadableBufferViewRangeEqualCapacity),
+                ("testWeDontWriteTooMuchForUnderreportingContiguousCollection", testWeDontWriteTooMuchForUnderreportingContiguousCollection),
            ]
    }
 }
