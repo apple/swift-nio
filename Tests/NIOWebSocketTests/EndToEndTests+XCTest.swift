@@ -36,6 +36,8 @@ extension EndToEndTests {
                 ("testMayRegisterMultipleWebSocketEndpoints", testMayRegisterMultipleWebSocketEndpoints),
                 ("testSendAFewFrames", testSendAFewFrames),
                 ("testMaxFrameSize", testMaxFrameSize),
+                ("testAutomaticErrorHandling", testAutomaticErrorHandling),
+                ("testNoAutomaticErrorHandling", testNoAutomaticErrorHandling),
            ]
    }
 }
