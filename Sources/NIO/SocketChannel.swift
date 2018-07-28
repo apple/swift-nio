@@ -86,6 +86,11 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             pendingWrites.writeSpinCount = value as! UInt
         case _ as WriteBufferWaterMarkOption:
             pendingWrites.waterMark = value as! WriteBufferWaterMark
+        case _ as UserDefinedWritabilityOption:
+            let index = option.value as! Int
+            if pendingWrites.setUserDefinedWritability(index: index, writable: value as! Bool) {
+                pipeline.fireChannelWritabilityChanged0()
+            }
         default:
             try super.setOption0(option: option, value: value)
         }
@@ -107,6 +112,9 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             return pendingWrites.writeSpinCount as! T.OptionType
         case _ as WriteBufferWaterMarkOption:
             return pendingWrites.waterMark as! T.OptionType
+        case _ as UserDefinedWritabilityOption:
+            let index = option.value as! Int
+            return pendingWrites.getUserDefinedWritability(index: index) as! T.OptionType
         default:
             return try super.getOption0(option: option)
         }
@@ -556,6 +564,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             pendingWrites.writeSpinCount = value as! UInt
         case _ as WriteBufferWaterMarkOption:
             pendingWrites.waterMark = value as! WriteBufferWaterMark
+        case _ as UserDefinedWritabilityOption:
+            let index = option.value as! Int
+            if pendingWrites.setUserDefinedWritability(index: index, writable: value as! Bool) {
+                pipeline.fireChannelWritabilityChanged0()
+            }
         default:
             try super.setOption0(option: option, value: value)
         }
@@ -573,6 +586,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             return pendingWrites.writeSpinCount as! T.OptionType
         case _ as WriteBufferWaterMarkOption:
             return pendingWrites.waterMark as! T.OptionType
+        case _ as UserDefinedWritabilityOption:
+            let index = option.value as! Int
+            return pendingWrites.getUserDefinedWritability(index: index) as! T.OptionType
         default:
             return try super.getOption0(option: option)
         }

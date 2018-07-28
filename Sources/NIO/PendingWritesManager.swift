@@ -273,7 +273,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
 
     internal var waterMark: WriteBufferWaterMark = WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
-    internal let channelWritabilityFlag: Atomic<Bool> = Atomic(value: true)
+    internal let unwritableFlags: Atomic<UInt64> = Atomic(value: 0)
 
     internal var writeSpinCount: UInt = 16
 
@@ -304,7 +304,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
         assert(self.isOpen)
         self.state.append(.init(data: data, promise: promise))
 
-        if self.state.bytes > waterMark.high && channelWritabilityFlag.compareAndExchange(expected: true, desired: false) {
+        if self.state.bytes > waterMark.high && setUnwritable() {
             // Returns false to signal the Channel became non-writable and we need to notify the user
             return false
         }
@@ -352,7 +352,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
         let (promise, result) = self.state.didWrite(itemCount: itemCount, result: result)
 
         if self.state.bytes < waterMark.low {
-            channelWritabilityFlag.store(true)
+            _ = setWritable()
         }
 
         promise?.succeed(result: ())
@@ -447,13 +447,92 @@ internal protocol PendingWritesManager {
     var isFlushPending: Bool { get }
     var writeSpinCount: UInt { get }
     var currentBestWriteMechanism: WriteMechanism { get }
-    var channelWritabilityFlag: Atomic<Bool> { get }
+    var unwritableFlags: Atomic<UInt64> { get }
 }
 
 extension PendingWritesManager {
     // This is called from `Channel` API so must be thread-safe.
     var isWritable: Bool {
-        return self.channelWritabilityFlag.load()
+        return self.unwritableFlags.load() == 0
+    }
+
+    internal func setWritable() -> Bool {
+        // Check if flag already cleared
+        if unwritableFlags.load() & 1 == 0 {
+            return false
+        }
+        var oldValue: UInt64
+        var newValue: UInt64
+        repeat {
+            oldValue = unwritableFlags.load()
+            newValue = oldValue & UInt64(bitPattern: -2);
+        }
+        while !unwritableFlags.compareAndExchange(expected: oldValue, desired: newValue)
+        return true
+    }
+
+    internal func setUnwritable() -> Bool {
+        // Check if flag already cleared
+        if unwritableFlags.load() & 1 == 1 {
+            return false
+        }
+        var oldValue: UInt64
+        var newValue: UInt64
+        repeat {
+            oldValue = unwritableFlags.load()
+            newValue = oldValue | 1
+        }
+        while !unwritableFlags.compareAndExchange(expected: oldValue, desired: newValue)
+        return true
+    }
+
+    internal func getUserDefinedWritability(index: Int) -> Bool {
+        let mask = writabilityMask(index)
+        return (unwritableFlags.load() & mask) == mask
+    }
+
+    internal func setUserDefinedWritability(index: Int, writable: Bool) -> Bool {
+        if (writable) {
+            return setUserDefinedWritability(index: index)
+        }
+        else {
+            return clearUserDefinedWritability(index: index)
+        }
+    }
+
+    internal func setUserDefinedWritability(index: Int) -> Bool {
+        let mask = ~writabilityMask(index)
+        var oldValue: UInt64
+        var newValue: UInt64
+        repeat {
+            oldValue = unwritableFlags.load()
+            newValue = oldValue & mask
+        }
+        while !unwritableFlags.compareAndExchange(expected: oldValue, desired: newValue)
+
+        return oldValue != 0 && newValue == 0
+    }
+
+    internal func clearUserDefinedWritability(index: Int) -> Bool {
+        let mask = writabilityMask(index)
+        var oldValue: UInt64
+        var newValue: UInt64
+        repeat {
+            oldValue = unwritableFlags.load()
+            newValue = oldValue | mask
+        }
+        while !unwritableFlags.compareAndExchange(expected: oldValue, desired: newValue)
+
+        return oldValue == 0 && newValue != 0
+    }
+
+    private func writabilityMask(_ index: Int) -> UInt64 {
+        if (index >= 1 && index <= 63) {
+            return 1 << index
+        }
+        else {
+            fatalError("index: \(index) (expected: 1~63)")
+        }
     }
 
     internal func triggerWriteOperations(triggerOneWriteOperation: (WriteMechanism) throws -> OneWriteOperationResult) throws -> (OverallWriteResult, Bool) {

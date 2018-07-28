@@ -186,6 +186,36 @@ public enum AllowRemoteHalfClosureOption: ChannelOption {
     case const(())
 }
 
+/// `UserDefinedWritabilityOption` allows users to control the `isWritable` status of the channel aside from its
+/// normal calculation.  This is useful for handlers that need to have a say in when the channel is writable. For
+/// example, the traffic shaping handler needs to be able to disable writability at certain times and this option
+/// provides that capability.
+///
+/// There are 63 available flags and users must negotatiate an index on their own. The option carries the index
+/// of a specific flag to set and a value for the flag.
+public enum UserDefinedWritabilityOption: ChannelOption {
+    public typealias AssociatedValueType = Int
+    public typealias OptionType = Bool
+
+    case const(AssociatedValueType)
+
+    /// Create a new `UserDefinedWritabilityOption`.
+    ///
+    /// - parameters:
+    ///       - index: Index of the writability flag to set.
+    public init(index: Int) {
+        assert(index >= 1 && index < 64, "User defined writability indices must be one of 1..63")
+        self = .const(index)
+    }
+
+    public var value: Int {
+        switch self {
+        case .const(let index):
+            return index
+        }
+    }
+}
+
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
 public struct ChannelOptions {
     /// - seealso: `SocketOption`.
@@ -217,4 +247,7 @@ public struct ChannelOptions {
 
     /// - seealso: `AllowRemoteHalfClosureOption`.
     public static let allowRemoteHalfClosure = AllowRemoteHalfClosureOption.const(())
+
+    /// - seealso: `UserDefinedWritabilityOption`.
+    public static let userDefinedWritability = { (index: Int) -> UserDefinedWritabilityOption in .const(index) }
 }
