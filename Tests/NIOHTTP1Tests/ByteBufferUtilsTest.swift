@@ -23,7 +23,7 @@ fileprivate enum DummyError: Error {
 class ByteBufferUtilsTest: XCTestCase {
     
     func testComparators() {
-        var someByteBuffer: ByteBuffer = ByteBufferAllocator.init().buffer(capacity: 16)
+        var someByteBuffer: ByteBuffer = ByteBufferAllocator().buffer(capacity: 16)
         someByteBuffer.write(string: "fiRSt")
         XCTAssert(
             someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
@@ -55,7 +55,7 @@ class ByteBufferUtilsTest: XCTestCase {
     }
 
     private func byteBufferView(string: String) -> ByteBufferView {
-        let byteBufferAllocator = ByteBufferAllocator.init()
+        let byteBufferAllocator = ByteBufferAllocator()
         var buffer = byteBufferAllocator.buffer(capacity: string.lengthOfBytes(using: .utf8))
         buffer.write(string: string)
         return buffer.readableBytesView
