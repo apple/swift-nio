@@ -11,9 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-//
-// ByteBufferUtilsTest.swift
-//
 
 import XCTest
 import NIO

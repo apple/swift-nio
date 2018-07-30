@@ -204,13 +204,13 @@ class HTTPHeadersTest : XCTestCase {
             headerName: "Connection".utf8, headers: headers)
         
         var currentToken = tokenSource.next()
-        XCTAssertEqual(String.init(decoding: currentToken!, as: UTF8.self), "x-options")
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "x-options")
         currentToken = tokenSource.next()
-        XCTAssertEqual(String.init(decoding: currentToken!, as: UTF8.self), "other")
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "other")
         currentToken = tokenSource.next()
-        XCTAssertEqual(String.init(decoding: currentToken!, as: UTF8.self), "server")
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "server")
         currentToken = tokenSource.next()
-        XCTAssertEqual(String.init(decoding: currentToken!, as: UTF8.self), "close")
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "close")
         currentToken = tokenSource.next()
         XCTAssertNil(currentToken)
     }

@@ -101,13 +101,16 @@ extension HTTPHeaders {
     
     internal var keepAliveFromHeaders: ConnectionHeaderValue {
         get {
-            let tokenizer = HTTPListHeaderIterator(
-                headerName: HTTPHeaders.connectionString, headers: self)
+            let tokenizer = HTTPListHeaderIterator(headerName: HTTPHeaders.connectionString,
+                                                   headers: self)
             
             // TODO: Handle the case where both keep-alive and close are used
             for token in tokenizer {
-                if token.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.keepAliveString) { return .keepAlive }
-                else if token.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.closeString) { return .close }
+                if token.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.keepAliveString) {
+                    return .keepAlive
+                } else if token.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.closeString) {
+                    return .close
+                }
             }
             
             return .unspecified
