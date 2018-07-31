@@ -1151,7 +1151,7 @@ public class ChannelTests: XCTestCase {
             XCTAssertEqual(ChannelError.outputClosed, err)
         }
         let written = try buffer.withUnsafeReadableBytes { p in
-            try accepted.write(pointer: p.baseAddress!.assumingMemoryBound(to: UInt8.self), size: 4)
+            try accepted.write(pointer: UnsafeRawBufferPointer(start: p.baseAddress, count: 4))
         }
         if case .processed(let numBytes) = written {
             XCTAssertEqual(4, numBytes)
@@ -1209,7 +1209,7 @@ public class ChannelTests: XCTestCase {
         buffer.write(string: "1234")
 
         let written = try buffer.withUnsafeReadableBytes { p in
-            try accepted.write(pointer: p.baseAddress!.assumingMemoryBound(to: UInt8.self), size: 4)
+            try accepted.write(pointer: UnsafeRawBufferPointer(start: p.baseAddress, count: 4))
         }
 
         switch written {
@@ -2042,16 +2042,16 @@ public class ChannelTests: XCTestCase {
             init(protocolFamily: CInt) throws {
                 try super.init(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: true)
             }
-            override func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> IOResult<Int> {
+            override func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
                 defer {
                     self.firstReadHappened = true
                 }
-                XCTAssertGreaterThan(size, 0)
+                XCTAssertGreaterThan(pointer.count, 0)
                 if self.firstReadHappened {
                     // this is a copy of the exact error that'd come out of the real Socket.read
                     throw IOError.init(errnoCode: ECONNRESET, function: "read(descriptor:pointer:size:)")
                 } else {
-                    pointer.pointee = 0xff
+                    pointer[0] = 0xff
                     return .processed(1)
                 }
             }
