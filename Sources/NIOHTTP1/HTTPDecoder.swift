@@ -30,7 +30,7 @@ private struct HTTPParserState {
     var currentStatus: String?
     var slice: (readerIndex: Int, length: Int)?
     // This is set before http_parser_execute(...) is called and set to nil again after it finish
-    var baseAddress: UnsafePointer<UInt8>?
+    var baseAddress: UnsafeRawPointer?
     var currentError: HTTPParserError?
     var seenEOF = false
     var headerStartIndex: Int?
@@ -477,15 +477,21 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     private func decodeHTTP(ctx: ChannelHandlerContext) throws {
         // We need to refetch the cumulationBuffer on each loop as it may has changed due re-entrance calls of channelRead(...)
         while let bufferSlice = self.cumulationBuffer, bufferSlice.readableBytes > 0 {
+            // we need to get `readerIndex` and `readableBytes` now because `withVeryUnsafeBytes` owns the
+            // `ByteBuffer` exclusively.
+            let readerIndex = bufferSlice.readerIndex
+            let readableBytes = bufferSlice.readableBytes
+
             // Using withVeryUnsafeBytes here as this simplifies the calculation of the readerIndex which is relative to the baseAddress.
             let result = bufferSlice.withVeryUnsafeBytes { (pointer) -> size_t in
-                self.state.baseAddress = pointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                self.state.baseAddress = pointer.baseAddress!
                 defer {
                     self.state.baseAddress = nil
                 }
-                return self.state.baseAddress!.withMemoryRebound(to: Int8.self, capacity: pointer.count) { p in
-                    c_nio_http_parser_execute(&self.parser, &self.settings, p.advanced(by: bufferSlice.readerIndex), bufferSlice.readableBytes)
-                }
+                return c_nio_http_parser_execute_swift(&self.parser,
+                                                       &self.settings,
+                                                       pointer.baseAddress!.advanced(by: readerIndex),
+                                                       readableBytes)
             }
             
             try self.rethrowParserError()

@@ -27,6 +27,16 @@ let sysFree: @convention(c) (UnsafeMutableRawPointer?) -> Void = free
             self.copyBytes(from: src)
         }
     }
+    public extension UnsafeRawBufferPointer {
+        public func bindMemory<T>(to type: T.Type) -> UnsafeBufferPointer<T> {
+            guard let base = self.baseAddress else {
+                return UnsafeBufferPointer<T>(start: nil, count: 0)
+            }
+            let capacity = count / MemoryLayout<T>.stride
+            let ptr = base.bindMemory(to: T.self, capacity: capacity)
+            return UnsafeBufferPointer<T>(start: ptr, count: capacity)
+        }
+    }
 #endif
 
 extension _ByteBufferSlice: Equatable {
@@ -284,8 +294,8 @@ public struct ByteBuffer {
 
         public func dumpBytes(slice: Slice, offset: Int, length: Int) -> String {
             var desc = "["
-            for i in Int(slice.lowerBound) + offset ..< Int(slice.lowerBound) + offset + length {
-                let byte = self.bytes.advanced(by: i).assumingMemoryBound(to: UInt8.self).pointee
+            let bytes = UnsafeRawBufferPointer(start: self.bytes, count: Int(self.capacity))
+            for byte in bytes[Int(slice.lowerBound) + offset ..< Int(slice.lowerBound) + offset + length] {
                 let hexByte = String(byte, radix: 16)
                 desc += " \(hexByte.count == 1 ? "0" : "")\(hexByte)"
             }
@@ -377,11 +387,11 @@ public struct ByteBuffer {
         }
 
         self._ensureAvailableCapacity(_Capacity(bytesCount), at: index)
-        let base = self._storage.bytes.advanced(by: Int(self._slice.lowerBound + index)).assumingMemoryBound(to: UInt8.self)
+        let base = self._storage.bytes.advanced(by: Int(self._slice.lowerBound + index))
         bytes.withUnsafeBytes { srcPtr in
             precondition(srcPtr.count >= bytesCount,
                          "collection \(bytes) claims count \(bytesCount) but withUnsafeBytes only offers \(srcPtr.count) bytes")
-            base.assign(from: srcPtr.baseAddress!.assumingMemoryBound(to: S.Element.self), count: Int(bytesCount))
+            base.copyMemory(from: srcPtr.baseAddress!, byteCount: Int(bytesCount))
         }
         return _toCapacity(Int(bytesCount))
     }
@@ -392,7 +402,8 @@ public struct ByteBuffer {
                "called the slower set<S: Sequence> function even though \(S.self) is a ContiguousCollection")
         func ensureCapacityAndReturnStorageBase(capacity: Int) -> UnsafeMutablePointer<UInt8> {
             self._ensureAvailableCapacity(_Capacity(capacity), at: index)
-            return self._storage.bytes.advanced(by: Int(self._slice.lowerBound + index)).assumingMemoryBound(to: UInt8.self)
+            return self._storage.bytes.advanced(by: Int(self._slice.lowerBound + index)).bindMemory(to: UInt8.self,
+                                                                                                    capacity: capacity)
         }
         let underestimatedByteCount = bytes.underestimatedCount
         let newPastEndIndex: _Index = index + _toIndex(underestimatedByteCount)
