@@ -30,13 +30,13 @@ let headerSeparator: StaticString = ": "
 ///
 /// You can iterate using this struct on those headers, for values of `Connection`, to get
 /// `keep-alive`, then `x-server`, then `other`
-public struct HTTPListHeaderIterator<Name: Collection>: Sequence, IteratorProtocol where Name.Element == UInt8 {
+public struct HTTPListHeaderIterator: Sequence, IteratorProtocol {
     
     public typealias Element = ByteBufferView
     
     private var currentHeaderIndex: Int = -1
     private var singleValueViewIterator: Array<ByteBufferView>.Iterator?
-    private let headerName: Name
+    private let headerName: String.UTF8View
     private let headers: HTTPHeaders
     
     private let comma = ",".utf8.first!
@@ -76,11 +76,11 @@ public struct HTTPListHeaderIterator<Name: Collection>: Sequence, IteratorProtoc
         
     }
     
-    public func makeIterator() -> HTTPListHeaderIterator<Name> {
+    public func makeIterator() -> HTTPListHeaderIterator {
         return self
     }
     
-    public init(headerName: Name,
+    public init(headerName: String.UTF8View,
                 headers: HTTPHeaders) {
         self.headers = headers
         self.headerName = headerName
