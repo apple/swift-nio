@@ -168,9 +168,7 @@ extension KQueueEventFilterSet {
             var index: Int = 0
             for (event, filter) in [(KQueueEventFilterSet.read, EVFILT_READ), (.write, EVFILT_WRITE), (.except, EVFILT_EXCEPT)] {
                 if let flags = calculateKQueueChange(event: event) {
-                    keventBuffer[index].ident = UInt(fileDescriptor)
-                    keventBuffer[index].filter = Int16(filter)
-                    keventBuffer[index].flags = flags
+                    keventBuffer[index].setEvent(fileDescriptor: fileDescriptor, filter: filter, flags: flags)
                     index += 1
                 }
             }
@@ -532,7 +530,7 @@ final class Selector<R: Registration> {
                     // in any case we only want what the user is currently registered for & what we got
                     selectorEvent = selectorEvent.intersection(registration.interested)
 
-                    guard selectorEvent != .none else {
+                    guard selectorEvent != ._none else {
                         continue
                     }
 
@@ -584,7 +582,7 @@ final class Selector<R: Registration> {
             // in any case we only want what the user is currently registered for & what we got
             selectorEvent = selectorEvent.intersection(registration.interested)
 
-            guard selectorEvent != .none else {
+            guard selectorEvent != ._none else {
                 continue
             }
             try body((SelectorEvent(io: selectorEvent, registration: registration)))
@@ -729,3 +727,30 @@ public enum IOEvent {
     /// Not interested in any event.
     case none
 }
+
+
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+extension kevent {
+    /// Update a kevent for a given filter, file descriptor, and set of flags.
+    mutating func setEvent(fileDescriptor fd: CInt, filter: CInt, flags: UInt16) {
+        self.ident = UInt(fd)
+        self.filter = Int16(filter)
+        self.flags = flags
+        self.udata = nil
+
+        // On macOS, EVFILT_EXCEPT will fire whenever there is unread data in the socket receive
+        // buffer. This is not a behaviour we want from EVFILT_EXCEPT: we only want it to tell us
+        // about actually exceptional conditions. For this reason, when we set EVFILT_EXCEPT
+        // we do it with NOTE_LOWAT set to Int.max, which will ensure that there is never enough data
+        // in the send buffer to trigger EVFILT_EXCEPT. Thanks to the sensible design of kqueue,
+        // this only affects our EXCEPT filter: EVFILT_READ behaves separately.
+        if filter == EVFILT_EXCEPT {
+            self.fflags = CUnsignedInt(NOTE_LOWAT)
+            self.data = Int.max
+        } else {
+            self.fflags = 0
+            self.data = 0
+        }
+    }
+}
+#endif

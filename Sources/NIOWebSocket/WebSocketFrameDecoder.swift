@@ -229,6 +229,9 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
     /// Whether we should continue to parse.
     private var shouldKeepParsing = true
 
+    /// Whether this `ChannelHandler` should be performing automatic error handling.
+    private let automaticErrorHandling: Bool
+
     /// Construct a new `WebSocketFrameDecoder`
     ///
     /// - parameters:
@@ -241,9 +244,13 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
     ///         Users are strongly encouraged not to increase this value unless they absolutely
     ///         must, as the decoder will not produce partial frames, meaning that it will hold
     ///         on to data until the *entire* body is received.
-    public init(maxFrameSize: Int = 1 << 14) {
+    ///     - automaticErrorHandling: Whether this `ChannelHandler` should automatically handle
+    ///         protocol errors in frame serialization, or whether it should allow the pipeline
+    ///         to handle them.
+    public init(maxFrameSize: Int = 1 << 14, automaticErrorHandling: Bool = true) {
         precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
         self.maxFrameSize = maxFrameSize
+        self.automaticErrorHandling = automaticErrorHandling
     }
 
     public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState  {
@@ -307,14 +314,19 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
         }
         self.shouldKeepParsing = false
 
-        var data = ctx.channel.allocator.buffer(capacity: 2)
-        data.write(webSocketErrorCode: WebSocketErrorCode(error))
-        let frame = WebSocketFrame(fin: true,
-                                   opcode: .connectionClose,
-                                   data: data)
-        ctx.writeAndFlush(self.wrapOutboundOut(frame)).whenComplete {
-            ctx.close(promise: nil)
+        // If we've been asked to handle the errors here, we should.
+        // TODO(cory): Remove this in 2.0, in favour of `WebSocketProtocolErrorHandler`.
+        if self.automaticErrorHandling {
+            var data = ctx.channel.allocator.buffer(capacity: 2)
+            data.write(webSocketErrorCode: WebSocketErrorCode(error))
+            let frame = WebSocketFrame(fin: true,
+                                       opcode: .connectionClose,
+                                       data: data)
+            ctx.writeAndFlush(self.wrapOutboundOut(frame)).whenComplete {
+                ctx.close(promise: nil)
+            }
         }
+
         ctx.fireErrorCaught(error)
     }
 }

@@ -472,7 +472,7 @@ class ByteBufferTest: XCTestCase {
                 XCTAssertEqual(string.utf8.count, ptr.count)
 
                 for (idx, expected) in zip(0..<string.utf8.count, string.utf8) {
-                    let actual = ptr.baseAddress!.advanced(by: idx).assumingMemoryBound(to: UInt8.self).pointee
+                    let actual = ptr[idx]
                     XCTAssertEqual(expected, actual, "character at index \(idx) is \(actual) but should be \(expected)")
                 }
             }
@@ -636,7 +636,7 @@ class ByteBufferTest: XCTestCase {
         otherBuf?.withUnsafeReadableBytes { ptr in
             XCTAssertEqual(cap, ptr.count)
             for i in 0..<cap {
-                XCTAssertEqual(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)[i], UInt8(truncatingIfNeeded: i))
+                XCTAssertEqual(ptr[i], UInt8(truncatingIfNeeded: i))
             }
         }
     }
@@ -675,13 +675,13 @@ class ByteBufferTest: XCTestCase {
         buf!.withUnsafeReadableBytes { ptr in
             XCTAssertEqual(cap, ptr.count)
             for i in 0..<cap {
-                XCTAssertEqual(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)[i], 0)
+                XCTAssertEqual(ptr[i], 0)
             }
         }
         otherBuf!.withUnsafeReadableBytes { ptr in
             XCTAssertEqual(cap, ptr.count)
             for i in 0..<cap {
-                XCTAssertEqual(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)[i], UInt8(truncatingIfNeeded: i))
+                XCTAssertEqual(ptr[i], UInt8(truncatingIfNeeded: i))
             }
         }
     }
@@ -1444,6 +1444,57 @@ class ByteBufferTest: XCTestCase {
         let view = self.buf.readableBytesView
         let viewSlice: ByteBufferView = view[view.startIndex ..< view.endIndex]
         XCTAssertEqual(buf.readableBytes, viewSlice.count)
+    }
+
+    func testWeDontWriteTooMuchForUnderreportingContiguousCollection() throws {
+        // this is an illegal contiguous collection but we should still be able to deal with this
+        struct UnderreportingContiguousCollection: ContiguousCollection {
+            let storage: [UInt8] = Array(repeating: 0xff, count: 4096)
+            typealias Element = UInt8
+            typealias Index = Array<UInt8>.Index
+            typealias SubSequence = Array<UInt8>.SubSequence
+            typealias Indices = Array<UInt8>.Indices
+
+            public var count: Int {
+                // we're reporting 3 elements
+                return 3
+            }
+
+            public var indices: Indices {
+                return CountableRange(0...2)
+            }
+
+            public subscript(bounds: Range<Index>) -> SubSequence {
+                return self.storage[bounds]
+            }
+
+            public subscript(position: Index) -> Element {
+                /* this is wrong but we need to check that we don't access this */
+                XCTFail("shouldn't have been called")
+                return 0xff
+            }
+
+            public var startIndex: Index {
+                return self.storage.startIndex
+            }
+
+            public var endIndex: Index {
+                return self.storage.endIndex
+            }
+
+            func index(after i: Index) -> Index {
+                return self.storage.index(after: i)
+            }
+
+            func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+                // we're giving access to 4096 elements despite the fact we claim to only have 3 available
+                return try self.storage.withUnsafeBytes(body)
+            }
+        }
+        buf.clear()
+        buf.write(bytes: UnderreportingContiguousCollection())
+        XCTAssertEqual(3, buf.readableBytes)
+        XCTAssertEqual([0xff, 0xff, 0xff], buf.readBytes(length: buf.readableBytes)!)
     }
 }
 

@@ -580,7 +580,9 @@ extension EventLoopFuture {
     ///         a new value lifted into a new `EventLoopFuture`.
     /// - returns: A future that will receive the recovered value.
     public func mapIfError(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) -> T) -> EventLoopFuture<T> {
-        return thenIfError { return EventLoopFuture<T>(eventLoop: self.eventLoop, result: callback($0), file: file, line: line) }
+        return thenIfError(file: file, line: line) {
+            return EventLoopFuture<T>(eventLoop: self.eventLoop, result: callback($0), file: file, line: line)
+        }
     }
 
 
