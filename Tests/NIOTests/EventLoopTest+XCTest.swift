@@ -35,6 +35,7 @@ extension EventLoopTest {
                 ("testScheduleRepeatedTaskToNotRetainEventLoop", testScheduleRepeatedTaskToNotRetainEventLoop),
                 ("testEventLoopGroupMakeIterator", testEventLoopGroupMakeIterator),
                 ("testEventLoopMakeIterator", testEventLoopMakeIterator),
+                ("testDummyEventLoopGroupMakeIterator", testDummyEventLoopGroupMakeIterator),
                 ("testMultipleShutdown", testMultipleShutdown),
                 ("testShuttingDownFailsRegistration", testShuttingDownFailsRegistration),
                 ("testEventLoopThreads", testEventLoopThreads),
