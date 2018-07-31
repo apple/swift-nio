@@ -137,6 +137,32 @@ public final class RepeatedTask {
         self.reschedule()
     }
 }
+
+/// An iterator over the `EventLoop`s forming an `EventLoopGroup`.
+///
+/// Usually returned by an `EventLoopGroup`'s `makeIterator()` method.
+///
+///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+///     group.makeIterator()?.forEach { loop in
+///         // Do something with each loop
+///     }
+///
+public struct EventLoopIterator: Sequence, IteratorProtocol {
+    public typealias Element = EventLoop
+    private var eventLoops: IndexingIterator<[EventLoop]>
+
+    internal init(_ eventLoops: [EventLoop]) {
+        self.eventLoops = eventLoops.makeIterator()
+    }
+
+    /// Advances to the next `EventLoop` and returns it, or `nil` if no next element exists.
+    ///
+    /// - returns: The next `EventLoop` if a next element exists; otherwise, `nil`.
+    public mutating func next() -> EventLoop? {
+        return self.eventLoops.next()
+    }
+}
+
 /// An EventLoop processes IO / tasks in an endless loop for `Channel`s until it's closed.
 ///
 /// Usually multiple `Channel`s share the same `EventLoop` for processing IO / tasks and so share the same processing `Thread`.
@@ -342,6 +368,14 @@ extension EventLoop {
         let repeated = RepeatedTask(interval: delay, eventLoop: self, task: task)
         repeated.begin(in: initialDelay)
         return repeated
+    }
+
+    /// Returns an `EventLoopIterator` over this `EventLoop`.
+    ///
+    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
+    /// - returns: `EventLoopIterator`
+    public func makeIterator() -> EventLoopIterator? {
+        return EventLoopIterator([self])
     }
 }
 
@@ -743,6 +777,12 @@ public protocol EventLoopGroup: class {
     /// The virtue of this function is to shut the event loop down. To work around that we call back on a DispatchQueue
     /// instead.
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void)
+
+    /// Returns an `EventLoopIterator` over the `EventLoop`s in this `EventLoopGroup`.
+    ///
+    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
+    /// - returns: `EventLoopIterator`
+    func makeIterator() -> EventLoopIterator?
 }
 
 extension EventLoopGroup {
@@ -768,6 +808,10 @@ extension EventLoopGroup {
                 throw error
             }
         }
+    }
+
+    public func makeIterator() -> EventLoopIterator? {
+        return nil
     }
 }
 
@@ -851,6 +895,14 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
     /// - returns: The current `EventLoop` for the calling thread or `nil` if none is assigned to the thread.
     public static var currentEventLoop: EventLoop? {
         return threadSpecificEventLoop.currentValue
+    }
+
+    /// Returns an `EventLoopIterator` over the `EventLoop`s in this `MultiThreadedEventLoopGroup`.
+    ///
+    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
+    /// - returns: `EventLoopIterator`
+    public func makeIterator() -> EventLoopIterator? {
+        return EventLoopIterator(self.eventLoops)
     }
 
     public func next() -> EventLoop {

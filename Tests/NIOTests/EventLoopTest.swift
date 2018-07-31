@@ -174,6 +174,54 @@ public class EventLoopTest : XCTestCase {
         XCTAssertNil(weakEventLoop)
     }
 
+    public func testEventLoopGroupMakeIterator() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        var counter = 0
+        var innerCounter = 0
+        eventLoopGroup.makeIterator()?.forEach { loop in
+            counter += 1
+            loop.makeIterator()?.forEach { _ in
+                innerCounter += 1
+            }
+        }
+
+        XCTAssertEqual(counter, System.coreCount)
+        XCTAssertEqual(innerCounter, System.coreCount)
+    }
+
+    public func testEventLoopMakeIterator() throws {
+        let eventLoop = EmbeddedEventLoop()
+        var iterator = eventLoop.makeIterator()
+        defer {
+            XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
+        }
+
+        var counter = 0
+        iterator?.forEach { loop in
+            XCTAssertTrue(loop === eventLoop)
+            counter += 1
+        }
+
+        XCTAssertEqual(counter, 1)
+    }
+
+    public func testDummyEventLoopGroupMakeIterator() throws {
+        class DummyEventLoopGroup: EventLoopGroup {
+            func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) { }
+
+            func next() -> EventLoop {
+                return EmbeddedEventLoop()
+            }
+        }
+
+        let dummyEventLoopGroup = DummyEventLoopGroup()
+        XCTAssertNil(dummyEventLoopGroup.makeIterator())
+    }
+
     public func testMultipleShutdown() throws {
         // This test catches a regression that causes it to intermittently fail: it reveals bugs in synchronous shutdown.
         // Do not ignore intermittent failures in this test!
