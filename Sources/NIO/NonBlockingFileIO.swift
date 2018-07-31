@@ -214,6 +214,46 @@ public struct NonBlockingFileIO {
         }
     }
 
+    /// Write `buffer` to `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///   - fileHandle: The `FileHandle` to write to.
+    ///   - buffer: The `ByteBuffer` to write.
+    ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
+    /// - returns: An `EventLoopFuture` which is fulfilled if the write was successful or fails on error.
+    public func write(fileHandle: FileHandle,
+                      buffer: ByteBuffer,
+                      eventLoop: EventLoop) -> EventLoopFuture<()> {
+        var byteCount = buffer.readableBytes
+
+        guard byteCount > 0 else {
+            return eventLoop.newSucceededFuture(result: ())
+        }
+
+        return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            var buf = buffer
+            while byteCount > 0 {
+                let n = try buf.readWithUnsafeReadableBytes { ptr in
+                    precondition(ptr.count == byteCount)
+                    let res = try fileHandle.withUnsafeFileDescriptor { descriptor in
+                        try Posix.write(descriptor: descriptor,
+                                        pointer: ptr.baseAddress!,
+                                        size: byteCount)
+                    }
+                    switch res {
+                    case .processed(let n):
+                        assert(n >= 0, "write claims to have written a negative number of bytes \(n)")
+                        return n
+                    case .wouldBlock:
+                        throw Error.descriptorSetToNonBlocking
+                    }
+                }
+
+                byteCount -= n
+            }
+        }
+    }
+
     /// Open the file at `path` on a private thread pool which is separate from any `EventLoop` thread.
     ///
     /// This function will return (a future) of the `FileHandle` associated with the file opened and a `FileRegion`
