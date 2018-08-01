@@ -133,7 +133,7 @@ final class NonAcceptingServerSocket: ServerSocket {
     private var errors: [Int32]
 
     init(errors: [Int32]) throws {
-        // Reverse so its cheaper to remove errors.
+        // Reverse so it's cheaper to remove errors.
         self.errors = errors.reversed()
         try super.init(protocolFamily: AF_INET, setNonBlocking: true)
     }
