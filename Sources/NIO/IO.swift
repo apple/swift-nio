@@ -60,7 +60,7 @@ private func reasonForError(errnoCode: Int32, reason: String) -> String {
         let errorDescLen = strlen(errorDescC)
         return errorDescC.withMemoryRebound(to: UInt8.self, capacity: errorDescLen) { ptr in
             let errorDescPtr = UnsafeBufferPointer<UInt8>(start: ptr, count: errorDescLen)
-            return "\(reason): \(String(decoding: errorDescPtr, as: UTF8.self)) (errno: \(errnoCode)) "
+            return "\(reason): \(String(decoding: errorDescPtr, as: UTF8.self)) (errno: \(errnoCode))"
         }
     } else {
         return "\(reason): Broken strerror, unknown error: \(errnoCode)"
