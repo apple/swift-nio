@@ -257,7 +257,7 @@ public struct NonBlockingFileIO {
     /// Open the file at `path` on a private thread pool which is separate from any `EventLoop` thread.
     ///
     /// This function will return (a future) of the `FileHandle` associated with the file opened and a `FileRegion`
-    /// comprising of the whole file. The caller must close the returned `FileHandle` when its no longer needed.
+    /// comprising of the whole file. The caller must close the returned `FileHandle` when it's no longer needed.
     ///
     /// - note: The reason this returns the `FileHandle` and the `FileRegion` is that both the opening of a file as well as the querying of its size are blocking.
     ///

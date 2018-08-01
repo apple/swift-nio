@@ -187,7 +187,7 @@ public struct EventLoopIterator: Sequence, IteratorProtocol {
 /// }
 /// ```
 ///
-/// Because an `EventLoop` may be shared between multiple `Channel`s its important to _NOT_ block while processing IO / tasks. This also includes long running computations which will have the same
+/// Because an `EventLoop` may be shared between multiple `Channel`s it's important to _NOT_ block while processing IO / tasks. This also includes long running computations which will have the same
 /// effect as blocking in this case.
 public protocol EventLoop: EventLoopGroup {
     /// Returns `true` if the current `Thread` is the same as the `Thread` that is tied to this `EventLoop`. `false` otherwise.
@@ -522,7 +522,7 @@ internal final class SelectableEventLoop: EventLoop {
     public func deregister<C: SelectableChannel>(channel: C) throws {
         assert(inEventLoop)
         guard lifecycleState == .open else {
-            // Its possible the EventLoop was closed before we were able to call deregister, so just return in this case as there is no harm.
+            // It's possible the EventLoop was closed before we were able to call deregister, so just return in this case as there is no harm.
             return
         }
         try selector.deregister(selectable: channel.selectable)

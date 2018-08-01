@@ -718,7 +718,7 @@ public enum IOEvent {
     /// Something is ready to be read.
     case read
 
-    /// Its possible to write some data again.
+    /// It's possible to write some data again.
     case write
 
     /// Combination of `read` and `write`.
