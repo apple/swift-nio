@@ -54,7 +54,7 @@ public struct IOError: Swift.Error {
 /// - parameters:
 ///       - errorCode: the `errno` that was set for the operation.
 ///       - reason: what failed
-/// -returns: the constructed reason.
+/// - returns: the constructed reason.
 private func reasonForError(errnoCode: Int32, reason: String) -> String {
     if let errorDescC = strerror(errnoCode) {
         return "\(reason): \(String(cString: errorDescC)) (errno: \(errnoCode))"

@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 //  This file contains code that ensures errno is captured correctly when doing syscalls and no ARC traffic can happen inbetween that *could* change the errno
 //  value before we were able to read it.
-//  Its important that all static methods are declared with `@inline(never)` so its not possible any ARC traffic happens while we need to read errno.
+//  It's important that all static methods are declared with `@inline(never)` so it's not possible any ARC traffic happens while we need to read errno.
 //
 //  Created by Norman Maurer on 11/10/17.
 //
@@ -373,7 +373,7 @@ internal enum Posix {
         }
     }
 
-    // Its not really posix but exists on Linux and MacOS / BSD so just put it here for now to keep it simple
+    // It's not really posix but exists on Linux and MacOS / BSD so just put it here for now to keep it simple
     @inline(never)
     public static func sendfile(descriptor: CInt, fd: CInt, offset: off_t, count: size_t) throws -> IOResult<Int> {
         var written: off_t = 0
