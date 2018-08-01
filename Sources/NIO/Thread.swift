@@ -89,7 +89,7 @@ final class Thread {
         let box = ThreadBox(tuple)
         let res = pthread_create(&pt, nil, { p in
             // Cast to UnsafeMutableRawPointer? and force unwrap to make the same code work on macOS and Linux.
-            let b = Unmanaged<ThreadBox>.fromOpaque((p as UnsafeMutableRawPointer?)!.assumingMemoryBound(to: ThreadBox.self)).takeRetainedValue()
+            let b = Unmanaged<ThreadBox>.fromOpaque((p as UnsafeMutableRawPointer?)!).takeRetainedValue()
 
             let body = b.value.body
             let name = b.value.name
