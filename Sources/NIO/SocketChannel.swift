@@ -13,10 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 private extension ByteBuffer {
-    mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> IOResult<Int>) rethrows -> IOResult<Int> {
+    mutating func withMutableWritePointer(body: (UnsafeMutableRawBufferPointer) throws -> IOResult<Int>) rethrows -> IOResult<Int> {
         var singleResult: IOResult<Int>!
         _ = try self.writeWithUnsafeMutableBytes { ptr in
-            let localWriteResult = try body(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), ptr.count)
+            let localWriteResult = try body(ptr)
             singleResult = localWriteResult
             switch localWriteResult {
             case .processed(let written):
@@ -133,7 +133,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             // Reset reader and writerIndex and so allow to have the buffer filled again. This is better here than at
             // the end of the loop to not do an allocation when the loop exits.
             buffer.clear()
-            switch try buffer.withMutableWritePointer(body: self.socket.read(pointer:size:)) {
+            switch try buffer.withMutableWritePointer(body: self.socket.read(pointer:)) {
             case .processed(let bytesRead):
                 if bytesRead > 0 {
                     let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
@@ -180,7 +180,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
                 return .processed(0)
             }
             // normal write
-            return try self.socket.write(pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), size: ptr.count)
+            return try self.socket.write(pointer: ptr)
         }, vectorBufferWriteOperation: { ptrs in
             // Gathering write
             try self.socket.writev(iovecs: ptrs)
@@ -604,7 +604,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             }
             buffer.clear()
 
-            let result = try buffer.withMutableWritePointer { try self.socket.recvfrom(pointer: $0, size: $1, storage: &rawAddress, storageLen: &rawAddressLength) }
+            let result = try buffer.withMutableWritePointer {
+                try self.socket.recvfrom(pointer: $0, storage: &rawAddress, storageLen: &rawAddressLength)
+            }
             switch result {
             case .processed(let bytesRead):
                 assert(bytesRead > 0)
@@ -677,8 +679,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 return .processed(0)
             }
             // normal write
-            return try self.socket.sendto(pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), size: ptr.count,
-                                          destinationPtr: destinationPtr, destinationSize: destinationSize)
+            return try self.socket.sendto(pointer: ptr,
+                                          destinationPtr: destinationPtr,
+                                          destinationSize: destinationSize)
         }, vectorWriteOperation: { msgs in
             try self.socket.sendmmsg(msgs: msgs)
         })
