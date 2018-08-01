@@ -166,15 +166,41 @@ func assertSetGetOptionOnOpenAndClosed<T: ChannelOption>(channel: Channel, optio
     }
 }
 
-func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T, defaultValue: T? = nil, file: StaticString = #file, line: UInt = #line) throws -> T {
+func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T, defaultValue: T? = nil, message: String? = nil, file: StaticString = #file, line: UInt = #line) throws -> T {
     do {
         return try body()
     } catch {
-        XCTFail("unexpected error \(error) thrown", file: file, line: line)
+        XCTFail("\(message.map { $0 + ": " } ?? "")unexpected error \(error) thrown", file: file, line: line)
         if let defaultValue = defaultValue {
             return defaultValue
         } else {
             throw error
         }
     }
+}
+
+func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyReceivedResult: SocketAddress) throws -> String {
+    func printSocketAddress(_ socketAddress: SocketAddress) -> String {
+        switch socketAddress {
+        case .unixDomainSocket(_):
+            return "uds"
+        case .v4(let sa):
+            var addr = sa.address
+            return addr.addressDescription()
+        case .v6(let sa):
+            var addr = sa.address
+            return addr.addressDescription()
+        }
+    }
+    let res = GetaddrinfoResolver(loop: eventLoop, aiSocktype: Posix.SOCK_STREAM, aiProtocol: Posix.IPPROTO_TCP)
+    let ipv6Results = try assertNoThrowWithValue(res.initiateAAAAQuery(host: host, port: 0).wait()).map(printSocketAddress)
+    let ipv4Results = try assertNoThrowWithValue(res.initiateAQuery(host: host, port: 0).wait()).map(printSocketAddress)
+
+    return """
+    when trying to resolve '\(host)' we've got the following results:
+    - previous try: \(printSocketAddress(previouslyReceivedResult))
+    - all results:
+    IPv4: \(ipv4Results)
+    IPv6: \(ipv6Results)
+    """
 }

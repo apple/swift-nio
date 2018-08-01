@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+@testable import NIO
 import XCTest
 
 class BootstrapTest: XCTestCase {
@@ -50,7 +50,7 @@ class BootstrapTest: XCTestCase {
                     return channel.eventLoop.newSucceededFuture(result: ())
                 }
                 .connect(to: serverChannel.localAddress!)
-                .wait())
+                .wait(), message: "resolver debug info: \(try! resolverDebugInformation(eventLoop: group.next(),host: "localhost", previouslyReceivedResult: serverChannel.localAddress!))")
             defer {
                 XCTAssertNoThrow(try client.syncCloseAcceptingAlreadyClosed())
             }
