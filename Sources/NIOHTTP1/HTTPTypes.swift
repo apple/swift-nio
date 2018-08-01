@@ -80,6 +80,12 @@ public struct HTTPListHeaderIterator: Sequence, IteratorProtocol {
         return self
     }
     
+    @inline(__always)
+    public init(headerName: String,
+                headers: HTTPHeaders) {
+        self.init(headerName: headerName.utf8, headers: headers)
+    }
+    
     public init(headerName: String.UTF8View,
                 headers: HTTPHeaders) {
         self.headers = headers
