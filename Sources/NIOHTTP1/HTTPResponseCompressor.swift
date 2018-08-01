@@ -303,7 +303,7 @@ private struct PartialHTTPResponse {
         head = nil
         end = nil
         body.clear()
-        body.changeCapacity(to: initialBufferSize)
+        body.reserveCapacity(initialBufferSize)
     }
 
     mutating private func compressBody(compressor: inout z_stream, allocator: ByteBufferAllocator, flag: Int32) -> ByteBuffer? {

@@ -54,7 +54,7 @@ public typealias IOVector = iovec
     /// Create a new instance.
     ///
     /// The ownership of the passed in descriptor is transferred to this class. A user must call `close` to close the underlying
-    /// file descriptor once its not needed / used anymore.
+    /// file descriptor once it's not needed / used anymore.
     ///
     /// - parameters:
     ///     - descriptor: The file descriptor to wrap.

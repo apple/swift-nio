@@ -2402,7 +2402,7 @@ public class ChannelTests: XCTestCase {
         }
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .connect(to: serverChannel.localAddress!)
-            .wait())
+            .wait(), message: "resolver debug info: \(try! resolverDebugInformation(eventLoop: group.next(),host: "localhost", previouslyReceivedResult: serverChannel.localAddress!))")
         XCTAssertNoThrow(try clientChannel.closeFuture.wait() as Void)
     }
 

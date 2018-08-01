@@ -383,7 +383,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
         let p: EventLoopPromise<Void> = eventLoop.newPromise()
         p.futureResult.map {
-            // Its important to call the methods before we actually notify the original promise for ordering reasons.
+            // It's important to call the methods before we actually notify the original promise for ordering reasons.
             self.becomeActive0(promise: promise)
         }.whenFailure{ error in
             promise?.fail(error: error)

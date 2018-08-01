@@ -437,6 +437,7 @@ public struct ByteBuffer {
     ///
     /// - parameters:
     ///     - to: The desired minimum capacity.
+    @available(*, deprecated, message: "changeCapacity has been replaced by reserveCapacity")
     public mutating func changeCapacity(to newCapacity: Int) {
         precondition(newCapacity >= self.writerIndex,
                      "new capacity \(newCapacity) less than the writer index (\(self.writerIndex))")
@@ -445,7 +446,41 @@ public struct ByteBuffer {
             return
         }
 
-        self._copyStorageAndRebase(capacity: _toCapacity(newCapacity))
+        // This function is deprecated, and behaves strangely if you try to shrink things.
+        // We don't really support that anymore, but we're leaving the method here in case
+        // someone is doing it. However, if the capacity is being *raised*, we want to call
+        // `reserveCapacity`, as it performs better.
+        if newCapacity > self.capacity {
+            self.reserveCapacity(newCapacity)
+        } else {
+            self._copyStorageAndRebase(capacity: _toCapacity(newCapacity))
+        }
+    }
+
+    /// Reserves enough space to store the specified number of bytes.
+    ///
+    /// This method will ensure that the buffer has space for at least as many bytes as requested.
+    /// This includes any bytes already stored, and completely disregards the reader/writer indices.
+    /// If the buffer already has space to store the requested number of bytes, this method will be
+    /// a no-op.
+    ///
+    /// - parameters:
+    ///     - minimumCapacity: The minimum number of bytes this buffer must be able to store.
+    public mutating func reserveCapacity(_ minimumCapacity: Int) {
+        guard minimumCapacity > self.capacity else {
+            return
+        }
+        let targetCapacity = _toCapacity(minimumCapacity)
+
+        if isKnownUniquelyReferenced(&self._storage) {
+            // We have the unique reference. If we have the full slice, we can realloc. Otherwise
+            // we have to copy memory anyway.
+            self._ensureAvailableCapacity(targetCapacity, at: 0)
+        } else {
+            // We don't have a unique reference here, so we need to allocate and copy, no
+            // optimisations available.
+            self._copyStorageAndRebase(capacity: targetCapacity)
+        }
     }
 
     private mutating func copyStorageAndRebaseIfNeeded() {
