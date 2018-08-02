@@ -201,6 +201,25 @@ class HTTPHeadersTest : XCTestCase {
                                    ("Content-Type", "text/html"),
                                    ("Connection", "server,     close")])
         var tokenSource = HTTPListHeaderIterator(
+            headerName: "Connection".utf8, headers: headers)
+        
+        var currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "x-options")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "other")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "server")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "close")
+        currentToken = tokenSource.next()
+        XCTAssertNil(currentToken)
+    }
+
+    func testStringBasedHTTPListHeaderIterator() {
+        let headers = HTTPHeaders([("Connection", "x-options,  other"),
+                                   ("Content-Type", "text/html"),
+                                   ("Connection", "server,     close")])
+        var tokenSource = HTTPListHeaderIterator(
             headerName: "Connection", headers: headers)
         
         var currentToken = tokenSource.next()

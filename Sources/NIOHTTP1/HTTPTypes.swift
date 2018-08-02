@@ -80,18 +80,25 @@ public struct HTTPListHeaderIterator: Sequence, IteratorProtocol {
         return self
     }
     
-    public init(headerName: String,
+    public init(headerName: String.UTF8View,
                 headers: HTTPHeaders) {
         self.headers = headers
-        self.headerName = headerName.utf8
+        self.headerName = headerName
+    }
+    
+    @_inlineable
+    public init(headerName: String,
+                headers: HTTPHeaders) {
+        self.init(headerName: headerName.utf8,
+                  headers: headers)
     }
 
 }
 
 extension HTTPHeaders {
-    private static let connectionString = "connection"
-    private static let keepAliveString = "keep-alive"
-    private static let closeString = "close"
+    private static let connectionString = "connection".utf8
+    private static let keepAliveString = "keep-alive".utf8
+    private static let closeString = "close".utf8
     
     internal enum ConnectionHeaderValue {
         case keepAlive
@@ -106,9 +113,9 @@ extension HTTPHeaders {
             
             // TODO: Handle the case where both keep-alive and close are used
             for token in tokenizer {
-                if token.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.keepAliveString.utf8) {
+                if token.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.keepAliveString) {
                     return .keepAlive
-                } else if token.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.closeString.utf8) {
+                } else if token.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.closeString) {
                     return .close
                 }
             }
