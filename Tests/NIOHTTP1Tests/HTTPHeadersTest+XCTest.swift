@@ -40,6 +40,7 @@ extension HTTPHeadersTest {
                 ("testKeepAliveStateHasKeepAlive", testKeepAliveStateHasKeepAlive),
                 ("testKeepAliveStateHasClose", testKeepAliveStateHasClose),
                 ("testResolveNonContiguousHeaders", testResolveNonContiguousHeaders),
+                ("testStringBasedHTTPListHeaderIterator", testStringBasedHTTPListHeaderIterator),
            ]
    }
 }
