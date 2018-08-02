@@ -200,7 +200,7 @@ public struct ByteBufferAllocator {
 /// Each method that is prefixed with `get` is considered "unsafe" as it allows the user to read uninitialized memory if the `index` or `index + length` points outside of the previous written
 /// range of the `ByteBuffer`. Because of this it's strongly advised to prefer the usage of methods that start with the `read` prefix and only use the `get` prefixed methods if there is a strong reason
 /// for doing so. In any case, if you use the `get` prefixed methods you are responsible for ensuring that you do not reach into uninitialized memory by taking the `readableBytes` and `readerIndex` into
-/// account, and ensuring that you have previously written into the area covered by the `index itself.
+/// account, and ensuring that you have previously written into the area covered by the `index` itself.
 public struct ByteBuffer {
     typealias Slice = _ByteBufferSlice
     typealias Allocator = ByteBufferAllocator
@@ -437,6 +437,7 @@ public struct ByteBuffer {
     ///
     /// - parameters:
     ///     - to: The desired minimum capacity.
+    @available(*, deprecated, message: "changeCapacity has been replaced by reserveCapacity")
     public mutating func changeCapacity(to newCapacity: Int) {
         precondition(newCapacity >= self.writerIndex,
                      "new capacity \(newCapacity) less than the writer index (\(self.writerIndex))")
@@ -445,7 +446,41 @@ public struct ByteBuffer {
             return
         }
 
-        self._copyStorageAndRebase(capacity: _toCapacity(newCapacity))
+        // This function is deprecated, and behaves strangely if you try to shrink things.
+        // We don't really support that anymore, but we're leaving the method here in case
+        // someone is doing it. However, if the capacity is being *raised*, we want to call
+        // `reserveCapacity`, as it performs better.
+        if newCapacity > self.capacity {
+            self.reserveCapacity(newCapacity)
+        } else {
+            self._copyStorageAndRebase(capacity: _toCapacity(newCapacity))
+        }
+    }
+
+    /// Reserves enough space to store the specified number of bytes.
+    ///
+    /// This method will ensure that the buffer has space for at least as many bytes as requested.
+    /// This includes any bytes already stored, and completely disregards the reader/writer indices.
+    /// If the buffer already has space to store the requested number of bytes, this method will be
+    /// a no-op.
+    ///
+    /// - parameters:
+    ///     - minimumCapacity: The minimum number of bytes this buffer must be able to store.
+    public mutating func reserveCapacity(_ minimumCapacity: Int) {
+        guard minimumCapacity > self.capacity else {
+            return
+        }
+        let targetCapacity = _toCapacity(minimumCapacity)
+
+        if isKnownUniquelyReferenced(&self._storage) {
+            // We have the unique reference. If we have the full slice, we can realloc. Otherwise
+            // we have to copy memory anyway.
+            self._ensureAvailableCapacity(targetCapacity, at: 0)
+        } else {
+            // We don't have a unique reference here, so we need to allocate and copy, no
+            // optimisations available.
+            self._copyStorageAndRebase(capacity: targetCapacity)
+        }
     }
 
     private mutating func copyStorageAndRebaseIfNeeded() {
@@ -545,6 +580,13 @@ public struct ByteBuffer {
     /// will correspond to index `0` in the returned `ByteBuffer`.
     /// The `readerIndex` of the returned `ByteBuffer` will be `0`, the `writerIndex` will be `length`.
     ///
+    /// - note: Please consider using `readSlice` which is a safer alternative that automatically maintains the
+    ///         `readerIndex` and won't allow you to slice off uninitialized memory.
+    /// - warning: This method allows the user to slice out any of the bytes in the `ByteBuffer`'s storage, including
+    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
+    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
+    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
+    ///           safe to read.
     /// - parameters:
     ///     - index: The index the requested slice starts at.
     ///     - length: The length of the requested slice.
@@ -722,6 +764,12 @@ extension ByteBuffer {
     }
 
     /// Move the reader index forward by `offset` bytes.
+    ///
+    /// - warning: By contract the bytes between (including) `readerIndex` and (excluding) `writerIndex` must be
+    ///            initialised, ie. have been written before. Also the `readerIndex` must always be less than or equal
+    ///            to the `writerIndex`. Failing to meet either of these requirements leads to undefined behaviour.
+    /// - parameters:
+    ///   - offset: The number of bytes to move the reader index forward by.
     public mutating func moveReaderIndex(forwardBy offset: Int) {
         let newIndex = self._readerIndex + _toIndex(offset)
         precondition(newIndex >= 0 && newIndex <= writerIndex, "new readerIndex: \(newIndex), expected: range(0, \(writerIndex))")
@@ -729,6 +777,12 @@ extension ByteBuffer {
     }
 
     /// Set the reader index to `offset`.
+    ///
+    /// - warning: By contract the bytes between (including) `readerIndex` and (excluding) `writerIndex` must be
+    ///            initialised, ie. have been written before. Also the `readerIndex` must always be less than or equal
+    ///            to the `writerIndex`. Failing to meet either of these requirements leads to undefined behaviour.
+    /// - parameters:
+    ///   - offset: The offset in bytes to set the reader index to.
     public mutating func moveReaderIndex(to offset: Int) {
         let newIndex = _toIndex(offset)
         precondition(newIndex >= 0 && newIndex <= writerIndex, "new readerIndex: \(newIndex), expected: range(0, \(writerIndex))")
@@ -736,6 +790,12 @@ extension ByteBuffer {
     }
 
     /// Move the writer index forward by `offset` bytes.
+    ///
+    /// - warning: By contract the bytes between (including) `readerIndex` and (excluding) `writerIndex` must be
+    ///            initialised, ie. have been written before. Also the `readerIndex` must always be less than or equal
+    ///            to the `writerIndex`. Failing to meet either of these requirements leads to undefined behaviour.
+    /// - parameters:
+    ///   - offset: The number of bytes to move the writer index forward by.
     public mutating func moveWriterIndex(forwardBy offset: Int) {
         let newIndex = self._writerIndex + _toIndex(offset)
         precondition(newIndex >= 0 && newIndex <= _toCapacity(self._slice.count),"new writerIndex: \(newIndex), expected: range(0, \(_toCapacity(self._slice.count)))")
@@ -743,6 +803,12 @@ extension ByteBuffer {
     }
 
     /// Set the writer index to `offset`.
+    ///
+    /// - warning: By contract the bytes between (including) `readerIndex` and (excluding) `writerIndex` must be
+    ///            initialised, ie. have been written before. Also the `readerIndex` must always be less than or equal
+    ///            to the `writerIndex`. Failing to meet either of these requirements leads to undefined behaviour.
+    /// - parameters:
+    ///   - offset: The offset in bytes to set the reader index to.
     public mutating func moveWriterIndex(to offset: Int) {
         let newIndex = _toIndex(offset)
         precondition(newIndex >= 0 && newIndex <= _toCapacity(self._slice.count),"new writerIndex: \(newIndex), expected: range(0, \(_toCapacity(self._slice.count)))")

@@ -124,7 +124,7 @@ public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
                 return high
             }
 
-            // Its import to put (...) around as >> is executed before + in swift while in java its the other way around (doh!)
+            // It's important to put (...) around as >> is executed before + in Swift while in Java it's the other way around (doh!)
             let mid = (low + high) >> 1
 
             let a = sizeTable[mid]

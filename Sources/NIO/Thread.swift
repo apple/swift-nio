@@ -62,7 +62,7 @@ final class Thread {
     /// Get current name of the `Thread` or `nil` if not set.
     var name: String? {
         get {
-            // 64 bytes should be good enough as on linux the limit is usually 16 and its very unlikely a user will ever set something longer anyway.
+            // 64 bytes should be good enough as on Linux the limit is usually 16 and it's very unlikely a user will ever set something longer anyway.
             var chars: [CChar] = Array(repeating: 0, count: 64)
             guard sys_pthread_getname_np(pthread, &chars, chars.count) == 0 else {
                 return nil
@@ -77,7 +77,7 @@ final class Thread {
     ///     - name: The name of the `Thread` or `nil` if no specific name should be set.
     ///     - body: The function to execute within the spawned `Thread`.
     static func spawnAndRun(name: String? = nil, body: @escaping (Thread) -> Void) {
-        // Unfortunately the pthread_create method take a different first argument depending on if its on linux or macOS, so ensure we use the correct one.
+        // Unfortunately the pthread_create method take a different first argument depending on if it's on Linux or macOS, so ensure we use the correct one.
         #if os(Linux)
             var pt: pthread_t = pthread_t()
         #else
@@ -89,7 +89,7 @@ final class Thread {
         let box = ThreadBox(tuple)
         let res = pthread_create(&pt, nil, { p in
             // Cast to UnsafeMutableRawPointer? and force unwrap to make the same code work on macOS and Linux.
-            let b = Unmanaged<ThreadBox>.fromOpaque((p as UnsafeMutableRawPointer?)!.assumingMemoryBound(to: ThreadBox.self)).takeRetainedValue()
+            let b = Unmanaged<ThreadBox>.fromOpaque((p as UnsafeMutableRawPointer?)!).takeRetainedValue()
 
             let body = b.value.body
             let name = b.value.name

@@ -525,7 +525,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             assert(self.state.slice == nil)
             
             if self.cumulationBuffer!.readableBytes == 0 {
-                // Its safe to just drop the cumulationBuffer as we don't have any extra views into it that are represented as readerIndex / length.
+                // It's safe to just drop the cumulationBuffer as we don't have any extra views into it that are represented as readerIndex / length.
                 self.cumulationBuffer = nil
             }
 
@@ -567,7 +567,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         }
     }
 
-    /// Will discard bytes till readerIndex if its needed and then call `fn`.
+    /// Will discard bytes till readerIndex if it's needed and then call `fn`.
     private func mayDiscardDecodedBytes(upTo: Int, _ fn: () -> Void) {
         assert(self.cumulationBuffer!.readerIndex == self.cumulationBuffer!.writerIndex)
         self.cumulationBuffer!.moveReaderIndex(to: upTo)
