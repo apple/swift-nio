@@ -49,7 +49,9 @@ let bootstrap = ServerBootstrap(group: group)
     .childChannelInitializer { channel in
         // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
         channel.pipeline.add(handler: BackPressureHandler()).then { v in
-            channel.pipeline.add(handler: EchoHandler())
+            channel.pipeline.add(handler:LineBasedFrameDecoder()).then { v in
+                channel.pipeline.add(handler: EchoHandler())
+            }
         }
     }
 
