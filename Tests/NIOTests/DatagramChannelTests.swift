@@ -397,7 +397,7 @@ final class DatagramChannelTests: XCTestCase {
                 try super.init(protocolFamily: AF_INET, type: Posix.SOCK_DGRAM)
             }
 
-            override func recvfrom(pointer: UnsafeMutablePointer<UInt8>, size: Int, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
+            override func recvfrom(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
                 if let err = self.error {
                     self.error = nil
                     throw IOError(errnoCode: err, function: "recvfrom")

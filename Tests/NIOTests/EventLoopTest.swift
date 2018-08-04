@@ -103,13 +103,12 @@ public class EventLoopTest : XCTestCase {
 
         let expect = expectation(description: "Is cancelling RepatedTask")
         let counter = Atomic<Int>(value: 0)
-        var repeatedTask: RepeatedTask?
-        repeatedTask = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in
+        eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { repeatedTask -> Void in
             if counter.load() == 0 {
                 XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds)
             } else if counter.load() == count {
                 expect.fulfill()
-                repeatedTask?.cancel()
+                repeatedTask.cancel()
             }
             counter.store(counter.load() + 1)
         }
@@ -130,12 +129,14 @@ public class EventLoopTest : XCTestCase {
         }
 
         let expect = expectation(description: "Is cancelling RepatedTask")
-        var repeatedTask: RepeatedTask?
-        repeatedTask = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in
-            DispatchQueue(label: "nio.repeatedtask.test").async {
-                repeatedTask?.cancel()
-                expect.fulfill()
-            }
+        let group = DispatchGroup()
+        group.enter()
+        let repeatedTask = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { (_: RepeatedTask) -> Void in
+            group.leave()
+            expect.fulfill()
+        }
+        group.notify(queue: DispatchQueue.global()) {
+            repeatedTask.cancel()
         }
 
         waitForExpectations(timeout: 1) { _ in
@@ -150,7 +151,7 @@ public class EventLoopTest : XCTestCase {
 
         var repeated: RepeatedTask?
         weak var weakRepeated: RepeatedTask?
-        repeated = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in }
+        repeated = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { (_: RepeatedTask) -> Void in }
         weakRepeated = repeated
         XCTAssertNotNil(weakRepeated)
         repeated?.cancel()
@@ -165,12 +166,60 @@ public class EventLoopTest : XCTestCase {
         var eventLoopGroup: EventLoopGroup? = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         weak var weakEventLoop = eventLoopGroup?.next()
 
-        eventLoopGroup?.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { () -> Void in }
+        eventLoopGroup?.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { (_: RepeatedTask) -> Void in }
         XCTAssertNoThrow(try eventLoopGroup?.syncShutdownGracefully())
         XCTAssertNotNil(weakEventLoop)
         eventLoopGroup = nil
         Thread.sleep(forTimeInterval: 0.01)
         XCTAssertNil(weakEventLoop)
+    }
+
+    public func testEventLoopGroupMakeIterator() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        var counter = 0
+        var innerCounter = 0
+        eventLoopGroup.makeIterator()?.forEach { loop in
+            counter += 1
+            loop.makeIterator()?.forEach { _ in
+                innerCounter += 1
+            }
+        }
+
+        XCTAssertEqual(counter, System.coreCount)
+        XCTAssertEqual(innerCounter, System.coreCount)
+    }
+
+    public func testEventLoopMakeIterator() throws {
+        let eventLoop = EmbeddedEventLoop()
+        var iterator = eventLoop.makeIterator()
+        defer {
+            XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
+        }
+
+        var counter = 0
+        iterator?.forEach { loop in
+            XCTAssertTrue(loop === eventLoop)
+            counter += 1
+        }
+
+        XCTAssertEqual(counter, 1)
+    }
+
+    public func testDummyEventLoopGroupMakeIterator() throws {
+        class DummyEventLoopGroup: EventLoopGroup {
+            func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) { }
+
+            func next() -> EventLoop {
+                return EmbeddedEventLoop()
+            }
+        }
+
+        let dummyEventLoopGroup = DummyEventLoopGroup()
+        XCTAssertNil(dummyEventLoopGroup.makeIterator())
     }
 
     public func testMultipleShutdown() throws {
@@ -421,16 +470,18 @@ public class EventLoopTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let eventLoop = group.next()
         let assertHandler = AssertHandler()
-        let serverSocket = try ServerBootstrap(group: group).bind(host: "localhost", port: 0).wait()
-        let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: serverSocket.localAddress!.protocolFamily)
-        try channel.pipeline.add(handler: assertHandler).wait()
-        try channel.eventLoop.submit {
+        let serverSocket = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .bind(host: "localhost", port: 0).wait())
+        let channel = try assertNoThrowWithValue(SocketChannel(eventLoop: eventLoop as! SelectableEventLoop,
+                                                               protocolFamily: serverSocket.localAddress!.protocolFamily))
+        XCTAssertNoThrow(try channel.pipeline.add(handler: assertHandler).wait() as Void)
+        XCTAssertNoThrow(try channel.eventLoop.submit {
             channel.register().then {
                 channel.connect(to: serverSocket.localAddress!)
             }
-        }.wait().wait()
+        }.wait().wait() as Void)
         XCTAssertFalse(channel.closeFuture.isFulfilled)
-        try group.syncShutdownGracefully()
+        XCTAssertNoThrow(try group.syncShutdownGracefully())
         XCTAssertTrue(assertHandler.groupIsShutdown.compareAndExchange(expected: false, desired: true))
         XCTAssertTrue(assertHandler.removed.load())
         XCTAssertTrue(channel.closeFuture.isFulfilled)

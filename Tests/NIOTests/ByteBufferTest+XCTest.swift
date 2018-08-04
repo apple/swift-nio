@@ -124,6 +124,12 @@ extension ByteBufferTest {
                 ("testViewsStartIndexIsStable", testViewsStartIndexIsStable),
                 ("testSlicesOfByteBufferViewsAreByteBufferViews", testSlicesOfByteBufferViewsAreByteBufferViews),
                 ("testReadableBufferViewRangeEqualCapacity", testReadableBufferViewRangeEqualCapacity),
+                ("testWeDontWriteTooMuchForUnderreportingContiguousCollection", testWeDontWriteTooMuchForUnderreportingContiguousCollection),
+                ("testReserveCapacityWhenOversize", testReserveCapacityWhenOversize),
+                ("testReserveCapacitySameCapacity", testReserveCapacitySameCapacity),
+                ("testReserveCapacityLargerUniquelyReferencedCallsRealloc", testReserveCapacityLargerUniquelyReferencedCallsRealloc),
+                ("testReserveCapacityLargerMultipleReferenceCallsMalloc", testReserveCapacityLargerMultipleReferenceCallsMalloc),
+                ("testReadWithFunctionsThatReturnNumberOfReadBytesAreDiscardable", testReadWithFunctionsThatReturnNumberOfReadBytesAreDiscardable),
            ]
    }
 }

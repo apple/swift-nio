@@ -1157,7 +1157,7 @@ public class ChannelTests: XCTestCase {
             XCTAssertEqual(ChannelError.outputClosed, err)
         }
         let written = try buffer.withUnsafeReadableBytes { p in
-            try accepted.write(pointer: p.baseAddress!.assumingMemoryBound(to: UInt8.self), size: 4)
+            try accepted.write(pointer: UnsafeRawBufferPointer(start: p.baseAddress, count: 4))
         }
         if case .processed(let numBytes) = written {
             XCTAssertEqual(4, numBytes)
@@ -1215,7 +1215,7 @@ public class ChannelTests: XCTestCase {
         buffer.write(string: "1234")
 
         let written = try buffer.withUnsafeReadableBytes { p in
-            try accepted.write(pointer: p.baseAddress!.assumingMemoryBound(to: UInt8.self), size: 4)
+            try accepted.write(pointer: UnsafeRawBufferPointer(start: p.baseAddress, count: 4))
         }
 
         switch written {
@@ -1586,27 +1586,24 @@ public class ChannelTests: XCTestCase {
         class VerifyNoReadBeforeEOFHandler: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
 
-            private var seenEOF: Bool = false
-
-            public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
-                if case .some(ChannelEvent.inputClosed) = event as? ChannelEvent {
-                    self.seenEOF = true
-                }
-                ctx.fireUserInboundEventTriggered(event)
-            }
+            var expectingData: Bool = false
 
             public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-                if self.seenEOF {
-                    XCTFail("Should not be called before seeing the EOF as autoRead is false and we did not call read(), but received \(self.unwrapInboundIn(data))")
+                if !self.expectingData {
+                    XCTFail("Received data before we expected it.")
+                } else {
+                    let data = self.unwrapInboundIn(data)
+                    XCTAssertEqual(data.getString(at: data.readerIndex, length: data.readableBytes), "test")
                 }
             }
         }
 
+        let handler = VerifyNoReadBeforeEOFHandler()
         let serverChannel = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { ch in
-                ch.pipeline.add(handler: VerifyNoReadBeforeEOFHandler())
+                ch.pipeline.add(handler: handler)
             }
             .bind(host: "127.0.0.1", port: 0).wait()
 
@@ -1615,10 +1612,15 @@ public class ChannelTests: XCTestCase {
         var buffer = clientChannel.allocator.buffer(capacity: 8)
         buffer.write(string: "test")
         try clientChannel.writeAndFlush(buffer).wait()
-        try clientChannel.close().wait()
 
-        // Wait for 100 ms.
+        // Wait for 100 ms. No data should be delivered.
         usleep(100 * 1000);
+
+        // Now we send close. This should deliver data.
+        try clientChannel.eventLoop.submit { () -> EventLoopFuture<Void> in
+            handler.expectingData = true
+            return clientChannel.close()
+        }.wait().wait()
         try serverChannel.close().wait()
     }
 
@@ -2046,16 +2048,16 @@ public class ChannelTests: XCTestCase {
             init(protocolFamily: CInt) throws {
                 try super.init(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: true)
             }
-            override func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> IOResult<Int> {
+            override func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
                 defer {
                     self.firstReadHappened = true
                 }
-                XCTAssertGreaterThan(size, 0)
+                XCTAssertGreaterThan(pointer.count, 0)
                 if self.firstReadHappened {
                     // this is a copy of the exact error that'd come out of the real Socket.read
                     throw IOError.init(errnoCode: ECONNRESET, function: "read(descriptor:pointer:size:)")
                 } else {
-                    pointer.pointee = 0xff
+                    pointer[0] = 0xff
                     return .processed(1)
                 }
             }
@@ -2396,18 +2398,18 @@ public class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .childChannelInitializer { channel in
                 channel.pipeline.add(handler: FailRegistrationAndDelayCloseHandler())
             }
-            .bind(host: "localhost", port: 0).wait()
+            .bind(host: "localhost", port: 0).wait())
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
-        let clientChannel = try ClientBootstrap(group: group)
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .connect(to: serverChannel.localAddress!)
-            .wait()
-        try clientChannel.closeFuture.wait()
+            .wait(), message: "resolver debug info: \(try! resolverDebugInformation(eventLoop: group.next(),host: "localhost", previouslyReceivedResult: serverChannel.localAddress!))")
+        XCTAssertNoThrow(try clientChannel.closeFuture.wait() as Void)
     }
 
     func testFailedRegistrationOfServerSocket() throws {

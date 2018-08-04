@@ -450,6 +450,27 @@ class NonBlockingFileIOTest: XCTestCase {
         XCTAssertEqual(2, numCalls)
     }
 
+    func testWriting() throws {
+        var buffer = allocator.buffer(capacity: 3)
+        buffer.write(staticString: "123")
+
+        try withTemporaryFile(content: "") { (fileHandle, path) in
+            try self.fileIO.write(fileHandle: fileHandle,
+                                  buffer: buffer,
+                                  eventLoop: self.eventLoop).wait()
+            let offset = try fileHandle.withUnsafeFileDescriptor {
+                try Posix.lseek(descriptor: $0, offset: 0, whence: SEEK_SET)
+            }
+            XCTAssertEqual(offset, 0)
+
+            let readBuffer = try self.fileIO.read(fileHandle: fileHandle,
+                                                  byteCount: 3,
+                                                  allocator: self.allocator,
+                                                  eventLoop: self.eventLoop).wait()
+            XCTAssertEqual(readBuffer.getString(at: 0, length: 3), "123")
+        }
+    }
+
     func testFileOpenWorks() throws {
         let content = "123"
         try withTemporaryFile(content: content) { (fileHandle, path) -> Void in

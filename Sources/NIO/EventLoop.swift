@@ -57,9 +57,9 @@ public final class RepeatedTask {
     private let delay: TimeAmount
     private let eventLoop: EventLoop
     private var scheduled: Scheduled<EventLoopFuture<Void>>?
-    private var task: (() -> EventLoopFuture<Void>)?
+    private var task: ((RepeatedTask) -> EventLoopFuture<Void>)?
 
-    internal init(interval: TimeAmount, eventLoop: EventLoop, task: @escaping () -> EventLoopFuture<Void>) {
+    internal init(interval: TimeAmount, eventLoop: EventLoop, task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) {
         self.delay = interval
         self.eventLoop = eventLoop
         self.task = task
@@ -80,7 +80,9 @@ public final class RepeatedTask {
         guard let task = self.task else {
             return
         }
-        self.scheduled = eventLoop.scheduleTask(in: delay, task)
+        self.scheduled = eventLoop.scheduleTask(in: delay) {
+            task(self)
+        }
         self.reschedule()
     }
 
@@ -88,6 +90,8 @@ public final class RepeatedTask {
     ///
     /// Whether the execution of the task is immediately canceled depends on whether the execution of a task has already begun.
     ///  This means immediate cancellation is not guaranteed.
+    ///
+    /// The safest way to cancel is by using the passed reference of `RepeatedTask` inside the task closure.
     public func cancel() {
         if self.eventLoop.inEventLoop {
             self.cancel0()
@@ -116,6 +120,10 @@ public final class RepeatedTask {
                 self.reschedule0()
             }
         }
+
+        scheduled.futureResult.whenFailure { (_: Error) in
+            self.cancel0()
+        }
     }
 
     private func reschedule0() {
@@ -123,10 +131,38 @@ public final class RepeatedTask {
         guard let task = self.task else {
             return
         }
-        self.scheduled = self.eventLoop.scheduleTask(in: self.delay, task)
+        self.scheduled = self.eventLoop.scheduleTask(in: self.delay) {
+            task(self)
+        }
         self.reschedule()
     }
 }
+
+/// An iterator over the `EventLoop`s forming an `EventLoopGroup`.
+///
+/// Usually returned by an `EventLoopGroup`'s `makeIterator()` method.
+///
+///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+///     group.makeIterator()?.forEach { loop in
+///         // Do something with each loop
+///     }
+///
+public struct EventLoopIterator: Sequence, IteratorProtocol {
+    public typealias Element = EventLoop
+    private var eventLoops: IndexingIterator<[EventLoop]>
+
+    internal init(_ eventLoops: [EventLoop]) {
+        self.eventLoops = eventLoops.makeIterator()
+    }
+
+    /// Advances to the next `EventLoop` and returns it, or `nil` if no next element exists.
+    ///
+    /// - returns: The next `EventLoop` if a next element exists; otherwise, `nil`.
+    public mutating func next() -> EventLoop? {
+        return self.eventLoops.next()
+    }
+}
+
 /// An EventLoop processes IO / tasks in an endless loop for `Channel`s until it's closed.
 ///
 /// Usually multiple `Channel`s share the same `EventLoop` for processing IO / tasks and so share the same processing `Thread`.
@@ -151,7 +187,7 @@ public final class RepeatedTask {
 /// }
 /// ```
 ///
-/// Because an `EventLoop` may be shared between multiple `Channel`s its important to _NOT_ block while processing IO / tasks. This also includes long running computations which will have the same
+/// Because an `EventLoop` may be shared between multiple `Channel`s it's important to _NOT_ block while processing IO / tasks. This also includes long running computations which will have the same
 /// effect as blocking in this case.
 public protocol EventLoop: EventLoopGroup {
     /// Returns `true` if the current `Thread` is the same as the `Thread` that is tied to this `EventLoop`. `false` otherwise.
@@ -308,10 +344,10 @@ extension EventLoop {
     ///     - task: The closure that will be executed.
     /// - return: `RepeatedTask`
     @discardableResult
-    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping () throws -> Void) -> RepeatedTask {
-        let futureTask: () -> EventLoopFuture<Void> = {
+    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping (RepeatedTask) throws -> Void) -> RepeatedTask {
+        let futureTask: (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
             do {
-                try task()
+                try task(repeatedTask)
                 return self.newSucceededFuture(result: ())
             } catch {
                 return self.newFailedFuture(error: error)
@@ -328,10 +364,18 @@ extension EventLoop {
     ///     - task: The closure that will be executed.
     /// - return: `RepeatedTask`
     @discardableResult
-    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping () -> EventLoopFuture<Void>) -> RepeatedTask {
+    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask {
         let repeated = RepeatedTask(interval: delay, eventLoop: self, task: task)
         repeated.begin(in: initialDelay)
         return repeated
+    }
+
+    /// Returns an `EventLoopIterator` over this `EventLoop`.
+    ///
+    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
+    /// - returns: `EventLoopIterator`
+    public func makeIterator() -> EventLoopIterator? {
+        return EventLoopIterator([self])
     }
 }
 
@@ -478,7 +522,7 @@ internal final class SelectableEventLoop: EventLoop {
     public func deregister<C: SelectableChannel>(channel: C) throws {
         assert(inEventLoop)
         guard lifecycleState == .open else {
-            // Its possible the EventLoop was closed before we were able to call deregister, so just return in this case as there is no harm.
+            // It's possible the EventLoop was closed before we were able to call deregister, so just return in this case as there is no harm.
             return
         }
         try selector.deregister(selectable: channel.selectable)
@@ -733,6 +777,12 @@ public protocol EventLoopGroup: class {
     /// The virtue of this function is to shut the event loop down. To work around that we call back on a DispatchQueue
     /// instead.
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void)
+
+    /// Returns an `EventLoopIterator` over the `EventLoop`s in this `EventLoopGroup`.
+    ///
+    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
+    /// - returns: `EventLoopIterator`
+    func makeIterator() -> EventLoopIterator?
 }
 
 extension EventLoopGroup {
@@ -758,6 +808,10 @@ extension EventLoopGroup {
                 throw error
             }
         }
+    }
+
+    public func makeIterator() -> EventLoopIterator? {
+        return nil
     }
 }
 
@@ -841,6 +895,14 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
     /// - returns: The current `EventLoop` for the calling thread or `nil` if none is assigned to the thread.
     public static var currentEventLoop: EventLoop? {
         return threadSpecificEventLoop.currentValue
+    }
+
+    /// Returns an `EventLoopIterator` over the `EventLoop`s in this `MultiThreadedEventLoopGroup`.
+    ///
+    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
+    /// - returns: `EventLoopIterator`
+    public func makeIterator() -> EventLoopIterator? {
+        return EventLoopIterator(self.eventLoops)
     }
 
     public func next() -> EventLoop {
