@@ -53,7 +53,9 @@ class SelectorTest: XCTestCase {
         }
         try socket2.setNonBlocking()
 
-        let serverSocket = try ServerSocket.bootstrap(protocolFamily: PF_INET, host: "127.0.0.1", port: 0)
+        let serverSocket = try assertNoThrowWithValue(ServerSocket.bootstrap(protocolFamily: PF_INET,
+                                                                             host: "127.0.0.1",
+                                                                             port: 0))
         defer {
             XCTAssertNoThrow(try serverSocket.close())
         }
