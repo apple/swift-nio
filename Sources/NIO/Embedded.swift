@@ -157,8 +157,14 @@ class EmbeddedChannelCore: ChannelCore {
         closePromise.succeed(result: ())
     }
 
+    /// Contains the flushed items that went into the `Channel` (and on a regular channel would have hit the network).
     var outboundBuffer: [IOData] = []
+
+    /// Contains the unflushed items that went into the `Channel`
     var pendingOutboundBuffer: [(IOData, EventLoopPromise<Void>?)] = []
+
+    /// Contains the items that travelled the `ChannelPipeline` all the way and hit the tail channel handler. On a
+    /// regular `Channel` these items would be lost.
     var inboundBuffer: [NIOAny] = []
 
     func localAddress0() throws -> SocketAddress {
@@ -326,6 +332,13 @@ public class EmbeddedChannel: Channel {
         return readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
 
+    /// Writes `data` into the `EmbeddedChannel`'s pipeline. This will result in a `channelRead` and a
+    /// `channelReadComplete` event for the first `ChannelHandler`.
+    ///
+    /// - parameters:
+    ///    - data: The data to fire through the pipeline.
+    /// - returns: If the `inboundBuffer` now contains items. The `inboundBuffer` will be empty until some item
+    ///            travels the `ChannelPipeline` all the way and hits the tail channel handler.
     @discardableResult public func writeInbound<T>(_ data: T) throws -> Bool {
         pipeline.fireChannelRead(NIOAny(data))
         pipeline.fireChannelReadComplete()

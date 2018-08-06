@@ -42,9 +42,9 @@ public class EventLoopTest : XCTestCase {
         }
 
         // First, we create a server and client channel, but don't connect them.
-        let serverChannel = try ServerBootstrap(group: eventLoopGroup)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: eventLoopGroup)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .bind(host: "127.0.0.1", port: 0).wait()
+            .bind(host: "127.0.0.1", port: 0).wait())
         let clientBootstrap = ClientBootstrap(group: eventLoopGroup)
 
         // Now, schedule two tasks: one that takes a while, one that doesn't.
@@ -53,17 +53,17 @@ public class EventLoopTest : XCTestCase {
             true
         }.futureResult
 
-        _ = try eventLoopGroup.next().scheduleTask(in: smallAmount) {
+        XCTAssertTrue(try assertNoThrowWithValue(try eventLoopGroup.next().scheduleTask(in: smallAmount) {
             true
-        }.futureResult.wait()
+        }.futureResult.wait()))
 
         // Ok, the short one has happened. Now we should try connecting them. This connect should happen
         // faster than the final task firing.
-        _ = try clientBootstrap.connect(to: serverChannel.localAddress!).wait()
+        _ = try assertNoThrowWithValue(clientBootstrap.connect(to: serverChannel.localAddress!).wait()) as Channel
         XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos < longAmount.nanoseconds)
 
         // Now wait for the long-delayed task.
-        _ = try longFuture.wait()
+        XCTAssertTrue(try assertNoThrowWithValue(try longFuture.wait()))
         // Now we're ok.
         XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= longAmount.nanoseconds)
     }
@@ -230,14 +230,16 @@ public class EventLoopTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: threads)
 
         // Create a server channel.
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .bind(host: "127.0.0.1", port: 0).wait()
+            .bind(host: "127.0.0.1", port: 0).wait())
 
         // We now want to connect to it. To try to slow this stuff down, we're going to use a multiple of the number
         // of event loops.
         for _ in 0..<(threads * 5) {
-            let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+            let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!)
+                .wait())
 
             var buffer = clientChannel.allocator.buffer(capacity: numBytes)
             for i in 0..<numBytes {
@@ -306,13 +308,13 @@ public class EventLoopTest : XCTestCase {
         let loop = group.next() as! SelectableEventLoop
 
         let serverChannelUp: EventLoopPromise<Void> = group.next().newPromise()
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .childChannelInitializer { channel in
                 channel.pipeline.add(handler: WedgeOpenHandler(channelActivePromise: serverChannelUp) { promise in
                     promiseQueue.sync { promises.append(promise) }
                 })
             }
-            .bind(host: "127.0.0.1", port: 0).wait()
+            .bind(host: "127.0.0.1", port: 0).wait())
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
