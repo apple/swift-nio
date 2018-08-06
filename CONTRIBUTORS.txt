@@ -14,6 +14,7 @@ needs to be listed here.
 - Adam Nemecek <adamnemecek@gmail.com>
 - Alex Blewitt <alex.blewitt@gmail.com>
 - Andrew Bennett <635596+therealbnut@users.noreply.github.com>
+- Andrew Edwards <andrewangeta@gmail.com>
 - Ankit Aggarwal <ankit_aggarwal@apple.com>
 - Arjun Nayini <aanayini@gmail.com>
 - Bas Broek <bas@basbroek.nl>
@@ -21,7 +22,10 @@ needs to be listed here.
 - Cory Benfield <cbenfield@apple.com>
 - Damiaan Dufaux <damiaan@dpro.be>
 - Daniel Dunbar <daniel_dunbar@apple.com>
+- Esteban Torres <me@estebantorr.es>
+- Eugen <eugenf78@gmail.com>
 - Frank Kair <frankkair@gmail.com>
+- Franz Busch <privat@franz-busch.de>
 - Gopal Sharma <gopal@the-sharmas.org>
 - Helge Heß <helge@alwaysrightinstitute.com>
 - Ian Partridge <i.partridge@uk.ibm.com>
@@ -34,9 +38,14 @@ needs to be listed here.
 - Lev Walkin <vlm@lionet.info>
 - Ludovic Dewailly <me@ldewailly.com>
 - Matt Eaton <agnosticdev@gmail.com>
+- Max Desiatov <max@desiatov.com>
 - Max Moiseev <moiseev@apple.com>
 - Moritz Lang <hi@slashmo.codes>
+- Nethra Ravindran <nethra.ravindran@in.ibm.com>
 - Norman Maurer <norman_maurer@apple.com>
+- Ole Begemann <ole@oleb.net>
+- OleG <emptystamp@gmail.com>
+- Portia <portia-s@users.noreply.github.com>
 - Pushkar N Kulkarni <pushkar.nk@in.ibm.com>
 - Sebastian Thiebaud <770074+SebastianThiebaud@users.noreply.github.com>
 - Semen Zhydenko <simeon.zhidenko@gmail.com>

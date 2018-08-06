@@ -28,10 +28,23 @@ else
   printf "\033[0;32mokay.\033[0m\n"
 fi
 
-printf "=> Checking license headers... "
+printf "=> Checking contributors list... "
+PRE_CONTRIBS_OUT="$(git status --porcelain)"
+$here/../scripts/generate_contributors_list.sh > /dev/null
+POST_CONTRIBS_OUT="$(git status --porcelain)"
+if [[ "$PRE_CONTRIBS_OUT" != "$POST_CONTRIBS_OUT" ]]; then
+  printf "\033[0;31mmissing contributors!\033[0m\n"
+  git --no-pager diff
+  exit 1
+else
+  printf "\033[0;32mokay.\033[0m\n"
+fi
+
+printf "=> Checking license headers...\n"
 tmp=$(mktemp /tmp/.swift-nio-sanity_XXXXXX)
 
 for language in swift-or-c bash dtrace; do
+  printf "\t=> ${language}... "
   declare -a matching_files
   declare -a exceptions
   expections=( )
