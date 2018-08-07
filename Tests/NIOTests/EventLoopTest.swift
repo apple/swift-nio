@@ -103,26 +103,62 @@ public class EventLoopTest : XCTestCase {
 
         let expect = expectation(description: "Is cancelling RepatedTask")
         let counter = Atomic<Int>(value: 0)
-        eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { repeatedTask -> Void in
-            if counter.load() == 0 {
+        let loop = eventLoopGroup.next()
+        loop.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { repeatedTask -> Void in
+            XCTAssertTrue(loop.inEventLoop)
+            let initialValue = counter.load()
+            _ = counter.add(1)
+            if initialValue == 0 {
                 XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds)
-            } else if counter.load() == count {
+            } else if initialValue == count {
                 expect.fulfill()
                 repeatedTask.cancel()
             }
-            counter.store(counter.load() + 1)
         }
 
-        waitForExpectations(timeout: 1) { _ in
+        waitForExpectations(timeout: 1) { error in
+            XCTAssertNil(error)
             XCTAssertEqual(counter.load(), count + 1)
             XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds + count * delay.nanoseconds)
         }
     }
 
+    public func testScheduledTaskThatIsImmediatelyCancelledNeverFires() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let loop = eventLoopGroup.next()
+        loop.execute {
+            let task = loop.scheduleTask(in: .milliseconds(0)) {
+                XCTFail()
+            }
+            task.cancel()
+        }
+        Thread.sleep(until: .init(timeIntervalSinceNow: 0.1))
+    }
+
+    public func testRepeatedTaskThatIsImmediatelyCancelledNeverFires() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let loop = eventLoopGroup.next()
+        loop.execute {
+            let task = loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(0)) { task in
+                XCTFail()
+            }
+            task.cancel()
+        }
+        Thread.sleep(until: .init(timeIntervalSinceNow: 0.1))
+    }
+
     public func testScheduleRepeatedTaskCancelFromDifferentThread() throws {
         let nanos = DispatchTime.now().uptimeNanoseconds
         let initialDelay: TimeAmount = .milliseconds(5)
-        let delay: TimeAmount = .milliseconds(10)
+        let delay: TimeAmount = .milliseconds(0) // this will actually force the race from issue #554 to happen frequently
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
@@ -130,16 +166,31 @@ public class EventLoopTest : XCTestCase {
 
         let expect = expectation(description: "Is cancelling RepatedTask")
         let group = DispatchGroup()
+        let loop = eventLoopGroup.next()
         group.enter()
-        let repeatedTask = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { (_: RepeatedTask) -> Void in
-            group.leave()
-            expect.fulfill()
+        var isAllowedToFire = true // read/write only on `loop`
+        var hasFired = false // read/write only on `loop`
+        let repeatedTask = loop.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { (_: RepeatedTask) -> Void in
+            XCTAssertTrue(loop.inEventLoop)
+            if !hasFired {
+                // we can only do this once as we can only leave the DispatchGroup once but we might lose a race and
+                // the timer might fire more than once (until `shouldNoLongerFire` becomes true).
+                hasFired = true
+                group.leave()
+                expect.fulfill()
+            }
+            XCTAssertTrue(isAllowedToFire)
         }
         group.notify(queue: DispatchQueue.global()) {
             repeatedTask.cancel()
+            loop.execute {
+                // only now do we know that the `cancel` must have gone through
+                isAllowedToFire = false
+            }
         }
 
-        waitForExpectations(timeout: 1) { _ in
+        waitForExpectations(timeout: 1) { error in
+            XCTAssertNil(error)
             XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds)
         }
     }
