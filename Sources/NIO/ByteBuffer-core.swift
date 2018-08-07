@@ -483,7 +483,8 @@ public struct ByteBuffer {
         }
     }
 
-    private mutating func copyStorageAndRebaseIfNeeded() {
+    @_versioned
+    mutating func _copyStorageAndRebaseIfNeeded() {
         if !isKnownUniquelyReferenced(&self._storage) {
             self._copyStorageAndRebase()
         }
@@ -496,8 +497,9 @@ public struct ByteBuffer {
     /// - parameters:
     ///     - body: The closure that will accept the yielded bytes.
     /// - returns: The value returned by `fn`.
+    @_inlineable
     public mutating func withUnsafeMutableReadableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> T) rethrows -> T {
-        self.copyStorageAndRebaseIfNeeded()
+        self._copyStorageAndRebaseIfNeeded()
         return try body(UnsafeMutableRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._readerIndex)),
                                                     count: self.readableBytes))
     }
@@ -512,8 +514,9 @@ public struct ByteBuffer {
     /// - parameters:
     ///     - body: The closure that will accept the yielded bytes and return the number of bytes written.
     /// - returns: The number of bytes written.
+    @_inlineable
     public mutating func withUnsafeMutableWritableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> T) rethrows -> T {
-        self.copyStorageAndRebaseIfNeeded()
+        self._copyStorageAndRebaseIfNeeded()
         return try body(UnsafeMutableRawBufferPointer(start: self._storage.bytes.advanced(by: Int(self._slice.lowerBound + self._writerIndex)),
                                                     count: self.writableBytes))
     }
