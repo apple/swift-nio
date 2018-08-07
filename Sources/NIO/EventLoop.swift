@@ -80,7 +80,7 @@ public final class RepeatedTask {
         guard let task = self.task else {
             return
         }
-        self.scheduled = eventLoop.scheduleTask(in: delay) {
+        self.scheduled = self.eventLoop.scheduleTask(in: delay) {
             task(self)
         }
         self.reschedule()
@@ -128,11 +128,15 @@ public final class RepeatedTask {
 
     private func reschedule0() {
         assert(self.eventLoop.inEventLoop)
-        guard let task = self.task else {
+        guard self.task != nil else {
             return
         }
         self.scheduled = self.eventLoop.scheduleTask(in: self.delay) {
-            task(self)
+            // we need to repeat this as we might have been cancelled in the meantime
+            guard let task = self.task else {
+                return self.eventLoop.newSucceededFuture(result: ())
+            }
+            return task(self)
         }
         self.reschedule()
     }
