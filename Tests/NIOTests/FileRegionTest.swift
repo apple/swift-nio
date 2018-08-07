@@ -33,18 +33,22 @@ class FileRegionTest : XCTestCase {
 
         let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().newPromise())
 
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .childChannelInitializer { $0.pipeline.add(handler: countingHandler) }.bind(host: "127.0.0.1", port: 0).wait()
+            .childChannelInitializer { $0.pipeline.add(handler: countingHandler) }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
 
         defer {
-            _ = serverChannel.close()
+            XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!)
+            .wait())
 
         defer {
-            _ = clientChannel.close()
+            XCTAssertNoThrow(try clientChannel.close().wait())
         }
 
         try withTemporaryFile { _, filePath in
@@ -69,18 +73,22 @@ class FileRegionTest : XCTestCase {
 
         let countingHandler = ByteCountingHandler(numBytes: 0, promise: group.next().newPromise())
 
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .childChannelInitializer { $0.pipeline.add(handler: countingHandler) }.bind(host: "127.0.0.1", port: 0).wait()
+            .childChannelInitializer { $0.pipeline.add(handler: countingHandler) }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
 
         defer {
-            _ = serverChannel.close()
+            XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!)
+            .wait())
 
         defer {
-            _ = clientChannel.close()
+            XCTAssertNoThrow(try clientChannel.close().wait())
         }
 
         try withTemporaryFile { _, filePath in
@@ -116,18 +124,22 @@ class FileRegionTest : XCTestCase {
 
         let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().newPromise())
 
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .childChannelInitializer { $0.pipeline.add(handler: countingHandler) }.bind(host: "127.0.0.1", port: 0).wait()
+            .childChannelInitializer { $0.pipeline.add(handler: countingHandler) }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
 
         defer {
-            _ = serverChannel.close()
+            XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!)
+            .wait())
 
         defer {
-            _ = clientChannel.close()
+            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
         try withTemporaryFile { fd, filePath in
