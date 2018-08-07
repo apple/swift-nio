@@ -16,6 +16,7 @@ import NIO
 import NIOHTTP1
 import Foundation
 import AtomicCounter
+import Dispatch // needed for Swift 4.0 on Linux only
 
 private final class SimpleHTTPServer: ChannelInboundHandler {
     typealias InboundIn = HTTPServerRequestPart
@@ -125,6 +126,16 @@ private final class PongHandler: ChannelInboundHandler {
     }
 }
 
+private func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
+    #if os(Linux)
+    return try execute()
+    #else
+    return try autoreleasepool {
+        try execute()
+    }
+    #endif
+}
+
 @_cdecl("swift_main")
 public func swiftMain() -> Int {
     final class RepeatedRequests: ChannelInboundHandler {
@@ -175,7 +186,9 @@ public func swiftMain() -> Int {
         func measureOne(_ fn: () -> Int) -> [String: Int] {
             AtomicCounter.reset_free_counter()
             AtomicCounter.reset_malloc_counter()
-            _ = fn()
+            withAutoReleasePool {
+                _ = fn()
+            }
             usleep(100_000) // allocs/frees happen on multiple threads, allow some cool down time
             let frees = AtomicCounter.read_free_counter()
             let mallocs = AtomicCounter.read_malloc_counter()
@@ -260,7 +273,7 @@ public func swiftMain() -> Int {
         return numberOfRequests
     }
 
-    let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
     defer {
         try! group.syncShutdownGracefully()
     }
@@ -285,6 +298,116 @@ public func swiftMain() -> Int {
         let numberDone = try! doPingPongRequests(group: group, number: 1000)
         precondition(numberDone == 1000)
         return numberDone
+    }
+
+    measureAndPrint(desc: "bytebuffer_lots_of_rw") {
+        let dispatchData = ("A" as StaticString).withUTF8Buffer { ptr in
+            DispatchData(bytes: UnsafeRawBufferPointer(start: UnsafeRawPointer(ptr.baseAddress), count: ptr.count))
+        }
+        var buffer = ByteBufferAllocator().buffer(capacity: 7 * 1000)
+        let foundationData = "A".data(using: .utf8)!
+        @inline(never)
+        func doWrites(buffer: inout ByteBuffer) {
+            /* all of those should be 0 allocations */
+
+            // buffer.write(bytes: foundationData) // see SR-7542
+            buffer.write(bytes: [0x41])
+            buffer.write(bytes: dispatchData)
+            buffer.write(bytes: "A".utf8)
+            buffer.write(string: "A")
+            buffer.write(staticString: "A")
+            buffer.write(integer: 0x41, as: UInt8.self)
+        }
+        @inline(never)
+        func doReads(buffer: inout ByteBuffer) {
+            /* these ones are zero allocations */
+            let val = buffer.readInteger(as: UInt8.self)
+            precondition(0x41 == val, "\(val!)")
+            var slice = buffer.readSlice(length: 1)
+            let sliceVal = slice!.readInteger(as: UInt8.self)
+            precondition(0x41 == sliceVal, "\(sliceVal!)")
+            buffer.withUnsafeReadableBytes { ptr in
+                precondition(ptr[0] == 0x41)
+            }
+
+            /* those down here should be one allocation each */
+            let arr = buffer.readBytes(length: 1)
+            precondition([0x41] == arr!, "\(arr!)")
+            let str = buffer.readString(length: 1)
+            precondition("A" == str, "\(str!)")
+        }
+        for _ in 0..<1000  {
+            doWrites(buffer: &buffer)
+            doReads(buffer: &buffer)
+        }
+        return buffer.readableBytes
+    }
+
+    measureAndPrint(desc: "future_lots_of_callbacks") {
+        struct MyError: Error { }
+        @inline(never)
+        func doThenAndFriends(loop: EventLoop) {
+            let p: EventLoopPromise<Int> = loop.newPromise()
+            let f = p.futureResult.then { (r: Int) -> EventLoopFuture<Int> in 
+                // This call allocates a new Future, and
+                // so does then(), so this is two Futures.
+                return loop.newSucceededFuture(result: r + 1)
+            }.thenThrowing { (r: Int) -> Int in
+                // thenThrowing allocates a new Future, and calls then
+                // which also allocates, so this is two.
+                return r + 2
+            }.map { (r: Int) -> Int in
+                // map allocates a new future, and calls then which
+                // also allocates, so this is two.
+                return r + 2
+            }.thenThrowing { (r: Int) -> Int in
+                // thenThrowing allocates a future on the error path and
+                // calls then, which also allocates, so this is two.
+                throw MyError()
+            }.thenIfError { (err: Error) -> EventLoopFuture<Int> in
+                // This call allocates a new Future, and so does thenIfError,
+                // so this is two Futures.
+                return loop.newFailedFuture(error: err)
+            }.thenIfErrorThrowing { (err: Error) -> Int in
+                // thenIfError allocates a new Future, and calls thenIfError,
+                // so this is two Futures
+                throw err
+            }.mapIfError { (err: Error) -> Int in
+                // mapIfError allocates a future, and calls thenIfError, so
+                // this is two Futures.
+                return 1
+            }
+            p.succeed(result: 0)
+            
+            // Wait also allocates a lock.
+            try! f.wait()
+        }
+        @inline(never)
+        func doAnd(loop: EventLoop) {
+            let p1: EventLoopPromise<Int> = loop.newPromise()
+            let p2: EventLoopPromise<Int> = loop.newPromise()
+            let p3: EventLoopPromise<Int> = loop.newPromise()
+
+            // Each call to and() allocates a Future. The calls to
+            // and(result:) allocate two.
+    
+            let f = p1.futureResult
+                        .and(p2.futureResult)
+                        .and(p3.futureResult)
+                        .and(result: 1)
+                        .and(result: 1)
+
+            p1.succeed(result: 1)
+            p2.succeed(result: 1)
+            p3.succeed(result: 1)
+            let r = try! f.wait()
+        }
+        let el = EmbeddedEventLoop()
+        for _ in 0..<1000  {
+            doThenAndFriends(loop: el)
+            doAnd(loop: el)
+        }
+        return 1000
     }
 
     return 0

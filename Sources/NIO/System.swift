@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 //  This file contains code that ensures errno is captured correctly when doing syscalls and no ARC traffic can happen inbetween that *could* change the errno
 //  value before we were able to read it.
-//  Its important that all static methods are declared with `@inline(never)` so its not possible any ARC traffic happens while we need to read errno.
+//  It's important that all static methods are declared with `@inline(never)` so it's not possible any ARC traffic happens while we need to read errno.
 //
 //  Created by Norman Maurer on 11/10/17.
 //
@@ -118,10 +118,9 @@ internal func wrapSyscall<T: FixedWidthInteger>(where function: StaticString = #
 
 /* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
 @inline(__always)
-internal func wrapErrorIsNullReturnCall(where function: StaticString = #function, _ body: () throws -> UnsafePointer<CChar>?) throws -> UnsafePointer<CChar>? {
+internal func wrapErrorIsNullReturnCall<T>(where function: StaticString = #function, _ body: () throws -> T?) throws -> T {
     while true {
-        let res = try body()
-        if res == nil {
+        guard let res = try body() else {
             let err = errno
             if err == EINTR {
                 continue
@@ -141,11 +140,11 @@ enum Shutdown {
     fileprivate var cValue: CInt {
         switch self {
         case .RD:
-            return CInt(SHUT_RD)
+            return CInt(Posix.SHUT_RD)
         case .WR:
-            return CInt(SHUT_WR)
+            return CInt(Posix.SHUT_WR)
         case .RDWR:
-            return CInt(SHUT_RDWR)
+            return CInt(Posix.SHUT_RDWR)
         }
     }
 }
@@ -155,13 +154,18 @@ internal enum Posix {
     static let SOCK_STREAM: CInt = CInt(Darwin.SOCK_STREAM)
     static let SOCK_DGRAM: CInt = CInt(Darwin.SOCK_DGRAM)
     static let IPPROTO_TCP: CInt = CInt(Darwin.IPPROTO_TCP)
-
     static let UIO_MAXIOV: Int = 1024
+    static let SHUT_RD: CInt = CInt(Darwin.SHUT_RD)
+    static let SHUT_WR: CInt = CInt(Darwin.SHUT_WR)
+    static let SHUT_RDWR: CInt = CInt(Darwin.SHUT_RDWR)
 #elseif os(Linux) || os(FreeBSD) || os(Android)
     static let SOCK_STREAM: CInt = CInt(Glibc.SOCK_STREAM.rawValue)
     static let SOCK_DGRAM: CInt = CInt(Glibc.SOCK_DGRAM.rawValue)
     static let IPPROTO_TCP: CInt = CInt(Glibc.IPPROTO_TCP)
     static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)
+    static let SHUT_RD: CInt = CInt(Glibc.SHUT_RD)
+    static let SHUT_WR: CInt = CInt(Glibc.SHUT_WR)
+    static let SHUT_RDWR: CInt = CInt(Glibc.SHUT_RDWR)
 #else
     static var SOCK_STREAM: CInt {
         fatalError("unsupported OS")
@@ -310,7 +314,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func write(descriptor: CInt, pointer: UnsafePointer<UInt8>, size: Int) throws -> IOResult<Int> {
+    public static func write(descriptor: CInt, pointer: UnsafeRawPointer, size: Int) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
             sysWrite(descriptor, pointer, size)
         }
@@ -324,7 +328,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func sendto(descriptor: CInt, pointer: UnsafePointer<UInt8>, size: size_t,
+    public static func sendto(descriptor: CInt, pointer: UnsafeRawPointer, size: size_t,
                               destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
             sysSendTo(descriptor, pointer, size, 0, destinationPtr, destinationSize)
@@ -332,14 +336,14 @@ internal enum Posix {
     }
 
     @inline(never)
-    public static func read(descriptor: CInt, pointer: UnsafeMutablePointer<UInt8>, size: size_t) throws -> IOResult<Int> {
+    public static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t) throws -> IOResult<Int> {
         return try wrapSyscallMayBlock {
             sysRead(descriptor, pointer, size)
         }
     }
 
     @inline(never)
-    public static func recvfrom(descriptor: CInt, pointer: UnsafeMutablePointer<UInt8>, len: size_t, addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) throws -> IOResult<ssize_t> {
+    public static func recvfrom(descriptor: CInt, pointer: UnsafeMutableRawPointer, len: size_t, addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) throws -> IOResult<ssize_t> {
         return try wrapSyscallMayBlock {
             sysRecvFrom(descriptor, pointer, len, 0, addr, addrlen)
         }
@@ -363,13 +367,13 @@ internal enum Posix {
 
     @discardableResult
     @inline(never)
-    public static func inet_ntop(addressFamily: CInt, addressBytes: UnsafeRawPointer, addressDescription: UnsafeMutablePointer<CChar>, addressDescriptionLength: socklen_t) throws -> UnsafePointer<CChar>? {
+    public static func inet_ntop(addressFamily: CInt, addressBytes: UnsafeRawPointer, addressDescription: UnsafeMutablePointer<CChar>, addressDescriptionLength: socklen_t) throws -> UnsafePointer<CChar> {
         return try wrapErrorIsNullReturnCall {
             sysInet_ntop(addressFamily, addressBytes, addressDescription, addressDescriptionLength)
         }
     }
 
-    // Its not really posix but exists on Linux and MacOS / BSD so just put it here for now to keep it simple
+    // It's not really posix but exists on Linux and MacOS / BSD so just put it here for now to keep it simple
     @inline(never)
     public static func sendfile(descriptor: CInt, fd: CInt, offset: off_t, count: size_t) throws -> IOResult<Int> {
         var written: off_t = 0

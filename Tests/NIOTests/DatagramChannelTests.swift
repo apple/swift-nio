@@ -98,7 +98,7 @@ final class DatagramChannelTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        self.group = MultiThreadedEventLoopGroup(numThreads: 1)
+        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         self.firstChannel = try! buildChannel(group: group)
         self.secondChannel = try! buildChannel(group: group)
     }
@@ -232,7 +232,7 @@ final class DatagramChannelTests: XCTestCase {
         var overall = self.firstChannel.eventLoop.newSucceededFuture(result: ())
         // We defer this work to the background thread because otherwise it incurs an enormous number of context
         // switches.
-        _ = try self.firstChannel.eventLoop.submit {
+        try self.firstChannel.eventLoop.submit {
             let myPromise: EventLoopPromise<Void> = self.firstChannel.eventLoop.newPromise()
             // For datagrams this buffer cannot be very large, because if it's larger than the path MTU it
             // will cause EMSGSIZE.
@@ -380,7 +380,7 @@ final class DatagramChannelTests: XCTestCase {
             }
         }
 
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -392,7 +392,7 @@ final class DatagramChannelTests: XCTestCase {
                 try super.init(protocolFamily: AF_INET, type: Posix.SOCK_DGRAM)
             }
 
-            override func recvfrom(pointer: UnsafeMutablePointer<UInt8>, size: Int, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
+            override func recvfrom(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
                 if let err = self.error {
                     self.error = nil
                     throw IOError(errnoCode: err, function: "recvfrom")
@@ -421,5 +421,25 @@ final class DatagramChannelTests: XCTestCase {
 
     public func testSetGetOptionClosedDatagramChannel() throws {
         try assertSetGetOptionOnOpenAndClosed(channel: firstChannel, option: ChannelOptions.maxMessagesPerRead, value: 1)
+    }
+
+    func testWritesAreAccountedCorrectly() throws {
+        var buffer = firstChannel.allocator.buffer(capacity: 256)
+        buffer.write(staticString: "hello, world!")
+        let firstWrite = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer.getSlice(at: buffer.readerIndex, length: 5)!)
+        let secondWrite = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        self.firstChannel.write(NIOAny(firstWrite), promise: nil)
+        self.firstChannel.write(NIOAny(secondWrite), promise: nil)
+        self.firstChannel.flush()
+
+        let reads = try self.secondChannel.waitForDatagrams(count: 2)
+
+        // These datagrams should not have been dropped by the kernel.
+        XCTAssertEqual(reads.count, 2)
+
+        XCTAssertEqual(reads[0].data, buffer.getSlice(at: buffer.readerIndex, length: 5)!)
+        XCTAssertEqual(reads[0].remoteAddress, self.firstChannel.localAddress!)
+        XCTAssertEqual(reads[1].data, buffer)
+        XCTAssertEqual(reads[1].remoteAddress, self.firstChannel.localAddress!)
     }
 }

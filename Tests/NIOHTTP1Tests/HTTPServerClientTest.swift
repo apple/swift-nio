@@ -19,18 +19,6 @@ import NIOFoundationCompat
 import Dispatch
 @testable import NIOHTTP1
 
-internal extension Channel {
-    func syncCloseAcceptingAlreadyClosed() throws {
-        do {
-            try self.close().wait()
-        } catch ChannelError.alreadyClosed {
-            /* we're happy with this one */
-        } catch let e {
-            throw e
-        }
-    }
-}
-
 extension Array where Array.Element == ByteBuffer {
     public func allAsBytes() -> [UInt8] {
         var out: [UInt8] = []
@@ -346,7 +334,7 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     private func testSimpleGet(_ mode: SendMode) throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -359,7 +347,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
             // Set the handlers that are appled to the accepted Channels
@@ -368,20 +356,20 @@ class HTTPServerClientTest : XCTestCase {
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            }.bind(host: "127.0.0.1", port: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait())
 
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        let clientChannel = try ClientBootstrap(group: group)
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().then {
                     channel.pipeline.add(handler: accumulation)
                 }
             }
             .connect(to: serverChannel.localAddress!)
-            .wait()
+            .wait())
 
         defer {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
@@ -404,7 +392,7 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     private func testSimpleGetChunkedEncoding(_ mode: SendMode) throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -417,7 +405,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
             // Set the handlers that are appled to the accepted Channels
@@ -426,20 +414,20 @@ class HTTPServerClientTest : XCTestCase {
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            }.bind(host: "127.0.0.1", port: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait())
 
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        let clientChannel = try ClientBootstrap(group: group)
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().then {
                     channel.pipeline.add(handler: accumulation)
                 }
             }
             .connect(to: serverChannel.localAddress!)
-            .wait()
+            .wait())
 
         defer {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
@@ -461,7 +449,7 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     private func testSimpleGetTrailers(_ mode: SendMode) throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -478,27 +466,26 @@ class HTTPServerClientTest : XCTestCase {
 
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            }.bind(host: "127.0.0.1", port: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait())
 
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        let clientChannel = try ClientBootstrap(group: group)
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().then {
                     channel.pipeline.add(handler: accumulation)
                 }
             }
             .connect(to: serverChannel.localAddress!)
-            .wait()
-
+            .wait())
         defer {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
@@ -520,7 +507,7 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     func testMassiveResponse(_ mode: SendMode) throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -535,7 +522,7 @@ class HTTPServerClientTest : XCTestCase {
         }
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(mode)
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
             // Set the handlers that are appled to the accepted Channels
@@ -544,17 +531,15 @@ class HTTPServerClientTest : XCTestCase {
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            }.bind(host: "127.0.0.1", port: 0).wait()
-
+            }.bind(host: "127.0.0.1", port: 0).wait())
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        let clientChannel = try ClientBootstrap(group: group)
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer({ $0.pipeline.add(handler: accumulation) })
             .connect(to: serverChannel.localAddress!)
-            .wait()
-
+            .wait())
         defer {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
@@ -567,7 +552,7 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     func testHead() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -580,25 +565,25 @@ class HTTPServerClientTest : XCTestCase {
 
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(.byteBuffer)
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            }.bind(host: "127.0.0.1", port: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait())
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        let clientChannel = try ClientBootstrap(group: group)
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().then {
                     channel.pipeline.add(handler: accumulation)
                 }
             }
             .connect(to: serverChannel.localAddress!)
-            .wait()
+            .wait())
 
         defer {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
@@ -613,7 +598,7 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     func test204() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -625,26 +610,25 @@ class HTTPServerClientTest : XCTestCase {
 
         let numBytes = 16 * 1024
         let httpHandler = SimpleHTTPServer(.byteBuffer)
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
                     channel.pipeline.add(handler: httpHandler)
                 }
-            }.bind(host: "127.0.0.1", port: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait())
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        let clientChannel = try ClientBootstrap(group: group)
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().then {
                     channel.pipeline.add(handler: accumulation)
                 }
             }
             .connect(to: serverChannel.localAddress!)
-            .wait()
-
+            .wait())
         defer {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
@@ -659,7 +643,7 @@ class HTTPServerClientTest : XCTestCase {
 
     @available(*, deprecated, message: "Tests deprecated function addHTTPServerHandlers")
     func testDeprecatedPipelineConstruction() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -670,27 +654,26 @@ class HTTPServerClientTest : XCTestCase {
 
         let accumulation = HTTPClientResponsePartAssertHandler(HTTPVersion(major: 1, minor: 1), .ok, expectedHeaders, "Hello World!\r\n")
 
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.addHTTPServerHandlers().then {
                     channel.pipeline.add(handler: SimpleHTTPServer(.byteBuffer))
                 }
-            }.bind(host: "127.0.0.1", port: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait())
 
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        let clientChannel = try ClientBootstrap(group: group)
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().then {
                     channel.pipeline.add(handler: accumulation)
                 }
             }
             .connect(to: serverChannel.localAddress!)
-            .wait()
-
+            .wait())
         defer {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }

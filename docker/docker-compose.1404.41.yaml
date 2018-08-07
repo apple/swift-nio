@@ -1,0 +1,38 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: swift-nio:14.04-4.1
+    build:
+      args:
+        ubuntu_version : "14.04"
+        swift_version : "4.1"
+        install_curl_from_source: "true"
+
+  unit-tests:
+    image: swift-nio:14.04-4.1
+
+  integration-tests:
+    image: swift-nio:14.04-4.1
+    environment:
+      - MAX_ALLOCS_ALLOWED_1000_reqs_1_conn=47000
+      - MAX_ALLOCS_ALLOWED_1_reqs_1000_conn=718100
+      - MAX_ALLOCS_ALLOWED_ping_pong_1000_reqs_1_conn=4600
+      - MAX_ALLOCS_ALLOWED_bytebuffer_lots_of_rw=3100
+      - MAX_ALLOCS_ALLOWED_future_lots_of_callbacks=99100
+
+  test:
+    image: swift-nio:14.04-4.1
+    environment:
+      - MAX_ALLOCS_ALLOWED_1000_reqs_1_conn=47000
+      - MAX_ALLOCS_ALLOWED_1_reqs_1000_conn=718100
+      - MAX_ALLOCS_ALLOWED_ping_pong_1000_reqs_1_conn=4600
+      - MAX_ALLOCS_ALLOWED_bytebuffer_lots_of_rw=3100
+      - MAX_ALLOCS_ALLOWED_future_lots_of_callbacks=99100
+
+  echo:
+    image: swift-nio:14.04-4.1
+
+  http:
+    image: swift-nio:14.04-4.1

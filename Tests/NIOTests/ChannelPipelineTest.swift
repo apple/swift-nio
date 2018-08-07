@@ -64,7 +64,7 @@ class ChannelPipelineTest: XCTestCase {
     func testAddAfterClose() throws {
 
         let channel = EmbeddedChannel()
-        _ = channel.close()
+        XCTAssertNoThrow(try channel.close().wait())
 
         channel.pipeline.removeHandlers()
 
@@ -111,7 +111,7 @@ class ChannelPipelineTest: XCTestCase {
             return 1
         }).wait()
 
-        try channel.writeAndFlush(NIOAny("msg")).wait()
+        XCTAssertNoThrow(try channel.writeAndFlush(NIOAny("msg")).wait() as Void)
         if let data = channel.readOutbound() {
             XCTAssertEqual(IOData.byteBuffer(buf), data)
         } else {
@@ -194,7 +194,7 @@ class ChannelPipelineTest: XCTestCase {
 
     func testEmptyPipelineWorks() throws {
         let channel = EmbeddedChannel()
-        try channel.writeInbound(2)
+        XCTAssertTrue(try assertNoThrowWithValue(channel.writeInbound(2)))
         XCTAssertEqual(Optional<Int>.some(2), channel.readInbound())
         XCTAssertFalse(try channel.finish())
     }
@@ -202,7 +202,7 @@ class ChannelPipelineTest: XCTestCase {
     func testWriteAfterClose() throws {
 
         let channel = EmbeddedChannel()
-        _ = try channel.close().wait()
+        XCTAssertNoThrow(try channel.close().wait())
         let loop = channel.eventLoop as! EmbeddedEventLoop
         loop.run()
 
@@ -265,7 +265,7 @@ class ChannelPipelineTest: XCTestCase {
 
             func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
                 let data = self.unwrapInboundIn(data)
-                ctx.write(self.wrapOutboundOut(data.map { $0 * -1 }), promise: nil)
+                ctx.writeAndFlush(self.wrapOutboundOut(data.map { $0 * -1 }), promise: nil)
                 ctx.fireChannelRead(self.wrapInboundOut(data))
             }
         }

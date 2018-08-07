@@ -18,6 +18,13 @@ extension ByteBuffer {
 
     /// Get `length` bytes starting at `index` and return the result as `[UInt8]`. This will not change the reader index.
     ///
+    /// - note: Please consider using `readBytes` which is a safer alternative that automatically maintains the
+    ///         `readerIndex` and won't allow you to read uninitialized memory.
+    /// - warning: This method allows the user to read any of the bytes in the `ByteBuffer`'s storage, including
+    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
+    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
+    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
+    ///           safe to read.
     /// - parameters:
     ///     - index: The starting index of the bytes of interest into the `ByteBuffer`.
     ///     - length: The number of bytes of interest.
@@ -30,8 +37,7 @@ extension ByteBuffer {
         }
 
         return self.withVeryUnsafeBytes { ptr in
-            Array.init(UnsafeBufferPointer<UInt8>(start: ptr.baseAddress?.advanced(by: index).assumingMemoryBound(to: UInt8.self),
-                                                  count: length))
+            Array<UInt8>(ptr[index..<(index+length)])
         }
     }
 
@@ -47,7 +53,7 @@ extension ByteBuffer {
             return nil
         }
         defer {
-            self.moveReaderIndex(forwardBy: length)
+            self._moveReaderIndex(forwardBy: length)
         }
         return self.getBytes(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
     }
@@ -62,7 +68,7 @@ extension ByteBuffer {
     @discardableResult
     public mutating func write(staticString string: StaticString) -> Int {
         let written = self.set(staticString: string, at: self.writerIndex)
-        self.moveWriterIndex(forwardBy: written)
+        self._moveWriterIndex(forwardBy: written)
         return written
     }
 
@@ -73,9 +79,9 @@ extension ByteBuffer {
     ///     - index: The index for the first serialized byte.
     /// - returns: The number of bytes written.
     public mutating func set(staticString string: StaticString, at index: Int) -> Int {
-        return string.withUTF8Buffer { ptr -> Int in
-            self.set(bytes: UnsafeRawBufferPointer(ptr), at: index)
-        }
+        // please do not replace the code below with code that uses `string.withUTF8Buffer { ... }` (see SR-7541)
+        return self.set(bytes: UnsafeRawBufferPointer(start: string.utf8Start,
+                                                      count: string.utf8CodeUnitCount), at: index)
     }
 
     // MARK: String APIs
@@ -87,7 +93,7 @@ extension ByteBuffer {
     @discardableResult
     public mutating func write(string: String) -> Int? {
         if let written = self.set(string: string, at: self.writerIndex) {
-            self.moveWriterIndex(forwardBy: written)
+            self._moveWriterIndex(forwardBy: written)
             return written
         } else {
             return nil
@@ -107,6 +113,13 @@ extension ByteBuffer {
 
     /// Get the string at `index` from this `ByteBuffer` decoding using the UTF-8 encoding. Does not move the reader index.
     ///
+    /// - note: Please consider using `readString` which is a safer alternative that automatically maintains the
+    ///         `readerIndex` and won't allow you to read uninitialized memory.
+    /// - warning: This method allows the user to read any of the bytes in the `ByteBuffer`'s storage, including
+    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
+    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
+    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
+    ///           safe to read.
     /// - parameters:
     ///     - index: The starting index into `ByteBuffer` containing the string of interest.
     ///     - length: The number of bytes making up the string.
@@ -118,8 +131,7 @@ extension ByteBuffer {
             guard index <= pointer.count - length else {
                 return nil
             }
-            return String(decoding: UnsafeBufferPointer(start: pointer.baseAddress?.assumingMemoryBound(to: UInt8.self).advanced(by: index), count: length),
-                          as: UTF8.self)
+            return String(decoding: pointer[index..<(index+length)], as: UTF8.self)
         }
     }
 
@@ -134,7 +146,7 @@ extension ByteBuffer {
             return nil
         }
         defer {
-            self.moveReaderIndex(forwardBy: length)
+            self._moveReaderIndex(forwardBy: length)
         }
         return self.getString(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
     }
@@ -149,10 +161,11 @@ extension ByteBuffer {
     /// - parameters:
     ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed.
     /// - returns: The number of bytes read.
+    @discardableResult
     @_inlineable
     public mutating func readWithUnsafeReadableBytes(_ body: (UnsafeRawBufferPointer) throws -> Int) rethrows -> Int {
         let bytesRead = try self.withUnsafeReadableBytes(body)
-        self.moveReaderIndex(forwardBy: bytesRead)
+        self._moveReaderIndex(forwardBy: bytesRead)
         return bytesRead
     }
 
@@ -167,7 +180,7 @@ extension ByteBuffer {
     @_inlineable
     public mutating func readWithUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> (Int, T)) rethrows -> T {
         let (bytesRead, ret) = try self.withUnsafeReadableBytes(body)
-        self.moveReaderIndex(forwardBy: bytesRead)
+        self._moveReaderIndex(forwardBy: bytesRead)
         return ret
     }
 
@@ -179,10 +192,11 @@ extension ByteBuffer {
     /// - parameters:
     ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed.
     /// - returns: The number of bytes read.
+    @discardableResult
     @_inlineable
     public mutating func readWithUnsafeMutableReadableBytes(_ body: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
         let bytesRead = try self.withUnsafeMutableReadableBytes(body)
-        self.moveReaderIndex(forwardBy: bytesRead)
+        self._moveReaderIndex(forwardBy: bytesRead)
         return bytesRead
     }
 
@@ -197,7 +211,7 @@ extension ByteBuffer {
     @_inlineable
     public mutating func readWithUnsafeMutableReadableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> (Int, T)) rethrows -> T {
         let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes(body)
-        self.moveReaderIndex(forwardBy: bytesRead)
+        self._moveReaderIndex(forwardBy: bytesRead)
         return ret
     }
 
@@ -223,8 +237,8 @@ extension ByteBuffer {
     @discardableResult
     public mutating func write(buffer: inout ByteBuffer) -> Int {
         let written = set(buffer: buffer, at: writerIndex)
-        self.moveWriterIndex(forwardBy: written)
-        buffer.moveReaderIndex(forwardBy: written)
+        self._moveWriterIndex(forwardBy: written)
+        buffer._moveReaderIndex(forwardBy: written)
         return written
     }
 
@@ -237,7 +251,7 @@ extension ByteBuffer {
     @_inlineable
     public mutating func write<S: Sequence>(bytes: S) -> Int where S.Element == UInt8 {
         let written = set(bytes: bytes, at: self.writerIndex)
-        self.moveWriterIndex(forwardBy: written)
+        self._moveWriterIndex(forwardBy: written)
         return written
     }
 
@@ -251,13 +265,15 @@ extension ByteBuffer {
     @_inlineable
     public mutating func write<S: ContiguousCollection>(bytes: S) -> Int where S.Element == UInt8 {
         let written = set(bytes: bytes, at: self.writerIndex)
-        self.moveWriterIndex(forwardBy: written)
+        self._moveWriterIndex(forwardBy: written)
         return written
     }
 
     /// Slice the readable bytes off this `ByteBuffer` without modifying the reader index. This method will return a
     /// `ByteBuffer` sharing the underlying storage with the `ByteBuffer` the method was invoked on. The returned
     /// `ByteBuffer` will contain the bytes in the range `readerIndex..<writerIndex` of the original `ByteBuffer`.
+    ///
+    /// - note: Because `ByteBuffer` implements copy-on-write a copy of the storage will be automatically triggered when either of the `ByteBuffer`s sharing storage is written to.
     ///
     /// - returns: A `ByteBuffer` sharing storage containing the readable bytes only.
     public func slice() -> ByteBuffer {
@@ -271,6 +287,8 @@ extension ByteBuffer {
     /// original `ByteBuffer`.
     /// The `readerIndex` of the returned `ByteBuffer` will be `0`, the `writerIndex` will be `length`.
     ///
+    /// - note: Because `ByteBuffer` implements copy-on-write a copy of the storage will be automatically triggered when either of the `ByteBuffer`s sharing storage is written to.
+    ///
     /// - parameters:
     ///     - length: The number of bytes to slice off.
     /// - returns: A `ByteBuffer` sharing storage containing `length` bytes or `nil` if the not enough bytes were readable.
@@ -281,7 +299,7 @@ extension ByteBuffer {
         }
 
         let buffer = self.getSlice(at: readerIndex, length: length)! /* must work, enough readable bytes */
-        self.moveReaderIndex(forwardBy: length)
+        self._moveReaderIndex(forwardBy: length)
         return buffer
     }
 }

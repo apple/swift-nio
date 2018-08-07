@@ -43,7 +43,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
     }
 
     private func assertBackoffRead(error: Int32) throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -79,7 +79,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
     }
 
     private func assertRemoval(read: Bool) throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -113,7 +113,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
     }
 
     public func testNotScheduleReadIfAlreadyScheduled() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -145,7 +145,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
     }
 
     public func testChannelInactiveCancelScheduled() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -194,7 +194,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
     }
 
     public func testSecondErrorUpdateScheduledRead() throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -208,7 +208,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
             }
             return .seconds(2)
         }, errors: [ENFILE, EMFILE])
-        
+
         XCTAssertEqual(0, try serverChannel.eventLoop.submit {
             serverChannel.readable()
             serverChannel.read()
@@ -249,7 +249,9 @@ public class AcceptBackoffHandlerTest: XCTestCase {
     private func setupChannel(group: EventLoopGroup, readCountHandler: ReadCountHandler, backoffProvider: @escaping (IOError) -> TimeAmount? = AcceptBackoffHandler.defaultBackoffProvider, errors: [Int32]) throws -> ServerSocketChannel {
         let eventLoop = group.next() as! SelectableEventLoop
         let socket = try NonAcceptingServerSocket(errors: errors)
-        let serverChannel = try ServerSocketChannel(serverSocket: socket, eventLoop: eventLoop, group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerSocketChannel(serverSocket: socket,
+                                                                           eventLoop: eventLoop,
+                                                                           group: group))
 
         XCTAssertNoThrow(try serverChannel.setOption(option: ChannelOptions.autoRead, value: false).wait())
         XCTAssertNoThrow(try serverChannel.pipeline.add(handler: readCountHandler).then { _ in
@@ -264,7 +266,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
             serverChannel.register().then { () -> EventLoopFuture<()> in
                 return serverChannel.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 0))
             }
-        }.wait())
+        }.wait().wait() as Void)
         return serverChannel
     }
 }

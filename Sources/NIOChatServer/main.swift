@@ -113,7 +113,7 @@ final class ChatHandler: ChannelInboundHandler {
 // connected clients. For this ChatHandler MUST be thread-safe!
 let chatHandler = ChatHandler()
 
-let group = MultiThreadedEventLoopGroup(numThreads: System.coreCount)
+let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .serverChannelOption(ChannelOptions.backlog, value: 256)
@@ -123,7 +123,7 @@ let bootstrap = ServerBootstrap(group: group)
     .childChannelInitializer { channel in
         // Add handler that will buffer data until a \n is received
         channel.pipeline.add(handler: LineDelimiterCodec()).then { v in
-            // Its important we use the same handler for all accepted channels. The ChatHandler is thread-safe!
+            // It's important we use the same handler for all accepted channels. The ChatHandler is thread-safe!
             channel.pipeline.add(handler: chatHandler)
         }
     }

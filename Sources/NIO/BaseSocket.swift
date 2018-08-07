@@ -296,7 +296,7 @@ class BaseSocket: Selectable {
     /// Create a new instance.
     ///
     /// The ownership of the passed in descriptor is transferred to this class. A user must call `close` to close the underlying
-    /// file descriptor once its not needed / used anymore.
+    /// file descriptor once it's not needed / used anymore.
     ///
     /// - parameters:
     ///     - descriptor: The file descriptor to wrap.
@@ -394,7 +394,7 @@ class BaseSocket: Selectable {
     /// After the socket was closed all other methods will throw an `IOError` when called.
     ///
     /// - throws: An `IOError` if the operation failed.
-    final func close() throws {
+    func close() throws {
         try withUnsafeFileDescriptor { fd in
             try Posix.close(descriptor: fd)
         }

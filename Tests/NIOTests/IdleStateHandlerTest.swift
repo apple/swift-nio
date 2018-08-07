@@ -34,7 +34,7 @@ class IdleStateHandlerTest : XCTestCase {
     }
 
     private func testIdle(_ handler: IdleStateHandler, _ writeToChannel: Bool, _ assertEventFn: @escaping (IdleStateHandler.IdleStateEvent) -> Bool) throws {
-        let group = MultiThreadedEventLoopGroup(numThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -74,24 +74,26 @@ class IdleStateHandlerTest : XCTestCase {
             }
         }
 
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.add(handler: handler).then { f in
                     channel.pipeline.add(handler: TestWriteHandler(writeToChannel, assertEventFn))
                 }
-            }.bind(host: "127.0.0.1", port: 0).wait()
+            }.bind(host: "127.0.0.1", port: 0).wait())
 
         defer {
-            _ = serverChannel.close()
+            XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!)
+            .wait())
         if !writeToChannel {
             var buffer = clientChannel.allocator.buffer(capacity: 4)
             buffer.write(staticString: "test")
-            try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
+            XCTAssertNoThrow(try clientChannel.writeAndFlush(NIOAny(buffer)).wait())
         }
-        try clientChannel.closeFuture.wait()
+        XCTAssertNoThrow(try clientChannel.closeFuture.wait())
     }
 }

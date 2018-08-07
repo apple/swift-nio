@@ -21,6 +21,7 @@
 #include <sys/sysinfo.h>
 #include <sys/socket.h>
 #include <sched.h>
+#include <errno.h>
 
 
 // Some explanation is required here.

@@ -273,6 +273,19 @@ public extension ChannelCore {
     public func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
         return data.forceAs()
     }
+
+    /// Removes the `ChannelHandler`s from the `ChannelPipeline` belonging to `channel`, and
+    /// closes that `ChannelPipeline`.
+    ///
+    /// This method is intended for use when writing custom `ChannelCore` implementations.
+    /// This can be called from `close0` to tear down the `ChannelPipeline` when closure is
+    /// complete.
+    ///
+    /// - parameters:
+    ///     - channel: The `Channel` whose `ChannelPipeline` will be closed.
+    public func removeHandlers(channel: Channel) {
+        channel.pipeline.removeHandlers()
+    }
 }
 
 /// An error that can occur on `Channel` operations.
@@ -361,4 +374,14 @@ public enum ChannelEvent: Equatable {
     case inputClosed
     /// Output portion of the `Channel` was closed.
     case outputClosed
+}
+
+/// A `Channel` user event that is sent when the `Channel` has been asked to quiesce.
+///
+/// The action(s) that should be taken after receiving this event are both application and protocol dependent. If the
+/// protocol supports a notion of requests and responses, it might make sense to stop accepting new requests but finish
+/// processing the request currently in flight.
+public struct ChannelShouldQuiesceEvent {
+    public init() {
+    }
 }

@@ -50,6 +50,123 @@ public struct Scheduled<T> {
     }
 }
 
+/// Returned once a task was scheduled to be repeatedly executed on the `EventLoop`.
+///
+/// A `RepeatedTask` allows the user to `cancel()` the repeated scheduling of further tasks.
+public final class RepeatedTask {
+    private let delay: TimeAmount
+    private let eventLoop: EventLoop
+    private var scheduled: Scheduled<EventLoopFuture<Void>>?
+    private var task: ((RepeatedTask) -> EventLoopFuture<Void>)?
+
+    internal init(interval: TimeAmount, eventLoop: EventLoop, task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) {
+        self.delay = interval
+        self.eventLoop = eventLoop
+        self.task = task
+    }
+
+    internal func begin(in delay: TimeAmount) {
+        if self.eventLoop.inEventLoop {
+            self.begin0(in: delay)
+        } else {
+            self.eventLoop.execute {
+                self.begin0(in: delay)
+            }
+        }
+    }
+
+    private func begin0(in delay: TimeAmount) {
+        assert(self.eventLoop.inEventLoop)
+        guard let task = self.task else {
+            return
+        }
+        self.scheduled = self.eventLoop.scheduleTask(in: delay) {
+            task(self)
+        }
+        self.reschedule()
+    }
+
+    /// Try to cancel the execution of the repeated task.
+    ///
+    /// Whether the execution of the task is immediately canceled depends on whether the execution of a task has already begun.
+    ///  This means immediate cancellation is not guaranteed.
+    ///
+    /// The safest way to cancel is by using the passed reference of `RepeatedTask` inside the task closure.
+    public func cancel() {
+        if self.eventLoop.inEventLoop {
+            self.cancel0()
+        } else {
+            self.eventLoop.execute {
+                self.cancel0()
+            }
+        }
+    }
+
+    private func cancel0() {
+        assert(self.eventLoop.inEventLoop)
+        self.scheduled?.cancel()
+        self.scheduled = nil
+        self.task = nil
+    }
+
+    private func reschedule() {
+        assert(self.eventLoop.inEventLoop)
+        guard let scheduled = self.scheduled else {
+            return
+        }
+
+        scheduled.futureResult.whenSuccess { future in
+            future.whenComplete {
+                self.reschedule0()
+            }
+        }
+
+        scheduled.futureResult.whenFailure { (_: Error) in
+            self.cancel0()
+        }
+    }
+
+    private func reschedule0() {
+        assert(self.eventLoop.inEventLoop)
+        guard self.task != nil else {
+            return
+        }
+        self.scheduled = self.eventLoop.scheduleTask(in: self.delay) {
+            // we need to repeat this as we might have been cancelled in the meantime
+            guard let task = self.task else {
+                return self.eventLoop.newSucceededFuture(result: ())
+            }
+            return task(self)
+        }
+        self.reschedule()
+    }
+}
+
+/// An iterator over the `EventLoop`s forming an `EventLoopGroup`.
+///
+/// Usually returned by an `EventLoopGroup`'s `makeIterator()` method.
+///
+///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+///     group.makeIterator()?.forEach { loop in
+///         // Do something with each loop
+///     }
+///
+public struct EventLoopIterator: Sequence, IteratorProtocol {
+    public typealias Element = EventLoop
+    private var eventLoops: IndexingIterator<[EventLoop]>
+
+    internal init(_ eventLoops: [EventLoop]) {
+        self.eventLoops = eventLoops.makeIterator()
+    }
+
+    /// Advances to the next `EventLoop` and returns it, or `nil` if no next element exists.
+    ///
+    /// - returns: The next `EventLoop` if a next element exists; otherwise, `nil`.
+    public mutating func next() -> EventLoop? {
+        return self.eventLoops.next()
+    }
+}
+
 /// An EventLoop processes IO / tasks in an endless loop for `Channel`s until it's closed.
 ///
 /// Usually multiple `Channel`s share the same `EventLoop` for processing IO / tasks and so share the same processing `Thread`.
@@ -74,7 +191,7 @@ public struct Scheduled<T> {
 /// }
 /// ```
 ///
-/// Because an `EventLoop` may be shared between multiple `Channel`s its important to _NOT_ block while processing IO / tasks. This also includes long running computations which will have the same
+/// Because an `EventLoop` may be shared between multiple `Channel`s it's important to _NOT_ block while processing IO / tasks. This also includes long running computations which will have the same
 /// effect as blocking in this case.
 public protocol EventLoop: EventLoopGroup {
     /// Returns `true` if the current `Thread` is the same as the `Thread` that is tied to this `EventLoop`. `false` otherwise.
@@ -98,10 +215,17 @@ public protocol EventLoop: EventLoopGroup {
 ///
 /// - note: `TimeAmount` should not be used to represent a point in time.
 public struct TimeAmount {
-    /// The nanoseconds representation of the `TimeAmount`.
-    public let nanoseconds: Int
+  
+    #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
+        public typealias Value = Int64
+    #else // 64-bit, keeping that at Int for SemVer in the 1.x line.
+        public typealias Value = Int
+    #endif
 
-    private init(_ nanoseconds: Int) {
+    /// The nanoseconds representation of the `TimeAmount`.
+    public let nanoseconds: Value
+
+    private init(_ nanoseconds: Value) {
         self.nanoseconds = nanoseconds
     }
 
@@ -110,7 +234,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of nanoseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func nanoseconds(_ amount: Int) -> TimeAmount {
+    public static func nanoseconds(_ amount: Value) -> TimeAmount {
         return TimeAmount(amount)
     }
 
@@ -119,7 +243,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of microseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func microseconds(_ amount: Int) -> TimeAmount {
+    public static func microseconds(_ amount: Value) -> TimeAmount {
         return TimeAmount(amount * 1000)
     }
 
@@ -128,7 +252,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of milliseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func milliseconds(_ amount: Int) -> TimeAmount {
+    public static func milliseconds(_ amount: Value) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000)
     }
 
@@ -137,7 +261,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of seconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func seconds(_ amount: Int) -> TimeAmount {
+    public static func seconds(_ amount: Value) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000 * 1000)
     }
 
@@ -146,7 +270,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of minutes this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func minutes(_ amount: Int) -> TimeAmount {
+    public static func minutes(_ amount: Value) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000 * 1000 * 60)
     }
 
@@ -155,7 +279,7 @@ public struct TimeAmount {
     /// - parameters:
     ///     - amount: the amount of hours this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
-    public static func hours(_ amount: Int) -> TimeAmount {
+    public static func hours(_ amount: Value) -> TimeAmount {
         return TimeAmount(amount * 1000 * 1000 * 1000 * 60 * 60)
     }
 }
@@ -164,7 +288,7 @@ extension TimeAmount: Comparable {
     public static func < (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds < rhs.nanoseconds
     }
-    
+
     public static func == (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds == rhs.nanoseconds
     }
@@ -203,7 +327,7 @@ extension EventLoop {
     ///
     /// - parameters:
     ///     - result: the value that is used by the `EventLoopFuture`.
-    /// - returns: a failed `EventLoopFuture`.
+    /// - returns: a succeeded `EventLoopFuture`.
     public func newSucceededFuture<T>(result: T) -> EventLoopFuture<T> {
         return EventLoopFuture<T>(eventLoop: self, result: result, file: "n/a", line: 0)
     }
@@ -214,6 +338,48 @@ extension EventLoop {
 
     public func close() throws {
         // Do nothing
+    }
+
+    /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each task.
+    ///
+    /// - parameters:
+    ///     - initialDelay: The delay after which the first task is executed.
+    ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - task: The closure that will be executed.
+    /// - return: `RepeatedTask`
+    @discardableResult
+    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping (RepeatedTask) throws -> Void) -> RepeatedTask {
+        let futureTask: (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
+            do {
+                try task(repeatedTask)
+                return self.newSucceededFuture(result: ())
+            } catch {
+                return self.newFailedFuture(error: error)
+            }
+        }
+        return self.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, futureTask)
+    }
+
+    /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each task.
+    ///
+    /// - parameters:
+    ///     - initialDelay: The delay after which the first task is executed.
+    ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - task: The closure that will be executed.
+    /// - return: `RepeatedTask`
+    @discardableResult
+    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask {
+        let repeated = RepeatedTask(interval: delay, eventLoop: self, task: task)
+        repeated.begin(in: initialDelay)
+        return repeated
+    }
+
+    /// Returns an `EventLoopIterator` over this `EventLoop`.
+    ///
+    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
+    /// - returns: `EventLoopIterator`
+    public func makeIterator() -> EventLoopIterator? {
+        return EventLoopIterator([self])
     }
 }
 
@@ -337,6 +503,12 @@ internal final class SelectableEventLoop: EventLoop {
         _addresses.deallocate()
     }
 
+    /// Is this `SelectableEventLoop` still open (ie. not shutting down or shut down)
+    internal var isOpen: Bool {
+        assert(self.inEventLoop)
+        return self.lifecycleState == .open
+    }
+
     /// Register the given `SelectableChannel` with this `SelectableEventLoop`. After this point all I/O for the `SelectableChannel` will be processed by this `SelectableEventLoop` until it
     /// is deregistered by calling `deregister`.
     public func register<C: SelectableChannel>(channel: C) throws {
@@ -354,7 +526,7 @@ internal final class SelectableEventLoop: EventLoop {
     public func deregister<C: SelectableChannel>(channel: C) throws {
         assert(inEventLoop)
         guard lifecycleState == .open else {
-            // Its possible the EventLoop was closed before we were able to call deregister, so just return in this case as there is no harm.
+            // It's possible the EventLoop was closed before we were able to call deregister, so just return in this case as there is no harm.
             return
         }
         try selector.deregister(selectable: channel.selectable)
@@ -609,6 +781,12 @@ public protocol EventLoopGroup: class {
     /// The virtue of this function is to shut the event loop down. To work around that we call back on a DispatchQueue
     /// instead.
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void)
+
+    /// Returns an `EventLoopIterator` over the `EventLoop`s in this `EventLoopGroup`.
+    ///
+    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
+    /// - returns: `EventLoopIterator`
+    func makeIterator() -> EventLoopIterator?
 }
 
 extension EventLoopGroup {
@@ -635,6 +813,10 @@ extension EventLoopGroup {
             }
         }
     }
+
+    public func makeIterator() -> EventLoopIterator? {
+        return nil
+    }
 }
 
 /// Called per `Thread` that is created for an EventLoop to do custom initialization of the `Thread` before the actual `EventLoop` is run on it.
@@ -644,7 +826,7 @@ typealias ThreadInitializer = (Thread) -> Void
 final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
-    
+
     private let index = Atomic<Int>(value: 0)
     private let eventLoops: [SelectableEventLoop]
 
@@ -680,13 +862,22 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         return lock.withLock { _loop }
     }
 
+    /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numberOfThreads`.
+    ///
+    /// - arguments:
+    ///     - numberOfThreads: The number of `Threads` to use.
+    public convenience init(numberOfThreads: Int) {
+        let initializers: [ThreadInitializer] = Array(repeating: { _ in }, count: numberOfThreads)
+        self.init(threadInitializers: initializers)
+    }
+    
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numThreads`.
     ///
     /// - arguments:
     ///     - numThreads: The number of `Threads` to use.
+    @available(*, deprecated, renamed: "init(numberOfThreads:)")
     public convenience init(numThreads: Int) {
-        let initializers: [ThreadInitializer] = Array(repeating: { _ in }, count: numThreads)
-        self.init(threadInitializers: initializers)
+        self.init(numberOfThreads: numThreads)
     }
 
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses the given `ThreadInitializer`s. One `Thread` per `ThreadInitializer` is created and used.
@@ -708,6 +899,14 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
     /// - returns: The current `EventLoop` for the calling thread or `nil` if none is assigned to the thread.
     public static var currentEventLoop: EventLoop? {
         return threadSpecificEventLoop.currentValue
+    }
+
+    /// Returns an `EventLoopIterator` over the `EventLoop`s in this `MultiThreadedEventLoopGroup`.
+    ///
+    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
+    /// - returns: `EventLoopIterator`
+    public func makeIterator() -> EventLoopIterator? {
+        return EventLoopIterator(self.eventLoops)
     }
 
     public func next() -> EventLoop {
@@ -755,19 +954,19 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 private final class ScheduledTask {
     let task: () -> Void
     private let failFn: (Error) ->()
-    private let readyTime: Int
+    private let readyTime: TimeAmount.Value
 
     init(_ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: TimeAmount) {
         self.task = task
         self.failFn = failFn
-        self.readyTime = time.nanoseconds + Int(DispatchTime.now().uptimeNanoseconds)
+        self.readyTime = time.nanoseconds + TimeAmount.Value(DispatchTime.now().uptimeNanoseconds)
     }
 
     func readyIn(_ t: DispatchTime) -> TimeAmount {
         if readyTime < t.uptimeNanoseconds {
             return .nanoseconds(0)
         }
-        return .nanoseconds(readyTime - Int(t.uptimeNanoseconds))
+        return .nanoseconds(readyTime - TimeAmount.Value(t.uptimeNanoseconds))
     }
 
     func fail(error: Error) {
@@ -785,7 +984,7 @@ extension ScheduledTask: Comparable {
     public static func < (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs.readyTime < rhs.readyTime
     }
-    
+
     public static func == (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs === rhs
     }

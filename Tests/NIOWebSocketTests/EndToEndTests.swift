@@ -26,6 +26,14 @@ extension EmbeddedChannel {
 
         return buffer
     }
+
+    func finishAcceptingAlreadyClosed() throws {
+        do {
+            try self.finish()
+        } catch ChannelError.alreadyClosed {
+            // ok
+        }
+    }
 }
 
 extension ByteBuffer {
@@ -38,11 +46,11 @@ extension EmbeddedChannel {
     func writeString(_ string: String) -> EventLoopFuture<Void> {
         var buffer = self.allocator.buffer(capacity: string.utf8.count)
         buffer.write(string: string)
-        return self.write(buffer)
+        return self.writeAndFlush(buffer)
     }
 }
 
-private func interactInMemory(_ first: EmbeddedChannel, _ second: EmbeddedChannel) {
+private func interactInMemory(_ first: EmbeddedChannel, _ second: EmbeddedChannel) throws {
     var operated: Bool
 
     repeat {
@@ -50,11 +58,11 @@ private func interactInMemory(_ first: EmbeddedChannel, _ second: EmbeddedChanne
 
         if case .some(.byteBuffer(let data)) = first.readOutbound() {
             operated = true
-            XCTAssertNoThrow(try second.writeInbound(data))
+            try second.writeInbound(data)
         }
         if case .some(.byteBuffer(let data)) = second.readOutbound() {
             operated = true
-            XCTAssertNoThrow(try first.writeInbound(data))
+            try first.writeInbound(data)
         }
     } while operated
 }
@@ -88,10 +96,16 @@ private class WebSocketRecorderHandler: ChannelInboundHandler {
     typealias OutboundOut = WebSocketFrame
 
     public var frames: [WebSocketFrame] = []
+    public var errors: [Error] = []
 
     func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         let frame = self.unwrapInboundIn(data)
         self.frames.append(frame)
+    }
+
+    func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+        self.errors.append(error)
+        ctx.fireErrorCaught(error)
     }
 }
 
@@ -105,9 +119,9 @@ class EndToEndTests: XCTestCase {
         return (loop: loop, serverChannel: serverChannel, clientChannel: clientChannel)
     }
 
-    func upgradeRequest(path: String = "/", extraHeaders: [String: String]) -> String {
+    func upgradeRequest(path: String = "/", extraHeaders: [String: String], protocolName: String = "websocket") -> String {
         let extraHeaderString = extraHeaders.map { hdr in "\(hdr.key): \(hdr.value)" }.joined(separator: "\r\n")
-        return "GET \(path) HTTP/1.1\r\nHost: example.com\r\nConnection: upgrade\r\nUpgrade: websocket\r\n" + extraHeaderString + "\r\n\r\n"
+        return "GET \(path) HTTP/1.1\r\nHost: example.com\r\nConnection: upgrade\r\nUpgrade: \(protocolName)\r\n" + extraHeaderString + "\r\n\r\n"
     }
 
     func testBasicUpgradeDance() throws {
@@ -122,7 +136,27 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
-        interactInMemory(client, server)
+        XCTAssertNoThrow(try interactInMemory(client, server))
+
+        let receivedResponse = client.readAllInboundBuffers().allAsString()
+        assertResponseIs(response: receivedResponse,
+                         expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
+                         expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"])
+    }
+
+    func testUpgradeWithProtocolName() throws {
+        let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { head in HTTPHeaders() },
+                                              upgradePipelineHandler: { (channel, req) in channel.eventLoop.newSucceededFuture(result: ()) })
+        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        defer {
+            XCTAssertNoThrow(try client.finish())
+            XCTAssertNoThrow(try server.finish())
+            XCTAssertNoThrow(try loop.syncShutdownGracefully())
+        }
+
+        let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="], protocolName: "WebSocket")
+        XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
+        XCTAssertNoThrow(try interactInMemory(client, server))
 
         let receivedResponse = client.readAllInboundBuffers().allAsString()
         assertResponseIs(response: receivedResponse,
@@ -262,7 +296,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
-        interactInMemory(client, server)
+        XCTAssertNoThrow(try interactInMemory(client, server))
 
         let receivedResponse = client.readAllInboundBuffers().allAsString()
         assertResponseIs(response: receivedResponse,
@@ -293,7 +327,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(path: "/third", extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
-        interactInMemory(client, server)
+        XCTAssertNoThrow(try interactInMemory(client, server))
 
         let receivedResponse = client.readAllInboundBuffers().allAsString()
         assertResponseIs(response: receivedResponse,
@@ -317,7 +351,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
-        interactInMemory(client, server)
+        XCTAssertNoThrow(try interactInMemory(client, server))
 
         let receivedResponse = client.readAllInboundBuffers().allAsString()
         assertResponseIs(response: receivedResponse,
@@ -332,11 +366,11 @@ class EndToEndTests: XCTestCase {
 
         // Let's send a frame or two, to confirm that this works.
         let dataFrame = WebSocketFrame(fin: true, opcode: .binary, data: data)
-        XCTAssertNoThrow(try client.write(dataFrame).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(dataFrame).wait())
 
         let pingFrame = WebSocketFrame(fin: true, opcode: .ping, data: client.allocator.buffer(capacity: 0))
-        XCTAssertNoThrow(try client.write(pingFrame).wait())
-        interactInMemory(client, server)
+        XCTAssertNoThrow(try client.writeAndFlush(pingFrame).wait())
+        XCTAssertNoThrow(try interactInMemory(client, server))
 
         XCTAssertEqual(recorder.frames, [dataFrame, pingFrame])
     }
@@ -355,7 +389,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
-        interactInMemory(client, server)
+        XCTAssertNoThrow(try interactInMemory(client, server))
 
         let receivedResponse = client.readAllInboundBuffers().allAsString()
         assertResponseIs(response: receivedResponse,
@@ -364,5 +398,96 @@ class EndToEndTests: XCTestCase {
 
         let decoder = (try server.pipeline.context(handlerType: WebSocketFrameDecoder.self).wait()).handler as! WebSocketFrameDecoder
         XCTAssertEqual(16, decoder.maxFrameSize)
+    }
+
+    func testAutomaticErrorHandling() throws {
+        let recorder = WebSocketRecorderHandler()
+        let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { head in HTTPHeaders() },
+                                              upgradePipelineHandler: { (channel, req) in
+                                                channel.pipeline.add(handler: recorder)
+
+        })
+        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        defer {
+            XCTAssertNoThrow(try client.finish())
+            XCTAssertNoThrow(try server.finishAcceptingAlreadyClosed())
+            XCTAssertNoThrow(try loop.syncShutdownGracefully())
+        }
+
+        let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
+        XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
+        XCTAssertNoThrow(try interactInMemory(client, server))
+
+        let receivedResponse = client.readAllInboundBuffers().allAsString()
+        assertResponseIs(response: receivedResponse,
+                         expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
+                         expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"])
+
+        // Send a fake frame header that claims this is a ping frame with 126 bytes of data.
+        var data = client.allocator.buffer(capacity: 12)
+        data.write(bytes: [0x89, 0x7E, 0x00, 0x7E])
+        XCTAssertNoThrow(try client.writeAndFlush(data).wait())
+
+        do {
+            try interactInMemory(client, server)
+            XCTFail("Did not throw")
+        } catch NIOWebSocketError.multiByteControlFrameLength {
+            // ok
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        XCTAssertEqual(recorder.errors.count, 1)
+        XCTAssertEqual(recorder.errors.first as? NIOWebSocketError, .some(.multiByteControlFrameLength))
+
+        // The client should have received a close frame, if we'd continued interacting.
+        let errorFrame = server.readAllOutboundBytes()
+        XCTAssertEqual(errorFrame, [0x88, 0x02, 0x03, 0xEA])
+    }
+
+    func testNoAutomaticErrorHandling() throws {
+        let recorder = WebSocketRecorderHandler()
+        let basicUpgrader = WebSocketUpgrader(automaticErrorHandling: false,
+                                              shouldUpgrade: { head in HTTPHeaders() },
+                                              upgradePipelineHandler: { (channel, req) in
+                                                channel.pipeline.add(handler: recorder)
+
+        })
+        let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
+        defer {
+            XCTAssertNoThrow(try client.finish())
+            XCTAssertNoThrow(try server.finishAcceptingAlreadyClosed())
+            XCTAssertNoThrow(try loop.syncShutdownGracefully())
+        }
+
+        let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
+        XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
+        XCTAssertNoThrow(try interactInMemory(client, server))
+
+        let receivedResponse = client.readAllInboundBuffers().allAsString()
+        assertResponseIs(response: receivedResponse,
+                         expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
+                         expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"])
+
+        // Send a fake frame header that claims this is a ping frame with 126 bytes of data.
+        var data = client.allocator.buffer(capacity: 12)
+        data.write(bytes: [0x89, 0x7E, 0x00, 0x7E])
+        XCTAssertNoThrow(try client.writeAndFlush(data).wait())
+
+        do {
+            try interactInMemory(client, server)
+            XCTFail("Did not throw")
+        } catch NIOWebSocketError.multiByteControlFrameLength {
+            // ok
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        XCTAssertEqual(recorder.errors.count, 1)
+        XCTAssertEqual(recorder.errors.first as? NIOWebSocketError, .some(.multiByteControlFrameLength))
+
+        // The client should not have received a close frame, if we'd continued interacting.
+        let errorFrame = server.readAllOutboundBytes()
+        XCTAssertEqual(errorFrame, [])
     }
 }

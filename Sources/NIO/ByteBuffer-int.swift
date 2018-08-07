@@ -36,12 +36,19 @@ extension ByteBuffer {
         }
 
         let value: T = self.getInteger(at: self.readerIndex, endianness: endianness)! /* must work as we have enough bytes */
-        self.moveReaderIndex(forwardBy: MemoryLayout<T>.size)
+        self._moveReaderIndex(forwardBy: MemoryLayout<T>.size)
         return value
     }
 
     /// Get the integer at `index` from this `ByteBuffer`. Does not move the reader index.
     ///
+    /// - note: Please consider using `readInteger` which is a safer alternative that automatically maintains the
+    ///         `readerIndex` and won't allow you to read uninitialized memory.
+    /// - warning: This method allows the user to read any of the bytes in the `ByteBuffer`'s storage, including
+    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
+    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
+    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
+    ///           safe to read.
     /// - parameters:
     ///     - index: The starting index of the bytes for the integer into the `ByteBuffer`.
     ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
@@ -73,7 +80,7 @@ extension ByteBuffer {
     @_inlineable
     public mutating func write<T: FixedWidthInteger>(integer: T, endianness: Endianness = .big, as: T.Type = T.self) -> Int {
         let bytesWritten = self.set(integer: integer, at: self.writerIndex, endianness: endianness)
-        self.moveWriterIndex(forwardBy: bytesWritten)
+        self._moveWriterIndex(forwardBy: bytesWritten)
         return Int(bytesWritten)
     }
 
@@ -94,25 +101,13 @@ extension ByteBuffer {
     }
 }
 
-extension UInt64 {
+extension FixedWidthInteger {
     /// Returns the next power of two.
-    public func nextPowerOf2() -> UInt64 {
-        guard self > 0 else {
+    public func nextPowerOf2() -> Self {
+        guard self != 0 else {
             return 1
         }
-
-        var n = self
-
-        n -= 1
-        n |= n >> 1
-        n |= n >> 2
-        n |= n >> 4
-        n |= n >> 8
-        n |= n >> 16
-        n |= n >> 32
-        n += 1
-
-        return n
+        return 1 << (Self.bitWidth - (self - 1).leadingZeroBitCount)
     }
 }
 
@@ -134,25 +129,6 @@ extension UInt32 {
         if n != .max {
             n += 1
         }
-
-        return n
-    }
-
-    /// Returns the next power of two.
-    public func nextPowerOf2() -> UInt32 {
-        guard self > 0 else {
-            return 1
-        }
-
-        var n = self
-
-        n -= 1
-        n |= n >> 1
-        n |= n >> 2
-        n |= n >> 4
-        n |= n >> 8
-        n |= n >> 16
-        n += 1
 
         return n
     }

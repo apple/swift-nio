@@ -26,6 +26,18 @@ case "$(uname -s)" in
         ;;
 esac
 
+if ! hash ${sed} 2>/dev/null; then
+    echo "You need sed \"${sed}\" to run this script ..."
+    echo
+    echo "On macOS: brew install gnu-sed"
+    exit 42
+fi
+
+for f in LICENSE-MIT AUTHORS; do
+    curl -o "${f}" \
+         -Ls "https://raw.githubusercontent.com/nodejs/http-parser/master/${f}"
+done
+
 for f in http_parser.c http_parser.h; do
     ( echo "/* Additional changes for SwiftNIO:"
       echo "    - prefixed all symbols by 'c_nio_'"
@@ -48,7 +60,11 @@ for f in http_parser.c http_parser.h; do
         -e 's/\b\(http_parser_url_init\)/c_nio_\1/g' \
         -e 's/\b\(http_parser_version\)/c_nio_\1/g' \
         -e 's/\b\(http_should_keep_alive\)/c_nio_\1/g' \
+        -e 's/\b\(http_status_str\)/c_nio_\1/g' \
         "$here/c_nio_$f"
+done
+
+mv "$here/c_nio_http_parser.h" "$here/include/c_nio_http_parser.h"
 
 tmp=$(mktemp -d /tmp/.test_compile_XXXXXX)
 
@@ -61,6 +77,4 @@ test 0 -eq $num_non_nio || {
 }
 
 rm -rf "$tmp"
-done
 
-mv "$here/c_nio_http_parser.h" "$here/include/c_nio_http_parser.h"

@@ -22,10 +22,10 @@ private enum SelectorLifecycleState {
 
 private extension timespec {
     init(timeAmount amount: TimeAmount) {
-        let nsecPerSec: Int = 1_000_000_000
+        let nsecPerSec: TimeAmount.Value = 1_000_000_000
         let ns = amount.nanoseconds
         let sec = ns / nsecPerSec
-        self = timespec(tv_sec: sec, tv_nsec: ns - sec * nsecPerSec)
+        self = timespec(tv_sec: Int(sec), tv_nsec: Int(ns - sec * nsecPerSec))
     }
 }
 
@@ -168,9 +168,7 @@ extension KQueueEventFilterSet {
             var index: Int = 0
             for (event, filter) in [(KQueueEventFilterSet.read, EVFILT_READ), (.write, EVFILT_WRITE), (.except, EVFILT_EXCEPT)] {
                 if let flags = calculateKQueueChange(event: event) {
-                    keventBuffer[index].ident = UInt(fileDescriptor)
-                    keventBuffer[index].filter = Int16(filter)
-                    keventBuffer[index].flags = flags
+                    keventBuffer[index].setEvent(fileDescriptor: fileDescriptor, filter: filter, flags: flags)
                     index += 1
                 }
             }
@@ -259,6 +257,8 @@ final class Selector<R: Registration> {
     private var eventsCapacity = 64
     private var events: UnsafeMutablePointer<EventType>
     private var registrations = [Int: R]()
+    // temporary workaround to stop us delivering outdated events; read in `whenReady`, set in `deregister`
+    private var deregistrationsHappened: Bool = false
 
     private static func allocateEventsArray(capacity: Int) -> UnsafeMutablePointer<EventType> {
         let events: UnsafeMutablePointer<EventType> = UnsafeMutablePointer.allocate(capacity: capacity)
@@ -453,6 +453,8 @@ final class Selector<R: Registration> {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't deregister from selector as it's \(self.lifecycleState).")
         }
+        // temporary workaround to stop us delivering outdated events
+        self.deregistrationsHappened = true
         try selectable.withUnsafeFileDescriptor { fd in
             guard let reg = registrations.removeValue(forKey: Int(fd)) else {
                 return
@@ -500,7 +502,10 @@ final class Selector<R: Registration> {
             ready = Int(try Epoll.epoll_wait(epfd: self.fd, events: events, maxevents: Int32(eventsCapacity), timeout: -1))
         }
 
-        for i in 0..<ready {
+        // start with no deregistrations happened
+        self.deregistrationsHappened = false
+        // temporary workaround to stop us delivering outdated events; possibly set in `deregister`
+        for i in 0..<ready where !self.deregistrationsHappened {
             let ev = events[i]
             switch ev.data.fd {
             case eventfd:
@@ -525,7 +530,7 @@ final class Selector<R: Registration> {
                     // in any case we only want what the user is currently registered for & what we got
                     selectorEvent = selectorEvent.intersection(registration.interested)
 
-                    guard selectorEvent != .none else {
+                    guard selectorEvent != ._none else {
                         continue
                     }
 
@@ -540,7 +545,10 @@ final class Selector<R: Registration> {
             Int(try KQueue.kevent(kq: self.fd, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: ts))
         }
 
-        for i in 0..<ready {
+        // start with no deregistrations happened
+        self.deregistrationsHappened = false
+        // temporary workaround to stop us delivering outdated events; possibly set in `deregister`
+        for i in 0..<ready where !self.deregistrationsHappened {
             let ev = events[i]
             let filter = Int32(ev.filter)
             guard Int32(ev.flags) & EV_ERROR == 0 else {
@@ -574,7 +582,7 @@ final class Selector<R: Registration> {
             // in any case we only want what the user is currently registered for & what we got
             selectorEvent = selectorEvent.intersection(registration.interested)
 
-            guard selectorEvent != .none else {
+            guard selectorEvent != ._none else {
                 continue
             }
             try body((SelectorEvent(io: selectorEvent, registration: registration)))
@@ -710,7 +718,7 @@ public enum IOEvent {
     /// Something is ready to be read.
     case read
 
-    /// Its possible to write some data again.
+    /// It's possible to write some data again.
     case write
 
     /// Combination of `read` and `write`.
@@ -719,3 +727,30 @@ public enum IOEvent {
     /// Not interested in any event.
     case none
 }
+
+
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+extension kevent {
+    /// Update a kevent for a given filter, file descriptor, and set of flags.
+    mutating func setEvent(fileDescriptor fd: CInt, filter: CInt, flags: UInt16) {
+        self.ident = UInt(fd)
+        self.filter = Int16(filter)
+        self.flags = flags
+        self.udata = nil
+
+        // On macOS, EVFILT_EXCEPT will fire whenever there is unread data in the socket receive
+        // buffer. This is not a behaviour we want from EVFILT_EXCEPT: we only want it to tell us
+        // about actually exceptional conditions. For this reason, when we set EVFILT_EXCEPT
+        // we do it with NOTE_LOWAT set to Int.max, which will ensure that there is never enough data
+        // in the send buffer to trigger EVFILT_EXCEPT. Thanks to the sensible design of kqueue,
+        // this only affects our EXCEPT filter: EVFILT_READ behaves separately.
+        if filter == EVFILT_EXCEPT {
+            self.fflags = CUnsignedInt(NOTE_LOWAT)
+            self.data = Int.max
+        } else {
+            self.fflags = 0
+            self.data = 0
+        }
+    }
+}
+#endif
