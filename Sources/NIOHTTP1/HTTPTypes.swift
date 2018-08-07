@@ -387,9 +387,8 @@ private extension ByteBuffer {
         return withVeryUnsafeBytes { buffer in
             // This should never happens as we control when this is called. Adding an assert to ensure this.
             assert(index.start <= self.capacity - index.length)
-            let address = buffer.baseAddress!.assumingMemoryBound(to: UInt8.self)
             for (idx, byte) in view.enumerated() {
-                guard byte.isASCII && address.advanced(by: index.start + idx).pointee & 0xdf == byte & 0xdf else {
+                guard byte.isASCII && buffer[index.start + idx] & 0xdf == byte & 0xdf else {
                     return false
                 }
             }

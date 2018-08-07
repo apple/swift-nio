@@ -1586,6 +1586,23 @@ class ByteBufferTest: XCTestCase {
             XCTAssertNotEqual(oldPtrVal, newPtrVal)
         }
     }
+
+    func testReadWithFunctionsThatReturnNumberOfReadBytesAreDiscardable() {
+        var buf = self.buf!
+        buf.write(string: "ABCD")
+
+        /* deliberately not ignoring the result */ buf.readWithUnsafeReadableBytes { buffer in
+            XCTAssertEqual(4, buffer.count)
+            return 2
+        }
+
+        /* deliberately not ignoring the result */ buf.readWithUnsafeMutableReadableBytes { buffer in
+            XCTAssertEqual(2, buffer.count)
+            return 2
+        }
+
+        XCTAssertEqual(0, buf.readableBytes)
+    }
 }
 
 private enum AllocationExpectationState: Int {

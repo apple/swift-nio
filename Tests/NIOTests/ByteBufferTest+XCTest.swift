@@ -129,6 +129,7 @@ extension ByteBufferTest {
                 ("testReserveCapacitySameCapacity", testReserveCapacitySameCapacity),
                 ("testReserveCapacityLargerUniquelyReferencedCallsRealloc", testReserveCapacityLargerUniquelyReferencedCallsRealloc),
                 ("testReserveCapacityLargerMultipleReferenceCallsMalloc", testReserveCapacityLargerMultipleReferenceCallsMalloc),
+                ("testReadWithFunctionsThatReturnNumberOfReadBytesAreDiscardable", testReadWithFunctionsThatReturnNumberOfReadBytesAreDiscardable),
            ]
    }
 }
