@@ -179,4 +179,58 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
         XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 0)))
     }
+
+    func testKeepAliveStateHasKeepAlive() {
+        let headers = HTTPHeaders([("Connection", "other, keEP-alive"),
+                                   ("Content-Type", "text/html"),
+                                   ("Connection", "server, x-options")])
+        
+        XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
+    }
+
+    func testKeepAliveStateHasClose() {
+        let headers = HTTPHeaders([("Connection", "x-options,  other"),
+                                   ("Content-Type", "text/html"),
+                                   ("Connection", "server,     clOse")])
+        
+        XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
+    }
+    
+    func testResolveNonContiguousHeaders() {
+        let headers = HTTPHeaders([("Connection", "x-options,  other"),
+                                   ("Content-Type", "text/html"),
+                                   ("Connection", "server,     close")])
+        var tokenSource = HTTPListHeaderIterator(
+            headerName: "Connection".utf8, headers: headers)
+        
+        var currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "x-options")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "other")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "server")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "close")
+        currentToken = tokenSource.next()
+        XCTAssertNil(currentToken)
+    }
+
+    func testStringBasedHTTPListHeaderIterator() {
+        let headers = HTTPHeaders([("Connection", "x-options,  other"),
+                                   ("Content-Type", "text/html"),
+                                   ("Connection", "server,     close")])
+        var tokenSource = HTTPListHeaderIterator(
+            headerName: "Connection", headers: headers)
+        
+        var currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "x-options")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "other")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "server")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "close")
+        currentToken = tokenSource.next()
+        XCTAssertNil(currentToken)
+    }
 }

@@ -17,6 +17,114 @@ import NIO
 let crlf: StaticString = "\r\n"
 let headerSeparator: StaticString = ": "
 
+/// An `IteratorProtocol` that can iterate through comma separated list of values for a certain
+/// header.
+///
+/// **Example:**
+///
+/// Suppose you have these headers:
+///
+///      Connection: keep-alive, x-server
+///      Content-Type: text/html
+///      Connection: other
+///
+/// You can iterate using this struct on those headers, for values of `Connection`, to get
+/// `keep-alive`, then `x-server`, then `other`
+public struct HTTPListHeaderIterator: Sequence, IteratorProtocol {
+    
+    public typealias Element = ByteBufferView
+    
+    private var currentHeaderIndex: Int = -1
+    private var singleValueViewIterator: Array<ByteBufferView>.Iterator?
+    private let headerName: String.UTF8View
+    private let headers: HTTPHeaders
+    
+    private let comma = ",".utf8.first!
+    
+    /// Returns next index in headers
+    ///
+    /// - Parameter current: The index to begin iteration at
+    /// - Returns: The next index of the header in header array, or `nil` if not found
+    private func headerIndex(after current: Int) -> Int? {
+        for (idx, currentHeader) in headers.headers.enumerated().dropFirst(current + 1) {
+            let view = headers.buffer.viewBytes(at: currentHeader.name.start,
+                                                length: currentHeader.name.length)
+            if view.compareCaseInsensitiveASCIIBytes(to: headerName) {
+                return idx
+            }
+        }
+        return nil
+    }
+
+    mutating public func next() -> ByteBufferView? {
+        if let next = self.singleValueViewIterator?.next() {
+            return next.trimSpaces()
+        } else {
+            // End of this buffer. Let's try to grab the next one.
+            guard let index = self.headerIndex(after: currentHeaderIndex) else {
+                // No more buffers left.
+                return nil
+            }
+            self.currentHeaderIndex = index
+            self.singleValueViewIterator = headers.buffer
+                .viewBytes(at: headers.headers[currentHeaderIndex].value.start,
+                           length: headers.headers[currentHeaderIndex].value.length)
+                .split(separator: comma)
+                .makeIterator()
+            return self.next()
+        }
+        
+    }
+    
+    public func makeIterator() -> HTTPListHeaderIterator {
+        return self
+    }
+    
+    @_versioned
+    internal init(headerName: String.UTF8View,
+                  headers: HTTPHeaders) {
+        self.headers = headers
+        self.headerName = headerName
+    }
+    
+    @_inlineable
+    public init(headerName: String,
+                headers: HTTPHeaders) {
+        self.init(headerName: headerName.utf8,
+                  headers: headers)
+    }
+
+}
+
+extension HTTPHeaders {
+    private static let connectionString = "connection".utf8
+    private static let keepAliveString = "keep-alive".utf8
+    private static let closeString = "close".utf8
+    
+    internal enum ConnectionHeaderValue {
+        case keepAlive
+        case close
+        case unspecified
+    }
+    
+    internal var keepAliveFromHeaders: ConnectionHeaderValue {
+        get {
+            let tokenizer = HTTPListHeaderIterator(headerName: HTTPHeaders.connectionString,
+                                                   headers: self)
+            
+            // TODO: Handle the case where both keep-alive and close are used
+            for token in tokenizer {
+                if token.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.keepAliveString) {
+                    return .keepAlive
+                } else if token.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.closeString) {
+                    return .close
+                }
+            }
+            
+            return .unspecified
+        }
+    }
+}
 
 // Keep track of keep alive state.
 internal enum KeepAliveState {
@@ -304,16 +412,15 @@ private extension UInt8 {
         case .keepAlive:
             return true
         case .unknown:
-            for header in self.headers {
-                if self.buffer.equalCaseInsensitiveASCII(view: "connection".utf8, at: header.name) {
-                    if self.buffer.equalCaseInsensitiveASCII(view: "close".utf8, at: header.value) {
-                        return false
-                    }
-                    return self.buffer.equalCaseInsensitiveASCII(view: "keep-alive".utf8, at: header.value)
-                }
+            switch self.keepAliveFromHeaders {
+            case .keepAlive:
+                return true
+            case .close:
+                return false
+            case .unspecified:
+                // HTTP 1.1 use keep-alive by default if not otherwise told.
+                return version.major == 1 && version.minor >= 1
             }
-            // HTTP 1.1 use keep-alive by default if not otherwise told.
-            return version.major == 1 && version.minor >= 1
         }
     }
 }
