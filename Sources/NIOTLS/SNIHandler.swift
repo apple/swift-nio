@@ -402,7 +402,7 @@ public class SniHandler: ByteToMessageDecoder {
                 guard nameLength <= ptr.count else {
                     return nil
                 }
-                return UnsafeRawBufferPointer(start: ptr.baseAddress!, count: min(nameLength, ptr.count)).decodeStringValidatingASCII()
+                return UnsafeRawBufferPointer(rebasing: ptr.prefix(nameLength)).decodeStringValidatingASCII()
             }
             if let hostname = hostname {
                 return hostname
