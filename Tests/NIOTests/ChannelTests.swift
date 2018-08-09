@@ -1153,7 +1153,7 @@ public class ChannelTests: XCTestCase {
             XCTAssertEqual(ChannelError.outputClosed, err)
         }
         let written = try buffer.withUnsafeReadableBytes { p in
-            try accepted.write(pointer: UnsafeRawBufferPointer(start: p.baseAddress, count: 4))
+            try accepted.write(pointer: UnsafeRawBufferPointer(rebasing: p.prefix(4)))
         }
         if case .processed(let numBytes) = written {
             XCTAssertEqual(4, numBytes)
@@ -1211,7 +1211,7 @@ public class ChannelTests: XCTestCase {
         buffer.write(string: "1234")
 
         let written = try buffer.withUnsafeReadableBytes { p in
-            try accepted.write(pointer: UnsafeRawBufferPointer(start: p.baseAddress, count: 4))
+            try accepted.write(pointer: UnsafeRawBufferPointer(rebasing: p.prefix(4)))
         }
 
         switch written {
