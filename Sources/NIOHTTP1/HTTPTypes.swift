@@ -368,13 +368,19 @@ public struct HTTPResponseHead: Equatable {
 }
 
 /// The Index for a header name or value that points into the underlying `ByteBuffer`.
-struct HTTPHeaderIndex {
+///
+/// - note: This is public to aid in the creation of supplemental HTTP libraries, e.g.
+///         NIOHTTP2 and NIOHPACK. It is not intended for general use.
+public struct HTTPHeaderIndex {
     let start: Int
     let length: Int
 }
 
 /// Struct which holds name, value pairs.
-struct HTTPHeader {
+///
+/// - note: This is public to aid in the creation of supplemental HTTP libraries, e.g.
+///         NIOHTTP2 and NIOHPACK. It is not intended for general use.
+public struct HTTPHeader {
     let name: HTTPHeaderIndex
     let value: HTTPHeaderIndex
 }
@@ -493,6 +499,41 @@ public struct HTTPHeaders: CustomStringConvertible {
             headersArray.append((self.string(idx: h.name), self.string(idx: h.value)))
         }
         return headersArray.description
+    }
+    
+    /// Creates a header block from a pre-filled contiguous string buffer containing a
+    /// UTF-8 encoded HTTP header block, along with a list of the locations of each
+    /// name/value pair within the block.
+    ///
+    /// - note: This is public to aid in the creation of supplemental HTTP libraries, e.g.
+    ///         NIOHTTP2 and NIOHPACK. It is not intended for general use.
+    ///
+    /// - Parameters:
+    ///   - buffer: A buffer containing UTF-8 encoded HTTP headers.
+    ///   - headers: The locations within `buffer` of the name and value of each header.
+    /// - Returns: A new `HTTPHeaders` using the provided buffer as storage.
+    public static func createHeaderBlock(buffer: ByteBuffer, headers: [HTTPHeader]) -> HTTPHeaders {
+        return HTTPHeaders(buffer: buffer, headers: headers, keepAliveState: KeepAliveState.unknown)
+    }
+    
+    
+    /// Provides access to raw UTF-8 storage of the headers in this header block, along with
+    /// a list of the header strings' indices.
+    ///
+    /// - note: This is public to aid in the creation of supplemental HTTP libraries, e.g.
+    /// NIOHTTP2 and NIOHPACK. It is not intended for general use.
+    ///
+    /// - parameters:
+    ///   - block:      A block that will be provided UTF-8 header block information.
+    ///   - buf:        A raw `ByteBuffer` containing potentially-contiguous sequences of UTF-8 encoded
+    ///                 characters.
+    ///   - locations:  An array of `HTTPHeader`s, each of which contains information on the location in
+    ///                 the buffer of both a header's name and value.
+    ///   - contiguous: A `Bool` indicating whether the headers are stored contiguously, with no padding
+    ///                 or orphaned data within the block. If this is `true`, then the buffer represents
+    ///                 a HTTP/1 header block appropriately encoded for the wire.
+    public func withUnsafeBufferAndIndices<R>(_ block: (_ buf: ByteBuffer, _ locations: [HTTPHeader], _ contiguous: Bool) throws -> R) rethrows -> R {
+        return try block(self.buffer, self.headers, self.continuous)
     }
 
     /// Constructor used by our decoder to construct headers without the need of converting bytes to string.

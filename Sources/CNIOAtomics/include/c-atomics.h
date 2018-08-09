@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <stdbool.h>
-#include <inttypes.h>
 #include <stdint.h>
 
 #if __clang_major__ == 3 && __clang_minor__ <= 6

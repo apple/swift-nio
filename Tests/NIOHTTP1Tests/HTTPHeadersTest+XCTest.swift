@@ -41,6 +41,8 @@ extension HTTPHeadersTest {
                 ("testKeepAliveStateHasClose", testKeepAliveStateHasClose),
                 ("testResolveNonContiguousHeaders", testResolveNonContiguousHeaders),
                 ("testStringBasedHTTPListHeaderIterator", testStringBasedHTTPListHeaderIterator),
+                ("testUnsafeBufferAccess", testUnsafeBufferAccess),
+                ("testCreateFromBufferAndLocations", testCreateFromBufferAndLocations),
            ]
    }
 }
