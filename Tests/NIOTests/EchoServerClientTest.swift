@@ -12,9 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-import NIOConcurrencyHelpers
 import Dispatch
+import XCTest
+
+import NIOConcurrencyHelpers
+import NIOTestUtils
+
 @testable import NIO
 
 class EchoServerClientTest : XCTestCase {

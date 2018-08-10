@@ -12,9 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOConcurrencyHelpers
-@testable import NIO
 import XCTest
+
+import NIOConcurrencyHelpers
+import NIOTestUtils
+
+@testable import NIO
 
 private extension Channel {
     func waitForDatagrams(count: Int) throws -> [AddressedEnvelope<ByteBuffer>] {

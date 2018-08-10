@@ -12,11 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Dispatch
 import XCTest
+
 import NIO
 import NIOConcurrencyHelpers
 import NIOFoundationCompat
-import Dispatch
+import NIOTestUtils
+
 @testable import NIOHTTP1
 
 extension Array where Array.Element == ByteBuffer {

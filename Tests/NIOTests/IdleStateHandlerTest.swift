@@ -13,6 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
+
+import NIOTestUtils
+
 @testable import NIO
 
 class IdleStateHandlerTest : XCTestCase {

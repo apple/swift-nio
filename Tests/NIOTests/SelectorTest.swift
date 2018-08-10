@@ -12,9 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import NIO
-import NIOConcurrencyHelpers
 import XCTest
+
+import NIOConcurrencyHelpers
+import NIOTestUtils
+
+@testable import NIO
 
 class SelectorTest: XCTestCase {
 

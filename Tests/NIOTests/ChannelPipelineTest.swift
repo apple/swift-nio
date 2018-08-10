@@ -13,7 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
+
 import NIOConcurrencyHelpers
+import NIOTestUtils
+
 @testable import NIO
 
 private final class IndexWritingHandler: ChannelDuplexHandler {
