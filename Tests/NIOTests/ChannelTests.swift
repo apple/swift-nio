@@ -12,10 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-@testable import NIO
-import NIOConcurrencyHelpers
 import Dispatch
+import XCTest
+
+import NIOConcurrencyHelpers
+import NIOTestUtils
+
+@testable import NIO
 
 func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String, file: StaticString = #file, line: UInt = #line) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)

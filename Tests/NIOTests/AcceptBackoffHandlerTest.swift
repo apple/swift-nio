@@ -12,10 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-@testable import NIO
 import Dispatch
+import XCTest
+
 import NIOConcurrencyHelpers
+import NIOTestUtils
+
+@testable import NIO
 
 
 public class AcceptBackoffHandlerTest: XCTestCase {

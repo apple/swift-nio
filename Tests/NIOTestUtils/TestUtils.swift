@@ -15,7 +15,7 @@
 @testable import NIO
 import XCTest
 
-func withPipe(_ body: (NIO.FileHandle, NIO.FileHandle) -> [NIO.FileHandle]) throws {
+public func withPipe(_ body: (NIO.FileHandle, NIO.FileHandle) -> [NIO.FileHandle]) throws {
     var fds: [Int32] = [-1, -1]
     fds.withUnsafeMutableBufferPointer { ptr in
         XCTAssertEqual(0, pipe(ptr.baseAddress!))
@@ -28,7 +28,7 @@ func withPipe(_ body: (NIO.FileHandle, NIO.FileHandle) -> [NIO.FileHandle]) thro
     }
 }
 
-func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.FileHandle, String) throws -> T) rethrows -> T {
+public func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.FileHandle, String) throws -> T) rethrows -> T {
     let (fd, path) = openTemporaryFile()
     let fileHandle = FileHandle(descriptor: fd)
     defer {
@@ -56,7 +56,7 @@ func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.FileHandle, Strin
     return try body(fileHandle, path)
 }
 
-func createTemporaryDirectory() -> String {
+public func createTemporaryDirectory() -> String {
     let template = "/tmp/.NIOTests-temp-dir_XXXXXX"
     var templateBytes = template.utf8 + [0]
     let templateBytesCount = templateBytes.count
@@ -70,7 +70,7 @@ func createTemporaryDirectory() -> String {
     return String(decoding: templateBytes, as: UTF8.self)
 }
 
-func openTemporaryFile() -> (CInt, String) {
+public func openTemporaryFile() -> (CInt, String) {
     let template = "/tmp/niotestXXXXXXX"
     var templateBytes = template.utf8 + [0]
     let templateBytesCount = templateBytes.count
@@ -83,7 +83,7 @@ func openTemporaryFile() -> (CInt, String) {
     return (fd, String(decoding: templateBytes, as: UTF8.self))
 }
 
-internal extension Channel {
+public extension Channel {
     func syncCloseAcceptingAlreadyClosed() throws {
         do {
             try self.close().wait()
@@ -95,26 +95,26 @@ internal extension Channel {
     }
 }
 
-final class ByteCountingHandler : ChannelInboundHandler {
-    typealias InboundIn = ByteBuffer
+public final class ByteCountingHandler : ChannelInboundHandler {
+    public typealias InboundIn = ByteBuffer
 
     private let numBytes: Int
     private let promise: EventLoopPromise<ByteBuffer>
     private var buffer: ByteBuffer!
 
-    init(numBytes: Int, promise: EventLoopPromise<ByteBuffer>) {
+    public init(numBytes: Int, promise: EventLoopPromise<ByteBuffer>) {
         self.numBytes = numBytes
         self.promise = promise
     }
 
-    func handlerAdded(ctx: ChannelHandlerContext) {
+    public func handlerAdded(ctx: ChannelHandlerContext) {
         buffer = ctx.channel.allocator.buffer(capacity: numBytes)
         if self.numBytes == 0 {
             self.promise.succeed(result: buffer)
         }
     }
 
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         var currentBuffer = self.unwrapInboundIn(data)
         buffer.write(buffer: &currentBuffer)
 
@@ -123,22 +123,22 @@ final class ByteCountingHandler : ChannelInboundHandler {
         }
     }
 
-    func assertReceived(buffer: ByteBuffer) throws {
+    public func assertReceived(buffer: ByteBuffer) throws {
         let received = try promise.futureResult.wait()
         XCTAssertEqual(buffer, received)
     }
 }
 
-final class NonAcceptingServerSocket: ServerSocket {
+public final class NonAcceptingServerSocket: ServerSocket {
     private var errors: [Int32]
 
-    init(errors: [Int32]) throws {
+    public init(errors: [Int32]) throws {
         // Reverse so it's cheaper to remove errors.
         self.errors = errors.reversed()
         try super.init(protocolFamily: AF_INET, setNonBlocking: true)
     }
 
-    override func accept(setNonBlocking: Bool) throws -> Socket? {
+    public override func accept(setNonBlocking: Bool) throws -> Socket? {
         if let err = self.errors.last {
             _ = self.errors.removeLast()
             throw IOError(errnoCode: err, function: "accept")
@@ -147,7 +147,7 @@ final class NonAcceptingServerSocket: ServerSocket {
     }
 }
 
-func assertSetGetOptionOnOpenAndClosed<T: ChannelOption>(channel: Channel, option: T, value: T.OptionType) throws {
+public func assertSetGetOptionOnOpenAndClosed<T: ChannelOption>(channel: Channel, option: T, value: T.OptionType) throws {
     _ = try channel.setOption(option: option, value: value).wait()
     _ = try channel.getOption(option: option).wait()
     try channel.close().wait()
@@ -166,7 +166,7 @@ func assertSetGetOptionOnOpenAndClosed<T: ChannelOption>(channel: Channel, optio
     }
 }
 
-func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T, defaultValue: T? = nil, message: String? = nil, file: StaticString = #file, line: UInt = #line) throws -> T {
+public func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T, defaultValue: T? = nil, message: String? = nil, file: StaticString = #file, line: UInt = #line) throws -> T {
     do {
         return try body()
     } catch {
@@ -179,7 +179,7 @@ func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T, defaultValue
     }
 }
 
-func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyReceivedResult: SocketAddress) throws -> String {
+public func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyReceivedResult: SocketAddress) throws -> String {
     func printSocketAddress(_ socketAddress: SocketAddress) -> String {
         switch socketAddress {
         case .unixDomainSocket(_):

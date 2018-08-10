@@ -11,10 +11,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
 import XCTest
-@testable import NIO
 import Dispatch
+
 import NIOConcurrencyHelpers
+import NIOTestUtils
+
+@testable import NIO
 
 private extension Array {
     /// A helper function that asserts that a predicate is true for all elements.

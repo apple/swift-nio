@@ -12,8 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import NIO
 import XCTest
+
+import NIOTestUtils
+
+@testable import NIO
 
 class BootstrapTest: XCTestCase {
     func testBootstrapsCallInitializersOnCorrectEventLoop() throws {
