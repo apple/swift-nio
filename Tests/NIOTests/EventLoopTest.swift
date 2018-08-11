@@ -200,29 +200,30 @@ public class EventLoopTest : XCTestCase {
         let delay: TimeAmount = .milliseconds(10)
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
-        var repeated: RepeatedTask?
         weak var weakRepeated: RepeatedTask?
-        repeated = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { (_: RepeatedTask) -> Void in }
-        weakRepeated = repeated
-        XCTAssertNotNil(weakRepeated)
-        repeated?.cancel()
-        XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
-        repeated = nil
-        XCTAssertNil(weakRepeated)
+        try { () -> Void in
+            let repeated = eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { (_: RepeatedTask) -> Void in }
+            weakRepeated = repeated
+            XCTAssertNotNil(weakRepeated)
+            repeated.cancel()
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }()
+        assert(weakRepeated == nil, within: .seconds(1))
     }
 
     public func testScheduleRepeatedTaskToNotRetainEventLoop() throws {
-        let initialDelay: TimeAmount = .milliseconds(5)
-        let delay: TimeAmount = .milliseconds(10)
-        var eventLoopGroup: EventLoopGroup? = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        weak var weakEventLoop = eventLoopGroup?.next()
+        weak var weakEventLoop: EventLoop? = nil
+        try {
+            let initialDelay: TimeAmount = .milliseconds(5)
+            let delay: TimeAmount = .milliseconds(10)
+            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            weakEventLoop = eventLoopGroup.next()
+            XCTAssertNotNil(weakEventLoop)
 
-        eventLoopGroup?.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { (_: RepeatedTask) -> Void in }
-        XCTAssertNoThrow(try eventLoopGroup?.syncShutdownGracefully())
-        XCTAssertNotNil(weakEventLoop)
-        eventLoopGroup = nil
-        Thread.sleep(forTimeInterval: 0.01)
-        XCTAssertNil(weakEventLoop)
+            eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { (_: RepeatedTask) -> Void in }
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }()
+        assert(weakEventLoop == nil, within: .seconds(1))
     }
 
     public func testEventLoopGroupMakeIterator() throws {
