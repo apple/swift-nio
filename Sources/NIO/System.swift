@@ -217,8 +217,8 @@ internal enum Posix {
 
     @inline(never)
     // TODO: Allow varargs
-    public static func fcntl(descriptor: CInt, command: CInt, value: CInt) throws {
-        _ = try wrapSyscall {
+    public static func fcntl(descriptor: CInt, command: CInt, value: CInt) throws -> CInt {
+        return try wrapSyscall {
             sysFcntl(descriptor, command, value)
         }
     }
@@ -233,7 +233,9 @@ internal enum Posix {
                 _ = unsafeBitCast(Glibc.signal(SIGPIPE, SIG_IGN) as sighandler_t?, to: Int.self)
             #else
                 if fd != -1 {
-                    _ = try? Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
+                    let ret = try? Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
+                    assert(ret == .some(0),
+                           "unexpectedly, fcntl(\(fd), F_SETFL, F_SETNOSIGPIPE) returned \(ret.debugDescription)")
                 }
             #endif
             return fd
@@ -270,8 +272,9 @@ internal enum Posix {
 
             #if !os(Linux)
                 if fd != -1 {
-                    // TODO: Handle return code ?
-                    _ = try? Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
+                    let ret = try? Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
+                    assert(ret == .some(0),
+                           "unexpectedly, fcntl(\(fd), F_SETFL, F_SETNOSIGPIPE) returned \(ret.debugDescription)")
                 }
             #endif
             return fd
