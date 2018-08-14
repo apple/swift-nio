@@ -26,6 +26,7 @@ needs to be listed here.
 - Helge Heß <helge@alwaysrightinstitute.com>
 - Ian Partridge <i.partridge@uk.ibm.com>
 - Jason Toffaletti <toffaletti@gmail.com>
+- Jim Dovey <jimdovey@mac.com>
 - Johannes Weiß <johannesweiss@apple.com>
 - John Connolly <connoljo2@gmail.com>
 - Karim ElNaggar <karimfarid.naggar@gmail.com>

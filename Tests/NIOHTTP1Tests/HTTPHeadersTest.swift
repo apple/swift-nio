@@ -179,4 +179,120 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
         XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 0)))
     }
+
+    func testKeepAliveStateHasKeepAlive() {
+        let headers = HTTPHeaders([("Connection", "other, keEP-alive"),
+                                   ("Content-Type", "text/html"),
+                                   ("Connection", "server, x-options")])
+        
+        XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
+    }
+
+    func testKeepAliveStateHasClose() {
+        let headers = HTTPHeaders([("Connection", "x-options,  other"),
+                                   ("Content-Type", "text/html"),
+                                   ("Connection", "server,     clOse")])
+        
+        XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
+    }
+    
+    func testResolveNonContiguousHeaders() {
+        let headers = HTTPHeaders([("Connection", "x-options,  other"),
+                                   ("Content-Type", "text/html"),
+                                   ("Connection", "server,     close")])
+        var tokenSource = HTTPListHeaderIterator(
+            headerName: "Connection".utf8, headers: headers)
+        
+        var currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "x-options")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "other")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "server")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "close")
+        currentToken = tokenSource.next()
+        XCTAssertNil(currentToken)
+    }
+
+    func testStringBasedHTTPListHeaderIterator() {
+        let headers = HTTPHeaders([("Connection", "x-options,  other"),
+                                   ("Content-Type", "text/html"),
+                                   ("Connection", "server,     close")])
+        var tokenSource = HTTPListHeaderIterator(
+            headerName: "Connection", headers: headers)
+        
+        var currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "x-options")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "other")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "server")
+        currentToken = tokenSource.next()
+        XCTAssertEqual(String(decoding: currentToken!, as: UTF8.self), "close")
+        currentToken = tokenSource.next()
+        XCTAssertNil(currentToken)
+	}
+    
+    func testUnsafeBufferAccess() {
+        let originalHeaders = [ ("X-Header", "1"),
+                                ("X-SomeHeader", "3"),
+                                ("X-Header", "2")]
+        let originalHeadersString = "X-Header: 1\r\nX-SomeHeader: 3\r\nX-Header: 2\r\n"
+        var headers1 = HTTPHeaders(originalHeaders)
+        
+        // ensure we can access the underlying buffer and header locations
+        headers1.withUnsafeBufferAndIndices { (buf, locations, contiguous) in
+            XCTAssertTrue(contiguous)
+            XCTAssertEqual(locations.count, 3)
+            XCTAssertEqual(buf.readableBytes, originalHeadersString.utf8.count) // NB: String considers "\r\n" to be one character
+            
+            let str = buf.getString(at: 0, length: buf.readableBytes)
+            XCTAssertEqual(str, originalHeadersString)
+        }
+        
+        // remove a header
+        headers1.remove(name: "X-SomeHeader")
+        
+        // should no longer be contiguous
+        headers1.withUnsafeBufferAndIndices { (_, _, contiguous) in
+            XCTAssertFalse(contiguous)
+        }
+    }
+    
+    func testCreateFromBufferAndLocations() {
+        let originalHeaders = [ ("User-Agent", "1"),
+                                ("host", "2"),
+                                ("X-SOMETHING", "3"),
+                                ("X-Something", "4"),
+                                ("SET-COOKIE", "foo=bar"),
+                                ("Set-Cookie", "buz=cux")]
+        
+        // create our own buffer and location list
+        var buf = ByteBufferAllocator().buffer(capacity: 128)
+        var locations: [HTTPHeader] = []
+        for (name, value) in originalHeaders {
+            let nstart = buf.writerIndex
+            buf.write(string: name)
+            let nameLoc = HTTPHeaderIndex(start: nstart, length: buf.writerIndex - nstart)
+            buf.write(string: ": ")
+            
+            let vstart = buf.writerIndex
+            buf.write(string: value)
+            let valueLoc = HTTPHeaderIndex(start: vstart, length: buf.writerIndex - vstart)
+            buf.write(string: "\r\n")
+            
+            locations.append(HTTPHeader(name: nameLoc, value: valueLoc))
+        }
+        
+        // create HTTP headers
+        let headers = HTTPHeaders.createHeaderBlock(buffer: buf, headers: locations)
+        
+        // looking up headers value is case-insensitive
+        XCTAssertEqual(["1"], headers["User-Agent"])
+        XCTAssertEqual(["1"], headers["User-agent"])
+        XCTAssertEqual(["2"], headers["Host"])
+        XCTAssertEqual(["3", "4"], headers["X-Something"])
+        XCTAssertEqual(["foo=bar", "buz=cux"], headers["set-cookie"])
+    }
 }
