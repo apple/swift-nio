@@ -121,8 +121,10 @@ The core SwiftNIO repository will contain a few extremely important protocol imp
 
 The following projects contain useful protocol implementations that do not live in-tree in SwiftNIO:
 
-- [swift-nio-ssl](https://github.com/apple/swift-nio-ssl)
-- [swift-nio-http2](https://github.com/apple/swift-nio-http2)
+- bindings to OpenSSL-compatible libraries for TLS: [swift-nio-ssl](https://github.com/apple/swift-nio-ssl)
+- HTTP/2 support for SwiftNIO: [swift-nio-http2](https://github.com/apple/swift-nio-http2)
+- Network.framework support for SwiftNIO on iOS, tvOS and macOS: [swift-nio-transport-services](https://github.com/apple/swift-nio-transport-services)
+- useful code around SwiftNIO: [swift-nio-extras](https://github.com/apple/swift-nio-extras)
 
 ## Documentation
 

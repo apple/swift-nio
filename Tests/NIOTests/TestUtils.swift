@@ -12,8 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import NIO
+import Dispatch
 import XCTest
+
+@testable import NIO
 
 func withPipe(_ body: (NIO.FileHandle, NIO.FileHandle) -> [NIO.FileHandle]) throws {
     var fds: [Int32] = [-1, -1]
@@ -203,4 +205,18 @@ func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyRece
     IPv4: \(ipv4Results)
     IPv6: \(ipv6Results)
     """
+}
+
+func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #file, line: UInt = #line) {
+    let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
+    let endTime = DispatchTime.now().uptimeNanoseconds + UInt64(time.nanoseconds)
+
+    repeat {
+        if condition() { return }
+        usleep(UInt32(testInterval.nanoseconds / 1000))
+    } while (DispatchTime.now().uptimeNanoseconds < endTime)
+
+    if !condition() {
+        XCTFail(message)
+    }
 }

@@ -302,7 +302,7 @@ public func swiftMain() -> Int {
 
     measureAndPrint(desc: "bytebuffer_lots_of_rw") {
         let dispatchData = ("A" as StaticString).withUTF8Buffer { ptr in
-            DispatchData(bytes: UnsafeRawBufferPointer(start: UnsafeRawPointer(ptr.baseAddress), count: ptr.count))
+            DispatchData(bytes: UnsafeRawBufferPointer(ptr))
         }
         var buffer = ByteBufferAllocator().buffer(capacity: 7 * 1000)
         let foundationData = "A".data(using: .utf8)!

@@ -798,8 +798,9 @@ class ByteBufferTest: XCTestCase {
         buf.write(string: str)
         var written1: Int = -1
         var written2: Int = -1
+        let hwDataCount = hwData.count
         hwData.withUnsafeBytes { (ptr: UnsafePointer<Int8>) -> Void in
-            let ptr = UnsafeRawBufferPointer(start: ptr, count: hwData.count)
+            let ptr = UnsafeRawBufferPointer(start: ptr, count: hwDataCount)
             /* ... write a second time and ...*/
             written1 = buf.set(bytes: ptr, at: buf.writerIndex)
             buf.moveWriterIndex(forwardBy: written1)
