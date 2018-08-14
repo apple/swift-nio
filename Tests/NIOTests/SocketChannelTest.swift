@@ -536,4 +536,24 @@ public class SocketChannelTest : XCTestCase {
         XCTAssertNoThrow(try clientChannel.close().wait())
         XCTAssertNoThrow(try handler.promise.futureResult.wait())
     }
+
+    func testSocketFlagNONBLOCKWorks() throws {
+        var socket = try assertNoThrowWithValue(try ServerSocket(protocolFamily: PF_INET, setNonBlocking: true))
+        XCTAssertNoThrow(try socket.withUnsafeFileDescriptor { fd in
+            let flags = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0))
+            XCTAssertEqual(O_NONBLOCK, flags & O_NONBLOCK)
+        })
+        XCTAssertNoThrow(try socket.close())
+
+        socket = try assertNoThrowWithValue(ServerSocket(protocolFamily: PF_INET, setNonBlocking: false))
+        XCTAssertNoThrow(try socket.withUnsafeFileDescriptor { fd in
+            var flags = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0))
+            XCTAssertEqual(0, flags & O_NONBLOCK)
+            let ret = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_SETFL, value: O_NONBLOCK))
+            XCTAssertEqual(0, ret)
+            flags = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0))
+            XCTAssertEqual(O_NONBLOCK, flags & O_NONBLOCK)
+            })
+        XCTAssertNoThrow(try socket.close())
+    }
 }
