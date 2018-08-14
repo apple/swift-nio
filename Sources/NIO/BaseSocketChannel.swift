@@ -921,7 +921,12 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
                 } else {
                     // we don't have a socket error, this must be connection reset without an error then
                     // this path should only be executed on Linux (EPOLLHUP, no EPOLLERR)
-                    error = IOError(errnoCode: ECONNRESET, reason: "connection reset (no error set)")
+                    #if os(Linux)
+                    let message: String = "connection reset (no error set)"
+                    #else
+                    let message: String = "BUG IN SwiftNIO (possibly #572), please report! Connection reset (no error set)."
+                    #endif
+                    error = IOError(errnoCode: ECONNRESET, reason: message)
                 }
                 self.close0(error: error, mode: .all, promise: nil)
             } catch {
