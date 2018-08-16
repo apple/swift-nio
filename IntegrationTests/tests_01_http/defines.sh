@@ -17,6 +17,23 @@ function server_lsof() {
     lsof -a -d 0-1024 -p "$1"
 }
 
+function do_netstat() {
+    pf="$1"
+    netstat_options=()
+    case "$(uname -s)" in
+        Linux)
+            netstat_options+=( "-A" "$pf" -p )
+            ;;
+        Darwin)
+            netstat_options+=( "-f" "$pf" -v )
+            ;;
+        *)
+            fail "Unknown OS $(uname -s)"
+            ;;
+    esac
+    netstat -an "${netstat_options[@]}"
+}
+
 function create_token() {
     mktemp "$tmp/server_token_XXXXXX"
 }
@@ -28,18 +45,16 @@ function start_server() {
         shift
     fi
     local token="$1"
-    local type="--uds"
+    local type="unix"
     local port="$tmp/port.sock"
     local tmp_server_pid
-    local tok_type="--unix-socket"
     local curl_port=80
 
     maybe_host=""
     maybe_nio_host=""
     if [[ "${2:-uds}" == "tcp" ]]; then
-        type=""
+        type="inet"
         port="0"
-        tok_type=""
         maybe_host="localhost"
         maybe_nio_host="127.0.0.1"
     fi
@@ -48,15 +63,15 @@ function start_server() {
     swift build
     "$(swift build --show-bin-path)/NIOHTTP1Server" $extra_args $maybe_nio_host "$port" "$tmp/htdocs" &
     tmp_server_pid=$!
-    if [[ -z "$type" ]]; then
+    case "$type" in
+    inet)
         # TCP mode, need to wait until we found a port that we can curl
         worked=false
         for f in $(seq 20); do
             server_lsof "$tmp_server_pid"
             port=$(server_lsof "$tmp_server_pid" | grep -Eo 'TCP .*:[0-9]+ ' | grep -Eo '[0-9]{4,5} ' | tr -d ' ' || true)
-            echo "port = '$port'"
             curl_port="$port"
-            if curl --ipv4 "http://$maybe_host:$curl_port/dynamic/pid"; then
+            if [[ -n "$port" ]] && curl --ipv4 "http://$maybe_host:$curl_port/dynamic/pid"; then
                 worked=true
                 break
             else
@@ -65,15 +80,20 @@ function start_server() {
             fi
         done
         "$worked" || fail "Could not reach server 2s after lauching..."
-    else
+        ;;
+    unix)
         # Unix Domain Socket, wait for the file to appear
         for f in $(seq 30); do if [[ -S "$port" ]]; then break; else sleep 0.1; fi; done
-    fi
+        ;;
+    *)
+        fail "Unknown server type '$type'"
+        ;;
+    esac
     echo "port: $port"
     echo "curl port: $curl_port"
     echo "local token_port;   local token_htdocs;         local token_pid;"      >> "$token"
     echo "      token_port='$port'; token_htdocs='$tmp/htdocs'; token_pid='$!';" >> "$token"
-    echo "      token_type='$tok_type'; token_server_ip='$maybe_nio_host'" >> "$token"
+    echo "      token_type='$type'; token_server_ip='$maybe_nio_host'" >> "$token"
     tmp_server_pid=$(get_server_pid "$token")
     echo "local token_open_fds" >> "$token"
     echo "token_open_fds='$(server_lsof "$tmp_server_pid" | wc -l)'" >> "$token"
@@ -96,6 +116,7 @@ function stop_server() {
     sleep 0.5 # just to make sure all the fds could be closed
     if command -v lsof > /dev/null 2> /dev/null; then
         server_lsof "$token_pid"
+        do_netstat "$token_type"
         local open_fds
         open_fds=$(server_lsof "$token_pid" | wc -l)
         assert_equal "$token_open_fds" "$open_fds" \
@@ -134,9 +155,15 @@ function get_server_ip() {
 function do_curl() {
     source "$1"
     shift
-    if [[ -z "$token_type" ]]; then
-        curl -v --ipv4 "$@"
-    else
-        curl $token_type "$token_port" -v "$@"
-    fi
+    case "$token_type" in
+        inet)
+            curl -v --ipv4 "$@"
+            ;;
+        unix)
+            curl --unix-socket "$token_port" -v "$@"
+            ;;
+        *)
+            fail "Unknown type '$token_type'"
+            ;;
+    esac
 }
