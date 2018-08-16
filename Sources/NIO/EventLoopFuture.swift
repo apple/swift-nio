@@ -795,9 +795,21 @@ extension EventLoopFuture {
     ///
     /// - returns: The value of the `EventLoopFuture` when it completes.
     /// - throws: The error value of the `EventLoopFuture` if it errors.
-    public func wait() throws -> T {
+    public func wait(file: StaticString = #file, line: UInt = #line) throws -> T {
         if !(self.eventLoop is EmbeddedEventLoop) {
-            precondition(!eventLoop.inEventLoop, "wait() must not be called when on the EventLoop")
+            let explainer: () -> String = { """
+BUG DETECTED: wait() must not be called when on an EventLoop.
+Calling wait() on any EventLoop can lead to
+- deadlocks
+- stalling processing of other connections (Channels) that are handled on the EventLoop that wait was called on
+
+Further information:
+- current eventLoop: \(MultiThreadedEventLoopGroup.currentEventLoop.debugDescription)
+- event loop associated to future: \(self.eventLoop)
+"""
+            }
+            precondition(!eventLoop.inEventLoop, explainer(), file: file, line: line)
+            precondition(MultiThreadedEventLoopGroup.currentEventLoop == nil, explainer(), file: file, line: line)
         }
 
         var v: EventLoopFutureValue <T>? = nil

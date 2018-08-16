@@ -78,11 +78,11 @@ public typealias IOVector = iovec
     func connect(to address: SocketAddress) throws -> Bool {
         switch address {
         case .v4(let addr):
-            return try connectSocket(addr: addr.address)
+            return try self.connectSocket(addr: addr.address)
         case .v6(let addr):
-            return try connectSocket(addr: addr.address)
+            return try self.connectSocket(addr: addr.address)
         case .unixDomainSocket(let addr):
-            return try connectSocket(addr: addr.address)
+            return try self.connectSocket(addr: addr.address)
         }
     }
 

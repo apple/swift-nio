@@ -211,9 +211,9 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override func finishConnectSocket() throws {
-        if let scheduled = connectTimeoutScheduled {
+        if let scheduled = self.connectTimeoutScheduled {
             // Connection established so cancel the previous scheduled timeout.
-            connectTimeoutScheduled = nil
+            self.connectTimeoutScheduled = nil
             scheduled.cancel()
         }
         try self.socket.finishConnect()

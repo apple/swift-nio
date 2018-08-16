@@ -23,6 +23,7 @@ function usage() {
     echo "OPTIONS:"
     echo "  -l: Only dependencies of library targets"
     echo "  -r: Reverse the output"
+    echo "  -d <PACKAGE>: Prints the dependencies of the given package"
 }
 
 function tac_compat() {
@@ -33,13 +34,17 @@ tmpfile=$(mktemp /tmp/.list_topsorted_dependencies_XXXXXX)
 
 only_libs=false
 do_reversed=false
-while getopts "lr" opt; do
+package_dependency=""
+while getopts "lrd:" opt; do
     case $opt in
         l)
             only_libs=true
             ;;
         r)
             do_reversed=true
+            ;;
+        d)
+            package_dependency="$OPTARG"
             ;;
         \?)
             usage
@@ -51,6 +56,12 @@ done
 transform=cat
 if $do_reversed; then
     transform=tac_compat
+fi
+
+if [[ ! -z "$package_dependency" ]]; then
+  swift package dump-package | jq -r ".targets |
+                                      map(select(.name == \"$package_dependency\" and .type == \"regular\") | .dependencies | map(.name)) | .[] | .[]"
+  exit 0
 fi
 
 (
