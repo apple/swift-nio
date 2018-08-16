@@ -228,7 +228,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
 
     deinit {
         // Remove the stored reference to ChannelHandlerContext
-        self.parser.data = UnsafeMutableRawPointer(bitPattern: 0xdeadbeef as UInt)
+        self.parser.data = UnsafeMutableRawPointer(bitPattern: 0xdeadbee)
 
         // Remove references to callbacks.
         self.settings = http_parser_settings()

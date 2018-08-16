@@ -52,7 +52,7 @@ _ = try? withUnsafePointer(to: &whatevs) { ptr in
     print("makeEBADFHappen? \(makeEBADFHappen ? "YES" : "NO")")
     print("makeEFAULTHappen ? \(makeEFAULTHappen ? "YES" : "NO")")
     _ = try Posix.write(descriptor: makeEBADFHappen ? -1 : fds[0],
-                        pointer: makeEFAULTHappen ? UnsafePointer<UInt8>(bitPattern: 0xdeadbeef)! : ptr,
+                        pointer: makeEFAULTHappen ? UnsafePointer<UInt8>(bitPattern: 0xdeadbee)! : ptr,
                      size: 1)
 }
 exit(42)
