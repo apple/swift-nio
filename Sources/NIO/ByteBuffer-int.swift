@@ -112,7 +112,9 @@ extension FixedWidthInteger {
 }
 
 extension UInt32 {
-    /// Returns the next power of two unless that would overflow in which case UInt32.max is returned.
+    /// Returns the next power of two unless that would overflow, in which case UInt32.max (on 64-bit systems) or
+    /// Int32.max (on 32-bit systems) is returned. The returned value is always safe to be cast to Int and passed
+    /// to malloc on all platforms.
     public func nextPowerOf2ClampedToMax() -> UInt32 {
         guard self > 0 else {
             return 1
@@ -120,13 +122,19 @@ extension UInt32 {
 
         var n = self
 
+        #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
+            let max = UInt32(Int32.max)
+        #else
+            let max = UInt32.max
+        #endif
+
         n -= 1
         n |= n >> 1
         n |= n >> 2
         n |= n >> 4
         n |= n >> 8
         n |= n >> 16
-        if n != .max {
+        if n != max {
             n += 1
         }
 

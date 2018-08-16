@@ -16,7 +16,14 @@ import NIO
 
 private let maxOneByteSize = 125
 private let maxTwoByteSize = Int(UInt16.max)
-private let maxNIOFrameSize = Int(UInt32.max)
+#if arch(arm) // 32-bit, Raspi/AppleWatch/etc
+    // Note(hh): This is not a _proper_ fix, but necessary because
+    //           other places extend on that. Should be fine in
+    //           practice on 32-bit platforms.
+    private let maxNIOFrameSize = Int(Int32.max / 4)
+#else
+    private let maxNIOFrameSize = Int(UInt32.max)
+#endif
 
 /// An inbound `ChannelHandler` that serializes structured websocket frames into a byte stream
 /// for sending on the network.
