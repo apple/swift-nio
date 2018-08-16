@@ -793,7 +793,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         assert(self.isOpen)
         assert(!self.lifecycleManager.isActive)
         let registerPromise: EventLoopPromise<Void> = self.eventLoop.newPromise()
-        register0(promise: registerPromise)
+        self.register0(promise: registerPromise)
         registerPromise.futureResult.whenFailure { (_: Error) in
             self.close(promise: nil)
         }
@@ -804,7 +804,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         if self.lifecycleManager.isPreRegistered {
             try! becomeFullyRegistered0()
             if self.lifecycleManager.isRegisteredFully {
-                becomeActive0(promise: promise)
+                self.becomeActive0(promise: promise)
             }
         }
     }
@@ -818,10 +818,10 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         assert(self.eventLoop.inEventLoop)
         assert(self.isOpen)
 
-        finishConnect()  // If we were connecting, that has finished.
-        if flushNow() == .unregister {
+        self.finishConnect()  // If we were connecting, that has finished.
+        if self.flushNow() == .unregister {
             // Everything was written or connect was complete
-            finishWritable()
+            self.finishWritable()
         }
     }
 
@@ -829,11 +829,11 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         assert(eventLoop.inEventLoop)
         assert(self.lifecycleManager.isPreRegistered)
 
-        if let connectPromise = pendingConnect {
+        if let connectPromise = self.pendingConnect {
             assert(!self.lifecycleManager.isActive)
 
             do {
-                try finishConnectSocket()
+                try self.finishConnectSocket()
             } catch {
                 assert(!self.lifecycleManager.isActive)
                 // close0 fails the connectPromise itself so no need to do it here
@@ -844,7 +844,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             self.pendingConnect = nil
             // We already know what the local address is.
             self.updateCachedAddressesFromSocket(updateLocal: false, updateRemote: true)
-            becomeActive0(promise: connectPromise)
+            self.becomeActive0(promise: connectPromise)
         } else {
             assert(self.lifecycleManager.isActive)
         }
@@ -855,7 +855,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
         if self.isOpen {
             assert(self.lifecycleManager.isPreRegistered)
-            unregisterForWritable()
+            self.unregisterForWritable()
         }
     }
 
@@ -967,11 +967,11 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
                     // If we want to allow half closure we will just mark the input side of the Channel
                     // as closed.
                     assert(self.lifecycleManager.isActive)
-                    pipeline.fireChannelReadComplete0()
-                    if shouldCloseOnReadError(err) {
-                        close0(error: err, mode: .input, promise: nil)
+                    self.pipeline.fireChannelReadComplete0()
+                    if self.shouldCloseOnReadError(err) {
+                        self.close0(error: err, mode: .input, promise: nil)
                     }
-                    readPending = false
+                    self.readPending = false
                     return .eof
                 }
             } else {
@@ -981,19 +981,19 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
             // Call before triggering the close of the Channel.
             if self.lifecycleManager.isActive {
-                pipeline.fireChannelReadComplete0()
+                self.pipeline.fireChannelReadComplete0()
             }
 
-            if shouldCloseOnReadError(err) {
+            if self.shouldCloseOnReadError(err) {
                 self.close0(error: err, mode: .all, promise: nil)
             }
 
             return readStreamState
         }
         if self.lifecycleManager.isActive {
-            pipeline.fireChannelReadComplete0()
+            self.pipeline.fireChannelReadComplete0()
         }
-        readIfNeeded0()
+        self.readIfNeeded0()
         return .normal(readResult)
     }
 
@@ -1039,19 +1039,19 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
 
         do {
-            if try !connectSocket(to: address) {
+            if try !self.connectSocket(to: address) {
                 // We aren't connected, we'll get the remote address later.
                 self.updateCachedAddressesFromSocket(updateLocal: true, updateRemote: false)
                 if promise != nil {
-                    pendingConnect = promise
+                    self.pendingConnect = promise
                 } else {
-                    pendingConnect = eventLoop.newPromise()
+                    self.pendingConnect = eventLoop.newPromise()
                 }
-                try becomeFullyRegistered0()
-                registerForWritable()
+                try self.becomeFullyRegistered0()
+                self.registerForWritable()
             } else {
                 self.updateCachedAddressesFromSocket()
-                becomeActive0(promise: promise)
+                self.becomeActive0(promise: promise)
             }
         } catch let error {
             assert(self.lifecycleManager.isPreRegistered)
