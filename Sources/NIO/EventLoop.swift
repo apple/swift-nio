@@ -216,10 +216,13 @@ public protocol EventLoop: EventLoopGroup {
 /// - note: `TimeAmount` should not be used to represent a point in time.
 public struct TimeAmount {
   
-    #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
-        public typealias Value = Int64
-    #else // 64-bit, keeping that at Int for SemVer in the 1.x line.
-        public typealias Value = Int
+    #if arch(arm) || arch(i386)
+    // Int64 is the correct type here but we don't want to break SemVer so can't change it for the 64-bit platforms.
+    // To be fixed in NIO 2.0
+    public typealias Value = Int64
+    #else
+    // 64-bit, keeping that at Int for SemVer in the 1.x line.
+    public typealias Value = Int
     #endif
 
     /// The nanoseconds representation of the `TimeAmount`.
