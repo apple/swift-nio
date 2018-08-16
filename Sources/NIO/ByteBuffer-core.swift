@@ -240,18 +240,20 @@ public struct ByteBuffer {
     @_versioned final class _Storage {
         private(set) var capacity: _Capacity
         @_versioned private(set) var bytes: UnsafeMutableRawPointer
-        private(set) var fullSlice: Slice
         private let allocator: ByteBufferAllocator
 
         public init(bytesNoCopy: UnsafeMutableRawPointer, capacity: _Capacity, allocator: ByteBufferAllocator) {
             self.bytes = bytesNoCopy
             self.capacity = capacity
             self.allocator = allocator
-            self.fullSlice = _ByteBufferSlice(0..<self.capacity)
         }
 
         deinit {
             self.deallocate()
+        }
+
+        internal var fullSlice: _ByteBufferSlice {
+            return _ByteBufferSlice(0..<self.capacity)
         }
 
         private static func allocateAndPrepareRawMemory(bytes: _Capacity, allocator: Allocator) -> UnsafeMutableRawPointer {
@@ -286,7 +288,6 @@ public struct ByteBuffer {
             ptr.bindMemory(to: UInt8.self, capacity: Int(newCapacity))
             self.bytes = ptr
             self.capacity = newCapacity
-            self.fullSlice = _ByteBufferSlice(0..<self.capacity)
         }
 
         private func deallocate() {
