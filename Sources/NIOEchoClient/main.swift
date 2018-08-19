@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 import NIO
-import Foundation
 
 print("Please enter line to send to the server")
 let line = readLine(strippingNewline: true)!
@@ -25,23 +24,18 @@ private final class EchoHandler: ChannelInboundHandler {
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
 
-        var charArray: [UInt8] = []
         var byteBuffer = self.unwrapInboundIn(data) as ByteBuffer
         numBytes -= byteBuffer.readableBytes
-
-
-        while let byte: UInt8 = byteBuffer.readInteger() {
-            charArray.append(byte)
-        }
 
         assert(numBytes >= 0)
 
         if numBytes == 0 {
-            if charArray.count > 0,
-                let charString = String(bytes: charArray, encoding: .utf8) {
-                print("Received: '\(charString)' back from the server, closing channel.")
-            } else {
-                print("Received line back from the server, closing channel.")
+            if let charArray = byteBuffer.readBytes(length: byteBuffer.readableBytes) {
+                var str = ""
+                for byte in charArray {
+                    str += String(UnicodeScalar(byte))
+                }
+                print("Received: '\(str)' back from the server, closing channel.")
             }
             ctx.close(promise: nil)
         }
