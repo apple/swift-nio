@@ -408,7 +408,10 @@ public struct ByteBuffer {
 
     @_inlineable @_versioned
     mutating func _set<S: Sequence>(bytes: S, at index: _Index) -> _Capacity where S.Element == UInt8 {
-        assert(!([Array<S.Element>.self, StaticString.self, ContiguousArray<S.Element>.self, UnsafeRawBufferPointer.self, UnsafeBufferPointer<UInt8>.self].contains(where: { (t: Any.Type) -> Bool in t == type(of: bytes) })),
+        assert(!([Array<S.Element>.self, StaticString.self, ContiguousArray<S.Element>.self,
+                  UnsafeRawBufferPointer.self, UnsafeBufferPointer<UInt8>.self, UnsafeMutableRawBufferPointer.self,
+                  UnsafeMutableBufferPointer<UInt8>.self,
+                  ArraySlice<UInt8>.self].contains(where: { (t: Any.Type) -> Bool in t == type(of: bytes) })),
                "called the slower set<S: Sequence> function even though \(S.self) is a ContiguousCollection")
         func ensureCapacityAndReturnStorageBase(capacity: Int) -> UnsafeMutablePointer<UInt8> {
             self._ensureAvailableCapacity(_Capacity(capacity), at: index)
@@ -733,49 +736,6 @@ extension ByteBuffer: CustomStringConvertible {
     /// - returns: A description of this `ByteBuffer` useful for debugging.
     public var debugDescription: String {
         return "\(self.description)\nreadable bytes (max 1k): \(self._storage.dumpBytes(slice: self._slice, offset: self.readerIndex, length: min(1024, self.readableBytes)))"
-    }
-}
-
-/// A `Collection` that is contiguously layed out in memory and can therefore be duplicated using `memcpy`.
-public protocol ContiguousCollection: Collection {
-    @_inlineable
-    func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R
-}
-
-extension StaticString: Collection {
-    public typealias Element = UInt8
-    public typealias SubSequence = ArraySlice<UInt8>
-
-    public typealias _Index = Int
-
-    public var startIndex: _Index { return 0 }
-    public var endIndex: _Index { return self.utf8CodeUnitCount }
-    public func index(after i: _Index) -> _Index { return i + 1 }
-
-    public subscript(position: Int) -> UInt8 {
-        precondition(position < self.utf8CodeUnitCount, "index \(position) out of bounds")
-        return self.utf8Start.advanced(by: position).pointee
-    }
-}
-
-extension Array: ContiguousCollection {}
-extension ContiguousArray: ContiguousCollection {}
-extension StaticString: ContiguousCollection {
-    @_inlineable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-        return try body(UnsafeRawBufferPointer(start: self.utf8Start, count: self.utf8CodeUnitCount))
-    }
-}
-extension UnsafeRawBufferPointer: ContiguousCollection {
-    @_inlineable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-        return try body(self)
-    }
-}
-extension UnsafeBufferPointer: ContiguousCollection {
-    @_inlineable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-        return try body(UnsafeRawBufferPointer(self))
     }
 }
 
