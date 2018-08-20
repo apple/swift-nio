@@ -23,19 +23,14 @@ private final class EchoHandler: ChannelInboundHandler {
 
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-
-        var byteBuffer = self.unwrapInboundIn(data) as ByteBuffer
+        var byteBuffer = self.unwrapInboundIn(data)
         numBytes -= byteBuffer.readableBytes
 
         assert(numBytes >= 0)
 
         if numBytes == 0 {
-            if let charArray = byteBuffer.readBytes(length: byteBuffer.readableBytes) {
-                var str = ""
-                for byte in charArray {
-                    str += String(UnicodeScalar(byte))
-                }
-                print("Received: '\(str)' back from the server, closing channel.")
+            if let string = byteBuffer.readString(length: byteBuffer.readableBytes) {
+                print("Received: '\(string)' back from the server, closing channel.")
             }
             ctx.close(promise: nil)
         }
