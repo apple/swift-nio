@@ -15,10 +15,12 @@
 import NIO
 import XCTest
 
-final class SocketOptionChannelTest: XCTestCase {
+final class SocketOptionProviderTest: XCTestCase {
     var group: MultiThreadedEventLoopGroup!
     var serverChannel: Channel!
     var clientChannel: Channel!
+    var ipv4DatagramChannel: Channel!
+    var ipv6DatagramChannel: Channel?
 
     struct CastError: Error { }
 
@@ -30,13 +32,47 @@ final class SocketOptionChannelTest: XCTestCase {
         return provider
     }
 
+    private func ipv4MulticastProvider(file: StaticString = #file, line: UInt = #line) throws -> SocketOptionProvider {
+        guard let provider = self.ipv4DatagramChannel as? SocketOptionProvider else {
+            XCTFail("Unable to cast \(String(describing: self.ipv4DatagramChannel)) to SocketOptionProvider", file: file, line: line)
+            throw CastError()
+        }
+        return provider
+    }
+
+    private func ipv6MulticastProvider(file: StaticString = #file, line: UInt = #line) throws -> SocketOptionProvider? {
+        guard let ipv6Channel = self.ipv6DatagramChannel else {
+            return nil
+        }
+
+        guard let provider = ipv6Channel as? SocketOptionProvider else {
+            XCTFail("Unable to cast \(ipv6Channel)) to SocketOptionChannel", file: file, line: line)
+            throw CastError()
+        }
+
+        return provider
+    }
+
     override func setUp() {
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         self.serverChannel = try? assertNoThrowWithValue(ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait())
         self.clientChannel = try? assertNoThrowWithValue(ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait())
+
+        self.ipv4DatagramChannel = try? assertNoThrowWithValue(
+            DatagramBootstrap(group: group).bind(host: "127.0.0.1", port: 0).then { channel in
+                return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "224.0.2.66", port: 0)).map { channel }
+            }.wait()
+        )
+
+        // The IPv6 setup is allowed to fail, some hosts don't have IPv6.
+        self.ipv6DatagramChannel = try? DatagramBootstrap(group: group).bind(host: "::1", port: 0).then { channel in
+            return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "ff12::beeb", port: 0)).map { channel }
+        }.wait()
     }
 
     override func tearDown() {
+        XCTAssertNoThrow(try ipv6DatagramChannel?.close().wait())
+        XCTAssertNoThrow(try ipv4DatagramChannel.close().wait())
         XCTAssertNoThrow(try clientChannel.close().wait())
         XCTAssertNoThrow(try serverChannel.close().wait())
         XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -109,6 +145,90 @@ final class SocketOptionChannelTest: XCTestCase {
         }.map {
             XCTAssertEqual($0.l_linger, newLingerValue.l_linger)
             XCTAssertEqual($0.l_onoff, newLingerValue.l_onoff)
+        }.wait())
+    }
+
+    func testSoIpMulticastIf() throws {
+        let channel = self.ipv4DatagramChannel!
+        let provider = try assertNoThrowWithValue(self.ipv4MulticastProvider())
+
+        let address: in_addr
+        switch channel.localAddress! {
+        case .v4(let addr):
+            address = addr.address.sin_addr
+        default:
+            XCTFail("Local address must be IPv4!")
+            return
+        }
+
+        XCTAssertNoThrow(try provider.setIPMulticastIF(address).then {
+            provider.getIPMulticastIF()
+        }.map {
+            XCTAssertEqual($0.s_addr, address.s_addr)
+        }.wait())
+    }
+
+    func testIpMulticastTtl() throws {
+        let provider = try assertNoThrowWithValue(self.ipv4MulticastProvider())
+        XCTAssertNoThrow(try provider.setIPMulticastTTL(6).then {
+            provider.getIPMulticastTTL()
+        }.map {
+            XCTAssertEqual($0, 6)
+        }.wait())
+    }
+
+    func testIpMulticastLoop() throws {
+        let provider = try assertNoThrowWithValue(self.ipv4MulticastProvider())
+        XCTAssertNoThrow(try provider.setIPMulticastLoop(1).then {
+            provider.getIPMulticastLoop()
+        }.map {
+            XCTAssertNotEqual($0, 0)
+        }.wait())
+    }
+
+    func testIpv6MulticastIf() throws {
+        guard let provider = try assertNoThrowWithValue(self.ipv6MulticastProvider()) else {
+            // Skip on systems without IPv6.
+            return
+        }
+
+        // TODO: test this when we know what the interface indices are.
+        let loopbackAddress = try assertNoThrowWithValue(SocketAddress(ipAddress: "::1", port: 0))
+        guard let loopbackInterface = try assertNoThrowWithValue(System.enumerateInterfaces().filter({ $0.address == loopbackAddress }).first) else {
+            XCTFail("Could not find index of loopback address")
+            return
+        }
+
+        XCTAssertNoThrow(try provider.setIPv6MulticastIF(CUnsignedInt(loopbackInterface.interfaceIndex)).then {
+            provider.getIPv6MulticastIF()
+        }.map {
+            XCTAssertEqual($0, CUnsignedInt(loopbackInterface.interfaceIndex))
+        }.wait())
+    }
+
+    func testIPv6MulticastHops() throws {
+        guard let provider = try assertNoThrowWithValue(self.ipv6MulticastProvider()) else {
+            // Skip on systems without IPv6.
+            return
+        }
+
+        XCTAssertNoThrow(try provider.setIPv6MulticastHops(6).then {
+            provider.getIPv6MulticastHops()
+        }.map {
+            XCTAssertEqual($0, 6)
+        }.wait())
+    }
+
+    func testIPv6MulticastLoop() throws {
+        guard let provider = try assertNoThrowWithValue(self.ipv6MulticastProvider()) else {
+            // Skip on systems without IPv6.
+            return
+        }
+
+        XCTAssertNoThrow(try provider.setIPv6MulticastLoop(1).then {
+            provider.getIPv6MulticastLoop()
+        }.map {
+            XCTAssertNotEqual($0, 0)
         }.wait())
     }
 }

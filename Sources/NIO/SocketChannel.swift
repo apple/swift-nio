@@ -728,3 +728,123 @@ extension DatagramChannel: CustomStringConvertible {
         return "DatagramChannel { selectable = \(self.selectable), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
     }
 }
+
+extension DatagramChannel: MulticastChannel {
+    /// The socket options for joining and leaving multicast groups are very similar.
+    /// This enum allows us to write a single function to do all the work, and then
+    /// at the last second pull out the correct socket option name.
+    private enum GroupOperation {
+        /// Join a multicast group.
+        case join
+
+        /// Leave a multicast group.
+        case leave
+
+        /// Given a socket option level, returns the appropriate socket option name for
+        /// this group operation.
+        ///
+        /// - parameters:
+        ///     - level: The socket option level. Must be one of `IPPROTO_IP` or
+        ///         `IPPROTO_IPV6`. Will trap if an invalid value is provided.
+        /// - returns: The socket option name to use for this group operation.
+        func optionName(level: CInt) -> CInt {
+            switch (self, level) {
+            case (.join, CInt(IPPROTO_IP)):
+                return CInt(IP_ADD_MEMBERSHIP)
+            case (.leave, CInt(IPPROTO_IP)):
+                return CInt(IP_DROP_MEMBERSHIP)
+            case (.join, CInt(IPPROTO_IPV6)):
+                return CInt(IPV6_JOIN_GROUP)
+            case (.leave, CInt(IPPROTO_IPV6)):
+                return CInt(IPV6_LEAVE_GROUP)
+            default:
+                preconditionFailure("Unexpected socket option level: \(level)")
+            }
+        }
+    }
+
+    public func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
+        if eventLoop.inEventLoop {
+            self.performGroupOperation0(group, interface: interface, promise: promise, operation: .join)
+        } else {
+            eventLoop.execute {
+                self.performGroupOperation0(group, interface: interface, promise: promise, operation: .join)
+            }
+        }
+    }
+
+    public func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
+        if eventLoop.inEventLoop {
+            self.performGroupOperation0(group, interface: interface, promise: promise, operation: .leave)
+        } else {
+            eventLoop.execute {
+                self.performGroupOperation0(group, interface: interface, promise: promise, operation: .leave)
+            }
+        }
+    }
+
+    /// The implementation of `joinGroup` and `leaveGroup`.
+    ///
+    /// Joining and leaving a multicast group ultimately corresponds to a single, carefully crafted, socket option.
+    private func performGroupOperation0(_ group: SocketAddress,
+                                        interface: NIONetworkInterface?,
+                                        promise: EventLoopPromise<Void>?,
+                                        operation: GroupOperation) {
+        assert(self.eventLoop.inEventLoop)
+
+        guard self.isActive else {
+            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            return
+        }
+
+        // We need to check that we have the appropriate address types in all cases. They all need to overlap with
+        // the address type of this channel, or this cannot work.
+        guard let localAddress = self.localAddress else {
+            promise?.fail(error: MulticastError.unknownLocalAddress)
+            return
+        }
+
+        guard localAddress.protocolFamily == group.protocolFamily else {
+            promise?.fail(error: MulticastError.badMulticastGroupAddressFamily)
+            return
+        }
+
+        // Ok, now we need to check that the group we've been asked to join is actually a multicast group.
+        guard group.isMulticast else {
+            promise?.fail(error: MulticastError.illegalMulticastAddress(group))
+            return
+        }
+
+        // Ok, we now have reason to believe this will actually work. We need to pass this on to the socket.
+        do {
+            switch (group, interface?.address) {
+            case (.unixDomainSocket, _):
+                preconditionFailure("Should not be reachable, UNIX sockets are never multicast addresses")
+            case (.v4(let groupAddress), .some(.v4(let interfaceAddress))):
+                // IPv4Binding with specific target interface.
+                let multicastRequest = ip_mreq(imr_multiaddr: groupAddress.address.sin_addr, imr_interface: interfaceAddress.address.sin_addr)
+                try self.socket.setOption(level: CInt(IPPROTO_IP), name: operation.optionName(level: CInt(IPPROTO_IP)), value: multicastRequest)
+            case (.v4(let groupAddress), .none):
+                // IPv4 binding without target interface.
+                let multicastRequest = ip_mreq(imr_multiaddr: groupAddress.address.sin_addr, imr_interface: in_addr(s_addr: INADDR_ANY))
+                try self.socket.setOption(level: CInt(IPPROTO_IP), name: operation.optionName(level: CInt(IPPROTO_IP)), value: multicastRequest)
+            case (.v6(let groupAddress), .some(.v6)):
+                // IPv6 binding with specific target interface.
+                let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: UInt32(interface!.interfaceIndex))
+                try self.socket.setOption(level: CInt(IPPROTO_IPV6), name: operation.optionName(level: CInt(IPPROTO_IPV6)), value: multicastRequest)
+            case (.v6(let groupAddress), .none):
+                // IPv6 binding with no specific interface requested.
+                let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: 0)
+                try self.socket.setOption(level: CInt(IPPROTO_IPV6), name: operation.optionName(level: CInt(IPPROTO_IPV6)), value: multicastRequest)
+            case (.v4, .some(.v6)), (.v6, .some(.v4)), (.v4, .some(.unixDomainSocket)), (.v6, .some(.unixDomainSocket)):
+                // Mismatched group and interface address: this is an error.
+                throw MulticastError.badInterfaceAddressFamily
+            }
+
+            promise?.succeed(result: ())
+        } catch {
+            promise?.fail(error: error)
+            return
+        }
+    }
+}

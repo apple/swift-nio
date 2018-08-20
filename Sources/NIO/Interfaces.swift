@@ -60,6 +60,9 @@ public final class NIONetworkInterface {
     /// instead.
     public let pointToPointDestinationAddress: SocketAddress?
 
+    /// The index of the interface, as provided by `if_nametoindex`.
+    public let interfaceIndex: Int
+
     /// Create a brand new network interface.
     ///
     /// This constructor will fail if NIO does not understand the format of the underlying
@@ -88,6 +91,12 @@ public final class NIONetworkInterface {
             self.broadcastAddress = nil
             self.pointToPointDestinationAddress = nil
         }
+
+        do {
+            self.interfaceIndex = Int(try Posix.if_nametoindex(caddr.ifa_name))
+        } catch {
+            return nil
+        }
     }
 }
 
@@ -105,6 +114,7 @@ extension NIONetworkInterface: Equatable {
                lhs.address == rhs.address &&
                lhs.netmask == rhs.netmask &&
                lhs.broadcastAddress == rhs.broadcastAddress &&
-               lhs.pointToPointDestinationAddress == rhs.pointToPointDestinationAddress
+               lhs.pointToPointDestinationAddress == rhs.pointToPointDestinationAddress &&
+               lhs.interfaceIndex == rhs.interfaceIndex
     }
 }

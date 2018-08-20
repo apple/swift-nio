@@ -54,6 +54,7 @@ private let sysGetpeername: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>
 private let sysGetsockname: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getsockname
 private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>?) -> CInt = getifaddrs
 private let sysFreeifaddrs: @convention(c) (UnsafeMutablePointer<ifaddrs>?) -> Void = freeifaddrs
+private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
 private let sysAF_INET = AF_INET
 private let sysAF_INET6 = AF_INET6
 private let sysAF_UNIX = AF_UNIX
@@ -449,6 +450,12 @@ internal enum Posix {
         }
     }
 
+    @inline(never)
+    public static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {
+        return try wrapSyscall {
+            sysIfNameToIndex(name)
+        }
+    }
 }
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
