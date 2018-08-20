@@ -21,7 +21,6 @@ private final class EchoHandler: ChannelInboundHandler {
     public typealias OutboundOut = ByteBuffer
     private var numBytes = 0
 
-
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         var byteBuffer = self.unwrapInboundIn(data)
         numBytes -= byteBuffer.readableBytes
@@ -31,6 +30,8 @@ private final class EchoHandler: ChannelInboundHandler {
         if numBytes == 0 {
             if let string = byteBuffer.readString(length: byteBuffer.readableBytes) {
                 print("Received: '\(string)' back from the server, closing channel.")
+            } else {
+                print("Received the line back from the server, closing channel")
             }
             ctx.close(promise: nil)
         }
