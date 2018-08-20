@@ -798,8 +798,9 @@ class ByteBufferTest: XCTestCase {
         buf.write(string: str)
         var written1: Int = -1
         var written2: Int = -1
+        let hwDataCount = hwData.count
         hwData.withUnsafeBytes { (ptr: UnsafePointer<Int8>) -> Void in
-            let ptr = UnsafeRawBufferPointer(start: ptr, count: hwData.count)
+            let ptr = UnsafeRawBufferPointer(start: ptr, count: hwDataCount)
             /* ... write a second time and ...*/
             written1 = buf.set(bytes: ptr, at: buf.writerIndex)
             buf.moveWriterIndex(forwardBy: written1)
@@ -1072,22 +1073,37 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testAllocationOfReallyBigByteBuffer() throws {
-        let alloc = ByteBufferAllocator(hookedMalloc: { testAllocationOfReallyBigByteBuffer_mallocHook($0) },
-                                        hookedRealloc: { testAllocationOfReallyBigByteBuffer_reallocHook($0, $1) },
-                                        hookedFree: { testAllocationOfReallyBigByteBuffer_freeHook($0) },
-                                        hookedMemcpy: { testAllocationOfReallyBigByteBuffer_memcpyHook($0, $1, $2) })
+        #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
+            // FIXME: Fails hard on Raspi 32-bit even with Int16.max in `__memcpy_neon`. Figure out how and why.
+            XCTAssertTrue(false, "testAllocationOfReallyBigByteBuffer fails on 32-bit Raspi")
+        #else
+            let alloc = ByteBufferAllocator(hookedMalloc: { testAllocationOfReallyBigByteBuffer_mallocHook($0) },
+                                            hookedRealloc: { testAllocationOfReallyBigByteBuffer_reallocHook($0, $1) },
+                                            hookedFree: { testAllocationOfReallyBigByteBuffer_freeHook($0) },
+                                            hookedMemcpy: { testAllocationOfReallyBigByteBuffer_memcpyHook($0, $1, $2) })
 
-        XCTAssertEqual(AllocationExpectationState.begin, testAllocationOfReallyBigByteBuffer_state)
-        var buf = alloc.buffer(capacity: Int(Int32.max))
-        XCTAssertEqual(AllocationExpectationState.mallocDone, testAllocationOfReallyBigByteBuffer_state)
-        XCTAssertGreaterThanOrEqual(buf.capacity, Int(Int32.max))
+            #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
+                let reallyBigSize = Int(Int16.max) // well, but Int32 is too big (1GB RAM, no swap)
+            #else
+                let reallyBigSize = Int(Int32.max)
+            #endif
+            XCTAssertEqual(AllocationExpectationState.begin, testAllocationOfReallyBigByteBuffer_state)
+            var buf = alloc.buffer(capacity: reallyBigSize)
+            XCTAssertEqual(AllocationExpectationState.mallocDone, testAllocationOfReallyBigByteBuffer_state)
+            XCTAssertGreaterThanOrEqual(buf.capacity, reallyBigSize)
 
-        buf.set(bytes: [1], at: 0)
-        /* now make it expand (will trigger realloc) */
-        buf.set(bytes: [1], at: buf.capacity)
+            buf.set(bytes: [1], at: 0)
+            /* now make it expand (will trigger realloc) */
+            buf.set(bytes: [1], at: buf.capacity)
 
-        XCTAssertEqual(AllocationExpectationState.reallocDone, testAllocationOfReallyBigByteBuffer_state)
-        XCTAssertEqual(buf.capacity, Int(UInt32.max))
+            XCTAssertEqual(AllocationExpectationState.reallocDone, testAllocationOfReallyBigByteBuffer_state)
+            #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
+                // TODO(hh): no idea, but not UInt32.max :-)
+                XCTAssertGreaterThanOrEqual(buf.capacity, reallyBigSize)
+            #else
+                XCTAssertEqual(buf.capacity, Int(UInt32.max))
+            #endif
+        #endif
     }
 
     func testWritableBytesAccountsForSlicing() throws {
