@@ -22,12 +22,17 @@ private final class EchoHandler: ChannelInboundHandler {
     private var numBytes = 0
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        numBytes -= self.unwrapInboundIn(data).readableBytes
+        var byteBuffer = self.unwrapInboundIn(data)
+        numBytes -= byteBuffer.readableBytes
 
         assert(numBytes >= 0)
 
         if numBytes == 0 {
-            print("Received the line back from the server, closing channel")
+            if let string = byteBuffer.readString(length: byteBuffer.readableBytes) {
+                print("Received: '\(string)' back from the server, closing channel.")
+            } else {
+                print("Received the line back from the server, closing channel")
+            }
             ctx.close(promise: nil)
         }
     }
