@@ -484,7 +484,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         switch option {
         case _ as SocketOption:
             let (level, name) = option.value as! (SocketOptionLevel, SocketOptionName)
-            try socket.setOption(level: Int32(level), name: name, value: value)
+            try self.setSocketOption0(level: level, name: name, value: value)
         case _ as AllocatorOption:
             bufferAllocator = value as! ByteBufferAllocator
         case _ as RecvAllocatorOption:
@@ -532,7 +532,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         switch option {
         case _ as SocketOption:
             let (level, name) = option.value as! (SocketOptionLevel, SocketOptionName)
-            return try socket.getOption(level: Int32(level), name: name)
+            return try self.getSocketOption0(level: level, name: name)
         case _ as AllocatorOption:
             return bufferAllocator as! T.OptionType
         case _ as RecvAllocatorOption:
