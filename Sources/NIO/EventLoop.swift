@@ -826,6 +826,18 @@ extension EventLoopGroup {
 typealias ThreadInitializer = (Thread) -> Void
 
 /// An `EventLoopGroup` which will create multiple `EventLoop`s, each tied to its own `Thread`.
+///
+/// The effect of initializing a `MultiThreadedEventLoopGroup` is to spawn `numberOfThreads` fresh threads which will
+/// all run their own `EventLoop`. Those threads will not be shut down until `shutdownGracefully` or
+/// `syncShutdownGracefully` is called.
+///
+/// - note: It's good style to call `MultiThreadedEventLoopGroup.shutdownGracefully` or
+///         `MultiThreadedEventLoopGroup.syncShutdownGracefully` when you no longer need this `EventLoopGroup`. In
+///         many cases that is just before your program exits.
+/// - warning: Unit tests often spawn one `MultiThreadedEventLoopGroup` per unit test to force isolation between the
+///            tests. In those cases it's important to shut the `MultiThreadedEventLoopGroup` down at the end of the
+///            test. A good place to start a `MultiThreadedEventLoopGroup` is the `setUp` method of your `XCTestCase`
+///            subclass, a good place to shut it down is the `tearDown` method.
 final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
@@ -866,6 +878,11 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
     }
 
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numberOfThreads`.
+    ///
+    /// - note: Don't forget to call `shutdownGracefully` or `syncShutdownGracefully` when you no longer need this
+    ///         `EventLoopGroup`. If you forget to shut the `EventLoopGroup` down you will leak `numberOfThreads`
+    ///         (kernel) threads which are costly resources. This is especially important in unit tests where one
+    ///         `MultiThreadedEventLoopGroup` is started per test case.
     ///
     /// - arguments:
     ///     - numberOfThreads: The number of `Threads` to use.
@@ -923,7 +940,14 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         }
     }
 
-    public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+    /// Shut this `MultiThreadedEventLoopGroup` down which causes the `EventLoop`s and their associated threads to be
+    /// shut down and release their resources.
+    ///
+    /// - parameters:
+    ///    - queue: The `DispatchQueue` to run `handler` on when the shutdown operation completes.
+    ///    - handler: The handler which is called after the shutdown operation completes. The parameter will be `nil`
+    ///               on success and contain the `Error` otherwise.
+    public func shutdownGracefully(queue: DispatchQueue, _ handler: @escaping (Error?) -> Void) {
         // This method cannot perform its final cleanup using EventLoopFutures, because it requires that all
         // our event loops still be alive, and they may not be. Instead, we use Dispatch to manage
         // our shutdown signaling, and then do our cleanup once the DispatchQueue is empty.
@@ -943,13 +967,13 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         g.notify(queue: q) {
             let failure = self.eventLoops.map { try? $0.close0() }.filter { $0 == nil }.count > 0
 
-            // TODO: In the next major release we should join in the Thread used by the EventLoop before invoking the callback to ensure
-            //       it is really gone.
+            // TODO: For Swift NIO 2.0 we should join in the threads used by the EventLoop before invoking the callback
+            //       to ensure they're really gone (#581).
             if failure {
                 error = EventLoopError.shutdownFailed
             }
 
-            callback(error)
+            handler(error)
         }
     }
 }
