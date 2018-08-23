@@ -19,16 +19,7 @@ public typealias IOVector = iovec
 /* final but tests */ class Socket: BaseSocket {
 
     /// The maximum number of bytes to write per `writev` call.
-    static var writevLimitBytes: Int {
-        #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
-            // Note(hh): This is not a _proper_ fix, but necessary because
-            //           other places extend on that. Should be fine in
-            //           practice on 32-bit platforms.
-            return Int(Int32.max / 4)
-        #else
-            return Int(Int32.max)
-        #endif
-    }
+    static var writevLimitBytes = Int(Int32.max)
 
     /// The maximum number of `IOVector`s to write per `writev` call.
     static let writevLimitIOVectors: Int = Posix.UIO_MAXIOV
