@@ -164,7 +164,7 @@ class FileRegionTest : XCTestCase {
                 }.wait()
                 XCTFail("no error happened even though we closed before flush")
             } catch let e as ChannelError {
-                XCTAssertEqual(ChannelError.alreadyClosed, e)
+                XCTAssertEqual(ChannelError.ioOnClosedChannel, e)
             } catch let e {
                 XCTFail("unexpected error \(e)")
             }

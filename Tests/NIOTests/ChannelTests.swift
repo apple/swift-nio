@@ -2449,6 +2449,122 @@ public class ChannelTests: XCTestCase {
             XCTFail("unexpected error: \(error)")
         }
     }
+
+    func testCloseInReadTriggeredByDrainingTheReceiveBufferBecauseOfWriteError() throws {
+        final class WriteWhenActiveHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            let channelAvailablePromise: EventLoopPromise<Channel>
+
+            init(channelAvailablePromise: EventLoopPromise<Channel>) {
+                self.channelAvailablePromise = channelAvailablePromise
+            }
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                let buffer = self.unwrapInboundIn(data)
+                XCTFail("unexpected read: \(String(decoding: buffer.readableBytesView, as: UTF8.self))")
+            }
+
+            func channelActive(ctx: ChannelHandlerContext) {
+                var buffer = ctx.channel.allocator.buffer(capacity: 1)
+                buffer.write(staticString: "X")
+                ctx.channel.writeAndFlush(self.wrapOutboundOut(buffer)).map { ctx.channel }.cascade(promise: self.channelAvailablePromise)
+            }
+        }
+
+        final class WriteAlwaysFailingSocket: Socket {
+            init() throws {
+                try super.init(protocolFamily: AF_INET, type: Posix.SOCK_STREAM, setNonBlocking: true)
+            }
+
+            override func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
+                throw IOError(errnoCode: ETXTBSY, function: "WriteAlwaysFailingSocket.write fake error")
+            }
+
+            override func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
+                throw IOError(errnoCode: ETXTBSY, function: "WriteAlwaysFailingSocket.writev fake error")
+            }
+        }
+
+        final class MakeChannelInactiveInReadCausedByWriteErrorHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            let serverChannel: EventLoopFuture<Channel>
+            let allDonePromise: EventLoopPromise<Void>
+
+            init(serverChannel: EventLoopFuture<Channel>,
+                 allDonePromise: EventLoopPromise<Void>) {
+                self.serverChannel = serverChannel
+                self.allDonePromise = allDonePromise
+            }
+
+            func channelActive(ctx: ChannelHandlerContext) {
+                XCTAssert(serverChannel.eventLoop === ctx.eventLoop)
+                self.serverChannel.whenSuccess { serverChannel in
+                    // all of the following futures need to complete synchronously for this test to test the correct
+                    // thing. Therefore we keep track if we're still on the same stack frame.
+                    var inSameStackFrame = true
+                    defer {
+                        inSameStackFrame = false
+                    }
+
+                    XCTAssertTrue(serverChannel.isActive)
+                    // we allow auto-read again to make sure that the socket buffer is drained on write error
+                    // (cf. https://github.com/apple/swift-nio/issues/593)
+                    ctx.channel.setOption(option: ChannelOptions.autoRead, value: true).then {
+                        // let's trigger the write error
+                        var buffer = ctx.channel.allocator.buffer(capacity: 16)
+                        buffer.write(staticString: "THIS WILL FAIL ANYWAY")
+                        return ctx.writeAndFlush(self.wrapOutboundOut(buffer))
+                    }.map {
+                        XCTFail("this should have failed")
+                    }.whenFailure { error in
+                        XCTAssertEqual(ChannelError.ioOnClosedChannel, error as? ChannelError)
+                        XCTAssertTrue(inSameStackFrame)
+                        self.allDonePromise.succeed(result: ())
+                    }
+                }
+            }
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                let buffer = self.unwrapInboundIn(data)
+                XCTAssertEqual("X", String(decoding: buffer.readableBytesView, as: UTF8.self))
+                ctx.close(promise: nil)
+            }
+        }
+
+        let singleThreadedELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully())
+        }
+        let serverChannelAvailablePromise: EventLoopPromise<Channel> = singleThreadedELG.next().newPromise()
+        let allDonePromise: EventLoopPromise<Void> = singleThreadedELG.next().newPromise()
+        let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
+            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+            .childChannelInitializer { channel in
+                channel.pipeline.add(handler: WriteWhenActiveHandler(channelAvailablePromise: serverChannelAvailablePromise))
+            }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
+        defer {
+            XCTAssertNoThrow(try server.close().wait())
+        }
+
+        let c = try assertNoThrowWithValue(SocketChannel(socket: WriteAlwaysFailingSocket(),
+                                                         parent: nil,
+                                                         eventLoop: singleThreadedELG.next() as! SelectableEventLoop))
+        XCTAssertNoThrow(try c.setOption(option: ChannelOptions.autoRead, value: false).wait())
+        XCTAssertNoThrow(try c.setOption(option: ChannelOptions.allowRemoteHalfClosure, value: true).wait())
+        XCTAssertNoThrow(try c.pipeline.add(handler: MakeChannelInactiveInReadCausedByWriteErrorHandler(serverChannel: serverChannelAvailablePromise.futureResult,
+                                                                                                        allDonePromise: allDonePromise)).wait())
+        XCTAssertNoThrow(try c.register().wait())
+        XCTAssertNoThrow(try c.connect(to: server.localAddress!).wait())
+
+        XCTAssertNoThrow(try allDonePromise.futureResult.wait())
+        XCTAssertFalse(c.isActive)
+    }
 }
 
 fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler {

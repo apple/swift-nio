@@ -321,7 +321,7 @@ public class SocketChannelTest : XCTestCase {
         let writeFut = clientChannel.write(buffer).map {
             XCTFail("Must not succeed")
         }.thenIfError { error in
-            XCTAssertEqual(error as? ChannelError, ChannelError.alreadyClosed)
+            XCTAssertEqual(error as? ChannelError, ChannelError.ioOnClosedChannel)
             return clientChannel.close()
         }
         XCTAssertNoThrow(try clientChannel.close().wait())
@@ -470,7 +470,7 @@ public class SocketChannelTest : XCTestCase {
         do {
             try connectPromise.futureResult.wait()
             XCTFail("Did not throw")
-        } catch let err as ChannelError where err == .alreadyClosed {
+        } catch let err as ChannelError where err == .ioOnClosedChannel {
             // expected
         }
         XCTAssertNoThrow(try closePromise.futureResult.wait())
