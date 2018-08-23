@@ -986,22 +986,57 @@ class ByteBufferTest: XCTestCase {
         buf.clear()
         var written = buf.write(bytes: [1, 2, 3, 4])
         XCTAssertEqual(4, written)
+        // UnsafeRawBufferPointer
         written += [5 as UInt8, 6, 7, 8].withUnsafeBytes { ptr in
             buf.write(bytes: ptr)
         }
         XCTAssertEqual(8, written)
+        // UnsafeBufferPointer<UInt8>
         written += [9 as UInt8, 10, 11, 12].withUnsafeBufferPointer { ptr in
             buf.write(bytes: ptr)
         }
         XCTAssertEqual(12, written)
+        // ContiguousArray
         written += buf.write(bytes: ContiguousArray<UInt8>([13, 14, 15, 16]))
         XCTAssertEqual(16, written)
+
+        // StaticString
         written += buf.write(bytes: "ABCD" as StaticString)
         XCTAssertEqual(20, written)
+
+        // Data
         written += buf.write(bytes: "EFGH".data(using: .utf8)!)
         XCTAssertEqual(24, written)
+        var more = Array("IJKL".utf8)
 
-        let expected = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, "A".utf8.first!, "B".utf8.first!, "C".utf8.first!, "D".utf8.first!, "E".utf8.first!, "F".utf8.first!, "G".utf8.first!, "H".utf8.first!]
+        // UnsafeMutableRawBufferPointer
+        written += more.withUnsafeMutableBytes { ptr in
+            buf.write(bytes: ptr)
+        }
+        more = Array("MNOP".utf8)
+        // UnsafeMutableBufferPointer<UInt8>
+        written += more.withUnsafeMutableBufferPointer { ptr in
+            buf.write(bytes: ptr)
+        }
+        more = Array("mnopQRSTuvwx".utf8)
+
+        // ArraySlice
+        written += buf.write(bytes: more.dropFirst(4).dropLast(4))
+
+        let moreCA = ContiguousArray("qrstUVWXyz01".utf8)
+        // ContiguousArray's slice (== ArraySlice)
+        written += buf.write(bytes: moreCA.dropFirst(4).dropLast(4))
+
+        // Slice<UnsafeRawBufferPointer>
+        written += Array("uvwxYZ01abcd".utf8).withUnsafeBytes { ptr in
+            buf.write(bytes: ptr.dropFirst(4).dropLast(4) as UnsafeRawBufferPointer.SubSequence)
+        }
+        more = Array("2345".utf8)
+        written += more.withUnsafeMutableBytes { ptr in
+            buf.write(bytes: ptr.dropFirst(0)) + buf.write(bytes: ptr.dropFirst(4 /* drop all of them */))
+        }
+
+        let expected = Array(1...16) + Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ012345".utf8)
 
         XCTAssertEqual(expected, buf.readBytes(length: written)!)
     }
