@@ -71,7 +71,7 @@ Additionally, SwiftNIO ships with a few [`Channel`][c] implementations. In parti
 
 ##### A Note on Blocking
 
-One of the important notes about [`ChannelPipeline`][cp]s is that they are not thread-safe. This is very important for writing SwiftNIO applications, as it allows you to write much simpler [`ChannelHandler`][ch]s in the knowledge that they will not require synchronization.
+One of the important notes about [`ChannelPipeline`][cp]s is that they are thread-safe. This is very important for writing SwiftNIO applications, as it allows you to write much simpler [`ChannelHandler`][ch]s in the knowledge that they will not require synchronization.
 
 However, this is achieved by dispatching all code on the [`ChannelPipeline`][cp] on the same thread as the [`EventLoop`][el]. This means that, as a general rule, [`ChannelHandler`][ch]s **must not** call blocking code without dispatching it to a background thread. If a [`ChannelHandler`][ch] blocks for any reason, all [`Channel`][c]s attached to the parent [`EventLoop`][el] will be unable to progress until the blocking call completes.
 
