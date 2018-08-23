@@ -23,6 +23,10 @@
 #include <sched.h>
 #include <errno.h>
 
+#ifdef __ANDROID__
+#include <pthread.h>
+#include "ifaddrs.h"
+#endif
 
 // Some explanation is required here.
 //

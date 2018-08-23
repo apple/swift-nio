@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+#if !os(Android)
 import NIO
 
 private final class ChatHandler: ChannelInboundHandler {
@@ -93,3 +94,4 @@ while let line = readLine(strippingNewline: false) {
 try! channel.close().wait()
 
 print("ChatClient closed")
+#endif

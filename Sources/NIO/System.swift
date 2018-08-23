@@ -30,6 +30,10 @@ internal typealias MMsgHdr = CNIOLinux_mmsghdr
 let badOS = { fatalError("unsupported OS") }()
 #endif
 
+#if os(Android)
+internal typealias sockaddr_storage = __kernel_sockaddr_storage
+#endif
+
 // Declare aliases to share more code and not need to repeat #if #else blocks
 private let sysClose: @convention(c) (CInt) -> CInt = close
 private let sysShutdown: @convention(c) (CInt, CInt) -> CInt = shutdown
@@ -44,10 +48,21 @@ private let sysConnect: @convention(c) (CInt, UnsafePointer<sockaddr>?, socklen_
 private let sysOpen: @convention(c) (UnsafePointer<CChar>, CInt) -> CInt = open
 private let sysOpenWithMode: @convention(c) (UnsafePointer<CChar>, CInt, mode_t) -> CInt = open
 private let sysWrite: @convention(c) (CInt, UnsafeRawPointer?, CLong) -> CLong = write
-private let sysWritev: @convention(c) (Int32, UnsafePointer<iovec>?, CInt) -> CLong = writev
 private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, CLong) -> CLong = read
 private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = lseek
+#if os(Android)
+func sysRecvFrom_wrapper(sockfd: Int32, buf: UnsafeMutableRawPointer, len: Int, flags: Int32, src_addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) -> CLong {
+    return recvfrom(sockfd, buf, len, flags, src_addr, addrlen) // src_addr is 'UnsafeMutablePointer', but it need to be 'UnsafePointer'
+}
+func sysWritev_wrapper(fd: Int32, iov: UnsafePointer<iovec>?, iovcnt: Int32) -> CLong {
+    return CLong(writev(fd, iov, iovcnt)) // cast 'Int32' to 'CLong'
+}
+private let sysRecvFrom = sysRecvFrom_wrapper
+private let sysWritev = sysWritev_wrapper
+#else
 private let sysRecvFrom: @convention(c) (CInt, UnsafeMutableRawPointer?, CLong, CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CLong = recvfrom
+private let sysWritev: @convention(c) (Int32, UnsafePointer<iovec>?, CInt) -> CLong = writev
+#endif
 private let sysSendTo: @convention(c) (CInt, UnsafeRawPointer?, CLong, CInt, UnsafePointer<sockaddr>?, socklen_t) -> CLong = sendto
 private let sysDup: @convention(c) (CInt) -> CInt = dup
 private let sysGetpeername: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getpeername
@@ -165,8 +180,14 @@ internal enum Posix {
     static let SHUT_WR: CInt = CInt(Darwin.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Darwin.SHUT_RDWR)
 #elseif os(Linux) || os(FreeBSD) || os(Android)
+
+#if os(Android)
+    static let SOCK_STREAM: CInt = CInt(Glibc.SOCK_STREAM)
+    static let SOCK_DGRAM: CInt = CInt(Glibc.SOCK_DGRAM)
+#else
     static let SOCK_STREAM: CInt = CInt(Glibc.SOCK_STREAM.rawValue)
     static let SOCK_DGRAM: CInt = CInt(Glibc.SOCK_DGRAM.rawValue)
+#endif
     static let IPPROTO_TCP: CInt = CInt(Glibc.IPPROTO_TCP)
     static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)
     static let SHUT_RD: CInt = CInt(Glibc.SHUT_RD)

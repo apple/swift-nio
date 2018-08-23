@@ -200,34 +200,34 @@ extension SelectorEventSet {
     var epollEventSet: UInt32 {
         assert(self != ._none)
         // EPOLLERR | EPOLLHUP is always set unconditionally anyway but it's easier to understand if we explicitly ask.
-        var filter: UInt32 = Epoll.EPOLLERR.rawValue | Epoll.EPOLLHUP.rawValue
+        var filter: UInt32 = Epoll.EPOLLERR | Epoll.EPOLLHUP
         let epollFilters = EpollFilterSet(selectorEventSet: self)
         if epollFilters.contains(.input) {
-            filter |= Epoll.EPOLLIN.rawValue
+            filter |= Epoll.EPOLLIN
         }
         if epollFilters.contains(.output) {
-            filter |= Epoll.EPOLLOUT.rawValue
+            filter |= Epoll.EPOLLOUT
         }
         if epollFilters.contains(.readHangup) {
-            filter |= Epoll.EPOLLRDHUP.rawValue
+            filter |= Epoll.EPOLLRDHUP
         }
-        assert(filter & Epoll.EPOLLHUP.rawValue != 0) // both of these are reported
-        assert(filter & Epoll.EPOLLERR.rawValue != 0) // always and can't be masked.
+        assert(filter & Epoll.EPOLLHUP != 0) // both of these are reported
+        assert(filter & Epoll.EPOLLERR != 0) // always and can't be masked.
         return filter
     }
 
     fileprivate init(epollEvent: Epoll.epoll_event) {
         var selectorEventSet: SelectorEventSet = ._none
-        if epollEvent.events & Epoll.EPOLLIN.rawValue != 0 {
+        if epollEvent.events & Epoll.EPOLLIN != 0 {
             selectorEventSet.formUnion(.read)
         }
-        if epollEvent.events & Epoll.EPOLLOUT.rawValue != 0 {
+        if epollEvent.events & Epoll.EPOLLOUT != 0 {
             selectorEventSet.formUnion(.write)
         }
-        if epollEvent.events & Epoll.EPOLLRDHUP.rawValue != 0 {
+        if epollEvent.events & Epoll.EPOLLRDHUP != 0 {
             selectorEventSet.formUnion(.readEOF)
         }
-        if epollEvent.events & Epoll.EPOLLHUP.rawValue != 0 || epollEvent.events & Epoll.EPOLLERR.rawValue != 0 {
+        if epollEvent.events & Epoll.EPOLLHUP != 0 || epollEvent.events & Epoll.EPOLLERR != 0 {
             selectorEventSet.formUnion(.reset)
         }
         self = selectorEventSet
@@ -300,7 +300,7 @@ final class Selector<R: Registration> {
         _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: eventfd, event: &ev)
 
         var timerev = Epoll.epoll_event()
-        timerev.events = Epoll.EPOLLIN.rawValue | Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue | Epoll.EPOLLET.rawValue
+        timerev.events = Epoll.EPOLLIN | Epoll.EPOLLERR | Epoll.EPOLLRDHUP | Epoll.EPOLLET
         timerev.data.fd = timerfd
         _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: timerfd, event: &timerev)
 #else

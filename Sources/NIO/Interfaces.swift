@@ -18,6 +18,8 @@
 //  Created by Cory Benfield on 27/02/2018.
 //
 
+import CNIOLinux
+
 private extension ifaddrs {
     var dstaddr: UnsafeMutablePointer<sockaddr>? {
         #if os(Linux)
