@@ -27,6 +27,8 @@
 ///         .childChannelInitializer { channel in
 ///             // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
 ///             channel.pipeline.add(handler: BackPressureHandler()).then { () in
+///                 // make sure to instantiate your `ChannelHandlers` inside of
+///                 // the closure as it will be invoked once per connection.
 ///                 channel.pipeline.add(handler: MyChannelHandler())
 ///             }
 ///         }
@@ -94,6 +96,12 @@ public final class ServerBootstrap {
 
     /// Initialize the accepted `SocketChannel`s with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
+    ///
+    /// - warning: The `initializer` will be invoked once for every accepted connection. Therefore it's usually the
+    ///            right choice to instantiate stateful `ChannelHandler`s within the closure to make sure they are not
+    ///            accidentally shared across `Channel`s. There are expert use-cases where stateful handler need to be
+    ///            shared across `Channel`s in which case the user is responsible to synchronise the state access
+    ///            appropriately.
     ///
     /// The accepted `Channel` will operate on `ByteBuffer` as inbound and `IOData` as outbound messages.
     ///
@@ -321,6 +329,9 @@ private extension Channel {
 ///         // Enable SO_REUSEADDR.
 ///         .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 ///         .channelInitializer { channel in
+///             // always instantiate the handler _within_ the closure as
+///             // it may be called multiple times (for example if the hostname
+///             // resolves to both IPv4 and IPv6 addresses, cf. Happy Eyeballs).
 ///             channel.pipeline.add(handler: MyChannelHandler())
 ///         }
 ///     defer {
@@ -351,6 +362,16 @@ public final class ClientBootstrap {
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
     /// The connected `Channel` will operate on `ByteBuffer` as inbound and `IOData` as outbound messages.
+    ///
+    /// - warning: The `handler` closure may be invoked _multiple times_ so it's usually the right choice to instantiate
+    ///            `ChannelHandler`s within `handler`. The reason `handler` may be invoked multiple times is that to
+    ///            successfully set up a connection multiple connections might be setup in the process. Assuming a
+    ///            hostname that resolves to both IPv4 and IPv6 addresses, NIO will follow
+    ///            [_Happy Eyeballs_](https://en.wikipedia.org/wiki/Happy_Eyeballs) and race both an IPv4 and an IPv6
+    ///            connection. It is possible that both connections get fully established before the IPv4 connection
+    ///            will be closed again because the IPv6 connection 'won the race'. Therefore the `channelInitializer`
+    ///            might be called multiple times and it's important not to share stateful `ChannelHandler`s in more
+    ///            than one `Channel`.
     ///
     /// - parameters:
     ///     - handler: A closure that initializes the provided `Channel`.
