@@ -363,7 +363,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
                 self.deliverOneMessage(ctx: ctx, data: read)
                 deliveredRead = true
             case .error(let error):
-                ctx.fireErrorCaught(error)
+                self.deliverOneError(ctx: ctx, error: error)
             case .halfClose:
                 // When we fire the half-close, we want to forget all prior reads.
                 // They will just trigger further half-close notifications we don't
