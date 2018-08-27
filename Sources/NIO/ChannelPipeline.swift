@@ -931,10 +931,11 @@ extension ChannelPipeline {
 }
 
 private extension CloseMode {
+    /// Returns the error to fail outstanding operations writes with.
     var error: ChannelError {
         switch self {
         case .all:
-            return .alreadyClosed
+            return .ioOnClosedChannel
         case .output:
             return .outputClosed
         case .input:

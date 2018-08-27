@@ -443,17 +443,20 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         } catch let err {
             // If there is a write error we should try drain the inbound before closing the socket as there may be some data pending.
             // We ignore any error that is thrown as we will use the original err to close the channel and notify the user.
-            if readIfNeeded0() {
+            if self.readIfNeeded0() {
                 assert(self.lifecycleManager.isActive)
 
                 // We need to continue reading until there is nothing more to be read from the socket as we will not have another chance to drain it.
+                var readAtLeastOnce = false
                 while let read = try? readFromSocket(), read == .some {
-                    assert(self.lifecycleManager.isActive)
+                    readAtLeastOnce = true
+                }
+                if readAtLeastOnce && self.lifecycleManager.isActive {
                     pipeline.fireChannelReadComplete()
                 }
             }
 
-            close0(error: err, mode: .all, promise: nil)
+            self.close0(error: err, mode: .all, promise: nil)
 
             // we handled all writes
             return .unregister

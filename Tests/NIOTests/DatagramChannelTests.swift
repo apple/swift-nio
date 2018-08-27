@@ -200,7 +200,7 @@ final class DatagramChannelTests: XCTestCase {
             do {
                 try $0.wait()
                 XCTFail("Did not error")
-            } catch ChannelError.alreadyClosed {
+            } catch ChannelError.ioOnClosedChannel {
                 // All good
             } catch {
                 XCTFail("Unexpected error: \(error)")
