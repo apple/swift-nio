@@ -332,7 +332,12 @@ class BaseSocket: Selectable {
     ///     - value: The value for the option.
     /// - throws: An `IOError` if the operation failed.
     final func setOption<T>(level: Int32, name: Int32, value: T) throws {
-        try withUnsafeFileDescriptor { fd in
+        if level == SocketOptionValue(IPPROTO_TCP) && name == TCP_NODELAY && (try? self.localAddress().protocolFamily) == Optional<Int32>.some(Int32(Posix.AF_UNIX)) {
+            // setting TCP_NODELAY on UNIX domain sockets will fail. Previously we had a bug where we would ignore
+            // most socket options settings so for the time being we'll just ignore this. Let's revisit for NIO 2.0.
+            return
+        }
+        return try withUnsafeFileDescriptor { fd in
             var val = value
 
             _ = try Posix.setsockopt(
@@ -355,10 +360,15 @@ class BaseSocket: Selectable {
     final func getOption<T>(level: Int32, name: Int32) throws -> T {
         return try withUnsafeFileDescriptor { fd in
             var length = socklen_t(MemoryLayout<T>.size)
-            var val = UnsafeMutablePointer<T>.allocate(capacity: 1)
+            let storage = UnsafeMutableRawBufferPointer.allocate(byteCount: MemoryLayout<T>.stride,
+                                                                 alignment: MemoryLayout<T>.alignment)
+            // write zeroes into the memory as Linux's getsockopt doesn't zero them out
+            _ = storage.initializeMemory(as: UInt8.self, repeating: 0)
+            var val = storage.bindMemory(to: T.self).baseAddress!
+            // initialisation will be done by getsockopt
             defer {
                 val.deinitialize(count: 1)
-                val.deallocate()
+                storage.deallocate()
             }
 
             try Posix.getsockopt(socket: fd, level: level, optionName: name, optionValue: val, optionLen: &length)
