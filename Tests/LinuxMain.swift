@@ -41,6 +41,7 @@ import XCTest
          testCase(ByteBufferUtilsTest.allTests),
          testCase(ByteToMessageDecoderTest.allTests),
          testCase(ChannelNotificationTest.allTests),
+         testCase(ChannelOptionStorageTest.allTests),
          testCase(ChannelPipelineTest.allTests),
          testCase(ChannelTests.allTests),
          testCase(CircularBufferTests.allTests),

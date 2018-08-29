@@ -220,3 +220,11 @@ func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testI
         XCTFail(message)
     }
 }
+
+func getBoolSocketOption<IntType: SignedInteger>(channel: Channel, level: IntType, name: SocketOptionName,
+                                                 file: StaticString = #file, line: UInt = #line) throws -> Bool {
+    return try assertNoThrowWithValue(channel.getOption(option: ChannelOptions.socket(SocketOptionLevel(level),
+                                                                                      name)),
+                                      file: file,
+                                      line: line).wait() != 0
+}

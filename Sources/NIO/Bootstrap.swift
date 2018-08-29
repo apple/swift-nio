@@ -672,11 +672,30 @@ public final class DatagramBootstrap {
     }
 }
 
-fileprivate struct ChannelOptionStorage {
+/* for tests */ internal struct ChannelOptionStorage {
     private var storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
 
+    mutating func put<K: ChannelOption & Equatable>(key: K, value: K.OptionType) {
+        return self.put(key: key, value: value, equalsFunc: ==)
+    }
+
+    // HACK: this function should go for NIO 2.0, all ChannelOptions should be equatable
+    mutating func put<K: ChannelOption>(key: K, value: K.OptionType) {
+        if K.self == SocketOption.self {
+            return self.put(key: key as! SocketOption, value: value as! SocketOptionValue) { lhs, rhs in
+                switch (lhs, rhs) {
+                case (.const(let lLevel, let lName), .const(let rLevel, let rName)):
+                    return lLevel == rLevel && lName == rName
+                }
+            }
+        } else {
+            return self.put(key: key, value: value) { _, _ in true }
+        }
+    }
+
     mutating func put<K: ChannelOption>(key: K,
-                             value newValue: K.OptionType) {
+                                        value newValue: K.OptionType,
+                                        equalsFunc: (K, K) -> Bool) {
         func applier(_ t: Channel) -> (Any, Any) -> EventLoopFuture<Void> {
             return { (x, y) in
                 return t.setOption(option: x as! K, value: y as! K.OptionType)
@@ -685,7 +704,7 @@ fileprivate struct ChannelOptionStorage {
         var hasSet = false
         self.storage = self.storage.map { typeAndValue in
             let (type, value) = typeAndValue
-            if type is K {
+            if type is K && equalsFunc(type as! K, key) {
                 hasSet = true
                 return (key, (newValue, applier))
             } else {
