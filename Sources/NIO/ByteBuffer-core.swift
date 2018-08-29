@@ -29,12 +29,21 @@ let sysFree: @convention(c) (UnsafeMutableRawPointer?) -> Void = free
 
         internal func initializeMemory<T>(as type: T.Type, repeating repeatedValue: T) -> UnsafeMutableBufferPointer<T> {
             let ptr = self.bindMemory(to: T.self)
-            ptr.initialize(from: repeatElement(repeatedValue, count: self.count / MemoryLayout<T>.stride))
+            _ = ptr.initialize(from: repeatElement(repeatedValue, count: self.count / MemoryLayout<T>.stride))
             return ptr
         }
 
         public func copyMemory(from src: UnsafeRawBufferPointer) {
             self.copyBytes(from: src)
+        }
+
+        internal func bindMemory<T>(to type: T.Type) -> UnsafeMutableBufferPointer<T> {
+            guard let base = self.baseAddress else {
+                return UnsafeMutableBufferPointer<T>(start: nil, count: 0)
+            }
+            let capacity = count / MemoryLayout<T>.stride
+            let ptr = base.bindMemory(to: T.self, capacity: capacity)
+            return UnsafeMutableBufferPointer<T>(start: ptr, count: capacity)
         }
     }
 #endif
