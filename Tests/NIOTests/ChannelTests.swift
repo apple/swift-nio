@@ -2565,6 +2565,83 @@ public class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try allDonePromise.futureResult.wait())
         XCTAssertFalse(c.isActive)
     }
+
+    func testApplyingTwoDistinctSocketOptionsOfSameTypeWorks() throws {
+        let singleThreadedELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully())
+        }
+        var numberOfAcceptedChannel = 0
+        var acceptedChannels: [EventLoopPromise<Channel>] = [singleThreadedELG.next().newPromise(),
+                                                             singleThreadedELG.next().newPromise(),
+                                                             singleThreadedELG.next().newPromise()]
+        let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_TIMESTAMP), value: 1)
+            .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_KEEPALIVE), value: 1)
+            .childChannelOption(ChannelOptions.socket(SocketOptionLevel(IPPROTO_TCP), TCP_NODELAY), value: 1)
+            .childChannelInitializer { channel in
+                acceptedChannels[numberOfAcceptedChannel].succeed(result: channel)
+                numberOfAcceptedChannel += 1
+                return channel.eventLoop.newSucceededFuture(result: ())
+            }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
+        defer {
+            XCTAssertNoThrow(try server.close().wait())
+        }
+        XCTAssertTrue(try getBoolSocketOption(channel: server, level: SOL_SOCKET, name: SO_REUSEADDR))
+        XCTAssertTrue(try getBoolSocketOption(channel: server, level: SOL_SOCKET, name: SO_TIMESTAMP))
+
+        let client1 = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(IPPROTO_TCP), TCP_NODELAY), value: 1)
+            .connect(to: server.localAddress!)
+            .wait())
+        let accepted1 = try assertNoThrowWithValue(acceptedChannels[0].futureResult.wait())
+        defer {
+            XCTAssertNoThrow(try client1.close().wait())
+        }
+        let client2 = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .connect(to: server.localAddress!)
+            .wait())
+        let accepted2 = try assertNoThrowWithValue(acceptedChannels[0].futureResult.wait())
+        defer {
+            XCTAssertNoThrow(try client2.close().wait())
+        }
+        let client3 = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
+            .connect(to: server.localAddress!)
+            .wait())
+        let accepted3 = try assertNoThrowWithValue(acceptedChannels[0].futureResult.wait())
+        defer {
+            XCTAssertNoThrow(try client3.close().wait())
+        }
+
+        XCTAssertTrue(try getBoolSocketOption(channel: client1, level: SOL_SOCKET, name: SO_REUSEADDR))
+
+        XCTAssertTrue(try getBoolSocketOption(channel: client1, level: IPPROTO_TCP, name: TCP_NODELAY))
+
+        XCTAssertTrue(try getBoolSocketOption(channel: accepted1, level: SOL_SOCKET, name: SO_KEEPALIVE))
+
+        XCTAssertTrue(try getBoolSocketOption(channel: accepted1, level: IPPROTO_TCP, name: TCP_NODELAY))
+
+        XCTAssertTrue(try getBoolSocketOption(channel: client2, level: SOL_SOCKET, name: SO_REUSEADDR))
+
+        XCTAssertFalse(try getBoolSocketOption(channel: client2, level: IPPROTO_TCP, name: TCP_NODELAY))
+
+        XCTAssertTrue(try getBoolSocketOption(channel: accepted2, level: SOL_SOCKET, name: SO_KEEPALIVE))
+
+        XCTAssertTrue(try getBoolSocketOption(channel: accepted2, level: IPPROTO_TCP, name: TCP_NODELAY))
+
+        XCTAssertFalse(try getBoolSocketOption(channel: client3, level: SOL_SOCKET, name: SO_REUSEADDR))
+
+        XCTAssertFalse(try getBoolSocketOption(channel: client3, level: IPPROTO_TCP, name: TCP_NODELAY))
+
+        XCTAssertTrue(try getBoolSocketOption(channel: accepted3, level: SOL_SOCKET, name: SO_KEEPALIVE))
+
+        XCTAssertTrue(try getBoolSocketOption(channel: accepted3, level: IPPROTO_TCP, name: TCP_NODELAY))
+    }
 }
 
 fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler {
@@ -2618,5 +2695,14 @@ fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {
         self.state = .unregistered
         self.allDone.succeed(result: ())
         ctx.fireChannelUnregistered()
+    }
+}
+
+extension SocketOption: Equatable {
+    public static func == (lhs: SocketOption, rhs: SocketOption) -> Bool {
+        switch (lhs, rhs) {
+        case (.const(let lLevel, let lName), .const(let rLevel, let rName)):
+            return lLevel == rLevel && lName == rName
+        }
     }
 }

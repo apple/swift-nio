@@ -443,4 +443,18 @@ final class DatagramChannelTests: XCTestCase {
         XCTAssertEqual(reads[1].data, buffer)
         XCTAssertEqual(reads[1].remoteAddress, self.firstChannel.localAddress!)
     }
+
+    func testSettingTwoDistinctChannelOptionsWorksForDatagramChannel() throws {
+        let channel = try assertNoThrowWithValue(DatagramBootstrap(group: group)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_TIMESTAMP), value: 1)
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
+        defer {
+            XCTAssertNoThrow(try channel.close().wait())
+        }
+        XCTAssertTrue(try getBoolSocketOption(channel: channel, level: SOL_SOCKET, name: SO_REUSEADDR))
+        XCTAssertTrue(try getBoolSocketOption(channel: channel, level: SOL_SOCKET, name: SO_TIMESTAMP))
+        XCTAssertFalse(try getBoolSocketOption(channel: channel, level: SOL_SOCKET, name: SO_KEEPALIVE))
+    }
 }

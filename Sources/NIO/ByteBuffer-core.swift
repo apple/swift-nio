@@ -23,6 +23,16 @@ let sysFree: @convention(c) (UnsafeMutableRawPointer?) -> Void = free
         }
     }
     public extension UnsafeMutableRawBufferPointer {
+        internal static func allocate(byteCount: Int, alignment: Int) -> UnsafeMutableRawBufferPointer {
+            return UnsafeMutableRawBufferPointer.allocate(count: byteCount)
+        }
+
+        internal func initializeMemory<T>(as type: T.Type, repeating repeatedValue: T) -> UnsafeMutableBufferPointer<T> {
+            let ptr = self.bindMemory(to: T.self)
+            ptr.initialize(from: repeatElement(repeatedValue, count: self.count / MemoryLayout<T>.stride))
+            return ptr
+        }
+
         public func copyMemory(from src: UnsafeRawBufferPointer) {
             self.copyBytes(from: src)
         }
