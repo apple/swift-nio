@@ -369,7 +369,7 @@ public class EmbeddedChannel: Channel {
         if buffer.isEmpty {
             return nil
         }
-        return (buffer.removeFirst().forceAs(type: T.self))
+        return buffer.removeFirst().tryAs(type: T.self)
     }
 
     /// Create a new instance.
