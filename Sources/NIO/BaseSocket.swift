@@ -24,7 +24,7 @@ protocol SockAddrProtocol {
 }
 
 /// Returns a description for the given address.
-private func descriptionForAddress(family: CInt, bytes: UnsafeRawPointer, length byteCount: Int) -> String {
+internal func descriptionForAddress(family: CInt, bytes: UnsafeRawPointer, length byteCount: Int) -> String {
     var addressBytes: [Int8] = Array(repeating: 0, count: byteCount)
     return addressBytes.withUnsafeMutableBufferPointer { (addressBytesPtr: inout UnsafeMutableBufferPointer<Int8>) -> String in
         try! Posix.inet_ntop(addressFamily: family,

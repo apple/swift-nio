@@ -75,28 +75,38 @@ public enum SocketAddress: CustomStringConvertible {
 
     /// A human-readable description of this `SocketAddress`. Mostly useful for logging.
     public var description: String {
+        let addressString: String
         let port: String
         let host: String?
         let type: String
         switch self {
         case .v4(let addr):
-            host = addr.host
+            host = addr.host.isEmpty ? nil : addr.host
             type = "IPv4"
+            var mutAddr = addr.address.sin_addr
+            addressString = descriptionForAddress(family: AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
+
             port = "\(self.port!)"
         case .v6(let addr):
-            host = addr.host
+            host = addr.host.isEmpty ? nil : addr.host
             type = "IPv6"
+            var mutAddr = addr.address.sin6_addr
+            addressString = descriptionForAddress(family: AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
+    
             port = "\(self.port!)"
         case .unixDomainSocket(let addr):
             var address = addr.address
             host = nil
             type = "UDS"
+            addressString = ""
             port = withUnsafeBytes(of: &address.sun_path) { ptr in
                 let ptr = ptr.baseAddress!.bindMemory(to: UInt8.self, capacity: 104)
                 return String(cString: ptr)
             }
+            return "[\(type)]\(port)"
         }
-        return "[\(type)]\(host.map { "\($0):" } ?? "")\(port)"
+        
+        return "[\(type)]\(host.map { "\($0)/\(addressString):" } ?? "\(addressString):")\(port)"
     }
 
     /// Returns the protocol family as defined in `man 2 socket` of this `SocketAddress`.
