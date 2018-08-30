@@ -23,7 +23,6 @@ class SocketAddressTest: XCTestCase {
             inet_pton(AF_INET, p, &ipv4SocketAddress.sin_addr)
         }
         XCTAssertEqual(res, 1)
-        //ipv4SocketAddress.sin_addr =
         ipv4SocketAddress.sin_port = (12345 as UInt16).bigEndian
         let sa = SocketAddress(ipv4SocketAddress, host: "foobar.com")
         XCTAssertEqual("[IPv4]foobar.com/10.0.0.1:12345", sa.description)
