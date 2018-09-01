@@ -30,7 +30,12 @@ extension MarkedCircularBufferTests {
                 ("testSimpleMark", testSimpleMark),
                 ("testPassingTheMark", testPassingTheMark),
                 ("testMovingTheMark", testMovingTheMark),
-           ]
+                ("testIndices", testIndices),
+                ("testFirst", testFirst),
+                ("testCount", testCount),
+                ("testSubscript", testSubscript),
+                ("testIsEmpty", testIsEmpty),
+      ]
    }
 }
 
