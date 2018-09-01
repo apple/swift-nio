@@ -167,3 +167,18 @@ function do_curl() {
             ;;
     esac
 }
+
+_new_nc=false
+if nc -h 2>&1 | grep -- -N | grep -q EOF; then
+    # this is a new kind of 'nc' that doesn't automatically shut down
+    # the input socket after EOF. But we rely on that behaviour.
+    _new_nc=true
+fi
+
+function do_nc() {
+    if "$_new_nc"; then
+        nc -N "$@"
+    else
+        nc "$@"
+    fi
+}
