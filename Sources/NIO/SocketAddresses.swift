@@ -190,7 +190,11 @@ public enum SocketAddress: CustomStringConvertible {
             throw SocketAddressError.unixDomainSocketPathTooLong
         }
 
+#if os(Linux) // in linux first byte must be zero to use abstract namespace
+        let pathBytes = [0] + unixDomainSocketPath.utf8
+#else
         let pathBytes = unixDomainSocketPath.utf8 + [0]
+#endif
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)

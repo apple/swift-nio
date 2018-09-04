@@ -92,7 +92,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
         }
 
         let toWriteForThisBuffer = p.data.readableBytes
-        toWrite += toWriteForThisBuffer
+        toWrite += numericCast(toWriteForThisBuffer)
 
         p.data.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
             storageRefs[c] = storageRef.retain()
@@ -132,7 +132,7 @@ private struct PendingDatagramWritesState {
 
     private var pendingWrites = MarkedCircularBuffer<PendingDatagramWrite>(initialRingCapacity: 16)
     private var chunks: Int = 0
-    public private(set) var bytes: Int = 0
+    public private(set) var bytes: Int64 = 0
 
     public var nextWrite: PendingDatagramWrite? {
         return self.pendingWrites.first
@@ -141,7 +141,7 @@ private struct PendingDatagramWritesState {
     /// Subtract `bytes` from the number of outstanding bytes to write.
     private mutating func subtractOutstanding(bytes: Int) {
         assert(self.bytes >= bytes, "allegedly written more bytes (\(bytes)) than outstanding (\(self.bytes))")
-        self.bytes -= bytes
+        self.bytes -= numericCast(bytes)
     }
 
     /// Indicates that the first outstanding write was written.
@@ -177,7 +177,7 @@ private struct PendingDatagramWritesState {
     public mutating func append(_ chunk: PendingDatagramWrite) {
         self.pendingWrites.append(chunk)
         self.chunks += 1
-        self.bytes += chunk.data.readableBytes
+        self.bytes += numericCast(chunk.data.readableBytes)
     }
 
     /// Mark the flush checkpoint.
@@ -285,7 +285,7 @@ private struct PendingDatagramWritesState {
         while !self.pendingWrites.isEmpty {
             let w = self.pendingWrites.removeFirst()
             self.chunks -= 1
-            self.bytes -= w.data.readableBytes
+            self.bytes -= numericCast(w.data.readableBytes)
             w.promise.map { promises.append($0) }
         }
 

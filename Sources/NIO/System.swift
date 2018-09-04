@@ -32,6 +32,7 @@ let badOS = { fatalError("unsupported OS") }()
 
 #if os(Android)
 internal typealias sockaddr_storage = __kernel_sockaddr_storage
+internal typealias in_port_t = UInt16
 #endif
 
 // Declare aliases to share more code and not need to repeat #if #else blocks
@@ -51,10 +52,10 @@ private let sysWrite: @convention(c) (CInt, UnsafeRawPointer?, CLong) -> CLong =
 private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, CLong) -> CLong = read
 private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = lseek
 #if os(Android)
-func sysRecvFrom_wrapper(sockfd: Int32, buf: UnsafeMutableRawPointer, len: Int, flags: Int32, src_addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) -> CLong {
+func sysRecvFrom_wrapper(sockfd: CInt, buf: UnsafeMutableRawPointer, len: CLong, flags: CInt, src_addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) -> CLong {
     return recvfrom(sockfd, buf, len, flags, src_addr, addrlen) // src_addr is 'UnsafeMutablePointer', but it need to be 'UnsafePointer'
 }
-func sysWritev_wrapper(fd: Int32, iov: UnsafePointer<iovec>?, iovcnt: Int32) -> CLong {
+func sysWritev_wrapper(fd: CInt, iov: UnsafePointer<iovec>?, iovcnt: CInt) -> CLong {
     return CLong(writev(fd, iov, iovcnt)) // cast 'Int32' to 'CLong'
 }
 private let sysRecvFrom = sysRecvFrom_wrapper

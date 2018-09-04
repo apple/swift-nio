@@ -25,7 +25,7 @@
 
 #ifdef __ANDROID__
 #include <pthread.h>
-#include "ifaddrs.h"
+#include "ifaddrs-android.h"
 #endif
 
 // Some explanation is required here.

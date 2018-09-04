@@ -97,16 +97,7 @@ class HTTPServerClientTest : XCTestCase {
             case .byteBuffer:
                 return (.body(.byteBuffer(buffer)), { () in })
             case .fileRegion:
-                let filePath: String
-                #if os(Linux)
-                    filePath = "/tmp/\(UUID().uuidString)"
-                #else
-                    if #available(OSX 10.12, *) {
-                        filePath = "\(fileManager.temporaryDirectory.path)/\(UUID().uuidString)"
-                    } else {
-                        filePath = "/tmp/\(UUID().uuidString)"
-                    }
-                #endif
+                let filePath: String = "\(tmpDirectory)/\(UUID().uuidString)"
                 files.append(filePath)
 
                 let content = buffer.getData(at: 0, length: buffer.readableBytes)!

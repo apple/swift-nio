@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef __ANDROID__
 
-#include "ifaddrs.h"
+#include "ifaddrs-android.h"
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
