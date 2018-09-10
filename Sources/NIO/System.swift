@@ -77,6 +77,10 @@ private func isBlacklistedErrno(_ code: Int32) -> Bool {
     }
 }
 
+private func assertIsNotBlacklistedErrno(err: CInt, where function: StaticString) -> Void {
+    assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+}
+
 /* Sorry, we really try hard to not use underscored attributes. In this case however we seem to break the inlining threshold which makes a system call take twice the time, ie. we need this exception. */
 @inline(__always)
 internal func wrapSyscallMayBlock<T: FixedWidthInteger>(where function: StaticString = #function, _ body: () throws -> T) throws -> IOResult<T> {
@@ -90,7 +94,7 @@ internal func wrapSyscallMayBlock<T: FixedWidthInteger>(where function: StaticSt
             case EWOULDBLOCK:
                 return .wouldBlock(0)
             default:
-                assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(strerror(err)!)")
+                assertIsNotBlacklistedErrno(err: err, where: function)
                 throw IOError(errnoCode: err, function: function)
             }
 
@@ -109,7 +113,7 @@ internal func wrapSyscall<T: FixedWidthInteger>(where function: StaticString = #
             if err == EINTR {
                 continue
             }
-            assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(strerror(err)!)")
+            assertIsNotBlacklistedErrno(err: err, where: function)
             throw IOError(errnoCode: err, function: function)
         }
         return res
@@ -125,7 +129,7 @@ internal func wrapErrorIsNullReturnCall<T>(where function: StaticString = #funct
             if err == EINTR {
                 continue
             }
-            assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(strerror(err)!)")
+            assertIsNotBlacklistedErrno(err: err, where: function)
             throw IOError(errnoCode: err, function: function)
         }
         return res
@@ -202,7 +206,7 @@ internal enum Posix {
             //     - https://bugs.chromium.org/p/chromium/issues/detail?id=269623
             //     - https://lwn.net/Articles/576478/
             if err != EINTR {
-                assert(!isBlacklistedErrno(err), "blacklisted errno \(err) \(strerror(err)!)")
+                assertIsNotBlacklistedErrno(err: err, where: #function)
                 throw IOError(errnoCode: err, function: "close")
             }
         }
