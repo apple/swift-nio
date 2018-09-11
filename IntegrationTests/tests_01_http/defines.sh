@@ -17,6 +17,29 @@ function server_lsof() {
     lsof -a -d 0-1024 -p "$1"
 }
 
+function get_number_of_open_fds_for_pid() {
+    server_lsof "$1" >&2
+    server_lsof "$1" | wc -l
+}
+
+# pid, expected_number_of_fds
+function assert_number_of_open_fds_for_pid_equals() {
+    local pid expected actual
+    pid="$1"
+    expected="$2"
+
+    for f in $(seq 50); do
+        sleep 0.2
+        actual=$(get_number_of_open_fds_for_pid "$pid")
+        echo "try $f, actually having $actual open fds, expecting $expected"
+        if [[ "$expected" == "$actual" ]]; then
+            break
+        fi
+    done
+    server_lsof "$pid"
+    assert_equal "$expected" "$actual" "wrong number of open fds"
+}
+
 function do_netstat() {
     pf="$1"
     netstat_options=()
@@ -96,8 +119,7 @@ function start_server() {
     echo "      token_type='$type'; token_server_ip='$maybe_nio_host'" >> "$token"
     tmp_server_pid=$(get_server_pid "$token")
     echo "local token_open_fds" >> "$token"
-    echo "token_open_fds='$(server_lsof "$tmp_server_pid" | wc -l)'" >> "$token"
-    server_lsof "$tmp_server_pid"
+    echo "token_open_fds='$(get_number_of_open_fds_for_pid "$tmp_server_pid")'" >> "$token"
     do_curl "$token" "http://$maybe_host:$curl_port/dynamic/pid"
 }
 
@@ -115,12 +137,8 @@ function stop_server() {
     source "$1"
     sleep 0.5 # just to make sure all the fds could be closed
     if command -v lsof > /dev/null 2> /dev/null; then
-        server_lsof "$token_pid"
         do_netstat "$token_type"
-        local open_fds
-        open_fds=$(server_lsof "$token_pid" | wc -l)
-        assert_equal "$token_open_fds" "$open_fds" \
-            "expected $token_open_fds open fds, found $open_fds"
+        assert_number_of_open_fds_for_pid_equals "$token_pid" "$token_open_fds"
     fi
     kill -0 "$token_pid" # assert server is still running
     ###kill -INT "$token_pid" # tell server to shut down gracefully
