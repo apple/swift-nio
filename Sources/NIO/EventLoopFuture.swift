@@ -147,6 +147,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
 ///     some other API, create an already-resolved object with `eventLoop.newSucceededFuture(result)`
 ///     or `eventLoop.newFailedFuture(error:)`.
 ///
+/// - note: `EventLoopPromise` has reference semantics.
 public struct EventLoopPromise<T> {
     /// The `EventLoopFuture` which is used by the `EventLoopPromise`. You can use it to add callbacks which are notified once the
     /// `EventLoopPromise` is completed.
