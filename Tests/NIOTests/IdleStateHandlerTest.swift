@@ -98,7 +98,7 @@ class IdleStateHandlerTest : XCTestCase {
     }
     
     func testPropagateInboundEvents() {
-        class EventHandler : ChannelInboundHandler {
+        class EventHandler: ChannelInboundHandler {
             typealias InboundIn = Any
             
             var active = false
@@ -172,8 +172,8 @@ class IdleStateHandlerTest : XCTestCase {
         channel.pipeline.fireUserInboundEventTriggered("")
 
         channel.pipeline.fireChannelWritabilityChanged()
-        channel.pipeline.fireChannelUnregistered()
         channel.pipeline.fireChannelInactive()
+        channel.pipeline.fireChannelUnregistered()
         
         XCTAssertFalse(try channel.finish())
         eventHandler.assertAllEventsReceived()
