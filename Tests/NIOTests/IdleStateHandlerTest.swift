@@ -96,4 +96,86 @@ class IdleStateHandlerTest : XCTestCase {
         }
         XCTAssertNoThrow(try clientChannel.closeFuture.wait())
     }
+    
+    func testPropagateInboundEvents() {
+        class EventHandler : ChannelInboundHandler {
+            typealias InboundIn = Any
+            
+            var active = false
+            var inactive = false
+            var read = false
+            var readComplete = false
+            var writabilityChanged = false
+            var eventTriggered = false
+            var errorCaught = false
+            var registered = false
+            var unregistered = false
+
+            func channelActive(ctx: ChannelHandlerContext) {
+                self.active = true
+            }
+            
+            func channelInactive(ctx: ChannelHandlerContext) {
+                self.inactive = true
+            }
+            
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                self.read = true
+            }
+            
+            func channelReadComplete(ctx: ChannelHandlerContext) {
+                self.readComplete = true
+            }
+            
+            func channelWritabilityChanged(ctx: ChannelHandlerContext) {
+                self.writabilityChanged = true
+            }
+  
+            func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+                self.eventTriggered = true
+            }
+            
+            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+                self.errorCaught = true
+            }
+            
+            func channelRegistered(ctx: ChannelHandlerContext) {
+                self.registered = true
+            }
+            
+            func channelUnregistered(ctx: ChannelHandlerContext) {
+                self.unregistered = true
+            }
+            
+            func assertAllEventsReceived() {
+                XCTAssertTrue(self.active)
+                XCTAssertTrue(self.inactive)
+                XCTAssertTrue(self.read)
+                XCTAssertTrue(self.readComplete)
+                XCTAssertTrue(self.writabilityChanged)
+                XCTAssertTrue(self.eventTriggered)
+                XCTAssertTrue(self.errorCaught)
+                XCTAssertTrue(self.registered)
+                XCTAssertTrue(self.unregistered)
+            }
+        }
+        let eventHandler = EventHandler()
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.pipeline.add(handler: IdleStateHandler()).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: eventHandler).wait())
+        
+        channel.pipeline.fireChannelRegistered()
+        channel.pipeline.fireChannelActive()
+        channel.pipeline.fireChannelRead(NIOAny(""))
+        channel.pipeline.fireChannelReadComplete()
+        channel.pipeline.fireErrorCaught(ChannelError.alreadyClosed)
+        channel.pipeline.fireUserInboundEventTriggered("")
+
+        channel.pipeline.fireChannelWritabilityChanged()
+        channel.pipeline.fireChannelUnregistered()
+        channel.pipeline.fireChannelInactive()
+        
+        XCTAssertFalse(try channel.finish())
+        eventHandler.assertAllEventsReceived()
+    }
 }
