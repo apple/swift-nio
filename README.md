@@ -205,6 +205,37 @@ First make sure you have [Docker](https://www.docker.com/community-edition) inst
 
 For the most part, SwiftNIO development is as straightforward as any other SwiftPM project. With that said, we do have a few processes that are worth understanding before you contribute. For details, please see `CONTRIBUTING.md` in this repository.
 
+### Prerequisites
+
+To be able to compile and run SwiftNIO and the integration tests, you need to
+have a few prerequisites installed on your system.
+
+#### macOS
+
+- Xcode 9 or newer
+
+### Linux
+
+- Swift 4.0 or newer
+- zlib and its development headers
+- netcat (for integration tests only)
+- lsof (for integration tests only)
+- shasum (for integration tests only)
+
+#### Ubuntu
+
+```
+# install swift tarball from https://swift.org/downloads
+apt-get install -y zlib1g-dev netcat-openbsd lsof perl
+```
+
+
+### Fedora 28+
+
+```
+dnf install swift-lang zlib-devel /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
+```
+
 [ch]: https://apple.github.io/swift-nio/docs/current/NIO/Protocols/ChannelHandler.html
 [c]: https://apple.github.io/swift-nio/docs/current/NIO/Protocols/Channel.html
 [chc]: https://apple.github.io/swift-nio/docs/current/NIO/Classes/ChannelHandlerContext.html
