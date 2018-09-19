@@ -246,7 +246,7 @@ private extension String {
         case .string(let string):
             self = string
         case .byteBuffer(let buffer):
-            self = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes)!
+            self = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes)! // bytes definitely in buffer
         }
     }
 }

@@ -84,14 +84,16 @@ public enum SocketAddress: CustomStringConvertible {
             host = addr.host.isEmpty ? nil : addr.host
             type = "IPv4"
             var mutAddr = addr.address.sin_addr
-            addressString = descriptionForAddress(family: AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            addressString = try! descriptionForAddress(family: AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
 
             port = "\(self.port!)"
         case .v6(let addr):
             host = addr.host.isEmpty ? nil : addr.host
             type = "IPv6"
             var mutAddr = addr.address.sin6_addr
-            addressString = descriptionForAddress(family: AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            addressString = try! descriptionForAddress(family: AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
     
             port = "\(self.port!)"
         case .unixDomainSocket(let addr):

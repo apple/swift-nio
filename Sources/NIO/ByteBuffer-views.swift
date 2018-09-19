@@ -53,7 +53,7 @@ public struct ByteBufferView: ContiguousCollection, RandomAccessCollection {
         guard position >= self.range.lowerBound && position < self.range.upperBound else {
             preconditionFailure("index \(position) out of range")
         }
-        return self.buffer.getInteger(at: position)!
+        return self.buffer.getInteger(at: position)! // range check above
     }
 
     public subscript(range: Range<Index>) -> ByteBufferView {
