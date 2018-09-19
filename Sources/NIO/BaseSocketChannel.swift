@@ -805,6 +805,9 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
 
         if self.lifecycleManager.isPreRegistered {
+            // we expect kqueue/epoll registration to always succeed which is basically true, except for errors that
+            // should be fatal (EBADF, EFAULT, ESRCH, ENOMEM) and a two 'table full' (EMFILE, ENFILE) error kinds which
+            // we don't handle yet but might do in the future (#469).
             try! becomeFullyRegistered0()
             if self.lifecycleManager.isRegisteredFully {
                 self.becomeActive0(promise: promise)
@@ -966,6 +969,9 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             if let channelErr = err as? ChannelError, channelErr == ChannelError.eof {
                 readStreamState = .eof
                 // Directly call getOption0 as we are already on the EventLoop and so not need to create an extra future.
+
+                // getOption0 can only fail if the channel is not active anymore but we assert further up that it is. If
+                // that's not the case this is a precondition failure and we would like to know.
                 if self.lifecycleManager.isActive, try! getOption0(option: ChannelOptions.allowRemoteHalfClosure) {
                     // If we want to allow half closure we will just mark the input side of the Channel
                     // as closed.

@@ -171,7 +171,7 @@ public class SniHandler: ByteToMessageDecoder {
         //
         // From this point onwards if we don't have enough data to satisfy a read, this is an error and
         // we will fall back to let the upper layers handle it.
-        tempBuffer = tempBuffer.getSlice(at: tempBuffer.readerIndex, length: Int(contentLength))!
+        tempBuffer = tempBuffer.getSlice(at: tempBuffer.readerIndex, length: Int(contentLength))! // length check above
 
         // Now parse the handshake header. If the length of the handshake message is not exactly the
         // length of this record, something has gone wrong and we should give up.
@@ -204,7 +204,7 @@ public class SniHandler: ByteToMessageDecoder {
         }
 
         // Check the content type.
-        let contentType: UInt8 = buffer.readInteger()!
+        let contentType: UInt8 = buffer.readInteger()! // length check above
         guard contentType == tlsContentTypeHandshake else {
             // Whatever this is, it's not a handshake message, so something has gone
             // wrong. We're going to fall back to the default handler here and let
@@ -213,7 +213,7 @@ public class SniHandler: ByteToMessageDecoder {
         }
 
         // Now, check the major version.
-        let majorVersion: UInt8 = buffer.readInteger()!
+        let majorVersion: UInt8 = buffer.readInteger()! // length check above
         guard majorVersion == 3 else {
             // A major version of 3 is the major version used for SSLv3 and all subsequent versions
             // of the protocol. If that's not what this is, we don't know what's happening here.
@@ -223,7 +223,7 @@ public class SniHandler: ByteToMessageDecoder {
 
         // Skip the minor version byte, then grab the content length.
         buffer.moveReaderIndex(forwardBy: 1)
-        let contentLength: UInt16 = buffer.readInteger()!
+        let contentLength: UInt16 = buffer.readInteger()! // length check above
         return Int(contentLength)
     }
 

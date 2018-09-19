@@ -331,6 +331,8 @@ final class Selector<R: Registration> {
          is likely to cause performance problems. By abusing ARC, we get the guarantee that there won't be any future
          wakeup calls as there are no references to this selector left. 💁
          */
+
+        // we try! this because `close` only fails in cases that should never happen (EBADF).
 #if os(Linux)
         try! Posix.close(descriptor: self.eventfd)
 #else

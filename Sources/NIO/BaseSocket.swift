@@ -24,13 +24,13 @@ protocol SockAddrProtocol {
 }
 
 /// Returns a description for the given address.
-internal func descriptionForAddress(family: CInt, bytes: UnsafeRawPointer, length byteCount: Int) -> String {
+internal func descriptionForAddress(family: CInt, bytes: UnsafeRawPointer, length byteCount: Int) throws -> String {
     var addressBytes: [Int8] = Array(repeating: 0, count: byteCount)
-    return addressBytes.withUnsafeMutableBufferPointer { (addressBytesPtr: inout UnsafeMutableBufferPointer<Int8>) -> String in
-        try! Posix.inet_ntop(addressFamily: family,
-                             addressBytes: bytes,
-                             addressDescription: addressBytesPtr.baseAddress!,
-                             addressDescriptionLength: socklen_t(byteCount))
+    return try addressBytes.withUnsafeMutableBufferPointer { (addressBytesPtr: inout UnsafeMutableBufferPointer<Int8>) -> String in
+        try Posix.inet_ntop(addressFamily: family,
+                            addressBytes: bytes,
+                            addressDescription: addressBytesPtr.baseAddress!,
+                            addressDescriptionLength: socklen_t(byteCount))
         return addressBytesPtr.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: byteCount) { addressBytesPtr -> String in
             String(cString: addressBytesPtr)
         }
@@ -78,7 +78,8 @@ extension sockaddr_in: SockAddrProtocol {
     /// Returns a description of the `sockaddr_in`.
     mutating func addressDescription() -> String {
         return withUnsafePointer(to: &self.sin_addr) { addrPtr in
-            descriptionForAddress(family: AF_INET, bytes: addrPtr, length: Int(INET_ADDRSTRLEN))
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            try! descriptionForAddress(family: AF_INET, bytes: addrPtr, length: Int(INET_ADDRSTRLEN))
         }
     }
 }
@@ -101,7 +102,8 @@ extension sockaddr_in6: SockAddrProtocol {
     /// Returns a description of the `sockaddr_in6`.
     mutating func addressDescription() -> String {
         return withUnsafePointer(to: &self.sin6_addr) { addrPtr in
-            descriptionForAddress(family: AF_INET6, bytes: addrPtr, length: Int(INET6_ADDRSTRLEN))
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            try! descriptionForAddress(family: AF_INET6, bytes: addrPtr, length: Int(INET6_ADDRSTRLEN))
         }
     }
 }
