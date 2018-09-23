@@ -846,7 +846,6 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
     private let eventLoops: [SelectableEventLoop]
 
     private static func setupThreadAndEventLoop(name: String, initializer: @escaping ThreadInitializer)  -> SelectableEventLoop {
-        let lock = Lock()
         /* the `loopUpAndRunningGroup` is done by the calling thread when the EventLoop has been created and was written to `_loop` */
         let loopUpAndRunningGroup = DispatchGroup()
 
@@ -864,9 +863,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
                 defer {
                     threadSpecificEventLoop.currentValue = nil
                 }
-                lock.withLock {
-                    _loop = l
-                }
+                _loop = l
                 loopUpAndRunningGroup.leave()
                 try l.run()
             } catch let err {
@@ -874,7 +871,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
             }
         }
         loopUpAndRunningGroup.wait()
-        return lock.withLock { _loop }
+        return _loop
     }
 
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numberOfThreads`.
