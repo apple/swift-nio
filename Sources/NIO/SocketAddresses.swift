@@ -191,7 +191,7 @@ public enum SocketAddress: CustomStringConvertible {
         }
 
 #if os(Android) // in Android first byte must be zero to use abstract namespace
-        let pathBytes = [0] + unixDomainSocketPath.utf8
+        let pathBytes = [0] + Array(unixDomainSocketPath.utf8) + [0]
 #else
         let pathBytes = unixDomainSocketPath.utf8 + [0]
 #endif

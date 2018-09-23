@@ -33,6 +33,8 @@ let badOS = { fatalError("unsupported OS") }()
 #if os(Android)
 internal typealias sockaddr_storage = __kernel_sockaddr_storage
 internal typealias in_port_t = UInt16
+let getifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>?) -> CInt = android_getifaddrs
+let freeifaddrs: @convention(c) (UnsafeMutablePointer<ifaddrs>?) -> Void = android_freeifaddrs
 #endif
 
 // Declare aliases to share more code and not need to repeat #if #else blocks

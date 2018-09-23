@@ -244,12 +244,12 @@ final class DatagramChannelTests: XCTestCase {
             }
             let envelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
 
-            let lotsOfData = Int(Int32.max) - bufferSize
-            var written = 0
+            let lotsOfData = Int(Int32.max)
+            var written: Int64 = 0
             while written <= lotsOfData {
                 self.firstChannel.write(NIOAny(envelope), promise: myPromise)
                 overall = EventLoopFuture<Void>.andAll([overall, myPromise.futureResult], eventLoop: self.firstChannel.eventLoop)
-                written += bufferSize
+                written += Int64(bufferSize)
                 datagrams += 1
             }
         }.wait()

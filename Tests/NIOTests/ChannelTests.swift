@@ -159,11 +159,11 @@ public class ChannelTests: XCTestCase {
         }
 
 
-        let lotsOfData = Int(Int32.max) - bufferSize
-        var written = 0
+        let lotsOfData = Int(Int32.max)
+        var written: Int64 = 0
         while written <= lotsOfData {
             clientChannel.write(NIOAny(buffer), promise: nil)
-            written += bufferSize
+            written += Int64(bufferSize)
         }
 
         XCTAssertNoThrow(try clientChannel.writeAndFlush(NIOAny(buffer)).wait())
@@ -706,8 +706,8 @@ public class ChannelTests: XCTestCase {
                                         hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
                                         hookedFree: { _ in },
                                         hookedMemcpy: { _, _, _ in })
-        /* size of each buffer - is the writev limit */
-        let biggerThanWriteV = Socket.writevLimitBytes + 23 // fails on 32bit system
+
+        let biggerThanWriteV = Socket.writevLimitBytes + 23
         var buffer = alloc.buffer(capacity: biggerThanWriteV)
         buffer.moveReaderIndex(to: 0)
         buffer.moveWriterIndex(to: biggerThanWriteV)

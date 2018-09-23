@@ -474,8 +474,8 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                         hookedRealloc: { _, _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
                                         hookedFree: { _ in },
                                         hookedMemcpy: { _, _, _ in })
-        /* size of each buffer - is writev limit */
-        let biggerThanWriteV = Socket.writevLimitBytes + 23 // fails on 32bit system
+
+        let biggerThanWriteV = Socket.writevLimitBytes + 23
         var buffer = alloc.buffer(capacity: biggerThanWriteV)
         buffer.moveReaderIndex(to: 0)
         buffer.moveWriterIndex(to: biggerThanWriteV)

@@ -82,7 +82,6 @@ class HTTPServerClientTest : XCTestCase {
         typealias OutboundOut = HTTPServerResponsePart
 
         private let mode: SendMode
-        private let fileManager = FileManager.default
         private var files: [String] = Array()
         private var seenEnd: Bool = false
         private var sentEnd: Bool = false
@@ -97,7 +96,7 @@ class HTTPServerClientTest : XCTestCase {
             case .byteBuffer:
                 return (.body(.byteBuffer(buffer)), { () in })
             case .fileRegion:
-                let filePath: String = "\(tmpDirectory)/\(UUID().uuidString)"
+                let filePath: String = "\(temporaryDirectory)/\(UUID().uuidString)"
                 files.append(filePath)
 
                 let content = buffer.getData(at: 0, length: buffer.readableBytes)!
@@ -107,12 +106,6 @@ class HTTPServerClientTest : XCTestCase {
                                              readerIndex: 0,
                                              endIndex: buffer.readableBytes)
                 return (.body(.fileRegion(region)), { try! fh.close() })
-            }
-        }
-
-        public func handlerRemoved(ctx: ChannelHandlerContext) {
-            for f in files {
-                _ = try? fileManager.removeItem(atPath: f)
             }
         }
 

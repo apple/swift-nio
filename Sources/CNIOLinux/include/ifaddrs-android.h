@@ -1,3 +1,4 @@
+#ifdef __ANDROID__
 /*
 Copyright (c) 2011, The WebRTC project authors. All rights reserved.
 
@@ -30,35 +31,32 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <netdb.h>
+#ifndef WEBRTC_BASE_IFADDRS_ANDROID_H_
+#define WEBRTC_BASE_IFADDRS_ANDROID_H_
 
-#ifdef __ANDROID__
-#if __ANDROID_API__ < 24
+#include <stdio.h>
+#include <sys/socket.h>
+#include <netdb.h> 
 
-#ifndef    _IFADDRS_H_
-#define    _IFADDRS_H_
-
+/* Implementation of getifaddrs for Android.
+ * Fills out a list of ifaddr structs (see below) which contain information
+ * about every network interface available on the host.
+ * See 'man getifaddrs' on Linux or OS X (nb: it is not a POSIX function). */
 struct ifaddrs {
-    struct ifaddrs *ifa_next;
-    char *ifa_name;
-    unsigned int ifa_flags;
-    struct sockaddr *ifa_addr;
-    struct sockaddr *ifa_netmask;
-    union {
-        struct sockaddr *ifu_broadaddr;
-        struct sockaddr *ifu_dstaddr;
-    } ifa_ifu;
+  struct ifaddrs* ifa_next;
+  char* ifa_name;
+  unsigned int ifa_flags;
+  struct sockaddr* ifa_addr;
+  struct sockaddr* ifa_netmask;
+  union {
+      struct sockaddr *ifu_broadaddr;
+      struct sockaddr *ifu_dstaddr;
+  } ifa_ifu;
 };
 
+int android_getifaddrs(struct ifaddrs** result);
+void android_freeifaddrs(struct ifaddrs* addrs);
 
-#include <sys/cdefs.h>
+#endif  /* WEBRTC_BASE_IFADDRS_ANDROID_H_ */
+#endif
 
-__BEGIN_DECLS
-extern int getifaddrs(struct ifaddrs **ifap); // only AF_INET6 and AF_INET
-extern void freeifaddrs(struct ifaddrs *ifa);
-__END_DECLS
-
-#endif // end of #ifndef    _IFADDRS_H_
-
-#endif // end of __ANDROID_API__ < 24
-#endif // end #ifdef __ANDROID__

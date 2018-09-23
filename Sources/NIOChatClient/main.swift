@@ -11,17 +11,24 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if !os(Android)
 import NIO
 
 private final class ChatHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
 
+    private func printByte(_ byte: UInt8) {
+        #if os(Android)
+        print(Character(UnicodeScalar(byte)),  terminator:"")
+        #else
+        fputc(Int32(byte), stdout)
+        #endif
+    }
+
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         var buffer = self.unwrapInboundIn(data)
         while let byte: UInt8 = buffer.readInteger() {
-            fputc(Int32(byte), stdout)
+            printByte(byte)
         }
     }
 
@@ -94,4 +101,3 @@ while let line = readLine(strippingNewline: false) {
 try! channel.close().wait()
 
 print("ChatClient closed")
-#endif

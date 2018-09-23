@@ -30,10 +30,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-// https://dxr.mozilla.org/mozilla-beta/source/media/mtransport/third_party/nICEr/src/stun/ifaddrs-android.c
-
 #ifdef __ANDROID__
-
 #include "ifaddrs-android.h"
 #include <stdlib.h>
 #include <string.h>
@@ -155,7 +152,7 @@ static int populate_ifaddrs(struct ifaddrs* ifaddr, struct ifaddrmsg* msg, void*
   return 0;
 }
 
-int getifaddrs(struct ifaddrs** result) {
+int android_getifaddrs(struct ifaddrs** result) {
   int fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
   if (fd < 0) {
     return -1;
@@ -189,7 +186,7 @@ int getifaddrs(struct ifaddrs** result) {
           return 0;
         case NLMSG_ERROR:
           close(fd);
-          freeifaddrs(start);
+          android_freeifaddrs(start);
           return -1;
         case RTM_NEWADDR: {
           struct ifaddrmsg* address_msg =
@@ -209,7 +206,7 @@ int getifaddrs(struct ifaddrs** result) {
                 }
                 if (populate_ifaddrs(newest, address_msg, RTA_DATA(rta),
                                      RTA_PAYLOAD(rta)) != 0) {
-                  freeifaddrs(start);
+                  android_freeifaddrs(start);
                   *result = NULL;
                   return -1;
                 }
@@ -225,11 +222,11 @@ int getifaddrs(struct ifaddrs** result) {
     amount_read = recv(fd, &buf, kMaxReadSize, 0);
   }
   close(fd);
-  freeifaddrs(start);
+  android_freeifaddrs(start);
   return -1;
 }
 
-void freeifaddrs(struct ifaddrs* addrs) {
+void android_freeifaddrs(struct ifaddrs* addrs) {
   struct ifaddrs* last = NULL;
   struct ifaddrs* cursor = addrs;
   while (cursor) {
@@ -242,5 +239,4 @@ void freeifaddrs(struct ifaddrs* addrs) {
   }
 }
 
-
-#endif
+#endif  /* defined(ANDROID) */
