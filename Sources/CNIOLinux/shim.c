@@ -47,12 +47,12 @@ int CNIOLinux_pthread_getname_np(pthread_t thread, char *name, size_t len) {
 #ifdef __ANDROID__
     // https://android.googlesource.com/platform/bionic/+/master/libc/bionic/pthread_setname_np.cpp#51
     if (thread == pthread_self()) {
-        return prctl(PR_GET_NAME, name) ? -1 : 0;
+        return TEMP_FAILURE_RETRY(prctl(PR_GET_NAME, name)) == -1 ? -1 : 0;
     }
 
     char comm_name[64];
     snprintf(comm_name, sizeof(comm_name), "/proc/self/task/%d/comm", pthread_gettid_np(thread));
-    int fd = open(comm_name, O_CLOEXEC | O_RDONLY);
+    int fd = TEMP_FAILURE_RETRY(open(comm_name, O_CLOEXEC | O_RDONLY));
 
     if (fd == -1) return -1;
 
