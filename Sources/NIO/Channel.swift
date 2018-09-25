@@ -331,10 +331,27 @@ public enum ChannelError: Error {
 }
 
 /// This should be inside of `ChannelError` but we keep it separate to not break API.
-// TODO: For 2.0: bring this inside of `ChannelError`
+// TODO: For 2.0: bring this inside of `ChannelError`. https://github.com/apple/swift-nio/issues/620
 public enum ChannelLifecycleError: Error {
     /// An operation that was inappropriate given the current `Channel` state was attempted.
     case inappropriateOperationForState
+}
+
+/// This should be inside of `ChannelError` but we keep it separate to not break API.
+// TODO: For 2.0: bring this inside of `ChannelError`. https://github.com/apple/swift-nio/issues/620
+public enum MulticastError: Error {
+    /// The local address of the `Channel` could not be determined.
+    case unknownLocalAddress
+
+    /// The address family of the multicast group was not valid for this `Channel`.
+    case badMulticastGroupAddressFamily
+
+    /// The address family of the provided multicast group join is not valid for this `Channel`.
+    case badInterfaceAddressFamily
+
+    /// An attempt was made to join a multicast group that does not correspond to a multicast
+    /// address.
+    case illegalMulticastAddress(SocketAddress)
 }
 
 extension ChannelError: Equatable {
