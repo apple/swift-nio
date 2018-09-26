@@ -329,8 +329,8 @@ extension SocketAddress {
             // The easy way to check if this is the case is to just mask off
             // the address.
             let v4WireAddress = v4Addr.address.sin_addr.s_addr
-            let mask = in_addr_t(0xF000_0000).bigEndian
-            let subnet = in_addr_t(0xE000_0000).bigEndian
+            let mask = in_addr_t(0xF000_0000 as UInt32).bigEndian
+            let subnet = in_addr_t(0xE000_0000 as UInt32).bigEndian
             return v4WireAddress & mask == subnet
         case .v6(let v6Addr):
             // For IPv6 a multicast address is in the range ff00::/8.
