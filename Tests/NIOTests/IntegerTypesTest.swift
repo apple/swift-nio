@@ -96,7 +96,7 @@ public class IntegerTypesTest: XCTestCase {
         XCTAssertEqual("72057594037927935", _UInt56.max.description)
         XCTAssertEqual("12345678901234567", _UInt56(12345678901234567 as UInt64).description)
         XCTAssertEqual("1", _UInt56(1).description)
-        XCTAssertEqual("36028797018963968", _UInt56(1 << 55).description)
         XCTAssertEqual("66", _UInt56(66).description)
+        XCTAssertEqual("36028797018963968", _UInt56(UInt64(1) << 55).description)
     }
 }

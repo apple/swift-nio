@@ -57,9 +57,24 @@ func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.FileHandle, Strin
     }
     return try body(fileHandle, path)
 }
-
+var temporaryDirectory: String {
+    get {
+#if os(Android)
+        return "/data/local/tmp"
+#elseif os(Linux)
+        return "/tmp"
+#else
+        if #available(OSX 10.12, *) {
+            return FileManager.default.temporaryDirectory.path
+        } else {
+            return "/tmp"
+        }
+#endif
+    }
+}
 func createTemporaryDirectory() -> String {
-    let template = "/tmp/.NIOTests-temp-dir_XXXXXX"
+    let template = "\(temporaryDirectory)/.NIOTests-temp-dir_XXXXXX"
+
     var templateBytes = template.utf8 + [0]
     let templateBytesCount = templateBytes.count
     templateBytes.withUnsafeMutableBufferPointer { ptr in
@@ -73,7 +88,7 @@ func createTemporaryDirectory() -> String {
 }
 
 func openTemporaryFile() -> (CInt, String) {
-    let template = "/tmp/niotestXXXXXXX"
+    let template = "\(temporaryDirectory)/niotestXXXXXXX"
     var templateBytes = template.utf8 + [0]
     let templateBytesCount = templateBytes.count
     let fd = templateBytes.withUnsafeMutableBufferPointer { ptr in

@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
+import CNIOLinux
+
 public enum SocketAddressError: Error {
     /// The host is unknown (could not be resolved).
     case unknown(host: String, port: Int)
@@ -188,7 +190,11 @@ public enum SocketAddress: CustomStringConvertible {
             throw SocketAddressError.unixDomainSocketPathTooLong
         }
 
+#if os(Android) // in Android first byte must be zero to use abstract namespace
+        let pathBytes = [0] + Array(unixDomainSocketPath.utf8) + [0]
+#else
         let pathBytes = unixDomainSocketPath.utf8 + [0]
+#endif
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
@@ -323,8 +329,8 @@ extension SocketAddress {
             // The easy way to check if this is the case is to just mask off
             // the address.
             let v4WireAddress = v4Addr.address.sin_addr.s_addr
-            let mask = in_addr_t(0xF000_0000).bigEndian
-            let subnet = in_addr_t(0xE000_0000).bigEndian
+            let mask = in_addr_t(0xF000_0000 as UInt32).bigEndian
+            let subnet = in_addr_t(0xE000_0000 as UInt32).bigEndian
             return v4WireAddress & mask == subnet
         case .v6(let v6Addr):
             // For IPv6 a multicast address is in the range ff00::/8.

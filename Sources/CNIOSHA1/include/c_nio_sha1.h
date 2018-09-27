@@ -48,6 +48,10 @@
 #define _CRYPTO_SHA1_H_
 #include <sys/types.h>
 
+#ifdef __ANDROID__
+#include <sys/endian.h>
+#endif
+
 struct sha1_ctxt {
 	union {
 		u_int8_t	b8[20];

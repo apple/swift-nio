@@ -17,7 +17,8 @@
 #include <c_nio_linux.h>
 #include <pthread.h>
 #include <sched.h>
-
+#include <stdio.h>
+#include <sys/prctl.h>
 
 _Static_assert(sizeof(CNIOLinux_mmsghdr) == sizeof(struct mmsghdr),
                "sizes of CNIOLinux_mmsghdr and struct mmsghdr differ");
@@ -43,14 +44,52 @@ int CNIOLinux_pthread_setname_np(pthread_t thread, const char *name) {
 }
 
 int CNIOLinux_pthread_getname_np(pthread_t thread, char *name, size_t len) {
+#ifdef __ANDROID__
+    // https://android.googlesource.com/platform/bionic/+/master/libc/bionic/pthread_setname_np.cpp#51
+    if (thread == pthread_self()) {
+        return TEMP_FAILURE_RETRY(prctl(PR_GET_NAME, name)) == -1 ? -1 : 0;
+    }
+
+    char comm_name[64];
+    snprintf(comm_name, sizeof(comm_name), "/proc/self/task/%d/comm", pthread_gettid_np(thread));
+    int fd = TEMP_FAILURE_RETRY(open(comm_name, O_CLOEXEC | O_RDONLY));
+
+    if (fd == -1) return -1;
+
+    ssize_t n = TEMP_FAILURE_RETRY(read(fd, name, len));
+    close(fd);
+    if (n == -1) return -1;
+
+    // The kernel adds a trailing '\n' to the /proc file,
+    // so this is actually the normal case for short names.
+    if (n > 0 && name[n - 1] == '\n') {
+        name[n - 1] = '\0';
+        return 0;
+    }
+
+    if (n >= 0 && len <= SSIZE_MAX && n == (ssize_t)len) return 1;
+
+    name[n] = '\0';
+    return 0;
+#else
     return pthread_getname_np(thread, name, len);
+#endif
 }
 
 int CNIOLinux_pthread_setaffinity_np(pthread_t thread, size_t cpusetsize, const cpu_set_t *cpuset) {
+#ifdef __ANDROID__
+    return sched_setaffinity(pthread_gettid_np(thread), cpusetsize, cpuset);
+#else
     return pthread_setaffinity_np(thread, cpusetsize, cpuset);
+#endif
 }
+
 int CNIOLinux_pthread_getaffinity_np(pthread_t thread, size_t cpusetsize, cpu_set_t *cpuset) {
+#ifdef __ANDROID__
+    return sched_getaffinity(pthread_gettid_np(thread), cpusetsize, cpuset);
+#else
     return pthread_getaffinity_np(thread, cpusetsize, cpuset);
+#endif
 }
 
 void CNIOLinux_CPU_SET(int cpu, cpu_set_t *set) {

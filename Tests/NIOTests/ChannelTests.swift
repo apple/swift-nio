@@ -157,13 +157,13 @@ public class ChannelTests: XCTestCase {
         for _ in 0..<bufferSize {
             buffer.write(staticString: "a")
         }
-        
+
 
         let lotsOfData = Int(Int32.max)
-        var written = 0
+        var written: Int64 = 0
         while written <= lotsOfData {
             clientChannel.write(NIOAny(buffer), promise: nil)
-            written += bufferSize
+            written += Int64(bufferSize)
         }
 
         XCTAssertNoThrow(try clientChannel.writeAndFlush(NIOAny(buffer)).wait())
@@ -286,7 +286,7 @@ public class ChannelTests: XCTestCase {
             if let expected = expectedVectorWritabilities {
                 if expected.count > multiState {
                     XCTAssertGreaterThan(returns.count, everythingState)
-                    XCTAssertEqual(expected[multiState], ptrs.map { $0.iov_len },
+                    XCTAssertEqual(expected[multiState], ptrs.map { numericCast($0.iov_len) },
                                    "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState]) byte counts expected but \(ptrs.map { $0.iov_len }) actual",
                         file: file, line: line)
                     return returns[everythingState]
@@ -697,12 +697,16 @@ public class ChannelTests: XCTestCase {
 
     /// Test that with a massive buffers (bigger than writev size), we don't offer more than we should to `writev`.
     func testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk() throws {
+        if MemoryLayout<Int>.size == MemoryLayout<Int32>.size  { // skip this test on 32bit system
+            return
+        }
+
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
                                         hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
                                         hookedFree: { _ in },
                                         hookedMemcpy: { _, _, _ in })
-        /* each buffer is half the writev limit */
+
         let biggerThanWriteV = Socket.writevLimitBytes + 23
         var buffer = alloc.buffer(capacity: biggerThanWriteV)
         buffer.moveReaderIndex(to: 0)

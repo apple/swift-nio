@@ -119,7 +119,7 @@ public class EventLoopTest : XCTestCase {
         waitForExpectations(timeout: 1) { error in
             XCTAssertNil(error)
             XCTAssertEqual(counter.load(), count + 1)
-            XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds + count * delay.nanoseconds)
+            XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds + numericCast(count) * delay.nanoseconds)
         }
     }
 
