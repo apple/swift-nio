@@ -58,15 +58,25 @@ final class SocketOptionProviderTest: XCTestCase {
         self.serverChannel = try? assertNoThrowWithValue(ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait())
         self.clientChannel = try? assertNoThrowWithValue(ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait())
 
+        // We need to join these multicast groups on the loopback interface to work around issues with rapidly joining and leaving
+        // many multicast groups. On some OSes, if we do that on a public interface, we can build up a kernel backlog of IGMP
+        // joins/leaves that may eventually lead to an ENOMEM and a spurious test failure. As joining/leaving groups on loopback
+        // interfaces does not require IGMP joins/leaves, forcing these joins onto the loopback interface saves us from this
+        // risk.
+        let v4LoopbackAddress = try! SocketAddress(ipAddress: "127.0.0.1", port: 0)
+        let v6LoopbackAddress = try! SocketAddress(ipAddress: "::1", port: 0)
+        let v4LoopbackInterface = try! System.enumerateInterfaces().filter { $0.address == v4LoopbackAddress }.first!
+
         self.ipv4DatagramChannel = try? assertNoThrowWithValue(
             DatagramBootstrap(group: group).bind(host: "127.0.0.1", port: 0).then { channel in
-                return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "224.0.2.66", port: 0)).map { channel }
+                return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "224.0.2.66", port: 0), interface: v4LoopbackInterface).map { channel }
             }.wait()
         )
 
         // The IPv6 setup is allowed to fail, some hosts don't have IPv6.
+       let v6LoopbackInterface = try! System.enumerateInterfaces().filter { $0.address == v6LoopbackAddress }.first
         self.ipv6DatagramChannel = try? DatagramBootstrap(group: group).bind(host: "::1", port: 0).then { channel in
-            return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "ff12::beeb", port: 0)).map { channel }
+            return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "ff12::beeb", port: 0), interface: v6LoopbackInterface).map { channel }
         }.wait()
     }
 
