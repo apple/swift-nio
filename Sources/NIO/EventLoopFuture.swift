@@ -912,7 +912,7 @@ extension EventLoopFuture {
 
     /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
     /// The new `EventLoopFuture` contains the result of combining the `initialResult` with the
-    /// values of the `[EventLoopFuture<U>]`. This funciton is analogous to the standard library's
+    /// values of the `[EventLoopFuture<U>]`. This function is analogous to the standard library's
     /// `reduce(into:)`, which does not make copies of the result type for each `EventLoopFuture`.
     ///
     /// The returned `EventLoopFuture` will fail as soon as a failure is encountered in any of the
