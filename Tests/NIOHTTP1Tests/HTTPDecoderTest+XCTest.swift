@@ -39,6 +39,7 @@ extension HTTPDecoderTest {
                 ("testDontDropExtraBytes", testDontDropExtraBytes),
                 ("testExtraCRLF", testExtraCRLF),
                 ("testSOURCEDoesntExplodeUs", testSOURCEDoesntExplodeUs),
+                ("testExtraCarriageReturnBetweenSubsequentRequests", testExtraCarriageReturnBetweenSubsequentRequests),
            ]
    }
 }
