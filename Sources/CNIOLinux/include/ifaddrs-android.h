@@ -48,10 +48,12 @@ struct ifaddrs {
   unsigned int ifa_flags;
   struct sockaddr* ifa_addr;
   struct sockaddr* ifa_netmask;
-  union {
-      struct sockaddr *ifu_broadaddr;
-      struct sockaddr *ifu_dstaddr;
-  } ifa_ifu;
+union {
+struct sockaddr *ifu_broadaddr;
+struct sockaddr *ifu_dstaddr;
+} ifa_ifu;
+  /* Real ifaddrs has broadcast, point to point and data members.
+   * We don't need them (yet?). */
 };
 
 int android_getifaddrs(struct ifaddrs** result);

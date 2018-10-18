@@ -14,7 +14,7 @@
 #ifdef __linux__
 
 #define _GNU_SOURCE
-#include <c_nio_linux.h>
+#include <CNIOLinux.h>
 #include <pthread.h>
 #include <sched.h>
 #include <stdio.h>
