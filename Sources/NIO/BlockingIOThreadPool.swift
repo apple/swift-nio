@@ -167,6 +167,15 @@ public final class BlockingIOThreadPool {
             }
         }
     }
+    
+    deinit {
+        switch self.state {
+        case .stopped, .shuttingDown:
+            ()
+        default:
+            assertionFailure("wrong state \(self.state)")
+        }
+    }
 }
 
 public extension BlockingIOThreadPool {
