@@ -4,6 +4,7 @@
     - removed the _KERNEL include guards
     - defined the __min_size macro inline
     - included sys/types.h in c_nio_sha1.h
+    - included sys/endian.h on Android
 */
 /*	$FreeBSD$	*/
 /*	$KAME: sha1.h,v 1.5 2000/03/27 04:36:23 sumikawa Exp $	*/
@@ -47,7 +48,6 @@
 #ifndef _CRYPTO_SHA1_H_
 #define _CRYPTO_SHA1_H_
 #include <sys/types.h>
-
 #ifdef __ANDROID__
 #include <sys/endian.h>
 #endif
