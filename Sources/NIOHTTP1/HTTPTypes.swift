@@ -957,9 +957,9 @@ public enum HTTPMethod: Equatable {
     /// Whether requests with this verb may have a request body.
     public var hasRequestBody: HasBody {
         switch self {
-        case .HEAD, .DELETE, .TRACE:
+        case .HEAD, .DELETE, .CONNECT, .TRACE:
             return .no
-        case .POST, .PUT, .CONNECT, .PATCH:
+        case .POST, .PUT, .PATCH:
             return .yes
         case .GET, .OPTIONS:
             fallthrough
