@@ -959,9 +959,9 @@ public enum HTTPMethod: Equatable {
         switch self {
         case .HEAD, .DELETE, .TRACE:
             return .no
-        case .POST, .PUT, .CONNECT, .PATCH:
+        case .POST, .PUT, .PATCH:
             return .yes
-        case .GET, .OPTIONS:
+        case .GET, .CONNECT, .OPTIONS:
             fallthrough
         default:
             return .unlikely
