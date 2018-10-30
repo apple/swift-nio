@@ -96,7 +96,7 @@ public extension UInt8 {
     ///
     /// - parameters:
     ///     - opcode: The `WebSocketOpcode`.
-    public init?(webSocketOpcode opcode: WebSocketOpcode) {
+    init?(webSocketOpcode opcode: WebSocketOpcode) {
         switch opcode {
         case .continuation:
             self = 0x0

@@ -661,7 +661,7 @@ struct SelectorEvent<R> {
 
 internal extension Selector where R == NIORegistration {
     /// Gently close the `Selector` after all registered `Channel`s are closed.
-    internal func closeGently(eventLoop: EventLoop) -> EventLoopFuture<Void> {
+    func closeGently(eventLoop: EventLoop) -> EventLoopFuture<Void> {
         guard self.lifecycleState == .open else {
             return eventLoop.newFailedFuture(error: IOError(errnoCode: EBADF, reason: "can't close selector gently as it's \(self.lifecycleState)."))
         }

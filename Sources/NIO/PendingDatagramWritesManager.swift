@@ -48,7 +48,7 @@ fileprivate extension Error {
     /// Returns whether the error is "recoverable" from the perspective of datagram sending.
     ///
     /// - returns: `true` if the error is recoverable, `false` otherwise.
-    fileprivate var isRecoverable: Bool {
+    var isRecoverable: Bool {
         switch self {
         case let e as IOError where e.errnoCode == EMSGSIZE,
              let e as IOError where e.errnoCode == EHOSTUNREACH:
