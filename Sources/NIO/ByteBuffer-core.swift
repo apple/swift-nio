@@ -421,9 +421,7 @@ public struct ByteBuffer {
                "called the slower set<S: Sequence> function even though \(S.self) is a ContiguousCollection")
         func ensureCapacityAndReturnStorageBase(capacity: Int) -> UnsafeMutablePointer<UInt8> {
             self._ensureAvailableCapacity(_Capacity(capacity), at: index)
-            let newBytesPtr = UnsafeMutableRawBufferPointer(rebasing: self._slicedStorageBuffer
-                .dropFirst(Int(index))
-                .prefix(capacity))
+            let newBytesPtr = UnsafeMutableRawBufferPointer(rebasing: self._slicedStorageBuffer[Int(index) ..< Int(index) + Int(capacity)])
             return newBytesPtr.bindMemory(to: UInt8.self).baseAddress!
         }
         let underestimatedByteCount = bytes.underestimatedCount
@@ -538,9 +536,8 @@ public struct ByteBuffer {
     @_inlineable
     public mutating func withUnsafeMutableReadableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> T) rethrows -> T {
         self._copyStorageAndRebaseIfNeeded()
-        return try body(.init(rebasing: self._slicedStorageBuffer
-            .dropFirst(self.readerIndex)
-            .prefix(self.readableBytes)))
+        let readerIndex = self.readerIndex
+        return try body(.init(rebasing: self._slicedStorageBuffer[readerIndex ..< readerIndex + self.readableBytes]))
     }
 
     /// Yields the bytes currently writable (`bytesWritable` = `capacity` - `writerIndex`). Before reading those bytes you must first
@@ -585,9 +582,8 @@ public struct ByteBuffer {
     /// - returns: The value returned by `fn`.
     @_inlineable
     public func withUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
-        return try body(.init(rebasing: self._slicedStorageBuffer
-            .dropFirst(self.readerIndex)
-            .prefix(self.readableBytes)))
+        let readerIndex = self.readerIndex
+        return try body(.init(rebasing: self._slicedStorageBuffer[readerIndex ..< readerIndex + self.readableBytes]))
     }
 
     /// Yields a buffer pointer containing this `ByteBuffer`'s readable bytes. You may hold a pointer to those bytes
@@ -604,9 +600,9 @@ public struct ByteBuffer {
     @_inlineable
     public func withUnsafeReadableBytesWithStorageManagement<T>(_ body: (UnsafeRawBufferPointer, Unmanaged<AnyObject>) throws -> T) rethrows -> T {
         let storageReference: Unmanaged<AnyObject> = Unmanaged.passUnretained(self._storage)
-        return try body(.init(rebasing: self._slicedStorageBuffer
-            .dropFirst(self.readerIndex)
-            .prefix(self.readableBytes)), storageReference)
+        let readerIndex = self.readerIndex
+        return try body(.init(rebasing: self._slicedStorageBuffer[readerIndex ..< readerIndex + self.readableBytes]),
+                        storageReference)
     }
 
     /// See `withUnsafeReadableBytesWithStorageManagement` and `withVeryUnsafeBytes`.
