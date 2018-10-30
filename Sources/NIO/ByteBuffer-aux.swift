@@ -131,7 +131,7 @@ extension ByteBuffer {
             guard index <= pointer.count - length else {
                 return nil
             }
-            return String(decoding: pointer[index..<(index+length)], as: UTF8.self)
+            return String(decoding: UnsafeRawBufferPointer(rebasing: pointer[index..<(index+length)]), as: UTF8.self)
         }
     }
 
