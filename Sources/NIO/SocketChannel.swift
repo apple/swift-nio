@@ -48,7 +48,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override var isOpen: Bool {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         assert(super.isOpen == self.pendingWrites.isOpen)
         return super.isOpen
     }
@@ -71,7 +71,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -92,7 +92,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -122,7 +122,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override func readFromSocket() throws -> ReadResult {
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         // Just allocate one time for the while read loop. This is fine as ByteBuffer is a struct and uses COW.
         var buffer = recvAllocator.buffer(allocator: allocator)
         var result = ReadResult.none
@@ -339,7 +339,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -354,7 +354,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -369,7 +369,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
@@ -450,7 +450,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override public func channelRead0(_ data: NIOAny) {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         let ch = data.forceAsOther() as SocketChannel
         ch.eventLoop.execute {
@@ -500,7 +500,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override var isOpen: Bool {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         assert(super.isOpen == self.pendingWrites.isOpen)
         return super.isOpen
     }
@@ -545,7 +545,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     // MARK: Datagram Channel overrides required by BaseSocketChannel
 
     override func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -562,7 +562,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -696,7 +696,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     // MARK: Datagram Channel overrides not required by BaseSocketChannel
 
     override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         guard self.isRegistered else {
             promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
             return
@@ -790,7 +790,7 @@ extension DatagramChannel: MulticastChannel {
                                         interface: NIONetworkInterface?,
                                         promise: EventLoopPromise<Void>?,
                                         operation: GroupOperation) {
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard self.isActive else {
             promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)

@@ -150,7 +150,7 @@ public final class ChannelPipeline: ChannelInvoker {
 
     /// The `Channel` that this `ChannelPipeline` belongs to.
     internal var channel: Channel {
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         assert(self._channel != nil || self.destroyed)
         return self._channel ?? DeadChannel(pipeline: self)
     }
@@ -257,7 +257,7 @@ public final class ChannelPipeline: ChannelInvoker {
                       relativeHandler: ChannelHandler,
                       operation: (ChannelHandlerContext, ChannelHandlerContext) -> Void,
                       promise: EventLoopPromise<Void>) {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         if self.destroyed {
             promise.fail(error: ChannelError.ioOnClosedChannel)
             return
@@ -293,7 +293,7 @@ public final class ChannelPipeline: ChannelInvoker {
                       relativeContext: ChannelHandlerContext,
                       operation: (ChannelHandlerContext, ChannelHandlerContext) -> Void,
                       promise: EventLoopPromise<Void>) {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         if destroyed {
             promise.fail(error: ChannelError.ioOnClosedChannel)
@@ -322,7 +322,7 @@ public final class ChannelPipeline: ChannelInvoker {
     ///     - new: The `ChannelHandlerContext` to add to the pipeline.
     ///     - existing: The `ChannelHandlerContext` that `new` will be added after.
     private func add0(context new: ChannelHandlerContext, after existing: ChannelHandlerContext) {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         let next = existing.next
         new.prev = existing
@@ -341,7 +341,7 @@ public final class ChannelPipeline: ChannelInvoker {
     ///     - new: The `ChannelHandlerContext` to add to the pipeline.
     ///     - existing: The `ChannelHandlerContext` that `new` will be added before.
     private func add0(context new: ChannelHandlerContext, before existing: ChannelHandlerContext) {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         let prev = existing.prev
         new.prev = prev
@@ -468,7 +468,7 @@ public final class ChannelPipeline: ChannelInvoker {
 
     /// Remove a `ChannelHandlerContext` from the `ChannelPipeline`. Must only be called from within the `EventLoop`.
     private func remove0(ctx: ChannelHandlerContext, promise: EventLoopPromise<Bool>?) {
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         let nextCtx = ctx.next
         let prevCtx = ctx.prev
@@ -493,7 +493,7 @@ public final class ChannelPipeline: ChannelInvoker {
 
     /// Returns the next name to use for a `ChannelHandler`.
     private func nextName() -> String {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         let name = "handler\(idx)"
         idx += 1
@@ -505,7 +505,7 @@ public final class ChannelPipeline: ChannelInvoker {
     /// This method must only be called from within the `EventLoop`. It should only be called from a `ChannelCore`
     /// implementation. Once called, the `ChannelPipeline` is no longer active and cannot be used again.
     func removeHandlers() {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         if let head = self.head {
             while let ctx = head.next {
@@ -1239,7 +1239,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeChannelRegistered() {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         if let inboundHandler = self.inboundHandler {
             inboundHandler.channelRegistered(ctx: self)
@@ -1249,7 +1249,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeChannelUnregistered() {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         if let inboundHandler = self.inboundHandler {
             inboundHandler.channelUnregistered(ctx: self)
@@ -1259,7 +1259,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeChannelActive() {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         if let inboundHandler = self.inboundHandler {
             inboundHandler.channelActive(ctx: self)
@@ -1269,7 +1269,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeChannelInactive() {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         if let inboundHandler = self.inboundHandler {
             inboundHandler.channelInactive(ctx: self)
@@ -1279,7 +1279,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeChannelRead(_ data: NIOAny) {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         if let inboundHandler = self.inboundHandler {
             inboundHandler.channelRead(ctx: self, data: data)
@@ -1289,7 +1289,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeChannelReadComplete() {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         if let inboundHandler = self.inboundHandler {
             inboundHandler.channelReadComplete(ctx: self)
@@ -1299,7 +1299,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeChannelWritabilityChanged() {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         if let inboundHandler = self.inboundHandler {
             inboundHandler.channelWritabilityChanged(ctx: self)
@@ -1309,7 +1309,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeErrorCaught(_ error: Error) {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         if let inboundHandler = self.inboundHandler {
             inboundHandler.errorCaught(ctx: self, error: error)
@@ -1319,7 +1319,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeUserInboundEventTriggered(_ event: Any) {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         if let inboundHandler = self.inboundHandler {
             inboundHandler.userInboundEventTriggered(ctx: self, event: event)
@@ -1329,7 +1329,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeRegister(promise: EventLoopPromise<Void>?) {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
         assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
@@ -1340,7 +1340,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
    fileprivate func invokeBind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
         assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
@@ -1351,7 +1351,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeConnect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
         assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
@@ -1362,7 +1362,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeWrite(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
         assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
@@ -1373,7 +1373,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeFlush() {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         if let outboundHandler = self.outboundHandler {
             outboundHandler.flush(ctx: self)
@@ -1383,7 +1383,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeWriteAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
         assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
@@ -1395,7 +1395,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeRead() {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         if let outboundHandler = self.outboundHandler {
             outboundHandler.read(ctx: self)
@@ -1405,7 +1405,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeClose(mode: CloseMode, promise: EventLoopPromise<Void>?) {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
         assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
@@ -1416,7 +1416,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeTriggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
         assert(promise.map { !$0.futureResult.isFulfilled } ?? true, "Promise \(promise!) already fulfilled")
 
         if let outboundHandler = self.outboundHandler {
@@ -1427,19 +1427,15 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     fileprivate func invokeHandlerAdded() throws {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         handler.handlerAdded(ctx: self)
     }
 
     fileprivate func invokeHandlerRemoved() throws {
-        assert(inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         handler.handlerRemoved(ctx: self)
-    }
-
-    private var inEventLoop: Bool {
-        return eventLoop.inEventLoop
     }
 }
 

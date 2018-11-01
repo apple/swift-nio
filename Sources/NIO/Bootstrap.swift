@@ -259,23 +259,23 @@ public final class ServerBootstrap {
             @inline(__always)
             func setupChildChannel() -> EventLoopFuture<Void> {
                 return self.childChannelOptions.applyAll(channel: accepted).then { () -> EventLoopFuture<Void> in
-                    assert(childEventLoop.inEventLoop)
+                    childEventLoop.assertInEventLoop()
                     return childChannelInit(accepted)
                 }
             }
 
             @inline(__always)
             func fireThroughPipeline(_ future: EventLoopFuture<Void>) {
-                assert(ctxEventLoop.inEventLoop)
+                ctxEventLoop.assertInEventLoop()
                 future.then { (_) -> EventLoopFuture<Void> in
-                    assert(ctxEventLoop.inEventLoop)
+                    ctxEventLoop.assertInEventLoop()
                     guard !ctx.pipeline.destroyed else {
                         return ctx.eventLoop.newFailedFuture(error: ChannelError.ioOnClosedChannel)
                     }
                     ctx.fireChannelRead(data)
                     return ctx.eventLoop.newSucceededFuture(result: ())
                 }.whenFailure { error in
-                    assert(ctx.eventLoop.inEventLoop)
+                    ctxEventLoop.assertInEventLoop()
                     self.closeAndFire(ctx: ctx, accepted: accepted, err: error)
                 }
             }
@@ -308,9 +308,9 @@ private extension Channel {
         // In many cases `body` must be _synchronously_ follow `register`, otherwise in our current
         // implementation, `epoll` will send us `EPOLLHUP`. To have it run synchronously, we need to invoke the
         // `then` on the eventloop that the `register` will succeed on.
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         return self.register().then {
-            assert(self.eventLoop.inEventLoop)
+            self.eventLoop.assertInEventLoop()
             return body(self)
         }
     }
@@ -507,7 +507,7 @@ public final class ClientBootstrap {
 
         @inline(__always)
         func setupChannel() -> EventLoopFuture<Channel> {
-            assert(eventLoop.inEventLoop)
+            eventLoop.assertInEventLoop()
             channelInitializer(channel).then {
                 channelOptions.applyAll(channel: channel)
             }.then {
