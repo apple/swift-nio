@@ -216,13 +216,13 @@ class FileRegionTest : XCTestCase {
                 let r = try Posix.read(descriptor: fd, pointer: &fr2Bytes, size: 5)
                 XCTAssertEqual(r, IOResult<Int>.processed(5))
             }
-            XCTAssertEqual(Array("01234".utf8), fr1Bytes)
-            XCTAssertEqual(Array("56789".utf8), fr2Bytes)
-
             defer {
                 // fr2's underlying fd must be closed by us.
                 XCTAssertNoThrow(try fh2.close())
             }
+
+            XCTAssertEqual(Array("01234".utf8), fr1Bytes)
+            XCTAssertEqual(Array("56789".utf8), fr2Bytes)
         }
     }
 

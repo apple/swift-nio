@@ -87,7 +87,7 @@ extension PriorityQueue: Sequence {
 @available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
 public extension PriorityQueue {
     @available(*, deprecated, message: "The NIOPriorityQueue module is deprecated and will be removed in the next major release.")
-    public var count: Int {
+    var count: Int {
         return self.heap.count
     }
 }

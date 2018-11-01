@@ -786,7 +786,7 @@ public protocol _DeprecateHTTPHeaderIterator: Sequence { }
 extension HTTPHeaders: _DeprecateHTTPHeaderIterator { }
 public extension _DeprecateHTTPHeaderIterator {
   @available(*, deprecated, message: "Please use the HTTPHeaders.Iterator type")
-  public func makeIterator() -> AnyIterator<Element> {
+  func makeIterator() -> AnyIterator<Element> {
     return AnyIterator(makeIterator() as Iterator)
   }
 }

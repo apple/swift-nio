@@ -226,21 +226,21 @@ public extension Channel {
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
-    public func write<T>(_ any: T) -> EventLoopFuture<Void> {
+    func write<T>(_ any: T) -> EventLoopFuture<Void> {
         return self.write(NIOAny(any))
     }
 
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
-    public func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+    func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
         self.write(NIOAny(any), promise: promise)
     }
 
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    public func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
+    func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
         return self.writeAndFlush(NIOAny(any))
     }
 
@@ -248,7 +248,7 @@ public extension Channel {
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    public func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+    func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
         self.writeAndFlush(NIOAny(any), promise: promise)
     }
 }
@@ -270,7 +270,7 @@ public extension ChannelCore {
     ///     - as: The type to extract from the `NIOAny`.
     /// - returns: The content of the `NIOAny`.
     @_inlineable
-    public func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
+    func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
         return data.forceAs()
     }
 
@@ -283,7 +283,7 @@ public extension ChannelCore {
     ///
     /// - parameters:
     ///     - channel: The `Channel` whose `ChannelPipeline` will be closed.
-    public func removeHandlers(channel: Channel) {
+    func removeHandlers(channel: Channel) {
         channel.pipeline.removeHandlers()
     }
 }

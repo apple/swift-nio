@@ -28,7 +28,7 @@ public extension ChannelPipeline {
     ///              or at the tail.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     @available(*, deprecated, message: "Please use configureHTTPServerPipeline")
-    public func addHTTPServerHandlers(first: Bool = false) -> EventLoopFuture<Void> {
+    func addHTTPServerHandlers(first: Bool = false) -> EventLoopFuture<Void> {
         return addHandlers(HTTPResponseEncoder(), HTTPRequestDecoder(), first: first)
     }
 
@@ -38,7 +38,7 @@ public extension ChannelPipeline {
     ///     - first: Whether to add the HTTP client at the head of the channel pipeline,
     ///              or at the tail.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    public func addHTTPClientHandlers(first: Bool = false) -> EventLoopFuture<Void> {
+    func addHTTPClientHandlers(first: Bool = false) -> EventLoopFuture<Void> {
         return addHandlers(HTTPRequestEncoder(), HTTPResponseDecoder(), first: first)
     }
 
@@ -54,9 +54,9 @@ public extension ChannelPipeline {
     ///                                 complete.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     @available(*, deprecated, message: "Please use configureHTTPServerPipeline")
-    public func addHTTPServerHandlersWithUpgrader(first: Bool = false,
-                                                  upgraders: [HTTPProtocolUpgrader],
-                                                  _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) -> EventLoopFuture<Void> {
+    func addHTTPServerHandlersWithUpgrader(first: Bool = false,
+                                           upgraders: [HTTPProtocolUpgrader],
+                                           _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) -> EventLoopFuture<Void> {
         let responseEncoder = HTTPResponseEncoder()
         let requestDecoder = HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes)
         let upgrader = HTTPServerUpgradeHandler(upgraders: upgraders,
@@ -93,10 +93,10 @@ public extension ChannelPipeline {
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `false` for
     ///         backward-compatibility reasons.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    public func configureHTTPServerPipeline(first: Bool = false,
-                                            withPipeliningAssistance pipelining: Bool = true,
-                                            withServerUpgrade upgrade: HTTPUpgradeConfiguration? = nil,
-                                            withErrorHandling errorHandling: Bool = false) -> EventLoopFuture<Void> {
+    func configureHTTPServerPipeline(first: Bool = false,
+                                     withPipeliningAssistance pipelining: Bool = true,
+                                     withServerUpgrade upgrade: HTTPUpgradeConfiguration? = nil,
+                                     withErrorHandling errorHandling: Bool = false) -> EventLoopFuture<Void> {
         let responseEncoder = HTTPResponseEncoder()
         let requestDecoder = HTTPRequestDecoder(leftOverBytesStrategy: upgrade == nil ? .dropBytes : .forwardBytes)
 
