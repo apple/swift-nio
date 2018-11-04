@@ -797,6 +797,14 @@ extension DatagramChannel: MulticastChannel {
             return
         }
 
+        /// Check if the interface supports multicast
+        if let interface = interface {
+            guard interface.multicastSupported else {
+                promise?.fail(error: MulticastError.multicastNotSupported(interface))
+                return
+            }
+        }
+
         // We need to check that we have the appropriate address types in all cases. They all need to overlap with
         // the address type of this channel, or this cannot work.
         guard let localAddress = self.localAddress else {

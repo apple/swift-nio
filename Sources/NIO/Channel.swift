@@ -352,6 +352,9 @@ public enum MulticastError: Error {
     /// An attempt was made to join a multicast group that does not correspond to a multicast
     /// address.
     case illegalMulticastAddress(SocketAddress)
+
+    /// Multicast is not supported on Interface
+    case multicastNotSupported(NIONetworkInterface)
 }
 
 extension ChannelError: Equatable {
