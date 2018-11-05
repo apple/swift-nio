@@ -589,7 +589,7 @@ extension EventLoopFuture {
 
     /// Add a callback.  If there's already a value, invoke it and return the resulting list of new callback functions.
     fileprivate func _addCallback(_ callback: @escaping () -> CallbackList) -> CallbackList {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         if value == nil {
             callbacks.append(callback)
             return CallbackList()
@@ -672,7 +672,7 @@ extension EventLoopFuture {
 
     /// Internal:  Set the value and return a list of callbacks that should be invoked as a result.
     fileprivate func _setValue(value: EventLoopFutureValue<T>) -> CallbackList {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         if self.value == nil {
             self.value = value
             let callbacks = self.callbacks
@@ -711,7 +711,7 @@ extension EventLoopFuture {
 
         let hopOver = other.hopTo(eventLoop: self.eventLoop)
         hopOver._whenComplete { () -> CallbackList in
-            assert(self.eventLoop.inEventLoop)
+            self.eventLoop.assertInEventLoop()
             switch other.value! {
             case .failure(let error):
                 return promise._setValue(value: .failure(error))
@@ -854,7 +854,7 @@ extension EventLoopFuture {
         let body = futures.reduce(self) { (f1: EventLoopFuture<T>, f2: EventLoopFuture<U>) -> EventLoopFuture<T> in
             let newFuture = f1.and(f2).then { (args: (T, U)) -> EventLoopFuture<T> in
                 let (f1Value, f2Value) = args
-                assert(self.eventLoop.inEventLoop)
+                self.eventLoop.assertInEventLoop()
                 return combiningFunction(f1Value, f2Value)
             }
             assert(newFuture.eventLoop === self.eventLoop)
@@ -933,17 +933,17 @@ extension EventLoopFuture {
 
         let f0 = eventLoop.newSucceededFuture(result: ())
         let future = f0.fold(futures) { (_: (), value: U) -> EventLoopFuture<Void> in
-            assert(eventLoop.inEventLoop)
+            eventLoop.assertInEventLoop()
             updateAccumulatingResult(&result, value)
             return eventLoop.newSucceededFuture(result: ())
         }
 
         future.whenSuccess {
-            assert(eventLoop.inEventLoop)
+            eventLoop.assertInEventLoop()
             p0.succeed(result: result)
         }
         future.whenFailure { (error) in
-            assert(eventLoop.inEventLoop)
+            eventLoop.assertInEventLoop()
             p0.fail(error: error)
         }
         return p0.futureResult

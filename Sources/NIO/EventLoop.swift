@@ -76,7 +76,7 @@ public final class RepeatedTask {
     }
 
     private func begin0(in delay: TimeAmount) {
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         guard let task = self.task else {
             return
         }
@@ -103,14 +103,14 @@ public final class RepeatedTask {
     }
 
     private func cancel0() {
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         self.scheduled?.cancel()
         self.scheduled = nil
         self.task = nil
     }
 
     private func reschedule() {
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         guard let scheduled = self.scheduled else {
             return
         }
@@ -127,7 +127,7 @@ public final class RepeatedTask {
     }
 
     private func reschedule0() {
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         guard self.task != nil else {
             return
         }
@@ -209,6 +209,10 @@ public protocol EventLoop: EventLoopGroup {
 
     /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
+
+    /// Checks that this call is run from the `EventLoop`. If this is called from within the `EventLoop` this function
+    /// will have no effect, if called from outside the `EventLoop` it will crash the process with a trap.
+    func preconditionInEventLoop(file: StaticString, line: UInt)
 }
 
 /// Represents a time _interval_.
@@ -384,6 +388,22 @@ extension EventLoop {
     public func makeIterator() -> EventLoopIterator? {
         return EventLoopIterator([self])
     }
+
+    /// Checks that this call is run from the EventLoop. If this is called from within the EventLoop this function will
+    /// have no effect, if called from outside the EventLoop it will crash the process with a trap if run in debug mode.
+    /// In release mode this function never has any effect.
+    ///
+    /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
+    @_inlineable
+    public func assertInEventLoop(file: StaticString = #file, line: UInt = #line) {
+        debugOnly {
+            self.preconditionInEventLoop(file: file, line: line)
+        }
+    }
+
+    public func preconditionInEventLoop(file: StaticString = #file, line: UInt = #line) {
+        precondition(self.inEventLoop, file: file, line: line)
+    }
 }
 
 /// Internal representation of a `Registration` to an `Selector`.
@@ -508,14 +528,14 @@ internal final class SelectableEventLoop: EventLoop {
 
     /// Is this `SelectableEventLoop` still open (ie. not shutting down or shut down)
     internal var isOpen: Bool {
-        assert(self.inEventLoop)
+        self.assertInEventLoop()
         return self.lifecycleState == .open
     }
 
     /// Register the given `SelectableChannel` with this `SelectableEventLoop`. After this point all I/O for the `SelectableChannel` will be processed by this `SelectableEventLoop` until it
     /// is deregistered by calling `deregister`.
     public func register<C: SelectableChannel>(channel: C) throws {
-        assert(inEventLoop)
+        self.assertInEventLoop()
 
         // Don't allow registration when we're closed.
         guard self.lifecycleState == .open else {
@@ -527,7 +547,7 @@ internal final class SelectableEventLoop: EventLoop {
 
     /// Deregister the given `SelectableChannel` from this `SelectableEventLoop`.
     public func deregister<C: SelectableChannel>(channel: C) throws {
-        assert(inEventLoop)
+        self.assertInEventLoop()
         guard lifecycleState == .open else {
             // It's possible the EventLoop was closed before we were able to call deregister, so just return in this case as there is no harm.
             return
@@ -538,7 +558,7 @@ internal final class SelectableEventLoop: EventLoop {
     /// Register the given `SelectableChannel` with this `SelectableEventLoop`. This should be done whenever `channel.interestedEvents` has changed and it should be taken into account when
     /// waiting for new I/O for the given `SelectableChannel`.
     public func reregister<C: SelectableChannel>(channel: C) throws {
-        assert(inEventLoop)
+        self.assertInEventLoop()
         try selector.reregister(selectable: channel.selectable, interested: channel.interestedEvent)
     }
 
@@ -636,7 +656,7 @@ internal final class SelectableEventLoop: EventLoop {
 
     /// Start processing I/O and tasks for this `SelectableEventLoop`. This method will continue running (and so block) until the `SelectableEventLoop` is closed.
     public func run() throws {
-        precondition(self.inEventLoop, "tried to run the EventLoop on the wrong thread.")
+        self.preconditionInEventLoop()
         defer {
             var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
             tasksLock.withLockVoid {

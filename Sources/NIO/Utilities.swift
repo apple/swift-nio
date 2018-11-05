@@ -19,6 +19,7 @@
 /// https://forums.swift.org/t/support-debug-only-code/11037 for a discussion.
 import CNIOLinux
 
+@_inlineable @_versioned
 internal func debugOnly(_ body: () -> Void) {
     assert({ body(); return true }())
 }
