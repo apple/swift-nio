@@ -98,9 +98,9 @@ public final class NIONetworkInterface {
         }
 
         if (caddr.ifa_flags & UInt32(IFF_MULTICAST)) != 0 {
-            multicastSupported = true
+            self.multicastSupported = true
         } else {
-            multicastSupported = false
+            self.multicastSupported = false
         }
 
         do {
