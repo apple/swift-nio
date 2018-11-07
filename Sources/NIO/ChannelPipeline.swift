@@ -357,11 +357,7 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
     public func remove(handler: ChannelHandler) -> EventLoopFuture<Bool> {
         let promise: EventLoopPromise<Bool> = self.eventLoop.newPromise()
-        context0({
-            return $0.handler === handler
-        }).map { ctx in
-            self.remove0(ctx: ctx, promise: promise)
-        }.cascadeFailure(promise: promise)
+        self.remove(handler: handler, promise: promise)
         return promise.futureResult
     }
 
@@ -372,9 +368,7 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
     public func remove(name: String) -> EventLoopFuture<Bool> {
         let promise: EventLoopPromise<Bool> = self.eventLoop.newPromise()
-        context0({ $0.name == name }).map { ctx in
-            self.remove0(ctx: ctx, promise: promise)
-        }.cascadeFailure(promise: promise)
+        self.remove(name: name, promise: promise)
         return promise.futureResult
     }
 
@@ -385,14 +379,57 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
     public func remove(ctx: ChannelHandlerContext) -> EventLoopFuture<Bool> {
         let promise: EventLoopPromise<Bool> = self.eventLoop.newPromise()
+        self.remove(ctx: ctx, promise: promise)
+        return promise.futureResult
+    }
+
+    /// Remove a `ChannelHandler` from the `ChannelPipeline`.
+    ///
+    /// - parameters:
+    ///     - handler: the `ChannelHandler` to remove.
+    ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
+    public func remove(handler: ChannelHandler, promise: EventLoopPromise<Bool>?) {
+        let contextFuture = self.context0 {
+            return $0.handler === handler
+        }.map { ctx in
+            self.remove0(ctx: ctx, promise: promise)
+        }
+
+        if let promise = promise {
+            contextFuture.cascadeFailure(promise: promise)
+        }
+    }
+
+    /// Remove a `ChannelHandler` from the `ChannelPipeline`.
+    ///
+    /// - parameters:
+    ///     - name: the name that was used to add the `ChannelHandler` to the `ChannelPipeline` before.
+    ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
+    public func remove(name: String, promise: EventLoopPromise<Bool>?) {
+        let contextFuture = self.context0 {
+            $0.name == name
+        }.map { ctx in
+            self.remove0(ctx: ctx, promise: promise)
+        }
+
+        if let promise = promise {
+            contextFuture.cascadeFailure(promise: promise)
+        }
+    }
+
+    /// Remove a `ChannelHandler` from the `ChannelPipeline`.
+    ///
+    /// - parameters:
+    ///     - ctx: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
+    ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
+    public func remove(ctx: ChannelHandlerContext, promise: EventLoopPromise<Bool>?) {
         if self.eventLoop.inEventLoop {
-            remove0(ctx: ctx, promise: promise)
+            self.remove0(ctx: ctx, promise: promise)
         } else {
             self.eventLoop.execute {
                 self.remove0(ctx: ctx, promise: promise)
             }
         }
-        return promise.futureResult
     }
 
     /// Returns the `ChannelHandlerContext` that belongs to a `ChannelHandler`.
