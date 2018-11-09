@@ -215,7 +215,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
                 // internal handler, then call the user code, and then finally when the user code is done we do
                 // our final cleanup steps, namely we replay the received data we buffered in the meantime and
                 // then remove ourselves from the pipeline.
-                _ = self.removeExtraHandlers(ctx: ctx).then {
+                self.removeExtraHandlers(ctx: ctx).then {
                     self.sendUpgradeResponse(ctx: ctx, upgradeRequest: request, responseHeaders: responseHeaders)
                 }.then {
                     self.removeHandler(ctx: ctx, handler: self.httpEncoder)
@@ -236,8 +236,8 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
                     if bufferedMessages.count > 0 {
                         ctx.fireChannelReadComplete()
                     }
-                }.then {
-                    ctx.pipeline.remove(ctx: ctx)
+                }.whenComplete {
+                    ctx.pipeline.remove(ctx: ctx, promise: nil)
                 }
             }
         }
@@ -256,7 +256,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     private func notUpgrading(ctx: ChannelHandlerContext, data: NIOAny) {
         assert(self.receivedMessages.count == 0)
         ctx.fireChannelRead(data)
-        _ = ctx.pipeline.remove(ctx: ctx)
+        ctx.pipeline.remove(ctx: ctx, promise: nil)
     }
 
     /// Builds the initial mandatory HTTP headers for HTTP ugprade responses.

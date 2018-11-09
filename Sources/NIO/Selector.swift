@@ -297,12 +297,12 @@ final class Selector<R: Registration> {
         ev.events = SelectorEventSet.read.epollEventSet
         ev.data.fd = eventfd
 
-        _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: eventfd, event: &ev)
+        try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: eventfd, event: &ev)
 
         var timerev = Epoll.epoll_event()
         timerev.events = Epoll.EPOLLIN | Epoll.EPOLLERR | Epoll.EPOLLRDHUP | Epoll.EPOLLET
         timerev.data.fd = timerfd
-        _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: timerfd, event: &timerev)
+        try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: timerfd, event: &timerev)
 #else
         fd = try KQueue.kqueue()
         self.lifecycleState = .open
@@ -360,12 +360,12 @@ final class Selector<R: Registration> {
             return
         }
         do {
-            _ = try KQueue.kevent(kq: self.fd,
-                                  changelist: keventBuffer.baseAddress!,
-                                  nchanges: CInt(keventBuffer.count),
-                                  eventlist: nil,
-                                  nevents: 0,
-                                  timeout: nil)
+            try KQueue.kevent(kq: self.fd,
+                              changelist: keventBuffer.baseAddress!,
+                              nchanges: CInt(keventBuffer.count),
+                              eventlist: nil,
+                              nevents: 0,
+                              timeout: nil)
         } catch let err as IOError {
             if err.errnoCode == EINTR {
                 // See https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
@@ -410,7 +410,7 @@ final class Selector<R: Registration> {
                 ev.events = interested.epollEventSet
                 ev.data.fd = fd
 
-                _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: fd, event: &ev)
+                try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: fd, event: &ev)
             #else
                 try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: nil)
             #endif
