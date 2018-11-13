@@ -1067,8 +1067,9 @@ public class ChannelTests: XCTestCase {
             } else {
                 XCTFail()
             }
-        } catch let err as IOError where err.errnoCode == ENETDOWN || err.errnoCode == ENETUNREACH {
+        } catch let err as IOError where err.errnoCode == ENETDOWN || err.errnoCode == ENETUNREACH || err.errnoCode == ECONNREFUSED {
             // we need to accept those too unfortunately
+            print("WARNING: \(#function) did not meaningfully test anything, received \(err)")
         } catch {
             XCTFail("unexpected error \(error)")
         }
@@ -1092,8 +1093,9 @@ public class ChannelTests: XCTestCase {
             } else {
                 XCTFail()
             }
-        } catch let err as IOError where err.errnoCode == ENETDOWN || err.errnoCode == ENETUNREACH {
+        } catch let err as IOError where err.errnoCode == ENETDOWN || err.errnoCode == ENETUNREACH || err.errnoCode == ECONNREFUSED {
             // we need to accept those too unfortunately
+            print("WARNING: \(#function) did not meaningfully test anything, received \(err)")
         } catch {
             XCTFail("unexpected error \(error)")
         }
