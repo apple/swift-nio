@@ -23,7 +23,7 @@ internal enum TimerFd {
 
     @inline(never)
     public static func timerfd_settime(fd: Int32, flags: Int32, newValue: UnsafePointer<itimerspec>, oldValue: UnsafeMutablePointer<itimerspec>?) throws  {
-        _ = try wrapSyscall {
+        try wrapSyscall {
             CNIOLinux.timerfd_settime(fd, flags, newValue, oldValue)
         }
     }
@@ -97,6 +97,7 @@ internal enum Epoll {
     }
 
     @inline(never)
+    @discardableResult
     public static func epoll_ctl(epfd: Int32, op: Int32, fd: Int32, event: UnsafeMutablePointer<epoll_event>) throws -> Int32 {
         return try wrapSyscall {
             CNIOLinux.epoll_ctl(epfd, op, fd, event)

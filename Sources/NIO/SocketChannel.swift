@@ -417,7 +417,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
                     assert(self.isActive)
                     pipeline.fireChannelRead0(NIOAny(chan))
                 } catch let err {
-                    _ = try? accepted.close()
+                    try? accepted.close()
                     throw err
                 }
             } else {
@@ -511,7 +511,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         do {
             try self.init(socket: socket, eventLoop: eventLoop)
         } catch {
-            _ = try? socket.close()
+            try? socket.close()
             throw error
         }
     }
@@ -521,7 +521,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         do {
             try socket.setNonBlocking()
         } catch let err {
-            _ = try? socket.close()
+            try? socket.close()
             throw err
         }
 

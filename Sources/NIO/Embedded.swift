@@ -58,6 +58,7 @@ public class EmbeddedEventLoop: EventLoop {
 
     public init() { }
 
+    @discardableResult
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = newPromise()
         let readyTime = now + UInt64(`in`.nanoseconds)
@@ -80,7 +81,7 @@ public class EmbeddedEventLoop: EventLoop {
     // at which point we run everything that's been submitted. Anything newly submitted
     // either gets on that train if it's still moving or waits until the next call to run().
     public func execute(_ task: @escaping () -> Void) {
-        _ = self.scheduleTask(in: .nanoseconds(0), task)
+        self.scheduleTask(in: .nanoseconds(0), task)
     }
 
     public func run() {
@@ -103,7 +104,7 @@ public class EmbeddedEventLoop: EventLoop {
             var tasks = Array<EmbeddedScheduledTask>()
             while let candidateTask = self.scheduledTasks.peek(), candidateTask.readyTime == nextTask.readyTime {
                 tasks.append(candidateTask)
-                _ = self.scheduledTasks.pop()
+                self.scheduledTasks.pop()
             }
 
             // Set the time correctly before we call into user code, then
@@ -389,7 +390,7 @@ public class EmbeddedChannel: Channel {
         }
 
         // This will never throw...
-        _ = try? register().wait()
+        try! register().wait()
     }
 
     public func setOption<T>(option: T, value: T.OptionType) -> EventLoopFuture<Void> where T: ChannelOption {

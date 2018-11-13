@@ -150,7 +150,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
 
         let frame = WebSocketFrame(fin: true, opcode: .text, data: buffer)
         ctx.writeAndFlush(self.wrapOutboundOut(frame)).map {
-            _ = ctx.eventLoop.scheduleTask(in: .seconds(1), { self.sendTime(ctx: ctx) })
+            ctx.eventLoop.scheduleTask(in: .seconds(1), { self.sendTime(ctx: ctx) })
         }.whenFailure { (_: Error) in
             ctx.close(promise: nil)
         }
@@ -193,8 +193,8 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
         var data = ctx.channel.allocator.buffer(capacity: 2)
         data.write(webSocketErrorCode: .protocolError)
         let frame = WebSocketFrame(fin: true, opcode: .connectionClose, data: data)
-        _ = ctx.write(self.wrapOutboundOut(frame)).then {
-            ctx.close(mode: .output)
+        ctx.write(self.wrapOutboundOut(frame)).whenComplete {
+            ctx.close(mode: .output, promise: nil)
         }
         awaitingClose = true
     }
@@ -218,7 +218,7 @@ let bootstrap = ServerBootstrap(group: group)
         let config: HTTPUpgradeConfiguration = (
                         upgraders: [ upgrader ], 
                         completionHandler: { _ in 
-                            _ = channel.pipeline.remove(handler: httpHandler)
+                            channel.pipeline.remove(handler: httpHandler, promise: nil)
                         }
                     )
         return channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: config).then {

@@ -356,7 +356,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
         var deliveredRead = false
 
         while self.state != .responseEndPending, let event = self.eventBuffer.first {
-            _ = self.eventBuffer.removeFirst()
+            self.eventBuffer.removeFirst()
 
             switch event {
             case .channelRead(let read):
@@ -384,7 +384,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
         // This is done after `fireChannelReadComplete` to keep the same observable
         // behaviour as `SocketChannel`, which fires these events in this order.
         if case .some(.halfClose) = self.eventBuffer.first {
-            _ = self.eventBuffer.removeFirst()
+            self.eventBuffer.removeFirst()
             self.readPending = false
             ctx.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
         }
