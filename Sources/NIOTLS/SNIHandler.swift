@@ -427,8 +427,8 @@ public class SniHandler: ByteToMessageDecoder {
     ///    in the pipeline, which is now responsible for the work.
     private func sniComplete(result: SniResult, ctx: ChannelHandlerContext) {
         waitingForUser = true
-        _ = completionHandler(result).then {
-            ctx.pipeline.remove(handler: self)
+        completionHandler(result).whenSuccess {
+            ctx.pipeline.remove(handler: self, promise: nil)
         }
     }
 }

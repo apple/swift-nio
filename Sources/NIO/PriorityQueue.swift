@@ -21,7 +21,7 @@ internal struct PriorityQueue<Element: Comparable> {
 
     public mutating func remove(_ key: Element) {
         assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
-        _ = self.heap.remove(value: key)
+        self.heap.remove(value: key)
         assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
     }
 
@@ -41,6 +41,7 @@ internal struct PriorityQueue<Element: Comparable> {
         return self.heap.storage.isEmpty
     }
 
+    @discardableResult
     public mutating func pop() -> Element? {
         assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
         return self.heap.removeRoot()

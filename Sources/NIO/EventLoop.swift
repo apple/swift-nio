@@ -208,6 +208,7 @@ public protocol EventLoop: EventLoopGroup {
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
 
     /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
+    @discardableResult
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
 
     /// Checks that this call is run from the `EventLoop`. If this is called from within the `EventLoop` this function
@@ -700,7 +701,7 @@ internal final class SelectableEventLoop: EventLoop {
                         // Make a copy of the tasks so we can execute these while not holding the lock anymore
                         while tasksCopy.count < tasksCopy.capacity, let task = scheduledTasks.peek() {
                             if task.readyIn(now) <= .nanoseconds(0) {
-                                _ = scheduledTasks.pop()
+                                scheduledTasks.pop()
                                 tasksCopy.append(task.task)
                             } else {
                                 nextReadyTask = task
@@ -757,7 +758,7 @@ internal final class SelectableEventLoop: EventLoop {
             return closeGently0()
         } else {
             let p: EventLoopPromise<Void> = self.newPromise()
-            _ = self.submit {
+            self.execute {
                 closeGently0().cascade(promise: p)
             }
             return p.futureResult
@@ -956,7 +957,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
     internal func unsafeClose() throws {
         for loop in eventLoops {
             // TODO: Should we log this somehow or just rethrow the first error ?
-            _ = try loop.close0()
+            try loop.close0()
         }
     }
 
