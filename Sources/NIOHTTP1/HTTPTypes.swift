@@ -372,8 +372,8 @@ public struct HTTPResponseHead: Equatable {
 /// - note: This is public to aid in the creation of supplemental HTTP libraries, e.g.
 ///         NIOHTTP2 and NIOHPACK. It is not intended for general use.
 public struct HTTPHeaderIndex {
-    let start: Int
-    let length: Int
+    public let start: Int
+    public let length: Int
 }
 
 /// Struct which holds name, value pairs.
@@ -381,8 +381,8 @@ public struct HTTPHeaderIndex {
 /// - note: This is public to aid in the creation of supplemental HTTP libraries, e.g.
 ///         NIOHTTP2 and NIOHPACK. It is not intended for general use.
 public struct HTTPHeader {
-    let name: HTTPHeaderIndex
-    let value: HTTPHeaderIndex
+    public let name: HTTPHeaderIndex
+    public let value: HTTPHeaderIndex
 }
 
 private extension ByteBuffer {
