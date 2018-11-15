@@ -1594,7 +1594,6 @@ class ByteBufferTest: XCTestCase {
         }
 
         XCTAssertNotEqual(buf.capacity, oldCapacity)
-        XCTAssertNotEqual(oldPtrVal, newPtrVal)
     }
 
     func testReserveCapacityLargerMultipleReferenceCallsMalloc() throws {
