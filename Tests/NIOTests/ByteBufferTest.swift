@@ -1579,20 +1579,12 @@ class ByteBufferTest: XCTestCase {
 
 
         let oldCapacity = buf.capacity
-        let oldPtrVal = buf.withVeryUnsafeBytes {
-            UInt(bitPattern: $0.baseAddress!)
-        }
 
         XCTAssertEqual(testReserveCapacityLarger_mallocCount, 1)
         XCTAssertEqual(testReserveCapacityLarger_reallocCount, 0)
         buf.reserveCapacity(32)
         XCTAssertEqual(testReserveCapacityLarger_mallocCount, 1)
         XCTAssertEqual(testReserveCapacityLarger_reallocCount, 1)
-
-        let newPtrVal = buf.withVeryUnsafeBytes {
-            UInt(bitPattern: $0.baseAddress!)
-        }
-
         XCTAssertNotEqual(buf.capacity, oldCapacity)
     }
 
