@@ -68,61 +68,73 @@ private struct SocketChannelLifecycleManager {
     }
 
     @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
-    internal mutating func beginRegistration(promise: EventLoopPromise<Void>?) -> ((ChannelPipeline) -> Void) {
-        return self.moveState(event: .beginRegistration, promise: promise)
+    internal mutating func beginRegistration() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
+        return self.moveState(event: .beginRegistration)
     }
 
     @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
-    internal mutating func finishRegistration(promise: EventLoopPromise<Void>?) -> ((ChannelPipeline) -> Void) {
-        return self.moveState(event: .finishRegistration, promise: promise)
+    internal mutating func finishRegistration() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
+        return self.moveState(event: .finishRegistration)
     }
 
     @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
-    internal mutating func close(promise: EventLoopPromise<Void>?) -> ((ChannelPipeline) -> Void) {
-        return self.moveState(event: .close, promise: promise)
+    internal mutating func close() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
+        return self.moveState(event: .close)
     }
 
     @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
-    internal mutating func activate(promise: EventLoopPromise<Void>?) -> ((ChannelPipeline) -> Void) {
-        return self.moveState(event: .activate, promise: promise)
+    internal mutating func activate() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
+        return self.moveState(event: .activate)
     }
 
     // MARK: private API
     @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
-    private mutating func moveState(event: Event, promise: EventLoopPromise<Void>?) -> ((ChannelPipeline) -> Void) {
+    private mutating func moveState(event: Event) -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
         self.eventLoop.assertInEventLoop()
 
         switch (self.currentState, event) {
         // origin: .fresh
         case (.fresh, .beginRegistration):
-            return self.doStateTransfer(newState: .preRegistered, promise: promise) { pipeline in
+            self.currentState = .preRegistered
+            return { promise, pipeline in
+                promise?.succeed(result: ())
                 pipeline.fireChannelRegistered0()
             }
 
         case (.fresh, .close):
-            return self.doStateTransfer(newState: .closed, promise: promise) { (_: ChannelPipeline) in }
+            self.currentState = .closed
+            return { (promise, _: ChannelPipeline) in
+                promise?.succeed(result: ())
+            }
 
         // origin: .preRegistered
         case (.preRegistered, .finishRegistration):
-            return self.doStateTransfer(newState: .fullyRegistered, promise: promise) { pipeline in
-                // we don't tell the user about this
+            self.currentState = .fullyRegistered
+            return { (promise, _: ChannelPipeline) in
+                promise?.succeed(result: ())
             }
 
         // origin: .fullyRegistered
         case (.fullyRegistered, .activate):
-            return self.doStateTransfer(newState: .activated, promise: promise) { pipeline in
+            self.currentState = .activated
+            return { promise, pipeline in
+                promise?.succeed(result: ())
                 pipeline.fireChannelActive0()
             }
 
         // origin: .preRegistered || .fullyRegistered
         case (.preRegistered, .close), (.fullyRegistered, .close):
-            return self.doStateTransfer(newState: .closed, promise: promise) { pipeline in
+            self.currentState = .closed
+            return { promise, pipeline in
+                promise?.succeed(result: ())
                 pipeline.fireChannelUnregistered0()
             }
 
         // origin: .activated
         case (.activated, .close):
-            return self.doStateTransfer(newState: .closed, promise: promise) { pipeline in
+            self.currentState = .closed
+            return { promise, pipeline in
+                promise?.succeed(result: ())
                 pipeline.fireChannelInactive0()
                 pipeline.fireChannelUnregistered0()
             }
@@ -143,17 +155,7 @@ private struct SocketChannelLifecycleManager {
     }
 
     private func badTransition(event: Event) -> Never {
-        fatalError("illegal transition: state=\(self.currentState), event=\(event)")
-    }
-
-    @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
-    private mutating func doStateTransfer(newState: State, promise: EventLoopPromise<Void>?, _ callouts: @escaping (ChannelPipeline) -> Void) -> ((ChannelPipeline) -> Void) {
-        self.currentState = newState
-
-        return { pipeline in
-            promise?.succeed(result: ())
-            callouts(pipeline)
-        }
+        preconditionFailure("illegal transition: state=\(self.currentState), event=\(event)")
     }
 
     // MARK: convenience properties
@@ -732,7 +734,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
 
         // Transition our internal state.
-        let callouts = self.lifecycleManager.close(promise: p)
+        let callouts = self.lifecycleManager.close()
 
         // === END: No user callouts (now that our state is reconciled, we can call out to user code.) ===
 
@@ -750,7 +752,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             connectPromise.fail(error: error)
         }
 
-        callouts(self.pipeline)
+        callouts(p, self.pipeline)
 
         eventLoop.execute {
             // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline
@@ -788,7 +790,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
 
         // we can't fully register yet as epoll would give us EPOLLHUP if bind/connect wasn't called yet.
-        self.lifecycleManager.beginRegistration(promise: promise)(self.pipeline)
+        self.lifecycleManager.beginRegistration()(promise, self.pipeline)
     }
 
     public final func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
@@ -1132,7 +1134,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
         // We always register with interested .none and will just trigger readIfNeeded0() later to re-register if needed.
         try self.safeRegister(interested: [.readEOF, .reset])
-        self.lifecycleManager.finishRegistration(promise: nil)(self.pipeline)
+        self.lifecycleManager.finishRegistration()(nil, self.pipeline)
     }
 
     final func becomeActive0(promise: EventLoopPromise<Void>?) {
@@ -1146,7 +1148,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
                 return
             }
         }
-        self.lifecycleManager.activate(promise: promise)(self.pipeline)
+        self.lifecycleManager.activate()(promise, self.pipeline)
         self.readIfNeeded0()
     }
 }
