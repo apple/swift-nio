@@ -30,7 +30,7 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler {
     private var hasUnterminatedResponse: Bool = false
 
     public init() {}
-	
+
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         guard error is HTTPParserError else {
             ctx.fireErrorCaught(error)
