@@ -41,7 +41,7 @@
 ///     defer {
 ///         try! group.syncShutdownGracefully()
 ///     }
-///     try! bootstrap.bind(host: host, port: port).wait()
+///     let channel = try! bootstrap.bind(host: host, port: port).wait()
 ///     /* the server will now be accepting connections */
 ///
 ///     try! channel.closeFuture.wait() // wait forever as we never close the Channel
