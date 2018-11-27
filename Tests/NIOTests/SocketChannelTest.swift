@@ -133,11 +133,11 @@ public class SocketChannelTest : XCTestCase {
                 self.promise = promise
             }
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 XCTFail("Should not accept a Channel but got \(self.unwrapInboundIn(data))")
             }
 
-            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+            func errorCaught(context: ChannelHandlerContext, error: Error) {
                 if let ioError = error as? IOError {
                     self.promise.succeed(result: ioError)
                 }
@@ -206,7 +206,7 @@ public class SocketChannelTest : XCTestCase {
                 self.promise = promise
             }
 
-            func channelActive(ctx: ChannelHandlerContext) {
+            func channelActive(context: ChannelHandlerContext) {
                 promise.succeed(result: ())
             }
         }
@@ -388,7 +388,7 @@ public class SocketChannelTest : XCTestCase {
 
             private var connectPromise: EventLoopPromise<Void>?
 
-            public func channelInactive(ctx: ChannelHandlerContext) {
+            public func channelInactive(context: ChannelHandlerContext) {
                 if let connectPromise = self.connectPromise {
                     XCTAssertTrue(connectPromise.futureResult.isFulfilled)
                 } else {
@@ -396,17 +396,17 @@ public class SocketChannelTest : XCTestCase {
                 }
             }
 
-            public func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+            public func connect(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
                 XCTAssertNil(self.connectPromise)
                 self.connectPromise = promise
-                ctx.connect(to: address, promise: promise)
+                context.connect(to: address, promise: promise)
             }
 
-            func handlerAdded(ctx: ChannelHandlerContext) {
+            func handlerAdded(context: ChannelHandlerContext) {
                 XCTAssertNil(self.connectPromise)
             }
 
-            func handlerRemoved(ctx: ChannelHandlerContext) {
+            func handlerRemoved(context: ChannelHandlerContext) {
                 if let connectPromise = self.connectPromise {
                     XCTAssertTrue(connectPromise.futureResult.isFulfilled)
                 } else {
@@ -497,22 +497,22 @@ public class SocketChannelTest : XCTestCase {
                 self.promise = promise
             }
 
-            func channelInactive(ctx: ChannelHandlerContext) {
-                XCTAssertNotNil(ctx.localAddress)
-                XCTAssertNotNil(ctx.remoteAddress)
+            func channelInactive(context: ChannelHandlerContext) {
+                XCTAssertNotNil(context.localAddress)
+                XCTAssertNotNil(context.remoteAddress)
                 XCTAssertEqual(.created, state)
                 state = .inactive
             }
 
-            func handlerRemoved(ctx: ChannelHandlerContext) {
-                XCTAssertNotNil(ctx.localAddress)
-                XCTAssertNotNil(ctx.remoteAddress)
+            func handlerRemoved(context: ChannelHandlerContext) {
+                XCTAssertNotNil(context.localAddress)
+                XCTAssertNotNil(context.remoteAddress)
                 XCTAssertEqual(.inactive, state)
                 state = .removed
 
-                ctx.channel.closeFuture.whenComplete {
-                    XCTAssertNil(ctx.localAddress)
-                    XCTAssertNil(ctx.remoteAddress)
+                context.channel.closeFuture.whenComplete {
+                    XCTAssertNil(context.localAddress)
+                    XCTAssertNil(context.remoteAddress)
 
                     self.promise.succeed(result: ())
                 }

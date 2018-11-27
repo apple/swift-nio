@@ -40,32 +40,32 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
         stateHistory.append(state)
     }
 
-    public func channelRegistered(ctx: ChannelHandlerContext) {
+    public func channelRegistered(context: ChannelHandlerContext) {
         XCTAssertEqual(currentState, .unregistered)
-        XCTAssertFalse(ctx.channel.isActive)
+        XCTAssertFalse(context.channel.isActive)
         updateState(.registered)
-        ctx.fireChannelRegistered()
+        context.fireChannelRegistered()
     }
 
-    public func channelActive(ctx: ChannelHandlerContext) {
+    public func channelActive(context: ChannelHandlerContext) {
         XCTAssertEqual(currentState, .registered)
-        XCTAssertTrue(ctx.channel.isActive)
+        XCTAssertTrue(context.channel.isActive)
         updateState(.active)
-        ctx.fireChannelActive()
+        context.fireChannelActive()
     }
 
-    public func channelInactive(ctx: ChannelHandlerContext) {
+    public func channelInactive(context: ChannelHandlerContext) {
         XCTAssertEqual(currentState, .active)
-        XCTAssertFalse(ctx.channel.isActive)
+        XCTAssertFalse(context.channel.isActive)
         updateState(.inactive)
-        ctx.fireChannelInactive()
+        context.fireChannelInactive()
     }
 
-    public func channelUnregistered(ctx: ChannelHandlerContext) {
+    public func channelUnregistered(context: ChannelHandlerContext) {
         XCTAssertEqual(currentState, .inactive)
-        XCTAssertFalse(ctx.channel.isActive)
+        XCTAssertFalse(context.channel.isActive)
         updateState(.unregistered)
-        ctx.fireChannelUnregistered()
+        context.fireChannelUnregistered()
     }
 }
 
@@ -1173,7 +1173,7 @@ public class ChannelTests: XCTestCase {
         class VerifyNoReadHandler : ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
 
-            public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 XCTFail("Received data: \(data)")
             }
         }
@@ -1279,7 +1279,7 @@ public class ChannelTests: XCTestCase {
             self.shutdownEvent = shutdownEvent
         }
 
-        public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+        public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
             switch event {
             case let ev as ChannelEvent:
                 switch ev {
@@ -1301,7 +1301,7 @@ public class ChannelTests: XCTestCase {
 
                 fallthrough
             default:
-                ctx.fireUserInboundEventTriggered(event)
+                context.fireUserInboundEventTriggered(event)
             }
         }
 
@@ -1310,7 +1310,7 @@ public class ChannelTests: XCTestCase {
             try! promise.futureResult.wait()
         }
 
-        public func channelInactive(ctx: ChannelHandlerContext) {
+        public func channelInactive(context: ChannelHandlerContext) {
             switch shutdownEvent {
             case .input:
                 XCTAssertTrue(inputShutdownEventReceived)
@@ -1357,8 +1357,8 @@ public class ChannelTests: XCTestCase {
                 self.promise = promise
             }
 
-            func channelRegistered(ctx: ChannelHandlerContext) {
-                self.promise.succeed(result: ctx.channel.pipeline)
+            func channelRegistered(context: ChannelHandlerContext) {
+                self.promise.succeed(result: context.channel.pipeline)
             }
         }
         weak var weakClientChannel: Channel? = nil
@@ -1467,10 +1467,10 @@ public class ChannelTests: XCTestCase {
         class AddressVerificationHandler : ChannelInboundHandler {
             typealias InboundIn = Never
 
-            public func channelActive(ctx: ChannelHandlerContext) {
-                XCTAssertNotNil(ctx.channel.localAddress)
-                XCTAssertNotNil(ctx.channel.remoteAddress)
-                ctx.channel.close(promise: nil)
+            public func channelActive(context: ChannelHandlerContext) {
+                XCTAssertNotNil(context.channel.localAddress)
+                XCTAssertNotNil(context.channel.remoteAddress)
+                context.channel.close(promise: nil)
             }
         }
 
@@ -1496,13 +1496,13 @@ public class ChannelTests: XCTestCase {
             typealias OutboundOut = Any
 
             public var reads = 0
-            private var ctx: ChannelHandlerContext!
+            private var context: ChannelHandlerContext!
             private var readCountPromise: EventLoopPromise<Void>!
             private var waitingForReadPromise: EventLoopPromise<Void>?
 
-            func handlerAdded(ctx: ChannelHandlerContext) {
-                self.ctx = ctx
-                self.readCountPromise = ctx.eventLoop.newPromise()
+            func handlerAdded(context: ChannelHandlerContext) {
+                self.context = context
+                self.readCountPromise = context.eventLoop.newPromise()
             }
 
             public func expectRead(loop: EventLoop) -> EventLoopFuture<Void> {
@@ -1513,22 +1513,22 @@ public class ChannelTests: XCTestCase {
                 }
             }
 
-            func channelReadComplete(ctx: ChannelHandlerContext) {
+            func channelReadComplete(context: ChannelHandlerContext) {
                 self.waitingForReadPromise?.succeed(result: ())
                 self.waitingForReadPromise = nil
             }
 
-            func read(ctx: ChannelHandlerContext) {
+            func read(context: ChannelHandlerContext) {
                 self.reads += 1
 
                 // Allow the first read through.
                 if self.reads == 1 {
-                    self.ctx.read()
+                    self.context.read()
                 }
             }
 
             public func issueDelayedRead() {
-                self.ctx.read()
+                self.context.read()
             }
         }
 
@@ -1583,7 +1583,7 @@ public class ChannelTests: XCTestCase {
 
             var expectingData: Bool = false
 
-            public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 if !self.expectingData {
                     XCTFail("Received data before we expected it.")
                 } else {
@@ -1631,14 +1631,14 @@ public class ChannelTests: XCTestCase {
             private var seenEOF: Bool = false
             private var numberOfChannelReads: Int = 0
 
-            public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+            public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
                 if case .some(ChannelEvent.inputClosed) = event as? ChannelEvent {
                     self.seenEOF = true
                 }
-                ctx.fireUserInboundEventTriggered(event)
+                context.fireUserInboundEventTriggered(event)
             }
 
-            public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 if self.seenEOF {
                     XCTFail("Should not be called before seeing the EOF as autoRead is false and we did not call read(), but received \(self.unwrapInboundIn(data))")
                 }
@@ -1646,7 +1646,7 @@ public class ChannelTests: XCTestCase {
                 let buffer = self.unwrapInboundIn(data)
                 XCTAssertLessThanOrEqual(buffer.readableBytes, 8)
                 XCTAssertEqual(1, self.numberOfChannelReads)
-                ctx.close(mode: .all, promise: nil)
+                context.close(mode: .all, promise: nil)
             }
         }
 
@@ -1689,13 +1689,13 @@ public class ChannelTests: XCTestCase {
                 self.allDone = allDone
             }
 
-            public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 if !self.didRead {
                     self.didRead = true
                     // closing this here causes an interesting situation:
                     // in readFromSocket we will spin one more iteration until we see the EOF but when we then return
                     // to `BaseSocketChannel.readable0`, we deliver EOF with the channel already deactivated.
-                    ctx.close(mode: .all, promise: self.allDone)
+                    context.close(mode: .all, promise: self.allDone)
                 }
             }
         }
@@ -1742,11 +1742,11 @@ public class ChannelTests: XCTestCase {
                 self.promise = promise
             }
 
-            public func read(ctx: ChannelHandlerContext) {
+            public func read(context: ChannelHandlerContext) {
                 XCTFail("shouldn't read")
             }
 
-            public func channelInactive(ctx: ChannelHandlerContext) {
+            public func channelInactive(context: ChannelHandlerContext) {
                 promise.succeed(result: ())
             }
         }
@@ -1821,18 +1821,18 @@ public class ChannelTests: XCTestCase {
                 XCTAssertFalse(self.isActive)
             }
 
-            func channelActive(ctx: ChannelHandlerContext) {
+            func channelActive(context: ChannelHandlerContext) {
                 XCTAssertFalse(self.isActive)
                 self.isActive = true
-                self.channelCollector.add(ctx.channel)
-                ctx.fireChannelActive()
+                self.channelCollector.add(context.channel)
+                context.fireChannelActive()
             }
 
-            func channelInactive(ctx: ChannelHandlerContext) {
+            func channelInactive(context: ChannelHandlerContext) {
                 XCTAssertTrue(self.isActive)
                 self.isActive = false
-                self.channelCollector.remove(ctx.channel)
-                ctx.fireChannelInactive()
+                self.channelCollector.remove(context.channel)
+                context.fireChannelInactive()
             }
         }
 
@@ -1899,21 +1899,21 @@ public class ChannelTests: XCTestCase {
                 self.hasUnregisteredPromise = hasUnregisteredPromise
                 self.hasReadPromise = hasReadPromise
             }
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 XCTAssertEqual(.active, self.state)
                 self.state = .read
                 self.hasReadPromise.succeed(result: ())
             }
-            func channelActive(ctx: ChannelHandlerContext) {
+            func channelActive(context: ChannelHandlerContext) {
                 XCTAssertEqual(.registered, self.state)
                 self.state = .active
             }
-            func channelRegistered(ctx: ChannelHandlerContext) {
+            func channelRegistered(context: ChannelHandlerContext) {
                 XCTAssertEqual(.start, self.state)
                 self.state = .registered
                 self.hasRegisteredPromise.succeed(result: ())
             }
-            func channelUnregistered(ctx: ChannelHandlerContext) {
+            func channelUnregistered(context: ChannelHandlerContext) {
                 self.hasUnregisteredPromise.succeed(result: ())
             }
         }
@@ -1937,10 +1937,10 @@ public class ChannelTests: XCTestCase {
                 self.writeDonePromise = writeDonePromise
             }
 
-            func channelActive(ctx: ChannelHandlerContext) {
-                var buffer = ctx.channel.allocator.buffer(capacity: 4)
+            func channelActive(context: ChannelHandlerContext) {
+                var buffer = context.channel.allocator.buffer(capacity: 4)
                 buffer.write(string: "foo")
-                ctx.writeAndFlush(NIOAny(buffer), promise: self.writeDonePromise)
+                context.writeAndFlush(NIOAny(buffer), promise: self.writeDonePromise)
             }
         }
 
@@ -2073,12 +2073,12 @@ public class ChannelTests: XCTestCase {
             init(allDone: EventLoopPromise<Void>) {
                 self.allDone = allDone
             }
-            func channelActive(ctx: ChannelHandlerContext) {
+            func channelActive(context: ChannelHandlerContext) {
                 XCTAssertEqual(.fresh, self.state)
                 self.state = .active
             }
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 XCTAssertEqual(.active, self.state)
                 self.state = .read
                 var buffer = self.unwrapInboundIn(data)
@@ -2086,18 +2086,18 @@ public class ChannelTests: XCTestCase {
                 XCTAssertEqual([0xff], buffer.readBytes(length: 1)!)
             }
 
-            func channelReadComplete(ctx: ChannelHandlerContext) {
+            func channelReadComplete(context: ChannelHandlerContext) {
                 XCTAssertEqual(.read, self.state)
                 self.state = .readComplete
             }
 
-            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+            func errorCaught(context: ChannelHandlerContext, error: Error) {
                 XCTAssertEqual(.readComplete, self.state)
                 self.state = .error
-                ctx.close(promise: nil)
+                context.close(promise: nil)
             }
 
-            func channelInactive(ctx: ChannelHandlerContext) {
+            func channelInactive(context: ChannelHandlerContext) {
                 XCTAssertEqual(.error, self.state)
                 self.state = .inactive
                 self.allDone.succeed(result: ())
@@ -2467,15 +2467,15 @@ public class ChannelTests: XCTestCase {
                 self.channelAvailablePromise = channelAvailablePromise
             }
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let buffer = self.unwrapInboundIn(data)
                 XCTFail("unexpected read: \(String(decoding: buffer.readableBytesView, as: UTF8.self))")
             }
 
-            func channelActive(ctx: ChannelHandlerContext) {
-                var buffer = ctx.channel.allocator.buffer(capacity: 1)
+            func channelActive(context: ChannelHandlerContext) {
+                var buffer = context.channel.allocator.buffer(capacity: 1)
                 buffer.write(staticString: "X")
-                ctx.channel.writeAndFlush(self.wrapOutboundOut(buffer)).map { ctx.channel }.cascade(promise: self.channelAvailablePromise)
+                context.channel.writeAndFlush(self.wrapOutboundOut(buffer)).map { context.channel }.cascade(promise: self.channelAvailablePromise)
             }
         }
 
@@ -2506,8 +2506,8 @@ public class ChannelTests: XCTestCase {
                 self.allDonePromise = allDonePromise
             }
 
-            func channelActive(ctx: ChannelHandlerContext) {
-                XCTAssert(serverChannel.eventLoop === ctx.eventLoop)
+            func channelActive(context: ChannelHandlerContext) {
+                XCTAssert(serverChannel.eventLoop === context.eventLoop)
                 self.serverChannel.whenSuccess { serverChannel in
                     // all of the following futures need to complete synchronously for this test to test the correct
                     // thing. Therefore we keep track if we're still on the same stack frame.
@@ -2519,11 +2519,11 @@ public class ChannelTests: XCTestCase {
                     XCTAssertTrue(serverChannel.isActive)
                     // we allow auto-read again to make sure that the socket buffer is drained on write error
                     // (cf. https://github.com/apple/swift-nio/issues/593)
-                    ctx.channel.setOption(option: ChannelOptions.autoRead, value: true).then {
+                    context.channel.setOption(option: ChannelOptions.autoRead, value: true).then {
                         // let's trigger the write error
-                        var buffer = ctx.channel.allocator.buffer(capacity: 16)
+                        var buffer = context.channel.allocator.buffer(capacity: 16)
                         buffer.write(staticString: "THIS WILL FAIL ANYWAY")
-                        return ctx.writeAndFlush(self.wrapOutboundOut(buffer))
+                        return context.writeAndFlush(self.wrapOutboundOut(buffer))
                     }.map {
                         XCTFail("this should have failed")
                     }.whenFailure { error in
@@ -2534,10 +2534,10 @@ public class ChannelTests: XCTestCase {
                 }
             }
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let buffer = self.unwrapInboundIn(data)
                 XCTAssertEqual("X", String(decoding: buffer.readableBytesView, as: UTF8.self))
-                ctx.close(promise: nil)
+                context.close(promise: nil)
             }
         }
 
@@ -2655,14 +2655,14 @@ fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHan
 
     typealias OutboundIn = Never
 
-    func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+    func register(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         promise!.fail(error: RegistrationFailedError.error)
     }
 
-    func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+    func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         /* for extra nastiness, let's delay close. This makes sure the ChannelPipeline correctly retains the Channel */
-        _ = ctx.eventLoop.scheduleTask(in: .milliseconds(10)) {
-            ctx.close(mode: mode, promise: promise)
+        _ = context.eventLoop.scheduleTask(in: .milliseconds(10)) {
+            context.close(mode: mode, promise: promise)
         }
     }
 }
@@ -2682,25 +2682,25 @@ fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {
     }
     deinit { XCTAssertEqual(.unregistered, self.state) }
 
-    func channelActive(ctx: ChannelHandlerContext) { XCTFail("should never become active") }
+    func channelActive(context: ChannelHandlerContext) { XCTFail("should never become active") }
 
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) { XCTFail("should never read") }
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) { XCTFail("should never read") }
 
-    func channelReadComplete(ctx: ChannelHandlerContext) { XCTFail("should never readComplete") }
+    func channelReadComplete(context: ChannelHandlerContext) { XCTFail("should never readComplete") }
 
-    func errorCaught(ctx: ChannelHandlerContext, error: Error) { XCTFail("pipeline shouldn't be told about connect error") }
+    func errorCaught(context: ChannelHandlerContext, error: Error) { XCTFail("pipeline shouldn't be told about connect error") }
 
-    func channelRegistered(ctx: ChannelHandlerContext) {
+    func channelRegistered(context: ChannelHandlerContext) {
         XCTAssertEqual(.fresh, self.state)
         self.state = .registered
-        ctx.fireChannelRegistered()
+        context.fireChannelRegistered()
     }
 
-    func channelUnregistered(ctx: ChannelHandlerContext) {
+    func channelUnregistered(context: ChannelHandlerContext) {
         XCTAssertEqual(.registered, self.state)
         self.state = .unregistered
         self.allDone.succeed(result: ())
-        ctx.fireChannelUnregistered()
+        context.fireChannelUnregistered()
     }
 }
 

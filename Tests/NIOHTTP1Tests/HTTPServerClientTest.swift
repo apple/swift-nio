@@ -47,11 +47,11 @@ internal class ArrayAccumulationHandler<T>: ChannelInboundHandler {
         }
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         self.receiveds.append(self.unwrapInboundIn(data))
     }
 
-    public func channelUnregistered(ctx: ChannelHandlerContext) {
+    public func channelUnregistered(context: ChannelHandlerContext) {
         self.allDoneBlock.perform()
     }
 
@@ -109,7 +109,7 @@ class HTTPServerClientTest : XCTestCase {
             }
         }
 
-        public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+        public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             switch self.unwrapInboundIn(data) {
             case .head(let req):
                 switch req.uri {
@@ -119,60 +119,60 @@ class HTTPServerClientTest : XCTestCase {
                     head.headers.add(name: "Content-Length", value: "\(replyString.utf8.count)")
                     head.headers.add(name: "Connection", value: "close")
                     let r = HTTPServerResponsePart.head(head)
-                    ctx.write(self.wrapOutboundOut(r), promise: nil)
-                    var b = ctx.channel.allocator.buffer(capacity: replyString.count)
+                    context.write(self.wrapOutboundOut(r), promise: nil)
+                    var b = context.channel.allocator.buffer(capacity: replyString.count)
                     b.write(string: replyString)
 
                     let outbound = self.outboundBody(b)
-                    ctx.write(self.wrapOutboundOut(outbound.body)).whenComplete {
+                    context.write(self.wrapOutboundOut(outbound.body)).whenComplete {
                         outbound.destructor()
                     }
-                    ctx.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
+                    context.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete {
                         self.sentEnd = true
-                        self.maybeClose(ctx: ctx)
+                        self.maybeClose(context: context)
                     }
                 case "/count-to-ten":
                     var head = HTTPResponseHead(version: req.version, status: .ok)
                     head.headers.add(name: "Connection", value: "close")
                     let r = HTTPServerResponsePart.head(head)
-                    ctx.write(self.wrapOutboundOut(r)).whenFailure { error in
+                    context.write(self.wrapOutboundOut(r)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
-                    var b = ctx.channel.allocator.buffer(capacity: 1024)
+                    var b = context.channel.allocator.buffer(capacity: 1024)
                     for i in 1...10 {
                         b.clear()
                         b.write(string: "\(i)")
 
                         let outbound = self.outboundBody(b)
-                        ctx.write(self.wrapOutboundOut(outbound.body)).mapIfError { error in
+                        context.write(self.wrapOutboundOut(outbound.body)).mapIfError { error in
                             XCTFail("unexpected error \(error)")
                         }.whenComplete {
                             outbound.destructor()
                         }
                     }
-                    ctx.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
+                    context.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete {
                         self.sentEnd = true
-                        self.maybeClose(ctx: ctx)
+                        self.maybeClose(context: context)
                     }
                 case "/trailers":
                     var head = HTTPResponseHead(version: req.version, status: .ok)
                     head.headers.add(name: "Connection", value: "close")
                     head.headers.add(name: "Transfer-Encoding", value: "chunked")
                     let r = HTTPServerResponsePart.head(head)
-                    ctx.write(self.wrapOutboundOut(r)).whenFailure { error in
+                    context.write(self.wrapOutboundOut(r)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
-                    var b = ctx.channel.allocator.buffer(capacity: 1024)
+                    var b = context.channel.allocator.buffer(capacity: 1024)
                     for i in 1...10 {
                         b.clear()
                         b.write(string: "\(i)")
 
                         let outbound = self.outboundBody(b)
-                        ctx.write(self.wrapOutboundOut(outbound.body)).mapIfError { error in
+                        context.write(self.wrapOutboundOut(outbound.body)).mapIfError { error in
                             XCTFail("unexpected error \(error)")
                         }.whenComplete {
                             outbound.destructor()
@@ -182,15 +182,15 @@ class HTTPServerClientTest : XCTestCase {
                     var trailers = HTTPHeaders()
                     trailers.add(name: "X-URL-Path", value: "/trailers")
                     trailers.add(name: "X-Should-Trail", value: "sure")
-                    ctx.write(self.wrapOutboundOut(.end(trailers))).mapIfError { error in
+                    context.write(self.wrapOutboundOut(.end(trailers))).mapIfError { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete {
                         self.sentEnd = true
-                        self.maybeClose(ctx: ctx)
+                        self.maybeClose(context: context)
                     }
 
                 case "/massive-response":
-                    var buf = ctx.channel.allocator.buffer(capacity: HTTPServerClientTest.massiveResponseLength)
+                    var buf = context.channel.allocator.buffer(capacity: HTTPServerClientTest.massiveResponseLength)
                     buf.writeWithUnsafeMutableBytes { targetPtr in
                         return HTTPServerClientTest.massiveResponseBytes.withUnsafeBytes { srcPtr in
                             precondition(targetPtr.count >= srcPtr.count)
@@ -203,45 +203,45 @@ class HTTPServerClientTest : XCTestCase {
                     head.headers.add(name: "Connection", value: "close")
                     head.headers.add(name: "Content-Length", value: "\(HTTPServerClientTest.massiveResponseLength)")
                     let r = HTTPServerResponsePart.head(head)
-                    ctx.write(self.wrapOutboundOut(r)).whenFailure { error in
+                    context.write(self.wrapOutboundOut(r)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
                     let outbound = self.outboundBody(buf)
-                    ctx.writeAndFlush(self.wrapOutboundOut(outbound.body)).mapIfError { error in
+                    context.writeAndFlush(self.wrapOutboundOut(outbound.body)).mapIfError { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete {
                         outbound.destructor()
                     }
-                    ctx.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
+                    context.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete {
                         self.sentEnd = true
-                        self.maybeClose(ctx: ctx)
+                        self.maybeClose(context: context)
                     }
                 case "/head":
                     var head = HTTPResponseHead(version: req.version, status: .ok)
                     head.headers.add(name: "Connection", value: "close")
                     head.headers.add(name: "Content-Length", value: "5000")
-                    ctx.write(self.wrapOutboundOut(.head(head))).whenFailure { error in
+                    context.write(self.wrapOutboundOut(.head(head))).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
-                    ctx.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
+                    context.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete {
                         self.sentEnd = true
-                        self.maybeClose(ctx: ctx)
+                        self.maybeClose(context: context)
                     }
                 case "/204":
                     var head = HTTPResponseHead(version: req.version, status: .noContent)
                     head.headers.add(name: "Connection", value: "keep-alive")
-                    ctx.write(self.wrapOutboundOut(.head(head))).whenFailure { error in
+                    context.write(self.wrapOutboundOut(.head(head))).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
-                    ctx.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
+                    context.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete {
                         self.sentEnd = true
-                        self.maybeClose(ctx: ctx)
+                        self.maybeClose(context: context)
                     }
                 default:
                     XCTFail("received request to unknown URI \(req.uri)")
@@ -254,16 +254,16 @@ class HTTPServerClientTest : XCTestCase {
             }
         }
 
-        public func channelReadComplete(ctx: ChannelHandlerContext) {
-            ctx.flush()
+        public func channelReadComplete(context: ChannelHandlerContext) {
+            context.flush()
         }
 
         // We should only close the connection when the remote peer has sent the entire request
         // and we have sent our entire response.
-        private func maybeClose(ctx: ChannelHandlerContext) {
+        private func maybeClose(context: ChannelHandlerContext) {
             if sentEnd && seenEnd && self.isOpen {
                 self.isOpen = false
-                ctx.close().whenFailure { error in
+                context.close().whenFailure { error in
                     XCTFail("unexpected error \(error)")
                 }
             }

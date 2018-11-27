@@ -326,19 +326,19 @@ public class EventLoopTest : XCTestCase {
                 self.channelActivePromise = channelActivePromise
             }
 
-            func channelActive(ctx: ChannelHandlerContext) {
+            func channelActive(context: ChannelHandlerContext) {
                 self.channelActivePromise?.succeed(result: ())
             }
 
-            func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+            func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
                 guard self.closePromise == nil else {
                     XCTFail("Attempted to create duplicate close promise")
                     return
                 }
-                XCTAssertTrue(ctx.channel.isActive)
-                self.closePromise = ctx.eventLoop.newPromise()
+                XCTAssertTrue(context.channel.isActive)
+                self.closePromise = context.eventLoop.newPromise()
                 self.closePromise!.futureResult.whenSuccess {
-                    ctx.close(mode: mode, promise: promise)
+                    context.close(mode: mode, promise: promise)
                 }
                 promiseRegisterCallback(self.closePromise!)
             }
@@ -515,7 +515,7 @@ public class EventLoopTest : XCTestCase {
             let groupIsShutdown = Atomic(value: false)
             let removed = Atomic(value: false)
 
-            public func handlerRemoved(ctx: ChannelHandlerContext) {
+            public func handlerRemoved(context: ChannelHandlerContext) {
                 XCTAssertFalse(groupIsShutdown.load())
                 XCTAssertTrue(removed.compareAndExchange(expected: false, desired: true))
             }

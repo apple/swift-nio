@@ -26,8 +26,8 @@ private final class TestChannelInboundHandler: ChannelInboundHandler {
         self.body = body
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        ctx.fireChannelRead(self.wrapInboundOut(self.body(self.unwrapInboundIn(data))))
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        context.fireChannelRead(self.wrapInboundOut(self.body(self.unwrapInboundIn(data))))
     }
 }
 

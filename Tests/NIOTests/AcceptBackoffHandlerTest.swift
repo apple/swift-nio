@@ -160,7 +160,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
                 self.promise = promise
             }
 
-            public func channelInactive(ctx: ChannelHandlerContext) {
+            public func channelInactive(context: ChannelHandlerContext) {
                 promise.succeed(result: ())
             }
 
@@ -240,9 +240,9 @@ public class AcceptBackoffHandlerTest: XCTestCase {
 
         var readCount = 0
 
-        func read(ctx: ChannelHandlerContext) {
+        func read(context: ChannelHandlerContext) {
             readCount += 1
-            ctx.read()
+            context.read()
         }
     }
 

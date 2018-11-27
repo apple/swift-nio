@@ -194,7 +194,7 @@ class HTTPDecoderTest: XCTestCase {
         class Receiver: ChannelInboundHandler {
             typealias InboundIn = HTTPServerRequestPart
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let part = self.unwrapInboundIn(data)
                 switch part {
                 case .head(let h):
@@ -237,12 +237,12 @@ class HTTPDecoderTest: XCTestCase {
         class Receiver: ChannelInboundHandler {
             typealias InboundIn = HTTPServerRequestPart
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let part = self.unwrapInboundIn(data)
                 switch part {
                 case .end:
                     // ignore
-                    _ = ctx.pipeline.remove(name: "decoder")
+                    _ = context.pipeline.remove(name: "decoder")
                 default:
                     break
                 }
@@ -264,14 +264,14 @@ class HTTPDecoderTest: XCTestCase {
             typealias InboundIn = ByteBuffer
             var called: Bool = false
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 var buffer = self.unwrapInboundIn(data)
                 XCTAssertEqual("XXXX", buffer.readString(length: buffer.readableBytes)!)
                 self.called = true
             }
 
-            func handlerAdded(ctx: ChannelHandlerContext) {
-                _ = ctx.pipeline.remove(name: "decoder")
+            func handlerAdded(context: ChannelHandlerContext) {
+                _ = context.pipeline.remove(name: "decoder")
             }
         }
 
@@ -279,12 +279,12 @@ class HTTPDecoderTest: XCTestCase {
             typealias InboundIn = HTTPServerRequestPart
             let collector = ByteCollector()
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let part = self.unwrapInboundIn(data)
                 switch part {
                 case .end:
-                    _ = ctx.pipeline.remove(handler: self).then { _ in
-                        ctx.pipeline.add(handler: self.collector)
+                    _ = context.pipeline.remove(handler: self).then { _ in
+                        context.pipeline.add(handler: self.collector)
                     }
                 default:
                     // ignore
@@ -292,7 +292,7 @@ class HTTPDecoderTest: XCTestCase {
                 }
             }
 
-            func channelInactive(ctx: ChannelHandlerContext) {
+            func channelInactive(context: ChannelHandlerContext) {
                 XCTAssertTrue(collector.called)
             }
         }

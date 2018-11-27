@@ -23,10 +23,10 @@ final class LineDelimiterCodec: ByteToMessageDecoder {
 
     public var cumulationBuffer: ByteBuffer?
 
-    public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+    public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         let readable = buffer.withUnsafeReadableBytes { $0.index(of: newLine) }
         if let r = readable {
-            ctx.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: r + 1)!))
+            context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: r + 1)!))
             return .continue
         }
         return .needMoreData
@@ -51,13 +51,13 @@ final class ChatHandler: ChannelInboundHandler {
     private let channelsSyncQueue = DispatchQueue(label: "channelsQueue")
     private var channels: [ObjectIdentifier: Channel] = [:]
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        let id = ObjectIdentifier(ctx.channel)
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        let id = ObjectIdentifier(context.channel)
         var read = self.unwrapInboundIn(data)
 
         // 64 should be good enough for the ipaddress
-        var buffer = ctx.channel.allocator.buffer(capacity: read.readableBytes + 64)
-        buffer.write(string: "(\(ctx.remoteAddress!)) - ")
+        var buffer = context.channel.allocator.buffer(capacity: read.readableBytes + 64)
+        buffer.write(string: "(\(context.remoteAddress!)) - ")
         buffer.write(buffer: &read)
         self.channelsSyncQueue.async {
             // broadcast the message to all the connected clients except the one that wrote it.
@@ -65,17 +65,17 @@ final class ChatHandler: ChannelInboundHandler {
         }
     }
 
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
         print("error: ", error)
 
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
-        ctx.close(promise: nil)
+        context.close(promise: nil)
     }
 
-    public func channelActive(ctx: ChannelHandlerContext) {
-        let remoteAddress = ctx.remoteAddress!
-        let channel = ctx.channel
+    public func channelActive(context: ChannelHandlerContext) {
+        let remoteAddress = context.remoteAddress!
+        let channel = context.channel
         self.channelsSyncQueue.async {
             // broadcast the message to all the connected clients except the one that just became active.
             self.writeToAll(channels: self.channels, allocator: channel.allocator, message: "(ChatServer) - New client connected with address: \(remoteAddress)\n")
@@ -84,12 +84,12 @@ final class ChatHandler: ChannelInboundHandler {
         }
 
         var buffer = channel.allocator.buffer(capacity: 64)
-        buffer.write(string: "(ChatServer) - Welcome to: \(ctx.localAddress!)\n")
-        ctx.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+        buffer.write(string: "(ChatServer) - Welcome to: \(context.localAddress!)\n")
+        context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
     }
 
-    public func channelInactive(ctx: ChannelHandlerContext) {
-        let channel = ctx.channel
+    public func channelInactive(context: ChannelHandlerContext) {
+        let channel = context.channel
         self.channelsSyncQueue.async {
             if self.channels.removeValue(forKey: ObjectIdentifier(channel)) != nil {
                 // Broadcast the message to all the connected clients except the one that just was disconnected.

@@ -25,19 +25,19 @@ private final class ChatHandler: ChannelInboundHandler {
         #endif
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var buffer = self.unwrapInboundIn(data)
         while let byte: UInt8 = buffer.readInteger() {
             printByte(byte)
         }
     }
 
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
         print("error: ", error)
 
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
-        ctx.close(promise: nil)
+        context.close(promise: nil)
     }
 }
 

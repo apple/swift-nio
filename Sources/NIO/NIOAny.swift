@@ -31,7 +31,7 @@
 ///         typealias InboundIn = Bacon /* we expected to be delivered `Bacon` ... */
 ///         typealias InboundOut = Sandwich /* ... and we will make and deliver a `Sandwich` from that */
 ///
-///         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+///         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
 ///              /* we receive the `Bacon` as a `NIOAny` as at compile-time the exact configuration of the channel
 ///                 pipeline can't be computed. The pipeline can't be computed at compile time as it can change
 ///                 dynamically at run-time. Yet, we assert that in any configuration the channel handler before
@@ -39,7 +39,7 @@
 ///              */
 ///              let bacon = self.unwrapInboundIn(data) /* `Bacon` or crash */
 ///              let sandwich = makeSandwich(bacon)
-///              ctx.fireChannelRead(self.wrapInboundOut(sandwich)) /* as promised we deliver a wrapped `Sandwich` */
+///              context.fireChannelRead(self.wrapInboundOut(sandwich)) /* as promised we deliver a wrapped `Sandwich` */
 ///         }
 ///     }
 public struct NIOAny {

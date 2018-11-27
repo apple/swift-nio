@@ -243,16 +243,16 @@ public final class ServerBootstrap {
             self.childChannelOptions = childChannelOptions
         }
 
-        func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+        func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
             if event is ChannelShouldQuiesceEvent {
-                ctx.channel.close(promise: nil)
+                context.channel.close(promise: nil)
             }
-            ctx.fireUserInboundEventTriggered(event)
+            context.fireUserInboundEventTriggered(event)
         }
 
-        func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+        func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             let accepted = self.unwrapInboundIn(data)
-            let ctxEventLoop = ctx.eventLoop
+            let ctxEventLoop = context.eventLoop
             let childEventLoop = accepted.eventLoop
             let childChannelInit = self.childChannelInit ?? { (_: Channel) in childEventLoop.newSucceededFuture(result: ()) }
 
@@ -269,14 +269,14 @@ public final class ServerBootstrap {
                 ctxEventLoop.assertInEventLoop()
                 future.then { (_) -> EventLoopFuture<Void> in
                     ctxEventLoop.assertInEventLoop()
-                    guard !ctx.pipeline.destroyed else {
-                        return ctx.eventLoop.newFailedFuture(error: ChannelError.ioOnClosedChannel)
+                    guard !context.pipeline.destroyed else {
+                        return context.eventLoop.newFailedFuture(error: ChannelError.ioOnClosedChannel)
                     }
-                    ctx.fireChannelRead(data)
-                    return ctx.eventLoop.newSucceededFuture(result: ())
+                    context.fireChannelRead(data)
+                    return context.eventLoop.newSucceededFuture(result: ())
                 }.whenFailure { error in
                     ctxEventLoop.assertInEventLoop()
-                    self.closeAndFire(ctx: ctx, accepted: accepted, err: error)
+                    self.closeAndFire(context: context, accepted: accepted, err: error)
                 }
             }
 
@@ -289,13 +289,13 @@ public final class ServerBootstrap {
             }
         }
 
-        private func closeAndFire(ctx: ChannelHandlerContext, accepted: SocketChannel, err: Error) {
+        private func closeAndFire(context: ChannelHandlerContext, accepted: SocketChannel, err: Error) {
             accepted.close(promise: nil)
-            if ctx.eventLoop.inEventLoop {
-                ctx.fireErrorCaught(err)
+            if context.eventLoop.inEventLoop {
+                context.fireErrorCaught(err)
             } else {
-                ctx.eventLoop.execute {
-                    ctx.fireErrorCaught(err)
+                context.eventLoop.execute {
+                    context.fireErrorCaught(err)
                 }
             }
         }

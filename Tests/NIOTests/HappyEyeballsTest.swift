@@ -61,21 +61,21 @@ private class ConnectRecorder: ChannelOutboundHandler {
     var targetHost: String?
     var state: State = .idle
 
-    public func connect(ctx: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?) {
+    public func connect(context: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?) {
         self.targetHost = to.toString()
-        let connectPromise = promise ?? ctx.eventLoop.newPromise()
+        let connectPromise = promise ?? context.eventLoop.newPromise()
         connectPromise.futureResult.whenSuccess {
             self.state = .connected
         }
-        ctx.connect(to: to, promise: connectPromise)
+        context.connect(to: to, promise: connectPromise)
     }
 
-    public func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-        let connectPromise = promise ?? ctx.eventLoop.newPromise()
+    public func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        let connectPromise = promise ?? context.eventLoop.newPromise()
         connectPromise.futureResult.whenComplete {
             self.state = .closed
         }
-        ctx.close(promise: connectPromise)
+        context.close(promise: connectPromise)
     }
 }
 
@@ -85,7 +85,7 @@ private class ConnectionDelayer: ChannelOutboundHandler {
 
     public var connectPromise: EventLoopPromise<Void>?
 
-    public func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+    public func connect(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         self.connectPromise = promise
     }
 }

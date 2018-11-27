@@ -21,29 +21,29 @@ private class CloseSwallower: ChannelOutboundHandler {
     typealias OutboundOut = Any
 
     private var closePromise: EventLoopPromise<Void>? = nil
-    private var ctx: ChannelHandlerContext? = nil
+    private var context: ChannelHandlerContext? = nil
 
     public func allowClose() {
-        self.ctx!.close(promise: self.closePromise)
+        self.context!.close(promise: self.closePromise)
     }
 
-    func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+    func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         self.closePromise = promise
-        self.ctx = ctx
+        self.context = context
     }
 }
 
-/// A class that calls ctx.close() when it receives a decoded websocket frame, and validates that it does
+/// A class that calls context.close() when it receives a decoded websocket frame, and validates that it does
 /// not receive two.
 private final class SynchronousCloser: ChannelInboundHandler {
     typealias InboundIn = WebSocketFrame
 
     private var closeFrame: WebSocketFrame?
 
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let frame = self.unwrapInboundIn(data)
         guard case .connectionClose = frame.opcode else {
-            ctx.fireChannelRead(data)
+            context.fireChannelRead(data)
             return
         }
 
@@ -52,7 +52,7 @@ private final class SynchronousCloser: ChannelInboundHandler {
         self.closeFrame = frame
 
         // Now we're going to call close.
-        ctx.close(promise: nil)
+        context.close(promise: nil)
     }
 }
 

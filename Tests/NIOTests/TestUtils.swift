@@ -124,14 +124,14 @@ final class ByteCountingHandler : ChannelInboundHandler {
         self.promise = promise
     }
 
-    func handlerAdded(ctx: ChannelHandlerContext) {
-        buffer = ctx.channel.allocator.buffer(capacity: numBytes)
+    func handlerAdded(context: ChannelHandlerContext) {
+        buffer = context.channel.allocator.buffer(capacity: numBytes)
         if self.numBytes == 0 {
             self.promise.succeed(result: buffer)
         }
     }
 
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var currentBuffer = self.unwrapInboundIn(data)
         buffer.write(buffer: &currentBuffer)
 

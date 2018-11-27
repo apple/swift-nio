@@ -18,7 +18,7 @@ import NIO
 private final class ChatMessageDecoder: ChannelInboundHandler {
     public typealias InboundIn = AddressedEnvelope<ByteBuffer>
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let envelope = self.unwrapInboundIn(data)
         var buffer = envelope.data
 
@@ -37,11 +37,11 @@ private final class ChatMessageEncoder: ChannelOutboundHandler {
     public typealias OutboundIn = AddressedEnvelope<String>
     public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
 
-    func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let message = self.unwrapOutboundIn(data)
-        var buffer = ctx.channel.allocator.buffer(capacity: message.data.utf8.count)
+        var buffer = context.channel.allocator.buffer(capacity: message.data.utf8.count)
         buffer.write(string: message.data)
-        ctx.write(self.wrapOutboundOut(AddressedEnvelope(remoteAddress: message.remoteAddress, data: buffer)), promise: promise)
+        context.write(self.wrapOutboundOut(AddressedEnvelope(remoteAddress: message.remoteAddress, data: buffer)), promise: promise)
     }
 }
 

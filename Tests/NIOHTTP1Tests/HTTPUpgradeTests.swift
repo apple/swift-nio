@@ -101,7 +101,7 @@ private class SingleHTTPResponseAccumulator: ChannelInboundHandler {
         self.allDoneBlock = completion
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let buffer = self.unwrapInboundIn(data)
         self.receiveds.append(buffer)
         if let finalBytes = buffer.getBytes(at: buffer.writerIndex - 4, length: 4), finalBytes == [0x0D, 0x0A, 0x0D, 0x0A] {
@@ -113,7 +113,7 @@ private class SingleHTTPResponseAccumulator: ChannelInboundHandler {
 private class ExplodingHandler: ChannelInboundHandler {
     typealias InboundIn = Any
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         XCTFail("Received unexpected read")
     }
 }
@@ -180,9 +180,9 @@ private class ExplodingUpgrader: HTTPProtocolUpgrader {
         throw Explosion.KABOOM
     }
 
-    public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         XCTFail("upgrade called")
-        return ctx.eventLoop.newSucceededFuture(result: ())
+        return context.eventLoop.newSucceededFuture(result: ())
     }
 }
 
@@ -202,9 +202,9 @@ private class UpgraderSaysNo: HTTPProtocolUpgrader {
         throw No.no
     }
 
-    public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         XCTFail("upgrade called")
-        return ctx.eventLoop.newSucceededFuture(result: ())
+        return context.eventLoop.newSucceededFuture(result: ())
     }
 }
 
@@ -225,9 +225,9 @@ private class SuccessfulUpgrader: HTTPProtocolUpgrader {
         return headers
     }
 
-    public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         self.onUpgradeComplete(upgradeRequest)
-        return ctx.eventLoop.newSucceededFuture(result: ())
+        return context.eventLoop.newSucceededFuture(result: ())
     }
 }
 
@@ -236,7 +236,7 @@ private class UpgradeDelayer: HTTPProtocolUpgrader {
     let requiredUpgradeHeaders: [String] = []
 
     private var upgradePromise: EventLoopPromise<Void>?
-    private var ctx: ChannelHandlerContext?
+    private var context: ChannelHandlerContext?
 
     public init(forProtocol `protocol`: String) {
         self.supportedProtocol = `protocol`
@@ -248,9 +248,9 @@ private class UpgradeDelayer: HTTPProtocolUpgrader {
         return headers
     }
 
-    public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
-        self.upgradePromise = ctx.eventLoop.newPromise()
-        self.ctx = ctx
+    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+        self.upgradePromise = context.eventLoop.newPromise()
+        self.context = context
         return self.upgradePromise!.futureResult
     }
 
@@ -263,9 +263,9 @@ private class UserEventSaver<EventType>: ChannelInboundHandler {
     public typealias InboundIn = Any
     public var events: [EventType] = []
 
-    public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+    public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         events.append(event as! EventType)
-        ctx.fireUserInboundEventTriggered(event)
+        context.fireUserInboundEventTriggered(event)
     }
 }
 
@@ -274,9 +274,9 @@ private class ErrorSaver: ChannelInboundHandler {
     public typealias InboundOut = Any
     public var errors: [Error] = []
 
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
         errors.append(error)
-        ctx.fireErrorCaught(error)
+        context.fireErrorCaught(error)
     }
 }
 
@@ -284,7 +284,7 @@ private class DataRecorder<T>: ChannelInboundHandler {
     public typealias InboundIn = T
     private var data: [T] = []
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let datum = self.unwrapInboundIn(data)
         self.data.append(datum)
     }
@@ -382,13 +382,13 @@ class HTTPUpgradeTestCase: XCTestCase {
         }
 
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: []) { (ctx) in
+                                                                                    extraHandlers: []) { (context) in
             // This is called before the upgrader gets called.
             XCTAssertNil(upgradeRequest)
             upgradeHandlerCbFired = true
 
             // We're closing the connection now.
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -487,13 +487,13 @@ class HTTPUpgradeTestCase: XCTestCase {
         }
 
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [explodingUpgrader, successfulUpgrader],
-                                                                                    extraHandlers: []) { ctx in
+                                                                                    extraHandlers: []) { context in
             // This is called before the upgrader gets called.
             XCTAssertNil(upgradeRequest)
             upgradeHandlerCbFired = true
 
             // We're closing the connection now.
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -535,9 +535,9 @@ class HTTPUpgradeTestCase: XCTestCase {
         }
 
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: [eventSaver]) { ctx in
+                                                                                    extraHandlers: [eventSaver]) { context in
             XCTAssertEqual(eventSaver.events.count, 0)
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -592,13 +592,13 @@ class HTTPUpgradeTestCase: XCTestCase {
         let errorCatcher = ErrorSaver()
 
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [explodingUpgrader, successfulUpgrader],
-                                                                                    extraHandlers: [errorCatcher]) { ctx in
+                                                                                    extraHandlers: [errorCatcher]) { context in
             // This is called before the upgrader gets called.
             XCTAssertNil(upgradeRequest)
             upgradeHandlerCbFired = true
 
             // We're closing the connection now.
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -643,8 +643,8 @@ class HTTPUpgradeTestCase: XCTestCase {
     func testUpgradeIsCaseInsensitive() throws {
         let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: ["WeIrDcAsE"]) { req in }
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: []) { ctx in
-            ctx.close(promise: nil)
+                                                                                    extraHandlers: []) { context in
+            context.close(promise: nil)
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -677,7 +677,7 @@ class HTTPUpgradeTestCase: XCTestCase {
 
         let upgrader = UpgradeDelayer(forProtocol: "myproto")
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: []) { ctx in
+                                                                                    extraHandlers: []) { context in
             g.leave()
         }
         defer {
@@ -720,7 +720,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         let upgrader = UpgradeDelayer(forProtocol: "myproto")
         let dataRecorder = DataRecorder<ByteBuffer>()
 
-        let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader], extraHandlers: [dataRecorder]) { ctx in
+        let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader], extraHandlers: [dataRecorder]) { context in
             g.leave()
         }
         defer {
@@ -770,7 +770,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: []) { req in }
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(pipelining: true,
                                                                                     upgraders: [upgrader],
-                                                                                    extraHandlers: []) { ctx in }
+                                                                                    extraHandlers: []) { context in }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -800,7 +800,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTAssertFalse(try channel.finish())
         }
         let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: []) { req in }
-        XCTAssertNoThrow(try channel.pipeline.addHTTPServerHandlersWithUpgrader(upgraders: [upgrader]) { ctx in }.wait())
+        XCTAssertNoThrow(try channel.pipeline.addHTTPServerHandlersWithUpgrader(upgraders: [upgrader]) { context in }.wait())
         try channel.pipeline.assertContainsUpgrader()
         try channel.pipeline.assertContains(handlerType: HTTPRequestDecoder.self)
         try channel.pipeline.assertContains(handlerType: HTTPResponseEncoder.self)
@@ -847,12 +847,12 @@ class HTTPUpgradeTestCase: XCTestCase {
                 self.allDonePromise = allDonePromise
             }
             
-            func handlerAdded(ctx: ChannelHandlerContext) {
+            func handlerAdded(context: ChannelHandlerContext) {
                 XCTAssertEqual(.fresh, self.state)
                 self.state = .added
             }
             
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let buf = self.unwrapInboundIn(data)
                 XCTAssertEqual(1, buf.readableBytes)
                 let stringRead = buf.getString(at: 0, length: buf.readableBytes)
@@ -868,7 +868,7 @@ class HTTPUpgradeTestCase: XCTestCase {
                 case .inlineDataRead:
                     XCTAssertEqual("B", stringRead)
                     self.state = .extraDataRead
-                    ctx.channel.close(promise: nil)
+                    context.channel.close(promise: nil)
                     if stringRead == .some("B") {
                         self.secondByteDonePromise.succeed(result: ())
                     } else {
@@ -879,10 +879,10 @@ class HTTPUpgradeTestCase: XCTestCase {
                 }
             }
             
-            func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+            func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
                 XCTAssertEqual(.extraDataRead, self.state)
                 self.state = .closed
-                ctx.close(mode: mode, promise: promise)
+                context.close(mode: mode, promise: promise)
                 
                 self.allDonePromise.succeed(result: ())
             }
@@ -902,12 +902,12 @@ class HTTPUpgradeTestCase: XCTestCase {
         let secondByteDonePromise: EventLoopPromise<Void> = promiseGroup.next().newPromise()
         let allDonePromise: EventLoopPromise<Void> = promiseGroup.next().newPromise()
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: []) { (ctx) in
+                                                                                    extraHandlers: []) { (context) in
                                                                                         // This is called before the upgrader gets called.
                                                                                         XCTAssertNil(upgradeRequest)
                                                                                         upgradeHandlerCbFired = true
                                                                                         
-                                                                                        _ = ctx.channel.pipeline.add(handler: CheckWeReadInlineAndExtraData(firstByteDonePromise: firstByteDonePromise,
+                                                                                        _ = context.channel.pipeline.add(handler: CheckWeReadInlineAndExtraData(firstByteDonePromise: firstByteDonePromise,
                                                                                                                                                             secondByteDonePromise: secondByteDonePromise,
                                                                                                                                                             allDonePromise: allDonePromise))
         }

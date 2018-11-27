@@ -25,20 +25,20 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
 
     public init() { }
 
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
         if let error = error as? NIOWebSocketError {
-            var data = ctx.channel.allocator.buffer(capacity: 2)
+            var data = context.channel.allocator.buffer(capacity: 2)
             data.write(webSocketErrorCode: WebSocketErrorCode(error))
             let frame = WebSocketFrame(fin: true,
                                        opcode: .connectionClose,
                                        data: data)
-            ctx.writeAndFlush(self.wrapOutboundOut(frame)).whenComplete {
-                ctx.close(promise: nil)
+            context.writeAndFlush(self.wrapOutboundOut(frame)).whenComplete {
+                context.close(promise: nil)
             }
         }
 
         // Regardless of whether this is an error we want to handle or not, we always
         // forward the error on to let others see it.
-        ctx.fireErrorCaught(error)
+        context.fireErrorCaught(error)
     }
 }

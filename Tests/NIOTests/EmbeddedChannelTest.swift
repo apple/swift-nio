@@ -108,8 +108,8 @@ class EmbeddedChannelTest: XCTestCase {
     private final class ExceptionThrowingInboundHandler : ChannelInboundHandler {
         typealias InboundIn = String
 
-        public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-            ctx.fireErrorCaught(ChannelError.operationUnsupported)
+        public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+            context.fireErrorCaught(ChannelError.operationUnsupported)
         }
 
     }
@@ -118,7 +118,7 @@ class EmbeddedChannelTest: XCTestCase {
         typealias OutboundIn = String
         typealias OutboundOut = Never
 
-        public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             promise!.fail(error: ChannelError.operationUnsupported)
         }
     }
@@ -127,9 +127,9 @@ class EmbeddedChannelTest: XCTestCase {
         typealias InboundIn = ByteBuffer
         public var inactiveNotifications = 0
 
-        public func channelInactive(ctx: ChannelHandlerContext) {
+        public func channelInactive(context: ChannelHandlerContext) {
             inactiveNotifications += 1
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         }
     }
 

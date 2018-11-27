@@ -42,11 +42,11 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
         return buffer
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         if case .head(let req) = self.unwrapInboundIn(data), req.uri == "/allocation-test-1" {
-            ctx.write(self.wrapOutboundOut(.head(self.responseHead)), promise: nil)
-            ctx.write(self.wrapOutboundOut(.body(.byteBuffer(self.responseBody(allocator: ctx.channel.allocator)))), promise: nil)
-            ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+            context.write(self.wrapOutboundOut(.head(self.responseHead)), promise: nil)
+            context.write(self.wrapOutboundOut(.body(.byteBuffer(self.responseBody(allocator: context.channel.allocator)))), promise: nil)
+            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
         }
     }
 }
@@ -75,25 +75,25 @@ private final class PingHandler: ChannelInboundHandler {
         self.allDone = eventLoop.newPromise()
     }
 
-    public func channelActive(ctx: ChannelHandlerContext) {
-        self.pingBuffer = ctx.channel.allocator.buffer(capacity: 1)
+    public func channelActive(context: ChannelHandlerContext) {
+        self.pingBuffer = context.channel.allocator.buffer(capacity: 1)
         self.pingBuffer.write(integer: PingHandler.pingCode)
 
-        ctx.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
+        context.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var buf = self.unwrapInboundIn(data)
         if buf.readableBytes == 1 &&
             buf.readInteger(as: UInt8.self) == PongHandler.pongCode {
             if self.remainingNumberOfRequests > 0 {
                 self.remainingNumberOfRequests -= 1
-                ctx.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
+                context.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
             } else {
-                ctx.close(promise: self.allDone)
+                context.close(promise: self.allDone)
             }
         } else {
-            ctx.close(promise: nil)
+            context.close(promise: nil)
             self.allDone.fail(error: PingPongFailure(problem: "wrong buffer received: \(buf.debugDescription)"))
         }
     }
@@ -110,18 +110,18 @@ private final class PongHandler: ChannelInboundHandler {
     private var pongBuffer: ByteBuffer!
     public static let pongCode: UInt8 = 0xef
 
-    public func channelActive(ctx: ChannelHandlerContext) {
-        self.pongBuffer = ctx.channel.allocator.buffer(capacity: 1)
+    public func channelActive(context: ChannelHandlerContext) {
+        self.pongBuffer = context.channel.allocator.buffer(capacity: 1)
         self.pongBuffer.write(integer: PongHandler.pongCode)
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var buf = self.unwrapInboundIn(data)
         if buf.readableBytes == 1 &&
             buf.readInteger(as: UInt8.self) == PingHandler.pingCode {
-            ctx.writeAndFlush(self.wrapOutboundOut(self.pongBuffer), promise: nil)
+            context.writeAndFlush(self.wrapOutboundOut(self.pongBuffer), promise: nil)
         } else {
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         }
     }
 }
@@ -163,20 +163,20 @@ public func swiftMain() -> Int {
             return reqs
         }
 
-        func errorCaught(ctx: ChannelHandlerContext, error: Error) {
-            ctx.channel.close(promise: nil)
+        func errorCaught(context: ChannelHandlerContext, error: Error) {
+            context.channel.close(promise: nil)
             self.isDonePromise.fail(error: error)
         }
 
-        func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+        func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             let respPart = self.unwrapInboundIn(data)
             if case .end(nil) = respPart {
                 if self.remainingNumberOfRequests <= 0 {
-                    ctx.channel.close().map { self.numberOfRequests - self.remainingNumberOfRequests }.cascade(promise: self.isDonePromise)
+                    context.channel.close().map { self.numberOfRequests - self.remainingNumberOfRequests }.cascade(promise: self.isDonePromise)
                 } else {
                     self.remainingNumberOfRequests -= 1
-                    ctx.write(self.wrapOutboundOut(.head(RepeatedRequests.requestHead)), promise: nil)
-                    ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                    context.write(self.wrapOutboundOut(.head(RepeatedRequests.requestHead)), promise: nil)
+                    context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 }
             }
         }

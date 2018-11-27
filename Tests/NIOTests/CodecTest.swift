@@ -45,7 +45,7 @@ private final class ChannelInactivePromiser: ChannelInboundHandler {
         channelInactivePromise = channel.eventLoop.newPromise()
     }
 
-    func channelInactive(ctx: ChannelHandlerContext) {
+    func channelInactive(context: ChannelHandlerContext) {
         channelInactivePromise.succeed(result: ())
     }
 }
@@ -58,11 +58,11 @@ public class ByteToMessageDecoderTest: XCTestCase {
         var cumulationBuffer: ByteBuffer?
 
 
-        func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
+        func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
             guard buffer.readableBytes >= MemoryLayout<Int32>.size else {
                 return .needMoreData
             }
-            ctx.fireChannelRead(self.wrapInboundOut(buffer.readInteger()!))
+            context.fireChannelRead(self.wrapInboundOut(buffer.readInteger()!))
             return .continue
         }
     }
@@ -73,7 +73,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         var cumulationBuffer: ByteBuffer?
 
-        func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
+        func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
             return .needMoreData
         }
     }
@@ -84,12 +84,12 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         var cumulationBuffer: ByteBuffer?
 
-        func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
+        func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
             guard case .some(let buffer) = buffer.readSlice(length: 512) else {
                 return .needMoreData
             }
 
-            ctx.fireChannelRead(self.wrapInboundOut(buffer))
+            context.fireChannelRead(self.wrapInboundOut(buffer))
             return .continue
         }
     }
@@ -102,12 +102,12 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         var cumulationBuffer: ByteBuffer?
 
-        func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
+        func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
             guard buffer.readableBytes >= 5120 else {
                 return .needMoreData
             }
 
-            ctx.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: 2048)!))
+            context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: 2048)!))
             return .continue
         }
     }
@@ -253,7 +253,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
             var reentranced: Bool = false
             var decode: Bool = false
 
-            func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 guard !self.decode else {
                     self.reentranced = true
                     return .needMoreData
@@ -264,9 +264,9 @@ public class ByteToMessageDecoderTest: XCTestCase {
                 }
 
                 if !self.reentranced {
-                    ctx.channel.pipeline.fireChannelRead(self.wrapInboundOut(buffer))
+                    context.channel.pipeline.fireChannelRead(self.wrapInboundOut(buffer))
                 }
-                ctx.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: 2)!))
+                context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: 2)!))
                 return .continue
             }
         }
@@ -298,10 +298,10 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
             var cumulationBuffer: ByteBuffer?
 
-            func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 XCTAssertTrue(buffer.readableBytes <= 4)
 
-                ctx.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: 2)!))
+                context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: 2)!))
 
                 if buffer.readableBytes > 0 {
                     // This should not be visible anymore after we exit the method which also means we should never see more then 4 readableBytes.
@@ -332,13 +332,13 @@ public class MessageToByteEncoderTest: XCTestCase {
         typealias OutboundIn = Int32
         typealias OutboundOut = ByteBuffer
 
-        public func encode(ctx: ChannelHandlerContext, data value: Int32, out: inout ByteBuffer) throws {
+        public func encode(context: ChannelHandlerContext, data value: Int32, out: inout ByteBuffer) throws {
             XCTAssertEqual(MemoryLayout<Int32>.size, out.writableBytes)
             out.write(integer: value)
         }
 
-        public func allocateOutBuffer(ctx: ChannelHandlerContext, data: Int32) throws -> ByteBuffer {
-            return ctx.channel.allocator.buffer(capacity: MemoryLayout<Int32>.size)
+        public func allocateOutBuffer(context: ChannelHandlerContext, data: Int32) throws -> ByteBuffer {
+            return context.channel.allocator.buffer(capacity: MemoryLayout<Int32>.size)
         }
     }
 
@@ -346,7 +346,7 @@ public class MessageToByteEncoderTest: XCTestCase {
         typealias OutboundIn = Int32
         typealias OutboundOut = ByteBuffer
 
-        public func encode(ctx: ChannelHandlerContext, data value: Int32, out: inout ByteBuffer) throws {
+        public func encode(context: ChannelHandlerContext, data value: Int32, out: inout ByteBuffer) throws {
             XCTAssertEqual(MemoryLayout<Int32>.size, 256)
             out.write(integer: value)
         }

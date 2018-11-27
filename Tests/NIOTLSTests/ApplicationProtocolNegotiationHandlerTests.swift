@@ -24,7 +24,7 @@ private class ReadCompletedHandler: ChannelInboundHandler {
         readCompleteCount = 0
     }
 
-    public func channelReadComplete(ctx: ChannelHandlerContext) {
+    public func channelReadComplete(context: ChannelHandlerContext) {
         readCompleteCount += 1
     }
 }

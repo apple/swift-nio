@@ -14,13 +14,13 @@
 
 import NIO
 
-private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandlerContext, isChunked: Bool, chunk: IOData, promise: EventLoopPromise<Void>?) {
+private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, context: ChannelHandlerContext, isChunked: Bool, chunk: IOData, promise: EventLoopPromise<Void>?) {
     let (mW1, mW2, mW3): (EventLoopPromise<Void>?, EventLoopPromise<Void>?, EventLoopPromise<Void>?)
 
     switch (isChunked, promise) {
     case (true, .some(let p)):
         /* chunked encoding and the user's interested: we need three promises and need to cascade into the users promise */
-        let (w1, w2, w3) = (ctx.eventLoop.newPromise() as EventLoopPromise<Void>, ctx.eventLoop.newPromise() as EventLoopPromise<Void>, ctx.eventLoop.newPromise() as EventLoopPromise<Void>)
+        let (w1, w2, w3) = (context.eventLoop.newPromise() as EventLoopPromise<Void>, context.eventLoop.newPromise() as EventLoopPromise<Void>, context.eventLoop.newPromise() as EventLoopPromise<Void>)
         w1.futureResult.and(w2.futureResult).and(w3.futureResult).map { (_: ((((), ()), ()))) in }.cascade(promise: p)
         (mW1, mW2, mW3) = (w1, w2, w3)
     case (false, .some(let p)):
@@ -35,51 +35,51 @@ private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandler
 
     /* we don't want to copy the chunk unnecessarily and therefore call write an annoyingly large number of times */
     if isChunked {
-        var buffer = ctx.channel.allocator.buffer(capacity: 32)
+        var buffer = context.channel.allocator.buffer(capacity: 32)
         let len = String(readableBytes, radix: 16)
         buffer.write(string: len)
         buffer.write(staticString: "\r\n")
-        ctx.write(wrapOutboundOut(.byteBuffer(buffer)), promise: mW1)
+        context.write(wrapOutboundOut(.byteBuffer(buffer)), promise: mW1)
 
-        ctx.write(wrapOutboundOut(chunk), promise: mW2)
+        context.write(wrapOutboundOut(chunk), promise: mW2)
 
         // Just move the buffers readerIndex to only make the \r\n readable and depend on COW semantics.
         buffer.moveReaderIndex(forwardBy: buffer.readableBytes - 2)
-        ctx.write(wrapOutboundOut(.byteBuffer(buffer)), promise: mW3)
+        context.write(wrapOutboundOut(.byteBuffer(buffer)), promise: mW3)
     } else {
-        ctx.write(wrapOutboundOut(chunk), promise: mW2)
+        context.write(wrapOutboundOut(chunk), promise: mW2)
     }
 }
 
-private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandlerContext, isChunked: Bool, trailers: HTTPHeaders?, promise: EventLoopPromise<Void>?) {
+private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, context: ChannelHandlerContext, isChunked: Bool, trailers: HTTPHeaders?, promise: EventLoopPromise<Void>?) {
     switch (isChunked, promise) {
     case (true, let p):
         var buffer: ByteBuffer
         if let trailers = trailers {
-            buffer = ctx.channel.allocator.buffer(capacity: 256)
+            buffer = context.channel.allocator.buffer(capacity: 256)
             buffer.write(staticString: "0\r\n")
             buffer.write(headers: trailers) // Includes trailing CRLF.
         } else {
-            buffer = ctx.channel.allocator.buffer(capacity: 8)
+            buffer = context.channel.allocator.buffer(capacity: 8)
             buffer.write(staticString: "0\r\n\r\n")
         }
-        ctx.write(wrapOutboundOut(.byteBuffer(buffer)), promise: p)
+        context.write(wrapOutboundOut(.byteBuffer(buffer)), promise: p)
     case (false, .some(let p)):
         // Not chunked so we have nothing to write. However, we don't want to satisfy this promise out-of-order
         // so we issue a zero-length write down the chain.
-        let buf = ctx.channel.allocator.buffer(capacity: 0)
-        ctx.write(wrapOutboundOut(.byteBuffer(buf)), promise: p)
+        let buf = context.channel.allocator.buffer(capacity: 0)
+        context.write(wrapOutboundOut(.byteBuffer(buf)), promise: p)
     case (false, .none):
         break
     }
 }
 
-private func writeHead(wrapOutboundOut: (IOData) -> NIOAny, writeStartLine: (inout ByteBuffer) -> Void, ctx: ChannelHandlerContext, headers: HTTPHeaders, promise: EventLoopPromise<Void>?) {
+private func writeHead(wrapOutboundOut: (IOData) -> NIOAny, writeStartLine: (inout ByteBuffer) -> Void, context: ChannelHandlerContext, headers: HTTPHeaders, promise: EventLoopPromise<Void>?) {
 
-    var buffer = ctx.channel.allocator.buffer(capacity: 256)
+    var buffer = context.channel.allocator.buffer(capacity: 256)
     writeStartLine(&buffer)
     buffer.write(headers: headers)
-    ctx.write(wrapOutboundOut(.byteBuffer(buffer)), promise: promise)
+    context.write(wrapOutboundOut(.byteBuffer(buffer)), promise: promise)
 }
 
 /// The type of framing that is used to mark the end of the body.
@@ -137,7 +137,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler {
 
     public init () { }
 
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch self.unwrapOutboundIn(data) {
         case .head(var request):
 
@@ -145,11 +145,11 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler {
 
             writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
                 buffer.write(request: request)
-            }, ctx: ctx, headers: request.headers, promise: promise)
+            }, context: context, headers: request.headers, promise: promise)
         case .body(let bodyPart):
-            writeChunk(wrapOutboundOut: self.wrapOutboundOut, ctx: ctx, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
+            writeChunk(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
         case .end(let trailers):
-            writeTrailers(wrapOutboundOut: self.wrapOutboundOut, ctx: ctx, isChunked: self.isChunked, trailers: trailers, promise: promise)
+            writeTrailers(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)
         }
     }
 }
@@ -166,7 +166,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler {
 
     public init () { }
 
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch self.unwrapOutboundIn(data) {
         case .head(var response):
 
@@ -174,11 +174,11 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler {
 
             writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
                 buffer.write(response: response)
-            }, ctx: ctx, headers: response.headers, promise: promise)
+            }, context: context, headers: response.headers, promise: promise)
         case .body(let bodyPart):
-            writeChunk(wrapOutboundOut: self.wrapOutboundOut, ctx: ctx, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
+            writeChunk(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
         case .end(let trailers):
-            writeTrailers(wrapOutboundOut: self.wrapOutboundOut, ctx: ctx, isChunked: self.isChunked, trailers: trailers, promise: promise)
+            writeTrailers(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)
         }
     }
 }
