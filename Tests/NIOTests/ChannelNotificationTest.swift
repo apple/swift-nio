@@ -291,7 +291,7 @@ class ChannelNotificationTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let acceptedChannelPromise: EventLoopPromise<Channel> = group.next().newPromise()
+        let acceptedChannelPromise = group.next().newPromise(for: Channel.self)
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -374,7 +374,7 @@ class ChannelNotificationTest: XCTestCase {
             }
         }
 
-        let promise: EventLoopPromise<Void> = group.next().newPromise()
+        let promise = group.next().newPromise(for: Void.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: true)

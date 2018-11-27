@@ -213,7 +213,7 @@ public extension SocketOptionProvider {
 extension BaseSocketChannel: SocketOptionProvider {
     public func unsafeSetSocketOption<Value>(level: SocketOptionLevel, name: SocketOptionName, value: Value) -> EventLoopFuture<Void> {
         if eventLoop.inEventLoop {
-            let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+            let promise = eventLoop.newPromise(for: Void.self)
             executeAndComplete(promise) {
                 try setSocketOption0(level: level, name: name, value: value)
             }
@@ -227,7 +227,7 @@ extension BaseSocketChannel: SocketOptionProvider {
 
     public func unsafeGetSocketOption<Value>(level: SocketOptionLevel, name: SocketOptionName) -> EventLoopFuture<Value> {
         if eventLoop.inEventLoop {
-            let promise: EventLoopPromise<Value> = eventLoop.newPromise()
+            let promise = eventLoop.newPromise(for: Value.self)
             executeAndComplete(promise) {
                 try getSocketOption0(level: level, name: name)
             }

@@ -698,7 +698,7 @@ class ChannelPipelineTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.write(staticString: "Hello, world!")
 
-        let removalPromise: EventLoopPromise<Bool> = channel.eventLoop.newPromise()
+        let removalPromise = channel.eventLoop.newPromise(for: Bool.self)
         removalPromise.futureResult.whenSuccess { (_: Bool) in
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
@@ -772,7 +772,7 @@ class ChannelPipelineTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.write(staticString: "Hello, world!")
 
-        let removalPromise: EventLoopPromise<Bool> = channel.eventLoop.newPromise()
+        let removalPromise = channel.eventLoop.newPromise(for: Bool.self)
         removalPromise.futureResult.whenSuccess { (_: Bool) in
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
@@ -847,7 +847,7 @@ class ChannelPipelineTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.write(staticString: "Hello, world!")
 
-        let removalPromise: EventLoopPromise<Bool> = channel.eventLoop.newPromise()
+        let removalPromise = channel.eventLoop.newPromise(for: Bool.self)
         removalPromise.futureResult.whenSuccess { (_: Bool) in
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())

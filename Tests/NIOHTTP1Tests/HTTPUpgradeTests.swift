@@ -77,7 +77,7 @@ private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
                                               upgraders: [HTTPProtocolUpgrader],
                                               extraHandlers: [ChannelHandler],
                                               _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) throws -> (Channel, EventLoopFuture<Channel>) {
-    let p: EventLoopPromise<Channel> = group.next().newPromise()
+    let p = group.next().newPromise(for: Channel.self)
     let c = try ServerBootstrap(group: group)
         .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
         .childChannelInitializer { channel in
@@ -394,7 +394,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().newPromise(for: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
@@ -499,7 +499,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().newPromise(for: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
@@ -543,7 +543,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().newPromise(for: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
@@ -604,7 +604,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().newPromise(for: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
@@ -650,7 +650,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().newPromise(for: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
@@ -684,7 +684,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().newPromise(for: Void.self)
         let clientHandler = SingleHTTPResponseAccumulator { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
@@ -727,7 +727,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().newPromise(for: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
@@ -898,9 +898,9 @@ class HTTPUpgradeTestCase: XCTestCase {
         defer {
             XCTAssertNoThrow(try promiseGroup.syncShutdownGracefully())
         }
-        let firstByteDonePromise: EventLoopPromise<Void> = promiseGroup.next().newPromise()
-        let secondByteDonePromise: EventLoopPromise<Void> = promiseGroup.next().newPromise()
-        let allDonePromise: EventLoopPromise<Void> = promiseGroup.next().newPromise()
+        let firstByteDonePromise = promiseGroup.next().newPromise(for: Void.self)
+        let secondByteDonePromise = promiseGroup.next().newPromise(for: Void.self)
+        let allDonePromise = promiseGroup.next().newPromise(for: Void.self)
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
                                                                                     extraHandlers: []) { (ctx) in
                                                                                         // This is called before the upgrader gets called.
@@ -915,7 +915,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
         
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().newPromise(for: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
