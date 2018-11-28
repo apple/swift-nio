@@ -152,7 +152,7 @@ public class SocketChannelTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerSocketChannel(serverSocket: socket,
                                                                            eventLoop: group.next() as! SelectableEventLoop,
                                                                            group: group))
-        let promise: EventLoopPromise<IOError> = serverChannel.eventLoop.newPromise()
+        let promise = serverChannel.eventLoop.newPromise(for: IOError.self)
 
         XCTAssertNoThrow(try serverChannel.eventLoop.submit {
             serverChannel.pipeline.add(handler: AcceptHandler(promise)).then {
@@ -230,12 +230,12 @@ public class SocketChannelTest : XCTestCase {
         }
 
         let eventLoop = group.next()
-        let connectPromise: EventLoopPromise<Void> = eventLoop.newPromise()
+        let connectPromise = eventLoop.newPromise(for: Void.self)
 
         let channel = try assertNoThrowWithValue(SocketChannel(socket: ConnectSocket(promise: connectPromise),
                                                                parent: nil,
                                                                eventLoop: eventLoop as! SelectableEventLoop))
-        let promise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
+        let promise = channel.eventLoop.newPromise(for: Void.self)
 
         XCTAssertNoThrow(try channel.pipeline.add(handler: ActiveVerificationHandler(promise)).then {
             channel.register()
@@ -424,7 +424,7 @@ public class SocketChannelTest : XCTestCase {
         defer { XCTAssertNoThrow(try serverChannel.close().wait()) }
 
         let eventLoop = group.next()
-        let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+        let promise = eventLoop.newPromise(for: Void.self)
 
         class ConnectPendingSocket: Socket {
             let promise: EventLoopPromise<Void>
@@ -442,8 +442,8 @@ public class SocketChannelTest : XCTestCase {
         }
 
         let channel = try SocketChannel(socket: ConnectPendingSocket(promise: promise), parent: nil, eventLoop: eventLoop as! SelectableEventLoop)
-        let connectPromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
-        let closePromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
+        let connectPromise = channel.eventLoop.newPromise(for: Void.self)
+        let closePromise = channel.eventLoop.newPromise(for: Void.self)
 
         closePromise.futureResult.whenComplete {
             XCTAssertTrue(connectPromise.futureResult.isFulfilled)

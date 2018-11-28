@@ -468,7 +468,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
     public final func setOption<T: ChannelOption>(option: T, value: T.OptionType) -> EventLoopFuture<Void> {
         if eventLoop.inEventLoop {
-            let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+            let promise = eventLoop.newPromise(for: Void.self)
             executeAndComplete(promise) { try setOption0(option: option, value: value) }
             return promise.futureResult
         } else {
@@ -797,7 +797,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.eventLoop.assertInEventLoop()
         assert(self.isOpen)
         assert(!self.lifecycleManager.isActive)
-        let registerPromise: EventLoopPromise<Void> = self.eventLoop.newPromise()
+        let registerPromise = self.eventLoop.newPromise(for: Void.self)
         self.register0(promise: registerPromise)
         registerPromise.futureResult.whenFailure { (_: Error) in
             self.close(promise: nil)

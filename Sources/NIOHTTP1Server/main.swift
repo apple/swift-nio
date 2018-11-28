@@ -342,7 +342,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                                                     }
                                                     return ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buffer))))
                     }.then { () -> EventLoopFuture<Void> in
-                        let p: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
+                        let p = ctx.eventLoop.newPromise(for: Void.self)
                         self.completeResponse(ctx, trailers: nil, promise: p)
                         return p.futureResult
                     }.thenIfError { error in
@@ -364,7 +364,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                     let response = responseHead(request: request, fileRegion: region)
                     ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
                     ctx.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region)))).then {
-                        let p: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
+                        let p = ctx.eventLoop.newPromise(for: Void.self)
                         self.completeResponse(ctx, trailers: nil, promise: p)
                         return p.futureResult
                     }.thenIfError { (_: Error) in

@@ -25,8 +25,8 @@ class BootstrapTest: XCTestCase {
                 XCTAssertNoThrow(try group.syncShutdownGracefully())
             }
 
-            let childChannelDone: EventLoopPromise<Void> = group.next().newPromise()
-            let serverChannelDone: EventLoopPromise<Void> = group.next().newPromise()
+            let childChannelDone = group.next().newPromise(for: Void.self)
+            let serverChannelDone = group.next().newPromise(for: Void.self)
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
                 .childChannelInitializer { channel in
                     XCTAssert(channel.eventLoop.inEventLoop)

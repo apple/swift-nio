@@ -189,7 +189,7 @@ public extension BlockingIOThreadPool {
     ///     - body: The closure which performs some blocking work to be done on the thread pool.
     /// - returns: The `EventLoopFuture` of `promise` fulfilled with the result (or error) of the passed closure.
     func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
-        let promise: EventLoopPromise<T> = eventLoop.newPromise()
+        let promise = eventLoop.newPromise(for: T.self)
         self.submit { shouldRun in
             guard case shouldRun = BlockingIOThreadPool.WorkItemState.active else {
                 promise.fail(error: ChannelError.ioOnClosedChannel)
