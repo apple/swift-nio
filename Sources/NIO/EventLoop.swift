@@ -318,7 +318,7 @@ extension EventLoop {
     }
 
     /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `Thread`.
-    public func newPromise<T>(for type: T.Type = T.self, file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<T> {
+    public func newPromise<T>(of type: T.Type = T.self, file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<T> {
         return EventLoopPromise<T>(eventLoop: self, file: file, line: line)
     }
 
@@ -757,7 +757,7 @@ internal final class SelectableEventLoop: EventLoop {
         if self.inEventLoop {
             return closeGently0()
         } else {
-            let p = self.newPromise(for: Void.self)
+            let p = self.newPromise(of: Void.self)
             self.execute {
                 closeGently0().cascade(promise: p)
             }

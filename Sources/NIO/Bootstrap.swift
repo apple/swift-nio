@@ -172,7 +172,7 @@ public final class ServerBootstrap {
             return try ServerSocketChannel(descriptor: descriptor, eventLoop: eventLoop, group: childEventLoopGroup)
         }
         return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
-            let promise = eventLoop.newPromise(for: Void.self)
+            let promise = eventLoop.newPromise(of: Void.self)
             serverChannel.registerAlreadyConfigured0(promise: promise)
             return promise.futureResult
         }
@@ -433,7 +433,7 @@ public final class ClientBootstrap {
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(to address: SocketAddress) -> EventLoopFuture<Channel> {
         return execute(eventLoop: group.next(), protocolFamily: address.protocolFamily) { channel in
-            let connectPromise = channel.eventLoop.newPromise(for: Void.self)
+            let connectPromise = channel.eventLoop.newPromise(of: Void.self)
             channel.connect(to: address, promise: connectPromise)
             let cancelTask = channel.eventLoop.scheduleTask(in: self.connectTimeout) {
                 connectPromise.fail(error: ChannelError.connectTimeout(self.connectTimeout))
@@ -479,7 +479,7 @@ public final class ClientBootstrap {
         return channelInitializer(channel).then {
             self.channelOptions.applyAll(channel: channel)
         }.then {
-            let promise = eventLoop.newPromise(for: Void.self)
+            let promise = eventLoop.newPromise(of: Void.self)
             channel.registerAlreadyConfigured0(promise: promise)
             return promise.futureResult
         }.map {
@@ -496,7 +496,7 @@ public final class ClientBootstrap {
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.newSucceededFuture(result: ()) }
         let channelOptions = self.channelOptions
 
-        let promise = eventLoop.newPromise(for: Channel.self)
+        let promise = eventLoop.newPromise(of: Channel.self)
         let channel: SocketChannel
         do {
             channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: protocolFamily)
@@ -595,7 +595,7 @@ public final class DatagramBootstrap {
             return try DatagramChannel(eventLoop: eventLoop, descriptor: descriptor)
         }
         return bind0(makeChannel: makeChannel) { (eventLoop, channel) in
-            let promise = eventLoop.newPromise(for: Void.self)
+            let promise = eventLoop.newPromise(of: Void.self)
             channel.registerAlreadyConfigured0(promise: promise)
             return promise.futureResult
         }
@@ -717,7 +717,7 @@ public final class DatagramBootstrap {
     }
 
     func applyAll(channel: Channel) -> EventLoopFuture<Void> {
-        let applyPromise = channel.eventLoop.newPromise(for: Void.self)
+        let applyPromise = channel.eventLoop.newPromise(of: Void.self)
         var it = self.storage.makeIterator()
 
         func applyNext() {

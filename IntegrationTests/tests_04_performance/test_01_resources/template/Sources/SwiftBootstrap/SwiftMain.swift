@@ -347,7 +347,7 @@ public func swiftMain() -> Int {
         struct MyError: Error { }
         @inline(never)
         func doThenAndFriends(loop: EventLoop) {
-            let p = loop.newPromise(for: Int.self)
+            let p = loop.newPromise(of: Int.self)
             let f = p.futureResult.then { (r: Int) -> EventLoopFuture<Int> in 
                 // This call allocates a new Future, and
                 // so does then(), so this is two Futures.
@@ -384,9 +384,9 @@ public func swiftMain() -> Int {
         }
         @inline(never)
         func doAnd(loop: EventLoop) {
-            let p1 = loop.newPromise(for: Int.self)
-            let p2 = loop.newPromise(for: Int.self)
-            let p3 = loop.newPromise(for: Int.self)
+            let p1 = loop.newPromise(of: Int.self)
+            let p2 = loop.newPromise(of: Int.self)
+            let p3 = loop.newPromise(of: Int.self)
 
             // Each call to and() allocates a Future. The calls to
             // and(result:) allocate two.

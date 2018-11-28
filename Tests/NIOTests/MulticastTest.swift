@@ -119,7 +119,7 @@ final class MulticastTest: XCTestCase {
     }
 
     private func assertDatagramReaches(multicastChannel: Channel, sender: Channel, multicastAddress: SocketAddress, file: StaticString = #file, line: UInt = #line) throws {
-        let receivedMulticastDatagram = multicastChannel.eventLoop.newPromise(for: AddressedEnvelope<ByteBuffer>.self)
+        let receivedMulticastDatagram = multicastChannel.eventLoop.newPromise(of: AddressedEnvelope<ByteBuffer>.self)
         XCTAssertNoThrow(try multicastChannel.pipeline.add(handler: PromiseOnReadHandler(promise: receivedMulticastDatagram)).wait())
 
         var messageBuffer = sender.allocator.buffer(capacity: 24)
@@ -141,8 +141,8 @@ final class MulticastTest: XCTestCase {
                                             sender: Channel,
                                             multicastAddress: SocketAddress,
                                             file: StaticString = #file, line: UInt = #line) throws {
-        let timeoutPromise = multicastChannel.eventLoop.newPromise(for: Void.self)
-        let receivedMulticastDatagram = multicastChannel.eventLoop.newPromise(for: AddressedEnvelope<ByteBuffer>.self)
+        let timeoutPromise = multicastChannel.eventLoop.newPromise(of: Void.self)
+        let receivedMulticastDatagram = multicastChannel.eventLoop.newPromise(of: AddressedEnvelope<ByteBuffer>.self)
         XCTAssertNoThrow(try multicastChannel.pipeline.add(handler: PromiseOnReadHandler(promise: receivedMulticastDatagram)).wait())
 
         // If we receive a datagram, or the reader promise fails, we must fail the timeoutPromise.
