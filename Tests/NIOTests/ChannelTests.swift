@@ -76,7 +76,7 @@ public class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let serverAcceptedChannelPromise = group.next().newPromise(for: Channel.self)
+        let serverAcceptedChannelPromise = group.next().newPromise(of: Channel.self)
         let serverLifecycleHandler = ChannelLifecycleHandler()
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -178,7 +178,7 @@ public class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let childChannelPromise = group.next().newPromise(for: Channel.self)
+        let childChannelPromise = group.next().newPromise(of: Channel.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
@@ -550,7 +550,7 @@ public class ChannelTests: XCTestCase {
             buffer.clear()
             buffer.write(bytes: [0xff] as [UInt8])
             let ps: [EventLoopPromise<Void>] = (0..<numberOfBytes).map { (_: Int) in
-                let p = el.newPromise(for: Void.self)
+                let p = el.newPromise(of: Void.self)
                 _ = pwm.add(data: .byteBuffer(buffer), promise: p)
                 return p
             }
@@ -1370,10 +1370,10 @@ public class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let promise = group.next().newPromise(for: ChannelPipeline.self)
+        let promise = group.next().newPromise(of: ChannelPipeline.self)
 
         try {
-            let serverChildChannelPromise = group.next().newPromise(for: Channel.self)
+            let serverChildChannelPromise = group.next().newPromise(of: Channel.self)
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
                 .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
                 .childChannelInitializer { channel in
@@ -1700,7 +1700,7 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        let allDone = group.next().newPromise(for: Void.self)
+        let allDone = group.next().newPromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: false)
@@ -1751,7 +1751,7 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        let promise = group.next().newPromise(for: Void.self)
+        let promise = group.next().newPromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: false)
@@ -1944,10 +1944,10 @@ public class ChannelTests: XCTestCase {
             }
         }
 
-        let serverWriteHappenedPromise = serverEL.next().newPromise(for: Void.self)
-        let clientHasRegistered = serverEL.next().newPromise(for: Void.self)
-        let clientHasUnregistered = serverEL.next().newPromise(for: Void.self)
-        let clientHasRead = serverEL.next().newPromise(for: Void.self)
+        let serverWriteHappenedPromise = serverEL.next().newPromise(of: Void.self)
+        let clientHasRegistered = serverEL.next().newPromise(of: Void.self)
+        let clientHasUnregistered = serverEL.next().newPromise(of: Void.self)
+        let clientHasRead = serverEL.next().newPromise(of: Void.self)
 
         let bootstrap = try assertNoThrowWithValue(ServerBootstrap(group: serverEL)
             .childChannelInitializer { channel in
@@ -2124,7 +2124,7 @@ public class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        let allDone = clientEL.newPromise(for: Void.self)
+        let allDone = clientEL.newPromise(of: Void.self)
 
         XCTAssertNoThrow(try sc.eventLoop.submit {
             // this is pretty delicate at the moment:
@@ -2173,7 +2173,7 @@ public class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        let allDone = group.next().newPromise(for: Void.self)
+        let allDone = group.next().newPromise(of: Void.self)
         let cf = try! sc.eventLoop.submit {
             sc.pipeline.add(handler: VerifyConnectionFailureHandler(allDone: allDone)).then {
                 sc.register().then {
@@ -2219,7 +2219,7 @@ public class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        let allDone = group.next().newPromise(for: Void.self)
+        let allDone = group.next().newPromise(of: Void.self)
         try! sc.eventLoop.submit {
             let f = sc.pipeline.add(handler: VerifyConnectionFailureHandler(allDone: allDone)).then {
                 sc.register().then {
@@ -2300,7 +2300,7 @@ public class ChannelTests: XCTestCase {
 
         do {
             try sc.eventLoop.submit { () -> EventLoopFuture<Void> in
-                let p = sc.eventLoop.newPromise(for: Void.self)
+                let p = sc.eventLoop.newPromise(of: Void.self)
                 // this callback must be attached before we call the close
                 let f = p.futureResult.map {
                     XCTFail("shouldn't be reached")
@@ -2545,8 +2545,8 @@ public class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully())
         }
-        let serverChannelAvailablePromise = singleThreadedELG.next().newPromise(for: Channel.self)
-        let allDonePromise = singleThreadedELG.next().newPromise(for: Void.self)
+        let serverChannelAvailablePromise = singleThreadedELG.next().newPromise(of: Channel.self)
+        let allDonePromise = singleThreadedELG.next().newPromise(of: Void.self)
         let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
             .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             .childChannelInitializer { channel in

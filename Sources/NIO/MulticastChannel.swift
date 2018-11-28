@@ -62,13 +62,13 @@ public extension MulticastChannel {
     }
 
     func joinGroup(_ group: SocketAddress) -> EventLoopFuture<Void> {
-        let promise = self.eventLoop.newPromise(for: Void.self)
+        let promise = self.eventLoop.newPromise(of: Void.self)
         self.joinGroup(group, promise: promise)
         return promise.futureResult
     }
 
     func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?) -> EventLoopFuture<Void> {
-        let promise = self.eventLoop.newPromise(for: Void.self)
+        let promise = self.eventLoop.newPromise(of: Void.self)
         self.joinGroup(group, interface: interface, promise: promise)
         return promise.futureResult
     }
@@ -78,13 +78,13 @@ public extension MulticastChannel {
     }
 
     func leaveGroup(_ group: SocketAddress) -> EventLoopFuture<Void> {
-        let promise = self.eventLoop.newPromise(for: Void.self)
+        let promise = self.eventLoop.newPromise(of: Void.self)
         self.leaveGroup(group, promise: promise)
         return promise.futureResult
     }
 
     func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?) -> EventLoopFuture<Void> {
-        let promise = self.eventLoop.newPromise(for: Void.self)
+        let promise = self.eventLoop.newPromise(of: Void.self)
         self.leaveGroup(group, interface: interface, promise: promise)
         return promise.futureResult
     }

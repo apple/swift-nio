@@ -251,7 +251,7 @@ class SelectorTest: XCTestCase {
                 var reconnectedChannelsHaveRead: [EventLoopFuture<Void>] = []
                 for _ in everyOtherIndex {
                     var hasBeenAdded: Bool = false
-                    let p = ctx.channel.eventLoop.newPromise(for: Void.self)
+                    let p = ctx.channel.eventLoop.newPromise(of: Void.self)
                     reconnectedChannelsHaveRead.append(p.futureResult)
                     let newChannel = ClientBootstrap(group: ctx.eventLoop)
                         .channelInitializer { channel in
@@ -343,7 +343,7 @@ class SelectorTest: XCTestCase {
             .bind(to: SocketAddress(unixDomainSocketPath: "\(tempDir)/server-sock.uds"))
             .wait()
 
-        let everythingWasReadPromise = el.newPromise(for: Void.self)
+        let everythingWasReadPromise = el.newPromise(of: Void.self)
         XCTAssertNoThrow(try el.submit { () -> [EventLoopFuture<Channel>] in
             (0..<SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse).map { (_: Int) in
                 ClientBootstrap(group: el)

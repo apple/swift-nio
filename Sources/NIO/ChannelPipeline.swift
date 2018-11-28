@@ -163,7 +163,7 @@ public final class ChannelPipeline: ChannelInvoker {
     ///     - first: `true` to add this handler to the front of the `ChannelPipeline`, `false to add it last
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was added.
     public func add(name: String? = nil, handler: ChannelHandler, first: Bool = false) -> EventLoopFuture<Void> {
-        let promise = self.eventLoop.newPromise(for: Void.self)
+        let promise = self.eventLoop.newPromise(of: Void.self)
 
         func _add() {
             if self.destroyed {
@@ -199,7 +199,7 @@ public final class ChannelPipeline: ChannelInvoker {
     ///     - after: The pre-existing `ChannelHandler` that `handler` should be inserted immediately after.
     /// - returns: An `EventLoopFuture` that will be notified when the `ChannelHandler` is added.
     public func add(name: String? = nil, handler: ChannelHandler, after: ChannelHandler) -> EventLoopFuture<Void> {
-        let promise = self.eventLoop.newPromise(for: Void.self)
+        let promise = self.eventLoop.newPromise(of: Void.self)
 
         if self.eventLoop.inEventLoop {
             self.add0(name: name, handler: handler, relativeHandler: after, operation: self.add0(context:after:), promise: promise)
@@ -222,7 +222,7 @@ public final class ChannelPipeline: ChannelInvoker {
     ///     - after: The pre-existing `ChannelHandler` that `handler` should be inserted immediately before.
     /// - returns: An `EventLoopFuture` that will be notified when the `ChannelHandler` is added.
     public func add(name: String? = nil, handler: ChannelHandler, before: ChannelHandler) -> EventLoopFuture<Void> {
-        let promise = self.eventLoop.newPromise(for: Void.self)
+        let promise = self.eventLoop.newPromise(of: Void.self)
 
         if self.eventLoop.inEventLoop {
             self.add0(name: name, handler: handler, relativeHandler: before, operation: self.add0(context:before:), promise: promise)
@@ -356,7 +356,7 @@ public final class ChannelPipeline: ChannelInvoker {
     ///     - handler: the `ChannelHandler` to remove.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
     public func remove(handler: ChannelHandler) -> EventLoopFuture<Bool> {
-        let promise = self.eventLoop.newPromise(for: Bool.self)
+        let promise = self.eventLoop.newPromise(of: Bool.self)
         self.remove(handler: handler, promise: promise)
         return promise.futureResult
     }
@@ -367,7 +367,7 @@ public final class ChannelPipeline: ChannelInvoker {
     ///     - name: the name that was used to add the `ChannelHandler` to the `ChannelPipeline` before.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
     public func remove(name: String) -> EventLoopFuture<Bool> {
-        let promise = self.eventLoop.newPromise(for: Bool.self)
+        let promise = self.eventLoop.newPromise(of: Bool.self)
         self.remove(name: name, promise: promise)
         return promise.futureResult
     }
@@ -378,7 +378,7 @@ public final class ChannelPipeline: ChannelInvoker {
     ///     - ctx: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
     public func remove(ctx: ChannelHandlerContext) -> EventLoopFuture<Bool> {
-        let promise = self.eventLoop.newPromise(for: Bool.self)
+        let promise = self.eventLoop.newPromise(of: Bool.self)
         self.remove(ctx: ctx, promise: promise)
         return promise.futureResult
     }
@@ -464,7 +464,7 @@ public final class ChannelPipeline: ChannelInvoker {
 
     /// Find a `ChannelHandlerContext` in the `ChannelPipeline`.
     private func context0(_ body: @escaping ((ChannelHandlerContext) -> Bool)) -> EventLoopFuture<ChannelHandlerContext> {
-        let promise = eventLoop.newPromise(for: ChannelHandlerContext.self)
+        let promise = eventLoop.newPromise(of: ChannelHandlerContext.self)
 
         func _context0() {
             if let ctx = self.contextForPredicate0(body) {

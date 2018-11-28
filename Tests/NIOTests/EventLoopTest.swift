@@ -359,7 +359,7 @@ public class EventLoopTest : XCTestCase {
         }
         let loop = group.next() as! SelectableEventLoop
 
-        let serverChannelUp = group.next().newPromise(for: Void.self)
+        let serverChannelUp = group.next().newPromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .childChannelInitializer { channel in
                 channel.pipeline.add(handler: WedgeOpenHandler(channelActivePromise: serverChannelUp) { promise in
@@ -370,7 +370,7 @@ public class EventLoopTest : XCTestCase {
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
-        let connectPromise = loop.newPromise(for: Void.self)
+        let connectPromise = loop.newPromise(of: Void.self)
 
         // We're going to create and register a channel, but not actually attempt to do anything with it.
         let wedgeHandler = WedgeOpenHandler { promise in

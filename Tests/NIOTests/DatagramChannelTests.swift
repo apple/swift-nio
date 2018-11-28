@@ -170,7 +170,7 @@ final class DatagramChannelTests: XCTestCase {
             XCTAssertTrue(writable)
         }
 
-        let lastWritePromise = self.firstChannel.eventLoop.newPromise(for: Void.self)
+        let lastWritePromise = self.firstChannel.eventLoop.newPromise(of: Void.self)
         // The last write will push us over the edge.
         var writable: Bool = try self.firstChannel.eventLoop.submit {
             self.firstChannel.write(NIOAny(writeData), promise: lastWritePromise)
@@ -214,7 +214,7 @@ final class DatagramChannelTests: XCTestCase {
 
         var overall: EventLoopFuture<Void> = self.firstChannel.eventLoop.newSucceededFuture(result: ())
         for _ in 0...Socket.writevLimitIOVectors {
-            let myPromise = self.firstChannel.eventLoop.newPromise(for: Void.self)
+            let myPromise = self.firstChannel.eventLoop.newPromise(of: Void.self)
             var buffer = self.firstChannel.allocator.buffer(capacity: 1)
             buffer.write(string: "a")
             let envelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
@@ -233,7 +233,7 @@ final class DatagramChannelTests: XCTestCase {
         // We defer this work to the background thread because otherwise it incurs an enormous number of context
         // switches.
         try self.firstChannel.eventLoop.submit {
-            let myPromise = self.firstChannel.eventLoop.newPromise(for: Void.self)
+            let myPromise = self.firstChannel.eventLoop.newPromise(of: Void.self)
             // For datagrams this buffer cannot be very large, because if it's larger than the path MTU it
             // will cause EMSGSIZE.
             let bufferSize = 1024 * 5
@@ -403,7 +403,7 @@ final class DatagramChannelTests: XCTestCase {
         }
         let socket = try NonRecvFromSocket(error: error)
         let channel = try DatagramChannel(socket: socket, eventLoop: group.next() as! SelectableEventLoop)
-        let promise = channel.eventLoop.newPromise(for: IOError.self)
+        let promise = channel.eventLoop.newPromise(of: IOError.self)
         XCTAssertNoThrow(try channel.register().wait())
         XCTAssertNoThrow(try channel.pipeline.add(handler: RecvFromHandler(promise)).wait())
         XCTAssertNoThrow(try channel.bind(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())

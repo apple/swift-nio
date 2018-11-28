@@ -72,7 +72,7 @@ class EchoServerClientTest : XCTestCase {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let promise = group.next().newPromise(for: ByteBuffer.self)
+        let promise = group.next().newPromise(of: ByteBuffer.self)
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: "X")).then { v2 in
@@ -438,7 +438,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         let writingBytes = "hello"
-        let bytesReceivedPromise = group.next().newPromise(for: ByteBuffer.self)
+        let bytesReceivedPromise = group.next().newPromise(of: ByteBuffer.self)
         let byteCountingHandler = ByteCountingHandler(numBytes: writingBytes.utf8.count, promise: bytesReceivedPromise)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -495,7 +495,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         let stringToWrite = "hello"
-        let promise = group.next().newPromise(for: ByteBuffer.self)
+        let promise = group.next().newPromise(of: ByteBuffer.self)
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite)).then {
@@ -528,7 +528,7 @@ class EchoServerClientTest : XCTestCase {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let promise = group.next().newPromise(for: ByteBuffer.self)
+        let promise = group.next().newPromise(of: ByteBuffer.self)
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.add(handler: ByteCountingHandler(numBytes: stringToWrite.utf8.count, promise: promise))
@@ -703,7 +703,7 @@ class EchoServerClientTest : XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let promise = group.next().newPromise(for: Void.self)
+        let promise = group.next().newPromise(of: Void.self)
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -782,7 +782,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         let numBytes = 16 * 1024
-        let promise = group.next().newPromise(for: ByteBuffer.self)
+        let promise = group.next().newPromise(of: ByteBuffer.self)
         let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: promise)
 
         // we're binding to IPv4 only
