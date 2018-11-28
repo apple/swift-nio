@@ -12,33 +12,49 @@ needs to be listed here.
 ### Contributors
 
 - Adam Nemecek <adamnemecek@gmail.com>
+- Albert Aleksieiev <albert.aleksieiev@gmail.com>
 - Alex Blewitt <alex.blewitt@gmail.com>
 - Andrew Bennett <635596+therealbnut@users.noreply.github.com>
+- Andrew Edwards <andrewangeta@gmail.com>
 - Ankit Aggarwal <ankit_aggarwal@apple.com>
 - Arjun Nayini <aanayini@gmail.com>
 - Bas Broek <bas@basbroek.nl>
 - Ben Cohen <airspeedswift@users.noreply.github.com>
+- Bouke Haarsma <bouke@haarsma.eu>
 - Cory Benfield <cbenfield@apple.com>
+- Cotton Hou <himcotton@gmail.com>
 - Damiaan Dufaux <damiaan@dpro.be>
 - Daniel Dunbar <daniel_dunbar@apple.com>
+- Esteban Torres <me@estebantorr.es>
+- Eugen <eugenf78@gmail.com>
 - Frank Kair <frankkair@gmail.com>
+- Franz Busch <privat@franz-busch.de>
 - Gopal Sharma <gopal@the-sharmas.org>
 - Helge Heß <helge@alwaysrightinstitute.com>
 - Ian Partridge <i.partridge@uk.ibm.com>
 - Jason Toffaletti <toffaletti@gmail.com>
 - Jim Dovey <jimdovey@mac.com>
-- Johannes Weiß <johannesweiss@apple.com>
+- Johannes Weiss <johannesweiss@apple.com>
 - John Connolly <connoljo2@gmail.com>
 - Karim ElNaggar <karimfarid.naggar@gmail.com>
 - Kevin Clark <kevin.clark@apple.com>
 - Kyle Bashour <kylebshr@me.com>
+- Kyle Jessup <kyle@perfect.org>
 - Lev Walkin <vlm@lionet.info>
 - Ludovic Dewailly <me@ldewailly.com>
+- Markus Jais <markusjais@googlemail.com>
 - Matt Eaton <agnosticdev@gmail.com>
+- Max Desiatov <max.desiatov@gmail.com>
 - Max Moiseev <moiseev@apple.com>
 - Moritz Lang <hi@slashmo.codes>
+- Nethra Ravindran <nethra.ravindran@in.ibm.com>
+- Norio Nomura <norio.nomura@gmail.com>
 - Norman Maurer <norman_maurer@apple.com>
+- Ole Begemann <ole@oleb.net>
+- OleG <emptystamp@gmail.com>
+- Portia <portia-s@users.noreply.github.com>
 - Pushkar N Kulkarni <pushkar.nk@in.ibm.com>
+- Rukshani Athapathu <arukshani@users.noreply.github.com>
 - Sebastian Thiebaud <770074+SebastianThiebaud@users.noreply.github.com>
 - Semen Zhydenko <simeon.zhidenko@gmail.com>
 - Shaun Hubbard <shaunhubbard2013@icloud.com>
@@ -51,6 +67,7 @@ needs to be listed here.
 - Tim Kientzle <tkientzle@apple.com>
 - Tomer Doron <tomerd@apple.com>
 - Wilson Ding <hello@wilsonding.com>
+- fadi-botros <botros_fadi@yahoo.com>
 - sun_ <sunlubo.sun@gmail.com>
 
 **Updating this list**
