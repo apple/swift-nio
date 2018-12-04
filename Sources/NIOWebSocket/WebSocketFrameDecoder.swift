@@ -224,7 +224,6 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = WebSocketFrame
     public typealias OutboundOut = WebSocketFrame
-    public var cumulationBuffer: ByteBuffer? = nil
 
     /// The maximum frame size the decoder is willing to tolerate from the remote peer.
     /* private but tests */ let maxFrameSize: Int
@@ -310,7 +309,7 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
             let frame = WebSocketFrame(fin: true,
                                        opcode: .connectionClose,
                                        data: data)
-            ctx.writeAndFlush(self.wrapOutboundOut(frame)).whenComplete {
+            ctx.writeAndFlush(self.wrapInboundOut(frame)).whenComplete {
                 ctx.close(promise: nil)
             }
         }
