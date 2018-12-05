@@ -32,7 +32,7 @@ extension Array where Array.Element == ByteBuffer {
     }
 
     public func allAsString() -> String? {
-        return String(decoding: self.allAsBytes(), as: UTF8.self)
+        return String(decoding: self.allAsBytes(), as: Unicode.UTF8.self)
     }
 }
 
@@ -306,7 +306,7 @@ class HTTPServerClientTest : XCTestCase {
                     i += 1
                 }
 
-                XCTAssertEqual(expectedBody, String(decoding: bytes, as: UTF8.self))
+                XCTAssertEqual(expectedBody, String(decoding: bytes, as: Unicode.UTF8.self))
 
                 if case .end(let trailers) = parts[parts.count - 1] {
                     XCTAssertEqual(expectedTrailers, trailers)
@@ -618,51 +618,6 @@ class HTTPServerClientTest : XCTestCase {
         }
 
         var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/204")
-        head.headers.add(name: "Host", value: "apple.com")
-        clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-        try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
-
-        accumulation.syncWaitForCompletion()
-    }
-
-    @available(*, deprecated, message: "Tests deprecated function addHTTPServerHandlers")
-    func testDeprecatedPipelineConstruction() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            XCTAssertNoThrow(try group.syncShutdownGracefully())
-        }
-
-        var expectedHeaders = HTTPHeaders()
-        expectedHeaders.add(name: "content-length", value: "14")
-        expectedHeaders.add(name: "connection", value: "close")
-
-        let accumulation = HTTPClientResponsePartAssertHandler(HTTPVersion(major: 1, minor: 1), .ok, expectedHeaders, "Hello World!\r\n")
-
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .childChannelInitializer { channel in
-                channel.pipeline.addHTTPServerHandlers().then {
-                    channel.pipeline.add(handler: SimpleHTTPServer(.byteBuffer))
-                }
-            }.bind(host: "127.0.0.1", port: 0).wait())
-
-        defer {
-            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
-        }
-
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers().then {
-                    channel.pipeline.add(handler: accumulation)
-                }
-            }
-            .connect(to: serverChannel.localAddress!)
-            .wait())
-        defer {
-            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
-        }
-
-        var head = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/helloworld")
         head.headers.add(name: "Host", value: "apple.com")
         clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
         try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()

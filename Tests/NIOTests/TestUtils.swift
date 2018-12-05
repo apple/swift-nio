@@ -84,7 +84,7 @@ func createTemporaryDirectory() -> String {
         }
     }
     templateBytes.removeLast()
-    return String(decoding: templateBytes, as: UTF8.self)
+    return String(decoding: templateBytes, as: Unicode.UTF8.self)
 }
 
 func openTemporaryFile() -> (CInt, String) {
@@ -97,7 +97,7 @@ func openTemporaryFile() -> (CInt, String) {
         }
     }
     templateBytes.removeLast()
-    return (fd, String(decoding: templateBytes, as: UTF8.self))
+    return (fd, String(decoding: templateBytes, as: Unicode.UTF8.self))
 }
 
 internal extension Channel {

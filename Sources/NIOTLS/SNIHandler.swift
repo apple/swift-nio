@@ -80,7 +80,7 @@ private extension Sequence where Element == UInt8 {
         decode: while true {
             switch decoder.parseScalar(from: &bytesIterator) {
             case .valid(let v):
-                scalars.append(UnicodeScalar(v[0]))
+                scalars.append(Unicode.Scalar(v[0]))
             case .emptyInput:
                 break decode
             case .error:

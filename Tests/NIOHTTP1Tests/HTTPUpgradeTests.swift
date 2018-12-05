@@ -22,7 +22,7 @@ extension ChannelPipeline {
         try self.assertDoesNotContain(handlerType: HTTPServerUpgradeHandler.self)
     }
 
-    func assertDoesNotContain<T>(handlerType: T.Type) throws {
+    func assertDoesNotContain<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
         do {
             _ = try self.context(handlerType: handlerType).wait()
             XCTFail("Found handler")
@@ -35,7 +35,7 @@ extension ChannelPipeline {
         try self.assertContains(handlerType: HTTPServerUpgradeHandler.self)
     }
 
-    func assertContains<T>(handlerType: T.Type) throws {
+    func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
         do {
             _ = try self.context(handlerType: handlerType).wait()
         } catch ChannelPipelineError.notFound {
@@ -793,28 +793,6 @@ class HTTPUpgradeTestCase: XCTestCase {
         XCTAssertNoThrow(try connectedServer.pipeline.assertDoesNotContain(handlerType: HTTPServerPipelineHandler.self))
     }
 
-    @available(*, deprecated, message: "Tests deprecated function addHTTPServerHandlers")
-    func testBasicUpgradePipelineMutation() throws {
-        let channel = EmbeddedChannel()
-        defer {
-            XCTAssertFalse(try channel.finish())
-        }
-        let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: []) { req in }
-        XCTAssertNoThrow(try channel.pipeline.addHTTPServerHandlersWithUpgrader(upgraders: [upgrader]) { ctx in }.wait())
-        try channel.pipeline.assertContainsUpgrader()
-        try channel.pipeline.assertContains(handlerType: HTTPRequestDecoder.self)
-        try channel.pipeline.assertContains(handlerType: HTTPResponseEncoder.self)
-
-        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\n"
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
-
-        var buffer = channel.readAllOutboundBuffers()
-        XCTAssertEqual(buffer.readString(length: 34), "HTTP/1.1 101 Switching Protocols\r\n")
-        try channel.pipeline.assertDoesNotContainUpgrader()
-        try channel.pipeline.assertDoesNotContain(handlerType: HTTPRequestDecoder.self)
-        try channel.pipeline.assertDoesNotContain(handlerType: HTTPResponseEncoder.self)
-    }
-    
     func testUpgradeWithUpgradePayloadInlineWithRequestWorks() throws {
         enum ReceivedTheWrongThingError: Error { case error }
         var upgradeRequest: HTTPRequestHead? = nil

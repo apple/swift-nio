@@ -1,4 +1,4 @@
-// swift-tools-version:4.0
+// swift-tools-version:4.2
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -21,7 +21,6 @@ var targets: [PackageDescription.Target] = [
                            "CNIODarwin",
                            "NIOConcurrencyHelpers",
                            "CNIOAtomics",
-                           "NIOPriorityQueue",
                            "CNIOSHA1"]),
     .target(name: "NIOFoundationCompat", dependencies: ["NIO"]),
     .target(name: "CNIOAtomics", dependencies: []),
@@ -30,8 +29,6 @@ var targets: [PackageDescription.Target] = [
     .target(name: "CNIODarwin", dependencies: []),
     .target(name: "NIOConcurrencyHelpers",
             dependencies: ["CNIOAtomics"]),
-    .target(name: "NIOPriorityQueue",
-            dependencies: []),
     .target(name: "NIOHTTP1",
             dependencies: ["NIO", "NIOConcurrencyHelpers", "CNIOHTTPParser", "CNIOZlib"]),
     .target(name: "NIOEchoServer",

@@ -458,8 +458,8 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - handlerType: The type of the handler to search for.
     /// - returns: the `EventLoopFuture` which will be notified once the the operation completes.
-    public func context<T>(handlerType: T.Type) -> EventLoopFuture<ChannelHandlerContext> {
-        return context0({ $0.handler is T })
+    public func context<Handler: ChannelHandler>(handlerType: Handler.Type) -> EventLoopFuture<ChannelHandlerContext> {
+        return context0({ $0.handler is Handler })
     }
 
     /// Find a `ChannelHandlerContext` in the `ChannelPipeline`.

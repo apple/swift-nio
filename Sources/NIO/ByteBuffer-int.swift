@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 extension ByteBuffer {
-    @_inlineable @_versioned
+    @inlinable
     func _toEndianness<T: FixedWidthInteger> (value: T, endianness: Endianness) -> T {
         switch endianness {
         case .little:
@@ -29,7 +29,7 @@ extension ByteBuffer {
     ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
     ///     - as: the desired `FixedWidthInteger` type (optional parameter)
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if there aren't enough bytes readable.
-    @_inlineable
+    @inlinable
     public mutating func readInteger<T: FixedWidthInteger>(endianness: Endianness = .big, as: T.Type = T.self) -> T? {
         guard self.readableBytes >= MemoryLayout<T>.size else {
             return nil
@@ -54,7 +54,7 @@ extension ByteBuffer {
     ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
     ///     - as: the desired `FixedWidthInteger` type (optional parameter)
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if the bytes of interest aren't contained in the `ByteBuffer`.
-    @_inlineable
+    @inlinable
     public func getInteger<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big, as: T.Type = T.self) -> T? {
         precondition(index >= 0, "index must not be negative")
         return self.withVeryUnsafeBytes { ptr in
@@ -77,7 +77,7 @@ extension ByteBuffer {
     ///     - endianness: The endianness to use, defaults to big endian.
     /// - returns: The number of bytes written.
     @discardableResult
-    @_inlineable
+    @inlinable
     public mutating func write<T: FixedWidthInteger>(integer: T, endianness: Endianness = .big, as: T.Type = T.self) -> Int {
         let bytesWritten = self.set(integer: integer, at: self.writerIndex, endianness: endianness)
         self._moveWriterIndex(forwardBy: bytesWritten)
@@ -92,7 +92,7 @@ extension ByteBuffer {
     ///     - endianness: The endianness to use, defaults to big endian.
     /// - returns: The number of bytes written.
     @discardableResult
-    @_inlineable
+    @inlinable
     public mutating func set<T: FixedWidthInteger>(integer: T, at index: Int, endianness: Endianness = .big, as: T.Type = T.self) -> Int {
         var value = _toEndianness(value: integer, endianness: endianness)
         return Swift.withUnsafeBytes(of: &value) { ptr in

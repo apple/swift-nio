@@ -220,15 +220,7 @@ public protocol EventLoop: EventLoopGroup {
 ///
 /// - note: `TimeAmount` should not be used to represent a point in time.
 public struct TimeAmount {
-  
-    #if arch(arm) || arch(i386)
-    // Int64 is the correct type here but we don't want to break SemVer so can't change it for the 64-bit platforms.
-    // To be fixed in NIO 2.0
     public typealias Value = Int64
-    #else
-    // 64-bit, keeping that at Int for SemVer in the 1.x line.
-    public typealias Value = Int
-    #endif
 
     /// The nanoseconds representation of the `TimeAmount`.
     public let nanoseconds: Value
@@ -384,9 +376,8 @@ extension EventLoop {
 
     /// Returns an `EventLoopIterator` over this `EventLoop`.
     ///
-    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
     /// - returns: `EventLoopIterator`
-    public func makeIterator() -> EventLoopIterator? {
+    public func makeIterator() -> EventLoopIterator {
         return EventLoopIterator([self])
     }
 
@@ -395,7 +386,7 @@ extension EventLoop {
     /// In release mode this function never has any effect.
     ///
     /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
-    @_inlineable
+    @inlinable
     public func assertInEventLoop(file: StaticString = #file, line: UInt = #line) {
         debugOnly {
             self.preconditionInEventLoop(file: file, line: line)
@@ -808,9 +799,8 @@ public protocol EventLoopGroup: class {
 
     /// Returns an `EventLoopIterator` over the `EventLoop`s in this `EventLoopGroup`.
     ///
-    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
     /// - returns: `EventLoopIterator`
-    func makeIterator() -> EventLoopIterator?
+    func makeIterator() -> EventLoopIterator
 }
 
 extension EventLoopGroup {
@@ -836,10 +826,6 @@ extension EventLoopGroup {
                 throw error
             }
         }
-    }
-
-    public func makeIterator() -> EventLoopIterator? {
-        return nil
     }
 }
 
@@ -912,15 +898,6 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         self.init(threadInitializers: initializers)
     }
     
-    /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numThreads`.
-    ///
-    /// - arguments:
-    ///     - numThreads: The number of `Threads` to use.
-    @available(*, deprecated, renamed: "init(numberOfThreads:)")
-    public convenience init(numThreads: Int) {
-        self.init(numberOfThreads: numThreads)
-    }
-
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses the given `ThreadInitializer`s. One `Thread` per `ThreadInitializer` is created and used.
     ///
     /// - arguments:
@@ -944,9 +921,8 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     /// Returns an `EventLoopIterator` over the `EventLoop`s in this `MultiThreadedEventLoopGroup`.
     ///
-    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
     /// - returns: `EventLoopIterator`
-    public func makeIterator() -> EventLoopIterator? {
+    public func makeIterator() -> EventLoopIterator {
         return EventLoopIterator(self.eventLoops)
     }
 

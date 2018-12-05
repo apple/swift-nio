@@ -85,7 +85,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         let bytes = try promise.futureResult.wait()
-        let expected = String(decoding: Array(repeating: "X".utf8.first!, count: 10000), as: UTF8.self)
+        let expected = String(decoding: Array(repeating: "X".utf8.first!, count: 10000), as: Unicode.UTF8.self)
         XCTAssertEqual(expected, bytes.getString(at: bytes.readerIndex, length: bytes.readableBytes))
     }
 

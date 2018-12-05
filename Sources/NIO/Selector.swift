@@ -714,23 +714,6 @@ enum SelectorStrategy {
     case now
 }
 
-/// The IO for which we want to be notified.
-@available(*, deprecated, message: "IOEvent was made public by accident, is no longer used internally and will be removed with SwiftNIO 2.0.0")
-public enum IOEvent {
-    /// Something is ready to be read.
-    case read
-
-    /// It's possible to write some data again.
-    case write
-
-    /// Combination of `read` and `write`.
-    case all
-
-    /// Not interested in any event.
-    case none
-}
-
-
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
 extension kevent {
     /// Update a kevent for a given filter, file descriptor, and set of flags.
