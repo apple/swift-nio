@@ -14,7 +14,7 @@
 
 /// A `Collection` that is contiguously laid out in memory and can therefore be duplicated using `memcpy`.
 public protocol ContiguousCollection: Collection {
-    @_inlineable
+    @inlinable
     func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R
 }
 
@@ -34,13 +34,13 @@ extension StaticString: Collection {
     }
 }
 extension UnsafeRawBufferPointer: ContiguousCollection {
-    @_inlineable
+    @inlinable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try body(self)
     }
 }
 extension UnsafeMutableRawBufferPointer: ContiguousCollection {
-    @_inlineable
+    @inlinable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try body(UnsafeRawBufferPointer(self))
     }
@@ -48,7 +48,7 @@ extension UnsafeMutableRawBufferPointer: ContiguousCollection {
 
 #if swift(>=4.1)
 extension Slice: ContiguousCollection where Base: ContiguousCollection {
-    @_inlineable
+    @inlinable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         // this is rather compicated because of SR-8580 (can't have two Slice extensions, even if non-overlapping)
         let byteDistanceFromBaseToSelf = self.base.distance(from: self.base.startIndex,
@@ -72,20 +72,20 @@ extension ContiguousArray: ContiguousCollection {}
 // ContiguousArray's slice is ArraySlice
 
 extension StaticString: ContiguousCollection {
-    @_inlineable
+    @inlinable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try body(UnsafeRawBufferPointer(start: self.utf8Start, count: self.utf8CodeUnitCount))
     }
 }
 
 extension UnsafeBufferPointer: ContiguousCollection {
-    @_inlineable
+    @inlinable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try body(UnsafeRawBufferPointer(self))
     }
 }
 extension UnsafeMutableBufferPointer: ContiguousCollection {
-    @_inlineable
+    @inlinable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try body(UnsafeRawBufferPointer(self))
     }

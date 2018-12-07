@@ -87,15 +87,3 @@ extension PriorityQueue: CustomStringConvertible {
         return "PriorityQueue(count: \(self.underestimatedCount)): \(Array(self))"
     }
 }
-
-extension PriorityQueue {
-  @available(*, deprecated, renamed: "Element")
-  public typealias T = Element
-  @available(*, deprecated, renamed: "PriorityQueue.Iterator")
-  typealias PriorityQueueIterator<T: Comparable> = PriorityQueue<T>.Iterator
-}
-
-extension PriorityQueue.Iterator {
-  @available(*, deprecated, renamed: "Element")
-  typealias T = Element
-}

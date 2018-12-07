@@ -2469,7 +2469,7 @@ public class ChannelTests: XCTestCase {
 
             func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
                 let buffer = self.unwrapInboundIn(data)
-                XCTFail("unexpected read: \(String(decoding: buffer.readableBytesView, as: UTF8.self))")
+                XCTFail("unexpected read: \(String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))")
             }
 
             func channelActive(ctx: ChannelHandlerContext) {
@@ -2536,7 +2536,7 @@ public class ChannelTests: XCTestCase {
 
             func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
                 let buffer = self.unwrapInboundIn(data)
-                XCTAssertEqual("X", String(decoding: buffer.readableBytesView, as: UTF8.self))
+                XCTAssertEqual("X", String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
                 ctx.close(promise: nil)
             }
         }

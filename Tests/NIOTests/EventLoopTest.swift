@@ -234,9 +234,9 @@ public class EventLoopTest : XCTestCase {
 
         var counter = 0
         var innerCounter = 0
-        eventLoopGroup.makeIterator()?.forEach { loop in
+        eventLoopGroup.makeIterator().forEach { loop in
             counter += 1
-            loop.makeIterator()?.forEach { _ in
+            loop.makeIterator().forEach { _ in
                 innerCounter += 1
             }
         }
@@ -253,25 +253,12 @@ public class EventLoopTest : XCTestCase {
         }
 
         var counter = 0
-        iterator?.forEach { loop in
+        iterator.forEach { loop in
             XCTAssertTrue(loop === eventLoop)
             counter += 1
         }
 
         XCTAssertEqual(counter, 1)
-    }
-
-    public func testDummyEventLoopGroupMakeIterator() throws {
-        class DummyEventLoopGroup: EventLoopGroup {
-            func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) { }
-
-            func next() -> EventLoop {
-                return EmbeddedEventLoop()
-            }
-        }
-
-        let dummyEventLoopGroup = DummyEventLoopGroup()
-        XCTAssertNil(dummyEventLoopGroup.makeIterator())
     }
 
     public func testMultipleShutdown() throws {
