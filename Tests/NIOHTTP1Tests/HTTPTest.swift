@@ -122,7 +122,7 @@ class HTTPTest: XCTestCase {
                 for bodyData in allBodyDatas {
                     XCTAssertEqual(firstBodyData, bodyData)
                 }
-                return String(decoding: firstBodyData, as: UTF8.self)
+                return String(decoding: firstBodyData, as: Unicode.UTF8.self)
             } else {
                 XCTAssertEqual(0, allBodyDatas.count, "left with \(allBodyDatas)")
                 return nil

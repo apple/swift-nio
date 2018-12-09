@@ -97,9 +97,8 @@ final class Thread {
             let pt = pthread_self()
 
             if let threadName = name {
-                let res = sys_pthread_setname_np(pt, threadName)
-                // This should only happen in case of a too-long name.
-                precondition(res == 0, "pthread_setname_np failed for '\(threadName)': \(res)")
+                _ = sys_pthread_setname_np(pt, threadName)
+                // this is non-critical so we ignore the result here, we've seen EPERM in containers.
             }
 
             body(Thread(pthread: pt))

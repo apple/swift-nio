@@ -270,7 +270,7 @@ class EventLoopFutureTest : XCTestCase {
         let eventLoop = EmbeddedEventLoop()
         var promises: [EventLoopPromise<Void>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
         _ = promises.map { $0.succeed(result: ()) }
-        let failedPromise: EventLoopPromise<Void> = eventLoop.newPromise()
+        let failedPromise = eventLoop.newPromise(of: Void.self)
         failedPromise.fail(error: E())
         promises.append(failedPromise)
 
@@ -336,7 +336,7 @@ class EventLoopFutureTest : XCTestCase {
         let eventLoop = EmbeddedEventLoop()
         var promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
         _ = promises.map { $0.succeed(result: (1)) }
-        let failedPromise: EventLoopPromise<Int> = eventLoop.newPromise()
+        let failedPromise = eventLoop.newPromise(of: Int.self)
         failedPromise.fail(error: E())
         promises.append(failedPromise)
 
@@ -359,7 +359,7 @@ class EventLoopFutureTest : XCTestCase {
         let eventLoop = EmbeddedEventLoop()
         var promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.newPromise() }
 
-        let failedPromise: EventLoopPromise<Int> = eventLoop.newPromise()
+        let failedPromise = eventLoop.newPromise(of: Int.self)
         promises.insert(failedPromise, at: promises.startIndex)
 
         let futures = promises.map { $0.futureResult }
@@ -475,7 +475,7 @@ class EventLoopFutureTest : XCTestCase {
     func testThenThrowingWhichDoesNotThrow() {
         let eventLoop = EmbeddedEventLoop()
         var ran = false
-        let p: EventLoopPromise<String> = eventLoop.newPromise()
+        let p = eventLoop.newPromise(of: String.self)
         p.futureResult.map {
             $0.count
         }.thenThrowing {
@@ -494,7 +494,7 @@ class EventLoopFutureTest : XCTestCase {
         }
         let eventLoop = EmbeddedEventLoop()
         var ran = false
-        let p: EventLoopPromise<String> = eventLoop.newPromise()
+        let p = eventLoop.newPromise(of: String.self)
         p.futureResult.map {
             $0.count
         }.thenThrowing { (x: Int) throws -> Int in
@@ -517,7 +517,7 @@ class EventLoopFutureTest : XCTestCase {
         }
         let eventLoop = EmbeddedEventLoop()
         var ran = false
-        let p: EventLoopPromise<String> = eventLoop.newPromise()
+        let p = eventLoop.newPromise(of: String.self)
         p.futureResult.map {
             $0.count
         }.thenIfErrorThrowing {
@@ -541,7 +541,7 @@ class EventLoopFutureTest : XCTestCase {
         }
         let eventLoop = EmbeddedEventLoop()
         var ran = false
-        let p: EventLoopPromise<String> = eventLoop.newPromise()
+        let p = eventLoop.newPromise(of: String.self)
         p.futureResult.map {
             $0.count
         }.thenIfErrorThrowing { (x: Error) throws -> Int in
@@ -582,7 +582,7 @@ class EventLoopFutureTest : XCTestCase {
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: n)
         var prev: EventLoopFuture<Int> = elg.next().newSucceededFuture(result: 0)
         (1..<20).forEach { (i: Int) in
-            let p: EventLoopPromise<Int> = elg.next().newPromise()
+            let p = elg.next().newPromise(of: Int.self)
             prev.then { (i2: Int) -> EventLoopFuture<Int> in
                 XCTAssertEqual(i - 1, i2)
                 p.succeed(result: i)
@@ -604,7 +604,7 @@ class EventLoopFutureTest : XCTestCase {
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: n)
         var prev: EventLoopFuture<Int> = elg.next().newSucceededFuture(result: 0)
         (1..<n).forEach { (i: Int) in
-            let p: EventLoopPromise<Int> = elg.next().newPromise()
+            let p = elg.next().newPromise(of: Int.self)
             prev.then { (i2: Int) -> EventLoopFuture<Int> in
                 XCTAssertEqual(i - 1, i2)
                 if i == n/2 {
@@ -693,8 +693,8 @@ class EventLoopFutureTest : XCTestCase {
             for eventLoops in [(el1, el1), (el1, el2), (el2, el1), (el2, el2)] {
                 // this determines if the promises fail or succeed
                 for whoSucceeds in [(false, false), (false, true), (true, false), (true, true)] {
-                    let p0: EventLoopPromise<Int> = eventLoops.0.newPromise()
-                    let p1: EventLoopPromise<String> = eventLoops.1.newPromise()
+                    let p0 = eventLoops.0.newPromise(of: Int.self)
+                    let p1 = eventLoops.1.newPromise(of: String.self)
                     let fAll = p0.futureResult.and(p1.futureResult)
 
                     // preheat both queues so we have a better chance of racing
@@ -780,7 +780,7 @@ class EventLoopFutureTest : XCTestCase {
         let loop2 = group.next()
         XCTAssertFalse(loop1 === loop2)
 
-        let succeedingPromise: EventLoopPromise<Void> = loop1.newPromise()
+        let succeedingPromise = loop1.newPromise(of: Void.self)
         let succeedingFuture = succeedingPromise.futureResult.map {
             XCTAssertTrue(loop1.inEventLoop)
         }.hopTo(eventLoop: loop2).map {
@@ -800,7 +800,7 @@ class EventLoopFutureTest : XCTestCase {
         let loop2 = group.next()
         XCTAssertFalse(loop1 === loop2)
 
-        let failingPromise: EventLoopPromise<Void> = loop2.newPromise()
+        let failingPromise = loop2.newPromise(of: Void.self)
         let failingFuture = failingPromise.futureResult.thenIfErrorThrowing { error in
             XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
             XCTAssertTrue(loop2.inEventLoop)
@@ -823,7 +823,7 @@ class EventLoopFutureTest : XCTestCase {
         let loop2 = group.next()
         XCTAssertFalse(loop1 === loop2)
 
-        let noHoppingPromise: EventLoopPromise<Void> = loop1.newPromise()
+        let noHoppingPromise = loop1.newPromise(of: Void.self)
         let noHoppingFuture = noHoppingPromise.futureResult.hopTo(eventLoop: loop1)
         XCTAssertTrue(noHoppingFuture === noHoppingPromise.futureResult)
         noHoppingPromise.succeed(result: ())

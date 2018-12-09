@@ -761,21 +761,16 @@ reexecute:
 
       case s_start_res:
       {
+        if (ch == CR || ch == LF)
+          break;
         parser->flags = 0;
         parser->content_length = ULLONG_MAX;
 
-        switch (ch) {
-          case 'H':
-            UPDATE_STATE(s_res_H);
-            break;
-
-          case CR:
-          case LF:
-            break;
-
-          default:
-            SET_ERRNO(HPE_INVALID_CONSTANT);
-            goto error;
+        if (ch == 'H') {
+          UPDATE_STATE(s_res_H);
+        } else {
+          SET_ERRNO(HPE_INVALID_CONSTANT);
+          goto error;
         }
 
         CALLBACK_NOTIFY(message_begin);
@@ -2028,7 +2023,7 @@ reexecute:
     }
   }
 
-  /* Run callbacks for any marks that we have leftover after we ran our of
+  /* Run callbacks for any marks that we have leftover after we ran out of
    * bytes. There should be at most one of these set, so it's OK to invoke
    * them in series (unset marks will not result in callbacks).
    *

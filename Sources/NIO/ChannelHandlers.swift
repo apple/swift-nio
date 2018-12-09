@@ -198,6 +198,7 @@ public class IdleStateHandler: ChannelDuplexHandler {
 
     public func channelActive(ctx: ChannelHandlerContext) {
         initIdleTasks(ctx)
+        ctx.fireChannelActive()
     }
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {

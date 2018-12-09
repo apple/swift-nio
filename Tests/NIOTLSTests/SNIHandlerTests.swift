@@ -262,7 +262,7 @@ class SniHandlerTest: XCTestCase {
         var buffer = bufferForBase64String(string: clientHello)
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise: EventLoopPromise<Void> = loop.newPromise()
+        let continuePromise = loop.newPromise(of: Void.self)
 
         let handler = SniHandler { result in
             XCTAssertEqual(expectedResult, result)
@@ -313,7 +313,7 @@ class SniHandlerTest: XCTestCase {
         let buffer = bufferForBase64String(string: clientHello)
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise: EventLoopPromise<Void> = loop.newPromise()
+        let continuePromise = loop.newPromise(of: Void.self)
 
         let handler = SniHandler { result in
             XCTAssertEqual(expectedResult, result)

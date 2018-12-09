@@ -64,7 +64,7 @@ class ChannelPipelineTest: XCTestCase {
     func testAddAfterClose() throws {
 
         let channel = EmbeddedChannel()
-        _ = channel.close()
+        XCTAssertNoThrow(try channel.close().wait())
 
         channel.pipeline.removeHandlers()
 
@@ -111,7 +111,7 @@ class ChannelPipelineTest: XCTestCase {
             return 1
         }).wait()
 
-        try channel.writeAndFlush(NIOAny("msg")).wait()
+        XCTAssertNoThrow(try channel.writeAndFlush(NIOAny("msg")).wait() as Void)
         if let data = channel.readOutbound() {
             XCTAssertEqual(IOData.byteBuffer(buf), data)
         } else {
@@ -194,7 +194,7 @@ class ChannelPipelineTest: XCTestCase {
 
     func testEmptyPipelineWorks() throws {
         let channel = EmbeddedChannel()
-        try channel.writeInbound(2)
+        XCTAssertTrue(try assertNoThrowWithValue(channel.writeInbound(2)))
         XCTAssertEqual(Optional<Int>.some(2), channel.readInbound())
         XCTAssertFalse(try channel.finish())
     }
@@ -202,7 +202,7 @@ class ChannelPipelineTest: XCTestCase {
     func testWriteAfterClose() throws {
 
         let channel = EmbeddedChannel()
-        _ = try channel.close().wait()
+        XCTAssertNoThrow(try channel.close().wait())
         let loop = channel.eventLoop as! EmbeddedEventLoop
         loop.run()
 
@@ -677,5 +677,229 @@ class ChannelPipelineTest: XCTestCase {
         } catch let err as ChannelPipelineError where err == .notFound {
             /// expected
         }
+    }
+
+    func testRemovingByContextWithPromiseStillInChannel() throws {
+        class NoOpHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+        }
+        class DummyError: Error { }
+
+        let channel = EmbeddedChannel()
+        defer {
+            // This will definitely throw.
+            _ = try? channel.finish()
+        }
+
+        XCTAssertNoThrow(try channel.pipeline.add(handler: NoOpHandler()).wait())
+
+        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+
+        var buffer = channel.allocator.buffer(capacity: 1024)
+        buffer.write(staticString: "Hello, world!")
+
+        let removalPromise = channel.eventLoop.newPromise(of: Bool.self)
+        removalPromise.futureResult.whenSuccess { (_: Bool) in
+            context.writeAndFlush(NIOAny(buffer), promise: nil)
+            context.fireErrorCaught(DummyError())
+        }
+
+        XCTAssertNil(channel.readOutbound())
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+        channel.pipeline.remove(ctx: context, promise: removalPromise)
+
+        guard case .some(.byteBuffer(let receivedBuffer)) = channel.readOutbound() else {
+            XCTFail("No buffer")
+            return
+        }
+        XCTAssertEqual(receivedBuffer, buffer)
+
+        do {
+            try channel.throwIfErrorCaught()
+            XCTFail("Did not throw")
+        } catch is DummyError {
+            // expected
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testRemovingByContextWithFutureNotInChannel() throws {
+        class NoOpHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+        }
+        class DummyError: Error { }
+
+        let channel = EmbeddedChannel()
+        defer {
+            // This will definitely throw.
+            XCTAssertFalse(try channel.finish())
+        }
+
+        XCTAssertNoThrow(try channel.pipeline.add(handler: NoOpHandler()).wait())
+
+        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+
+        var buffer = channel.allocator.buffer(capacity: 1024)
+        buffer.write(staticString: "Hello, world!")
+
+        XCTAssertNil(channel.readOutbound())
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+        channel.pipeline.remove(ctx: context).whenSuccess { (_: Bool) in
+            context.writeAndFlush(NIOAny(buffer), promise: nil)
+            context.fireErrorCaught(DummyError())
+        }
+        XCTAssertNil(channel.readOutbound())
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+    }
+
+    func testRemovingByNameWithPromiseStillInChannel() throws {
+        class NoOpHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+        }
+        class DummyError: Error { }
+
+        let channel = EmbeddedChannel()
+        defer {
+            // This will definitely throw.
+            _ = try? channel.finish()
+        }
+
+        XCTAssertNoThrow(try channel.pipeline.add(name: "TestHandler", handler: NoOpHandler()).wait())
+
+        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+
+        var buffer = channel.allocator.buffer(capacity: 1024)
+        buffer.write(staticString: "Hello, world!")
+
+        let removalPromise = channel.eventLoop.newPromise(of: Bool.self)
+        removalPromise.futureResult.whenSuccess { (_: Bool) in
+            context.writeAndFlush(NIOAny(buffer), promise: nil)
+            context.fireErrorCaught(DummyError())
+        }
+
+        XCTAssertNil(channel.readOutbound())
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+        channel.pipeline.remove(name: "TestHandler", promise: removalPromise)
+
+        guard case .some(.byteBuffer(let receivedBuffer)) = channel.readOutbound() else {
+            XCTFail("No buffer")
+            return
+        }
+        XCTAssertEqual(receivedBuffer, buffer)
+
+        do {
+            try channel.throwIfErrorCaught()
+            XCTFail("Did not throw")
+        } catch is DummyError {
+            // expected
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testRemovingByNameWithFutureNotInChannel() throws {
+        class NoOpHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+        }
+        class DummyError: Error { }
+
+        let channel = EmbeddedChannel()
+        defer {
+            // This will definitely throw.
+            XCTAssertFalse(try channel.finish())
+        }
+
+        XCTAssertNoThrow(try channel.pipeline.add(name: "TestHandler", handler: NoOpHandler()).wait())
+
+        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+
+        var buffer = channel.allocator.buffer(capacity: 1024)
+        buffer.write(staticString: "Hello, world!")
+
+        XCTAssertNil(channel.readOutbound())
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+        channel.pipeline.remove(name: "TestHandler").whenSuccess { (_: Bool) in
+            context.writeAndFlush(NIOAny(buffer), promise: nil)
+            context.fireErrorCaught(DummyError())
+        }
+        XCTAssertNil(channel.readOutbound())
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+    }
+
+    func testRemovingByReferenceWithPromiseStillInChannel() throws {
+        class NoOpHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+        }
+        class DummyError: Error { }
+
+        let channel = EmbeddedChannel()
+        defer {
+            // This will definitely throw.
+            _ = try? channel.finish()
+        }
+
+        let handler = NoOpHandler()
+        XCTAssertNoThrow(try channel.pipeline.add(handler: handler).wait())
+
+        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+
+        var buffer = channel.allocator.buffer(capacity: 1024)
+        buffer.write(staticString: "Hello, world!")
+
+        let removalPromise = channel.eventLoop.newPromise(of: Bool.self)
+        removalPromise.futureResult.whenSuccess { (_: Bool) in
+            context.writeAndFlush(NIOAny(buffer), promise: nil)
+            context.fireErrorCaught(DummyError())
+        }
+
+        XCTAssertNil(channel.readOutbound())
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+        channel.pipeline.remove(handler: handler, promise: removalPromise)
+
+        guard case .some(.byteBuffer(let receivedBuffer)) = channel.readOutbound() else {
+            XCTFail("No buffer")
+            return
+        }
+        XCTAssertEqual(receivedBuffer, buffer)
+
+        do {
+            try channel.throwIfErrorCaught()
+            XCTFail("Did not throw")
+        } catch is DummyError {
+            // expected
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testRemovingByReferenceWithFutureNotInChannel() throws {
+        class NoOpHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+        }
+        class DummyError: Error { }
+
+        let channel = EmbeddedChannel()
+        defer {
+            // This will definitely throw.
+            XCTAssertFalse(try channel.finish())
+        }
+
+        let handler = NoOpHandler()
+        XCTAssertNoThrow(try channel.pipeline.add(handler: handler).wait())
+
+        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+
+        var buffer = channel.allocator.buffer(capacity: 1024)
+        buffer.write(staticString: "Hello, world!")
+
+        XCTAssertNil(channel.readOutbound())
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+        channel.pipeline.remove(handler: handler).whenSuccess { (_: Bool) in
+            context.writeAndFlush(NIOAny(buffer), promise: nil)
+            context.fireErrorCaught(DummyError())
+        }
+        XCTAssertNil(channel.readOutbound())
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
     }
 }

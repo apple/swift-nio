@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
+import CNIOLinux
+
 public enum SocketAddressError: Error {
     /// The host is unknown (could not be resolved).
     case unknown(host: String, port: Int)
@@ -75,28 +77,40 @@ public enum SocketAddress: CustomStringConvertible {
 
     /// A human-readable description of this `SocketAddress`. Mostly useful for logging.
     public var description: String {
+        let addressString: String
         let port: String
         let host: String?
         let type: String
         switch self {
         case .v4(let addr):
-            host = addr.host
+            host = addr.host.isEmpty ? nil : addr.host
             type = "IPv4"
+            var mutAddr = addr.address.sin_addr
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            addressString = try! descriptionForAddress(family: AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
+
             port = "\(self.port!)"
         case .v6(let addr):
-            host = addr.host
+            host = addr.host.isEmpty ? nil : addr.host
             type = "IPv6"
+            var mutAddr = addr.address.sin6_addr
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            addressString = try! descriptionForAddress(family: AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
+    
             port = "\(self.port!)"
         case .unixDomainSocket(let addr):
             var address = addr.address
             host = nil
             type = "UDS"
+            addressString = ""
             port = withUnsafeBytes(of: &address.sun_path) { ptr in
                 let ptr = ptr.baseAddress!.bindMemory(to: UInt8.self, capacity: 104)
                 return String(cString: ptr)
             }
+            return "[\(type)]\(port)"
         }
-        return "[\(type)]\(host.map { "\($0):" } ?? "")\(port)"
+        
+        return "[\(type)]\(host.map { "\($0)/\(addressString):" } ?? "\(addressString):")\(port)"
     }
 
     /// Returns the protocol family as defined in `man 2 socket` of this `SocketAddress`.
@@ -176,7 +190,11 @@ public enum SocketAddress: CustomStringConvertible {
             throw SocketAddressError.unixDomainSocketPathTooLong
         }
 
+#if os(Android) // in Android first byte must be zero to use abstract namespace
+        let pathBytes = [0] + Array(unixDomainSocketPath.utf8) + [0]
+#else
         let pathBytes = unixDomainSocketPath.utf8 + [0]
+#endif
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
@@ -294,6 +312,32 @@ extension SocketAddress: Equatable {
             return memcmp(&sunpath1, &sunpath2, MemoryLayout.size(ofValue: sunpath1)) == 0
         case (.v4, _), (.v6, _), (.unixDomainSocket, _):
             return false
+        }
+    }
+}
+
+
+extension SocketAddress {
+    /// Whether this `SocketAddress` corresponds to a multicast address.
+    public var isMulticast: Bool {
+        switch self {
+        case .unixDomainSocket:
+            // No multicast on unix sockets.
+            return false
+        case .v4(let v4Addr):
+            // For IPv4 a multicast address is in the range 224.0.0.0/4.
+            // The easy way to check if this is the case is to just mask off
+            // the address.
+            let v4WireAddress = v4Addr.address.sin_addr.s_addr
+            let mask = in_addr_t(0xF000_0000 as UInt32).bigEndian
+            let subnet = in_addr_t(0xE000_0000 as UInt32).bigEndian
+            return v4WireAddress & mask == subnet
+        case .v6(let v6Addr):
+            // For IPv6 a multicast address is in the range ff00::/8.
+            // Here we don't need a bitmask, as all the top bits are set,
+            // so we can just ask for equality on the top byte.
+            var v6WireAddress = v6Addr.address.sin6_addr
+            return withUnsafeBytes(of: &v6WireAddress) { $0[0] == 0xff }
         }
     }
 }

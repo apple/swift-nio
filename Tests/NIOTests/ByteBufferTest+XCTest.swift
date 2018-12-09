@@ -41,8 +41,6 @@ extension ByteBufferTest {
                 ("testCoWWorks", testCoWWorks),
                 ("testWithMutableReadPointerMovesReaderIndexAndReturnsNumBytesConsumed", testWithMutableReadPointerMovesReaderIndexAndReturnsNumBytesConsumed),
                 ("testWithMutableWritePointerMovesWriterIndexAndReturnsNumBytesWritten", testWithMutableWritePointerMovesWriterIndexAndReturnsNumBytesWritten),
-                ("testChangeCapacityWhenEnoughAvailable", testChangeCapacityWhenEnoughAvailable),
-                ("testChangeCapacityWhenNotEnoughMaxCapacity", testChangeCapacityWhenNotEnoughMaxCapacity),
                 ("testSetGetInt8", testSetGetInt8),
                 ("testSetGetInt16", testSetGetInt16),
                 ("testSetGetInt32", testSetGetInt32),
@@ -74,7 +72,6 @@ extension ByteBufferTest {
                 ("testExpansion2", testExpansion2),
                 ("testNotEnoughBytesToReadForIntegers", testNotEnoughBytesToReadForIntegers),
                 ("testNotEnoughBytesToReadForData", testNotEnoughBytesToReadForData),
-                ("testChangeCapacityToSameCapacityRetainsCapacityAndPointers", testChangeCapacityToSameCapacityRetainsCapacityAndPointers),
                 ("testSlicesThatAreOutOfBands", testSlicesThatAreOutOfBands),
                 ("testMutableBytesCoW", testMutableBytesCoW),
                 ("testWritableBytesTriggersCoW", testWritableBytesTriggersCoW),
@@ -129,6 +126,7 @@ extension ByteBufferTest {
                 ("testReserveCapacitySameCapacity", testReserveCapacitySameCapacity),
                 ("testReserveCapacityLargerUniquelyReferencedCallsRealloc", testReserveCapacityLargerUniquelyReferencedCallsRealloc),
                 ("testReserveCapacityLargerMultipleReferenceCallsMalloc", testReserveCapacityLargerMultipleReferenceCallsMalloc),
+                ("testReadWithFunctionsThatReturnNumberOfReadBytesAreDiscardable", testReadWithFunctionsThatReturnNumberOfReadBytesAreDiscardable),
            ]
    }
 }

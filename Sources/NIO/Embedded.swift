@@ -58,6 +58,7 @@ public class EmbeddedEventLoop: EventLoop {
 
     public init() { }
 
+    @discardableResult
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = newPromise()
         let readyTime = now + UInt64(`in`.nanoseconds)
@@ -80,7 +81,7 @@ public class EmbeddedEventLoop: EventLoop {
     // at which point we run everything that's been submitted. Anything newly submitted
     // either gets on that train if it's still moving or waits until the next call to run().
     public func execute(_ task: @escaping () -> Void) {
-        _ = self.scheduleTask(in: .nanoseconds(0), task)
+        self.scheduleTask(in: .nanoseconds(0), task)
     }
 
     public func run() {
@@ -103,7 +104,7 @@ public class EmbeddedEventLoop: EventLoop {
             var tasks = Array<EmbeddedScheduledTask>()
             while let candidateTask = self.scheduledTasks.peek(), candidateTask.readyTime == nextTask.readyTime {
                 tasks.append(candidateTask)
-                _ = self.scheduledTasks.pop()
+                self.scheduledTasks.pop()
             }
 
             // Set the time correctly before we call into user code, then
@@ -157,8 +158,14 @@ class EmbeddedChannelCore: ChannelCore {
         closePromise.succeed(result: ())
     }
 
+    /// Contains the flushed items that went into the `Channel` (and on a regular channel would have hit the network).
     var outboundBuffer: [IOData] = []
+
+    /// Contains the unflushed items that went into the `Channel`
     var pendingOutboundBuffer: [(IOData, EventLoopPromise<Void>?)] = []
+
+    /// Contains the items that travelled the `ChannelPipeline` all the way and hit the tail channel handler. On a
+    /// regular `Channel` these items would be lost.
     var inboundBuffer: [NIOAny] = []
 
     func localAddress0() throws -> SocketAddress {
@@ -326,6 +333,13 @@ public class EmbeddedChannel: Channel {
         return readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
 
+    /// Writes `data` into the `EmbeddedChannel`'s pipeline. This will result in a `channelRead` and a
+    /// `channelReadComplete` event for the first `ChannelHandler`.
+    ///
+    /// - parameters:
+    ///    - data: The data to fire through the pipeline.
+    /// - returns: If the `inboundBuffer` now contains items. The `inboundBuffer` will be empty until some item
+    ///            travels the `ChannelPipeline` all the way and hits the tail channel handler.
     @discardableResult public func writeInbound<T>(_ data: T) throws -> Bool {
         pipeline.fireChannelRead(NIOAny(data))
         pipeline.fireChannelReadComplete()
@@ -376,7 +390,7 @@ public class EmbeddedChannel: Channel {
         }
 
         // This will never throw...
-        _ = try? register().wait()
+        try! register().wait()
     }
 
     public func setOption<T>(option: T, value: T.OptionType) -> EventLoopFuture<Void> where T: ChannelOption {

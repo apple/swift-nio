@@ -238,7 +238,7 @@ extension CircularBuffer: BidirectionalCollection, RandomAccessCollection, Range
         precondition(bounds.upperBound >= self.startIndex && bounds.upperBound <= self.endIndex, "Invalid bounds.")
         switch bounds.count {
         case 1:
-            _ = remove(at: bounds.lowerBound)
+            remove(at: bounds.lowerBound)
         case self.count:
             self = .init(initialRingCapacity: self.buffer.count)
         default:
@@ -266,6 +266,7 @@ extension CircularBuffer: BidirectionalCollection, RandomAccessCollection, Range
     /// *O(1)* if the position is `headIdx` or `tailIdx`.
     /// otherwise
     /// *O(n)* where *n* is the number of elements between `position` and `tailIdx`.
+    @discardableResult
     public mutating func remove(at position: Int) -> E {
         precondition(self.indices.contains(position), "Position out of bounds.")
         var bufferIndex = self.bufferIndex(ofIndex: position)

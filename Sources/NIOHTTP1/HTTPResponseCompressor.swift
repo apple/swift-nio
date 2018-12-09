@@ -367,7 +367,7 @@ private extension z_stream {
             self.next_out = nil
         }
 
-        _ = from.readWithUnsafeMutableReadableBytes { dataPtr in
+        from.readWithUnsafeMutableReadableBytes { dataPtr in
             let typedPtr = dataPtr.baseAddress!.assumingMemoryBound(to: UInt8.self)
             let typedDataPtr = UnsafeMutableBufferPointer(start: typedPtr,
                                                           count: dataPtr.count)
@@ -388,7 +388,7 @@ private extension z_stream {
     private mutating func deflateToBuffer(buffer: inout ByteBuffer, flag: Int32) -> Int32 {
         var rc = Z_OK
 
-        _ = buffer.writeWithUnsafeMutableBytes { outputPtr in
+        buffer.writeWithUnsafeMutableBytes { outputPtr in
             let typedOutputPtr = UnsafeMutableBufferPointer(start: outputPtr.baseAddress!.assumingMemoryBound(to: UInt8.self),
                                                             count: outputPtr.count)
             self.avail_out = UInt32(typedOutputPtr.count)

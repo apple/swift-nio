@@ -12,8 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import NIO
+import Dispatch
 import XCTest
+
+@testable import NIO
 
 func withPipe(_ body: (NIO.FileHandle, NIO.FileHandle) -> [NIO.FileHandle]) throws {
     var fds: [Int32] = [-1, -1]
@@ -55,9 +57,24 @@ func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.FileHandle, Strin
     }
     return try body(fileHandle, path)
 }
-
+var temporaryDirectory: String {
+    get {
+#if os(Android)
+        return "/data/local/tmp"
+#elseif os(Linux)
+        return "/tmp"
+#else
+        if #available(OSX 10.12, *) {
+            return FileManager.default.temporaryDirectory.path
+        } else {
+            return "/tmp"
+        }
+#endif
+    }
+}
 func createTemporaryDirectory() -> String {
-    let template = "/tmp/.NIOTests-temp-dir_XXXXXX"
+    let template = "\(temporaryDirectory)/.NIOTests-temp-dir_XXXXXX"
+
     var templateBytes = template.utf8 + [0]
     let templateBytesCount = templateBytes.count
     templateBytes.withUnsafeMutableBufferPointer { ptr in
@@ -67,11 +84,11 @@ func createTemporaryDirectory() -> String {
         }
     }
     templateBytes.removeLast()
-    return String(decoding: templateBytes, as: UTF8.self)
+    return String(decoding: templateBytes, as: Unicode.UTF8.self)
 }
 
 func openTemporaryFile() -> (CInt, String) {
-    let template = "/tmp/niotestXXXXXXX"
+    let template = "\(temporaryDirectory)/niotestXXXXXXX"
     var templateBytes = template.utf8 + [0]
     let templateBytesCount = templateBytes.count
     let fd = templateBytes.withUnsafeMutableBufferPointer { ptr in
@@ -80,7 +97,7 @@ func openTemporaryFile() -> (CInt, String) {
         }
     }
     templateBytes.removeLast()
-    return (fd, String(decoding: templateBytes, as: UTF8.self))
+    return (fd, String(decoding: templateBytes, as: Unicode.UTF8.self))
 }
 
 internal extension Channel {
@@ -203,4 +220,26 @@ func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyRece
     IPv4: \(ipv4Results)
     IPv6: \(ipv6Results)
     """
+}
+
+func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #file, line: UInt = #line) {
+    let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
+    let endTime = DispatchTime.now().uptimeNanoseconds + UInt64(time.nanoseconds)
+
+    repeat {
+        if condition() { return }
+        usleep(UInt32(testInterval.nanoseconds / 1000))
+    } while (DispatchTime.now().uptimeNanoseconds < endTime)
+
+    if !condition() {
+        XCTFail(message)
+    }
+}
+
+func getBoolSocketOption<IntType: SignedInteger>(channel: Channel, level: IntType, name: SocketOptionName,
+                                                 file: StaticString = #file, line: UInt = #line) throws -> Bool {
+    return try assertNoThrowWithValue(channel.getOption(option: ChannelOptions.socket(SocketOptionLevel(level),
+                                                                                      name)),
+                                      file: file,
+                                      line: line).wait() != 0
 }

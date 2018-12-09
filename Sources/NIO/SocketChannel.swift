@@ -48,7 +48,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override var isOpen: Bool {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         assert(super.isOpen == self.pendingWrites.isOpen)
         return super.isOpen
     }
@@ -71,7 +71,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -92,7 +92,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -122,7 +122,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override func readFromSocket() throws -> ReadResult {
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         // Just allocate one time for the while read loop. This is fine as ByteBuffer is a struct and uses COW.
         var buffer = recvAllocator.buffer(allocator: allocator)
         var result = ReadResult.none
@@ -211,9 +211,9 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override func finishConnectSocket() throws {
-        if let scheduled = connectTimeoutScheduled {
+        if let scheduled = self.connectTimeoutScheduled {
             // Connection established so cancel the previous scheduled timeout.
-            connectTimeoutScheduled = nil
+            self.connectTimeoutScheduled = nil
             scheduled.cancel()
         }
         try self.socket.finishConnect()
@@ -339,7 +339,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -354,7 +354,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -369,7 +369,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
@@ -381,7 +381,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             return
         }
 
-        let p: EventLoopPromise<Void> = eventLoop.newPromise()
+        let p = eventLoop.newPromise(of: Void.self)
         p.futureResult.map {
             // It's important to call the methods before we actually notify the original promise for ordering reasons.
             self.becomeActive0(promise: promise)
@@ -417,7 +417,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
                     assert(self.isActive)
                     pipeline.fireChannelRead0(NIOAny(chan))
                 } catch let err {
-                    _ = try? accepted.close()
+                    try? accepted.close()
                     throw err
                 }
             } else {
@@ -450,7 +450,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override public func channelRead0(_ data: NIOAny) {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         let ch = data.forceAsOther() as SocketChannel
         ch.eventLoop.execute {
@@ -500,7 +500,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override var isOpen: Bool {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         assert(super.isOpen == self.pendingWrites.isOpen)
         return super.isOpen
     }
@@ -511,7 +511,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         do {
             try self.init(socket: socket, eventLoop: eventLoop)
         } catch {
-            _ = try? socket.close()
+            try? socket.close()
             throw error
         }
     }
@@ -521,7 +521,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         do {
             try socket.setNonBlocking()
         } catch let err {
-            _ = try? socket.close()
+            try? socket.close()
             throw err
         }
 
@@ -545,7 +545,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     // MARK: Datagram Channel overrides required by BaseSocketChannel
 
     override func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -562,7 +562,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -696,7 +696,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     // MARK: Datagram Channel overrides not required by BaseSocketChannel
 
     override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         guard self.isRegistered else {
             promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
             return
@@ -726,5 +726,125 @@ extension ServerSocketChannel: CustomStringConvertible {
 extension DatagramChannel: CustomStringConvertible {
     var description: String {
         return "DatagramChannel { selectable = \(self.selectable), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
+    }
+}
+
+extension DatagramChannel: MulticastChannel {
+    /// The socket options for joining and leaving multicast groups are very similar.
+    /// This enum allows us to write a single function to do all the work, and then
+    /// at the last second pull out the correct socket option name.
+    private enum GroupOperation {
+        /// Join a multicast group.
+        case join
+
+        /// Leave a multicast group.
+        case leave
+
+        /// Given a socket option level, returns the appropriate socket option name for
+        /// this group operation.
+        ///
+        /// - parameters:
+        ///     - level: The socket option level. Must be one of `IPPROTO_IP` or
+        ///         `IPPROTO_IPV6`. Will trap if an invalid value is provided.
+        /// - returns: The socket option name to use for this group operation.
+        func optionName(level: CInt) -> CInt {
+            switch (self, level) {
+            case (.join, CInt(IPPROTO_IP)):
+                return CInt(IP_ADD_MEMBERSHIP)
+            case (.leave, CInt(IPPROTO_IP)):
+                return CInt(IP_DROP_MEMBERSHIP)
+            case (.join, CInt(IPPROTO_IPV6)):
+                return CInt(IPV6_JOIN_GROUP)
+            case (.leave, CInt(IPPROTO_IPV6)):
+                return CInt(IPV6_LEAVE_GROUP)
+            default:
+                preconditionFailure("Unexpected socket option level: \(level)")
+            }
+        }
+    }
+
+    public func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
+        if eventLoop.inEventLoop {
+            self.performGroupOperation0(group, interface: interface, promise: promise, operation: .join)
+        } else {
+            eventLoop.execute {
+                self.performGroupOperation0(group, interface: interface, promise: promise, operation: .join)
+            }
+        }
+    }
+
+    public func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
+        if eventLoop.inEventLoop {
+            self.performGroupOperation0(group, interface: interface, promise: promise, operation: .leave)
+        } else {
+            eventLoop.execute {
+                self.performGroupOperation0(group, interface: interface, promise: promise, operation: .leave)
+            }
+        }
+    }
+
+    /// The implementation of `joinGroup` and `leaveGroup`.
+    ///
+    /// Joining and leaving a multicast group ultimately corresponds to a single, carefully crafted, socket option.
+    private func performGroupOperation0(_ group: SocketAddress,
+                                        interface: NIONetworkInterface?,
+                                        promise: EventLoopPromise<Void>?,
+                                        operation: GroupOperation) {
+        self.eventLoop.assertInEventLoop()
+
+        guard self.isActive else {
+            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            return
+        }
+
+        // We need to check that we have the appropriate address types in all cases. They all need to overlap with
+        // the address type of this channel, or this cannot work.
+        guard let localAddress = self.localAddress else {
+            promise?.fail(error: MulticastError.unknownLocalAddress)
+            return
+        }
+
+        guard localAddress.protocolFamily == group.protocolFamily else {
+            promise?.fail(error: MulticastError.badMulticastGroupAddressFamily)
+            return
+        }
+
+        // Ok, now we need to check that the group we've been asked to join is actually a multicast group.
+        guard group.isMulticast else {
+            promise?.fail(error: MulticastError.illegalMulticastAddress(group))
+            return
+        }
+
+        // Ok, we now have reason to believe this will actually work. We need to pass this on to the socket.
+        do {
+            switch (group, interface?.address) {
+            case (.unixDomainSocket, _):
+                preconditionFailure("Should not be reachable, UNIX sockets are never multicast addresses")
+            case (.v4(let groupAddress), .some(.v4(let interfaceAddress))):
+                // IPv4Binding with specific target interface.
+                let multicastRequest = ip_mreq(imr_multiaddr: groupAddress.address.sin_addr, imr_interface: interfaceAddress.address.sin_addr)
+                try self.socket.setOption(level: CInt(IPPROTO_IP), name: operation.optionName(level: CInt(IPPROTO_IP)), value: multicastRequest)
+            case (.v4(let groupAddress), .none):
+                // IPv4 binding without target interface.
+                let multicastRequest = ip_mreq(imr_multiaddr: groupAddress.address.sin_addr, imr_interface: in_addr(s_addr: INADDR_ANY))
+                try self.socket.setOption(level: CInt(IPPROTO_IP), name: operation.optionName(level: CInt(IPPROTO_IP)), value: multicastRequest)
+            case (.v6(let groupAddress), .some(.v6)):
+                // IPv6 binding with specific target interface.
+                let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: UInt32(interface!.interfaceIndex))
+                try self.socket.setOption(level: CInt(IPPROTO_IPV6), name: operation.optionName(level: CInt(IPPROTO_IPV6)), value: multicastRequest)
+            case (.v6(let groupAddress), .none):
+                // IPv6 binding with no specific interface requested.
+                let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: 0)
+                try self.socket.setOption(level: CInt(IPPROTO_IPV6), name: operation.optionName(level: CInt(IPPROTO_IPV6)), value: multicastRequest)
+            case (.v4, .some(.v6)), (.v6, .some(.v4)), (.v4, .some(.unixDomainSocket)), (.v6, .some(.unixDomainSocket)):
+                // Mismatched group and interface address: this is an error.
+                throw MulticastError.badInterfaceAddressFamily
+            }
+
+            promise?.succeed(result: ())
+        } catch {
+            promise?.fail(error: error)
+            return
+        }
     }
 }

@@ -482,7 +482,7 @@ public class AtomicBox<T: AnyObject> {
     }
 
     deinit {
-        let oldPtrBits = self.storage.exchange(with: 0xdeadbeef)
+        let oldPtrBits = self.storage.exchange(with: 0xdeadbee)
         let oldPtr = Unmanaged<T>.fromOpaque(UnsafeRawPointer(bitPattern: oldPtrBits)!)
         oldPtr.release()
     }

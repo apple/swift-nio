@@ -170,7 +170,7 @@ final class DatagramChannelTests: XCTestCase {
             XCTAssertTrue(writable)
         }
 
-        let lastWritePromise: EventLoopPromise<Void> = self.firstChannel.eventLoop.newPromise()
+        let lastWritePromise = self.firstChannel.eventLoop.newPromise(of: Void.self)
         // The last write will push us over the edge.
         var writable: Bool = try self.firstChannel.eventLoop.submit {
             self.firstChannel.write(NIOAny(writeData), promise: lastWritePromise)
@@ -200,7 +200,7 @@ final class DatagramChannelTests: XCTestCase {
             do {
                 try $0.wait()
                 XCTFail("Did not error")
-            } catch ChannelError.alreadyClosed {
+            } catch ChannelError.ioOnClosedChannel {
                 // All good
             } catch {
                 XCTFail("Unexpected error: \(error)")
@@ -214,7 +214,7 @@ final class DatagramChannelTests: XCTestCase {
 
         var overall: EventLoopFuture<Void> = self.firstChannel.eventLoop.newSucceededFuture(result: ())
         for _ in 0...Socket.writevLimitIOVectors {
-            let myPromise: EventLoopPromise<Void> = self.firstChannel.eventLoop.newPromise()
+            let myPromise = self.firstChannel.eventLoop.newPromise(of: Void.self)
             var buffer = self.firstChannel.allocator.buffer(capacity: 1)
             buffer.write(string: "a")
             let envelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
@@ -233,7 +233,7 @@ final class DatagramChannelTests: XCTestCase {
         // We defer this work to the background thread because otherwise it incurs an enormous number of context
         // switches.
         try self.firstChannel.eventLoop.submit {
-            let myPromise: EventLoopPromise<Void> = self.firstChannel.eventLoop.newPromise()
+            let myPromise = self.firstChannel.eventLoop.newPromise(of: Void.self)
             // For datagrams this buffer cannot be very large, because if it's larger than the path MTU it
             // will cause EMSGSIZE.
             let bufferSize = 1024 * 5
@@ -244,11 +244,12 @@ final class DatagramChannelTests: XCTestCase {
             }
             let envelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
 
-            var written = 0
-            while written <= Int(INT32_MAX) {
+            let lotsOfData = Int(Int32.max)
+            var written: Int64 = 0
+            while written <= lotsOfData {
                 self.firstChannel.write(NIOAny(envelope), promise: myPromise)
                 overall = EventLoopFuture<Void>.andAll([overall, myPromise.futureResult], eventLoop: self.firstChannel.eventLoop)
-                written += bufferSize
+                written += Int64(bufferSize)
                 datagrams += 1
             }
         }.wait()
@@ -402,7 +403,7 @@ final class DatagramChannelTests: XCTestCase {
         }
         let socket = try NonRecvFromSocket(error: error)
         let channel = try DatagramChannel(socket: socket, eventLoop: group.next() as! SelectableEventLoop)
-        let promise: EventLoopPromise<IOError> = channel.eventLoop.newPromise()
+        let promise = channel.eventLoop.newPromise(of: IOError.self)
         XCTAssertNoThrow(try channel.register().wait())
         XCTAssertNoThrow(try channel.pipeline.add(handler: RecvFromHandler(promise)).wait())
         XCTAssertNoThrow(try channel.bind(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())
@@ -441,5 +442,19 @@ final class DatagramChannelTests: XCTestCase {
         XCTAssertEqual(reads[0].remoteAddress, self.firstChannel.localAddress!)
         XCTAssertEqual(reads[1].data, buffer)
         XCTAssertEqual(reads[1].remoteAddress, self.firstChannel.localAddress!)
+    }
+
+    func testSettingTwoDistinctChannelOptionsWorksForDatagramChannel() throws {
+        let channel = try assertNoThrowWithValue(DatagramBootstrap(group: group)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_TIMESTAMP), value: 1)
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
+        defer {
+            XCTAssertNoThrow(try channel.close().wait())
+        }
+        XCTAssertTrue(try getBoolSocketOption(channel: channel, level: SOL_SOCKET, name: SO_REUSEADDR))
+        XCTAssertTrue(try getBoolSocketOption(channel: channel, level: SOL_SOCKET, name: SO_TIMESTAMP))
+        XCTAssertFalse(try getBoolSocketOption(channel: channel, level: SOL_SOCKET, name: SO_KEEPALIVE))
     }
 }

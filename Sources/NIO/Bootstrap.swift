@@ -27,6 +27,8 @@
 ///         .childChannelInitializer { channel in
 ///             // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
 ///             channel.pipeline.add(handler: BackPressureHandler()).then { () in
+///                 // make sure to instantiate your `ChannelHandlers` inside of
+///                 // the closure as it will be invoked once per connection.
 ///                 channel.pipeline.add(handler: MyChannelHandler())
 ///             }
 ///         }
@@ -39,7 +41,7 @@
 ///     defer {
 ///         try! group.syncShutdownGracefully()
 ///     }
-///     try! bootstrap.bind(host: host, port: port).wait()
+///     let channel = try! bootstrap.bind(host: host, port: port).wait()
 ///     /* the server will now be accepting connections */
 ///
 ///     try! channel.closeFuture.wait() // wait forever as we never close the Channel
@@ -94,6 +96,12 @@ public final class ServerBootstrap {
 
     /// Initialize the accepted `SocketChannel`s with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
+    ///
+    /// - warning: The `initializer` will be invoked once for every accepted connection. Therefore it's usually the
+    ///            right choice to instantiate stateful `ChannelHandler`s within the closure to make sure they are not
+    ///            accidentally shared across `Channel`s. There are expert use-cases where stateful handler need to be
+    ///            shared across `Channel`s in which case the user is responsible to synchronise the state access
+    ///            appropriately.
     ///
     /// The accepted `Channel` will operate on `ByteBuffer` as inbound and `IOData` as outbound messages.
     ///
@@ -164,7 +172,7 @@ public final class ServerBootstrap {
             return try ServerSocketChannel(descriptor: descriptor, eventLoop: eventLoop, group: childEventLoopGroup)
         }
         return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
-            let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+            let promise = eventLoop.newPromise(of: Void.self)
             serverChannel.registerAlreadyConfigured0(promise: promise)
             return promise.futureResult
         }
@@ -251,23 +259,23 @@ public final class ServerBootstrap {
             @inline(__always)
             func setupChildChannel() -> EventLoopFuture<Void> {
                 return self.childChannelOptions.applyAll(channel: accepted).then { () -> EventLoopFuture<Void> in
-                    assert(childEventLoop.inEventLoop)
+                    childEventLoop.assertInEventLoop()
                     return childChannelInit(accepted)
                 }
             }
 
             @inline(__always)
             func fireThroughPipeline(_ future: EventLoopFuture<Void>) {
-                assert(ctxEventLoop.inEventLoop)
+                ctxEventLoop.assertInEventLoop()
                 future.then { (_) -> EventLoopFuture<Void> in
-                    assert(ctxEventLoop.inEventLoop)
+                    ctxEventLoop.assertInEventLoop()
                     guard !ctx.pipeline.destroyed else {
                         return ctx.eventLoop.newFailedFuture(error: ChannelError.ioOnClosedChannel)
                     }
                     ctx.fireChannelRead(data)
                     return ctx.eventLoop.newSucceededFuture(result: ())
                 }.whenFailure { error in
-                    assert(ctx.eventLoop.inEventLoop)
+                    ctxEventLoop.assertInEventLoop()
                     self.closeAndFire(ctx: ctx, accepted: accepted, err: error)
                 }
             }
@@ -300,9 +308,9 @@ private extension Channel {
         // In many cases `body` must be _synchronously_ follow `register`, otherwise in our current
         // implementation, `epoll` will send us `EPOLLHUP`. To have it run synchronously, we need to invoke the
         // `then` on the eventloop that the `register` will succeed on.
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         return self.register().then {
-            assert(self.eventLoop.inEventLoop)
+            self.eventLoop.assertInEventLoop()
             return body(self)
         }
     }
@@ -321,6 +329,9 @@ private extension Channel {
 ///         // Enable SO_REUSEADDR.
 ///         .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 ///         .channelInitializer { channel in
+///             // always instantiate the handler _within_ the closure as
+///             // it may be called multiple times (for example if the hostname
+///             // resolves to both IPv4 and IPv6 addresses, cf. Happy Eyeballs).
 ///             channel.pipeline.add(handler: MyChannelHandler())
 ///         }
 ///     defer {
@@ -351,6 +362,16 @@ public final class ClientBootstrap {
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
     /// The connected `Channel` will operate on `ByteBuffer` as inbound and `IOData` as outbound messages.
+    ///
+    /// - warning: The `handler` closure may be invoked _multiple times_ so it's usually the right choice to instantiate
+    ///            `ChannelHandler`s within `handler`. The reason `handler` may be invoked multiple times is that to
+    ///            successfully set up a connection multiple connections might be setup in the process. Assuming a
+    ///            hostname that resolves to both IPv4 and IPv6 addresses, NIO will follow
+    ///            [_Happy Eyeballs_](https://en.wikipedia.org/wiki/Happy_Eyeballs) and race both an IPv4 and an IPv6
+    ///            connection. It is possible that both connections get fully established before the IPv4 connection
+    ///            will be closed again because the IPv6 connection 'won the race'. Therefore the `channelInitializer`
+    ///            might be called multiple times and it's important not to share stateful `ChannelHandler`s in more
+    ///            than one `Channel`.
     ///
     /// - parameters:
     ///     - handler: A closure that initializes the provided `Channel`.
@@ -412,7 +433,7 @@ public final class ClientBootstrap {
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(to address: SocketAddress) -> EventLoopFuture<Channel> {
         return execute(eventLoop: group.next(), protocolFamily: address.protocolFamily) { channel in
-            let connectPromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
+            let connectPromise = channel.eventLoop.newPromise(of: Void.self)
             channel.connect(to: address, promise: connectPromise)
             let cancelTask = channel.eventLoop.scheduleTask(in: self.connectTimeout) {
                 connectPromise.fail(error: ChannelError.connectTimeout(self.connectTimeout))
@@ -458,7 +479,7 @@ public final class ClientBootstrap {
         return channelInitializer(channel).then {
             self.channelOptions.applyAll(channel: channel)
         }.then {
-            let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+            let promise = eventLoop.newPromise(of: Void.self)
             channel.registerAlreadyConfigured0(promise: promise)
             return promise.futureResult
         }.map {
@@ -475,7 +496,7 @@ public final class ClientBootstrap {
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.newSucceededFuture(result: ()) }
         let channelOptions = self.channelOptions
 
-        let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
+        let promise = eventLoop.newPromise(of: Channel.self)
         let channel: SocketChannel
         do {
             channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: protocolFamily)
@@ -486,7 +507,7 @@ public final class ClientBootstrap {
 
         @inline(__always)
         func setupChannel() -> EventLoopFuture<Channel> {
-            assert(eventLoop.inEventLoop)
+            eventLoop.assertInEventLoop()
             channelInitializer(channel).then {
                 channelOptions.applyAll(channel: channel)
             }.then {
@@ -574,7 +595,7 @@ public final class DatagramBootstrap {
             return try DatagramChannel(eventLoop: eventLoop, descriptor: descriptor)
         }
         return bind0(makeChannel: makeChannel) { (eventLoop, channel) in
-            let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+            let promise = eventLoop.newPromise(of: Void.self)
             channel.registerAlreadyConfigured0(promise: promise)
             return promise.futureResult
         }
@@ -651,11 +672,30 @@ public final class DatagramBootstrap {
     }
 }
 
-fileprivate struct ChannelOptionStorage {
+/* for tests */ internal struct ChannelOptionStorage {
     private var storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
 
+    mutating func put<K: ChannelOption & Equatable>(key: K, value: K.OptionType) {
+        return self.put(key: key, value: value, equalsFunc: ==)
+    }
+
+    // HACK: this function should go for NIO 2.0, all ChannelOptions should be equatable
+    mutating func put<K: ChannelOption>(key: K, value: K.OptionType) {
+        if K.self == SocketOption.self {
+            return self.put(key: key as! SocketOption, value: value as! SocketOptionValue) { lhs, rhs in
+                switch (lhs, rhs) {
+                case (.const(let lLevel, let lName), .const(let rLevel, let rName)):
+                    return lLevel == rLevel && lName == rName
+                }
+            }
+        } else {
+            return self.put(key: key, value: value) { _, _ in true }
+        }
+    }
+
     mutating func put<K: ChannelOption>(key: K,
-                             value newValue: K.OptionType) {
+                                        value newValue: K.OptionType,
+                                        equalsFunc: (K, K) -> Bool) {
         func applier(_ t: Channel) -> (Any, Any) -> EventLoopFuture<Void> {
             return { (x, y) in
                 return t.setOption(option: x as! K, value: y as! K.OptionType)
@@ -664,7 +704,7 @@ fileprivate struct ChannelOptionStorage {
         var hasSet = false
         self.storage = self.storage.map { typeAndValue in
             let (type, value) = typeAndValue
-            if type is K {
+            if type is K && equalsFunc(type as! K, key) {
                 hasSet = true
                 return (key, (newValue, applier))
             } else {
@@ -677,7 +717,7 @@ fileprivate struct ChannelOptionStorage {
     }
 
     func applyAll(channel: Channel) -> EventLoopFuture<Void> {
-        let applyPromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
+        let applyPromise = channel.eventLoop.newPromise(of: Void.self)
         var it = self.storage.makeIterator()
 
         func applyNext() {

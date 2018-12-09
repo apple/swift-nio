@@ -19,9 +19,7 @@ public typealias IOVector = iovec
 /* final but tests */ class Socket: BaseSocket {
 
     /// The maximum number of bytes to write per `writev` call.
-    static var writevLimitBytes: Int {
-        return Int(Int32.max)
-    }
+    static var writevLimitBytes = Int(Int32.max)
 
     /// The maximum number of `IOVector`s to write per `writev` call.
     static let writevLimitIOVectors: Int = Posix.UIO_MAXIOV
@@ -71,11 +69,11 @@ public typealias IOVector = iovec
     func connect(to address: SocketAddress) throws -> Bool {
         switch address {
         case .v4(let addr):
-            return try connectSocket(addr: addr.address)
+            return try self.connectSocket(addr: addr.address)
         case .v6(let addr):
-            return try connectSocket(addr: addr.address)
+            return try self.connectSocket(addr: addr.address)
         case .unixDomainSocket(let addr):
-            return try connectSocket(addr: addr.address)
+            return try self.connectSocket(addr: addr.address)
         }
     }
 

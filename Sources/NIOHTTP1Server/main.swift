@@ -177,7 +177,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             ()
         case .end:
             self.state.requestComplete()
-            _ = ctx.eventLoop.scheduleTask(in: delay) { () -> Void in
+            ctx.eventLoop.scheduleTask(in: delay) { () -> Void in
                 var buf = ctx.channel.allocator.buffer(capacity: string.utf8.count)
                 buf.write(string: string)
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buf))), promise: nil)
@@ -203,7 +203,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                 self.continuousCount += 1
                 self.buffer.write(string: "line \(self.continuousCount)\n")
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).map {
-                    _ = ctx.eventLoop.scheduleTask(in: .milliseconds(400), doNext)
+                    ctx.eventLoop.scheduleTask(in: .milliseconds(400), doNext)
                 }.whenFailure { (_: Error) in
                     self.completeResponse(ctx, trailers: nil, promise: nil)
                 }
@@ -229,7 +229,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                 self.continuousCount += 1
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenSuccess {
                     if self.continuousCount < strings.count {
-                        _ = ctx.eventLoop.scheduleTask(in: delay, doNext)
+                        ctx.eventLoop.scheduleTask(in: delay, doNext)
                     } else {
                         self.completeResponse(ctx, trailers: nil, promise: nil)
                     }
@@ -342,7 +342,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                                                     }
                                                     return ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buffer))))
                     }.then { () -> EventLoopFuture<Void> in
-                        let p: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
+                        let p = ctx.eventLoop.newPromise(of: Void.self)
                         self.completeResponse(ctx, trailers: nil, promise: p)
                         return p.futureResult
                     }.thenIfError { error in
@@ -364,7 +364,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                     let response = responseHead(request: request, fileRegion: region)
                     ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
                     ctx.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region)))).then {
-                        let p: EventLoopPromise<Void> = ctx.eventLoop.newPromise()
+                        let p = ctx.eventLoop.newPromise(of: Void.self)
                         self.completeResponse(ctx, trailers: nil, promise: p)
                         return p.futureResult
                     }.thenIfError { (_: Error) in

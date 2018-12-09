@@ -27,7 +27,7 @@ private class PromiseOrderer {
     }
 
     func newPromise() -> EventLoopPromise<Void> {
-        let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+        let promise = eventLoop.newPromise(of: Void.self)
         appendPromise(promise)
         return promise
     }
@@ -501,7 +501,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         let channel = try compressionChannel()
         try sendRequest(acceptEncoding: "gzip", channel: channel)
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
-        let writePromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
+        let writePromise = channel.eventLoop.newPromise(of: Void.self)
         channel.write(NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
         writePromise.futureResult.map {
             XCTFail("Write succeeded")
@@ -528,7 +528,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         let channel = try compressionChannel()
         try sendRequest(acceptEncoding: nil, channel: channel)
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
-        let writePromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
+        let writePromise = channel.eventLoop.newPromise(of: Void.self)
         channel.writeAndFlush(NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
         channel.pipeline.removeHandlers()
         try writePromise.futureResult.wait()
