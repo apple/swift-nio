@@ -262,13 +262,13 @@ class SniHandlerTest: XCTestCase {
         var buffer = bufferForBase64String(string: clientHello)
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise: EventLoopPromise<Void> = loop.newPromise()
+        let continuePromise = loop.makePromise(of: Void.self)
 
-        let handler = SniHandler { result in
+        let handler = ByteToMessageHandler(SniHandler { result in
             XCTAssertEqual(expectedResult, result)
             called = true
             return continuePromise.futureResult
-        }
+        })
 
         try channel.pipeline.add(handler: handler).wait()
 
@@ -296,7 +296,7 @@ class SniHandlerTest: XCTestCase {
         continuePromise.succeed(result: ())
         loop.run()
 
-        let writtenBuffer: ByteBuffer = channel.readInbound()!
+        let writtenBuffer: ByteBuffer = channel.readInbound() ?? channel.allocator.buffer(capacity: 0)
         let writtenData = writtenBuffer.getData(at: writtenBuffer.readerIndex, length: writtenBuffer.readableBytes)
         let expectedData = Data(base64Encoded: clientHello, options: .ignoreUnknownCharacters)!
         XCTAssertEqual(writtenData, expectedData)
@@ -313,13 +313,13 @@ class SniHandlerTest: XCTestCase {
         let buffer = bufferForBase64String(string: clientHello)
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise: EventLoopPromise<Void> = loop.newPromise()
+        let continuePromise = loop.makePromise(of: Void.self)
 
-        let handler = SniHandler { result in
+        let handler = ByteToMessageHandler(SniHandler { result in
             XCTAssertEqual(expectedResult, result)
             called = true
             return continuePromise.futureResult
-        }
+        })
 
         try channel.pipeline.add(handler: handler).wait()
 
@@ -356,10 +356,10 @@ class SniHandlerTest: XCTestCase {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
 
-        let handler = SniHandler { result in
+        let handler = ByteToMessageHandler(SniHandler { result in
             XCTFail("Handler was called")
-            return loop.newSucceededFuture(result: ())
-        }
+            return loop.makeSucceededFuture(result: ())
+        })
 
         try channel.pipeline.add(handler: handler).wait()
 

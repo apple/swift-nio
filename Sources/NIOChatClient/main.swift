@@ -17,10 +17,18 @@ private final class ChatHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
 
+    private func printByte(_ byte: UInt8) {
+        #if os(Android)
+        print(Character(UnicodeScalar(byte)),  terminator:"")
+        #else
+        fputc(Int32(byte), stdout)
+        #endif
+    }
+
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         var buffer = self.unwrapInboundIn(data)
         while let byte: UInt8 = buffer.readInteger() {
-            fputc(Int32(byte), stdout)
+            printByte(byte)
         }
     }
 
@@ -33,7 +41,7 @@ private final class ChatHandler: ChannelInboundHandler {
     }
 }
 
-let group = MultiThreadedEventLoopGroup(numThreads: 1)
+let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 let bootstrap = ClientBootstrap(group: group)
     // Enable SO_REUSEADDR.
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)

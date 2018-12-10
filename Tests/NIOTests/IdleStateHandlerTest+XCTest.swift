@@ -30,6 +30,7 @@ extension IdleStateHandlerTest {
                 ("testIdleWrite", testIdleWrite),
                 ("testIdleAllWrite", testIdleAllWrite),
                 ("testIdleAllRead", testIdleAllRead),
+                ("testPropagateInboundEvents", testPropagateInboundEvents),
            ]
    }
 }

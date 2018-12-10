@@ -35,6 +35,14 @@ extension HTTPHeadersTest {
                 ("testTrimWhitespaceWorksOnOnlyWhitespace", testTrimWhitespaceWorksOnOnlyWhitespace),
                 ("testTrimWorksWithCharactersInTheMiddleAndWhitespaceAround", testTrimWorksWithCharactersInTheMiddleAndWhitespaceAround),
                 ("testContains", testContains),
+                ("testKeepAliveStateStartsWithClose", testKeepAliveStateStartsWithClose),
+                ("testKeepAliveStateStartsWithKeepAlive", testKeepAliveStateStartsWithKeepAlive),
+                ("testKeepAliveStateHasKeepAlive", testKeepAliveStateHasKeepAlive),
+                ("testKeepAliveStateHasClose", testKeepAliveStateHasClose),
+                ("testResolveNonContiguousHeaders", testResolveNonContiguousHeaders),
+                ("testStringBasedHTTPListHeaderIterator", testStringBasedHTTPListHeaderIterator),
+                ("testUnsafeBufferAccess", testUnsafeBufferAccess),
+                ("testCreateFromBufferAndLocations", testCreateFromBufferAndLocations),
            ]
    }
 }

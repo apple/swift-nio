@@ -19,7 +19,7 @@ token=$(create_token)
 start_server "$token"
 htdocs=$(get_htdocs "$token")
 socket=$(get_socket "$token")
-echo -e 'GET / HTT\r\n\r\n' | nc -U "$socket" > "$tmp/actual"
+echo -e 'GET / HTT\r\n\r\n' | do_nc -U "$socket" > "$tmp/actual"
 
 if ! grep -q 'HTTP/1.1 400 Bad Request' "$tmp/actual"; then
     fail "couldn't find status line in response"

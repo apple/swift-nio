@@ -28,6 +28,10 @@ private final class DeadChannelCore: ChannelCore {
         promise?.fail(error: ChannelError.ioOnClosedChannel)
     }
 
+    func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
+        promise?.fail(error: ChannelError.ioOnClosedChannel)
+    }
+
     func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?) {
         promise?.fail(error: ChannelError.ioOnClosedChannel)
     }
@@ -76,7 +80,7 @@ internal final class DeadChannel: Channel {
     let pipeline: ChannelPipeline
 
     public var closeFuture: EventLoopFuture<Void> {
-        return self.eventLoop.newSucceededFuture(result: ())
+        return self.eventLoop.makeSucceededFuture(result: ())
     }
 
     internal init(pipeline: ChannelPipeline) {
@@ -104,7 +108,7 @@ internal final class DeadChannel: Channel {
     }
 
     func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T: ChannelOption {
-        return eventLoop.newFailedFuture(error: ChannelError.ioOnClosedChannel)
+        return eventLoop.makeFailedFuture(error: ChannelError.ioOnClosedChannel)
     }
 
     let isWritable = false

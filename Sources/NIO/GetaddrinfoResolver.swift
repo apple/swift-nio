@@ -21,6 +21,8 @@
 /// needed to implement it.
 ///
 /// This resolver is a single-use object: it can only be used to perform a single host resolution.
+import CNIOLinux
+
 internal class GetaddrinfoResolver: Resolver {
     private let v4Future: EventLoopPromise<[SocketAddress]>
     private let v6Future: EventLoopPromise<[SocketAddress]>
@@ -34,8 +36,8 @@ internal class GetaddrinfoResolver: Resolver {
     ///     - aiSocktype: The sock type to use as hint when calling getaddrinfo.
     ///     - aiProtocol: the protocol to use as hint when calling getaddrinfo.
     init(loop: EventLoop, aiSocktype: CInt, aiProtocol: CInt) {
-        self.v4Future = loop.newPromise()
-        self.v6Future = loop.newPromise()
+        self.v4Future = loop.makePromise()
+        self.v6Future = loop.makePromise()
         self.aiSocktype = aiSocktype
         self.aiProtocol = aiProtocol
     }

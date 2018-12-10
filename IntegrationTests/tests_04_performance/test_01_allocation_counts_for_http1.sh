@@ -15,6 +15,9 @@
 
 source defines.sh
 
+warn "DISABLED for https://bugs.swift.org/browse/SR-9204"
+exit 0
+
 set -eu
 swift_bin=swift
 
@@ -58,7 +61,7 @@ cd ..
 "$swift_bin" run -c release | tee "$tmp/output"
 )
 
-for test in 1000_reqs_1_conn 1_reqs_1000_conn ping_pong_1000_reqs_1_conn; do
+for test in 1000_reqs_1_conn 1_reqs_1000_conn ping_pong_1000_reqs_1_conn bytebuffer_lots_of_rw future_lots_of_callbacks; do
     cat "$tmp/output"  # helps debugging
     total_allocations=$(grep "^$test.total_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
     not_freed_allocations=$(grep "^$test.remaining_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')

@@ -29,7 +29,7 @@ public enum NIOWebSocketUpgradeError: Error {
 }
 
 fileprivate extension HTTPHeaders {
-    fileprivate func nonListHeader(_ name: String) throws -> String {
+    func nonListHeader(_ name: String) throws -> String {
         let fields = self[canonicalForm: name]
         guard fields.count == 1 else {
             throw NIOWebSocketUpgradeError.invalidUpgradeHeader
@@ -60,10 +60,14 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
     private let shouldUpgrade: (HTTPRequestHead) -> HTTPHeaders?
     private let upgradePipelineHandler: (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
     private let maxFrameSize: Int
+    private let automaticErrorHandling: Bool
 
     /// Create a new `WebSocketUpgrader`.
     ///
     /// - parameters:
+    ///     - automaticErrorHandling: Whether the pipeline should automatically handle protocol
+    ///         errors by sending error responses and closing the connection. Defaults to `true`,
+    ///         may be set to `false` if the user wishes to handle their own errors.
     ///     - shouldUpgrade: A callback that determines whether the websocket request should be
     ///         upgraded. This callback is responsible for creating a `HTTPHeaders` object with
     ///         any headers that it needs on the response *except for* the `Upgrade`, `Connection`,
@@ -74,18 +78,10 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
     ///         websocket protocol. This only needs to add the user handlers: the
     ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
     ///         pipeline automatically.
-    ///     - maxFrameSize: The maximum frame size the decoder is willing to tolerate from the
-    ///         remote peer. WebSockets in principle allows frame sizes up to `2**64` bytes, but
-    ///         this is an objectively unreasonable maximum value (on AMD64 systems it is not
-    ///         possible to even allocate a buffer large enough to handle this size), so we
-    ///         set a lower one. The default value is the same as the default HTTP/2 max frame
-    ///         size, `2**14` bytes. Users may override this to any value up to `UInt32.max`.
-    ///         Users are strongly encouraged not to increase this value unless they absolutely
-    ///         must, as the decoder will not produce partial frames, meaning that it will hold
-    ///         on to data until the *entire* body is received.
-    public convenience init(shouldUpgrade: @escaping (HTTPRequestHead) -> HTTPHeaders?,
+    public convenience init(automaticErrorHandling: Bool = true, shouldUpgrade: @escaping (HTTPRequestHead) -> HTTPHeaders?,
                 upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>) {
-        self.init(maxFrameSize: 1 << 14, shouldUpgrade: shouldUpgrade, upgradePipelineHandler: upgradePipelineHandler)
+        self.init(maxFrameSize: 1 << 14, automaticErrorHandling: automaticErrorHandling,
+                  shouldUpgrade: shouldUpgrade, upgradePipelineHandler: upgradePipelineHandler)
     }
 
 
@@ -96,6 +92,9 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
     ///         remote peer. WebSockets in principle allows frame sizes up to `2**64` bytes, but
     ///         this is an objectively unreasonable maximum value (on AMD64 systems it is not
     ///         possible to even. Users may set this to any value up to `UInt32.max`.
+    ///     - automaticErrorHandling: Whether the pipeline should automatically handle protocol
+    ///         errors by sending error responses and closing the connection. Defaults to `true`,
+    ///         may be set to `false` if the user wishes to handle their own errors.
     ///     - shouldUpgrade: A callback that determines whether the websocket request should be
     ///         upgraded. This callback is responsible for creating a `HTTPHeaders` object with
     ///         any headers that it needs on the response *except for* the `Upgrade`, `Connection`,
@@ -106,12 +105,13 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
     ///         websocket protocol. This only needs to add the user handlers: the
     ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
     ///         pipeline automatically.
-    public init(maxFrameSize: Int, shouldUpgrade: @escaping (HTTPRequestHead) -> HTTPHeaders?,
+    public init(maxFrameSize: Int, automaticErrorHandling: Bool = true, shouldUpgrade: @escaping (HTTPRequestHead) -> HTTPHeaders?,
                 upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>) {
         precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
         self.shouldUpgrade = shouldUpgrade
         self.upgradePipelineHandler = upgradePipelineHandler
         self.maxFrameSize = maxFrameSize
+        self.automaticErrorHandling = automaticErrorHandling
     }
 
     public func buildUpgradeResponse(upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) throws -> HTTPHeaders {
@@ -145,9 +145,17 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
     }
 
     public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
-        return ctx.pipeline.add(handler: WebSocketFrameEncoder()).then {
-            ctx.pipeline.add(handler: WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize))
-        }.then {
+        /// We never use the automatic error handling feature of the WebSocketFrameDecoder: we always use the separate channel
+        /// handler.
+        var upgradeFuture = ctx.pipeline.add(handler: WebSocketFrameEncoder()).then {
+            ctx.pipeline.add(handler: ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize, automaticErrorHandling: false)))
+        }
+
+        if self.automaticErrorHandling {
+            upgradeFuture = upgradeFuture.then { ctx.pipeline.add(handler: WebSocketProtocolErrorHandler())}
+        }
+
+        return upgradeFuture.then {
             self.upgradePipelineHandler(ctx.channel, upgradeRequest)
         }
     }

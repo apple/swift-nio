@@ -55,7 +55,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
     override func setUp() {
         self.channel = EmbeddedChannel()
-        self.loop = channel.eventLoop as! EmbeddedEventLoop
+        self.loop = (channel.eventLoop as! EmbeddedEventLoop)
     }
 
     override func tearDown() {
@@ -138,7 +138,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // We now want to send a HTTP/1.1 response. This response has no content-length, no transfer-encoding,
         // is not a response to a HEAD request, is not a 2XX response to CONNECT, and is not 1XX, 204, or 304.
-        // That means, per RFC 7230 § 3.3.3, the body is framed by EOF. Becuase this is a response, that EOF
+        // That means, per RFC 7230 § 3.3.3, the body is framed by EOF. Because this is a response, that EOF
         // may be transmitted by channelInactive.
         let response = "HTTP/\(version.major).\(version.minor) 200 OK\r\nServer: example\r\n\r\n"
         XCTAssertNoThrow(try channel.writeInbound(IOData.byteBuffer(ByteBuffer(string: response))))

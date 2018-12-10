@@ -122,7 +122,7 @@ class HTTPTest: XCTestCase {
                 for bodyData in allBodyDatas {
                     XCTAssertEqual(firstBodyData, bodyData)
                 }
-                return String(decoding: firstBodyData, as: UTF8.self)
+                return String(decoding: firstBodyData, as: Unicode.UTF8.self)
             } else {
                 XCTAssertEqual(0, allBodyDatas.count, "left with \(allBodyDatas)")
                 return nil
@@ -133,7 +133,7 @@ class HTTPTest: XCTestCase {
         let bd1 = try sendAndCheckRequests(expecteds, body: body, trailers: trailers, sendStrategy: { (reqString, chan) in
             var buf = chan.allocator.buffer(capacity: 1024)
             buf.write(string: reqString)
-            return chan.eventLoop.newSucceededFuture(result: ()).thenThrowing {
+            return chan.eventLoop.makeSucceededFuture(result: ()).thenThrowing {
                 try chan.writeInbound(buf)
             }
         })
@@ -145,7 +145,7 @@ class HTTPTest: XCTestCase {
                 var buf = chan.allocator.buffer(capacity: 1024)
 
                 buf.write(string: "\(c)")
-                writeFutures.append(chan.eventLoop.newSucceededFuture(result: ()).thenThrowing {
+                writeFutures.append(chan.eventLoop.makeSucceededFuture(result: ()).thenThrowing {
                     try chan.writeInbound(buf)
                 })
             }
@@ -205,5 +205,63 @@ class HTTPTest: XCTestCase {
         trailers.add(name: "X-Key", value: "X-Value")
         trailers.add(name: "Something", value: "Else")
         try checkHTTPRequest(HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .POST, uri: "/"), body: "100", trailers: trailers)
+    }
+
+    func testHTTPRequestHeadCoWWorks() throws {
+        let headers = HTTPHeaders([("foo", "bar")])
+        var httpReq = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1), method: .GET, uri: "/uri")
+        httpReq.headers = headers
+
+        var modVersion = httpReq
+        modVersion.version = HTTPVersion(major: 2, minor: 0)
+        XCTAssertEqual(HTTPVersion(major: 1, minor: 1), httpReq.version)
+        XCTAssertEqual(HTTPVersion(major: 2, minor: 0), modVersion.version)
+
+        var modMethod = httpReq
+        modMethod.method = .POST
+        XCTAssertEqual(.GET, httpReq.method)
+        XCTAssertEqual(.POST, modMethod.method)
+
+        var modURI = httpReq
+        modURI.uri = "/changed"
+        XCTAssertEqual("/uri", httpReq.uri)
+        XCTAssertEqual("/changed", modURI.uri)
+
+        var modHeaders = httpReq
+        modHeaders.headers.add(name: "qux", value: "quux")
+        XCTAssertEqual(httpReq.headers, headers)
+        XCTAssertNotEqual(httpReq, modHeaders)
+        modHeaders.headers.remove(name: "foo")
+        XCTAssertEqual(httpReq.headers, headers)
+        XCTAssertNotEqual(httpReq, modHeaders)
+        modHeaders.headers.remove(name: "qux")
+        modHeaders.headers.add(name: "foo", value: "bar")
+        XCTAssertEqual(httpReq, modHeaders)
+    }
+
+    func testHTTPResponseHeadCoWWorks() throws {
+        let headers = HTTPHeaders([("foo", "bar")])
+        let httpRes = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok, headers: headers)
+
+        var modVersion = httpRes
+        modVersion.version = HTTPVersion(major: 2, minor: 0)
+        XCTAssertEqual(HTTPVersion(major: 1, minor: 1), httpRes.version)
+        XCTAssertEqual(HTTPVersion(major: 2, minor: 0), modVersion.version)
+
+        var modStatus = httpRes
+        modStatus.status = .notFound
+        XCTAssertEqual(.ok, httpRes.status)
+        XCTAssertEqual(.notFound, modStatus.status)
+
+        var modHeaders = httpRes
+        modHeaders.headers.add(name: "qux", value: "quux")
+        XCTAssertEqual(httpRes.headers, headers)
+        XCTAssertNotEqual(httpRes, modHeaders)
+        modHeaders.headers.remove(name: "foo")
+        XCTAssertEqual(httpRes.headers, headers)
+        XCTAssertNotEqual(httpRes, modHeaders)
+        modHeaders.headers.remove(name: "qux")
+        modHeaders.headers.add(name: "foo", value: "bar")
+        XCTAssertEqual(httpRes, modHeaders)
     }
 }

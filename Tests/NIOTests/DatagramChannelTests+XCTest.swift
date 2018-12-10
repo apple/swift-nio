@@ -40,6 +40,8 @@ extension DatagramChannelTests {
                 ("testRecvFromFailsWithENOMEM", testRecvFromFailsWithENOMEM),
                 ("testRecvFromFailsWithEFAULT", testRecvFromFailsWithEFAULT),
                 ("testSetGetOptionClosedDatagramChannel", testSetGetOptionClosedDatagramChannel),
+                ("testWritesAreAccountedCorrectly", testWritesAreAccountedCorrectly),
+                ("testSettingTwoDistinctChannelOptionsWorksForDatagramChannel", testSettingTwoDistinctChannelOptionsWorksForDatagramChannel),
            ]
    }
 }

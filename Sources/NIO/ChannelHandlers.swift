@@ -23,8 +23,8 @@ import struct Dispatch.DispatchTime
 public final class AcceptBackoffHandler: ChannelDuplexHandler {
     public typealias InboundIn = Channel
     public typealias OutboundIn = Channel
-    
-    private var nextReadDeadlineNS: Int?
+
+    private var nextReadDeadlineNS: TimeAmount.Value?
     private let backoffProvider: (IOError) -> TimeAmount?
     private var scheduledRead: Scheduled<Void>?
 
@@ -40,13 +40,13 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
     public init(backoffProvider: @escaping (IOError) -> TimeAmount? = AcceptBackoffHandler.defaultBackoffProvider) {
         self.backoffProvider = backoffProvider
     }
-    
+
     public func read(ctx: ChannelHandlerContext) {
         // If we already have a read scheduled there is no need to schedule another one.
         guard scheduledRead == nil else { return }
 
         if let deadline = self.nextReadDeadlineNS {
-            let now = Int(DispatchTime.now().uptimeNanoseconds)
+            let now = TimeAmount.Value(DispatchTime.now().uptimeNanoseconds)
             if now >= deadline {
                 // The backoff already expired, just do a read.
                 doRead(ctx)
@@ -58,11 +58,11 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
             ctx.read()
         }
     }
-    
+
     public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         if let ioError = error as? IOError {
             if let amount = backoffProvider(ioError) {
-                self.nextReadDeadlineNS = Int(DispatchTime.now().uptimeNanoseconds) + amount.nanoseconds
+                self.nextReadDeadlineNS = TimeAmount.Value(DispatchTime.now().uptimeNanoseconds) + amount.nanoseconds
                 if let scheduled = self.scheduledRead {
                     scheduled.cancel()
                     scheduleRead(in: amount, ctx: ctx)
@@ -71,7 +71,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
         }
         ctx.fireErrorCaught(error)
     }
-    
+
     public func channelInactive(ctx: ChannelHandlerContext) {
         if let scheduled = self.scheduledRead {
             scheduled.cancel()
@@ -80,7 +80,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
         self.nextReadDeadlineNS = nil
         ctx.fireChannelInactive()
     }
-    
+
     public func handlerRemoved(ctx: ChannelHandlerContext) {
         if let scheduled = self.scheduledRead {
             // Cancel the previous scheduled read and trigger a read directly. This is needed as otherwise we may never read again.
@@ -90,13 +90,13 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
         }
         self.nextReadDeadlineNS = nil
     }
-    
+
     private func scheduleRead(in: TimeAmount, ctx: ChannelHandlerContext) {
         self.scheduledRead = ctx.eventLoop.scheduleTask(in: `in`) {
             self.doRead(ctx)
         }
     }
-    
+
     private func doRead(_ ctx: ChannelHandlerContext) {
         /// Reset the backoff time and read.
         self.nextReadDeadlineNS = nil
@@ -198,6 +198,7 @@ public class IdleStateHandler: ChannelDuplexHandler {
 
     public func channelActive(ctx: ChannelHandlerContext) {
         initIdleTasks(ctx)
+        ctx.fireChannelActive()
     }
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
@@ -221,7 +222,7 @@ public class IdleStateHandler: ChannelDuplexHandler {
             return
         }
 
-        let writePromise = promise ?? ctx.eventLoop.newPromise()
+        let writePromise = promise ?? ctx.eventLoop.makePromise()
         writePromise.futureResult.whenComplete {
             self.lastWriteCompleteTime = DispatchTime.now()
         }
@@ -235,31 +236,31 @@ public class IdleStateHandler: ChannelDuplexHandler {
         return false
     }
 
-    private func newReadTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
+    private func makeReadTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
         return {
             guard self.shouldReschedule(ctx) else  {
                 return
             }
 
             if self.reading {
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newReadTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.makeReadTimeoutTask(ctx, timeout))
                 return
             }
 
-            let diff = Int(DispatchTime.now().uptimeNanoseconds) - Int(self.lastReadTime.uptimeNanoseconds)
+            let diff = TimeAmount.Value(DispatchTime.now().uptimeNanoseconds) - TimeAmount.Value(self.lastReadTime.uptimeNanoseconds)
             if diff >= timeout.nanoseconds {
                 // Reader is idle - set a new timeout and trigger an event through the pipeline
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newReadTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.makeReadTimeoutTask(ctx, timeout))
 
                 ctx.fireUserInboundEventTriggered(IdleStateEvent.read)
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(timeout.nanoseconds - diff), self.newReadTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(timeout.nanoseconds - diff), self.makeReadTimeoutTask(ctx, timeout))
             }
         }
     }
 
-    private func newWriteTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
+    private func makeWriteTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
         return {
             guard self.shouldReschedule(ctx) else  {
                 return
@@ -270,38 +271,38 @@ public class IdleStateHandler: ChannelDuplexHandler {
 
             if diff >= timeout.nanoseconds {
                 // Writer is idle - set a new timeout and notify the callback.
-                self.scheduledWriterTask = ctx.eventLoop.scheduleTask(in: timeout, self.newWriteTimeoutTask(ctx, timeout))
+                self.scheduledWriterTask = ctx.eventLoop.scheduleTask(in: timeout, self.makeWriteTimeoutTask(ctx, timeout))
 
                 ctx.fireUserInboundEventTriggered(IdleStateEvent.write)
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledWriterTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(Int(timeout.nanoseconds) - Int(diff)), self.newWriteTimeoutTask(ctx, timeout))
+                self.scheduledWriterTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(TimeAmount.Value(timeout.nanoseconds) - TimeAmount.Value(diff)), self.makeWriteTimeoutTask(ctx, timeout))
             }
         }
     }
 
-    private func newAllTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
+    private func makeAllTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
         return {
             guard self.shouldReschedule(ctx) else  {
                 return
             }
 
             if self.reading {
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newAllTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.makeAllTimeoutTask(ctx, timeout))
                 return
             }
             let lastRead = self.lastReadTime
             let lastWrite = self.lastWriteCompleteTime
 
-            let diff = Int(DispatchTime.now().uptimeNanoseconds) - Int((lastRead > lastWrite ? lastRead : lastWrite).uptimeNanoseconds)
+            let diff = TimeAmount.Value(DispatchTime.now().uptimeNanoseconds) - TimeAmount.Value((lastRead > lastWrite ? lastRead : lastWrite).uptimeNanoseconds)
             if diff >= timeout.nanoseconds {
                 // Reader is idle - set a new timeout and trigger an event through the pipeline
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newAllTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.makeAllTimeoutTask(ctx, timeout))
 
                 ctx.fireUserInboundEventTriggered(IdleStateEvent.all)
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(Int(timeout.nanoseconds) - diff), self.newAllTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(TimeAmount.Value(timeout.nanoseconds) - diff), self.makeAllTimeoutTask(ctx, timeout))
             }
         }
     }
@@ -317,9 +318,9 @@ public class IdleStateHandler: ChannelDuplexHandler {
         let now = DispatchTime.now()
         lastReadTime = now
         lastWriteCompleteTime = now
-        scheduledReaderTask = schedule(ctx, readTimeout, newReadTimeoutTask)
-        scheduledWriterTask = schedule(ctx, writeTimeout, newWriteTimeoutTask)
-        scheduledAllTask = schedule(ctx, allTimeout, newAllTimeoutTask)
+        scheduledReaderTask = schedule(ctx, readTimeout, makeReadTimeoutTask)
+        scheduledWriterTask = schedule(ctx, writeTimeout, makeWriteTimeoutTask)
+        scheduledAllTask = schedule(ctx, allTimeout, makeAllTimeoutTask)
     }
 
     private func cancelIdleTasks(_ ctx: ChannelHandlerContext) {

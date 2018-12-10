@@ -122,6 +122,10 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
             self.pong(ctx: ctx, frame: frame)
         case .unknownControl, .unknownNonControl:
             self.closeOnError(ctx: ctx)
+        case .text:
+            var data = frame.unmaskedData
+            let text = data.readString(length: data.readableBytes) ?? ""
+            print(text)
         default:
             // We ignore all other frames.
             break
@@ -146,7 +150,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
 
         let frame = WebSocketFrame(fin: true, opcode: .text, data: buffer)
         ctx.writeAndFlush(self.wrapOutboundOut(frame)).map {
-            _ = ctx.eventLoop.scheduleTask(in: .seconds(1), { self.sendTime(ctx: ctx) })
+            ctx.eventLoop.scheduleTask(in: .seconds(1), { self.sendTime(ctx: ctx) })
         }.whenFailure { (_: Error) in
             ctx.close(promise: nil)
         }
@@ -189,14 +193,14 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
         var data = ctx.channel.allocator.buffer(capacity: 2)
         data.write(webSocketErrorCode: .protocolError)
         let frame = WebSocketFrame(fin: true, opcode: .connectionClose, data: data)
-        _ = ctx.write(self.wrapOutboundOut(frame)).then {
-            ctx.close(mode: .output)
+        ctx.write(self.wrapOutboundOut(frame)).whenComplete {
+            ctx.close(mode: .output, promise: nil)
         }
         awaitingClose = true
     }
 }
 
-let group = MultiThreadedEventLoopGroup(numThreads: 1)
+let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
 let upgrader = WebSocketUpgrader(shouldUpgrade: { (head: HTTPRequestHead) in HTTPHeaders() },
                                  upgradePipelineHandler: { (channel: Channel, _: HTTPRequestHead) in
@@ -210,9 +214,15 @@ let bootstrap = ServerBootstrap(group: group)
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
-        let config: HTTPUpgradeConfiguration = (upgraders: [], completionHandler: { _ in })
+        let httpHandler = HTTPHandler()
+        let config: HTTPUpgradeConfiguration = (
+                        upgraders: [ upgrader ], 
+                        completionHandler: { _ in 
+                            channel.pipeline.remove(handler: httpHandler, promise: nil)
+                        }
+                    )
         return channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: config).then {
-            channel.pipeline.add(handler: HTTPHandler())
+            channel.pipeline.add(handler: httpHandler)
         }
     }
 
@@ -242,15 +252,15 @@ switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
 case (.some(let h), _ , .some(let p)):
     /* we got two arguments, let's interpret that as host and port */
     bindTarget = .ip(host: h, port: p)
-    
+
 case (let portString?, .none, _):
     // Couldn't parse as number, expecting unix domain socket path.
     bindTarget = .unixDomainSocket(path: portString)
-    
+
 case (_, let p?, _):
     // Only one argument --> port.
     bindTarget = .ip(host: defaultHost, port: p)
-    
+
 default:
     bindTarget = .ip(host: defaultHost, port: defaultPort)
 }

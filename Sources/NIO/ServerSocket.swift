@@ -16,7 +16,7 @@
 /* final but tests */ class ServerSocket: BaseSocket {
     public class func bootstrap(protocolFamily: Int32, host: String, port: Int) throws -> ServerSocket {
         let socket = try ServerSocket(protocolFamily: protocolFamily)
-        try socket.bind(to: SocketAddress.newAddressResolving(host: host, port: port))
+        try socket.bind(to: SocketAddress.makeAddressResolvingHost(host, port: port))
         try socket.listen()
         return socket
     }
@@ -28,8 +28,21 @@
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if creation of the socket failed.
     init(protocolFamily: Int32, setNonBlocking: Bool = false) throws {
-        let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: setNonBlocking)
+        let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: setNonBlocking)
         super.init(descriptor: sock)
+    }
+
+    /// Create a new instance.
+    ///
+    /// - parameters:
+    ///     - descriptor: The _Unix file descriptor_ representing the bound socket.
+    ///     - setNonBlocking: Set non-blocking mode on the socket.
+    /// - throws: An `IOError` if socket is invalid.
+    init(descriptor: CInt, setNonBlocking: Bool = false) throws {
+        super.init(descriptor: descriptor)
+        if setNonBlocking {
+            try self.setNonBlocking()
+        }
     }
 
     /// Start to listen for new connections.
