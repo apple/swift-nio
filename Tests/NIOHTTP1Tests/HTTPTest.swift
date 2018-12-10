@@ -122,7 +122,7 @@ class HTTPTest: XCTestCase {
                 for bodyData in allBodyDatas {
                     XCTAssertEqual(firstBodyData, bodyData)
                 }
-                return String(decoding: firstBodyData, as: UTF8.self)
+                return String(decoding: firstBodyData, as: Unicode.UTF8.self)
             } else {
                 XCTAssertEqual(0, allBodyDatas.count, "left with \(allBodyDatas)")
                 return nil
@@ -133,7 +133,7 @@ class HTTPTest: XCTestCase {
         let bd1 = try sendAndCheckRequests(expecteds, body: body, trailers: trailers, sendStrategy: { (reqString, chan) in
             var buf = chan.allocator.buffer(capacity: 1024)
             buf.write(string: reqString)
-            return chan.eventLoop.newSucceededFuture(result: ()).thenThrowing {
+            return chan.eventLoop.makeSucceededFuture(result: ()).thenThrowing {
                 try chan.writeInbound(buf)
             }
         })
@@ -145,7 +145,7 @@ class HTTPTest: XCTestCase {
                 var buf = chan.allocator.buffer(capacity: 1024)
 
                 buf.write(string: "\(c)")
-                writeFutures.append(chan.eventLoop.newSucceededFuture(result: ()).thenThrowing {
+                writeFutures.append(chan.eventLoop.makeSucceededFuture(result: ()).thenThrowing {
                     try chan.writeInbound(buf)
                 })
             }

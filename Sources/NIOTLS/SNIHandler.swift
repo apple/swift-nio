@@ -80,7 +80,7 @@ private extension Sequence where Element == UInt8 {
         decode: while true {
             switch decoder.parseScalar(from: &bytesIterator) {
             case .valid(let v):
-                scalars.append(UnicodeScalar(v[0]))
+                scalars.append(Unicode.Scalar(v[0]))
             case .emptyInput:
                 break decode
             case .error:
@@ -114,12 +114,16 @@ public class SniHandler: ByteToMessageDecoder {
     private var waitingForUser: Bool
 
     public init(sniCompleteHandler: @escaping (SniResult) -> EventLoopFuture<Void>) {
-        self.cumulationBuffer = nil
         self.completionHandler = sniCompleteHandler
         self.waitingForUser = false
     }
 
-    // A note to maintainers: this method *never* returns true.
+    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+        ctx.fireChannelRead(NIOAny(buffer))
+        return .needMoreData
+    }
+
+    // A note to maintainers: this method *never* returns `.continue`.
     public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
         // If we've asked the user to mutate the pipeline already, we're not interested in
         // this data. Keep waiting.
@@ -428,7 +432,7 @@ public class SniHandler: ByteToMessageDecoder {
     private func sniComplete(result: SniResult, ctx: ChannelHandlerContext) {
         waitingForUser = true
         completionHandler(result).whenSuccess {
-            ctx.pipeline.remove(handler: self, promise: nil)
+            ctx.pipeline.remove(ctx: ctx, promise: nil)
         }
     }
 }

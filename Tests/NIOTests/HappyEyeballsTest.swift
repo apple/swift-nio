@@ -63,7 +63,7 @@ private class ConnectRecorder: ChannelOutboundHandler {
 
     public func connect(ctx: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?) {
         self.targetHost = to.toString()
-        let connectPromise = promise ?? ctx.eventLoop.newPromise()
+        let connectPromise = promise ?? ctx.eventLoop.makePromise()
         connectPromise.futureResult.whenSuccess {
             self.state = .connected
         }
@@ -71,7 +71,7 @@ private class ConnectRecorder: ChannelOutboundHandler {
     }
 
     public func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-        let connectPromise = promise ?? ctx.eventLoop.newPromise()
+        let connectPromise = promise ?? ctx.eventLoop.makePromise()
         connectPromise.futureResult.whenComplete {
             self.state = .closed
         }
@@ -190,8 +190,8 @@ private class DummyResolver: Resolver {
     var events: [Event] = []
 
     init(loop: EventLoop) {
-        self.v4Promise = loop.newPromise()
-        self.v6Promise = loop.newPromise()
+        self.v4Promise = loop.makePromise()
+        self.v6Promise = loop.makePromise()
     }
 
     func initiateAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
@@ -227,7 +227,7 @@ extension DummyResolver.Event: Equatable {
 private func defaultChannelBuilder(loop: EventLoop, family: Int32) -> EventLoopFuture<Channel> {
     let channel = EmbeddedChannel(loop: loop as! EmbeddedEventLoop)
     XCTAssertNoThrow(try channel.pipeline.add(name: CONNECT_RECORDER, handler: ConnectRecorder()).wait())
-    return loop.newSucceededFuture(result: channel)
+    return loop.makeSucceededFuture(result: channel)
 }
 
 private func buildEyeballer(host: String,
@@ -1076,7 +1076,7 @@ public class HappyEyeballsTest : XCTestCase {
     func testDelayedChannelCreation() throws {
         var ourChannelFutures: [EventLoopPromise<Channel>] = []
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80) { loop, _ in
-            ourChannelFutures.append(loop.newPromise())
+            ourChannelFutures.append(loop.makePromise())
             return ourChannelFutures.last!.futureResult
         }
         let channelFuture = eyeballer.resolveAndConnect()
@@ -1121,7 +1121,7 @@ public class HappyEyeballsTest : XCTestCase {
         var errors: [DummyError] = []
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80) { loop, _ in
             errors.append(DummyError())
-            return loop.newFailedFuture(error: errors.last!)
+            return loop.makeFailedFuture(error: errors.last!)
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [

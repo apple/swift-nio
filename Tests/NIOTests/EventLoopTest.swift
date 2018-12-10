@@ -234,9 +234,9 @@ public class EventLoopTest : XCTestCase {
 
         var counter = 0
         var innerCounter = 0
-        eventLoopGroup.makeIterator()?.forEach { loop in
+        eventLoopGroup.makeIterator().forEach { loop in
             counter += 1
-            loop.makeIterator()?.forEach { _ in
+            loop.makeIterator().forEach { _ in
                 innerCounter += 1
             }
         }
@@ -253,25 +253,12 @@ public class EventLoopTest : XCTestCase {
         }
 
         var counter = 0
-        iterator?.forEach { loop in
+        iterator.forEach { loop in
             XCTAssertTrue(loop === eventLoop)
             counter += 1
         }
 
         XCTAssertEqual(counter, 1)
-    }
-
-    public func testDummyEventLoopGroupMakeIterator() throws {
-        class DummyEventLoopGroup: EventLoopGroup {
-            func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) { }
-
-            func next() -> EventLoop {
-                return EmbeddedEventLoop()
-            }
-        }
-
-        let dummyEventLoopGroup = DummyEventLoopGroup()
-        XCTAssertNil(dummyEventLoopGroup.makeIterator())
     }
 
     public func testMultipleShutdown() throws {
@@ -336,7 +323,7 @@ public class EventLoopTest : XCTestCase {
                     return
                 }
                 XCTAssertTrue(ctx.channel.isActive)
-                self.closePromise = ctx.eventLoop.newPromise()
+                self.closePromise = ctx.eventLoop.makePromise()
                 self.closePromise!.futureResult.whenSuccess {
                     ctx.close(mode: mode, promise: promise)
                 }
@@ -359,7 +346,7 @@ public class EventLoopTest : XCTestCase {
         }
         let loop = group.next() as! SelectableEventLoop
 
-        let serverChannelUp = group.next().newPromise(of: Void.self)
+        let serverChannelUp = group.next().makePromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .childChannelInitializer { channel in
                 channel.pipeline.add(handler: WedgeOpenHandler(channelActivePromise: serverChannelUp) { promise in
@@ -370,7 +357,7 @@ public class EventLoopTest : XCTestCase {
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
-        let connectPromise = loop.newPromise(of: Void.self)
+        let connectPromise = loop.makePromise(of: Void.self)
 
         // We're going to create and register a channel, but not actually attempt to do anything with it.
         let wedgeHandler = WedgeOpenHandler { promise in

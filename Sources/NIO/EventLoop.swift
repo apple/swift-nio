@@ -134,7 +134,7 @@ public final class RepeatedTask {
         self.scheduled = self.eventLoop.scheduleTask(in: self.delay) {
             // we need to repeat this as we might have been cancelled in the meantime
             guard let task = self.task else {
-                return self.eventLoop.newSucceededFuture(result: ())
+                return self.eventLoop.makeSucceededFuture(result: ())
             }
             return task(self)
         }
@@ -220,15 +220,7 @@ public protocol EventLoop: EventLoopGroup {
 ///
 /// - note: `TimeAmount` should not be used to represent a point in time.
 public struct TimeAmount {
-  
-    #if arch(arm) || arch(i386)
-    // Int64 is the correct type here but we don't want to break SemVer so can't change it for the 64-bit platforms.
-    // To be fixed in NIO 2.0
     public typealias Value = Int64
-    #else
-    // 64-bit, keeping that at Int for SemVer in the 1.x line.
-    public typealias Value = Int
-    #endif
 
     /// The nanoseconds representation of the `TimeAmount`.
     public let nanoseconds: Value
@@ -304,7 +296,7 @@ extension TimeAmount: Comparable {
 
 extension EventLoop {
     public func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
-        let promise: EventLoopPromise<T> = newPromise(file: #file, line: #line)
+        let promise: EventLoopPromise<T> = makePromise(file: #file, line: #line)
 
         self.execute {
             do {
@@ -318,7 +310,7 @@ extension EventLoop {
     }
 
     /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `Thread`.
-    public func newPromise<T>(of type: T.Type = T.self, file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<T> {
+    public func makePromise<T>(of type: T.Type = T.self, file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<T> {
         return EventLoopPromise<T>(eventLoop: self, file: file, line: line)
     }
 
@@ -327,7 +319,7 @@ extension EventLoop {
     /// - parameters:
     ///     - error: the `Error` that is used by the `EventLoopFuture`.
     /// - returns: a failed `EventLoopFuture`.
-    public func newFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
+    public func makeFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
         return EventLoopFuture<T>(eventLoop: self, error: error, file: "n/a", line: 0)
     }
 
@@ -336,7 +328,7 @@ extension EventLoop {
     /// - parameters:
     ///     - result: the value that is used by the `EventLoopFuture`.
     /// - returns: a succeeded `EventLoopFuture`.
-    public func newSucceededFuture<T>(result: T) -> EventLoopFuture<T> {
+    public func makeSucceededFuture<T>(result: T) -> EventLoopFuture<T> {
         return EventLoopFuture<T>(eventLoop: self, result: result, file: "n/a", line: 0)
     }
 
@@ -360,9 +352,9 @@ extension EventLoop {
         let futureTask: (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
             do {
                 try task(repeatedTask)
-                return self.newSucceededFuture(result: ())
+                return self.makeSucceededFuture(result: ())
             } catch {
-                return self.newFailedFuture(error: error)
+                return self.makeFailedFuture(error: error)
             }
         }
         return self.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, futureTask)
@@ -384,9 +376,8 @@ extension EventLoop {
 
     /// Returns an `EventLoopIterator` over this `EventLoop`.
     ///
-    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
     /// - returns: `EventLoopIterator`
-    public func makeIterator() -> EventLoopIterator? {
+    public func makeIterator() -> EventLoopIterator {
         return EventLoopIterator([self])
     }
 
@@ -395,7 +386,7 @@ extension EventLoop {
     /// In release mode this function never has any effect.
     ///
     /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
-    @_inlineable
+    @inlinable
     public func assertInEventLoop(file: StaticString = #file, line: UInt = #line) {
         debugOnly {
             self.preconditionInEventLoop(file: file, line: line)
@@ -568,7 +559,7 @@ internal final class SelectableEventLoop: EventLoop {
     }
 
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
-        let promise: EventLoopPromise<T> = newPromise()
+        let promise: EventLoopPromise<T> = makePromise()
         let task = ScheduledTask({
             do {
                 promise.succeed(result: try task())
@@ -749,7 +740,7 @@ internal final class SelectableEventLoop: EventLoop {
     public func closeGently() -> EventLoopFuture<Void> {
         func closeGently0() -> EventLoopFuture<Void> {
             guard self.lifecycleState == .open else {
-                return self.newFailedFuture(error: EventLoopError.shutdown)
+                return self.makeFailedFuture(error: EventLoopError.shutdown)
             }
             self.lifecycleState = .closing
             return self.selector.closeGently(eventLoop: self)
@@ -757,7 +748,7 @@ internal final class SelectableEventLoop: EventLoop {
         if self.inEventLoop {
             return closeGently0()
         } else {
-            let p = self.newPromise(of: Void.self)
+            let p = self.makePromise(of: Void.self)
             self.execute {
                 closeGently0().cascade(promise: p)
             }
@@ -808,9 +799,8 @@ public protocol EventLoopGroup: class {
 
     /// Returns an `EventLoopIterator` over the `EventLoop`s in this `EventLoopGroup`.
     ///
-    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
     /// - returns: `EventLoopIterator`
-    func makeIterator() -> EventLoopIterator?
+    func makeIterator() -> EventLoopIterator
 }
 
 extension EventLoopGroup {
@@ -836,10 +826,6 @@ extension EventLoopGroup {
                 throw error
             }
         }
-    }
-
-    public func makeIterator() -> EventLoopIterator? {
-        return nil
     }
 }
 
@@ -912,15 +898,6 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         self.init(threadInitializers: initializers)
     }
     
-    /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numThreads`.
-    ///
-    /// - arguments:
-    ///     - numThreads: The number of `Threads` to use.
-    @available(*, deprecated, renamed: "init(numberOfThreads:)")
-    public convenience init(numThreads: Int) {
-        self.init(numberOfThreads: numThreads)
-    }
-
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses the given `ThreadInitializer`s. One `Thread` per `ThreadInitializer` is created and used.
     ///
     /// - arguments:
@@ -944,9 +921,8 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     /// Returns an `EventLoopIterator` over the `EventLoop`s in this `MultiThreadedEventLoopGroup`.
     ///
-    /// - note: The return value of `makeIterator` is currently optional as requiring it would be SemVer major. From NIO 2.0.0 on it will return a non-optional iterator.
     /// - returns: `EventLoopIterator`
-    public func makeIterator() -> EventLoopIterator? {
+    public func makeIterator() -> EventLoopIterator {
         return EventLoopIterator(self.eventLoops)
     }
 

@@ -351,7 +351,7 @@ class CircularBufferTests: XCTestCase {
             ring.append(idx)
         }
 
-        let slice = ring[Range(25..<30)]
+        let slice = ring[25..<30]
         for (idx, element) in slice.enumerated() {
             XCTAssertEqual(idx + 25, element)
         }

@@ -82,36 +82,6 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     /// - Parameter upgraders: All `HTTPProtocolUpgrader` objects that this pipeline will be able
     ///     to use to handle HTTP upgrade.
     /// - Parameter httpEncoder: The `HTTPResponseEncoder` encoding responses from this handler and which will
-    ///     be removed from the pipeline once the upgrade response is sent. This is used mostly to ensure
-    ///     that the pipeline will be in a clean state after upgrade. Pass `nil` to this parameter if for any
-    ///     reason you want to keep the `HTTPResponseEncoder` in the pipeline after upgrade.
-    /// - Parameter httpDecoder: The `HTTPRequestDecoder` decoding responses that are passed to this handler.
-    ///     This is necessary to ensure that no further data is parsed as HTTP when we attempt an upgrade.
-    ///     Pass `nil` to this parameter if for any reason you want to keep the `HTTPRequestDecoder` in
-    ///     the pipeline after upgrade.
-    /// - Parameter upgradeCompletionHandler: A block that will be fired when HTTP upgrade is complete.
-    @available(*, deprecated, message: "Please use init(upgraders:httpEncoder:extraHTTPHandlers:upgradeCompletionHandler:)")
-    public init(upgraders: [HTTPProtocolUpgrader], httpEncoder: HTTPResponseEncoder?, httpDecoder: HTTPRequestDecoder?, upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) {
-        var upgraderMap = [String: HTTPProtocolUpgrader]()
-        for upgrader in upgraders {
-            upgraderMap[upgrader.supportedProtocol.lowercased()] = upgrader
-        }
-        self.upgraders = upgraderMap
-        self.upgradeCompletionHandler = upgradeCompletionHandler
-        self.httpEncoder = httpEncoder
-
-        if let decoder = httpDecoder {
-            self.extraHTTPHandlers = [decoder]
-        } else {
-            self.extraHTTPHandlers = []
-        }
-    }
-
-    /// Create a `HTTPServerUpgradeHandler`.
-    ///
-    /// - Parameter upgraders: All `HTTPProtocolUpgrader` objects that this pipeline will be able
-    ///     to use to handle HTTP upgrade.
-    /// - Parameter httpEncoder: The `HTTPResponseEncoder` encoding responses from this handler and which will
     ///     be removed from the pipeline once the upgrade response is sent. This is used to ensure
     ///     that the pipeline will be in a clean state after upgrade.
     /// - Parameter extraHTTPHandlers: Any other handlers that are directly related to handling HTTP. At the very least
@@ -269,14 +239,14 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
         if let handler = handler {
             return ctx.pipeline.remove(handler: handler)
         } else {
-            return ctx.eventLoop.newSucceededFuture(result: true)
+            return ctx.eventLoop.makeSucceededFuture(result: true)
         }
     }
 
     /// Removes any extra HTTP-related handlers from the channel pipeline.
     private func removeExtraHandlers(ctx: ChannelHandlerContext) -> EventLoopFuture<Void> {
         guard self.extraHTTPHandlers.count > 0 else {
-            return ctx.eventLoop.newSucceededFuture(result: ())
+            return ctx.eventLoop.makeSucceededFuture(result: ())
         }
 
         return EventLoopFuture<Void>.andAll(self.extraHTTPHandlers.map { ctx.pipeline.remove(handler: $0).map { (_: Bool) in () }},

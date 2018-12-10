@@ -80,14 +80,14 @@ public struct HTTPListHeaderIterator: Sequence, IteratorProtocol {
         return self
     }
     
-    @_versioned
+    @usableFromInline
     internal init(headerName: String.UTF8View,
                   headers: HTTPHeaders) {
         self.headers = headers
         self.headerName = headerName
     }
     
-    @_inlineable
+    @inlinable
     public init(headerName: String,
                 headers: HTTPHeaders) {
         self.init(headerName: headerName.utf8,
@@ -704,11 +704,6 @@ public struct HTTPHeaders: CustomStringConvertible {
         return false
     }
 
-    @available(*, deprecated, message: "getCanonicalForm has been changed to a subscript: headers[canonicalForm: name]")
-    public func getCanonicalForm(_ name: String) -> [String] {
-        return self[canonicalForm: name]
-    }
-
     /// Retrieves the header values for the given header field in "canonical form": that is,
     /// splitting them on commas as extensively as possible such that multiple values received on the
     /// one line are returned as separate entries. Also respects the fact that Set-Cookie should not
@@ -778,17 +773,6 @@ extension HTTPHeaders: Sequence {
     public func makeIterator() -> Iterator {
         return Iterator(headerParts: headers.map { (self.string(idx: $0.name), self.string(idx: $0.value)) }.makeIterator())
     }
-}
-
-// Dance to ensure that this version of makeIterator(), which returns
-// an AnyIterator, is only called when forced through type context.
-public protocol _DeprecateHTTPHeaderIterator: Sequence { }
-extension HTTPHeaders: _DeprecateHTTPHeaderIterator { }
-public extension _DeprecateHTTPHeaderIterator {
-  @available(*, deprecated, message: "Please use the HTTPHeaders.Iterator type")
-  func makeIterator() -> AnyIterator<Element> {
-    return AnyIterator(makeIterator() as Iterator)
-  }
 }
 
 /* private but tests */ internal extension Character {
