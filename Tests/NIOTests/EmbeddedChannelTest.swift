@@ -159,14 +159,14 @@ class EmbeddedChannelTest: XCTestCase {
     func testActiveWhenConnectPromiseFiresAndInactiveWhenClosePromiseFires() throws {
         let channel = EmbeddedChannel()
         XCTAssertFalse(channel.isActive)
-        let connectPromise = channel.eventLoop.newPromise(of: Void.self)
+        let connectPromise = channel.eventLoop.makePromise(of: Void.self)
         connectPromise.futureResult.whenComplete {
             XCTAssertTrue(channel.isActive)
         }
         channel.connect(to: try SocketAddress(ipAddress: "127.0.0.1", port: 0), promise: connectPromise)
         try connectPromise.futureResult.wait()
 
-        let closePromise = channel.eventLoop.newPromise(of: Void.self)
+        let closePromise = channel.eventLoop.makePromise(of: Void.self)
         closePromise.futureResult.whenComplete {
             XCTAssertFalse(channel.isActive)
         }

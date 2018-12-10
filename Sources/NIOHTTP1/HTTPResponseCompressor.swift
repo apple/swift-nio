@@ -91,7 +91,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
 
     public func handlerAdded(ctx: ChannelHandlerContext) {
         pendingResponse = PartialHTTPResponse(bodyBuffer: ctx.channel.allocator.buffer(capacity: initialByteBufferCapacity))
-        pendingWritePromise = ctx.eventLoop.newPromise()
+        pendingWritePromise = ctx.eventLoop.makePromise()
     }
 
     public func handlerRemoved(ctx: ChannelHandlerContext) {
@@ -247,7 +247,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
         }
 
         // Reset the pending promise.
-        pendingWritePromise = ctx.eventLoop.newPromise()
+        pendingWritePromise = ctx.eventLoop.makePromise()
     }
 }
 /// A buffer object that allows us to keep track of how much of a HTTP response we've seen before

@@ -388,7 +388,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.bufferAllocatorCached = AtomicBox(value: Box(self.bufferAllocator))
         self.socket = socket
         self.selectableEventLoop = eventLoop
-        self.closePromise = eventLoop.newPromise()
+        self.closePromise = eventLoop.makePromise()
         self.parent = parent
         self.recvAllocator = recvAllocator
         self.lifecycleManager = SocketChannelLifecycleManager(eventLoop: eventLoop, isActiveAtomic: self.isActiveAtomic)
@@ -468,7 +468,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
     public final func setOption<T: ChannelOption>(option: T, value: T.OptionType) -> EventLoopFuture<Void> {
         if eventLoop.inEventLoop {
-            let promise = eventLoop.newPromise(of: Void.self)
+            let promise = eventLoop.makePromise(of: Void.self)
             executeAndComplete(promise) { try setOption0(option: option, value: value) }
             return promise.futureResult
         } else {
@@ -515,9 +515,9 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     public func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T: ChannelOption {
         if eventLoop.inEventLoop {
             do {
-                return eventLoop.newSucceededFuture(result: try getOption0(option: option))
+                return eventLoop.makeSucceededFuture(result: try getOption0(option: option))
             } catch {
-                return eventLoop.newFailedFuture(error: error)
+                return eventLoop.makeFailedFuture(error: error)
             }
         } else {
             return eventLoop.submit { try self.getOption0(option: option) }
@@ -797,7 +797,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.eventLoop.assertInEventLoop()
         assert(self.isOpen)
         assert(!self.lifecycleManager.isActive)
-        let registerPromise = self.eventLoop.newPromise(of: Void.self)
+        let registerPromise = self.eventLoop.makePromise(of: Void.self)
         self.register0(promise: registerPromise)
         registerPromise.futureResult.whenFailure { (_: Error) in
             self.close(promise: nil)
@@ -1056,7 +1056,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
                 if promise != nil {
                     self.pendingConnect = promise
                 } else {
-                    self.pendingConnect = eventLoop.newPromise()
+                    self.pendingConnect = eventLoop.makePromise()
                 }
                 try self.becomeFullyRegistered0()
                 self.registerForWritable()

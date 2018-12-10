@@ -248,7 +248,7 @@ public enum SocketAddress: CustomStringConvertible {
     ///       - port: the port itself
     /// - returns: the `SocketAddress` for the host / port pair.
     /// - throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
-    public static func newAddressResolving(host: String, port: Int) throws -> SocketAddress {
+    public static func makeAddressResolvingHost(_ host: String, port: Int) throws -> SocketAddress {
         var info: UnsafeMutablePointer<addrinfo>?
 
         /* FIXME: this is blocking! */
