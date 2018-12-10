@@ -10,3 +10,7 @@
 - `EventLoop.makePromise`/`makeSucceededFuture`/`makeFailedFuture` instead of `new*`
 - `SocketAddress.makeAddressResolvingHost(:port:)` instead of
   `SocketAddress.newAddressResolving(host:port:)`
+- changed all ports to `Int` (from `UInt16`)
+- changed `HTTPVersion`'s `major` and `minor` properties to `Int` (from `UInt16`)
+- renamed the generic parameter name to `Bytes` where we're talking about a
+  generic collection of bytes
