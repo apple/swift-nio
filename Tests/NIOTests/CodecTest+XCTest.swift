@@ -32,7 +32,12 @@ extension ByteToMessageDecoderTest {
                 ("testMemoryIsReclaimedIfMostIsConsumed", testMemoryIsReclaimedIfMostIsConsumed),
                 ("testMemoryIsReclaimedIfLotsIsAvailable", testMemoryIsReclaimedIfLotsIsAvailable),
                 ("testDecoderReentranceChannelRead", testDecoderReentranceChannelRead),
-                ("testDecoderWriteIntoCumulationBuffer", testDecoderWriteIntoCumulationBuffer),
+                ("testTrivialDecoderDoesSensibleStuffWhenCloseInRead", testTrivialDecoderDoesSensibleStuffWhenCloseInRead),
+                ("testLeftOversMakeDecodeLastCalled", testLeftOversMakeDecodeLastCalled),
+                ("testRemovingHandlerMakesLeftoversAppearInDecodeLast", testRemovingHandlerMakesLeftoversAppearInDecodeLast),
+                ("testStructsWorkAsByteToMessageDecoders", testStructsWorkAsByteToMessageDecoders),
+                ("testReentrantChannelReadWhileWholeBufferIsBeingProcessed", testReentrantChannelReadWhileWholeBufferIsBeingProcessed),
+                ("testReentrantChannelCloseInChannelRead", testReentrantChannelCloseInChannelRead),
            ]
    }
 }
