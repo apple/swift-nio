@@ -80,7 +80,7 @@ private extension Sequence where Element == UInt8 {
         decode: while true {
             switch decoder.parseScalar(from: &bytesIterator) {
             case .valid(let v):
-                scalars.append(UnicodeScalar(v[0]))
+                scalars.append(Unicode.Scalar(v[0]))
             case .emptyInput:
                 break decode
             case .error:
@@ -114,12 +114,16 @@ public class SniHandler: ByteToMessageDecoder {
     private var waitingForUser: Bool
 
     public init(sniCompleteHandler: @escaping (SniResult) -> EventLoopFuture<Void>) {
-        self.cumulationBuffer = nil
         self.completionHandler = sniCompleteHandler
         self.waitingForUser = false
     }
 
-    // A note to maintainers: this method *never* returns true.
+    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+        ctx.fireChannelRead(NIOAny(buffer))
+        return .needMoreData
+    }
+
+    // A note to maintainers: this method *never* returns `.continue`.
     public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
         // If we've asked the user to mutate the pipeline already, we're not interested in
         // this data. Keep waiting.
@@ -171,7 +175,7 @@ public class SniHandler: ByteToMessageDecoder {
         //
         // From this point onwards if we don't have enough data to satisfy a read, this is an error and
         // we will fall back to let the upper layers handle it.
-        tempBuffer = tempBuffer.getSlice(at: tempBuffer.readerIndex, length: Int(contentLength))!
+        tempBuffer = tempBuffer.getSlice(at: tempBuffer.readerIndex, length: Int(contentLength))! // length check above
 
         // Now parse the handshake header. If the length of the handshake message is not exactly the
         // length of this record, something has gone wrong and we should give up.
@@ -204,7 +208,7 @@ public class SniHandler: ByteToMessageDecoder {
         }
 
         // Check the content type.
-        let contentType: UInt8 = buffer.readInteger()!
+        let contentType: UInt8 = buffer.readInteger()! // length check above
         guard contentType == tlsContentTypeHandshake else {
             // Whatever this is, it's not a handshake message, so something has gone
             // wrong. We're going to fall back to the default handler here and let
@@ -213,7 +217,7 @@ public class SniHandler: ByteToMessageDecoder {
         }
 
         // Now, check the major version.
-        let majorVersion: UInt8 = buffer.readInteger()!
+        let majorVersion: UInt8 = buffer.readInteger()! // length check above
         guard majorVersion == 3 else {
             // A major version of 3 is the major version used for SSLv3 and all subsequent versions
             // of the protocol. If that's not what this is, we don't know what's happening here.
@@ -223,7 +227,7 @@ public class SniHandler: ByteToMessageDecoder {
 
         // Skip the minor version byte, then grab the content length.
         buffer.moveReaderIndex(forwardBy: 1)
-        let contentLength: UInt16 = buffer.readInteger()!
+        let contentLength: UInt16 = buffer.readInteger()! // length check above
         return Int(contentLength)
     }
 
@@ -402,7 +406,7 @@ public class SniHandler: ByteToMessageDecoder {
                 guard nameLength <= ptr.count else {
                     return nil
                 }
-                return UnsafeRawBufferPointer(start: ptr.baseAddress!, count: min(nameLength, ptr.count)).decodeStringValidatingASCII()
+                return UnsafeRawBufferPointer(rebasing: ptr.prefix(nameLength)).decodeStringValidatingASCII()
             }
             if let hostname = hostname {
                 return hostname
@@ -427,8 +431,8 @@ public class SniHandler: ByteToMessageDecoder {
     ///    in the pipeline, which is now responsible for the work.
     private func sniComplete(result: SniResult, ctx: ChannelHandlerContext) {
         waitingForUser = true
-        _ = completionHandler(result).then {
-            ctx.pipeline.remove(handler: self)
+        completionHandler(result).whenSuccess {
+            ctx.pipeline.remove(ctx: ctx, promise: nil)
         }
     }
 }

@@ -30,7 +30,7 @@ private struct HTTPParserState {
     var currentStatus: String?
     var slice: (readerIndex: Int, length: Int)?
     // This is set before http_parser_execute(...) is called and set to nil again after it finish
-    var baseAddress: UnsafePointer<UInt8>?
+    var baseAddress: UnsafeRawPointer?
     var currentError: HTTPParserError?
     var seenEOF = false
     var headerStartIndex: Int?
@@ -210,7 +210,7 @@ public enum RemoveAfterUpgradeStrategy {
 /// either the form of `HTTPClientResponsePart` or `HTTPServerRequestPart`: that is,
 /// it produces messages that correspond to the semantic units of HTTP produced by
 /// the remote peer.
-public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
+public class HTTPDecoder<HTTPMessageT>: ChannelInboundHandler, AnyHTTPDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = HTTPMessageT
 
@@ -228,7 +228,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
 
     deinit {
         // Remove the stored reference to ChannelHandlerContext
-        self.parser.data = UnsafeMutableRawPointer(bitPattern: 0xdeadbeef as UInt)
+        self.parser.data = UnsafeMutableRawPointer(bitPattern: 0xdeadbee)
 
         // Remove references to callbacks.
         self.settings = http_parser_settings()
@@ -274,7 +274,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         self.cumulationBuffer = nil
     }
     
-    public func decoderAdded(ctx: ChannelHandlerContext) {
+    public func handlerAdded(ctx: ChannelHandlerContext) {
         if HTTPMessageT.self == HTTPServerRequestPart.self {
             c_nio_http_parser_init(&self.parser, HTTP_REQUEST)
         } else if HTTPMessageT.self == HTTPClientResponsePart.self {
@@ -477,15 +477,21 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
     private func decodeHTTP(ctx: ChannelHandlerContext) throws {
         // We need to refetch the cumulationBuffer on each loop as it may has changed due re-entrance calls of channelRead(...)
         while let bufferSlice = self.cumulationBuffer, bufferSlice.readableBytes > 0 {
+            // we need to get `readerIndex` and `readableBytes` now because `withVeryUnsafeBytes` owns the
+            // `ByteBuffer` exclusively.
+            let readerIndex = bufferSlice.readerIndex
+            let readableBytes = bufferSlice.readableBytes
+
             // Using withVeryUnsafeBytes here as this simplifies the calculation of the readerIndex which is relative to the baseAddress.
             let result = bufferSlice.withVeryUnsafeBytes { (pointer) -> size_t in
-                self.state.baseAddress = pointer.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                self.state.baseAddress = pointer.baseAddress!
                 defer {
                     self.state.baseAddress = nil
                 }
-                return self.state.baseAddress!.withMemoryRebound(to: Int8.self, capacity: pointer.count) { p in
-                    c_nio_http_parser_execute(&self.parser, &self.settings, p.advanced(by: bufferSlice.readerIndex), bufferSlice.readableBytes)
-                }
+                return c_nio_http_parser_execute_swift(&self.parser,
+                                                       &self.settings,
+                                                       pointer.baseAddress!.advanced(by: readerIndex),
+                                                       readableBytes)
             }
             
             try self.rethrowParserError()
@@ -525,7 +531,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
             assert(self.state.slice == nil)
             
             if self.cumulationBuffer!.readableBytes == 0 {
-                // Its safe to just drop the cumulationBuffer as we don't have any extra views into it that are represented as readerIndex / length.
+                // It's safe to just drop the cumulationBuffer as we don't have any extra views into it that are represented as readerIndex / length.
                 self.cumulationBuffer = nil
             }
 
@@ -567,7 +573,19 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         }
     }
 
-    /// Will discard bytes till readerIndex if its needed and then call `fn`.
+    private func shouldReclaimBytes(buffer: ByteBuffer) -> Bool {
+        // We want to reclaim in the following cases:
+        //
+        // 1. If there is more than 2kB of memory to reclaim
+        // 2. If the buffer is more than 50% reclaimable memory and is at least
+        //    1kB in size.
+        if buffer.readerIndex > 2048 {
+            return true
+        }
+        return buffer.capacity > 1024 && (buffer.capacity - buffer.readerIndex) >= buffer.readerIndex
+    }
+
+    /// Will discard bytes till readerIndex if it's needed and then call `fn`.
     private func mayDiscardDecodedBytes(upTo: Int, _ fn: () -> Void) {
         assert(self.cumulationBuffer!.readerIndex == self.cumulationBuffer!.writerIndex)
         self.cumulationBuffer!.moveReaderIndex(to: upTo)

@@ -315,7 +315,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
             case .quiescingLastRequestEndReceived:
                 ctx.write(data).then {
                     ctx.close()
-                }.cascade(promise: promise ?? ctx.channel.eventLoop.newPromise())
+                }.cascade(promise: promise ?? ctx.channel.eventLoop.makePromise())
             case .acceptingEvents, .quiescingWaitingForRequestEnd:
                 ctx.write(data, promise: promise)
             }
@@ -356,14 +356,14 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
         var deliveredRead = false
 
         while self.state != .responseEndPending, let event = self.eventBuffer.first {
-            _ = self.eventBuffer.removeFirst()
+            self.eventBuffer.removeFirst()
 
             switch event {
             case .channelRead(let read):
                 self.deliverOneMessage(ctx: ctx, data: read)
                 deliveredRead = true
             case .error(let error):
-                ctx.fireErrorCaught(error)
+                self.deliverOneError(ctx: ctx, error: error)
             case .halfClose:
                 // When we fire the half-close, we want to forget all prior reads.
                 // They will just trigger further half-close notifications we don't
@@ -384,7 +384,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
         // This is done after `fireChannelReadComplete` to keep the same observable
         // behaviour as `SocketChannel`, which fires these events in this order.
         if case .some(.halfClose) = self.eventBuffer.first {
-            _ = self.eventBuffer.removeFirst()
+            self.eventBuffer.removeFirst()
             self.readPending = false
             ctx.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
         }

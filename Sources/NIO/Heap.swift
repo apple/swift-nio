@@ -123,32 +123,35 @@ internal struct Heap<T: Comparable> {
         Heap<T>.heapInsert(storage: &self.storage, compare: self.comparator, key: value)
     }
 
+    @discardableResult
     public mutating func removeRoot() -> T? {
         return self.remove(index: 0)
     }
 
+    @discardableResult
     public mutating func remove(value: T) -> Bool {
         if let idx = self.storage.index(of: value) {
-            _ = self.remove(index: idx)
+            self.remove(index: idx)
             return true
         } else {
             return false
         }
     }
 
+    @discardableResult
     private mutating func remove(index: Int) -> T? {
         guard self.storage.count > 0 else {
             return nil
         }
         let element = self.storage[index]
         if self.storage.count == 1 || self.storage[index] == self.storage[self.storage.count - 1] {
-            _ = self.storage.removeLast()
+            self.storage.removeLast()
         } else if !self.comparator(self.storage[index], self.storage[self.storage.count - 1]) {
             Heap<T>.heapRootify(storage: &self.storage, compare: self.comparator, index: index, key: self.storage[self.storage.count - 1])
-            _ = self.storage.removeLast()
+            self.storage.removeLast()
         } else {
             self.storage[index] = self.storage[self.storage.count - 1]
-            _ = self.storage.removeLast()
+            self.storage.removeLast()
             Heap<T>.heapify(storage: &self.storage, compare: self.comparator, index)
         }
         return element
@@ -185,7 +188,7 @@ extension Heap: CustomDebugStringConvertible {
             return "<empty heap>"
         }
         let descriptions = self.storage.map { String(describing: $0) }
-        let maxLen: Int = descriptions.map { $0.count }.max()!
+        let maxLen: Int = descriptions.map { $0.count }.max()! // storage checked non-empty above
         let paddedDescs = descriptions.map { (desc: String) -> String in
             var desc = desc
             while desc.count < maxLen {
