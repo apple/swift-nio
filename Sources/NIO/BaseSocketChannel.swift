@@ -572,7 +572,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             return
         }
         guard self.lifecycleManager.isPreRegistered else {
-            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            promise?.fail(error: ChannelError.inappropriateOperationForState)
             return
         }
 
@@ -592,7 +592,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
 
         guard self.lifecycleManager.isActive else {
-            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            promise?.fail(error: ChannelError.inappropriateOperationForState)
             return
         }
 
@@ -775,7 +775,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
 
         guard !self.lifecycleManager.isPreRegistered else {
-            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            promise?.fail(error: ChannelError.inappropriateOperationForState)
             return
         }
 
@@ -1045,7 +1045,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
 
         guard self.lifecycleManager.isPreRegistered else {
-            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            promise?.fail(error: ChannelError.inappropriateOperationForState)
             return
         }
 
