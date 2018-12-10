@@ -381,7 +381,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             return
         }
 
-        let p = eventLoop.newPromise(of: Void.self)
+        let p = eventLoop.makePromise(of: Void.self)
         p.futureResult.map {
             // It's important to call the methods before we actually notify the original promise for ordering reasons.
             self.becomeActive0(promise: promise)

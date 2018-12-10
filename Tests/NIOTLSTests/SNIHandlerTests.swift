@@ -262,7 +262,7 @@ class SniHandlerTest: XCTestCase {
         var buffer = bufferForBase64String(string: clientHello)
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise = loop.newPromise(of: Void.self)
+        let continuePromise = loop.makePromise(of: Void.self)
 
         let handler = ByteToMessageHandler(SniHandler { result in
             XCTAssertEqual(expectedResult, result)
@@ -313,7 +313,7 @@ class SniHandlerTest: XCTestCase {
         let buffer = bufferForBase64String(string: clientHello)
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise = loop.newPromise(of: Void.self)
+        let continuePromise = loop.makePromise(of: Void.self)
 
         let handler = ByteToMessageHandler(SniHandler { result in
             XCTAssertEqual(expectedResult, result)
@@ -358,7 +358,7 @@ class SniHandlerTest: XCTestCase {
 
         let handler = ByteToMessageHandler(SniHandler { result in
             XCTFail("Handler was called")
-            return loop.newSucceededFuture(result: ())
+            return loop.makeSucceededFuture(result: ())
         })
 
         try channel.pipeline.add(handler: handler).wait()

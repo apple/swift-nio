@@ -174,7 +174,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
             return .milliseconds(100)
         }, errors: [ENFILE])
 
-        let inactiveVerificationHandler = InactiveVerificationHandler(promise: serverChannel.eventLoop.newPromise())
+        let inactiveVerificationHandler = InactiveVerificationHandler(promise: serverChannel.eventLoop.makePromise())
         XCTAssertNoThrow(try serverChannel.pipeline.add(handler: inactiveVerificationHandler).wait())
 
         XCTAssertEqual(0, try serverChannel.eventLoop.submit {

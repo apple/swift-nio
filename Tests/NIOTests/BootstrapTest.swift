@@ -25,18 +25,18 @@ class BootstrapTest: XCTestCase {
                 XCTAssertNoThrow(try group.syncShutdownGracefully())
             }
 
-            let childChannelDone = group.next().newPromise(of: Void.self)
-            let serverChannelDone = group.next().newPromise(of: Void.self)
+            let childChannelDone = group.next().makePromise(of: Void.self)
+            let serverChannelDone = group.next().makePromise(of: Void.self)
             let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
                 .childChannelInitializer { channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
                     childChannelDone.succeed(result: ())
-                    return channel.eventLoop.newSucceededFuture(result: ())
+                    return channel.eventLoop.makeSucceededFuture(result: ())
                 }
                 .serverChannelInitializer { channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
                     serverChannelDone.succeed(result: ())
-                    return channel.eventLoop.newSucceededFuture(result: ())
+                    return channel.eventLoop.makeSucceededFuture(result: ())
                 }
                 .bind(host: "localhost", port: 0)
                 .wait())
@@ -47,7 +47,7 @@ class BootstrapTest: XCTestCase {
             let client = try assertNoThrowWithValue(ClientBootstrap(group: group)
                 .channelInitializer { channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
-                    return channel.eventLoop.newSucceededFuture(result: ())
+                    return channel.eventLoop.makeSucceededFuture(result: ())
                 }
                 .connect(to: serverChannel.localAddress!)
                 .wait(), message: "resolver debug info: \(try! resolverDebugInformation(eventLoop: group.next(),host: "localhost", previouslyReceivedResult: serverChannel.localAddress!))")

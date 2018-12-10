@@ -26,8 +26,8 @@ private class PromiseOrderer {
         self.eventLoop = eventLoop
     }
 
-    func newPromise() -> EventLoopPromise<Void> {
-        let promise = eventLoop.newPromise(of: Void.self)
+    func makePromise(file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<Void> {
+        let promise = eventLoop.makePromise(of: Void.self, file: file, line: line)
         appendPromise(promise)
         return promise
     }
@@ -142,15 +142,15 @@ class HTTPResponseCompressorTest: XCTestCase {
 
     private func writeOneChunk(head: HTTPResponseHead, body: [ByteBuffer], channel: EmbeddedChannel) throws {
         let promiseOrderer = PromiseOrderer(eventLoop: channel.eventLoop)
-        channel.pipeline.write(NIOAny(HTTPServerResponsePart.head(head)), promise: promiseOrderer.newPromise())
+        channel.pipeline.write(NIOAny(HTTPServerResponsePart.head(head)), promise: promiseOrderer.makePromise())
 
         for bodyChunk in body {
             channel.pipeline.write(NIOAny(HTTPServerResponsePart.body(.byteBuffer(bodyChunk))),
-                                   promise: promiseOrderer.newPromise())
+                                   promise: promiseOrderer.makePromise())
 
         }
         channel.pipeline.write(NIOAny(HTTPServerResponsePart.end(nil)),
-                               promise: promiseOrderer.newPromise())
+                               promise: promiseOrderer.makePromise())
         channel.pipeline.flush()
 
         // Get all the promises to fire.
@@ -160,17 +160,17 @@ class HTTPResponseCompressorTest: XCTestCase {
     private func writeIntermittentFlushes(head: HTTPResponseHead, body: [ByteBuffer], channel: EmbeddedChannel) throws {
         let promiseOrderer = PromiseOrderer(eventLoop: channel.eventLoop)
         var writeCount = 0
-        channel.pipeline.write(NIOAny(HTTPServerResponsePart.head(head)), promise: promiseOrderer.newPromise())
+        channel.pipeline.write(NIOAny(HTTPServerResponsePart.head(head)), promise: promiseOrderer.makePromise())
         for bodyChunk in body {
             channel.pipeline.write(NIOAny(HTTPServerResponsePart.body(.byteBuffer(bodyChunk))),
-                                   promise: promiseOrderer.newPromise())
+                                   promise: promiseOrderer.makePromise())
             writeCount += 1
             if writeCount % 3 == 0 {
                 channel.pipeline.flush()
             }
         }
         channel.pipeline.write(NIOAny(HTTPServerResponsePart.end(nil)),
-                               promise: promiseOrderer.newPromise())
+                               promise: promiseOrderer.makePromise())
         channel.pipeline.flush()
 
         // Get all the promises to fire.
@@ -501,7 +501,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         let channel = try compressionChannel()
         try sendRequest(acceptEncoding: "gzip", channel: channel)
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
-        let writePromise = channel.eventLoop.newPromise(of: Void.self)
+        let writePromise = channel.eventLoop.makePromise(of: Void.self)
         channel.write(NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
         writePromise.futureResult.map {
             XCTFail("Write succeeded")
@@ -528,7 +528,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         let channel = try compressionChannel()
         try sendRequest(acceptEncoding: nil, channel: channel)
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
-        let writePromise = channel.eventLoop.newPromise(of: Void.self)
+        let writePromise = channel.eventLoop.makePromise(of: Void.self)
         channel.writeAndFlush(NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
         channel.pipeline.removeHandlers()
         try writePromise.futureResult.wait()

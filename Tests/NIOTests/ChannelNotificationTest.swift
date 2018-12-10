@@ -168,7 +168,7 @@ class ChannelNotificationTest: XCTestCase {
         public func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
             XCTAssertNil(self.registerPromise)
 
-            let p = promise ?? ctx.eventLoop.newPromise()
+            let p = promise ?? ctx.eventLoop.makePromise()
             p.futureResult.whenSuccess {
                 XCTAssertFalse(ctx.channel.isActive)
             }
@@ -243,7 +243,7 @@ class ChannelNotificationTest: XCTestCase {
             XCTAssertNil(self.bindPromise)
             XCTAssertNil(self.closePromise)
 
-            let p = promise ?? ctx.eventLoop.newPromise()
+            let p = promise ?? ctx.eventLoop.makePromise()
             p.futureResult.whenSuccess {
                 XCTAssertFalse(ctx.channel.isActive)
             }
@@ -275,7 +275,7 @@ class ChannelNotificationTest: XCTestCase {
             XCTAssertNotNil(self.bindPromise)
             XCTAssertNil(self.closePromise)
 
-            let p = promise ?? ctx.eventLoop.newPromise()
+            let p = promise ?? ctx.eventLoop.makePromise()
             p.futureResult.whenSuccess {
                 XCTAssertFalse(ctx.channel.isActive)
             }
@@ -291,7 +291,7 @@ class ChannelNotificationTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let acceptedChannelPromise = group.next().newPromise(of: Channel.self)
+        let acceptedChannelPromise = group.next().makePromise(of: Channel.self)
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -374,7 +374,7 @@ class ChannelNotificationTest: XCTestCase {
             }
         }
 
-        let promise = group.next().newPromise(of: Void.self)
+        let promise = group.next().makePromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: true)
