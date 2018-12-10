@@ -36,8 +36,8 @@ internal class GetaddrinfoResolver: Resolver {
     ///     - aiSocktype: The sock type to use as hint when calling getaddrinfo.
     ///     - aiProtocol: the protocol to use as hint when calling getaddrinfo.
     init(loop: EventLoop, aiSocktype: CInt, aiProtocol: CInt) {
-        self.v4Future = loop.newPromise()
-        self.v6Future = loop.newPromise()
+        self.v4Future = loop.makePromise()
+        self.v6Future = loop.makePromise()
         self.aiSocktype = aiSocktype
         self.aiProtocol = aiProtocol
     }

@@ -60,7 +60,7 @@ public class EmbeddedEventLoop: EventLoop {
 
     @discardableResult
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
-        let promise: EventLoopPromise<T> = newPromise()
+        let promise: EventLoopPromise<T> = makePromise()
         let readyTime = now + UInt64(`in`.nanoseconds)
         let task = EmbeddedScheduledTask(readyTime: readyTime) {
             do {
@@ -147,7 +147,7 @@ class EmbeddedChannelCore: ChannelCore {
     private let pipeline: ChannelPipeline
 
     init(pipeline: ChannelPipeline, eventLoop: EventLoop) {
-        closePromise = eventLoop.newPromise()
+        closePromise = eventLoop.makePromise()
         self.pipeline = pipeline
         self.eventLoop = eventLoop
     }
@@ -400,7 +400,7 @@ public class EmbeddedChannel: Channel {
 
     public func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T: ChannelOption {
         if option is AutoReadOption {
-            return self.eventLoop.newSucceededFuture(result: true as! T.OptionType)
+            return self.eventLoop.makeSucceededFuture(result: true as! T.OptionType)
         }
         fatalError("option \(option) not supported")
     }

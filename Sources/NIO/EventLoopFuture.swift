@@ -123,7 +123,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
 ///
 /// ```
 /// func someAsyncOperation(args) -> EventLoopFuture<ResultType> {
-///     let promise = eventLoop.newPromise(of: ResultType.self)
+///     let promise = eventLoop.makePromise(of: ResultType.self)
 ///     someAsyncOperationWithACallback(args) { result -> Void in
 ///         // when finished...
 ///         promise.succeed(result: result)
@@ -218,7 +218,7 @@ public struct EventLoopPromise<T> {
 ///
 /// ```
 /// func getNetworkData(args) -> EventLoopFuture<NetworkResponse> {
-///     let promise = eventLoop.newPromise(of: NetworkResponse.self)
+///     let promise = eventLoop.makePromise(of: NetworkResponse.self)
 ///     queue.async {
 ///         . . . do some work . . .
 ///         promise.succeed(response)
@@ -901,10 +901,10 @@ extension EventLoopFuture {
     ///     - nextPartialResult: The bifunction used to produce partial results.
     /// - returns: A new `EventLoopFuture` with the reduced value.
     public static func reduce<U>(_ initialResult: T, _ futures: [EventLoopFuture<U>], eventLoop: EventLoop, _ nextPartialResult: @escaping (T, U) -> T) -> EventLoopFuture<T> {
-        let f0 = eventLoop.newSucceededFuture(result: initialResult)
+        let f0 = eventLoop.makeSucceededFuture(result: initialResult)
 
         let body = f0.fold(futures) { (t: T, u: U) -> EventLoopFuture<T> in
-            eventLoop.newSucceededFuture(result: nextPartialResult(t, u))
+            eventLoop.makeSucceededFuture(result: nextPartialResult(t, u))
         }
 
         return body
@@ -928,14 +928,14 @@ extension EventLoopFuture {
     ///     - updateAccumulatingResult: The bifunction used to combine partialResults with new elements.
     /// - returns: A new `EventLoopFuture` with the combined value.
     public static func reduce<U>(into initialResult: T, _ futures: [EventLoopFuture<U>], eventLoop: EventLoop, _ updateAccumulatingResult: @escaping (inout T, U) -> Void) -> EventLoopFuture<T> {
-        let p0 = eventLoop.newPromise(of: T.self)
+        let p0 = eventLoop.makePromise(of: T.self)
         var result: T = initialResult
 
-        let f0 = eventLoop.newSucceededFuture(result: ())
+        let f0 = eventLoop.makeSucceededFuture(result: ())
         let future = f0.fold(futures) { (_: (), value: U) -> EventLoopFuture<Void> in
             eventLoop.assertInEventLoop()
             updateAccumulatingResult(&result, value)
-            return eventLoop.newSucceededFuture(result: ())
+            return eventLoop.makeSucceededFuture(result: ())
         }
 
         future.whenSuccess {
@@ -967,7 +967,7 @@ public extension EventLoopFuture {
             // We're already on that event loop, nothing to do here. Save an allocation.
             return self
         }
-        let hoppingPromise = target.newPromise(of: T.self)
+        let hoppingPromise = target.makePromise(of: T.self)
         self.cascade(promise: hoppingPromise)
         return hoppingPromise.futureResult
     }
