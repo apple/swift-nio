@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import NIO
+@testable import NIO
 import NIOHTTP1
 @testable import NIOWebSocket
 
@@ -397,8 +397,8 @@ class EndToEndTests: XCTestCase {
                          expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                          expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"])
 
-        let decoder = (try server.pipeline.context(handlerType: WebSocketFrameDecoder.self).wait()).handler as! WebSocketFrameDecoder
-        XCTAssertEqual(16, decoder.maxFrameSize)
+        let decoder = ((try server.pipeline.context(handlerType: ByteToMessageHandler<WebSocketFrameDecoder>.self).wait()).handler as! ByteToMessageHandler<WebSocketFrameDecoder>).decoder
+        XCTAssertEqual(16, decoder?.maxFrameSize)
     }
 
     func testAutomaticErrorHandling() throws {
