@@ -116,6 +116,24 @@ class HTTPRequestEncoderTests: XCTestCase {
         assertOutboundContainsOnly(channel, "")
     }
 
+    func testCONNECT() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertEqual(.some(false), try? channel.finish())
+        }
+
+        let uri = "server.example.com:80"
+        try channel.pipeline.add(handler: HTTPRequestEncoder()).wait()
+        var request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:1), method: .CONNECT, uri: uri)
+        request.headers.add(name: "Host", value: uri)
+
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(request)))
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(nil)))
+
+        assertOutboundContainsOnly(channel, "CONNECT \(uri) HTTP/1.1\r\nHost: \(uri)\r\n\r\n")
+        assertOutboundContainsOnly(channel, "")
+    }
+
     private func assertOutboundContainsOnly(_ channel: EmbeddedChannel, _ expected: String) {
         if case .some(.byteBuffer(let buffer)) = channel.readOutbound() {
             buffer.assertContainsOnly(expected)

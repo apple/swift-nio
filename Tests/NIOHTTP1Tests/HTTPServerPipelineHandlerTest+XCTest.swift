@@ -35,6 +35,16 @@ extension HTTPServerPipelineHandlerTest {
                 ("testAReadIsNotIssuedWhenUnbufferingAHalfCloseAfterRequestComplete", testAReadIsNotIssuedWhenUnbufferingAHalfCloseAfterRequestComplete),
                 ("testHalfCloseWhileWaitingForResponseIsPassedAlongIfNothingElseBuffered", testHalfCloseWhileWaitingForResponseIsPassedAlongIfNothingElseBuffered),
                 ("testRecursiveChannelReadInvocationsDoNotCauseIssues", testRecursiveChannelReadInvocationsDoNotCauseIssues),
+                ("testQuiescingEventWhenInitiallyIdle", testQuiescingEventWhenInitiallyIdle),
+                ("testQuiescingEventWhenIdleAfterARequest", testQuiescingEventWhenIdleAfterARequest),
+                ("testQuiescingInTheMiddleOfARequestNoResponseBitsYet", testQuiescingInTheMiddleOfARequestNoResponseBitsYet),
+                ("testQuiescingAfterHavingReceivedRequestButBeforeResponseWasSent", testQuiescingAfterHavingReceivedRequestButBeforeResponseWasSent),
+                ("testQuiescingAfterHavingReceivedRequestAndResponseHeadButNoResponseEndYet", testQuiescingAfterHavingReceivedRequestAndResponseHeadButNoResponseEndYet),
+                ("testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndBeforeResponseEnd", testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndBeforeResponseEnd),
+                ("testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndAfterResponseEnd", testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndAfterResponseEnd),
+                ("testQuiescingAfterHavingReceivedOneRequestButBeforeResponseWasSentWithMoreRequestsInTheBuffer", testQuiescingAfterHavingReceivedOneRequestButBeforeResponseWasSentWithMoreRequestsInTheBuffer),
+                ("testParserErrorOnly", testParserErrorOnly),
+                ("testLegitRequestFollowedByParserErrorArrivingWhilstResponseOutstanding", testLegitRequestFollowedByParserErrorArrivingWhilstResponseOutstanding),
            ]
    }
 }

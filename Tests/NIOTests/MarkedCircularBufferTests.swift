@@ -77,4 +77,50 @@ class MarkedCircularBufferTests: XCTestCase {
             XCTAssertTrue(buf.isMarked(index: i - 1))
         }
     }
+    func testIndices() throws {
+        var buf = MarkedCircularBuffer<Int>(initialRingCapacity: 4)
+        for i in 1...4 {
+            buf.append(i)
+        }
+        XCTAssertEqual(buf.indices, 0..<4)
+    }
+
+    func testFirst() throws {
+        var buf = MarkedCircularBuffer<Int>(initialRingCapacity: 4)
+        for i in 1...4 {
+            buf.append(i)
+        }
+        XCTAssertEqual(buf.first, 1)
+    }
+
+    func testCount() throws {
+        var buf = MarkedCircularBuffer<Int>(initialRingCapacity: 4)
+        for i in 1...4 {
+            buf.append(i)
+        }
+        XCTAssertEqual(buf.count, 4)
+    }
+
+    func testSubscript() throws {
+        var buf = MarkedCircularBuffer<Int>(initialRingCapacity: 4)
+        for i in 1...4 {
+            buf.append(i)
+        }
+        XCTAssertEqual(buf[0], 1)
+        XCTAssertEqual(buf[3], 4)
+    }
+
+    func testIsEmpty() throws {
+        var buf = MarkedCircularBuffer<Int>(initialRingCapacity: 4)
+        for i in 1...4 {
+            buf.append(i)
+        }
+        XCTAssertFalse(buf.isEmpty)
+        let _ = buf.removeFirst()
+        let _ = buf.removeFirst()
+        let _ = buf.removeFirst()
+        let _ = buf.removeFirst()
+        XCTAssertTrue(buf.isEmpty)
+    }
+    
 }

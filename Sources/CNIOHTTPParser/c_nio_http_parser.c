@@ -25,7 +25,6 @@
 #include <assert.h>
 #include <stddef.h>
 #include <ctype.h>
-#include <stdlib.h>
 #include <string.h>
 #include <limits.h>
 
@@ -53,6 +52,7 @@
 
 #define SET_ERRNO(e)                                                 \
 do {                                                                 \
+  parser->nread = nread;                                             \
   parser->http_errno = (e);                                          \
 } while(0)
 
@@ -60,6 +60,7 @@ do {                                                                 \
 #define UPDATE_STATE(V) p_state = (enum state) (V);
 #define RETURN(V)                                                    \
 do {                                                                 \
+  parser->nread = nread;                                             \
   parser->state = CURRENT_STATE();                                   \
   return (V);                                                        \
 } while (0);
@@ -153,8 +154,8 @@ do {                                                                 \
  */
 #define COUNT_HEADER_SIZE(V)                                         \
 do {                                                                 \
-  parser->nread += (V);                                              \
-  if (UNLIKELY(parser->nread > (HTTP_MAX_HEADER_SIZE))) {            \
+  nread += (V);                                                      \
+  if (UNLIKELY(nread > (HTTP_MAX_HEADER_SIZE))) {                    \
     SET_ERRNO(HPE_HEADER_OVERFLOW);                                  \
     goto error;                                                      \
   }                                                                  \
@@ -196,7 +197,7 @@ static const char tokens[256] = {
 /*  24 can   25 em    26 sub   27 esc   28 fs    29 gs    30 rs    31 us  */
         0,       0,       0,       0,       0,       0,       0,       0,
 /*  32 sp    33  !    34  "    35  #    36  $    37  %    38  &    39  '  */
-        0,      '!',      0,      '#',     '$',     '%',     '&',    '\'',
+       ' ',     '!',      0,      '#',     '$',     '%',     '&',    '\'',
 /*  40  (    41  )    42  *    43  +    44  ,    45  -    46  .    47  /  */
         0,       0,      '*',     '+',      0,      '-',     '.',      0,
 /*  48  0    49  1    50  2    51  3    52  4    53  5    54  6    55  7  */
@@ -374,6 +375,8 @@ enum header_states
 
   , h_connection
   , h_content_length
+  , h_content_length_num
+  , h_content_length_ws
   , h_transfer_encoding
   , h_upgrade
 
@@ -421,14 +424,14 @@ enum http_host_state
   (c) == ';' || (c) == ':' || (c) == '&' || (c) == '=' || (c) == '+' || \
   (c) == '$' || (c) == ',')
 
-#define STRICT_TOKEN(c)     (tokens[(unsigned char)c])
+#define STRICT_TOKEN(c)     ((c == ' ') ? 0 : tokens[(unsigned char)c])
 
 #if HTTP_PARSER_STRICT
-#define TOKEN(c)            (tokens[(unsigned char)c])
+#define TOKEN(c)            STRICT_TOKEN(c)
 #define IS_URL_CHAR(c)      (BIT_AT(normal_url_char, (unsigned char)c))
 #define IS_HOST_CHAR(c)     (IS_ALPHANUM(c) || (c) == '.' || (c) == '-')
 #else
-#define TOKEN(c)            ((c == ' ') ? ' ' : tokens[(unsigned char)c])
+#define TOKEN(c)            tokens[(unsigned char)c]
 #define IS_URL_CHAR(c)                                                         \
   (BIT_AT(normal_url_char, (unsigned char)c) || ((c) & 0x80))
 #define IS_HOST_CHAR(c)                                                        \
@@ -542,7 +545,7 @@ parse_url_char(enum state s, const char ch)
         return s_dead;
       }
 
-    /* FALLTHROUGH */
+    /* fall through */
     case s_req_server_start:
     case s_req_server:
       if (ch == '/') {
@@ -646,6 +649,7 @@ size_t c_nio_http_parser_execute (http_parser *parser,
   const char *status_mark = 0;
   enum state p_state = (enum state) parser->state;
   const unsigned int lenient = parser->lenient_http_headers;
+  uint32_t nread = parser->nread;
 
   /* We're in an error state. Don't bother doing anything. */
   if (HTTP_PARSER_ERRNO(parser) != HPE_OK) {
@@ -757,21 +761,16 @@ reexecute:
 
       case s_start_res:
       {
+        if (ch == CR || ch == LF)
+          break;
         parser->flags = 0;
         parser->content_length = ULLONG_MAX;
 
-        switch (ch) {
-          case 'H':
-            UPDATE_STATE(s_res_H);
-            break;
-
-          case CR:
-          case LF:
-            break;
-
-          default:
-            SET_ERRNO(HPE_INVALID_CONSTANT);
-            goto error;
+        if (ch == 'H') {
+          UPDATE_STATE(s_res_H);
+        } else {
+          SET_ERRNO(HPE_INVALID_CONSTANT);
+          goto error;
         }
 
         CALLBACK_NOTIFY(message_begin);
@@ -946,7 +945,7 @@ reexecute:
             /* or PROPFIND|PROPPATCH|PUT|PATCH|PURGE */
             break;
           case 'R': parser->method = HTTP_REPORT; /* or REBIND */ break;
-          case 'S': parser->method = HTTP_SUBSCRIBE; /* or SEARCH */ break;
+          case 'S': parser->method = HTTP_SUBSCRIBE; /* or SEARCH, SOURCE */ break;
           case 'T': parser->method = HTTP_TRACE; break;
           case 'U': parser->method = HTTP_UNLOCK; /* or UNSUBSCRIBE, UNBIND, UNLINK */ break;
           default:
@@ -992,6 +991,7 @@ reexecute:
             XX(MKCOL,     2, 'A', MKACTIVITY)
             XX(MKCOL,     3, 'A', MKCALENDAR)
             XX(SUBSCRIBE, 1, 'E', SEARCH)
+            XX(SUBSCRIBE, 1, 'O', SOURCE)
             XX(REPORT,    2, 'B', REBIND)
             XX(PROPFIND,  4, 'P', PROPPATCH)
             XX(LOCK,      1, 'I', LINK)
@@ -1239,8 +1239,14 @@ reexecute:
             break;
 
           switch (parser->header_state) {
-            case h_general:
+            case h_general: {
+              size_t limit = data + len - p;
+              limit = MIN(limit, HTTP_MAX_HEADER_SIZE);
+              while (p+1 < data + limit && TOKEN(p[1])) {
+                p++;
+              }
               break;
+            }
 
             case h_C:
               parser->index++;
@@ -1340,12 +1346,13 @@ reexecute:
           }
         }
 
-        COUNT_HEADER_SIZE(p - start);
-
         if (p == data + len) {
           --p;
+          COUNT_HEADER_SIZE(p - start);
           break;
         }
+
+        COUNT_HEADER_SIZE(p - start);
 
         if (ch == ':') {
           UPDATE_STATE(s_header_value_discard_ws);
@@ -1370,7 +1377,7 @@ reexecute:
           break;
         }
 
-        /* FALLTHROUGH */
+        /* fall through */
 
       case s_header_value_start:
       {
@@ -1409,6 +1416,7 @@ reexecute:
 
             parser->flags |= F_CONTENTLENGTH;
             parser->content_length = ch - '0';
+            parser->header_state = h_content_length_num;
             break;
 
           case h_connection:
@@ -1486,7 +1494,6 @@ reexecute:
                 p = data + len;
               }
               --p;
-
               break;
             }
 
@@ -1496,10 +1503,18 @@ reexecute:
               break;
 
             case h_content_length:
+              if (ch == ' ') break;
+              h_state = h_content_length_num;
+              /* fall through */
+
+            case h_content_length_num:
             {
               uint64_t t;
 
-              if (ch == ' ') break;
+              if (ch == ' ') {
+                h_state = h_content_length_ws;
+                break;
+              }
 
               if (UNLIKELY(!IS_NUM(ch))) {
                 SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
@@ -1521,6 +1536,12 @@ reexecute:
               parser->content_length = t;
               break;
             }
+
+            case h_content_length_ws:
+              if (ch == ' ') break;
+              SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
+              parser->header_state = h_state;
+              goto error;
 
             /* Transfer-Encoding: chunked */
             case h_matching_transfer_encoding_chunked:
@@ -1620,10 +1641,10 @@ reexecute:
         }
         parser->header_state = h_state;
 
-        COUNT_HEADER_SIZE(p - start);
-
         if (p == data + len)
           --p;
+
+        COUNT_HEADER_SIZE(p - start);
         break;
       }
 
@@ -1756,7 +1777,7 @@ reexecute:
             case 2:
               parser->upgrade = 1;
 
-            /* FALLTHROUGH */
+              /* fall through */
             case 1:
               parser->flags |= F_SKIPBODY;
               break;
@@ -1780,6 +1801,7 @@ reexecute:
         STRICT_CHECK(ch != LF);
 
         parser->nread = 0;
+        nread = 0;
 
         hasBody = parser->flags & F_CHUNKED ||
           (parser->content_length > 0 && parser->content_length != ULLONG_MAX);
@@ -1874,7 +1896,7 @@ reexecute:
 
       case s_chunk_size_start:
       {
-        assert(parser->nread == 1);
+        assert(nread == 1);
         assert(parser->flags & F_CHUNKED);
 
         unhex_val = unhex[(unsigned char)ch];
@@ -1928,7 +1950,7 @@ reexecute:
       case s_chunk_parameters:
       {
         assert(parser->flags & F_CHUNKED);
-        /* just ignore this. TODO check for overflow */
+        /* just ignore this shit. TODO check for overflow */
         if (ch == CR) {
           UPDATE_STATE(s_chunk_size_almost_done);
           break;
@@ -1942,6 +1964,7 @@ reexecute:
         STRICT_CHECK(ch != LF);
 
         parser->nread = 0;
+        nread = 0;
 
         if (parser->content_length == 0) {
           parser->flags |= F_TRAILING;
@@ -1988,6 +2011,7 @@ reexecute:
         assert(parser->flags & F_CHUNKED);
         STRICT_CHECK(ch != LF);
         parser->nread = 0;
+        nread = 0;
         UPDATE_STATE(s_chunk_size_start);
         CALLBACK_NOTIFY(chunk_complete);
         break;
@@ -1999,7 +2023,7 @@ reexecute:
     }
   }
 
-  /* Run callbacks for any marks that we have leftover after we ran our of
+  /* Run callbacks for any marks that we have leftover after we ran out of
    * bytes. There should be at most one of these set, so it's OK to invoke
    * them in series (unset marks will not result in callbacks).
    *
@@ -2081,6 +2105,16 @@ c_nio_http_method_str (enum http_method m)
   return ELEM_AT(method_strings, m, "<unknown>");
 }
 
+const char *
+c_nio_http_status_str (enum http_status s)
+{
+  switch (s) {
+#define XX(num, name, string) case HTTP_STATUS_##name: return #string;
+    HTTP_STATUS_MAP(XX)
+#undef XX
+    default: return "<unknown>";
+  }
+}
 
 void
 c_nio_http_parser_init (http_parser *parser, enum http_parser_type t)
@@ -2141,7 +2175,7 @@ http_parse_host_char(enum http_host_state s, const char ch) {
         return s_http_host;
       }
 
-    /* FALLTHROUGH */
+    /* fall through */
     case s_http_host_v6_end:
       if (ch == ':') {
         return s_http_host_port_start;
@@ -2154,7 +2188,7 @@ http_parse_host_char(enum http_host_state s, const char ch) {
         return s_http_host_v6_end;
       }
 
-    /* FALLTHROUGH */
+    /* fall through */
     case s_http_host_v6_start:
       if (IS_HEX(ch) || ch == ':' || ch == '.') {
         return s_http_host_v6;
@@ -2170,7 +2204,7 @@ http_parse_host_char(enum http_host_state s, const char ch) {
         return s_http_host_v6_end;
       }
 
-    /* FALLTHROUGH */
+    /* fall through */
     case s_http_host_v6_zone_start:
       /* RFC 6874 Zone ID consists of 1*( unreserved / pct-encoded) */
       if (IS_ALPHANUM(ch) || ch == '%' || ch == '.' || ch == '-' || ch == '_' ||
@@ -2289,6 +2323,10 @@ c_nio_http_parser_parse_url(const char *buf, size_t buflen, int is_connect,
   enum http_parser_url_fields uf, old_uf;
   int found_at = 0;
 
+  if (buflen == 0) {
+    return 1;
+  }
+
   u->port = u->field_set = 0;
   s = is_connect ? s_req_server_start : s_req_spaces_before_url;
   old_uf = UF_MAX;
@@ -2316,7 +2354,7 @@ c_nio_http_parser_parse_url(const char *buf, size_t buflen, int is_connect,
       case s_req_server_with_at:
         found_at = 1;
 
-      /* FALLTHROUGH */
+      /* fall through */
       case s_req_server:
         uf = UF_HOST;
         break;
@@ -2370,12 +2408,27 @@ c_nio_http_parser_parse_url(const char *buf, size_t buflen, int is_connect,
   }
 
   if (u->field_set & (1 << UF_PORT)) {
-    /* Don't bother with endp; we've already validated the string */
-    unsigned long v = strtoul(buf + u->field_data[UF_PORT].off, NULL, 10);
+    uint16_t off;
+    uint16_t len;
+    const char* p;
+    const char* end;
+    unsigned long v;
 
-    /* Ports have a max value of 2^16 */
-    if (v > 0xffff) {
-      return 1;
+    off = u->field_data[UF_PORT].off;
+    len = u->field_data[UF_PORT].len;
+    end = buf + off + len;
+
+    /* NOTE: The characters are already validated and are in the [0-9] range */
+    assert(off + len <= buflen && "Port number overflow");
+    v = 0;
+    for (p = buf + off; p < end; p++) {
+      v *= 10;
+      v += *p - '0';
+
+      /* Ports have a max value of 2^16 */
+      if (v > 0xffff) {
+        return 1;
+      }
     }
 
     u->port = (uint16_t) v;
@@ -2392,6 +2445,7 @@ c_nio_http_parser_pause(http_parser *parser, int paused) {
    */
   if (HTTP_PARSER_ERRNO(parser) == HPE_OK ||
       HTTP_PARSER_ERRNO(parser) == HPE_PAUSED) {
+    uint32_t nread = parser->nread; /* used by the SET_ERRNO macro */
     SET_ERRNO((paused) ? HPE_PAUSED : HPE_OK);
   } else {
     assert(0 && "Attempting to pause parser in error state");

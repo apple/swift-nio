@@ -16,7 +16,21 @@ import Dispatch
 import NIOConcurrencyHelpers
 
 
-/// A thread pool that should be used for blocking IO.
+/// A thread pool that should be used if some (kernel thread) blocking work
+/// needs to be performed for which no non-blocking API exists.
+///
+/// When using NIO it is crucial not to block any of the `EventLoop`s as that
+/// leads to slow downs or stalls of arbitrary other work. Unfortunately though
+/// there are tasks that applications need to achieve for which no non-blocking
+/// APIs exist. In those cases `BlockingIOThreadPool` can be used but should be
+/// treated as a last resort.
+///
+/// - note: The prime example for missing non-blocking APIs is file IO on UNIX.
+///   The OS does not provide a usable and truly non-blocking API but with
+///   `NonBlockingFileIO` NIO provides a high-level API for file IO that should
+///   be preferred to running blocking file IO system calls directly on
+///   `BlockingIOThreadPool`. Under the covers `NonBlockingFileIO` will use
+///   `BlockingIOThreadPool` on all currently supported platforms though.
 public final class BlockingIOThreadPool {
 
     /// The state of the `WorkItem`.
@@ -54,7 +68,9 @@ public final class BlockingIOThreadPool {
         self.lock.withLock {
             switch self.state {
             case .running(let items):
-                items.forEach { $0(.cancelled) }
+                queue.async {
+                    items.forEach { $0(.cancelled) }
+                }
                 self.state = .shuttingDown(Array(repeating: true, count: numberOfThreads))
                 (0..<numberOfThreads).forEach { _ in
                     self.semaphore.signal()
@@ -148,9 +164,18 @@ public final class BlockingIOThreadPool {
         self.queues.enumerated().forEach { idAndQueue in
             let id = idAndQueue.0
             let q = idAndQueue.1
-            q.async { [unowned self] in
+            q.async {
                 self.process(identifier: id)
             }
+        }
+    }
+    
+    deinit {
+        switch self.state {
+        case .stopped, .shuttingDown:
+            ()
+        default:
+            assertionFailure("wrong state \(self.state)")
         }
     }
 }
@@ -163,8 +188,8 @@ public extension BlockingIOThreadPool {
     ///     - eventLoop: The `EventLoop` the returned `EventLoopFuture` will fire on.
     ///     - body: The closure which performs some blocking work to be done on the thread pool.
     /// - returns: The `EventLoopFuture` of `promise` fulfilled with the result (or error) of the passed closure.
-    public func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
-        let promise: EventLoopPromise<T> = eventLoop.newPromise()
+    func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
+        let promise = eventLoop.makePromise(of: T.self)
         self.submit { shouldRun in
             guard case shouldRun = BlockingIOThreadPool.WorkItemState.active else {
                 promise.fail(error: ChannelError.ioOnClosedChannel)

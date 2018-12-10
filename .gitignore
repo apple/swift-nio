@@ -6,3 +6,4 @@ Package.pins
 *.pem
 /docs
 Package.resolved
+.podspecs

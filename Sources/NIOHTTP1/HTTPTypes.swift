@@ -17,7 +17,114 @@ import NIO
 let crlf: StaticString = "\r\n"
 let headerSeparator: StaticString = ": "
 
-private let connectionUtf8 = "connection".utf8
+/// An `IteratorProtocol` that can iterate through comma separated list of values for a certain
+/// header.
+///
+/// **Example:**
+///
+/// Suppose you have these headers:
+///
+///      Connection: keep-alive, x-server
+///      Content-Type: text/html
+///      Connection: other
+///
+/// You can iterate using this struct on those headers, for values of `Connection`, to get
+/// `keep-alive`, then `x-server`, then `other`
+public struct HTTPListHeaderIterator: Sequence, IteratorProtocol {
+    
+    public typealias Element = ByteBufferView
+    
+    private var currentHeaderIndex: Int = -1
+    private var singleValueViewIterator: Array<ByteBufferView>.Iterator?
+    private let headerName: String.UTF8View
+    private let headers: HTTPHeaders
+    
+    private let comma = ",".utf8.first!
+    
+    /// Returns next index in headers
+    ///
+    /// - Parameter current: The index to begin iteration at
+    /// - Returns: The next index of the header in header array, or `nil` if not found
+    private func headerIndex(after current: Int) -> Int? {
+        for (idx, currentHeader) in headers.headers.enumerated().dropFirst(current + 1) {
+            let view = headers.buffer.viewBytes(at: currentHeader.name.start,
+                                                length: currentHeader.name.length)
+            if view.compareCaseInsensitiveASCIIBytes(to: headerName) {
+                return idx
+            }
+        }
+        return nil
+    }
+
+    mutating public func next() -> ByteBufferView? {
+        if let next = self.singleValueViewIterator?.next() {
+            return next.trimSpaces()
+        } else {
+            // End of this buffer. Let's try to grab the next one.
+            guard let index = self.headerIndex(after: currentHeaderIndex) else {
+                // No more buffers left.
+                return nil
+            }
+            self.currentHeaderIndex = index
+            self.singleValueViewIterator = headers.buffer
+                .viewBytes(at: headers.headers[currentHeaderIndex].value.start,
+                           length: headers.headers[currentHeaderIndex].value.length)
+                .split(separator: comma)
+                .makeIterator()
+            return self.next()
+        }
+        
+    }
+    
+    public func makeIterator() -> HTTPListHeaderIterator {
+        return self
+    }
+    
+    @usableFromInline
+    internal init(headerName: String.UTF8View,
+                  headers: HTTPHeaders) {
+        self.headers = headers
+        self.headerName = headerName
+    }
+    
+    @inlinable
+    public init(headerName: String,
+                headers: HTTPHeaders) {
+        self.init(headerName: headerName.utf8,
+                  headers: headers)
+    }
+
+}
+
+extension HTTPHeaders {
+    private static let connectionString = "connection".utf8
+    private static let keepAliveString = "keep-alive".utf8
+    private static let closeString = "close".utf8
+    
+    internal enum ConnectionHeaderValue {
+        case keepAlive
+        case close
+        case unspecified
+    }
+    
+    internal var keepAliveFromHeaders: ConnectionHeaderValue {
+        get {
+            let tokenizer = HTTPListHeaderIterator(headerName: HTTPHeaders.connectionString,
+                                                   headers: self)
+            
+            // TODO: Handle the case where both keep-alive and close are used
+            for token in tokenizer {
+                if token.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.keepAliveString) {
+                    return .keepAlive
+                } else if token.compareCaseInsensitiveASCIIBytes(to: HTTPHeaders.closeString) {
+                    return .close
+                }
+            }
+            
+            return .unspecified
+        }
+    }
+}
 
 // Keep track of keep alive state.
 internal enum KeepAliveState {
@@ -139,7 +246,7 @@ private extension String {
         case .string(let string):
             self = string
         case .byteBuffer(let buffer):
-            self = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes)!
+            self = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes)! // bytes definitely in buffer
         }
     }
 }
@@ -188,6 +295,14 @@ extension HTTPRequestHead {
     /// connection should remain open after the request is complete.
     public var isKeepAlive: Bool {
         return headers.isKeepAlive(version: version)
+    }
+}
+
+extension HTTPResponseHead {
+    /// Whether this HTTP response is a keep-alive request: that is, whether the
+    /// connection should remain open after the request is complete.
+    public var isKeepAlive: Bool {
+        return self.headers.isKeepAlive(version: self.version)
     }
 }
 
@@ -253,15 +368,21 @@ public struct HTTPResponseHead: Equatable {
 }
 
 /// The Index for a header name or value that points into the underlying `ByteBuffer`.
-struct HTTPHeaderIndex {
-    let start: Int
-    let length: Int
+///
+/// - note: This is public to aid in the creation of supplemental HTTP libraries, e.g.
+///         NIOHTTP2 and NIOHPACK. It is not intended for general use.
+public struct HTTPHeaderIndex {
+    public let start: Int
+    public let length: Int
 }
 
 /// Struct which holds name, value pairs.
-struct HTTPHeader {
-    let name: HTTPHeaderIndex
-    let value: HTTPHeaderIndex
+///
+/// - note: This is public to aid in the creation of supplemental HTTP libraries, e.g.
+///         NIOHTTP2 and NIOHPACK. It is not intended for general use.
+public struct HTTPHeader {
+    public let name: HTTPHeaderIndex
+    public let value: HTTPHeaderIndex
 }
 
 private extension ByteBuffer {
@@ -272,9 +393,8 @@ private extension ByteBuffer {
         return withVeryUnsafeBytes { buffer in
             // This should never happens as we control when this is called. Adding an assert to ensure this.
             assert(index.start <= self.capacity - index.length)
-            let address = buffer.baseAddress!.assumingMemoryBound(to: UInt8.self)
             for (idx, byte) in view.enumerated() {
-                guard byte.isASCII && address.advanced(by: index.start + idx).pointee & 0xdf == byte & 0xdf else {
+                guard byte.isASCII && buffer[index.start + idx] & 0xdf == byte & 0xdf else {
                     return false
                 }
             }
@@ -298,15 +418,15 @@ private extension UInt8 {
         case .keepAlive:
             return true
         case .unknown:
-            guard let connection = self["connection"].first?.lowercased() else {
-                // HTTP 1.1 use keep-alive by default if not otherwise told.
-                return version.major == 1 && version.minor == 1
-            }
-            
-            if connection == "close" {
+            switch self.keepAliveFromHeaders {
+            case .keepAlive:
+                return true
+            case .close:
                 return false
+            case .unspecified:
+                // HTTP 1.1 use keep-alive by default if not otherwise told.
+                return version.major == 1 && version.minor >= 1
             }
-            return connection == "keep-alive"
         }
     }
 }
@@ -380,6 +500,41 @@ public struct HTTPHeaders: CustomStringConvertible {
         }
         return headersArray.description
     }
+    
+    /// Creates a header block from a pre-filled contiguous string buffer containing a
+    /// UTF-8 encoded HTTP header block, along with a list of the locations of each
+    /// name/value pair within the block.
+    ///
+    /// - note: This is public to aid in the creation of supplemental HTTP libraries, e.g.
+    ///         NIOHTTP2 and NIOHPACK. It is not intended for general use.
+    ///
+    /// - Parameters:
+    ///   - buffer: A buffer containing UTF-8 encoded HTTP headers.
+    ///   - headers: The locations within `buffer` of the name and value of each header.
+    /// - Returns: A new `HTTPHeaders` using the provided buffer as storage.
+    public static func createHeaderBlock(buffer: ByteBuffer, headers: [HTTPHeader]) -> HTTPHeaders {
+        return HTTPHeaders(buffer: buffer, headers: headers, keepAliveState: KeepAliveState.unknown)
+    }
+    
+    
+    /// Provides access to raw UTF-8 storage of the headers in this header block, along with
+    /// a list of the header strings' indices.
+    ///
+    /// - note: This is public to aid in the creation of supplemental HTTP libraries, e.g.
+    /// NIOHTTP2 and NIOHPACK. It is not intended for general use.
+    ///
+    /// - parameters:
+    ///   - block:      A block that will be provided UTF-8 header block information.
+    ///   - buf:        A raw `ByteBuffer` containing potentially-contiguous sequences of UTF-8 encoded
+    ///                 characters.
+    ///   - locations:  An array of `HTTPHeader`s, each of which contains information on the location in
+    ///                 the buffer of both a header's name and value.
+    ///   - contiguous: A `Bool` indicating whether the headers are stored contiguously, with no padding
+    ///                 or orphaned data within the block. If this is `true`, then the buffer represents
+    ///                 a HTTP/1 header block appropriately encoded for the wire.
+    public func withUnsafeBufferAndIndices<R>(_ block: (_ buf: ByteBuffer, _ locations: [HTTPHeader], _ contiguous: Bool) throws -> R) rethrows -> R {
+        return try block(self.buffer, self.headers, self.continuous)
+    }
 
     /// Constructor used by our decoder to construct headers without the need of converting bytes to string.
     init(buffer: ByteBuffer, headers: [HTTPHeader], keepAliveState: KeepAliveState) {
@@ -415,7 +570,7 @@ public struct HTTPHeaders: CustomStringConvertible {
     }
     
     private func isConnectionHeader(_ header: HTTPHeaderIndex) -> Bool {
-         return self.buffer.equalCaseInsensitiveASCII(view: connectionUtf8, at: header)
+         return self.buffer.equalCaseInsensitiveASCII(view: "connection".utf8, at: header)
     }
     
     /// Add a header name/value pair to the block.
@@ -549,11 +704,6 @@ public struct HTTPHeaders: CustomStringConvertible {
         return false
     }
 
-    @available(*, deprecated, message: "getCanonicalForm has been changed to a subscript: headers[canonicalForm: name]")
-    public func getCanonicalForm(_ name: String) -> [String] {
-        return self[canonicalForm: name]
-    }
-
     /// Retrieves the header values for the given header field in "canonical form": that is,
     /// splitting them on commas as extensively as possible such that multiple values received on the
     /// one line are returned as separate entries. Also respects the fact that Set-Cookie should not
@@ -623,17 +773,6 @@ extension HTTPHeaders: Sequence {
     public func makeIterator() -> Iterator {
         return Iterator(headerParts: headers.map { (self.string(idx: $0.name), self.string(idx: $0.value)) }.makeIterator())
     }
-}
-
-// Dance to ensure that this version of makeIterator(), which returns
-// an AnyIterator, is only called when forced through type context.
-public protocol _DeprecateHTTPHeaderIterator: Sequence { }
-extension HTTPHeaders: _DeprecateHTTPHeaderIterator { }
-public extension _DeprecateHTTPHeaderIterator {
-  @available(*, deprecated, message: "Please use the HTTPHeaders.Iterator type")
-  public func makeIterator() -> AnyIterator<Element> {
-    return AnyIterator(makeIterator() as Iterator)
-  }
 }
 
 /* private but tests */ internal extension Character {
@@ -804,9 +943,9 @@ public enum HTTPMethod: Equatable {
         switch self {
         case .HEAD, .DELETE, .TRACE:
             return .no
-        case .POST, .PUT, .CONNECT, .PATCH:
+        case .POST, .PUT, .PATCH:
             return .yes
-        case .GET, .OPTIONS:
+        case .GET, .CONNECT, .OPTIONS:
             fallthrough
         default:
             return .unlikely

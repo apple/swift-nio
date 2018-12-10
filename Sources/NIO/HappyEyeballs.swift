@@ -288,7 +288,7 @@ internal class HappyEyeballsConnector {
         self.channelBuilderCallback = channelBuilderCallback
 
         self.state = .idle
-        self.resolutionPromise = self.loop.newPromise()
+        self.resolutionPromise = self.loop.makePromise()
         self.error = NIOConnectionError(host: host, port: port)
 
         precondition(resolutionDelay.nanoseconds > 0, "Resolution delay must be greater than zero, got \(resolutionDelay).")

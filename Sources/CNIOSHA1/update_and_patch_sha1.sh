@@ -33,6 +33,7 @@ for f in sha1.c sha1.h; do
       echo "    - removed the _KERNEL include guards"
       echo "    - defined the __min_size macro inline"
       echo "    - included sys/types.h in c_nio_sha1.h"
+      echo "    - included sys/endian.h on Android"
       echo "*/"
       curl -Ls "https://raw.githubusercontent.com/freebsd/freebsd/master/sys/crypto/$f"
     ) > "$here/c_nio_$f"
@@ -41,7 +42,7 @@ for f in sha1.c sha1.h; do
         "$sed" -i \
             -e "s/$func/c_nio_$func/g" \
             -e 's#<sys/systm.h>#<strings.h>#g' \
-            -e 's#<crypto/sha1.h>#"include/c_nio_sha1.h"#g' \
+            -e 's#<crypto/sha1.h>#"include/CNIOSHA1.h"#g' \
             -e 's%#ifdef _KERNEL%#define __min_size(x)	static (x)%g' \
             -e 's%#endif /\* _KERNEL \*/%%g' \
             -e 's%__FBSDID("$FreeBSD$");%%g' \
@@ -49,8 +50,9 @@ for f in sha1.c sha1.h; do
     done
 done
 
+gsed -i $'/#define _CRYPTO_SHA1_H_/a #ifdef __ANDROID__\\\n#include <sys/endian.h>\\\n#endif' "$here/c_nio_sha1.h"
 gsed -i '/#define _CRYPTO_SHA1_H_/a #include <sys/types.h>' "$here/c_nio_sha1.h"
-mv "$here/c_nio_sha1.h" "$here/include/c_nio_sha1.h"
+mv "$here/c_nio_sha1.h" "$here/include/CNIOSHA1.h"
 
 tmp=$(mktemp -d /tmp/.test_compile_XXXXXX)
 

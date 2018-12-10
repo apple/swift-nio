@@ -49,7 +49,7 @@ public class WebSocketFrameEncoderTest: XCTestCase {
     }
 
     private func assertFrameEncodes(frame: WebSocketFrame, expectedBytes: [UInt8]) {
-        self.channel.write(frame, promise: nil)
+        self.channel.writeAndFlush(frame, promise: nil)
         let writtenBytes = self.channel.readAllOutboundBytes()
         XCTAssertEqual(writtenBytes, expectedBytes)
     }
@@ -75,7 +75,7 @@ public class WebSocketFrameEncoderTest: XCTestCase {
         self.buffer.write(bytes: dataBytes)
 
         let frame = WebSocketFrame(fin: true, opcode: .binary, data: self.buffer)
-        self.channel.write(frame, promise: nil)
+        self.channel.writeAndFlush(frame, promise: nil)
 
         let writtenBytes = self.channel.readAllOutboundBytes()
         let expectedBytes: [UInt8] = [0x82, 0x7F, 0, 0, 0, 0, 0, 1, 0, 0]

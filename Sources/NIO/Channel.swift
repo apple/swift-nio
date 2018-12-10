@@ -226,21 +226,21 @@ public extension Channel {
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
-    public func write<T>(_ any: T) -> EventLoopFuture<Void> {
+    func write<T>(_ any: T) -> EventLoopFuture<Void> {
         return self.write(NIOAny(any))
     }
 
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
-    public func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+    func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
         self.write(NIOAny(any), promise: promise)
     }
 
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    public func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
+    func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
         return self.writeAndFlush(NIOAny(any))
     }
 
@@ -248,7 +248,7 @@ public extension Channel {
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    public func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+    func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
         self.writeAndFlush(NIOAny(any), promise: promise)
     }
 }
@@ -269,9 +269,22 @@ public extension ChannelCore {
     ///     - data: The `NIOAny` to unwrap.
     ///     - as: The type to extract from the `NIOAny`.
     /// - returns: The content of the `NIOAny`.
-    @_inlineable
-    public func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
+    @inlinable
+    func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
         return data.forceAs()
+    }
+
+    /// Removes the `ChannelHandler`s from the `ChannelPipeline` belonging to `channel`, and
+    /// closes that `ChannelPipeline`.
+    ///
+    /// This method is intended for use when writing custom `ChannelCore` implementations.
+    /// This can be called from `close0` to tear down the `ChannelPipeline` when closure is
+    /// complete.
+    ///
+    /// - parameters:
+    ///     - channel: The `Channel` whose `ChannelPipeline` will be closed.
+    func removeHandlers(channel: Channel) {
+        channel.pipeline.removeHandlers()
     }
 }
 
@@ -318,10 +331,27 @@ public enum ChannelError: Error {
 }
 
 /// This should be inside of `ChannelError` but we keep it separate to not break API.
-// TODO: For 2.0: bring this inside of `ChannelError`
+// TODO: For 2.0: bring this inside of `ChannelError`. https://github.com/apple/swift-nio/issues/620
 public enum ChannelLifecycleError: Error {
     /// An operation that was inappropriate given the current `Channel` state was attempted.
     case inappropriateOperationForState
+}
+
+/// This should be inside of `ChannelError` but we keep it separate to not break API.
+// TODO: For 2.0: bring this inside of `ChannelError`. https://github.com/apple/swift-nio/issues/620
+public enum MulticastError: Error {
+    /// The local address of the `Channel` could not be determined.
+    case unknownLocalAddress
+
+    /// The address family of the multicast group was not valid for this `Channel`.
+    case badMulticastGroupAddressFamily
+
+    /// The address family of the provided multicast group join is not valid for this `Channel`.
+    case badInterfaceAddressFamily
+
+    /// An attempt was made to join a multicast group that does not correspond to a multicast
+    /// address.
+    case illegalMulticastAddress(SocketAddress)
 }
 
 extension ChannelError: Equatable {
@@ -361,4 +391,14 @@ public enum ChannelEvent: Equatable {
     case inputClosed
     /// Output portion of the `Channel` was closed.
     case outputClosed
+}
+
+/// A `Channel` user event that is sent when the `Channel` has been asked to quiesce.
+///
+/// The action(s) that should be taken after receiving this event are both application and protocol dependent. If the
+/// protocol supports a notion of requests and responses, it might make sense to stop accepting new requests but finish
+/// processing the request currently in flight.
+public struct ChannelShouldQuiesceEvent {
+    public init() {
+    }
 }

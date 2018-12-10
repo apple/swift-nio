@@ -168,9 +168,7 @@ extension KQueueEventFilterSet {
             var index: Int = 0
             for (event, filter) in [(KQueueEventFilterSet.read, EVFILT_READ), (.write, EVFILT_WRITE), (.except, EVFILT_EXCEPT)] {
                 if let flags = calculateKQueueChange(event: event) {
-                    keventBuffer[index].ident = UInt(fileDescriptor)
-                    keventBuffer[index].filter = Int16(filter)
-                    keventBuffer[index].flags = flags
+                    keventBuffer[index].setEvent(fileDescriptor: fileDescriptor, filter: filter, flags: flags)
                     index += 1
                 }
             }
@@ -202,34 +200,34 @@ extension SelectorEventSet {
     var epollEventSet: UInt32 {
         assert(self != ._none)
         // EPOLLERR | EPOLLHUP is always set unconditionally anyway but it's easier to understand if we explicitly ask.
-        var filter: UInt32 = Epoll.EPOLLERR.rawValue | Epoll.EPOLLHUP.rawValue
+        var filter: UInt32 = Epoll.EPOLLERR | Epoll.EPOLLHUP
         let epollFilters = EpollFilterSet(selectorEventSet: self)
         if epollFilters.contains(.input) {
-            filter |= Epoll.EPOLLIN.rawValue
+            filter |= Epoll.EPOLLIN
         }
         if epollFilters.contains(.output) {
-            filter |= Epoll.EPOLLOUT.rawValue
+            filter |= Epoll.EPOLLOUT
         }
         if epollFilters.contains(.readHangup) {
-            filter |= Epoll.EPOLLRDHUP.rawValue
+            filter |= Epoll.EPOLLRDHUP
         }
-        assert(filter & Epoll.EPOLLHUP.rawValue != 0) // both of these are reported
-        assert(filter & Epoll.EPOLLERR.rawValue != 0) // always and can't be masked.
+        assert(filter & Epoll.EPOLLHUP != 0) // both of these are reported
+        assert(filter & Epoll.EPOLLERR != 0) // always and can't be masked.
         return filter
     }
 
     fileprivate init(epollEvent: Epoll.epoll_event) {
         var selectorEventSet: SelectorEventSet = ._none
-        if epollEvent.events & Epoll.EPOLLIN.rawValue != 0 {
+        if epollEvent.events & Epoll.EPOLLIN != 0 {
             selectorEventSet.formUnion(.read)
         }
-        if epollEvent.events & Epoll.EPOLLOUT.rawValue != 0 {
+        if epollEvent.events & Epoll.EPOLLOUT != 0 {
             selectorEventSet.formUnion(.write)
         }
-        if epollEvent.events & Epoll.EPOLLRDHUP.rawValue != 0 {
+        if epollEvent.events & Epoll.EPOLLRDHUP != 0 {
             selectorEventSet.formUnion(.readEOF)
         }
-        if epollEvent.events & Epoll.EPOLLHUP.rawValue != 0 || epollEvent.events & Epoll.EPOLLERR.rawValue != 0 {
+        if epollEvent.events & Epoll.EPOLLHUP != 0 || epollEvent.events & Epoll.EPOLLERR != 0 {
             selectorEventSet.formUnion(.reset)
         }
         self = selectorEventSet
@@ -299,12 +297,12 @@ final class Selector<R: Registration> {
         ev.events = SelectorEventSet.read.epollEventSet
         ev.data.fd = eventfd
 
-        _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: eventfd, event: &ev)
+        try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: eventfd, event: &ev)
 
         var timerev = Epoll.epoll_event()
-        timerev.events = Epoll.EPOLLIN.rawValue | Epoll.EPOLLERR.rawValue | Epoll.EPOLLRDHUP.rawValue | Epoll.EPOLLET.rawValue
+        timerev.events = Epoll.EPOLLIN | Epoll.EPOLLERR | Epoll.EPOLLRDHUP | Epoll.EPOLLET
         timerev.data.fd = timerfd
-        _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: timerfd, event: &timerev)
+        try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: timerfd, event: &timerev)
 #else
         fd = try KQueue.kqueue()
         self.lifecycleState = .open
@@ -333,6 +331,8 @@ final class Selector<R: Registration> {
          is likely to cause performance problems. By abusing ARC, we get the guarantee that there won't be any future
          wakeup calls as there are no references to this selector left. 💁
          */
+
+        // we try! this because `close` only fails in cases that should never happen (EBADF).
 #if os(Linux)
         try! Posix.close(descriptor: self.eventfd)
 #else
@@ -360,12 +360,12 @@ final class Selector<R: Registration> {
             return
         }
         do {
-            _ = try KQueue.kevent(kq: self.fd,
-                                  changelist: keventBuffer.baseAddress!,
-                                  nchanges: CInt(keventBuffer.count),
-                                  eventlist: nil,
-                                  nevents: 0,
-                                  timeout: nil)
+            try KQueue.kevent(kq: self.fd,
+                              changelist: keventBuffer.baseAddress!,
+                              nchanges: CInt(keventBuffer.count),
+                              eventlist: nil,
+                              nevents: 0,
+                              timeout: nil)
         } catch let err as IOError {
             if err.errnoCode == EINTR {
                 // See https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
@@ -410,7 +410,7 @@ final class Selector<R: Registration> {
                 ev.events = interested.epollEventSet
                 ev.data.fd = fd
 
-                _ = try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: fd, event: &ev)
+                try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: fd, event: &ev)
             #else
                 try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: nil)
             #endif
@@ -532,7 +532,7 @@ final class Selector<R: Registration> {
                     // in any case we only want what the user is currently registered for & what we got
                     selectorEvent = selectorEvent.intersection(registration.interested)
 
-                    guard selectorEvent != .none else {
+                    guard selectorEvent != ._none else {
                         continue
                     }
 
@@ -584,7 +584,7 @@ final class Selector<R: Registration> {
             // in any case we only want what the user is currently registered for & what we got
             selectorEvent = selectorEvent.intersection(registration.interested)
 
-            guard selectorEvent != .none else {
+            guard selectorEvent != ._none else {
                 continue
             }
             try body((SelectorEvent(io: selectorEvent, registration: registration)))
@@ -661,9 +661,9 @@ struct SelectorEvent<R> {
 
 internal extension Selector where R == NIORegistration {
     /// Gently close the `Selector` after all registered `Channel`s are closed.
-    internal func closeGently(eventLoop: EventLoop) -> EventLoopFuture<Void> {
+    func closeGently(eventLoop: EventLoop) -> EventLoopFuture<Void> {
         guard self.lifecycleState == .open else {
-            return eventLoop.newFailedFuture(error: IOError(errnoCode: EBADF, reason: "can't close selector gently as it's \(self.lifecycleState)."))
+            return eventLoop.makeFailedFuture(error: IOError(errnoCode: EBADF, reason: "can't close selector gently as it's \(self.lifecycleState)."))
         }
 
         let futures: [EventLoopFuture<Void>] = self.registrations.map { (_, reg: NIORegistration) -> EventLoopFuture<Void> in
@@ -695,7 +695,7 @@ internal extension Selector where R == NIORegistration {
         }
 
         guard futures.count > 0 else {
-            return eventLoop.newSucceededFuture(result: ())
+            return eventLoop.makeSucceededFuture(result: ())
         }
 
         return EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
@@ -714,18 +714,28 @@ enum SelectorStrategy {
     case now
 }
 
-/// The IO for which we want to be notified.
-@available(*, deprecated, message: "IOEvent was made public by accident, is no longer used internally and will be removed with SwiftNIO 2.0.0")
-public enum IOEvent {
-    /// Something is ready to be read.
-    case read
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+extension kevent {
+    /// Update a kevent for a given filter, file descriptor, and set of flags.
+    mutating func setEvent(fileDescriptor fd: CInt, filter: CInt, flags: UInt16) {
+        self.ident = UInt(fd)
+        self.filter = Int16(filter)
+        self.flags = flags
+        self.udata = nil
 
-    /// Its possible to write some data again.
-    case write
-
-    /// Combination of `read` and `write`.
-    case all
-
-    /// Not interested in any event.
-    case none
+        // On macOS, EVFILT_EXCEPT will fire whenever there is unread data in the socket receive
+        // buffer. This is not a behaviour we want from EVFILT_EXCEPT: we only want it to tell us
+        // about actually exceptional conditions. For this reason, when we set EVFILT_EXCEPT
+        // we do it with NOTE_LOWAT set to Int.max, which will ensure that there is never enough data
+        // in the send buffer to trigger EVFILT_EXCEPT. Thanks to the sensible design of kqueue,
+        // this only affects our EXCEPT filter: EVFILT_READ behaves separately.
+        if filter == EVFILT_EXCEPT {
+            self.fflags = CUnsignedInt(NOTE_LOWAT)
+            self.data = Int.max
+        } else {
+            self.fflags = 0
+            self.data = 0
+        }
+    }
 }
+#endif

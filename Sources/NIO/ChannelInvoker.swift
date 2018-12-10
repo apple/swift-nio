@@ -138,49 +138,49 @@ public protocol ChannelOutboundInvoker {
 ///     - return `EventLoopPromise.futureResult`
 extension ChannelOutboundInvoker {
     public func register() -> EventLoopFuture<Void> {
-        let promise = newPromise()
+        let promise = makePromise()
         register(promise: promise)
         return promise.futureResult
     }
 
     public func bind(to address: SocketAddress) -> EventLoopFuture<Void> {
-        let promise = newPromise()
+        let promise = makePromise()
         bind(to: address, promise: promise)
         return promise.futureResult
     }
 
     public func connect(to address: SocketAddress) -> EventLoopFuture<Void> {
-        let promise = newPromise()
+        let promise = makePromise()
         connect(to: address, promise: promise)
         return promise.futureResult
     }
 
     public func write(_ data: NIOAny) -> EventLoopFuture<Void> {
-        let promise = newPromise()
+        let promise = makePromise()
         write(data, promise: promise)
         return promise.futureResult
     }
 
     public func writeAndFlush(_ data: NIOAny) -> EventLoopFuture<Void> {
-        let promise = newPromise()
+        let promise = makePromise()
         writeAndFlush(data, promise: promise)
         return promise.futureResult
     }
 
     public func close(mode: CloseMode = .all) -> EventLoopFuture<Void> {
-        let promise = newPromise()
+        let promise = makePromise()
         close(mode: mode, promise: promise)
         return promise.futureResult
     }
 
     public func triggerUserOutboundEvent(_ event: Any) -> EventLoopFuture<Void> {
-        let promise = newPromise()
+        let promise = makePromise()
         triggerUserOutboundEvent(event, promise: promise)
         return promise.futureResult
     }
 
-    private func newPromise(file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<Void> {
-        return eventLoop.newPromise(file: file, line: line)
+    private func makePromise(file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<Void> {
+        return eventLoop.makePromise(file: file, line: line)
     }
 }
 

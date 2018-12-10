@@ -23,7 +23,7 @@ class HTTPDecoderTest: XCTestCase {
 
     override func setUp() {
         self.channel = EmbeddedChannel()
-        self.loop = channel.eventLoop as! EmbeddedEventLoop
+        self.loop = (channel.eventLoop as! EmbeddedEventLoop)
     }
 
     override func tearDown() {
@@ -232,4 +232,168 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(buffer3))
         XCTAssertNoThrow(try channel.finish())
     }
+
+    func testDropExtraBytes() throws {
+        class Receiver: ChannelInboundHandler {
+            typealias InboundIn = HTTPServerRequestPart
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                let part = self.unwrapInboundIn(data)
+                switch part {
+                case .end:
+                    // ignore
+                    _ = ctx.pipeline.remove(name: "decoder")
+                default:
+                    break
+                }
+            }
+        }
+        XCTAssertNoThrow(try channel.pipeline.add(name: "decoder", handler: HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: Receiver()).wait())
+
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.write(staticString: "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\nXXXX")
+
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(try channel.pipeline.assertDoesNotContain(handlerType: HTTPRequestDecoder.self))
+        XCTAssertNoThrow(try channel.finish())
+    }
+
+    func testDontDropExtraBytes() throws {
+        class ByteCollector: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            var called: Bool = false
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                var buffer = self.unwrapInboundIn(data)
+                XCTAssertEqual("XXXX", buffer.readString(length: buffer.readableBytes)!)
+                self.called = true
+            }
+
+            func handlerAdded(ctx: ChannelHandlerContext) {
+                _ = ctx.pipeline.remove(name: "decoder")
+            }
+        }
+
+        class Receiver: ChannelInboundHandler {
+            typealias InboundIn = HTTPServerRequestPart
+            let collector = ByteCollector()
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                let part = self.unwrapInboundIn(data)
+                switch part {
+                case .end:
+                    _ = ctx.pipeline.remove(handler: self).then { _ in
+                        ctx.pipeline.add(handler: self.collector)
+                    }
+                default:
+                    // ignore
+                    break
+                }
+            }
+
+            func channelInactive(ctx: ChannelHandlerContext) {
+                XCTAssertTrue(collector.called)
+            }
+        }
+        XCTAssertNoThrow(try channel.pipeline.add(name: "decoder", handler: HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes)).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: Receiver()).wait())
+
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.write(staticString: "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\nXXXX")
+
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(try channel.pipeline.assertDoesNotContain(handlerType: HTTPRequestDecoder.self))
+        XCTAssertNoThrow(try channel.finish())
+    }
+
+    func testExtraCRLF() throws {
+        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+
+        // This is a simple HTTP/1.1 request with a few too many CRLFs before it, to trigger
+        // https://github.com/nodejs/http-parser/pull/432.
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.write(staticString: "\r\nGET / HTTP/1.1\r\nHost: example.com\r\n\r\n")
+        try channel.writeInbound(buffer)
+
+        let message: HTTPServerRequestPart? = self.channel.readInbound()
+        guard case .some(.head(let head)) = message else {
+            XCTFail("Invalid message: \(String(describing: message))")
+            return
+        }
+
+        XCTAssertEqual(head.method, .GET)
+        XCTAssertEqual(head.uri, "/")
+        XCTAssertEqual(head.version, .init(major: 1, minor: 1))
+        XCTAssertEqual(head.headers, HTTPHeaders([("Host", "example.com")]))
+
+        let secondMessage: HTTPServerRequestPart? = self.channel.readInbound()
+        guard case .some(.end(.none)) = secondMessage else {
+            XCTFail("Invalid second message: \(String(describing: secondMessage))")
+            return
+        }
+
+        XCTAssertNoThrow(try channel.finish())
+    }
+
+    func testSOURCEDoesntExplodeUs() throws {
+        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+
+        // This is a simple HTTP/1.1 request with the SOURCE verb which is newly added to
+        // http_parser.
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.write(staticString: "SOURCE / HTTP/1.1\r\nHost: example.com\r\n\r\n")
+        try channel.writeInbound(buffer)
+
+        let message: HTTPServerRequestPart? = self.channel.readInbound()
+        guard case .some(.head(let head)) = message else {
+            XCTFail("Invalid message: \(String(describing: message))")
+            return
+        }
+
+        XCTAssertEqual(head.method, .RAW(value: "SOURCE"))
+        XCTAssertEqual(head.uri, "/")
+        XCTAssertEqual(head.version, .init(major: 1, minor: 1))
+        XCTAssertEqual(head.headers, HTTPHeaders([("Host", "example.com")]))
+
+        let secondMessage: HTTPServerRequestPart? = self.channel.readInbound()
+        guard case .some(.end(.none)) = secondMessage else {
+            XCTFail("Invalid second message: \(String(describing: secondMessage))")
+            return
+        }
+
+        XCTAssertNoThrow(try channel.finish())
+    }
+
+    func testExtraCarriageReturnBetweenSubsequentRequests() throws {
+        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+
+        // This is a simple HTTP/1.1 request with an extra \r between first and second message, designed to hit the code
+        // changed in https://github.com/nodejs/http-parser/pull/432 .
+        var buffer = channel.allocator.buffer(capacity: 64)
+        buffer.write(staticString: "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n")
+        buffer.write(staticString: "\r") // this is extra
+        buffer.write(staticString: "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n")
+        try channel.writeInbound(buffer)
+
+        let message: HTTPServerRequestPart? = self.channel.readInbound()
+        guard case .some(.head(let head)) = message else {
+            XCTFail("Invalid message: \(String(describing: message))")
+            return
+        }
+
+        XCTAssertEqual(head.method, .GET)
+        XCTAssertEqual(head.uri, "/")
+        XCTAssertEqual(head.version, .init(major: 1, minor: 1))
+        XCTAssertEqual(head.headers, HTTPHeaders([("Host", "example.com")]))
+
+        let secondMessage: HTTPServerRequestPart? = self.channel.readInbound()
+        guard case .some(.end(.none)) = secondMessage else {
+            XCTFail("Invalid second message: \(String(describing: secondMessage))")
+            return
+        }
+
+        XCTAssertNoThrow(try channel.finish())
+    }
+
 }
