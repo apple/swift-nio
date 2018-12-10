@@ -249,7 +249,7 @@ extension ByteBuffer {
     /// - returns: The number of bytes written or `bytes.count`.
     @discardableResult
     @inlinable
-    public mutating func write<S: Sequence>(bytes: S) -> Int where S.Element == UInt8 {
+    public mutating func write<Bytes: Sequence>(bytes: Bytes) -> Int where Bytes.Element == UInt8 {
         let written = set(bytes: bytes, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
         return written
@@ -263,7 +263,7 @@ extension ByteBuffer {
     /// - returns: The number of bytes written or `bytes.count`.
     @discardableResult
     @inlinable
-    public mutating func write<S: ContiguousCollection>(bytes: S) -> Int where S.Element == UInt8 {
+    public mutating func write<Bytes: ContiguousCollection>(bytes: Bytes) -> Int where Bytes.Element == UInt8 {
         let written = set(bytes: bytes, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
         return written

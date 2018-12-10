@@ -125,7 +125,7 @@ class ChannelPipelineTest: XCTestCase {
     func testConnectingDoesntCallBind() throws {
         let channel = EmbeddedChannel()
         var ipv4SocketAddress = sockaddr_in()
-        ipv4SocketAddress.sin_port = (12345 as UInt16).bigEndian
+        ipv4SocketAddress.sin_port = (12345 as in_port_t).bigEndian
         let sa = SocketAddress(ipv4SocketAddress, host: "foobar.com")
 
         _ = try channel.pipeline.add(handler: NoBindAllowed()).wait()
