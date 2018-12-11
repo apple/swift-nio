@@ -129,7 +129,7 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
         return self.markedElementIndex.map { self.buffer[$0] }
     }
 
-    /// Returns tre if the buffer has been marked at all.
+    /// Returns true if the buffer has been marked at all.
     public var hasMark: Bool {
         if self.markedIndex < 0 {
             assert(self.markedIndex == -1, "marked index is \(self.markedIndex)")
