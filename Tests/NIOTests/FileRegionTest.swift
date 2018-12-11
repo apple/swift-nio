@@ -31,7 +31,7 @@ class FileRegionTest : XCTestCase {
         }
         let bytes = Array(content.utf8)
 
-        let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().newPromise())
+        let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().makePromise())
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -71,7 +71,7 @@ class FileRegionTest : XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let countingHandler = ByteCountingHandler(numBytes: 0, promise: group.next().newPromise())
+        let countingHandler = ByteCountingHandler(numBytes: 0, promise: group.next().makePromise())
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -122,7 +122,7 @@ class FileRegionTest : XCTestCase {
         }
         let bytes = Array(content.utf8)
 
-        let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().newPromise())
+        let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().makePromise())
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)

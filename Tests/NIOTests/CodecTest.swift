@@ -42,7 +42,7 @@ private final class ChannelInactivePromiser: ChannelInboundHandler {
     let channelInactivePromise: EventLoopPromise<Void>
 
     init(channel: Channel) {
-        channelInactivePromise = channel.eventLoop.newPromise()
+        channelInactivePromise = channel.eventLoop.makePromise()
     }
 
     func channelInactive(ctx: ChannelHandlerContext) {
@@ -345,7 +345,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
     }
 
     func testLeftOversMakeDecodeLastCalled() {
-        let lastPromise = EmbeddedEventLoop().newPromise(of: ByteBuffer.self)
+        let lastPromise = EmbeddedEventLoop().makePromise(of: ByteBuffer.self)
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(PairOfBytesDecoder(lastPromise: lastPromise)))
 
         var buffer = channel.allocator.buffer(capacity: 16)
@@ -373,7 +373,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
     }
 
     func testRemovingHandlerMakesLeftoversAppearInDecodeLast() {
-        let lastPromise = EmbeddedEventLoop().newPromise(of: ByteBuffer.self)
+        let lastPromise = EmbeddedEventLoop().makePromise(of: ByteBuffer.self)
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(PairOfBytesDecoder(lastPromise: lastPromise)))
         defer {
             XCTAssertNoThrow(XCTAssertFalse(try channel.finish()))

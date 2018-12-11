@@ -125,7 +125,7 @@ class ChannelPipelineTest: XCTestCase {
     func testConnectingDoesntCallBind() throws {
         let channel = EmbeddedChannel()
         var ipv4SocketAddress = sockaddr_in()
-        ipv4SocketAddress.sin_port = (12345 as UInt16).bigEndian
+        ipv4SocketAddress.sin_port = (12345 as in_port_t).bigEndian
         let sa = SocketAddress(ipv4SocketAddress, host: "foobar.com")
 
         _ = try channel.pipeline.add(handler: NoBindAllowed()).wait()
@@ -698,7 +698,7 @@ class ChannelPipelineTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.write(staticString: "Hello, world!")
 
-        let removalPromise = channel.eventLoop.newPromise(of: Bool.self)
+        let removalPromise = channel.eventLoop.makePromise(of: Bool.self)
         removalPromise.futureResult.whenSuccess { (_: Bool) in
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
@@ -772,7 +772,7 @@ class ChannelPipelineTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.write(staticString: "Hello, world!")
 
-        let removalPromise = channel.eventLoop.newPromise(of: Bool.self)
+        let removalPromise = channel.eventLoop.makePromise(of: Bool.self)
         removalPromise.futureResult.whenSuccess { (_: Bool) in
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
@@ -847,7 +847,7 @@ class ChannelPipelineTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.write(staticString: "Hello, world!")
 
-        let removalPromise = channel.eventLoop.newPromise(of: Bool.self)
+        let removalPromise = channel.eventLoop.makePromise(of: Bool.self)
         removalPromise.futureResult.whenSuccess { (_: Bool) in
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())

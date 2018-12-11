@@ -241,7 +241,7 @@ public class HTTPDecoder<HTTPMessageT>: ChannelInboundHandler, AnyHTTPDecoder {
 
     private func newRequestHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPRequestHead {
         let method = HTTPMethod.from(httpParserMethod: http_method(rawValue: parser.pointee.method))
-        let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
+        let version = HTTPVersion(major: Int(parser.pointee.http_major), minor: Int(parser.pointee.http_minor))
         let request = HTTPRequestHead(version: version, method: method, rawURI: state.currentURI!, headers: HTTPHeaders(buffer: cumulationBuffer!, headers: state.currentHeaders, keepAliveState: parser.keepAliveState))
         self.state.currentHeaders.removeAll(keepingCapacity: true)
         return request
@@ -249,7 +249,7 @@ public class HTTPDecoder<HTTPMessageT>: ChannelInboundHandler, AnyHTTPDecoder {
 
     private func newResponseHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPResponseHead {
         let status = HTTPResponseStatus(statusCode: Int(parser.pointee.status_code), reasonPhrase: state.currentStatus!)
-        let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
+        let version = HTTPVersion(major: Int(parser.pointee.http_major), minor: Int(parser.pointee.http_minor))
         let response = HTTPResponseHead(version: version, status: status, headers: HTTPHeaders(buffer: cumulationBuffer!, headers: state.currentHeaders, keepAliveState: parser.keepAliveState))
         self.state.currentHeaders.removeAll(keepingCapacity: true)
         return response

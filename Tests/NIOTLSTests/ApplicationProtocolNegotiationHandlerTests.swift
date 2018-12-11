@@ -40,7 +40,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             XCTFail("Negotiation fired")
-            return loop.newSucceededFuture(result: ())
+            return loop.makeSucceededFuture(result: ())
         }
 
         try channel.pipeline.add(handler: handler).wait()
@@ -58,7 +58,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
     private func negotiateTest(event: TLSUserEvent, expectedResult: ALPNResult) throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise = loop.newPromise(of: Void.self)
+        let continuePromise = loop.makePromise(of: Void.self)
 
         let expectedResult: ALPNResult = .negotiated("h2")
         var called = false
@@ -102,7 +102,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             XCTFail("Should not be called")
-            return loop.newSucceededFuture(result: ())
+            return loop.makeSucceededFuture(result: ())
         }
 
         try channel.pipeline.add(handler: handler).wait()
@@ -117,7 +117,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
     func testBufferingWhileWaitingForFuture() throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise = loop.newPromise(of: Void.self)
+        let continuePromise = loop.makePromise(of: Void.self)
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             continuePromise.futureResult
@@ -148,7 +148,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
     func testNothingBufferedDoesNotFireReadCompleted() throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise = loop.newPromise(of: Void.self)
+        let continuePromise = loop.makePromise(of: Void.self)
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             continuePromise.futureResult
@@ -175,7 +175,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
     func testUnbufferingFiresReadCompleted() throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise = loop.newPromise(of: Void.self)
+        let continuePromise = loop.makePromise(of: Void.self)
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             continuePromise.futureResult
