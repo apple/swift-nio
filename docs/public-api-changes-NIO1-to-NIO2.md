@@ -7,4 +7,4 @@
 - `ByteToMessageDecoder`s now need to be wrapped in `ByteToMessageHandler`
   before they can be added to the pipeline.
   before: `pipeline.add(MyDecoder())`, after: `pipeline.add(ByteToMessageHandler(MyDecoder()))`
-
+- `markedElementIndex()`, `markedElement()` and `hasMark()` are now computed variables instead of functions.
