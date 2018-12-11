@@ -169,7 +169,7 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testString() {
-        let written = buf.write(string: "Hello")!
+        let written = buf.write(string: "Hello")
         let string = buf.getString(at: 0, length: written)
         XCTAssertEqual("Hello", string)
     }
@@ -1600,6 +1600,32 @@ class ByteBufferTest: XCTestCase {
         }
 
         XCTAssertEqual(0, buf.readableBytes)
+    }
+
+    func testWriteAndSetAndGetAndReadEncoding() throws {
+        var buf = self.buf!
+        buf.clear()
+
+        var writtenBytes = try assertNoThrowWithValue(buf.write(string: "ÆBCD", encoding: .utf16LittleEndian))
+        XCTAssertEqual(writtenBytes, 8)
+        XCTAssertEqual(buf.readableBytes, 8)
+        XCTAssertEqual(buf.getString(at: buf.readerIndex + 2, length: 6, encoding: .utf16LittleEndian), "BCD")
+
+        writtenBytes = try assertNoThrowWithValue(buf.set(string: "EFGH", encoding: .utf32BigEndian, at: buf.readerIndex))
+        XCTAssertEqual(writtenBytes, 16)
+        XCTAssertEqual(buf.readableBytes, 8)
+        XCTAssertEqual(buf.readString(length: 8, encoding: .utf32BigEndian), "EF")
+        XCTAssertEqual(buf.readableBytes, 0)
+
+        buf.clear()
+
+        // Confirm that we do throw.
+        XCTAssertThrowsError(try buf.set(string: "🤷‍♀️", encoding: .ascii, at: buf.readerIndex)) {
+            XCTAssertEqual($0 as? ByteBufferFoundationError, .failedToEncodeString)
+        }
+        XCTAssertThrowsError(try buf.write(string: "🤷‍♀️", encoding: .ascii)) {
+            XCTAssertEqual($0 as? ByteBufferFoundationError, .failedToEncodeString)
+        }
     }
 }
 

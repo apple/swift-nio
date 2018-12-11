@@ -589,10 +589,10 @@ public struct HTTPHeaders: CustomStringConvertible {
             self._storage = self._storage.copy()
         }
         let nameStart = self.buffer.writerIndex
-        let nameLength = self._storage.buffer.write(string: name)!
+        let nameLength = self._storage.buffer.write(string: name)
         self._storage.buffer.write(staticString: headerSeparator)
         let valueStart = self.buffer.writerIndex
-        let valueLength = self._storage.buffer.write(string: value)!
+        let valueLength = self._storage.buffer.write(string: value)
         
         let nameIdx = HTTPHeaderIndex(start: nameStart, length: nameLength)
         self._storage.headers.append(HTTPHeader(name: nameIdx, value: HTTPHeaderIndex(start: valueStart, length: valueLength)))
