@@ -126,7 +126,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         }
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
 
         let handler = ChannelInactiveHandler(eofMechanism)
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
@@ -189,7 +189,7 @@ class HTTPDecoderLengthTest: XCTestCase {
                                            responseStatus: HTTPResponseStatus,
                                            responseFramingField: FramingField) throws {
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
 
         let handler = MessageEndHandler<HTTPResponseHead, ByteBuffer>()
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
@@ -292,7 +292,7 @@ class HTTPDecoderLengthTest: XCTestCase {
     }
 
     private func assertRequestTransferEncodingHasNoBody(transferEncodingHeader: String) throws {
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
         let handler = MessageEndHandler<HTTPRequestHead, ByteBuffer>()
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
@@ -328,7 +328,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
     private func assertResponseTransferEncodingHasBodyTerminatedByEOF(transferEncodingHeader: String, eofMechanism: EOFMechanism) throws {
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
 
         let handler = MessageEndHandler<HTTPResponseHead, ByteBuffer>()
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
@@ -398,7 +398,7 @@ class HTTPDecoderLengthTest: XCTestCase {
     }
 
     func testRequestWithTEAndContentLengthErrors() throws {
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
         // Send a GET with the invalid headers.
         do {
@@ -417,7 +417,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
     func testResponseWithTEAndContentLengthErrors() throws {
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPResponseDecoder())).wait())
 
         // Prime the decoder with a request.
         XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1),
@@ -440,7 +440,7 @@ class HTTPDecoderLengthTest: XCTestCase {
     }
 
     private func assertRequestWithInvalidCLErrors(contentLengthField: String) throws {
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
         // Send a GET with the invalid headers.
         do {
@@ -474,7 +474,7 @@ class HTTPDecoderLengthTest: XCTestCase {
     func testRequestWithIdenticalContentLengthRepeatedErrors() throws {
         // This is another case where http_parser is, if not wrong, then aggressively interpreting
         // the spec. Regardless, we match it.
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
         // Send two POSTs with repeated content length, one with one field and one with two.
         // Both should error.
@@ -495,7 +495,7 @@ class HTTPDecoderLengthTest: XCTestCase {
     func testRequestWithMultipleIdenticalContentLengthFieldsErrors() throws {
         // This is another case where http_parser is, if not wrong, then aggressively interpreting
         // the spec. Regardless, we match it.
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
         do {
             try channel.writeInbound(ByteBuffer(string: "POST / HTTP/1.1\r\nContent-Length: 4\r\nContent-Length: 4\r\n\r\n"))
@@ -512,7 +512,7 @@ class HTTPDecoderLengthTest: XCTestCase {
     }
 
     func testRequestWithoutExplicitLengthIsZeroLength() throws {
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait())
 
         let handler = MessageEndHandler<HTTPRequestHead, ByteBuffer>()
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())

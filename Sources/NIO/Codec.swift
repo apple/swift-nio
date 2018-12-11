@@ -206,7 +206,6 @@ extension B2MDBuffer {
         }
     }
 
-
     mutating func finishProcessing(remainder buffer: inout ByteBuffer) -> Void {
         assert(self.state == .processingInProgress)
         self.state = .ready
@@ -338,6 +337,7 @@ public class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     // sadly to construct a B2MDBuffer we need an empty ByteBuffer which we can only get from the allocator, so IUO.
     private var buffer: B2MDBuffer!
     private var seenEOF: Bool = false
+    private var selfAsCanDequeueWrites: CanDequeueWrites? = nil
 
     public init(_ decoder: Decoder) {
         self.decoder = decoder
@@ -420,7 +420,7 @@ extension ByteToMessageHandler {
     private func tryDecodeWrites() {
         if self.queuedWrites.count > 0 {
             // this must succeed because unless we implement `CanDequeueWrites`, `queuedWrites` must always be empty.
-            (self as! CanDequeueWrites).dequeueWrites()
+            self.selfAsCanDequeueWrites!.dequeueWrites()
         }
     }
 
@@ -455,12 +455,14 @@ extension ByteToMessageHandler {
     }
 }
 
+
 // MARK: ByteToMessageHandler: ChannelInboundHandler
 extension ByteToMessageHandler: ChannelInboundHandler {
 
     public func handlerAdded(context: ChannelHandlerContext) {
         self.buffer = B2MDBuffer(emptyByteBuffer: context.channel.allocator.buffer(capacity: 0))
         // here we can force it because we know that the decoder isn't in use if we're just adding this handler
+        self.selfAsCanDequeueWrites = self as? CanDequeueWrites // we need to cache this as it allocates.
         self.decoder!.decoderAdded(context: context)
     }
 
@@ -472,6 +474,9 @@ extension ByteToMessageHandler: ChannelInboundHandler {
         if !self.state.isFinalState {
             self.state = .done
         }
+
+        self.selfAsCanDequeueWrites = nil
+
         // here we can force it because we know that the decoder isn't in use because the removal is always
         // eventLoop.execute'd
         self.decoder!.decoderRemoved(context: context)
