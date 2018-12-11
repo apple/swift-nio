@@ -40,10 +40,8 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     @_specialize(where T == Int)
     @_specialize(where T == Bool)
     @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @_specialize(where T == UInt)
+    @_specialize(where T == Int64)
     public init(value: T) {
         self.value = T.atomic_create(value)
     }
@@ -66,10 +64,8 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     @_specialize(where T == Int)
     @_specialize(where T == Bool)
     @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @_specialize(where T == UInt)
+    @_specialize(where T == Int64)
     public func compareAndExchange(expected: T, desired: T) -> Bool {
         return T.atomic_compare_and_exchange(self.value, expected, desired)
     }
@@ -85,10 +81,8 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     @_specialize(where T == Int)
     @_specialize(where T == Bool)
     @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @_specialize(where T == UInt)
+    @_specialize(where T == Int64)
     public func add(_ rhs: T) -> T {
         return T.atomic_add(self.value, rhs)
     }
@@ -104,10 +98,8 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     @_specialize(where T == Int)
     @_specialize(where T == Bool)
     @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @_specialize(where T == UInt)
+    @_specialize(where T == Int64)
     public func sub(_ rhs: T) -> T {
         return T.atomic_sub(self.value, rhs)
     }
@@ -123,10 +115,8 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     @_specialize(where T == Int)
     @_specialize(where T == Bool)
     @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @_specialize(where T == UInt)
+    @_specialize(where T == Int64)
     public func exchange(with value: T) -> T {
         return T.atomic_exchange(self.value, value)
     }
@@ -141,10 +131,8 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     @_specialize(where T == Int)
     @_specialize(where T == Bool)
     @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @_specialize(where T == UInt)
+    @_specialize(where T == Int64)
     public func load() -> T {
         return T.atomic_load(self.value)
     }
@@ -159,10 +147,8 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     @_specialize(where T == Int)
     @_specialize(where T == Bool)
     @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @_specialize(where T == UInt)
+    @_specialize(where T == Int64)
     public func store(_ value: T) -> Void {
         T.atomic_store(self.value, value)
     }
@@ -201,10 +187,8 @@ public final class Atomic<T: AtomicPrimitive> {
     @_specialize(where T == Int)
     @_specialize(where T == Bool)
     @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @_specialize(where T == UInt)
+    @_specialize(where T == Int64)
     public init(value: T) {
         self.embedded = UnsafeEmbeddedAtomic(value: value)
     }
@@ -227,10 +211,8 @@ public final class Atomic<T: AtomicPrimitive> {
     @_specialize(where T == Int)
     @_specialize(where T == Bool)
     @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @_specialize(where T == UInt)
+    @_specialize(where T == Int64)
     public func compareAndExchange(expected: T, desired: T) -> Bool {
         return self.embedded.compareAndExchange(expected: expected, desired: desired)
     }
@@ -246,10 +228,8 @@ public final class Atomic<T: AtomicPrimitive> {
     @_specialize(where T == Int)
     @_specialize(where T == Bool)
     @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @_specialize(where T == UInt)
+    @_specialize(where T == Int64)
     public func add(_ rhs: T) -> T {
         return self.embedded.add(rhs)
     }
@@ -265,10 +245,8 @@ public final class Atomic<T: AtomicPrimitive> {
     @_specialize(where T == Int)
     @_specialize(where T == Bool)
     @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @_specialize(where T == UInt)
+    @_specialize(where T == Int64)
     public func sub(_ rhs: T) -> T {
         return self.embedded.sub(rhs)
     }
@@ -284,10 +262,8 @@ public final class Atomic<T: AtomicPrimitive> {
     @_specialize(where T == Int)
     @_specialize(where T == Bool)
     @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @_specialize(where T == UInt)
+    @_specialize(where T == Int64)
     public func exchange(with value: T) -> T {
         return self.embedded.exchange(with: value)
     }
@@ -302,10 +278,8 @@ public final class Atomic<T: AtomicPrimitive> {
     @_specialize(where T == Int)
     @_specialize(where T == Bool)
     @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @_specialize(where T == UInt)
+    @_specialize(where T == Int64)
     public func load() -> T {
         return self.embedded.load()
     }
@@ -320,10 +294,8 @@ public final class Atomic<T: AtomicPrimitive> {
     @_specialize(where T == Int)
     @_specialize(where T == Bool)
     @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @_specialize(where T == UInt)
+    @_specialize(where T == Int64)
     public func store(_ value: T) -> Void {
         self.embedded.store(value)
     }
