@@ -19,3 +19,6 @@
 - Moved error `ChannelLifecycleError.inappropriateOperationForState` to `ChannelError.inappropriateOperationForState`.
 - Moved all errors in `MulticastError` enum into `ChannelError`.
 - Removed `ChannelError.connectFailed`. All errors that triggered this now throw `NIOConnectError` directly.
+- Made `WebSocketOpcode` a struct. Removed `WebSocketOpcode.unknownControl` and
+  `WebSocketOpcode.unknownNonControl` values: these should be replaced by
+  simply instantiating `WebSocketOpcode` with the value.
