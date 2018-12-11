@@ -22,3 +22,4 @@
 - Made `WebSocketOpcode` a struct. Removed `WebSocketOpcode.unknownControl` and
   `WebSocketOpcode.unknownNonControl` values: these should be replaced by
   simply instantiating `WebSocketOpcode` with the value.
+- `markedElementIndex()`, `markedElement()` and `hasMark()` are now computed variables instead of functions.
