@@ -16,3 +16,6 @@
 - changed `HTTPVersion`'s `major` and `minor` properties to `Int` (from `UInt16`)
 - renamed the generic parameter name to `Bytes` where we're talking about a
   generic collection of bytes
+- Moved error `ChannelLifecycleError.inappropriateOperationForState` to `ChannelError.inappropriateOperationForState`.
+- Moved all errors in `MulticastError` enum into `ChannelError`.
+- Removed `ChannelError.connectFailed`. All errors that triggered this now throw `NIOConnectError` directly.

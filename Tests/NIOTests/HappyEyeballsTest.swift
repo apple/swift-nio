@@ -522,12 +522,12 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertEqual(resolver.events, expectedQueries)
 
         // But we should have failed.
-        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
-            XCTAssertEqual(inner.host, "example.com")
-            XCTAssertEqual(inner.port, 80)
-            XCTAssertNil(inner.dnsAError)
-            XCTAssertNil(inner.dnsAAAAError)
-            XCTAssertEqual(inner.connectionErrors.count, 0)
+        if let error = channelFuture.getError() as? NIOConnectionError {
+            XCTAssertEqual(error.host, "example.com")
+            XCTAssertEqual(error.port, 80)
+            XCTAssertNil(error.dnsAError)
+            XCTAssertNil(error.dnsAAAAError)
+            XCTAssertEqual(error.connectionErrors.count, 0)
         } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
         }
@@ -554,12 +554,12 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertEqual(resolver.events, expectedQueries)
 
         // But we should have failed.
-        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
-            XCTAssertEqual(inner.host, "example.com")
-            XCTAssertEqual(inner.port, 80)
-            XCTAssertEqual(inner.dnsAError as? DummyError ?? DummyError(), v4Error)
-            XCTAssertEqual(inner.dnsAAAAError as? DummyError ?? DummyError(), v6Error)
-            XCTAssertEqual(inner.connectionErrors.count, 0)
+        if let error = channelFuture.getError() as? NIOConnectionError {
+            XCTAssertEqual(error.host, "example.com")
+            XCTAssertEqual(error.port, 80)
+            XCTAssertEqual(error.dnsAError as? DummyError ?? DummyError(), v4Error)
+            XCTAssertEqual(error.dnsAAAAError as? DummyError ?? DummyError(), v6Error)
+            XCTAssertEqual(error.connectionErrors.count, 0)
         } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
         }
@@ -689,14 +689,14 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertTrue(channelFuture.isFulfilled)
 
         // Check the error.
-        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
-            XCTAssertEqual(inner.host, "example.com")
-            XCTAssertEqual(inner.port, 80)
-            XCTAssertNil(inner.dnsAError)
-            XCTAssertNil(inner.dnsAAAAError)
-            XCTAssertEqual(inner.connectionErrors.count, 20)
+        if let error = channelFuture.getError() as? NIOConnectionError {
+            XCTAssertEqual(error.host, "example.com")
+            XCTAssertEqual(error.port, 80)
+            XCTAssertNil(error.dnsAError)
+            XCTAssertNil(error.dnsAAAAError)
+            XCTAssertEqual(error.connectionErrors.count, 20)
 
-            for (idx, error) in inner.connectionErrors.enumerated() {
+            for (idx, error) in error.connectionErrors.enumerated() {
                 XCTAssertEqual(error.error as? DummyError, errors[idx])
             }
         } else {
@@ -1021,7 +1021,7 @@ public class HappyEyeballsTest : XCTestCase {
 
         XCTAssertTrue(channelFuture.isFulfilled)
         switch channelFuture.getError() {
-        case .some(ChannelError.connectFailed):
+        case is NIOConnectionError:
             break
         default:
             XCTFail("Got unexpected error: \(String(describing: channelFuture.getError()))")
@@ -1141,8 +1141,8 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertEqual(errors.count, 20)
 
         XCTAssertTrue(channelFuture.isFulfilled)
-        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
-            XCTAssertEqual(inner.connectionErrors.map { $0.error as! DummyError }, errors)
+        if let error = channelFuture.getError() as? NIOConnectionError {
+            XCTAssertEqual(error.connectionErrors.map { $0.error as! DummyError }, errors)
         } else {
             XCTFail("Got unexpected error: \(String(describing: channelFuture.getError()))")
         }

@@ -46,7 +46,7 @@ public struct SingleConnectionFailure {
 
 /// A representation of all the errors that happened during an attempt to connect
 /// to a given host and port.
-public struct NIOConnectionError {
+public struct NIOConnectionError: Error {
     /// The hostname SwiftNIO was trying to connect to.
     public let host: String
 
@@ -518,7 +518,7 @@ internal class HappyEyeballsConnector {
     private func failed() {
         precondition(pendingConnections.count == 0, "failed with pending connections")
         cleanUp()
-        self.resolutionPromise.fail(error: ChannelError.connectFailed(self.error))
+        self.resolutionPromise.fail(error: self.error)
     }
 
     /// Called to connect to a given target.
