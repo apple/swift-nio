@@ -106,7 +106,7 @@ private struct PendingStreamWritesState {
     public private(set) var bytes: Int64 = 0
 
     public var flushedChunks: Int {
-        return self.pendingWrites.markedElementIndex().map { $0 + 1 } ?? 0
+        return self.pendingWrites.markedElementIndex.map { $0 + 1 } ?? 0
     }
 
     /// Subtract `bytes` from the number of outstanding bytes to write.
@@ -141,7 +141,7 @@ private struct PendingStreamWritesState {
     public var isEmpty: Bool {
         if self.pendingWrites.isEmpty {
             assert(self.bytes == 0)
-            assert(!self.pendingWrites.hasMark())
+            assert(!self.pendingWrites.hasMark)
             return true
         } else {
             assert(self.bytes >= 0)
@@ -216,7 +216,7 @@ private struct PendingStreamWritesState {
 
     /// Is there a pending flush?
     public var isFlushPending: Bool {
-        return self.pendingWrites.hasMark()
+        return self.pendingWrites.hasMark
     }
 
     /// Remove all pending writes and return a `EventLoopPromise` which will cascade notifications to all.

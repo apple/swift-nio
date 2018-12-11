@@ -114,7 +114,7 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
     }
 
     /// Returns the index of the marked element.
-    public func markedElementIndex() -> Int? {
+    public var markedElementIndex: Int? {
         let markedIndex = self.markedIndex
         if markedIndex >= 0 {
             return markedIndex
@@ -125,12 +125,12 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
     }
 
     /// Returns the marked element.
-    public func markedElement() -> E? {
-        return self.markedElementIndex().map { self.buffer[$0] }
+    public var markedElement: E? {
+        return self.markedElementIndex.map { self.buffer[$0] }
     }
 
     /// Returns tre if the buffer has been marked at all.
-    public func hasMark() -> Bool {
+    public var hasMark: Bool {
         if self.markedIndex < 0 {
             assert(self.markedIndex == -1, "marked index is \(self.markedIndex)")
             return false
