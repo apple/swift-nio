@@ -91,13 +91,10 @@ extension ByteBuffer {
     ///     - string: The string to write.
     /// - returns: The number of bytes written.
     @discardableResult
-    public mutating func write(string: String) -> Int? {
-        if let written = self.set(string: string, at: self.writerIndex) {
-            self._moveWriterIndex(forwardBy: written)
-            return written
-        } else {
-            return nil
-        }
+    public mutating func write(string: String) -> Int {
+        let written = self.set(string: string, at: self.writerIndex)
+        self._moveWriterIndex(forwardBy: written)
+        return written
     }
 
     /// Write `string` into this `ByteBuffer` at `index` using UTF-8 encoding. Does not move the writer index.
@@ -107,7 +104,7 @@ extension ByteBuffer {
     ///     - index: The index for the first serialized byte.
     /// - returns: The number of bytes written.
     @discardableResult
-    public mutating func set(string: String, at index: Int) -> Int? {
+    public mutating func set(string: String, at index: Int) -> Int {
         return self.set(bytes: string.utf8, at: index)
     }
 
