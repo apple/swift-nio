@@ -130,7 +130,7 @@ internal struct Heap<T: Comparable> {
 
     @discardableResult
     public mutating func remove(value: T) -> Bool {
-        if let idx = self.storage.index(of: value) {
+        if let idx = self.storage.firstIndex(of: value) {
             self.remove(index: idx)
             return true
         } else {
