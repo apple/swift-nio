@@ -238,10 +238,10 @@ public struct ByteBuffer {
     public typealias _Index = UInt32
     public typealias _Capacity = UInt32
 
-    @usableFromInline private(set) var _storage: _Storage
-    @usableFromInline private(set) var _readerIndex: _Index = 0
-    @usableFromInline private(set) var _writerIndex: _Index = 0
-    @usableFromInline private(set) var _slice: Slice
+    @usableFromInline var _storage: _Storage
+    @usableFromInline var _readerIndex: _Index = 0
+    @usableFromInline var _writerIndex: _Index = 0
+    @usableFromInline var _slice: Slice
 
     // MARK: Internal _Storage for CoW
     @usableFromInline final class _Storage {
