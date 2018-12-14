@@ -151,7 +151,7 @@ internal func assertResponseIs(response: String, expectedResponseLine: String, e
 
     // For each header, find it in the actual response headers and remove it.
     for expectedHeader in expectedResponseHeaders {
-        guard let index = lines.index(of: expectedHeader) else {
+        guard let index = lines.firstIndex(of: expectedHeader) else {
             XCTFail("Could not find header \"\(expectedHeader)\"")
             return
         }
