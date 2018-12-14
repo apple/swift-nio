@@ -120,15 +120,16 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
             self.receivedClose(ctx: ctx, frame: frame)
         case .ping:
             self.pong(ctx: ctx, frame: frame)
-        case .unknownControl, .unknownNonControl:
-            self.closeOnError(ctx: ctx)
         case .text:
             var data = frame.unmaskedData
             let text = data.readString(length: data.readableBytes) ?? ""
             print(text)
-        default:
-            // We ignore all other frames.
+        case .binary, .continuation, .pong:
+            // We ignore these frames.
             break
+        default:
+            // Unknown frames are errors.
+            self.closeOnError(ctx: ctx)
         }
     }
 

@@ -738,8 +738,8 @@ class EchoServerClientTest : XCTestCase {
                 serverChannel = try ServerBootstrap(group: group)
                     .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
                     .childChannelInitializer { channel in
-                        acceptedRemotePort.store(channel.remoteAddress?.port.map(Int.init) ?? -3)
-                        acceptedLocalPort.store(channel.localAddress?.port.map(Int.init) ?? -4)
+                        acceptedRemotePort.store(channel.remoteAddress?.port ?? -3)
+                        acceptedLocalPort.store(channel.localAddress?.port ?? -4)
                         sem.signal()
                         return channel.eventLoop.makeSucceededFuture(result: ())
                     }.bind(host: host, port: 0).wait()
@@ -769,8 +769,8 @@ class EchoServerClientTest : XCTestCase {
             }
             sem.wait()
             XCTAssertEqual(serverChannel.localAddress?.port, clientChannel.remoteAddress?.port)
-            XCTAssertEqual(acceptedLocalPort.load(), clientChannel.remoteAddress?.port.map(Int.init) ?? -5)
-            XCTAssertEqual(acceptedRemotePort.load(), clientChannel.localAddress?.port.map(Int.init) ?? -6)
+            XCTAssertEqual(acceptedLocalPort.load(), clientChannel.remoteAddress?.port ?? -5)
+            XCTAssertEqual(acceptedRemotePort.load(), clientChannel.localAddress?.port ?? -6)
         }
         XCTAssertTrue(atLeastOneSucceeded)
     }

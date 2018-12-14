@@ -161,8 +161,7 @@ public struct WebSocketFrame {
             return WebSocketOpcode(encodedWebSocketOpcode: firstByte & 0x0F)!
         }
         set {
-            // this ! isn't actually safe (won't cause problems in reality though). Filed as #617 to be fixed in NIO 2.0
-            self.firstByte = (self.firstByte & 0xF0) + UInt8(webSocketOpcode: newValue)!
+            self.firstByte = (self.firstByte & 0xF0) + UInt8(webSocketOpcode: newValue)
         }
     }
 
