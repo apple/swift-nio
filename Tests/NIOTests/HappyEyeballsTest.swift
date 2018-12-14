@@ -1114,7 +1114,7 @@ public class HappyEyeballsTest : XCTestCase {
         ourChannelFutures[2].fail(error: DummyError())
 
         // Verify that the first channel is the one listed as connected.
-        XCTAssertTrue((try? ourChannelFutures.first!.futureResult.wait()) === (try? channelFuture.wait()))
+        XCTAssertTrue((try ourChannelFutures.first!.futureResult.wait()) === (try channelFuture.wait()))
     }
 
     func testChannelCreationFails() throws {
