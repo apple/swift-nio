@@ -91,13 +91,10 @@ extension ByteBuffer {
     ///     - string: The string to write.
     /// - returns: The number of bytes written.
     @discardableResult
-    public mutating func write(string: String) -> Int? {
-        if let written = self.set(string: string, at: self.writerIndex) {
-            self._moveWriterIndex(forwardBy: written)
-            return written
-        } else {
-            return nil
-        }
+    public mutating func write(string: String) -> Int {
+        let written = self.set(string: string, at: self.writerIndex)
+        self._moveWriterIndex(forwardBy: written)
+        return written
     }
 
     /// Write `string` into this `ByteBuffer` at `index` using UTF-8 encoding. Does not move the writer index.
@@ -107,8 +104,22 @@ extension ByteBuffer {
     ///     - index: The index for the first serialized byte.
     /// - returns: The number of bytes written.
     @discardableResult
-    public mutating func set(string: String, at index: Int) -> Int? {
-        return self.set(bytes: string.utf8, at: index)
+    public mutating func set(string: String, at index: Int) -> Int {
+        if let written = string.utf8.withContiguousStorageIfAvailable({ utf8Bytes in
+            self.set(bytes: utf8Bytes, at: index)
+        }) {
+            // best case, directly available
+            return written
+        } else {
+            // second best case, let's try to force the string to be native
+            if let written = (string + "").utf8.withContiguousStorageIfAvailable({ utf8Bytes in
+                self.set(bytes: utf8Bytes, at: index)
+            }) {
+                return written
+            } else {
+                return self.set(bytes: string.utf8, at: index)
+            }
+        }
     }
 
     /// Get the string at `index` from this `ByteBuffer` decoding using the UTF-8 encoding. Does not move the reader index.

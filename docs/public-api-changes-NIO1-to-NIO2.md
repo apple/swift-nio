@@ -23,3 +23,7 @@
   `WebSocketOpcode.unknownNonControl` values: these should be replaced by
   simply instantiating `WebSocketOpcode` with the value.
 - `markedElementIndex()`, `markedElement()` and `hasMark()` are now computed variables instead of functions.
+- `ByteBuffer.set(string:at:)` no longer returns an `Int?`, instead it
+  returns `Int` and has had its return value made discardable.
+- `ByteBuffer.write(string:)` no longer returns an `Int?`, instead it
+  returns `Int` and has had its return value made discardable.
