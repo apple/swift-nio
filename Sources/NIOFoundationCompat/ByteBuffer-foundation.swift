@@ -37,9 +37,9 @@ public enum ByteBufferFoundationError: Error {
  *   the platforms OpenSSL in which might cause problems.
  */
 
-extension Data: ContiguousCollection {
+extension Data: NIOContiguousCollection {
     @inlinable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    public func withUnsafeBytesNIO<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try self.withUnsafeBytes { (ptr: UnsafePointer<UInt8>) -> R in
             try body(UnsafeRawBufferPointer(start: ptr, count: self.count))
         }

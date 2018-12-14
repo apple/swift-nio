@@ -1154,7 +1154,7 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testWeUseFastWriteForContiguousCollections() throws {
-        struct WrongCollection: ContiguousCollection {
+        struct WrongCollection: NIOContiguousCollection {
             let storage: [UInt8] = [1, 2, 3]
             typealias Element = UInt8
             typealias Index = Array<UInt8>.Index
@@ -1185,7 +1185,7 @@ class ByteBufferTest: XCTestCase {
                 return self.storage.index(after: i)
             }
 
-            func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+            func withUnsafeBytesNIO<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
                 return try self.storage.withUnsafeBytes(body)
             }
         }
@@ -1453,7 +1453,7 @@ class ByteBufferTest: XCTestCase {
 
     func testWeDontWriteTooMuchForUnderreportingContiguousCollection() throws {
         // this is an illegal contiguous collection but we should still be able to deal with this
-        struct UnderreportingContiguousCollection: ContiguousCollection {
+        struct UnderreportingContiguousCollection: NIOContiguousCollection {
             let storage: [UInt8] = Array(repeating: 0xff, count: 4096)
             typealias Element = UInt8
             typealias Index = Array<UInt8>.Index
@@ -1491,7 +1491,7 @@ class ByteBufferTest: XCTestCase {
                 return self.storage.index(after: i)
             }
 
-            func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+            func withUnsafeBytesNIO<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
                 // we're giving access to 4096 elements despite the fact we claim to only have 3 available
                 return try self.storage.withUnsafeBytes(body)
             }

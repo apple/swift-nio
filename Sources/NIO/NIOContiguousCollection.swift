@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 /// A `Collection` that is contiguously laid out in memory and can therefore be duplicated using `memcpy`.
-public protocol ContiguousCollection: Collection {
+public protocol NIOContiguousCollection: Collection {
     @inlinable
-    func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R
+    func withUnsafeBytesNIO<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R
 }
 
 extension StaticString: Collection {
@@ -33,28 +33,28 @@ extension StaticString: Collection {
         return self.utf8Start.advanced(by: position).pointee
     }
 }
-extension UnsafeRawBufferPointer: ContiguousCollection {
+extension UnsafeRawBufferPointer: NIOContiguousCollection {
     @inlinable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    public func withUnsafeBytesNIO<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try body(self)
     }
 }
-extension UnsafeMutableRawBufferPointer: ContiguousCollection {
+extension UnsafeMutableRawBufferPointer: NIOContiguousCollection {
     @inlinable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    public func withUnsafeBytesNIO<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try body(UnsafeRawBufferPointer(self))
     }
 }
 
 #if swift(>=4.1)
-extension Slice: ContiguousCollection where Base: ContiguousCollection {
+extension Slice: NIOContiguousCollection where Base: NIOContiguousCollection {
     @inlinable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    public func withUnsafeBytesNIO<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         // this is rather compicated because of SR-8580 (can't have two Slice extensions, even if non-overlapping)
         let byteDistanceFromBaseToSelf = self.base.distance(from: self.base.startIndex,
                                                             to: self.startIndex) * MemoryLayout<Base.Element>.stride
         let numberOfBytesInSelf = self.count * MemoryLayout<Base.Element>.stride
-        return try self.base.withUnsafeBytes { (pointerToBaseCollection: UnsafeRawBufferPointer) -> R in
+        return try self.base.withUnsafeBytesNIO { (pointerToBaseCollection: UnsafeRawBufferPointer) -> R in
             let start = pointerToBaseCollection.startIndex + byteDistanceFromBaseToSelf
             let end   = start + numberOfBytesInSelf
             let range = start..<end
@@ -66,27 +66,41 @@ extension Slice: ContiguousCollection where Base: ContiguousCollection {
 }
 #endif
 
-extension Array: ContiguousCollection {}
-extension ArraySlice: ContiguousCollection {}
-extension ContiguousArray: ContiguousCollection {}
+extension Array: NIOContiguousCollection {
+    public func withUnsafeBytesNIO<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+        return try self.withUnsafeBytes(body)
+    }
+}
+
+extension ArraySlice: NIOContiguousCollection {
+    public func withUnsafeBytesNIO<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+        return try self.withUnsafeBytes(body)
+    }
+}
+
+extension ContiguousArray: NIOContiguousCollection {
+    public func withUnsafeBytesNIO<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+        return try self.withUnsafeBytes(body)
+    }
+}
 // ContiguousArray's slice is ArraySlice
 
-extension StaticString: ContiguousCollection {
+extension StaticString: NIOContiguousCollection {
     @inlinable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    public func withUnsafeBytesNIO<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try body(UnsafeRawBufferPointer(start: self.utf8Start, count: self.utf8CodeUnitCount))
     }
 }
 
-extension UnsafeBufferPointer: ContiguousCollection {
+extension UnsafeBufferPointer: NIOContiguousCollection {
     @inlinable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    public func withUnsafeBytesNIO<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try body(UnsafeRawBufferPointer(self))
     }
 }
-extension UnsafeMutableBufferPointer: ContiguousCollection {
+extension UnsafeMutableBufferPointer: NIOContiguousCollection {
     @inlinable
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    public func withUnsafeBytesNIO<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try body(UnsafeRawBufferPointer(self))
     }
 }

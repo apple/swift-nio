@@ -395,7 +395,7 @@ public struct ByteBuffer {
     }
 
     @inlinable
-    mutating func _set<Bytes: ContiguousCollection>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
+    mutating func _set<Bytes: NIOContiguousCollection>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
         let bytesCount = bytes.count
         let newEndIndex: _Index = index + _toIndex(Int(bytesCount))
         if !isKnownUniquelyReferenced(&self._storage) {
@@ -405,9 +405,9 @@ public struct ByteBuffer {
 
         self._ensureAvailableCapacity(_Capacity(bytesCount), at: index)
         let targetPtr = UnsafeMutableRawBufferPointer(rebasing: self._slicedStorageBuffer.dropFirst(Int(index)))
-        bytes.withUnsafeBytes { srcPtr in
+        bytes.withUnsafeBytesNIO { srcPtr in
             precondition(srcPtr.count >= bytesCount,
-                         "collection \(bytes) claims count \(bytesCount) but withUnsafeBytes only offers \(srcPtr.count) bytes")
+                         "collection \(bytes) claims count \(bytesCount) but withUnsafeBytesNIO only offers \(srcPtr.count) bytes")
             targetPtr.copyMemory(from: UnsafeRawBufferPointer(rebasing: srcPtr.prefix(Int(bytesCount))))
         }
         return _toCapacity(Int(bytesCount))
@@ -730,7 +730,7 @@ extension ByteBuffer {
     /// Copy the collection of `bytes` into the `ByteBuffer` at `index`.
     @discardableResult
     @inlinable
-    public mutating func set<Bytes: ContiguousCollection>(bytes: Bytes, at index: Int) -> Int where Bytes.Element == UInt8 {
+    public mutating func set<Bytes: NIOContiguousCollection>(bytes: Bytes, at index: Int) -> Int where Bytes.Element == UInt8 {
         return Int(self._set(bytes: bytes, at: _toIndex(index)))
     }
 

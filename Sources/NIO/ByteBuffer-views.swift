@@ -16,7 +16,7 @@
 ///
 /// A `ByteBufferView` is useful whenever a `Collection where Element == UInt8` representing a portion of a
 /// `ByteBuffer` is needed.
-public struct ByteBufferView: ContiguousCollection, RandomAccessCollection {
+public struct ByteBufferView: NIOContiguousCollection, RandomAccessCollection {
     public typealias Element = UInt8
     public typealias Index = Int
     public typealias SubSequence = ByteBufferView
@@ -30,7 +30,7 @@ public struct ByteBufferView: ContiguousCollection, RandomAccessCollection {
         self.range = range
     }
 
-    public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    public func withUnsafeBytesNIO<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try self.buffer.withVeryUnsafeBytes { ptr in
             try body(UnsafeRawBufferPointer.init(start: ptr.baseAddress!.advanced(by: self.range.lowerBound),
                                                  count: self.range.count))
