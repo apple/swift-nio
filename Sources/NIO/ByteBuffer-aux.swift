@@ -105,7 +105,21 @@ extension ByteBuffer {
     /// - returns: The number of bytes written.
     @discardableResult
     public mutating func set(string: String, at index: Int) -> Int {
-        return self.set(bytes: string.utf8, at: index)
+        if let written = string.utf8.withContiguousStorageIfAvailable({ utf8Bytes in
+            self.set(bytes: utf8Bytes, at: index)
+        }) {
+            // best case, directly available
+            return written
+        } else {
+            // second best case, let's try to force the string to be native
+            if let written = (string + "").utf8.withContiguousStorageIfAvailable({ utf8Bytes in
+                self.set(bytes: utf8Bytes, at: index)
+            }) {
+                return written
+            } else {
+                return self.set(bytes: string.utf8, at: index)
+            }
+        }
     }
 
     /// Get the string at `index` from this `ByteBuffer` decoding using the UTF-8 encoding. Does not move the reader index.

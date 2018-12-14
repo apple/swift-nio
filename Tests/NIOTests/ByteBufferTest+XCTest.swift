@@ -128,6 +128,7 @@ extension ByteBufferTest {
                 ("testReserveCapacityLargerMultipleReferenceCallsMalloc", testReserveCapacityLargerMultipleReferenceCallsMalloc),
                 ("testReadWithFunctionsThatReturnNumberOfReadBytesAreDiscardable", testReadWithFunctionsThatReturnNumberOfReadBytesAreDiscardable),
                 ("testWriteAndSetAndGetAndReadEncoding", testWriteAndSetAndGetAndReadEncoding),
+                ("testPossiblyLazilyBridgedString", testPossiblyLazilyBridgedString),
            ]
    }
 }

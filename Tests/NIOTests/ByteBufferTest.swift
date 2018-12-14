@@ -1627,6 +1627,17 @@ class ByteBufferTest: XCTestCase {
             XCTAssertEqual($0 as? ByteBufferFoundationError, .failedToEncodeString)
         }
     }
+
+    func testPossiblyLazilyBridgedString() {
+        // won't hit the String writing fast path
+        let utf16Bytes = Data([0xfe, 0xff, 0x00, 0x61, 0x00, 0x62, 0x00, 0x63, 0x00, 0xe4, 0x00, 0xe4, 0x00, 0xe4, 0x00, 0x0a])
+        let slowString = String(data: utf16Bytes, encoding: .utf16)!
+
+        self.buf.clear()
+        let written = self.buf.write(string: slowString as String)
+        XCTAssertEqual(10, written)
+        XCTAssertEqual("abcäää\n", String(decoding: self.buf.readableBytesView, as: Unicode.UTF8.self))
+    }
 }
 
 private enum AllocationExpectationState: Int {
