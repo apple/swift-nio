@@ -18,6 +18,13 @@
 /// writes and mark how far through the buffer the user has flushed, and therefore how far through the buffer is
 /// safe to write.
 public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollection {
+    // this typealias is so complicated because of SR-6963, when that's fixed we can drop the generic parameters and the where clause
+    #if swift(>=4.2)
+    public typealias RangeType<Bound> = Range<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
+    #else
+    public typealias RangeType<Bound> = CountableRange<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
+    #endif
+
     private var buffer: CircularBuffer<E>
     private var markedIndex: Int = -1 /* negative: nothing marked */
 
@@ -71,7 +78,7 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
     }
 
     /// The valid indices into the buffer.
-    public var indices: CountableRange<Int> {
+    public var indices: RangeType<Int> {
         return self.buffer.indices
     }
 
@@ -89,7 +96,7 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
 
     // MARK: Marking
 
-    /// Marks the buffer at the current index, making the last idex in the buffer marked.
+    /// Marks the buffer at the current index, making the last index in the buffer marked.
     public mutating func mark() {
         let count = self.buffer.count
         if count > 0 {
@@ -107,7 +114,7 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
     }
 
     /// Returns the index of the marked element.
-    public func markedElementIndex() -> Int? {
+    public var markedElementIndex: Int? {
         let markedIndex = self.markedIndex
         if markedIndex >= 0 {
             return markedIndex
@@ -118,12 +125,12 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
     }
 
     /// Returns the marked element.
-    public func markedElement() -> E? {
-        return self.markedElementIndex().map { self.buffer[$0] }
+    public var markedElement: E? {
+        return self.markedElementIndex.map { self.buffer[$0] }
     }
 
-    /// Returns tre if the buffer has been marked at all.
-    public func hasMark() -> Bool {
+    /// Returns true if the buffer has been marked at all.
+    public var hasMark: Bool {
         if self.markedIndex < 0 {
             assert(self.markedIndex == -1, "marked index is \(self.markedIndex)")
             return false

@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// A Registration on a `Selector`, which is interested in an `IOEvent`.
+/// A Registration on a `Selector`, which is interested in an `SelectorEventSet`.
 protocol Registration {
-    /// The `IOEvent` in which the `Registration` is interested.
-    var interested: IOEvent { get set }
+    /// The `SelectorEventSet` in which the `Registration` is interested.
+    var interested: SelectorEventSet { get set }
 }
 
 protocol SockAddrProtocol {
@@ -24,13 +24,13 @@ protocol SockAddrProtocol {
 }
 
 /// Returns a description for the given address.
-private func descriptionForAddress(family: CInt, bytes: UnsafeRawPointer, length byteCount: Int) -> String {
+internal func descriptionForAddress(family: CInt, bytes: UnsafeRawPointer, length byteCount: Int) throws -> String {
     var addressBytes: [Int8] = Array(repeating: 0, count: byteCount)
-    return addressBytes.withUnsafeMutableBufferPointer { (addressBytesPtr: inout UnsafeMutableBufferPointer<Int8>) -> String in
-        try! Posix.inet_ntop(addressFamily: family,
-                             addressBytes: bytes,
-                             addressDescription: addressBytesPtr.baseAddress!,
-                             addressDescriptionLength: socklen_t(byteCount))
+    return try addressBytes.withUnsafeMutableBufferPointer { (addressBytesPtr: inout UnsafeMutableBufferPointer<Int8>) -> String in
+        try Posix.inet_ntop(addressFamily: family,
+                            addressBytes: bytes,
+                            addressDescription: addressBytesPtr.baseAddress!,
+                            addressDescriptionLength: socklen_t(byteCount))
         return addressBytesPtr.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: byteCount) { addressBytesPtr -> String in
             String(cString: addressBytesPtr)
         }
@@ -78,7 +78,8 @@ extension sockaddr_in: SockAddrProtocol {
     /// Returns a description of the `sockaddr_in`.
     mutating func addressDescription() -> String {
         return withUnsafePointer(to: &self.sin_addr) { addrPtr in
-            descriptionForAddress(family: AF_INET, bytes: addrPtr, length: Int(INET_ADDRSTRLEN))
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            try! descriptionForAddress(family: AF_INET, bytes: addrPtr, length: Int(INET_ADDRSTRLEN))
         }
     }
 }
@@ -101,7 +102,8 @@ extension sockaddr_in6: SockAddrProtocol {
     /// Returns a description of the `sockaddr_in6`.
     mutating func addressDescription() -> String {
         return withUnsafePointer(to: &self.sin6_addr) { addrPtr in
-            descriptionForAddress(family: AF_INET6, bytes: addrPtr, length: Int(INET6_ADDRSTRLEN))
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            try! descriptionForAddress(family: AF_INET6, bytes: addrPtr, length: Int(INET6_ADDRSTRLEN))
         }
     }
 }
@@ -254,7 +256,7 @@ class BaseSocket: Selectable {
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - returns: the file descriptor of the socket that was created.
     /// - throws: An `IOError` if creation of the socket failed.
-    static func newSocket(protocolFamily: Int32, type: CInt, setNonBlocking: Bool = false) throws -> Int32 {
+    static func makeSocket(protocolFamily: Int32, type: CInt, setNonBlocking: Bool = false) throws -> Int32 {
         var sockType = type
         #if os(Linux)
         if setNonBlocking {
@@ -267,8 +269,10 @@ class BaseSocket: Selectable {
         #if !os(Linux)
         if setNonBlocking {
             do {
-                try Posix.fcntl(descriptor: sock, command: F_SETFL, value: O_NONBLOCK)
+                let ret = try Posix.fcntl(descriptor: sock, command: F_SETFL, value: O_NONBLOCK)
+                assert(ret == 0, "unexpectedly, fcntl(\(sock), F_SETFL, O_NONBLOCK) returned \(ret)")
             } catch {
+                // best effort close
                 _ = try? Posix.close(descriptor: sock)
                 throw error
             }
@@ -277,8 +281,7 @@ class BaseSocket: Selectable {
         if protocolFamily == AF_INET6 {
             var zero: Int32 = 0
             do {
-                _ = try Posix.setsockopt(socket: sock, level: Int32(IPPROTO_IPV6), optionName: IPV6_V6ONLY, optionValue: &zero, optionLen: socklen_t(MemoryLayout.size(ofValue: zero)))
-
+                try Posix.setsockopt(socket: sock, level: Int32(IPPROTO_IPV6), optionName: IPV6_V6ONLY, optionValue: &zero, optionLen: socklen_t(MemoryLayout.size(ofValue: zero)))
             } catch let e as IOError {
                 if e.errnoCode != EAFNOSUPPORT {
                     // Ignore error that may be thrown by close.
@@ -296,7 +299,7 @@ class BaseSocket: Selectable {
     /// Create a new instance.
     ///
     /// The ownership of the passed in descriptor is transferred to this class. A user must call `close` to close the underlying
-    /// file descriptor once its not needed / used anymore.
+    /// file descriptor once it's not needed / used anymore.
     ///
     /// - parameters:
     ///     - descriptor: The file descriptor to wrap.
@@ -316,7 +319,8 @@ class BaseSocket: Selectable {
     /// throws: An `IOError` if the operation failed.
     final func setNonBlocking() throws {
         return try withUnsafeFileDescriptor { fd in
-            try Posix.fcntl(descriptor: fd, command: F_SETFL, value: O_NONBLOCK)
+            let ret = try Posix.fcntl(descriptor: fd, command: F_SETFL, value: O_NONBLOCK)
+            assert(ret == 0, "unexpectedly, fcntl(\(fd), F_SETFL, O_NONBLOCK) returned \(ret)")
         }
     }
 
@@ -330,10 +334,15 @@ class BaseSocket: Selectable {
     ///     - value: The value for the option.
     /// - throws: An `IOError` if the operation failed.
     final func setOption<T>(level: Int32, name: Int32, value: T) throws {
-        try withUnsafeFileDescriptor { fd in
+        if level == SocketOptionValue(IPPROTO_TCP) && name == TCP_NODELAY && (try? self.localAddress().protocolFamily) == Optional<Int32>.some(Int32(Posix.AF_UNIX)) {
+            // setting TCP_NODELAY on UNIX domain sockets will fail. Previously we had a bug where we would ignore
+            // most socket options settings so for the time being we'll just ignore this. Let's revisit for NIO 2.0.
+            return
+        }
+        return try withUnsafeFileDescriptor { fd in
             var val = value
 
-            _ = try Posix.setsockopt(
+            try Posix.setsockopt(
                 socket: fd,
                 level: level,
                 optionName: name,
@@ -353,10 +362,15 @@ class BaseSocket: Selectable {
     final func getOption<T>(level: Int32, name: Int32) throws -> T {
         return try withUnsafeFileDescriptor { fd in
             var length = socklen_t(MemoryLayout<T>.size)
-            var val = UnsafeMutablePointer<T>.allocate(capacity: 1)
+            let storage = UnsafeMutableRawBufferPointer.allocate(byteCount: MemoryLayout<T>.stride,
+                                                                 alignment: MemoryLayout<T>.alignment)
+            // write zeroes into the memory as Linux's getsockopt doesn't zero them out
+            storage.initializeMemory(as: UInt8.self, repeating: 0)
+            var val = storage.bindMemory(to: T.self).baseAddress!
+            // initialisation will be done by getsockopt
             defer {
                 val.deinitialize(count: 1)
-                val.deallocate()
+                storage.deallocate()
             }
 
             try Posix.getsockopt(socket: fd, level: level, optionName: name, optionValue: val, optionLen: &length)
@@ -394,7 +408,7 @@ class BaseSocket: Selectable {
     /// After the socket was closed all other methods will throw an `IOError` when called.
     ///
     /// - throws: An `IOError` if the operation failed.
-    final func close() throws {
+    func close() throws {
         try withUnsafeFileDescriptor { fd in
             try Posix.close(descriptor: fd)
         }

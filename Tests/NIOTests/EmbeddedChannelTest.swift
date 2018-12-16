@@ -145,7 +145,7 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
 
         do {
-            try channel.write(NIOAny(5)).wait()
+            try channel.writeAndFlush(NIOAny(5)).wait()
             XCTFail("Did not throw")
         } catch ChannelError.writeDataUnsupported {
             // All good
@@ -154,5 +154,38 @@ class EmbeddedChannelTest: XCTestCase {
         }
 
         XCTAssertFalse(try channel.finish())
+    }
+
+    func testActiveWhenConnectPromiseFiresAndInactiveWhenClosePromiseFires() throws {
+        let channel = EmbeddedChannel()
+        XCTAssertFalse(channel.isActive)
+        let connectPromise = channel.eventLoop.makePromise(of: Void.self)
+        connectPromise.futureResult.whenComplete {
+            XCTAssertTrue(channel.isActive)
+        }
+        channel.connect(to: try SocketAddress(ipAddress: "127.0.0.1", port: 0), promise: connectPromise)
+        try connectPromise.futureResult.wait()
+
+        let closePromise = channel.eventLoop.makePromise(of: Void.self)
+        closePromise.futureResult.whenComplete {
+            XCTAssertFalse(channel.isActive)
+        }
+
+        channel.close(promise: closePromise)
+        try closePromise.futureResult.wait()
+    }
+
+    func testWriteWithoutFlushDoesNotWrite() throws {
+        let channel = EmbeddedChannel()
+
+        var buf = ByteBufferAllocator().buffer(capacity: 1)
+        buf.write(bytes: [1])
+        let writeFuture = channel.write(buf)
+        XCTAssertNil(channel.readOutbound())
+        XCTAssertFalse(writeFuture.isFulfilled)
+        channel.flush()
+        XCTAssertNotNil(channel.readOutbound())
+        XCTAssertTrue(writeFuture.isFulfilled)
+        XCTAssertNoThrow(try XCTAssertFalse(channel.finish()))
     }
 }

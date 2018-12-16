@@ -123,7 +123,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
 ///
 /// ```
 /// func someAsyncOperation(args) -> EventLoopFuture<ResultType> {
-///     let promise: EventLoopPromise<ResultType> = eventLoop.newPromise()
+///     let promise = eventLoop.makePromise(of: ResultType.self)
 ///     someAsyncOperationWithACallback(args) { result -> Void in
 ///         // when finished...
 ///         promise.succeed(result: result)
@@ -147,6 +147,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
 ///     some other API, create an already-resolved object with `eventLoop.newSucceededFuture(result)`
 ///     or `eventLoop.newFailedFuture(error:)`.
 ///
+/// - note: `EventLoopPromise` has reference semantics.
 public struct EventLoopPromise<T> {
     /// The `EventLoopFuture` which is used by the `EventLoopPromise`. You can use it to add callbacks which are notified once the
     /// `EventLoopPromise` is completed.
@@ -217,7 +218,7 @@ public struct EventLoopPromise<T> {
 ///
 /// ```
 /// func getNetworkData(args) -> EventLoopFuture<NetworkResponse> {
-///     let promise: EventLoopPromise<NetworkResponse> = eventLoop.newPromise()
+///     let promise = eventLoop.makePromise(of: NetworkResponse.self)
 ///     queue.async {
 ///         . . . do some work . . .
 ///         promise.succeed(response)
@@ -338,7 +339,8 @@ public final class EventLoopFuture<T> {
         }
     }
 
-    fileprivate let _isFulfilled: Atomic<Bool>
+    private let _isFulfilled: UnsafeEmbeddedAtomic<Bool>
+    
     /// The `EventLoop` which is tied to the `EventLoopFuture` and is used to notify all registered callbacks.
     public let eventLoop: EventLoop
 
@@ -357,7 +359,7 @@ public final class EventLoopFuture<T> {
     private init(eventLoop: EventLoop, value: EventLoopFutureValue<T>?, file: StaticString, line: UInt) {
         self.eventLoop = eventLoop
         self.value = value
-        self._isFulfilled = Atomic(value: value != nil)
+        self._isFulfilled = UnsafeEmbeddedAtomic(value: value != nil)
 
         debugOnly {
             if let me = eventLoop as? SelectableEventLoop {
@@ -392,6 +394,8 @@ public final class EventLoopFuture<T> {
                 precondition(isFulfilled, "leaking an unfulfilled Promise")
             }
         }
+        
+        self._isFulfilled.destroy()
     }
 }
 
@@ -577,13 +581,15 @@ extension EventLoopFuture {
     ///         a new value lifted into a new `EventLoopFuture`.
     /// - returns: A future that will receive the recovered value.
     public func mapIfError(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) -> T) -> EventLoopFuture<T> {
-        return thenIfError { return EventLoopFuture<T>(eventLoop: self.eventLoop, result: callback($0), file: file, line: line) }
+        return thenIfError(file: file, line: line) {
+            return EventLoopFuture<T>(eventLoop: self.eventLoop, result: callback($0), file: file, line: line)
+        }
     }
 
 
     /// Add a callback.  If there's already a value, invoke it and return the resulting list of new callback functions.
     fileprivate func _addCallback(_ callback: @escaping () -> CallbackList) -> CallbackList {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         if value == nil {
             callbacks.append(callback)
             return CallbackList()
@@ -666,7 +672,7 @@ extension EventLoopFuture {
 
     /// Internal:  Set the value and return a list of callbacks that should be invoked as a result.
     fileprivate func _setValue(value: EventLoopFutureValue<T>) -> CallbackList {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         if self.value == nil {
             self.value = value
             let callbacks = self.callbacks
@@ -687,7 +693,7 @@ extension EventLoopFuture {
         let promise = EventLoopPromise<(T,U)>(eventLoop: eventLoop, file: file, line: line)
         var tvalue: T?
         var uvalue: U?
-        
+
         assert(self.eventLoop === promise.futureResult.eventLoop)
         _whenComplete { () -> CallbackList in
             switch self.value! {
@@ -702,10 +708,10 @@ extension EventLoopFuture {
             }
             return CallbackList()
         }
-        
+
         let hopOver = other.hopTo(eventLoop: self.eventLoop)
         hopOver._whenComplete { () -> CallbackList in
-            assert(self.eventLoop.inEventLoop)
+            self.eventLoop.assertInEventLoop()
             switch other.value! {
             case .failure(let error):
                 return promise._setValue(value: .failure(error))
@@ -718,7 +724,7 @@ extension EventLoopFuture {
             }
             return CallbackList()
         }
-        
+
         return promise.futureResult
     }
 
@@ -734,7 +740,7 @@ extension EventLoopFuture {
     /// Fulfill the given `EventLoopPromise` with the results from this `EventLoopFuture`.
     ///
     /// This is useful when allowing users to provide promises for you to fulfill, but
-    /// when you are calling functions that return their own proimses. They allow you to
+    /// when you are calling functions that return their own promises. They allow you to
     /// tidy up your computational pipelines. For example:
     ///
     /// ```
@@ -790,9 +796,21 @@ extension EventLoopFuture {
     ///
     /// - returns: The value of the `EventLoopFuture` when it completes.
     /// - throws: The error value of the `EventLoopFuture` if it errors.
-    public func wait() throws -> T {
+    public func wait(file: StaticString = #file, line: UInt = #line) throws -> T {
         if !(self.eventLoop is EmbeddedEventLoop) {
-            precondition(!eventLoop.inEventLoop, "wait() must not be called when on the EventLoop")
+            let explainer: () -> String = { """
+BUG DETECTED: wait() must not be called when on an EventLoop.
+Calling wait() on any EventLoop can lead to
+- deadlocks
+- stalling processing of other connections (Channels) that are handled on the EventLoop that wait was called on
+
+Further information:
+- current eventLoop: \(MultiThreadedEventLoopGroup.currentEventLoop.debugDescription)
+- event loop associated to future: \(self.eventLoop)
+"""
+            }
+            precondition(!eventLoop.inEventLoop, explainer(), file: file, line: line)
+            precondition(MultiThreadedEventLoopGroup.currentEventLoop == nil, explainer(), file: file, line: line)
         }
 
         var v: EventLoopFutureValue <T>? = nil
@@ -816,6 +834,37 @@ extension EventLoopFuture {
 }
 
 extension EventLoopFuture {
+    /// Returns a new `EventLoopFuture` that fires only when this `EventLoopFuture` and
+    /// all the provided `futures` complete. It then provides the result of folding the value of this
+    /// `EventLoopFuture` with the values of all the provided `futures`.
+    ///
+    /// This function is suited when you have APIs that already know how to return `EventLoopFuture`s.
+    ///
+    /// The returned `EventLoopFuture` will fail as soon as the a failure is encountered in any of the
+    /// `futures` (or in this one). However, the failure will not occur until all preceding
+    /// `EventLoopFutures` have completed. At the point the failure is encountered, all subsequent
+    /// `EventLoopFuture` objects will no longer be waited for. This function therefore fails fast: once
+    /// a failure is encountered, it will immediately fail the overall EventLoopFuture.
+    ///
+    /// - parameters:
+    ///     - futures: An array of `EventLoopFuture<U>` to wait for.
+    ///     - with: A function that will be used to fold the values of two `EventLoopFuture`s and return a new value wrapped in an `EventLoopFuture`.
+    /// - returns: A new `EventLoopFuture` with the folded value whose callbacks run on `self.eventLoop`.
+    public func fold<U>(_ futures: [EventLoopFuture<U>], with combiningFunction: @escaping (T, U) -> EventLoopFuture<T>) -> EventLoopFuture<T> {
+        let body = futures.reduce(self) { (f1: EventLoopFuture<T>, f2: EventLoopFuture<U>) -> EventLoopFuture<T> in
+            let newFuture = f1.and(f2).then { (args: (T, U)) -> EventLoopFuture<T> in
+                let (f1Value, f2Value) = args
+                self.eventLoop.assertInEventLoop()
+                return combiningFunction(f1Value, f2Value)
+            }
+            assert(newFuture.eventLoop === self.eventLoop)
+            return newFuture
+        }
+        return body
+    }
+}
+
+extension EventLoopFuture {
     /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
     ///
     /// This extension is only available when you have a collection of `EventLoopFuture`s that do not provide
@@ -828,19 +877,80 @@ extension EventLoopFuture {
     ///     - eventLoop: The `EventLoop` on which the new `EventLoopFuture` callbacks will fire.
     /// - returns: A new `EventLoopFuture`.
     public static func andAll(_ futures: [EventLoopFuture<Void>], eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let p0: EventLoopPromise<Void> = eventLoop.newPromise()
-        guard futures.count > 0 else {
-            p0.succeed(result: ())
-            return p0.futureResult
+        let body = EventLoopFuture<Void>.reduce((), futures, eventLoop: eventLoop) { (_: (), _: ()) in }
+        return body
+    }
+
+    /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
+    /// The new `EventLoopFuture` contains the result of reducing the `initialResult` with the
+    /// values of the `[EventLoopFuture<U>]`.
+    ///
+    /// This function makes copies of the result for each EventLoopFuture, for a version which avoids
+    /// making copies, check out `reduce<U>(into:)`.
+    ///
+    /// The returned `EventLoopFuture` will fail as soon as a failure is encountered in any of the
+    /// `futures`. However, the failure will not occur until all preceding
+    /// `EventLoopFutures` have completed. At the point the failure is encountered, all subsequent
+    /// `EventLoopFuture` objects will no longer be waited for. This function therefore fails fast: once
+    /// a failure is encountered, it will immediately fail the overall `EventLoopFuture`.
+    ///
+    /// - parameters:
+    ///     - initialResult: An initial result to begin the reduction.
+    ///     - futures: An array of `EventLoopFuture` to wait for.
+    ///     - eventLoop: The `EventLoop` on which the new `EventLoopFuture` callbacks will fire.
+    ///     - nextPartialResult: The bifunction used to produce partial results.
+    /// - returns: A new `EventLoopFuture` with the reduced value.
+    public static func reduce<U>(_ initialResult: T, _ futures: [EventLoopFuture<U>], eventLoop: EventLoop, _ nextPartialResult: @escaping (T, U) -> T) -> EventLoopFuture<T> {
+        let f0 = eventLoop.makeSucceededFuture(result: initialResult)
+
+        let body = f0.fold(futures) { (t: T, u: U) -> EventLoopFuture<T> in
+            eventLoop.makeSucceededFuture(result: nextPartialResult(t, u))
         }
 
-        let body: EventLoopFuture<Void> = futures.reduce(p0.futureResult, { (f1: EventLoopFuture<Void>, f2: EventLoopFuture<Void>) in f1.and(f2).map({ (_ : ((), ())) in }) })
-        p0.succeed(result: ())
         return body
+    }
+
+    /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
+    /// The new `EventLoopFuture` contains the result of combining the `initialResult` with the
+    /// values of the `[EventLoopFuture<U>]`. This function is analogous to the standard library's
+    /// `reduce(into:)`, which does not make copies of the result type for each `EventLoopFuture`.
+    ///
+    /// The returned `EventLoopFuture` will fail as soon as a failure is encountered in any of the
+    /// `futures`. However, the failure will not occur until all preceding
+    /// `EventLoopFutures` have completed. At the point the failure is encountered, all subsequent
+    /// `EventLoopFuture` objects will no longer be waited for. This function therefore fails fast: once
+    /// a failure is encountered, it will immediately fail the overall `EventLoopFuture`.
+    ///
+    /// - parameters:
+    ///     - initialResult: An initial result to begin the reduction.
+    ///     - futures: An array of `EventLoopFuture` to wait for.
+    ///     - eventLoop: The `EventLoop` on which the new `EventLoopFuture` callbacks will fire.
+    ///     - updateAccumulatingResult: The bifunction used to combine partialResults with new elements.
+    /// - returns: A new `EventLoopFuture` with the combined value.
+    public static func reduce<U>(into initialResult: T, _ futures: [EventLoopFuture<U>], eventLoop: EventLoop, _ updateAccumulatingResult: @escaping (inout T, U) -> Void) -> EventLoopFuture<T> {
+        let p0 = eventLoop.makePromise(of: T.self)
+        var result: T = initialResult
+
+        let f0 = eventLoop.makeSucceededFuture(result: ())
+        let future = f0.fold(futures) { (_: (), value: U) -> EventLoopFuture<Void> in
+            eventLoop.assertInEventLoop()
+            updateAccumulatingResult(&result, value)
+            return eventLoop.makeSucceededFuture(result: ())
+        }
+
+        future.whenSuccess {
+            eventLoop.assertInEventLoop()
+            p0.succeed(result: result)
+        }
+        future.whenFailure { (error) in
+            eventLoop.assertInEventLoop()
+            p0.fail(error: error)
+        }
+        return p0.futureResult
     }
 }
 
-extension EventLoopFuture {
+public extension EventLoopFuture {
     /// Returns an `EventLoopFuture` that fires when this future completes, but executes its callbacks on the
     /// target event loop instead of the original one.
     ///
@@ -857,7 +967,7 @@ extension EventLoopFuture {
             // We're already on that event loop, nothing to do here. Save an allocation.
             return self
         }
-        let hoppingPromise: EventLoopPromise<T> = target.newPromise()
+        let hoppingPromise = target.makePromise(of: T.self)
         self.cascade(promise: hoppingPromise)
         return hoppingPromise.futureResult
     }

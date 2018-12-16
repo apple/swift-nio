@@ -30,6 +30,11 @@ public protocol ChannelCore: class {
     ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func register0(promise: EventLoopPromise<Void>?)
 
+    /// Register channel as already connected or bound socket.
+    /// - parameters:
+    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?)
+
     /// Bind to a `SocketAddress`.
     ///
     /// - parameters:
@@ -148,7 +153,7 @@ internal protocol SelectableChannel: Channel {
     var selectable: SelectableType { get }
 
     /// The event(s) of interest.
-    var interestedEvent: IOEvent { get }
+    var interestedEvent: SelectorEventSet { get }
 
     /// Called when the `SelectableChannel` is ready to be written.
     func writable()
@@ -156,12 +161,18 @@ internal protocol SelectableChannel: Channel {
     /// Called when the `SelectableChannel` is ready to be read.
     func readable()
 
-    /// Creates a registration for the `interested` `IOEvent` suitable for this `Channel`.
+    /// Called when the read side of the `SelectableChannel` hit EOF.
+    func readEOF()
+
+    /// Called when the `SelectableChannel` was reset (ie. is now unusable)
+    func reset()
+
+    /// Creates a registration for the `interested` `SelectorEventSet` suitable for this `Channel`.
     ///
     /// - parameters:
     ///     - interested: The event(s) of interest.
-    /// - returns: A suitable registration for the `IOEvent` of interest.
-    func registrationFor(interested: IOEvent) -> NIORegistration
+    /// - returns: A suitable registration for the `SelectorEventSet` of interest.
+    func registrationFor(interested: SelectorEventSet) -> NIORegistration
 }
 
 /// Default implementations which will start on the head of the `ChannelPipeline`.
@@ -199,6 +210,10 @@ extension Channel {
         pipeline.register(promise: promise)
     }
 
+    public func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
+        promise?.fail(error: ChannelError.operationUnsupported)
+    }
+
     public func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {
         pipeline.triggerUserOutboundEvent(event, promise: promise)
     }
@@ -211,21 +226,21 @@ public extension Channel {
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
-    public func write<T>(_ any: T) -> EventLoopFuture<Void> {
+    func write<T>(_ any: T) -> EventLoopFuture<Void> {
         return self.write(NIOAny(any))
     }
 
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
-    public func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+    func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
         self.write(NIOAny(any), promise: promise)
     }
 
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    public func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
+    func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
         return self.writeAndFlush(NIOAny(any))
     }
 
@@ -233,8 +248,43 @@ public extension Channel {
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    public func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+    func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
         self.writeAndFlush(NIOAny(any), promise: promise)
+    }
+}
+
+public extension ChannelCore {
+    /// Unwraps the given `NIOAny` as a specific concrete type.
+    ///
+    /// This method is intended for use when writing custom `ChannelCore` implementations.
+    /// This can safely be called in methods like `write0` to extract data from the `NIOAny`
+    /// provided in those cases.
+    ///
+    /// Note that if the unwrap fails, this will cause a runtime trap. `ChannelCore`
+    /// implementations should be concrete about what types they support writing. If multiple
+    /// types are supported, considere using a tagged union to store the type information like
+    /// NIO's own `IOData`, which will minimise the amount of runtime type checking.
+    ///
+    /// - parameters:
+    ///     - data: The `NIOAny` to unwrap.
+    ///     - as: The type to extract from the `NIOAny`.
+    /// - returns: The content of the `NIOAny`.
+    @inlinable
+    func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
+        return data.forceAs()
+    }
+
+    /// Removes the `ChannelHandler`s from the `ChannelPipeline` belonging to `channel`, and
+    /// closes that `ChannelPipeline`.
+    ///
+    /// This method is intended for use when writing custom `ChannelCore` implementations.
+    /// This can be called from `close0` to tear down the `ChannelPipeline` when closure is
+    /// complete.
+    ///
+    /// - parameters:
+    ///     - channel: The `Channel` whose `ChannelPipeline` will be closed.
+    func removeHandlers(channel: Channel) {
+        channel.pipeline.removeHandlers()
     }
 }
 
@@ -245,9 +295,6 @@ public enum ChannelError: Error {
 
     /// Connect operation timed out
     case connectTimeout(TimeAmount)
-
-    /// Connect operation failed
-    case connectFailed(NIOConnectionError)
 
     /// Unsupported operation triggered on a `Channel`. For example `connect` on a `ServerSocketChannel`.
     case operationUnsupported
@@ -278,38 +325,25 @@ public enum ChannelError: Error {
 
     /// A `DatagramChannel` `write` was made with an address that was not reachable and so could not be delivered.
     case writeHostUnreachable
+
+    /// The local address of the `Channel` could not be determined.
+    case unknownLocalAddress
+
+    /// The address family of the multicast group was not valid for this `Channel`.
+    case badMulticastGroupAddressFamily
+
+    /// The address family of the provided multicast group join is not valid for this `Channel`.
+    case badInterfaceAddressFamily
+
+    /// An attempt was made to join a multicast group that does not correspond to a multicast
+    /// address.
+    case illegalMulticastAddress(SocketAddress)
+
+    /// An operation that was inappropriate given the current `Channel` state was attempted.
+    case inappropriateOperationForState
 }
 
-extension ChannelError: Equatable {
-    public static func ==(lhs: ChannelError, rhs: ChannelError) -> Bool {
-        switch (lhs, rhs) {
-        case (.connectPending, .connectPending):
-            return true
-        case (.connectTimeout, .connectTimeout):
-            return true
-        case (.operationUnsupported, .operationUnsupported):
-            return true
-        case (.ioOnClosedChannel, .ioOnClosedChannel):
-            return true
-        case (.alreadyClosed, .alreadyClosed):
-            return true
-        case (.outputClosed, .outputClosed):
-            return true
-        case (.inputClosed, .inputClosed):
-            return true
-        case (.eof, .eof):
-            return true
-        case (.writeDataUnsupported, .writeDataUnsupported):
-            return true
-        case (.writeMessageTooLarge, .writeMessageTooLarge):
-            return true
-        case (.writeHostUnreachable, .writeHostUnreachable):
-            return true
-        default:
-            return false
-        }
-    }
-}
+extension ChannelError: Equatable { }
 
 /// An `Channel` related event that is passed through the `ChannelPipeline` to notify the user.
 public enum ChannelEvent: Equatable {
@@ -317,4 +351,14 @@ public enum ChannelEvent: Equatable {
     case inputClosed
     /// Output portion of the `Channel` was closed.
     case outputClosed
+}
+
+/// A `Channel` user event that is sent when the `Channel` has been asked to quiesce.
+///
+/// The action(s) that should be taken after receiving this event are both application and protocol dependent. If the
+/// protocol supports a notion of requests and responses, it might make sense to stop accepting new requests but finish
+/// processing the request currently in flight.
+public struct ChannelShouldQuiesceEvent {
+    public init() {
+    }
 }

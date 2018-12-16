@@ -94,7 +94,7 @@ extension ChannelOutboundInvoker {
     ///
     /// - returns: the future which will be notified once the operation completes.
     public func register() -> EventLoopFuture<Void> {
-        let promise = newPromise()
+        let promise = makePromise()
         register(promise: promise)
         return promise.futureResult
     }
@@ -104,7 +104,7 @@ extension ChannelOutboundInvoker {
     ///       - to: the `SocketAddress` to which we should bind the `Channel`.
     /// - returns: the future which will be notified once the operation completes.
     public func bind(to address: SocketAddress) -> EventLoopFuture<Void> {
-        let promise = newPromise()
+        let promise = makePromise()
         bind(to: address, promise: promise)
         return promise.futureResult
     }
@@ -114,7 +114,7 @@ extension ChannelOutboundInvoker {
     ///       - to: the `SocketAddress` to which we should connect the `Channel`.
     /// - returns: the future which will be notified once the operation completes.
     public func connect(to address: SocketAddress) -> EventLoopFuture<Void> {
-        let promise = newPromise()
+        let promise = makePromise()
         connect(to: address, promise: promise)
         return promise.futureResult
     }
@@ -128,7 +128,7 @@ extension ChannelOutboundInvoker {
     ///       - data: the data to write
     /// - returns: the future which will be notified once the operation completes.
     public func write(_ data: NIOAny) -> EventLoopFuture<Void> {
-        let promise = newPromise()
+        let promise = makePromise()
         write(data, promise: promise)
         return promise.futureResult
     }
@@ -139,7 +139,7 @@ extension ChannelOutboundInvoker {
     ///       - data: the data to write
     /// - returns: the future which will be notified once the `write` operation completes.
     public func writeAndFlush(_ data: NIOAny) -> EventLoopFuture<Void> {
-        let promise = newPromise()
+        let promise = makePromise()
         writeAndFlush(data, promise: promise)
         return promise.futureResult
     }
@@ -150,7 +150,7 @@ extension ChannelOutboundInvoker {
     ///       - mode: the `CloseMode` that is used
     /// - returns: the future which will be notified once the operation completes.
     public func close(mode: CloseMode = .all) -> EventLoopFuture<Void> {
-        let promise = newPromise()
+        let promise = makePromise()
         close(mode: mode, promise: promise)
         return promise.futureResult
     }
@@ -161,13 +161,13 @@ extension ChannelOutboundInvoker {
     ///       - event: the event itself.
     /// - returns: the future which will be notified once the operation completes.
     public func triggerUserOutboundEvent(_ event: Any) -> EventLoopFuture<Void> {
-        let promise = newPromise()
+        let promise = makePromise()
         triggerUserOutboundEvent(event, promise: promise)
         return promise.futureResult
     }
 
-    private func newPromise(file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<Void> {
-        return eventLoop.newPromise(file: file, line: line)
+    private func makePromise(file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<Void> {
+        return eventLoop.makePromise(file: file, line: line)
     }
 }
 

@@ -15,6 +15,14 @@
 import NIO
 import struct Foundation.Data
 
+
+/// Errors that may be thrown by ByteBuffer methods that call into Foundation.
+public enum ByteBufferFoundationError: Error {
+    /// Attempting to encode the given string failed.
+    case failedToEncodeString
+}
+
+
 /*
  * This is NIO's `NIOFoundationCompat` module which at the moment only adds `ByteBuffer` utility methods
  * for Foundation's `Data` type.
@@ -30,6 +38,7 @@ import struct Foundation.Data
  */
 
 extension Data: ContiguousCollection {
+    @inlinable
     public func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         return try self.withUnsafeBytes { (ptr: UnsafePointer<UInt8>) -> R in
             try body(UnsafeRawBufferPointer(start: ptr, count: self.count))
@@ -59,6 +68,13 @@ extension ByteBuffer {
 
     /// Return `length` bytes starting at `index` and return the result as `Data`. This will not change the reader index.
     ///
+    /// - note: Please consider using `readData` which is a safer alternative that automatically maintains the
+    ///         `readerIndex` and won't allow you to read uninitialized memory.
+    /// - warning: This method allows the user to read any of the bytes in the `ByteBuffer`'s storage, including
+    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
+    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
+    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
+    ///           safe to read.
     /// - parameters:
     ///     - index: The starting index of the bytes of interest into the `ByteBuffer`
     ///     - length: The number of bytes of interest
@@ -79,15 +95,70 @@ extension ByteBuffer {
 
     /// Get a `String` decoding `length` bytes starting at `index` with `encoding`. This will not change the reader index.
     ///
+    /// - note: Please consider using `readString` which is a safer alternative that automatically maintains the
+    ///         `readerIndex` and won't allow you to read uninitialized memory.
+    /// - warning: This method allows the user to read any of the bytes in the `ByteBuffer`'s storage, including
+    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
+    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
+    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
+    ///           safe to read.
     /// - parameters:
     ///     - index: The starting index of the bytes of interest into the `ByteBuffer`.
     ///     - length: The number of bytes of interest.
     ///     - encoding: The `String` encoding to be used.
-    /// - returns: A `String` value containing the bytes of interest or `nil` if the `ByteBuffer` doesn't contain those bytes.
+    /// - returns: A `String` value containing the bytes of interest or `nil` if the `ByteBuffer` doesn't contain those bytes,
+    ///     or if those bytes cannot be decoded with the given encoding.
     public func getString(at index: Int, length: Int, encoding: String.Encoding) -> String? {
         guard let data = self.getData(at: index, length: length) else {
             return nil
         }
         return String(data: data, encoding: encoding)
+    }
+
+    /// Read a `String` decoding `length` bytes with `encoding` from the `readerIndex`, moving the `readerIndex` appropriately.
+    ///
+    /// - parameters:
+    ///     - length: The number of bytes to read.
+    ///     - encoding: The `String` encoding to be used.
+    /// - returns: A `String` value containing the bytes of interest or `nil` if the `ByteBuffer` doesn't contain enough bytes, or
+    ///     if those bytes cannot be decoded with the given encoding.
+    public mutating func readString(length: Int, encoding: String.Encoding) -> String? {
+        guard length <= self.readableBytes else {
+            return nil
+        }
+
+        guard let string = self.getString(at: self.readerIndex, length: length, encoding: encoding) else {
+            return nil
+        }
+        self.moveReaderIndex(forwardBy: length)
+        return string
+    }
+
+    /// Write `string` into this `ByteBuffer` using the encoding `encoding`, moving the writer index forward appropriately.
+    ///
+    /// - parameters:
+    ///     - string: The string to write.
+    ///     - encoding: The encoding to use to encode the string.
+    /// - returns: The number of bytes written.
+    @discardableResult
+    public mutating func write(string: String, encoding: String.Encoding) throws -> Int {
+        let written = try self.set(string: string, encoding: encoding, at: self.writerIndex)
+        self.moveWriterIndex(forwardBy: written)
+        return written
+    }
+
+    /// Write `string` into this `ByteBuffer` at `index` using the encoding `encoding`. Does not move the writer index.
+    ///
+    /// - parameters:
+    ///     - string: The string to write.
+    ///     - encoding: The encoding to use to encode the string.
+    ///     - index: The index for the first serialized byte.
+    /// - returns: The number of bytes written.
+    @discardableResult
+    public mutating func set(string: String, encoding: String.Encoding, at index: Int) throws -> Int {
+        guard let data = string.data(using: encoding) else {
+            throw ByteBufferFoundationError.failedToEncodeString
+        }
+        return self.set(bytes: data, at: index)
     }
 }

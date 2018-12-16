@@ -28,7 +28,7 @@ kill -0 $server_pid
         echo $f
         sleep 0.1
     done
-) | nc -U "$socket"
+) | do_nc -U "$socket"
 sleep 0.1
 kill -0 $server_pid
 stop_server "$token"

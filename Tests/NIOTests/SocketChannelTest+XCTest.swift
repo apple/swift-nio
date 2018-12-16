@@ -36,6 +36,15 @@ extension SocketChannelTest {
                 ("testAcceptFailsWithEFAULT", testAcceptFailsWithEFAULT),
                 ("testSetGetOptionClosedServerSocketChannel", testSetGetOptionClosedServerSocketChannel),
                 ("testConnect", testConnect),
+                ("testWriteServerSocketChannel", testWriteServerSocketChannel),
+                ("testWriteAndFlushServerSocketChannel", testWriteAndFlushServerSocketChannel),
+                ("testConnectServerSocketChannel", testConnectServerSocketChannel),
+                ("testCloseDuringWriteFailure", testCloseDuringWriteFailure),
+                ("testWithConfiguredStreamSocket", testWithConfiguredStreamSocket),
+                ("testWithConfiguredDatagramSocket", testWithConfiguredDatagramSocket),
+                ("testPendingConnectNotificationOrder", testPendingConnectNotificationOrder),
+                ("testLocalAndRemoteAddressNotNilInChannelInactiveAndHandlerRemoved", testLocalAndRemoteAddressNotNilInChannelInactiveAndHandlerRemoved),
+                ("testSocketFlagNONBLOCKWorks", testSocketFlagNONBLOCKWorks),
            ]
    }
 }

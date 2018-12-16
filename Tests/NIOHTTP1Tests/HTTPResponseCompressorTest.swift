@@ -26,8 +26,8 @@ private class PromiseOrderer {
         self.eventLoop = eventLoop
     }
 
-    func newPromise() -> EventLoopPromise<Void> {
-        let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+    func makePromise(file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<Void> {
+        let promise = eventLoop.makePromise(of: Void.self, file: file, line: line)
         appendPromise(promise)
         return promise
     }
@@ -39,11 +39,11 @@ private class PromiseOrderer {
         promise.futureResult.whenComplete {
             let priorFutures = self.promiseArray[0..<thisPromiseIndex]
             let subsequentFutures = self.promiseArray[(thisPromiseIndex + 1)...]
-            let allPriorFuturesFired = priorFutures.map { $0.futureResult.isFulfilled }.reduce(true, { $0 && $1 })
-            let allSubsequentFuturesUnfired = subsequentFutures.map { $0.futureResult.isFulfilled }.reduce(false, { $0 || $1 })
+            let allPriorFuturesFired = priorFutures.map { $0.futureResult.isFulfilled }.allSatisfy { $0 }
+            let allSubsequentFuturesUnfired = subsequentFutures.map { $0.futureResult.isFulfilled }.allSatisfy { !$0 }
 
             XCTAssertTrue(allPriorFuturesFired)
-            XCTAssertFalse(allSubsequentFuturesUnfired)
+            XCTAssertTrue(allSubsequentFuturesUnfired)
         }
     }
 
@@ -142,15 +142,15 @@ class HTTPResponseCompressorTest: XCTestCase {
 
     private func writeOneChunk(head: HTTPResponseHead, body: [ByteBuffer], channel: EmbeddedChannel) throws {
         let promiseOrderer = PromiseOrderer(eventLoop: channel.eventLoop)
-        channel.pipeline.write(NIOAny(HTTPServerResponsePart.head(head)), promise: promiseOrderer.newPromise())
+        channel.pipeline.write(NIOAny(HTTPServerResponsePart.head(head)), promise: promiseOrderer.makePromise())
 
         for bodyChunk in body {
             channel.pipeline.write(NIOAny(HTTPServerResponsePart.body(.byteBuffer(bodyChunk))),
-                                   promise: promiseOrderer.newPromise())
+                                   promise: promiseOrderer.makePromise())
 
         }
         channel.pipeline.write(NIOAny(HTTPServerResponsePart.end(nil)),
-                               promise: promiseOrderer.newPromise())
+                               promise: promiseOrderer.makePromise())
         channel.pipeline.flush()
 
         // Get all the promises to fire.
@@ -160,17 +160,17 @@ class HTTPResponseCompressorTest: XCTestCase {
     private func writeIntermittentFlushes(head: HTTPResponseHead, body: [ByteBuffer], channel: EmbeddedChannel) throws {
         let promiseOrderer = PromiseOrderer(eventLoop: channel.eventLoop)
         var writeCount = 0
-        channel.pipeline.write(NIOAny(HTTPServerResponsePart.head(head)), promise: promiseOrderer.newPromise())
+        channel.pipeline.write(NIOAny(HTTPServerResponsePart.head(head)), promise: promiseOrderer.makePromise())
         for bodyChunk in body {
             channel.pipeline.write(NIOAny(HTTPServerResponsePart.body(.byteBuffer(bodyChunk))),
-                                   promise: promiseOrderer.newPromise())
+                                   promise: promiseOrderer.makePromise())
             writeCount += 1
             if writeCount % 3 == 0 {
                 channel.pipeline.flush()
             }
         }
         channel.pipeline.write(NIOAny(HTTPServerResponsePart.end(nil)),
-                               promise: promiseOrderer.newPromise())
+                               promise: promiseOrderer.makePromise())
         channel.pipeline.flush()
 
         // Get all the promises to fire.
@@ -255,15 +255,15 @@ class HTTPResponseCompressorTest: XCTestCase {
         let compressedResponse = data.0
         var compressedChunks = data.1
         var compressedBody = compressedChunks[0].merge(compressedChunks[1...])
-        XCTAssertEqual(compressedResponse.headers.getCanonicalForm("content-encoding"), ["deflate"])
+        XCTAssertEqual(compressedResponse.headers[canonicalForm: "content-encoding"], ["deflate"])
 
         switch writeStrategy {
         case .once:
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("content-length"), ["\(compressedBody.readableBytes)"])
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("transfer-encoding"), [])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "content-length"], ["\(compressedBody.readableBytes)"])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "transfer-encoding"], [])
         case .intermittentFlushes:
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("content-length"), [])
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("transfer-encoding"), ["chunked"])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "content-length"], [])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "transfer-encoding"], ["chunked"])
         }
 
         assertDecompressedResponseMatches(responseData: &compressedBody,
@@ -292,15 +292,15 @@ class HTTPResponseCompressorTest: XCTestCase {
         let compressedResponse = data.0
         var compressedChunks = data.1
         var compressedBody = compressedChunks[0].merge(compressedChunks[1...])
-        XCTAssertEqual(compressedResponse.headers.getCanonicalForm("content-encoding"), ["gzip"])
+        XCTAssertEqual(compressedResponse.headers[canonicalForm: "content-encoding"], ["gzip"])
 
         switch writeStrategy {
         case .once:
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("content-length"), ["\(compressedBody.readableBytes)"])
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("transfer-encoding"), [])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "content-length"], ["\(compressedBody.readableBytes)"])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "transfer-encoding"], [])
         case .intermittentFlushes:
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("content-length"), [])
-            XCTAssertEqual(compressedResponse.headers.getCanonicalForm("transfer-encoding"), ["chunked"])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "content-length"], [])
+            XCTAssertEqual(compressedResponse.headers[canonicalForm: "transfer-encoding"], ["chunked"])
         }
 
         assertDecompressedResponseMatches(responseData: &compressedBody,
@@ -329,7 +329,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         let compressedResponse = data.0
         var compressedChunks = data.1
         let uncompressedBody = compressedChunks[0].merge(compressedChunks[1...])
-        XCTAssertEqual(compressedResponse.headers.getCanonicalForm("content-encoding"), [])
+        XCTAssertEqual(compressedResponse.headers[canonicalForm: "content-encoding"], [])
         XCTAssertEqual(uncompressedBody.readableBytes, 2048)
         XCTAssertEqual(uncompressedBody, bodyBuffer)
     }
@@ -501,7 +501,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         let channel = try compressionChannel()
         try sendRequest(acceptEncoding: "gzip", channel: channel)
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
-        let writePromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
+        let writePromise = channel.eventLoop.makePromise(of: Void.self)
         channel.write(NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
         writePromise.futureResult.map {
             XCTFail("Write succeeded")
@@ -528,8 +528,8 @@ class HTTPResponseCompressorTest: XCTestCase {
         let channel = try compressionChannel()
         try sendRequest(acceptEncoding: nil, channel: channel)
         let head = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
-        let writePromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
-        channel.write(NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
+        let writePromise = channel.eventLoop.makePromise(of: Void.self)
+        channel.writeAndFlush(NIOAny(HTTPServerResponsePart.head(head)), promise: writePromise)
         channel.pipeline.removeHandlers()
         try writePromise.futureResult.wait()
     }

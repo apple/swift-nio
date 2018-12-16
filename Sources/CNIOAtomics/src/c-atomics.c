@@ -18,7 +18,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-#include "../include/c-atomics.h"
+#include "../include/CNIOAtomics.h"
 #include "../include/cpp_magic.h"
 
 struct catmc_atomic_flag {

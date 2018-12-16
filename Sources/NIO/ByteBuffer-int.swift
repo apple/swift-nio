@@ -13,7 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 extension ByteBuffer {
-    private func toEndianness<T: FixedWidthInteger> (value: T, endianness: Endianness) -> T {
+    @inlinable
+    func _toEndianness<T: FixedWidthInteger> (value: T, endianness: Endianness) -> T {
         switch endianness {
         case .little:
             return value.littleEndian
@@ -28,23 +29,32 @@ extension ByteBuffer {
     ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
     ///     - as: the desired `FixedWidthInteger` type (optional parameter)
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if there aren't enough bytes readable.
+    @inlinable
     public mutating func readInteger<T: FixedWidthInteger>(endianness: Endianness = .big, as: T.Type = T.self) -> T? {
         guard self.readableBytes >= MemoryLayout<T>.size else {
             return nil
         }
 
         let value: T = self.getInteger(at: self.readerIndex, endianness: endianness)! /* must work as we have enough bytes */
-        self.moveReaderIndex(forwardBy: MemoryLayout<T>.size)
+        self._moveReaderIndex(forwardBy: MemoryLayout<T>.size)
         return value
     }
 
     /// Get the integer at `index` from this `ByteBuffer`. Does not move the reader index.
     ///
+    /// - note: Please consider using `readInteger` which is a safer alternative that automatically maintains the
+    ///         `readerIndex` and won't allow you to read uninitialized memory.
+    /// - warning: This method allows the user to read any of the bytes in the `ByteBuffer`'s storage, including
+    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
+    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
+    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
+    ///           safe to read.
     /// - parameters:
     ///     - index: The starting index of the bytes for the integer into the `ByteBuffer`.
     ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
     ///     - as: the desired `FixedWidthInteger` type (optional parameter)
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if the bytes of interest aren't contained in the `ByteBuffer`.
+    @inlinable
     public func getInteger<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big, as: T.Type = T.self) -> T? {
         precondition(index >= 0, "index must not be negative")
         return self.withVeryUnsafeBytes { ptr in
@@ -56,7 +66,7 @@ extension ByteBuffer {
                 valuePtr.copyMemory(from: UnsafeRawBufferPointer(start: ptr.baseAddress!.advanced(by: index),
                                                                  count: MemoryLayout<T>.size))
             }
-            return toEndianness(value: value, endianness: endianness)
+            return _toEndianness(value: value, endianness: endianness)
         }
     }
 
@@ -67,9 +77,10 @@ extension ByteBuffer {
     ///     - endianness: The endianness to use, defaults to big endian.
     /// - returns: The number of bytes written.
     @discardableResult
+    @inlinable
     public mutating func write<T: FixedWidthInteger>(integer: T, endianness: Endianness = .big, as: T.Type = T.self) -> Int {
         let bytesWritten = self.set(integer: integer, at: self.writerIndex, endianness: endianness)
-        self.moveWriterIndex(forwardBy: bytesWritten)
+        self._moveWriterIndex(forwardBy: bytesWritten)
         return Int(bytesWritten)
     }
 
@@ -81,38 +92,29 @@ extension ByteBuffer {
     ///     - endianness: The endianness to use, defaults to big endian.
     /// - returns: The number of bytes written.
     @discardableResult
+    @inlinable
     public mutating func set<T: FixedWidthInteger>(integer: T, at index: Int, endianness: Endianness = .big, as: T.Type = T.self) -> Int {
-        var value = toEndianness(value: integer, endianness: endianness)
+        var value = _toEndianness(value: integer, endianness: endianness)
         return Swift.withUnsafeBytes(of: &value) { ptr in
             self.set(bytes: ptr, at: index)
         }
     }
 }
 
-extension UInt64 {
+extension FixedWidthInteger {
     /// Returns the next power of two.
-    public func nextPowerOf2() -> UInt64 {
-        guard self > 0 else {
+    public func nextPowerOf2() -> Self {
+        guard self != 0 else {
             return 1
         }
-
-        var n = self
-
-        n -= 1
-        n |= n >> 1
-        n |= n >> 2
-        n |= n >> 4
-        n |= n >> 8
-        n |= n >> 16
-        n |= n >> 32
-        n += 1
-
-        return n
+        return 1 << (Self.bitWidth - (self - 1).leadingZeroBitCount)
     }
 }
 
 extension UInt32 {
-    /// Returns the next power of two unless that would overflow in which case UInt32.max is returned.
+    /// Returns the next power of two unless that would overflow, in which case UInt32.max (on 64-bit systems) or
+    /// Int32.max (on 32-bit systems) is returned. The returned value is always safe to be cast to Int and passed
+    /// to malloc on all platforms.
     public func nextPowerOf2ClampedToMax() -> UInt32 {
         guard self > 0 else {
             return 1
@@ -120,34 +122,23 @@ extension UInt32 {
 
         var n = self
 
+        #if arch(arm) || arch(i386)
+        // on 32-bit platforms we can't make use of a whole UInt32.max (as it doesn't fit in an Int)
+        let max = UInt32(Int.max)
+        #else
+        // on 64-bit platforms we're good
+        let max = UInt32.max
+        #endif
+
         n -= 1
         n |= n >> 1
         n |= n >> 2
         n |= n >> 4
         n |= n >> 8
         n |= n >> 16
-        if n != .max {
+        if n != max {
             n += 1
         }
-
-        return n
-    }
-
-    /// Returns the next power of two.
-    public func nextPowerOf2() -> UInt32 {
-        guard self > 0 else {
-            return 1
-        }
-
-        var n = self
-
-        n -= 1
-        n |= n >> 1
-        n |= n >> 2
-        n |= n >> 4
-        n |= n >> 8
-        n |= n >> 16
-        n += 1
 
         return n
     }

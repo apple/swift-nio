@@ -29,6 +29,14 @@ extension EventLoopTest {
                 ("testSchedule", testSchedule),
                 ("testScheduleWithDelay", testScheduleWithDelay),
                 ("testScheduleCancelled", testScheduleCancelled),
+                ("testScheduleRepeatedTask", testScheduleRepeatedTask),
+                ("testScheduledTaskThatIsImmediatelyCancelledNeverFires", testScheduledTaskThatIsImmediatelyCancelledNeverFires),
+                ("testRepeatedTaskThatIsImmediatelyCancelledNeverFires", testRepeatedTaskThatIsImmediatelyCancelledNeverFires),
+                ("testScheduleRepeatedTaskCancelFromDifferentThread", testScheduleRepeatedTaskCancelFromDifferentThread),
+                ("testScheduleRepeatedTaskToNotRetainRepeatedTask", testScheduleRepeatedTaskToNotRetainRepeatedTask),
+                ("testScheduleRepeatedTaskToNotRetainEventLoop", testScheduleRepeatedTaskToNotRetainEventLoop),
+                ("testEventLoopGroupMakeIterator", testEventLoopGroupMakeIterator),
+                ("testEventLoopMakeIterator", testEventLoopMakeIterator),
                 ("testMultipleShutdown", testMultipleShutdown),
                 ("testShuttingDownFailsRegistration", testShuttingDownFailsRegistration),
                 ("testEventLoopThreads", testEventLoopThreads),
@@ -36,6 +44,8 @@ extension EventLoopTest {
                 ("testEventLoopPinnedCPUIdsConstructor", testEventLoopPinnedCPUIdsConstructor),
                 ("testCurrentEventLoop", testCurrentEventLoop),
                 ("testShutdownWhileScheduledTasksNotReady", testShutdownWhileScheduledTasksNotReady),
+                ("testCloseFutureNotifiedBeforeUnblock", testCloseFutureNotifiedBeforeUnblock),
+                ("testScheduleMultipleTasks", testScheduleMultipleTasks),
            ]
    }
 }

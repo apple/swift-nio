@@ -1,4 +1,4 @@
-// swift-tools-version:4.0
+// swift-tools-version:5.0
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -21,7 +21,6 @@ var targets: [PackageDescription.Target] = [
                            "CNIODarwin",
                            "NIOConcurrencyHelpers",
                            "CNIOAtomics",
-                           "NIOPriorityQueue",
                            "CNIOSHA1"]),
     .target(name: "NIOFoundationCompat", dependencies: ["NIO"]),
     .target(name: "CNIOAtomics", dependencies: []),
@@ -30,8 +29,6 @@ var targets: [PackageDescription.Target] = [
     .target(name: "CNIODarwin", dependencies: []),
     .target(name: "NIOConcurrencyHelpers",
             dependencies: ["CNIOAtomics"]),
-    .target(name: "NIOPriorityQueue",
-            dependencies: []),
     .target(name: "NIOHTTP1",
             dependencies: ["NIO", "NIOConcurrencyHelpers", "CNIOHTTPParser", "CNIOZlib"]),
     .target(name: "NIOEchoServer",
@@ -51,12 +48,14 @@ var targets: [PackageDescription.Target] = [
             dependencies: ["NIO", "NIOHTTP1", "CNIOSHA1"]),
     .target(name: "NIOWebSocketServer",
             dependencies: ["NIO", "NIOHTTP1", "NIOWebSocket"]),
+    .target(name: "NIOPerformanceTester",
+            dependencies: ["NIO", "NIOHTTP1", "NIOFoundationCompat"]),
+    .target(name: "NIOMulticastChat",
+            dependencies: ["NIO"]),
     .testTarget(name: "NIOTests",
                 dependencies: ["NIO", "NIOFoundationCompat"]),
     .testTarget(name: "NIOConcurrencyHelpersTests",
                 dependencies: ["NIOConcurrencyHelpers"]),
-    .testTarget(name: "NIOPriorityQueueTests",
-                dependencies: ["NIOPriorityQueue"]),
     .testTarget(name: "NIOHTTP1Tests",
                 dependencies: ["NIOHTTP1", "NIOFoundationCompat"]),
     .testTarget(name: "NIOTLSTests",
@@ -75,6 +74,9 @@ let package = Package(
         .executable(name: "NIOHTTP1Server", targets: ["NIOHTTP1Server"]),
         .executable(name: "NIOWebSocketServer",
                     targets: ["NIOWebSocketServer"]),
+        .executable(name: "NIOPerformanceTester",
+                    targets: ["NIOPerformanceTester"]),
+        .executable(name: "NIOMulticastChat", targets: ["NIOMulticastChat"]),
         .library(name: "NIO", targets: ["NIO"]),
         .library(name: "NIOTLS", targets: ["NIOTLS"]),
         .library(name: "NIOHTTP1", targets: ["NIOHTTP1"]),

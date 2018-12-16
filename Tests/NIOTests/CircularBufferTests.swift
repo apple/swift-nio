@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import NIO
+@testable import NIO
 
 class CircularBufferTests: XCTestCase {
     func testTrivial() {
@@ -24,20 +24,77 @@ class CircularBufferTests: XCTestCase {
 
     func testAddRemoveInALoop() {
         var ring = CircularBuffer<Int>(initialRingCapacity: 8)
+        XCTAssertTrue(ring.isEmpty)
+        XCTAssertEqual(0, ring.count)
+
         for f in 0..<1000 {
             ring.append(f)
             XCTAssertEqual(f, ring.removeFirst())
+            XCTAssertTrue(ring.isEmpty)
+            XCTAssertEqual(0, ring.count)
         }
     }
 
     func testAddAllRemoveAll() {
         var ring = CircularBuffer<Int>(initialRingCapacity: 8)
-        for f in 0..<1000 {
+        XCTAssertTrue(ring.isEmpty)
+        XCTAssertEqual(0, ring.count)
+
+        for f in 1..<1000 {
             ring.append(f)
+            XCTAssertEqual(f, ring.count)
         }
-        for f in 0..<1000 {
+        for f in 1..<1000 {
             XCTAssertEqual(f, ring.removeFirst())
+            XCTAssertEqual(999 - f, ring.count)
         }
+        XCTAssertTrue(ring.isEmpty)
+    }
+
+    func testRemoveAt() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<7 {
+            ring.prepend(idx)
+        }
+
+        XCTAssertEqual(7, ring.count)
+        _ = ring.remove(at: 1)
+        XCTAssertEqual(6, ring.count)
+        XCTAssertEqual(0, ring.last)
+    }
+
+    func testRemoveAtLastPosition() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<7 {
+            ring.prepend(idx)
+        }
+
+        let last = ring.remove(at: ring.endIndex - 1)
+        XCTAssertEqual(0, last)
+        XCTAssertEqual(1, ring.last)
+    }
+
+    func testRemoveAtTailIdx0() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        ring.prepend(99)
+        ring.prepend(98)
+        XCTAssertEqual(2, ring.count)
+        XCTAssertEqual(99, ring.remove(at: ring.endIndex - 1))
+        XCTAssertFalse(ring.isEmpty)
+        XCTAssertEqual(1, ring.count)
+        XCTAssertEqual(98, ring.last)
+        XCTAssertEqual(98, ring.first)
+    }
+
+    func testRemoveAtFirstPosition() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<7 {
+            ring.prepend(idx)
+        }
+
+        let first = ring.remove(at: 0)
+        XCTAssertEqual(6, first)
+        XCTAssertEqual(5, ring.first)
     }
 
     func testHarderExpansion() {
@@ -106,15 +163,106 @@ class CircularBufferTests: XCTestCase {
             ring.append(idx)
         }
 
+        XCTAssertFalse(ring.isEmpty)
+        XCTAssertEqual(5, ring.count)
+
         XCTAssertEqual(ring.indices, 0..<5)
         XCTAssertEqual(ring.startIndex, 0)
         XCTAssertEqual(ring.endIndex, 5)
 
         XCTAssertEqual(ring.index(after: 1), 2)
-
+        XCTAssertEqual(ring.index(before: 3), 2)
+        
         let actualValues = [Int](ring)
         let expectedValues = [0, 1, 2, 3, 4]
         XCTAssertEqual(expectedValues, actualValues)
+    }
+
+    func testReplaceSubrange5ElementsWith1() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<50 {
+            ring.prepend(idx)
+        }
+        XCTAssertEqual(50, ring.count)
+        ring.replaceSubrange(20..<25, with: [99])
+
+        XCTAssertEqual(ring.count, 46)
+        XCTAssertEqual(ring[19], 30)
+        XCTAssertEqual(ring[20], 99)
+        XCTAssertEqual(ring[21], 24)
+    }
+
+    func testReplaceSubrangeAllElementsWithFewerElements() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<50 {
+            ring.prepend(idx)
+        }
+        XCTAssertEqual(50, ring.count)
+
+        ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: [3,4])
+        XCTAssertEqual(2, ring.count)
+        XCTAssertEqual(3, ring.first)
+        XCTAssertEqual(4, ring.last)
+    }
+
+    func testReplaceSubrangeEmptyRange() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<50 {
+            ring.prepend(idx)
+        }
+        XCTAssertEqual(50, ring.count)
+
+        ring.replaceSubrange(0..<0, with: [])
+        XCTAssertEqual(50, ring.count)
+    }
+
+    func testReplaceSubrangeWithSubrangeLargerThanTargetRange() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<5 {
+            ring.prepend(idx)
+        }
+        XCTAssertEqual(5, ring.count)
+
+        ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: [10,11,12,13,14,15,16,17,18,19])
+        XCTAssertEqual(10, ring.count)
+        XCTAssertEqual(10, ring.first)
+        XCTAssertEqual(19, ring.last)
+    }
+
+    func testReplaceSubrangeSameSize() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<5 {
+            ring.prepend(idx)
+        }
+        XCTAssertEqual(5, ring.count)
+        XCTAssertEqual(4, ring.first)
+        XCTAssertEqual(0, ring.last)
+
+        var replacement = [Int]()
+        for idx in 0..<5 {
+            replacement.append(idx)
+        }
+        XCTAssertEqual(5, replacement.count)
+        XCTAssertEqual(0, replacement.first)
+        XCTAssertEqual(4, replacement.last)
+
+        ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: replacement)
+        XCTAssertEqual(5, ring.count)
+        XCTAssertEqual(0, ring.first)
+        XCTAssertEqual(4, ring.last)
+    }
+
+    func testReplaceSubrangeReplaceBufferWithEmptyArray() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        for idx in 0..<5 {
+            ring.prepend(idx)
+        }
+        XCTAssertEqual(5, ring.count)
+        XCTAssertEqual(4, ring.first)
+        XCTAssertEqual(0, ring.last)
+
+        ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: [])
+        XCTAssertTrue(ring.isEmpty)
     }
 
     func testWeCanDistinguishBetweenEmptyAndFull() {
@@ -123,6 +271,7 @@ class CircularBufferTests: XCTestCase {
         for idx in 0..<4 {
             ring.append(idx)
         }
+        XCTAssertEqual(4, ring.count)
         XCTAssertFalse(ring.isEmpty)
     }
 
@@ -202,9 +351,207 @@ class CircularBufferTests: XCTestCase {
             ring.append(idx)
         }
 
-        let slice = ring[Range(25..<30)]
+        let slice = ring[25..<30]
         for (idx, element) in slice.enumerated() {
             XCTAssertEqual(idx + 25, element)
         }
     }
+
+    func testCount() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        ring.append(1)
+        XCTAssertEqual(1, ring.count)
+        ring.append(2)
+        XCTAssertEqual(2, ring.count)
+        XCTAssertEqual(1, ring.removeFirst())
+        ring.append(3)
+        XCTAssertEqual(2, ring.count)
+        XCTAssertEqual(2, ring.removeFirst())
+        ring.append(4)
+
+        XCTAssertEqual(2, ring.count)
+        XCTAssertEqual(3, ring.removeFirst())
+        ring.append(5)
+
+        XCTAssertEqual(3, ring.headIdx)
+        XCTAssertEqual(1, ring.tailIdx)
+        XCTAssertEqual(2, ring.count)
+        XCTAssertEqual(4, ring.removeFirst())
+        XCTAssertEqual(5, ring.removeFirst())
+        XCTAssertEqual(0, ring.count)
+        XCTAssertTrue(ring.isEmpty)
+    }
+
+    func testFirst() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 3)
+        XCTAssertNil(ring.first)
+        ring.append(1)
+        XCTAssertEqual(1, ring.first)
+        XCTAssertEqual(1, ring.removeFirst())
+        XCTAssertNil(ring.first)
+    }
+
+    func testLast() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 3)
+        XCTAssertNil(ring.last)
+        ring.prepend(1)
+        XCTAssertEqual(1, ring.last)
+        XCTAssertEqual(1, ring.removeLast())
+        XCTAssertNil(ring.last)
+        XCTAssertEqual(0, ring.count)
+        XCTAssertTrue(ring.isEmpty)
+    }
+
+    func testRemoveLast() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 3)
+        XCTAssertNil(ring.last)
+        ring.append(1)
+        ring.prepend(0)
+        XCTAssertEqual(1, ring.last)
+        XCTAssertEqual(1, ring.removeLast())
+        XCTAssertEqual(0, ring.last)
+    }
+
+    func testRemoveLastCountElements() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 3)
+        XCTAssertNil(ring.last)
+        ring.append(1)
+        ring.prepend(0)
+        XCTAssertEqual(1, ring.last)
+        ring.removeLast(2)
+        XCTAssertTrue(ring.isEmpty)
+    }
+
+    func testRemoveLastElements() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 10)
+        XCTAssertNil(ring.last)
+        for i in 0 ..< 20 {
+            ring.prepend(i)
+        }
+        XCTAssertEqual(20, ring.count)
+        XCTAssertEqual(19, ring.first)
+        XCTAssertEqual(0, ring.last)
+        ring.removeLast(10)
+        XCTAssertEqual(10, ring.count)
+        XCTAssertEqual(19, ring.first)
+        XCTAssertEqual(10, ring.last)
+    }
+    
+    func testOperateOnBothSides() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 3)
+        XCTAssertNil(ring.last)
+        ring.prepend(1)
+        ring.prepend(2)
+
+        XCTAssertEqual(1, ring.last)
+        XCTAssertEqual(2, ring.first)
+
+        XCTAssertEqual(1, ring.removeLast())
+        XCTAssertEqual(2, ring.removeFirst())
+
+        XCTAssertNil(ring.last)
+        XCTAssertNil(ring.first)
+        XCTAssertEqual(0, ring.count)
+        XCTAssertTrue(ring.isEmpty)
+    }
+
+
+    func testPrependExpandBuffer() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 3)
+        for f in 1..<1000 {
+            ring.prepend(f)
+            XCTAssertEqual(f, ring.count)
+        }
+        for f in 1..<1000 {
+            XCTAssertEqual(f, ring.removeLast())
+        }
+        XCTAssertTrue(ring.isEmpty)
+        XCTAssertEqual(0, ring.count)
+    }
+
+    func testRemoveAllKeepingCapacity() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 2)
+        XCTAssertEqual(ring.capacity, 2)
+        ring.append(1)
+        ring.append(2)
+        // we're full so it will have doubled
+        XCTAssertEqual(ring.capacity, 4)
+        XCTAssertEqual(ring.count, 2)
+        ring.removeAll(keepingCapacity: true)
+        XCTAssertEqual(ring.capacity, 4)
+        XCTAssertEqual(ring.count, 0)
+    }
+
+    func testRemoveAllNotKeepingCapacity() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 2)
+        XCTAssertGreaterThanOrEqual(ring.capacity, 2)
+        ring.append(1)
+        ring.append(2)
+        // we're full so it will have doubled
+        XCTAssertEqual(ring.capacity, 4)
+        XCTAssertEqual(ring.count, 2)
+        ring.removeAll(keepingCapacity: false)
+        // 1 is the smallest capacity we have
+        XCTAssertEqual(ring.capacity, 1)
+        XCTAssertEqual(ring.count, 0)
+        ring.append(1)
+        XCTAssertEqual(ring.capacity, 2)
+        XCTAssertEqual(ring.count, 1)
+        ring.append(2)
+        XCTAssertEqual(ring.capacity, 4)
+        XCTAssertEqual(ring.count, 2)
+        ring.removeAll() // default should not keep capacity
+        XCTAssertEqual(ring.capacity, 1)
+        XCTAssertEqual(ring.count, 0)
+    }
+
+    func testBufferManaged() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 2)
+        ring.append(1)
+        XCTAssertEqual(ring.capacity, 2)
+
+        // Now we want to replace the last subrange with two elements. This should
+        // force an increase in size.
+        ring.replaceSubrange(0..<1, with: [3, 4])
+        XCTAssertEqual(ring.capacity, 4)
+    }
+
+    func testDoesNotExpandCapacityNeedlesslyWhenInserting() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        let capacity0 = ring.capacity
+        XCTAssertGreaterThanOrEqual(capacity0, 4)
+        XCTAssertLessThan(capacity0, 16)
+
+        ring.insert(0, at: ring.startIndex)
+        let capacity1 = ring.capacity
+        XCTAssertEqual(capacity0, capacity1)
+
+        ring.insert(1, at: ring.startIndex)
+        let capacity2 = ring.capacity
+        XCTAssertEqual(capacity0, capacity2)
+
+        ring.insert(2, at: ring.startIndex)
+        let capacity3 = ring.capacity
+        XCTAssertEqual(capacity0, capacity3)
+    }
+
+    func testDoesNotExpandCapacityNeedlesslyWhenAppending() {
+        var ring = CircularBuffer<Int>(initialRingCapacity: 4)
+        let capacity0 = ring.capacity
+        XCTAssertGreaterThanOrEqual(capacity0, 4)
+        XCTAssertLessThan(capacity0, 16)
+
+        ring.append(0)
+        let capacity1 = ring.capacity
+        XCTAssertEqual(capacity0, capacity1)
+
+        ring.append(1)
+        let capacity2 = ring.capacity
+        XCTAssertEqual(capacity0, capacity2)
+
+        ring.append(2)
+        let capacity3 = ring.capacity
+        XCTAssertEqual(capacity0, capacity3)
+    }
+
 }

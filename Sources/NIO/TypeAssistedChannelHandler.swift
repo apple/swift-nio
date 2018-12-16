@@ -20,11 +20,13 @@ public protocol _EmittingChannelHandler {
     associatedtype OutboundOut = Never
 
     /// Wrap the provided `OutboundOut` that will be passed to the next `ChannelOutboundHandler` by calling `ChannelHandlerContext.write`.
+    @inlinable
     func wrapOutboundOut(_ value: OutboundOut) -> NIOAny
 }
 
 /// Default implementations for `_EmittingChannelHandler`.
 extension _EmittingChannelHandler {
+    @inlinable
     public func wrapOutboundOut(_ value: OutboundOut) -> NIOAny {
         return NIOAny(value)
     }
@@ -41,18 +43,22 @@ public protocol ChannelInboundHandler: _ChannelInboundHandler, _EmittingChannelH
     associatedtype InboundOut = Never
 
     /// Unwrap the provided `NIOAny` that was passed to `channelRead`.
+    @inlinable
     func unwrapInboundIn(_ value: NIOAny) -> InboundIn
 
     /// Wrap the provided `InboundOut` that will be passed to the next `ChannelInboundHandler` by calling `ChannelHandlerContext.fireChannelRead`.
+    @inlinable
     func wrapInboundOut(_ value: InboundOut) -> NIOAny
 }
 
 /// Default implementations for `ChannelInboundHandler`.
 extension ChannelInboundHandler {
+    @inlinable
     public func unwrapInboundIn(_ value: NIOAny) -> InboundIn {
         return value.forceAs()
     }
 
+    @inlinable
     public func wrapInboundOut(_ value: InboundOut) -> NIOAny {
         return NIOAny(value)
     }
@@ -66,11 +72,13 @@ public protocol ChannelOutboundHandler: _ChannelOutboundHandler, _EmittingChanne
     associatedtype OutboundIn
 
     /// Unwrap the provided `NIOAny` that was passed to `write`.
+    @inlinable
     func unwrapOutboundIn(_ value: NIOAny) -> OutboundIn
 }
 
 /// Default implementations for `ChannelOutboundHandler`.
 extension ChannelOutboundHandler {
+    @inlinable
     public func unwrapOutboundIn(_ value: NIOAny) -> OutboundIn {
         return value.forceAs()
     }

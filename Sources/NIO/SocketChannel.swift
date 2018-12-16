@@ -13,10 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 private extension ByteBuffer {
-    mutating func withMutableWritePointer(body: (UnsafeMutablePointer<UInt8>, Int) throws -> IOResult<Int>) rethrows -> IOResult<Int> {
+    mutating func withMutableWritePointer(body: (UnsafeMutableRawBufferPointer) throws -> IOResult<Int>) rethrows -> IOResult<Int> {
         var singleResult: IOResult<Int>!
         _ = try self.writeWithUnsafeMutableBytes { ptr in
-            let localWriteResult = try body(ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), ptr.count)
+            let localWriteResult = try body(ptr)
             singleResult = localWriteResult
             switch localWriteResult {
             case .processed(let written):
@@ -48,12 +48,19 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override var isOpen: Bool {
-        assert(eventLoop.inEventLoop)
-        return pendingWrites.isOpen
+        self.eventLoop.assertInEventLoop()
+        assert(super.isOpen == self.pendingWrites.isOpen)
+        return super.isOpen
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
         let socket = try Socket(protocolFamily: protocolFamily, type: Posix.SOCK_STREAM, setNonBlocking: true)
+        self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
+        try super.init(socket: socket, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
+    }
+
+    init(eventLoop: SelectableEventLoop, descriptor: CInt) throws {
+        let socket = try Socket(descriptor: descriptor, setNonBlocking: true)
         self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
         try super.init(socket: socket, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
@@ -64,7 +71,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -85,7 +92,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -105,7 +112,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         }
     }
 
-    override func registrationFor(interested: IOEvent) -> NIORegistration {
+    override func registrationFor(interested: SelectorEventSet) -> NIORegistration {
         return .socketChannel(self, interested)
     }
 
@@ -115,32 +122,39 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override func readFromSocket() throws -> ReadResult {
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
         // Just allocate one time for the while read loop. This is fine as ByteBuffer is a struct and uses COW.
         var buffer = recvAllocator.buffer(allocator: allocator)
         var result = ReadResult.none
         for i in 1...maxMessagesPerRead {
             guard self.isOpen && !self.inputShutdown else {
-                return result
+                throw ChannelError.eof
             }
             // Reset reader and writerIndex and so allow to have the buffer filled again. This is better here than at
             // the end of the loop to not do an allocation when the loop exits.
             buffer.clear()
-            switch try buffer.withMutableWritePointer(body: self.socket.read(pointer:size:)) {
+            switch try buffer.withMutableWritePointer(body: self.socket.read(pointer:)) {
             case .processed(let bytesRead):
                 if bytesRead > 0 {
                     let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
 
                     readPending = false
 
-                    assert(self.isOpen)
+                    assert(self.isActive)
                     pipeline.fireChannelRead0(NIOAny(buffer))
-                    if mayGrow && i < maxMessagesPerRead {
+                    result = .some
+
+                    if buffer.writableBytes > 0 {
+                        // If we did not fill the whole buffer with read(...) we should stop reading and wait until we get notified again.
+                        // Otherwise chances are good that the next read(...) call will either read nothing or only a very small amount of data.
+                        // Also this will allow us to call fireChannelReadComplete() which may give the user the chance to flush out all pending
+                        // writes.
+                        return result
+                    } else if mayGrow && i < maxMessagesPerRead {
                         // if the ByteBuffer may grow on the next allocation due we used all the writable bytes we should allocate a new `ByteBuffer` to allow ramping up how much data
                         // we are able to read on the next read operation.
                         buffer = recvAllocator.buffer(allocator: allocator)
                     }
-                    result = .some
                 } else {
                     if inputShutdown {
                         // We received a EOF because we called shutdown on the fd by ourself, unregister from the Selector and return
@@ -166,7 +180,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
                 return .processed(0)
             }
             // normal write
-            return try self.socket.write(pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), size: ptr.count)
+            return try self.socket.write(pointer: ptr)
         }, vectorBufferWriteOperation: { ptrs in
             // Gathering write
             try self.socket.writev(iovecs: ptrs)
@@ -197,9 +211,9 @@ final class SocketChannel: BaseSocketChannel<Socket> {
     }
 
     override func finishConnectSocket() throws {
-        if let scheduled = connectTimeoutScheduled {
+        if let scheduled = self.connectTimeoutScheduled {
             // Connection established so cancel the previous scheduled timeout.
-            connectTimeoutScheduled = nil
+            self.connectTimeoutScheduled = nil
             scheduled.cancel()
         }
         try self.socket.finishConnect()
@@ -252,7 +266,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         }
     }
 
-    override func markFlushPoint(promise: EventLoopPromise<Void>?) {
+    override func markFlushPoint() {
         // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actually written once writable() is called.
         self.pendingWrites.markFlushCheckpoint()
@@ -308,18 +322,24 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     convenience init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: Int32) throws {
         try self.init(serverSocket: try ServerSocket(protocolFamily: protocolFamily, setNonBlocking: true), eventLoop: eventLoop, group: group)
     }
-    
+
     init(serverSocket: ServerSocket, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
         self.group = group
         try super.init(socket: serverSocket, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
     }
 
-    override func registrationFor(interested: IOEvent) -> NIORegistration {
+    convenience init(descriptor: CInt, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
+        let socket = try ServerSocket(descriptor: descriptor, setNonBlocking: true)
+        try self.init(serverSocket: socket, eventLoop: eventLoop, group: group)
+        try self.socket.listen(backlog: backlog)
+    }
+
+    override func registrationFor(interested: SelectorEventSet) -> NIORegistration {
         return .serverSocketChannel(self, interested)
     }
 
     override func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -334,7 +354,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -349,16 +369,21 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
             promise?.fail(error: ChannelError.ioOnClosedChannel)
             return
         }
 
-        let p: EventLoopPromise<Void> = eventLoop.newPromise()
+        guard self.isRegistered else {
+            promise?.fail(error: ChannelError.inappropriateOperationForState)
+            return
+        }
+
+        let p = eventLoop.makePromise(of: Void.self)
         p.futureResult.map {
-            // Its important to call the methods before we actual notify the original promise for ordering reasons.
+            // It's important to call the methods before we actually notify the original promise for ordering reasons.
             self.becomeActive0(promise: promise)
         }.whenFailure{ error in
             promise?.fail(error: error)
@@ -382,16 +407,17 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         var result = ReadResult.none
         for _ in 1...maxMessagesPerRead {
             guard self.isOpen else {
-                return result
+                throw ChannelError.eof
             }
             if let accepted =  try self.socket.accept(setNonBlocking: true) {
                 readPending = false
                 result = .some
                 do {
                     let chan = try SocketChannel(socket: accepted, parent: self, eventLoop: group.next() as! SelectableEventLoop)
+                    assert(self.isActive)
                     pipeline.fireChannelRead0(NIOAny(chan))
                 } catch let err {
-                    _ = try? accepted.close()
+                    try? accepted.close()
                     throw err
                 }
             } else {
@@ -400,10 +426,10 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         }
         return result
     }
-    
+
     override func shouldCloseOnReadError(_ err: Error) -> Bool {
         guard let err = err as? IOError else { return true }
-        
+
         switch err.errnoCode {
         case ECONNABORTED,
              EMFILE,
@@ -424,17 +450,31 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override public func channelRead0(_ data: NIOAny) {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         let ch = data.forceAsOther() as SocketChannel
-        ch.register().thenThrowing {
-            guard ch.isOpen else {
-                throw ChannelError.ioOnClosedChannel
+        ch.eventLoop.execute {
+            ch.register().thenThrowing {
+                guard ch.isOpen else {
+                    throw ChannelError.ioOnClosedChannel
+                }
+                ch.becomeActive0(promise: nil)
+            }.whenFailure { error in
+                ch.close(promise: nil)
             }
-            ch.becomeActive0(promise: nil)
-        }.whenFailure { error in
-            ch.close(promise: nil)
         }
+    }
+
+    override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
+        promise?.fail(error: ChannelError.operationUnsupported)
+    }
+
+    override func markFlushPoint() {
+        // We do nothing here: flushes are no-ops.
+    }
+
+    override func flushNow() -> IONotificationState {
+        return IONotificationState.unregister
     }
 }
 
@@ -460,8 +500,20 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override var isOpen: Bool {
-        assert(eventLoop.inEventLoop)
-        return pendingWrites.isOpen
+        self.eventLoop.assertInEventLoop()
+        assert(super.isOpen == self.pendingWrites.isOpen)
+        return super.isOpen
+    }
+
+    convenience init(eventLoop: SelectableEventLoop, descriptor: CInt) throws {
+        let socket = Socket(descriptor: descriptor)
+
+        do {
+            try self.init(socket: socket, eventLoop: eventLoop)
+        } catch {
+            try? socket.close()
+            throw error
+        }
     }
 
     init(eventLoop: SelectableEventLoop, protocolFamily: Int32) throws {
@@ -469,7 +521,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         do {
             try socket.setNonBlocking()
         } catch let err {
-            _ = try? socket.close()
+            try? socket.close()
             throw err
         }
 
@@ -493,7 +545,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     // MARK: Datagram Channel overrides required by BaseSocketChannel
 
     override func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -510,7 +562,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
-        assert(eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
             throw ChannelError.ioOnClosedChannel
@@ -526,7 +578,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
     }
 
-    override func registrationFor(interested: IOEvent) -> NIORegistration {
+    override func registrationFor(interested: SelectorEventSet) -> NIORegistration {
         return .datagramChannel(self, interested)
     }
 
@@ -548,11 +600,13 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
         for i in 1...self.maxMessagesPerRead {
             guard self.isOpen else {
-                return readResult
+                throw ChannelError.eof
             }
             buffer.clear()
 
-            let result = try buffer.withMutableWritePointer { try self.socket.recvfrom(pointer: $0, size: $1, storage: &rawAddress, storageLen: &rawAddressLength) }
+            let result = try buffer.withMutableWritePointer {
+                try self.socket.recvfrom(pointer: $0, storage: &rawAddress, storageLen: &rawAddressLength)
+            }
             switch result {
             case .processed(let bytesRead):
                 assert(bytesRead > 0)
@@ -561,6 +615,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 readPending = false
 
                 let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(), data: buffer)
+                assert(self.isActive)
                 pipeline.fireChannelRead0(NIOAny(msg))
                 if mayGrow && i < maxMessagesPerRead {
                     buffer = recvAllocator.buffer(allocator: allocator)
@@ -598,13 +653,14 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
 
         if !self.pendingWrites.add(envelope: data, promise: promise) {
+            assert(self.isActive)
             pipeline.fireChannelWritabilityChanged0()
         }
     }
 
     /// Mark a flush point. This is called when flush is received, and instructs
     /// the implementation to record the flush.
-    override func markFlushPoint(promise: EventLoopPromise<Void>?) {
+    override func markFlushPoint() {
         // Even if writable() will be called later by the EventLoop we still need to mark the flush checkpoint so we are sure all the flushed messages
         // are actually written once writable() is called.
         self.pendingWrites.markFlushCheckpoint()
@@ -623,13 +679,15 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 return .processed(0)
             }
             // normal write
-            return try self.socket.sendto(pointer: ptr.baseAddress!.assumingMemoryBound(to: UInt8.self), size: ptr.count,
-                                          destinationPtr: destinationPtr, destinationSize: destinationSize)
+            return try self.socket.sendto(pointer: ptr,
+                                          destinationPtr: destinationPtr,
+                                          destinationSize: destinationSize)
         }, vectorWriteOperation: { msgs in
             try self.socket.sendmmsg(msgs: msgs)
         })
         if result.writable {
             // writable again
+            assert(self.isActive)
             self.pipeline.fireChannelWritabilityChanged0()
         }
         return result.writeResult
@@ -638,7 +696,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     // MARK: Datagram Channel overrides not required by BaseSocketChannel
 
     override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        assert(self.eventLoop.inEventLoop)
+        self.eventLoop.assertInEventLoop()
+        guard self.isRegistered else {
+            promise?.fail(error: ChannelError.inappropriateOperationForState)
+            return
+        }
         do {
             try socket.bind(to: address)
             self.updateCachedAddressesFromSocket(updateRemote: false)
@@ -664,5 +726,125 @@ extension ServerSocketChannel: CustomStringConvertible {
 extension DatagramChannel: CustomStringConvertible {
     var description: String {
         return "DatagramChannel { selectable = \(self.selectable), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
+    }
+}
+
+extension DatagramChannel: MulticastChannel {
+    /// The socket options for joining and leaving multicast groups are very similar.
+    /// This enum allows us to write a single function to do all the work, and then
+    /// at the last second pull out the correct socket option name.
+    private enum GroupOperation {
+        /// Join a multicast group.
+        case join
+
+        /// Leave a multicast group.
+        case leave
+
+        /// Given a socket option level, returns the appropriate socket option name for
+        /// this group operation.
+        ///
+        /// - parameters:
+        ///     - level: The socket option level. Must be one of `IPPROTO_IP` or
+        ///         `IPPROTO_IPV6`. Will trap if an invalid value is provided.
+        /// - returns: The socket option name to use for this group operation.
+        func optionName(level: CInt) -> CInt {
+            switch (self, level) {
+            case (.join, CInt(IPPROTO_IP)):
+                return CInt(IP_ADD_MEMBERSHIP)
+            case (.leave, CInt(IPPROTO_IP)):
+                return CInt(IP_DROP_MEMBERSHIP)
+            case (.join, CInt(IPPROTO_IPV6)):
+                return CInt(IPV6_JOIN_GROUP)
+            case (.leave, CInt(IPPROTO_IPV6)):
+                return CInt(IPV6_LEAVE_GROUP)
+            default:
+                preconditionFailure("Unexpected socket option level: \(level)")
+            }
+        }
+    }
+
+    public func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
+        if eventLoop.inEventLoop {
+            self.performGroupOperation0(group, interface: interface, promise: promise, operation: .join)
+        } else {
+            eventLoop.execute {
+                self.performGroupOperation0(group, interface: interface, promise: promise, operation: .join)
+            }
+        }
+    }
+
+    public func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
+        if eventLoop.inEventLoop {
+            self.performGroupOperation0(group, interface: interface, promise: promise, operation: .leave)
+        } else {
+            eventLoop.execute {
+                self.performGroupOperation0(group, interface: interface, promise: promise, operation: .leave)
+            }
+        }
+    }
+
+    /// The implementation of `joinGroup` and `leaveGroup`.
+    ///
+    /// Joining and leaving a multicast group ultimately corresponds to a single, carefully crafted, socket option.
+    private func performGroupOperation0(_ group: SocketAddress,
+                                        interface: NIONetworkInterface?,
+                                        promise: EventLoopPromise<Void>?,
+                                        operation: GroupOperation) {
+        self.eventLoop.assertInEventLoop()
+
+        guard self.isActive else {
+            promise?.fail(error: ChannelError.inappropriateOperationForState)
+            return
+        }
+
+        // We need to check that we have the appropriate address types in all cases. They all need to overlap with
+        // the address type of this channel, or this cannot work.
+        guard let localAddress = self.localAddress else {
+            promise?.fail(error: ChannelError.unknownLocalAddress)
+            return
+        }
+
+        guard localAddress.protocolFamily == group.protocolFamily else {
+            promise?.fail(error: ChannelError.badMulticastGroupAddressFamily)
+            return
+        }
+
+        // Ok, now we need to check that the group we've been asked to join is actually a multicast group.
+        guard group.isMulticast else {
+            promise?.fail(error: ChannelError.illegalMulticastAddress(group))
+            return
+        }
+
+        // Ok, we now have reason to believe this will actually work. We need to pass this on to the socket.
+        do {
+            switch (group, interface?.address) {
+            case (.unixDomainSocket, _):
+                preconditionFailure("Should not be reachable, UNIX sockets are never multicast addresses")
+            case (.v4(let groupAddress), .some(.v4(let interfaceAddress))):
+                // IPv4Binding with specific target interface.
+                let multicastRequest = ip_mreq(imr_multiaddr: groupAddress.address.sin_addr, imr_interface: interfaceAddress.address.sin_addr)
+                try self.socket.setOption(level: CInt(IPPROTO_IP), name: operation.optionName(level: CInt(IPPROTO_IP)), value: multicastRequest)
+            case (.v4(let groupAddress), .none):
+                // IPv4 binding without target interface.
+                let multicastRequest = ip_mreq(imr_multiaddr: groupAddress.address.sin_addr, imr_interface: in_addr(s_addr: INADDR_ANY))
+                try self.socket.setOption(level: CInt(IPPROTO_IP), name: operation.optionName(level: CInt(IPPROTO_IP)), value: multicastRequest)
+            case (.v6(let groupAddress), .some(.v6)):
+                // IPv6 binding with specific target interface.
+                let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: UInt32(interface!.interfaceIndex))
+                try self.socket.setOption(level: CInt(IPPROTO_IPV6), name: operation.optionName(level: CInt(IPPROTO_IPV6)), value: multicastRequest)
+            case (.v6(let groupAddress), .none):
+                // IPv6 binding with no specific interface requested.
+                let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: 0)
+                try self.socket.setOption(level: CInt(IPPROTO_IPV6), name: operation.optionName(level: CInt(IPPROTO_IPV6)), value: multicastRequest)
+            case (.v4, .some(.v6)), (.v6, .some(.v4)), (.v4, .some(.unixDomainSocket)), (.v6, .some(.unixDomainSocket)):
+                // Mismatched group and interface address: this is an error.
+                throw ChannelError.badInterfaceAddressFamily
+            }
+
+            promise?.succeed(result: ())
+        } catch {
+            promise?.fail(error: error)
+            return
+        }
     }
 }
