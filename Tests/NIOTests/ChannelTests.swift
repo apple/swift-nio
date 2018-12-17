@@ -659,7 +659,7 @@ public class ChannelTests: XCTestCase {
 
             pwm.failAll(error: ChannelError.operationUnsupported, close: true)
 
-            XCTAssertTrue(ps.map { $0.futureResult.isFulfilled }.reduce(true) { $0 && $1 })
+            XCTAssertTrue(ps.map { $0.futureResult.isFulfilled }.allSatisfy { $0 })
         }
     }
 
@@ -1983,7 +1983,7 @@ public class ChannelTests: XCTestCase {
             do {
                 try body()
                 XCTFail("didn't throw", file: file, line: line)
-            } catch let error as ChannelLifecycleError where error == .inappropriateOperationForState {
+            } catch let error as ChannelError where error == .inappropriateOperationForState {
                 //OK
             } catch {
                 XCTFail("unexpected error \(error)", file: file, line: line)

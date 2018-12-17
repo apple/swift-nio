@@ -8,12 +8,13 @@ services:
       args:
         ubuntu_version: "18.04"
         swift_version: "5.0"
-        swift_flavour: "DEVELOPMENT-SNAPSHOT-2018-12-04-a"
+        swift_flavour: "DEVELOPMENT-SNAPSHOT-2018-12-13-a"
         swift_builds_suffix: "branch"
         skip_ruby_from_ppa: "true"
 
   unit-tests:
     image: swift-nio:18.04-5.0
+    command: /bin/bash -cl "swift test -Xswiftc -warnings-as-errors"
 
   integration-tests:
     image: swift-nio:18.04-5.0

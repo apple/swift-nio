@@ -589,10 +589,10 @@ public struct HTTPHeaders: CustomStringConvertible {
             self._storage = self._storage.copy()
         }
         let nameStart = self.buffer.writerIndex
-        let nameLength = self._storage.buffer.write(string: name)!
+        let nameLength = self._storage.buffer.write(string: name)
         self._storage.buffer.write(staticString: headerSeparator)
         let valueStart = self.buffer.writerIndex
-        let valueLength = self._storage.buffer.write(string: value)!
+        let valueLength = self._storage.buffer.write(string: value)
         
         let nameIdx = HTTPHeaderIndex(start: nameStart, length: nameLength)
         self._storage.headers.append(HTTPHeader(name: nameIdx, value: HTTPHeaderIndex(start: valueStart, length: valueLength)))
@@ -963,16 +963,34 @@ public struct HTTPVersion: Equatable {
     ///
     /// - Parameter major: The major version number.
     /// - Parameter minor: The minor version number.
-    public init(major: UInt16, minor: UInt16) {
-        self.major = major
-        self.minor = minor
+    public init(major: Int, minor: Int) {
+        self._major = UInt16(major)
+        self._minor = UInt16(minor)
     }
 
+    private var _minor: UInt16
+    private var _major: UInt16
+
     /// The major version number.
-    public let major: UInt16
+    public var major: Int {
+        get {
+            return Int(self._major)
+        }
+        set {
+            self._major = UInt16(newValue)
+        }
+    }
 
     /// The minor version number.
-    public let minor: UInt16
+    public var minor: Int {
+        get {
+            return Int(self._minor)
+        }
+        set {
+            self._minor = UInt16(newValue)
+        }
+    }
+
 }
 
 extension HTTPParserError: CustomDebugStringConvertible {

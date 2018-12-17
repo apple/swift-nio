@@ -155,7 +155,8 @@ public struct EventLoopIterator: Sequence, IteratorProtocol {
     public typealias Element = EventLoop
     private var eventLoops: IndexingIterator<[EventLoop]>
 
-    internal init(_ eventLoops: [EventLoop]) {
+    /// Create an `EventLoopIterator` from an array of `EventLoop`s.
+    public init(_ eventLoops: [EventLoop]) {
         self.eventLoops = eventLoops.makeIterator()
     }
 

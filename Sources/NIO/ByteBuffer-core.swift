@@ -238,10 +238,10 @@ public struct ByteBuffer {
     public typealias _Index = UInt32
     public typealias _Capacity = UInt32
 
-    @usableFromInline private(set) var _storage: _Storage
-    @usableFromInline private(set) var _readerIndex: _Index = 0
-    @usableFromInline private(set) var _writerIndex: _Index = 0
-    @usableFromInline private(set) var _slice: Slice
+    @usableFromInline var _storage: _Storage
+    @usableFromInline var _readerIndex: _Index = 0
+    @usableFromInline var _writerIndex: _Index = 0
+    @usableFromInline var _slice: Slice
 
     // MARK: Internal _Storage for CoW
     @usableFromInline final class _Storage {
@@ -395,7 +395,7 @@ public struct ByteBuffer {
     }
 
     @inlinable
-    mutating func _set<S: ContiguousCollection>(bytes: S, at index: _Index) -> _Capacity where S.Element == UInt8 {
+    mutating func _set<Bytes: ContiguousCollection>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
         let bytesCount = bytes.count
         let newEndIndex: _Index = index + _toIndex(Int(bytesCount))
         if !isKnownUniquelyReferenced(&self._storage) {
@@ -414,12 +414,12 @@ public struct ByteBuffer {
     }
 
     @inlinable
-    mutating func _set<S: Sequence>(bytes: S, at index: _Index) -> _Capacity where S.Element == UInt8 {
-        assert(!([Array<S.Element>.self, StaticString.self, ContiguousArray<S.Element>.self,
+    mutating func _set<Bytes: Sequence>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
+        assert(!([Array<Bytes.Element>.self, StaticString.self, ContiguousArray<Bytes.Element>.self,
                   UnsafeRawBufferPointer.self, UnsafeBufferPointer<UInt8>.self, UnsafeMutableRawBufferPointer.self,
                   UnsafeMutableBufferPointer<UInt8>.self,
                   ArraySlice<UInt8>.self].contains(where: { (t: Any.Type) -> Bool in t == type(of: bytes) })),
-               "called the slower set<S: Sequence> function even though \(S.self) is a ContiguousCollection")
+               "called the slower set<Bytes: Sequence> function even though \(Bytes.self) is a ContiguousCollection")
         func ensureCapacityAndReturnStorageBase(capacity: Int) -> UnsafeMutablePointer<UInt8> {
             self._ensureAvailableCapacity(_Capacity(capacity), at: index)
             let newBytesPtr = UnsafeMutableRawBufferPointer(rebasing: self._slicedStorageBuffer[Int(index) ..< Int(index) + Int(capacity)])
@@ -723,14 +723,14 @@ extension ByteBuffer {
     /// Copy the collection of `bytes` into the `ByteBuffer` at `index`.
     @discardableResult
     @inlinable
-    public mutating func set<S: Sequence>(bytes: S, at index: Int) -> Int where S.Element == UInt8 {
+    public mutating func set<Bytes: Sequence>(bytes: Bytes, at index: Int) -> Int where Bytes.Element == UInt8 {
         return Int(self._set(bytes: bytes, at: _toIndex(index)))
     }
 
     /// Copy the collection of `bytes` into the `ByteBuffer` at `index`.
     @discardableResult
     @inlinable
-    public mutating func set<S: ContiguousCollection>(bytes: S, at index: Int) -> Int where S.Element == UInt8 {
+    public mutating func set<Bytes: ContiguousCollection>(bytes: Bytes, at index: Int) -> Int where Bytes.Element == UInt8 {
         return Int(self._set(bytes: bytes, at: _toIndex(index)))
     }
 
