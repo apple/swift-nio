@@ -34,16 +34,11 @@ import CNIOAtomics
 /// communicate or cooperate across multiple threads. In the case of
 /// SwiftNIO this usually involves communicating across multiple event loops.
 public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
-    private let value: OpaquePointer
+    @usableFromInline
+    internal let value: OpaquePointer
 
     /// Create an atomic object with `value`.
-    @_specialize(where T == Int)
-    @_specialize(where T == Bool)
-    @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @inlinable
     public init(value: T) {
         self.value = T.atomic_create(value)
     }
@@ -63,13 +58,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     ///     succeeds.
     /// - Returns: `True` if the exchange occurred, or `False` if `expected` did not
     ///     match the current value and so no exchange occurred.
-    @_specialize(where T == Int)
-    @_specialize(where T == Bool)
-    @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @inlinable
     public func compareAndExchange(expected: T, desired: T) -> Bool {
         return T.atomic_compare_and_exchange(self.value, expected, desired)
     }
@@ -82,13 +71,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     ///
     /// - Parameter rhs: The value to add to this object.
     /// - Returns: The previous value of this object, before the addition occurred.
-    @_specialize(where T == Int)
-    @_specialize(where T == Bool)
-    @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @inlinable
     public func add(_ rhs: T) -> T {
         return T.atomic_add(self.value, rhs)
     }
@@ -101,13 +84,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     ///
     /// - Parameter rhs: The value to subtract from this object.
     /// - Returns: The previous value of this object, before the subtraction occurred.
-    @_specialize(where T == Int)
-    @_specialize(where T == Bool)
-    @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @inlinable
     public func sub(_ rhs: T) -> T {
         return T.atomic_sub(self.value, rhs)
     }
@@ -120,13 +97,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     ///
     /// - Parameter value: The new value to set this object to.
     /// - Returns: The value previously held by this object.
-    @_specialize(where T == Int)
-    @_specialize(where T == Bool)
-    @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @inlinable
     public func exchange(with value: T) -> T {
         return T.atomic_exchange(self.value, value)
     }
@@ -138,13 +109,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     /// event will be ordered before or after this one.
     ///
     /// - Returns: The value of this object
-    @_specialize(where T == Int)
-    @_specialize(where T == Bool)
-    @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @inlinable
     public func load() -> T {
         return T.atomic_load(self.value)
     }
@@ -156,13 +121,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     /// event will be ordered before or after this one.
     ///
     /// - Parameter value: The new value to set the object to.
-    @_specialize(where T == Int)
-    @_specialize(where T == Bool)
-    @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @inlinable
     public func store(_ value: T) -> Void {
         T.atomic_store(self.value, value)
     }
@@ -195,16 +154,11 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
 /// sense to talk about managing an atomic value when each time it's modified
 /// the thread that modified it gets a local copy!
 public final class Atomic<T: AtomicPrimitive> {
-    private let embedded: UnsafeEmbeddedAtomic<T>
+    @usableFromInline
+    internal let embedded: UnsafeEmbeddedAtomic<T>
 
     /// Create an atomic object with `value`.
-    @_specialize(where T == Int)
-    @_specialize(where T == Bool)
-    @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @inlinable
     public init(value: T) {
         self.embedded = UnsafeEmbeddedAtomic(value: value)
     }
@@ -224,13 +178,7 @@ public final class Atomic<T: AtomicPrimitive> {
     ///     succeeds.
     /// - Returns: `True` if the exchange occurred, or `False` if `expected` did not
     ///     match the current value and so no exchange occurred.
-    @_specialize(where T == Int)
-    @_specialize(where T == Bool)
-    @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @inlinable
     public func compareAndExchange(expected: T, desired: T) -> Bool {
         return self.embedded.compareAndExchange(expected: expected, desired: desired)
     }
@@ -243,13 +191,7 @@ public final class Atomic<T: AtomicPrimitive> {
     ///
     /// - Parameter rhs: The value to add to this object.
     /// - Returns: The previous value of this object, before the addition occurred.
-    @_specialize(where T == Int)
-    @_specialize(where T == Bool)
-    @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @inlinable
     public func add(_ rhs: T) -> T {
         return self.embedded.add(rhs)
     }
@@ -262,13 +204,7 @@ public final class Atomic<T: AtomicPrimitive> {
     ///
     /// - Parameter rhs: The value to subtract from this object.
     /// - Returns: The previous value of this object, before the subtraction occurred.
-    @_specialize(where T == Int)
-    @_specialize(where T == Bool)
-    @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @inlinable
     public func sub(_ rhs: T) -> T {
         return self.embedded.sub(rhs)
     }
@@ -281,13 +217,7 @@ public final class Atomic<T: AtomicPrimitive> {
     ///
     /// - Parameter value: The new value to set this object to.
     /// - Returns: The value previously held by this object.
-    @_specialize(where T == Int)
-    @_specialize(where T == Bool)
-    @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @inlinable
     public func exchange(with value: T) -> T {
         return self.embedded.exchange(with: value)
     }
@@ -299,13 +229,7 @@ public final class Atomic<T: AtomicPrimitive> {
     /// event will be ordered before or after this one.
     ///
     /// - Returns: The value of this object
-    @_specialize(where T == Int)
-    @_specialize(where T == Bool)
-    @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @inlinable
     public func load() -> T {
         return self.embedded.load()
     }
@@ -317,13 +241,7 @@ public final class Atomic<T: AtomicPrimitive> {
     /// event will be ordered before or after this one.
     ///
     /// - Parameter value: The new value to set the object to.
-    @_specialize(where T == Int)
-    @_specialize(where T == Bool)
-    @_specialize(where T == UInt64)
-    // in Swift 4.0 (fixed in 4.0.2), there was a crash that only allowed three specialisations otherwise the compiler would crash
-    // FIXME: Bring back when we require Swift >= 4.0.2
-    // @_specialize(where T == UInt)
-    // @_specialize(where T == Int64)
+    @inlinable
     public func store(_ value: T) -> Void {
         self.embedded.store(value)
     }
@@ -482,7 +400,7 @@ public class AtomicBox<T: AnyObject> {
     }
 
     deinit {
-        let oldPtrBits = self.storage.exchange(with: 0xdeadbeef)
+        let oldPtrBits = self.storage.exchange(with: 0xdeadbee)
         let oldPtr = Unmanaged<T>.fromOpaque(UnsafeRawPointer(bitPattern: oldPtrBits)!)
         oldPtr.release()
     }

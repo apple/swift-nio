@@ -20,7 +20,7 @@
 
 import XCTest
 import NIO
-import NIOHTTP1
+@testable import NIOHTTP1
 
 private final class ReadRecorder: ChannelInboundHandler {
     typealias InboundIn = HTTPServerRequestPart
@@ -705,5 +705,100 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         XCTAssertFalse(self.channel.isActive)
         self.channel = nil
+    }
+
+    func testParserErrorOnly() throws {
+        class VerifyOrderHandler: ChannelInboundHandler {
+            typealias InboundIn = HTTPServerRequestPart
+            typealias OutboundOut = HTTPServerResponsePart
+
+            enum State {
+                case errorExpected
+                case done
+            }
+            var state: State = .errorExpected
+
+            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+                XCTAssertEqual(HTTPParserError.headerOverflow, error as? HTTPParserError)
+                XCTAssertEqual(.errorExpected, self.state)
+                self.state = .done
+            }
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                XCTFail("no requests expected")
+            }
+        }
+
+        let handler = VerifyOrderHandler()
+        XCTAssertNoThrow(try self.channel.pipeline.add(handler: HTTPServerProtocolErrorHandler()).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.add(handler: handler).wait())
+
+        self.channel.pipeline.fireErrorCaught(HTTPParserError.headerOverflow)
+
+        XCTAssertEqual(.done, handler.state)
+    }
+
+    func testLegitRequestFollowedByParserErrorArrivingWhilstResponseOutstanding() throws {
+        func makeRequestHead(uri: String) -> HTTPRequestHead {
+            var requestHead = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: uri)
+            requestHead.headers.add(name: "Host", value: "example.com")
+            return requestHead
+        }
+
+        class VerifyOrderHandler: ChannelInboundHandler {
+            typealias InboundIn = HTTPServerRequestPart
+            typealias OutboundOut = HTTPServerResponsePart
+
+            enum State {
+                case reqHeadExpected
+                case reqEndExpected
+                case errorExpected
+                case done
+            }
+            var state: State = .reqHeadExpected
+
+            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+                XCTAssertEqual(HTTPParserError.closedConnection, error as? HTTPParserError)
+                XCTAssertEqual(.errorExpected, self.state)
+                self.state = .done
+            }
+
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                switch self.unwrapInboundIn(data) {
+                case .head:
+                    // We dispatch this to the event loop so that it doesn't happen immediately but rather can be
+                    // run from the driving test code whenever it wants by running the EmbeddedEventLoop.
+                    ctx.eventLoop.execute {
+                        ctx.writeAndFlush(self.wrapOutboundOut(.head(.init(version: HTTPVersion(major: 1, minor: 1),
+                                                                           status: .ok))),
+                                          promise: nil)
+                    }
+                    XCTAssertEqual(.reqHeadExpected, self.state)
+                    self.state = .reqEndExpected
+                case .body:
+                    XCTFail("no body expected")
+                case .end:
+                    // We dispatch this to the event loop so that it doesn't happen immediately but rather can be
+                    // run from the driving test code whenever it wants by running the EmbeddedEventLoop.
+                    ctx.eventLoop.execute {
+                        ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                    }
+                    XCTAssertEqual(.reqEndExpected, self.state)
+                    self.state = .errorExpected
+                }
+            }
+        }
+
+        let handler = VerifyOrderHandler()
+        XCTAssertNoThrow(try self.channel.pipeline.add(handler: HTTPServerProtocolErrorHandler()).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.add(handler: handler).wait())
+
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(makeRequestHead(uri: "/one"))))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+        self.channel.pipeline.fireErrorCaught(HTTPParserError.closedConnection)
+
+        // let's now run the HTTP responses that we enqueued earlier on.
+        (self.channel.eventLoop as! EmbeddedEventLoop).run()
+        XCTAssertEqual(.done, handler.state)
     }
 }

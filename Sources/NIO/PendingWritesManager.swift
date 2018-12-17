@@ -48,11 +48,11 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
                 break loop
             }
             let toWriteForThisBuffer = min(Socket.writevLimitBytes, buffer.readableBytes)
-            toWrite += toWriteForThisBuffer
+            toWrite += numericCast(toWriteForThisBuffer)
 
             buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
                 storageRefs[i] = storageRef.retain()
-                iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: toWriteForThisBuffer)
+                iovecs[i] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
             }
             numberOfUsedStorageSlots += 1
         case .fileRegion:
@@ -103,16 +103,16 @@ internal enum OverallWriteResult {
 ///  - `failAll` if for some reason all outstanding writes need to be discarded and the corresponding `EventLoopPromise` needs to be failed.
 private struct PendingStreamWritesState {
     private var pendingWrites = MarkedCircularBuffer<PendingStreamWrite>(initialRingCapacity: 16)
-    public private(set) var bytes: Int = 0
+    public private(set) var bytes: Int64 = 0
 
     public var flushedChunks: Int {
-        return self.pendingWrites.markedElementIndex().map { $0 + 1 } ?? 0
+        return self.pendingWrites.markedElementIndex.map { $0 + 1 } ?? 0
     }
 
     /// Subtract `bytes` from the number of outstanding bytes to write.
     private mutating func subtractOutstanding(bytes: Int) {
         assert(self.bytes >= bytes, "allegedly written more bytes (\(bytes)) than outstanding (\(self.bytes))")
-        self.bytes -= bytes
+        self.bytes -= numericCast(bytes)
     }
 
     /// Indicates that the first outstanding write was written in its entirety.
@@ -141,7 +141,7 @@ private struct PendingStreamWritesState {
     public var isEmpty: Bool {
         if self.pendingWrites.isEmpty {
             assert(self.bytes == 0)
-            assert(!self.pendingWrites.hasMark())
+            assert(!self.pendingWrites.hasMark)
             return true
         } else {
             assert(self.bytes >= 0)
@@ -154,9 +154,9 @@ private struct PendingStreamWritesState {
         self.pendingWrites.append(chunk)
         switch chunk.data {
         case .byteBuffer(let buffer):
-            self.bytes += buffer.readableBytes
+            self.bytes += numericCast(buffer.readableBytes)
         case .fileRegion(let fileRegion):
-            self.bytes += fileRegion.readableBytes
+            self.bytes += numericCast(fileRegion.readableBytes)
         }
     }
 
@@ -216,7 +216,7 @@ private struct PendingStreamWritesState {
 
     /// Is there a pending flush?
     public var isFlushPending: Bool {
-        return self.pendingWrites.hasMark()
+        return self.pendingWrites.hasMark
     }
 
     /// Remove all pending writes and return a `EventLoopPromise` which will cascade notifications to all.

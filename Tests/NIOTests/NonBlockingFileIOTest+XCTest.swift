@@ -45,6 +45,7 @@ extension NonBlockingFileIOTest {
                 ("testFileRegionReadFromPipeFails", testFileRegionReadFromPipeFails),
                 ("testReadFromNonBlockingPipeFails", testReadFromNonBlockingPipeFails),
                 ("testSeekPointerIsSetToFront", testSeekPointerIsSetToFront),
+                ("testWriting", testWriting),
                 ("testFileOpenWorks", testFileOpenWorks),
                 ("testFileOpenWorksWithEmptyFile", testFileOpenWorksWithEmptyFile),
                 ("testFileOpenFails", testFileOpenFails),

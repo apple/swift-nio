@@ -53,7 +53,9 @@ class SelectorTest: XCTestCase {
         }
         try socket2.setNonBlocking()
 
-        let serverSocket = try ServerSocket.bootstrap(protocolFamily: PF_INET, host: "127.0.0.1", port: 0)
+        let serverSocket = try assertNoThrowWithValue(ServerSocket.bootstrap(protocolFamily: PF_INET,
+                                                                             host: "127.0.0.1",
+                                                                             port: 0))
         defer {
             XCTAssertNoThrow(try serverSocket.close())
         }
@@ -249,7 +251,7 @@ class SelectorTest: XCTestCase {
                 var reconnectedChannelsHaveRead: [EventLoopFuture<Void>] = []
                 for _ in everyOtherIndex {
                     var hasBeenAdded: Bool = false
-                    let p: EventLoopPromise<Void> = ctx.channel.eventLoop.newPromise()
+                    let p = ctx.channel.eventLoop.makePromise(of: Void.self)
                     reconnectedChannelsHaveRead.append(p.futureResult)
                     let newChannel = ClientBootstrap(group: ctx.eventLoop)
                         .channelInitializer { channel in
@@ -341,7 +343,7 @@ class SelectorTest: XCTestCase {
             .bind(to: SocketAddress(unixDomainSocketPath: "\(tempDir)/server-sock.uds"))
             .wait()
 
-        let everythingWasReadPromise: EventLoopPromise<Void> = el.newPromise()
+        let everythingWasReadPromise = el.makePromise(of: Void.self)
         XCTAssertNoThrow(try el.submit { () -> [EventLoopFuture<Channel>] in
             (0..<SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse).map { (_: Int) in
                 ClientBootstrap(group: el)

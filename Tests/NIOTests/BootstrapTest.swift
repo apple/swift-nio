@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+@testable import NIO
 import XCTest
 
 class BootstrapTest: XCTestCase {
@@ -25,35 +25,37 @@ class BootstrapTest: XCTestCase {
                 XCTAssertNoThrow(try group.syncShutdownGracefully())
             }
 
-            let childChannelDone: EventLoopPromise<Void> = group.next().newPromise()
-            let serverChannelDone: EventLoopPromise<Void> = group.next().newPromise()
-            let serverChannel = try ServerBootstrap(group: group)
+            let childChannelDone = group.next().makePromise(of: Void.self)
+            let serverChannelDone = group.next().makePromise(of: Void.self)
+            let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
                 .childChannelInitializer { channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
                     childChannelDone.succeed(result: ())
-                    return channel.eventLoop.newSucceededFuture(result: ())
+                    return channel.eventLoop.makeSucceededFuture(result: ())
                 }
                 .serverChannelInitializer { channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
                     serverChannelDone.succeed(result: ())
-                    return channel.eventLoop.newSucceededFuture(result: ())
+                    return channel.eventLoop.makeSucceededFuture(result: ())
                 }
                 .bind(host: "localhost", port: 0)
-                .wait()
+                .wait())
             defer {
                 XCTAssertNoThrow(try serverChannel.close().wait())
             }
 
-            let client = try ClientBootstrap(group: group)
+            let client = try assertNoThrowWithValue(ClientBootstrap(group: group)
                 .channelInitializer { channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
-                    return channel.eventLoop.newSucceededFuture(result: ())
+                    return channel.eventLoop.makeSucceededFuture(result: ())
                 }
                 .connect(to: serverChannel.localAddress!)
-                .wait()
+                .wait(), message: "resolver debug info: \(try! resolverDebugInformation(eventLoop: group.next(),host: "localhost", previouslyReceivedResult: serverChannel.localAddress!))")
             defer {
                 XCTAssertNoThrow(try client.syncCloseAcceptingAlreadyClosed())
             }
+            XCTAssertNoThrow(try childChannelDone.futureResult.wait())
+            XCTAssertNoThrow(try serverChannelDone.futureResult.wait())
         }
     }
 }

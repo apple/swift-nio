@@ -13,8 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include <stdbool.h>
-#include <inttypes.h>
 #include <stdint.h>
+
+#include "cpp_magic.h"
 
 #if __clang_major__ == 3 && __clang_minor__ <= 6
 /* clang 3.6 doesn't seem to know about _Nonnull yet */

@@ -85,9 +85,10 @@ public class IntegerTypesTest: XCTestCase {
     func testDescriptionUInt24() {
         XCTAssertEqual("0", _UInt24.min.description)
         XCTAssertEqual("16777215", _UInt24.max.description)
-        XCTAssertEqual("12345678", _UInt24(12345678).description)
+        XCTAssertEqual("12345678", _UInt24(12345678 as UInt32).description)
         XCTAssertEqual("1", _UInt24(1).description)
         XCTAssertEqual("8388608", _UInt24(1 << 23).description)
+        XCTAssertEqual("66", _UInt24(66).description)
     }
 
     func testDescriptionUInt56() {
@@ -95,6 +96,7 @@ public class IntegerTypesTest: XCTestCase {
         XCTAssertEqual("72057594037927935", _UInt56.max.description)
         XCTAssertEqual("12345678901234567", _UInt56(12345678901234567 as UInt64).description)
         XCTAssertEqual("1", _UInt56(1).description)
-        XCTAssertEqual("36028797018963968", _UInt56(1 << 55).description)
+        XCTAssertEqual("66", _UInt56(66).description)
+        XCTAssertEqual("36028797018963968", _UInt56(UInt64(1) << 55).description)
     }
 }
