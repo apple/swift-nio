@@ -965,13 +965,9 @@ class ByteBufferTest: XCTestCase {
         written += buf.write(bytes: ContiguousArray<UInt8>([13, 14, 15, 16]))
         XCTAssertEqual(16, written)
 
-        // StaticString
-        written += buf.write(bytes: "ABCD" as StaticString)
-        XCTAssertEqual(20, written)
-
         // Data
         written += buf.write(bytes: "EFGH".data(using: .utf8)!)
-        XCTAssertEqual(24, written)
+        XCTAssertEqual(20, written)
         var more = Array("IJKL".utf8)
 
         // UnsafeMutableRawBufferPointer
@@ -1001,7 +997,7 @@ class ByteBufferTest: XCTestCase {
             buf.write(bytes: ptr.dropFirst(0)) + buf.write(bytes: ptr.dropFirst(4 /* drop all of them */))
         }
 
-        let expected = Array(1...16) + Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ012345".utf8)
+        let expected = Array(1...16) + Array("EFGHIJKLMNOPQRSTUVWXYZ012345".utf8)
 
         XCTAssertEqual(expected, buf.readBytes(length: written)!)
     }
@@ -1154,7 +1150,7 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testWeUseFastWriteForContiguousCollections() throws {
-        struct WrongCollection: ContiguousCollection {
+        struct WrongCollection: Collection {
             let storage: [UInt8] = [1, 2, 3]
             typealias Element = UInt8
             typealias Index = Array<UInt8>.Index
@@ -1185,8 +1181,8 @@ class ByteBufferTest: XCTestCase {
                 return self.storage.index(after: i)
             }
 
-            func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-                return try self.storage.withUnsafeBytes(body)
+            func withContiguousStorageIfAvailable<R>(_ body: (UnsafeBufferPointer<UInt8>) throws -> R) rethrows -> R? {
+                return try self.storage.withUnsafeBufferPointer(body)
             }
         }
         buf.clear()
@@ -1390,12 +1386,6 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(expected, actual)
     }
 
-    func testStaticStringCategorySubscript() throws {
-        let s: StaticString = "hello"
-        XCTAssertEqual("h".utf8.first!, s[0])
-        XCTAssertEqual("o".utf8.first!, s[4])
-    }
-
     func testReadableBytesView() throws {
         self.buf.clear()
         self.buf.write(string: "hello world 012345678")
@@ -1449,57 +1439,6 @@ class ByteBufferTest: XCTestCase {
         let view = self.buf.readableBytesView
         let viewSlice: ByteBufferView = view[view.startIndex ..< view.endIndex]
         XCTAssertEqual(buf.readableBytes, viewSlice.count)
-    }
-
-    func testWeDontWriteTooMuchForUnderreportingContiguousCollection() throws {
-        // this is an illegal contiguous collection but we should still be able to deal with this
-        struct UnderreportingContiguousCollection: ContiguousCollection {
-            let storage: [UInt8] = Array(repeating: 0xff, count: 4096)
-            typealias Element = UInt8
-            typealias Index = Array<UInt8>.Index
-            typealias SubSequence = Array<UInt8>.SubSequence
-            typealias Indices = Array<UInt8>.Indices
-
-            public var count: Int {
-                // we're reporting 3 elements
-                return 3
-            }
-
-            public var indices: Indices {
-                return CountableRange(0...2)
-            }
-
-            public subscript(bounds: Range<Index>) -> SubSequence {
-                return self.storage[bounds]
-            }
-
-            public subscript(position: Index) -> Element {
-                /* this is wrong but we need to check that we don't access this */
-                XCTFail("shouldn't have been called")
-                return 0xff
-            }
-
-            public var startIndex: Index {
-                return self.storage.startIndex
-            }
-
-            public var endIndex: Index {
-                return self.storage.endIndex
-            }
-
-            func index(after i: Index) -> Index {
-                return self.storage.index(after: i)
-            }
-
-            func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
-                // we're giving access to 4096 elements despite the fact we claim to only have 3 available
-                return try self.storage.withUnsafeBytes(body)
-            }
-        }
-        buf.clear()
-        buf.write(bytes: UnderreportingContiguousCollection())
-        XCTAssertEqual(3, buf.readableBytes)
-        XCTAssertEqual([0xff, 0xff, 0xff], buf.readBytes(length: buf.readableBytes)!)
     }
 
     func testReserveCapacityWhenOversize() throws {
