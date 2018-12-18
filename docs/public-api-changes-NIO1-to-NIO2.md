@@ -27,3 +27,4 @@
   returns `Int` and has had its return value made discardable.
 - `ByteBuffer.write(string:)` no longer returns an `Int?`, instead it
   returns `Int` and has had its return value made discardable.
+- removed ContiguousCollection

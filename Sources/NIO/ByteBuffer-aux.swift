@@ -97,6 +97,19 @@ extension ByteBuffer {
         return written
     }
 
+    @inline(never)
+    @usableFromInline
+    mutating func _setStringSlowpath(_ string: String, at index: Int) -> Int {
+        // slow path, let's try to force the string to be native
+        if let written = (string + "").utf8.withContiguousStorageIfAvailable({ utf8Bytes in
+            self.set(bytes: utf8Bytes, at: index)
+        }) {
+            return written
+        } else {
+            return self.set(bytes: string.utf8, at: index)
+        }
+    }
+
     /// Write `string` into this `ByteBuffer` at `index` using UTF-8 encoding. Does not move the writer index.
     ///
     /// - parameters:
@@ -104,21 +117,15 @@ extension ByteBuffer {
     ///     - index: The index for the first serialized byte.
     /// - returns: The number of bytes written.
     @discardableResult
+    @inlinable
     public mutating func set(string: String, at index: Int) -> Int {
         if let written = string.utf8.withContiguousStorageIfAvailable({ utf8Bytes in
             self.set(bytes: utf8Bytes, at: index)
         }) {
-            // best case, directly available
+            // fast path, directly available
             return written
         } else {
-            // second best case, let's try to force the string to be native
-            if let written = (string + "").utf8.withContiguousStorageIfAvailable({ utf8Bytes in
-                self.set(bytes: utf8Bytes, at: index)
-            }) {
-                return written
-            } else {
-                return self.set(bytes: string.utf8, at: index)
-            }
+            return self._setStringSlowpath(string, at: index)
         }
     }
 
@@ -261,21 +268,20 @@ extension ByteBuffer {
     @discardableResult
     @inlinable
     public mutating func write<Bytes: Sequence>(bytes: Bytes) -> Int where Bytes.Element == UInt8 {
-        let written = set(bytes: bytes, at: self.writerIndex)
+        let written = self.set(bytes: bytes, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
         return written
     }
 
-    /// Write `bytes`, a `ContiguousCollection` of `UInt8` into this `ByteBuffer`. Moves the writer index forward by the number of bytes written.
-    /// This method is likely more efficient than the one operating on plain `Collection` as it will use `memcpy` to copy all the bytes in one go.
+    /// Write `bytes` into this `ByteBuffer`. Moves the writer index forward by the number of bytes written.
     ///
     /// - parameters:
-    ///     - bytes: A `ContiguousCollection` of `UInt8` to be written.
+    ///     - bytes: An `UnsafeRawBufferPointer`
     /// - returns: The number of bytes written or `bytes.count`.
     @discardableResult
     @inlinable
-    public mutating func write<Bytes: ContiguousCollection>(bytes: Bytes) -> Int where Bytes.Element == UInt8 {
-        let written = set(bytes: bytes, at: self.writerIndex)
+    public mutating func write(bytes: UnsafeRawBufferPointer) -> Int {
+        let written = self.set(bytes: bytes, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
         return written
     }
