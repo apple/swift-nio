@@ -395,9 +395,9 @@ public struct ByteBuffer {
     }
 
     @inlinable
-    mutating func _set<Bytes: ContiguousCollection>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
+    mutating func _set(bytes: UnsafeRawBufferPointer, at index: _Index) -> _Capacity {
         let bytesCount = bytes.count
-        let newEndIndex: _Index = index + _toIndex(Int(bytesCount))
+        let newEndIndex: _Index = index + _toIndex(bytesCount)
         if !isKnownUniquelyReferenced(&self._storage) {
             let extraCapacity = newEndIndex > self._slice.upperBound ? newEndIndex - self._slice.upperBound : 0
             self._copyStorageAndRebase(extraCapacity: extraCapacity)
@@ -405,21 +405,13 @@ public struct ByteBuffer {
 
         self._ensureAvailableCapacity(_Capacity(bytesCount), at: index)
         let targetPtr = UnsafeMutableRawBufferPointer(rebasing: self._slicedStorageBuffer.dropFirst(Int(index)))
-        bytes.withUnsafeBytes { srcPtr in
-            precondition(srcPtr.count >= bytesCount,
-                         "collection \(bytes) claims count \(bytesCount) but withUnsafeBytes only offers \(srcPtr.count) bytes")
-            targetPtr.copyMemory(from: UnsafeRawBufferPointer(rebasing: srcPtr.prefix(Int(bytesCount))))
-        }
+        targetPtr.copyMemory(from: bytes)
         return _toCapacity(Int(bytesCount))
     }
 
-    @inlinable
-    mutating func _set<Bytes: Sequence>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
-        assert(!([Array<Bytes.Element>.self, StaticString.self, ContiguousArray<Bytes.Element>.self,
-                  UnsafeRawBufferPointer.self, UnsafeBufferPointer<UInt8>.self, UnsafeMutableRawBufferPointer.self,
-                  UnsafeMutableBufferPointer<UInt8>.self,
-                  ArraySlice<UInt8>.self].contains(where: { (t: Any.Type) -> Bool in t == type(of: bytes) })),
-               "called the slower set<Bytes: Sequence> function even though \(Bytes.self) is a ContiguousCollection")
+    @inline(never)
+    @usableFromInline
+    mutating func _setSlowPath<Bytes: Sequence>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
         func ensureCapacityAndReturnStorageBase(capacity: Int) -> UnsafeMutablePointer<UInt8> {
             self._ensureAvailableCapacity(_Capacity(capacity), at: index)
             let newBytesPtr = UnsafeMutableRawBufferPointer(rebasing: self._slicedStorageBuffer[Int(index) ..< Int(index) + Int(capacity)])
@@ -441,6 +433,18 @@ public struct ByteBuffer {
             idx += 1
         }
         return _toCapacity(idx)
+    }
+
+    @inlinable
+    mutating func _set<Bytes: Sequence>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
+        if let written = bytes.withContiguousStorageIfAvailable({ bytes in
+            self._set(bytes: UnsafeRawBufferPointer(bytes), at: index)
+        }) {
+            // fast path, we've got access to the contiguous bytes
+            return written
+        } else {
+            return self._setSlowPath(bytes: bytes, at: index)
+        }
     }
 
     // MARK: Public Core API
@@ -727,10 +731,10 @@ extension ByteBuffer {
         return Int(self._set(bytes: bytes, at: _toIndex(index)))
     }
 
-    /// Copy the collection of `bytes` into the `ByteBuffer` at `index`.
+    /// Copy `bytes` into the `ByteBuffer` at `index`.
     @discardableResult
     @inlinable
-    public mutating func set<Bytes: ContiguousCollection>(bytes: Bytes, at index: Int) -> Int where Bytes.Element == UInt8 {
+    public mutating func set(bytes: UnsafeRawBufferPointer, at index: Int) -> Int {
         return Int(self._set(bytes: bytes, at: _toIndex(index)))
     }
 
