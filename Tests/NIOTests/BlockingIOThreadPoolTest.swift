@@ -125,4 +125,66 @@ class BlockingIOThreadPoolTest: XCTestCase {
         shutdownDoneSem.wait()
         assert(weakThreadPool == nil, within: .seconds(1))
     }
+
+	class SomeClass {
+		init() {}
+		func dummy() {}
+	}
+
+	func testClosureReferenceDroppedAfterSingleWorkItemExecution() throws {
+		let taskRunningSem = DispatchSemaphore(value: 0)
+		let doneSem = DispatchSemaphore(value: 0)
+		let threadPool = BlockingIOThreadPool(numberOfThreads: 1)
+		threadPool.start()
+		weak var referencedObject: SomeClass? = nil
+		({
+			let object = SomeClass()
+			referencedObject = object
+			threadPool.submit { state in
+				XCTAssertEqual(.active, state)
+				taskRunningSem.signal()
+				object.dummy()
+				doneSem.wait()
+			}
+		})()
+		taskRunningSem.wait()
+		doneSem.signal()
+		assert(referencedObject == nil, within: .seconds(1))
+		try threadPool.syncShutdownGracefully()
+	}
+
+	func testClosureReferencesDroppedAfterTwoConsecutiveWorkItemsExecution() throws {
+		let taskRunningSem = DispatchSemaphore(value: 0)
+		let doneSem = DispatchSemaphore(value: 0)
+		let threadPool = BlockingIOThreadPool(numberOfThreads: 1)
+		threadPool.start()
+		weak var referencedObject1: SomeClass? = nil
+		weak var referencedObject2: SomeClass? = nil
+		({
+			let object1 = SomeClass()
+			let object2 = SomeClass()
+			referencedObject1 = object1
+			referencedObject2 = object2
+			threadPool.submit { state in
+				XCTAssertEqual(.active, state)
+				taskRunningSem.signal()
+				object1.dummy()
+				doneSem.wait()
+			}
+			threadPool.submit { state in
+				XCTAssertEqual(.active, state)
+				taskRunningSem.signal()
+				object2.dummy()
+				doneSem.wait()
+			}
+		})()
+		taskRunningSem.wait()
+		doneSem.signal()
+		taskRunningSem.wait()
+		doneSem.signal()
+		assert(referencedObject1 == nil, within: .seconds(1))
+		assert(referencedObject2 == nil, within: .seconds(1))
+		try threadPool.syncShutdownGracefully()
+	}
+
 }
