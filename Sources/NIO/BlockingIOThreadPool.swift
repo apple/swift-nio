@@ -126,7 +126,7 @@ public final class BlockingIOThreadPool {
         var item: WorkItem? = nil
         repeat {
             /* wait until work has become available */
-			item = nil	// ensure previous work item is not retained for duration of semaphore wait
+            item = nil	// ensure previous work item is not retained for duration of semaphore wait
             self.semaphore.wait()
 
             item = self.lock.withLock { () -> (WorkItem)? in
