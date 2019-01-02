@@ -699,14 +699,16 @@ extension ByteBuffer: CustomStringConvertible {
     ///
     /// - returns: A description of this `ByteBuffer`.
     public var description: String {
-        return  "ByteBuffer { " +
-            /*    this     */ "readerIndex: \(self.readerIndex), " +
-            /*     is      */ "writerIndex: \(self.writerIndex), " +
-            /*     to      */ "readableBytes: \(self.readableBytes), " +
-            /*    help     */ "capacity: \(self.capacity), " +
-            /*    Xcode    */ "slice: \(self._slice), " +
-            /*   indent    */ "storage: \(self._storage.bytes) (\(self._storage.capacity) bytes)" +
-            /*             */ "}"
+        return """
+        ByteBuffer { \
+        readerIndex: \(self.readerIndex), \
+        writerIndex: \(self.writerIndex), \
+        readableBytes: \(self.readableBytes), \
+        capacity: \(self.capacity), \
+        slice: \(self._slice), \
+        storage: \(self._storage.bytes) (\(self._storage.capacity) bytes)\
+        }
+        """
     }
 
     /// A `String` describing this `ByteBuffer` with some portion of the readable bytes dumped too. Example:
