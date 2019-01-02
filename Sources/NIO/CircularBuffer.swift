@@ -16,7 +16,7 @@
 /// RangeReplaceableCollection. It defines the append method that is present
 /// on RangeReplaceableCollection, which makes all RangeReplaceableCollections
 /// trivially able to implement this protocol.
-public protocol AppendableCollection: Collection {
+protocol AppendableCollection: Collection {
     mutating func append(_ newElement: Self.Iterator.Element)
 }
 
