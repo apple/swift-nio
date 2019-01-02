@@ -272,10 +272,11 @@ class HTTPResponseCompressorTest: XCTestCase {
                                           decompressor: z_stream.decompressDeflate)
     }
 
-    private func assertGzippedResponse(channel: EmbeddedChannel, writeStrategy: WriteStrategy = .once) throws {
+    private func assertGzippedResponse(channel: EmbeddedChannel, writeStrategy: WriteStrategy = .once, additionalHeaders: HTTPHeaders = HTTPHeaders()) throws {
         let bodySize = 2048
-        let response = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1),
+        var response = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1),
                                         status: .ok)
+        response.headers = additionalHeaders
         let body = [UInt8](repeating: 60, count: bodySize)
         var bodyBuffer = channel.allocator.buffer(capacity: bodySize)
         bodyBuffer.write(bytes: body)
@@ -495,6 +496,16 @@ class HTTPResponseCompressorTest: XCTestCase {
 
         try sendRequest(acceptEncoding: "deflate;q=2.2, gzip;q=0.3", channel: channel)
         try assertGzippedResponse(channel: channel)
+    }
+
+    func testOverridesContentEncodingHeader() throws {
+        let channel = try compressionChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+
+        try sendRequest(acceptEncoding: "deflate;q=2.2, gzip;q=0.3", channel: channel)
+        try assertGzippedResponse(channel: channel, additionalHeaders: HTTPHeaders([("Content-Encoding", "gzip")]))
     }
 
     func testRemovingHandlerFailsPendingWrites() throws {
