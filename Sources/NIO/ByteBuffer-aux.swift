@@ -91,12 +91,22 @@ extension ByteBuffer {
     ///     - string: The string to write.
     /// - returns: The number of bytes written.
     @discardableResult
-    public mutating func write(string: String) -> Int? {
-        if let written = self.set(string: string, at: self.writerIndex) {
-            self._moveWriterIndex(forwardBy: written)
+    public mutating func write(string: String) -> Int {
+        let written = self.set(string: string, at: self.writerIndex)
+        self._moveWriterIndex(forwardBy: written)
+        return written
+    }
+
+    @inline(never)
+    @usableFromInline
+    mutating func _setStringSlowpath(_ string: String, at index: Int) -> Int {
+        // slow path, let's try to force the string to be native
+        if let written = (string + "").utf8.withContiguousStorageIfAvailable({ utf8Bytes in
+            self.set(bytes: utf8Bytes, at: index)
+        }) {
             return written
         } else {
-            return nil
+            return self.set(bytes: string.utf8, at: index)
         }
     }
 
@@ -107,8 +117,16 @@ extension ByteBuffer {
     ///     - index: The index for the first serialized byte.
     /// - returns: The number of bytes written.
     @discardableResult
-    public mutating func set(string: String, at index: Int) -> Int? {
-        return self.set(bytes: string.utf8, at: index)
+    @inlinable
+    public mutating func set(string: String, at index: Int) -> Int {
+        if let written = string.utf8.withContiguousStorageIfAvailable({ utf8Bytes in
+            self.set(bytes: utf8Bytes, at: index)
+        }) {
+            // fast path, directly available
+            return written
+        } else {
+            return self._setStringSlowpath(string, at: index)
+        }
     }
 
     /// Get the string at `index` from this `ByteBuffer` decoding using the UTF-8 encoding. Does not move the reader index.
@@ -131,7 +149,7 @@ extension ByteBuffer {
             guard index <= pointer.count - length else {
                 return nil
             }
-            return String(decoding: UnsafeRawBufferPointer(rebasing: pointer[index..<(index+length)]), as: UTF8.self)
+            return String(decoding: UnsafeRawBufferPointer(rebasing: pointer[index..<(index+length)]), as: Unicode.UTF8.self)
         }
     }
 
@@ -162,7 +180,7 @@ extension ByteBuffer {
     ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed.
     /// - returns: The number of bytes read.
     @discardableResult
-    @_inlineable
+    @inlinable
     public mutating func readWithUnsafeReadableBytes(_ body: (UnsafeRawBufferPointer) throws -> Int) rethrows -> Int {
         let bytesRead = try self.withUnsafeReadableBytes(body)
         self._moveReaderIndex(forwardBy: bytesRead)
@@ -177,7 +195,7 @@ extension ByteBuffer {
     /// - parameters:
     ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
     /// - returns: The value `fn` returned in the second tuple component.
-    @_inlineable
+    @inlinable
     public mutating func readWithUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> (Int, T)) rethrows -> T {
         let (bytesRead, ret) = try self.withUnsafeReadableBytes(body)
         self._moveReaderIndex(forwardBy: bytesRead)
@@ -193,7 +211,7 @@ extension ByteBuffer {
     ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed.
     /// - returns: The number of bytes read.
     @discardableResult
-    @_inlineable
+    @inlinable
     public mutating func readWithUnsafeMutableReadableBytes(_ body: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
         let bytesRead = try self.withUnsafeMutableReadableBytes(body)
         self._moveReaderIndex(forwardBy: bytesRead)
@@ -208,7 +226,7 @@ extension ByteBuffer {
     /// - parameters:
     ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
     /// - returns: The value `fn` returned in the second tuple component.
-    @_inlineable
+    @inlinable
     public mutating func readWithUnsafeMutableReadableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> (Int, T)) rethrows -> T {
         let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes(body)
         self._moveReaderIndex(forwardBy: bytesRead)
@@ -248,23 +266,22 @@ extension ByteBuffer {
     ///     - bytes: A `Collection` of `UInt8` to be written.
     /// - returns: The number of bytes written or `bytes.count`.
     @discardableResult
-    @_inlineable
-    public mutating func write<S: Sequence>(bytes: S) -> Int where S.Element == UInt8 {
-        let written = set(bytes: bytes, at: self.writerIndex)
+    @inlinable
+    public mutating func write<Bytes: Sequence>(bytes: Bytes) -> Int where Bytes.Element == UInt8 {
+        let written = self.set(bytes: bytes, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
         return written
     }
 
-    /// Write `bytes`, a `ContiguousCollection` of `UInt8` into this `ByteBuffer`. Moves the writer index forward by the number of bytes written.
-    /// This method is likely more efficient than the one operating on plain `Collection` as it will use `memcpy` to copy all the bytes in one go.
+    /// Write `bytes` into this `ByteBuffer`. Moves the writer index forward by the number of bytes written.
     ///
     /// - parameters:
-    ///     - bytes: A `ContiguousCollection` of `UInt8` to be written.
+    ///     - bytes: An `UnsafeRawBufferPointer`
     /// - returns: The number of bytes written or `bytes.count`.
     @discardableResult
-    @_inlineable
-    public mutating func write<S: ContiguousCollection>(bytes: S) -> Int where S.Element == UInt8 {
-        let written = set(bytes: bytes, at: self.writerIndex)
+    @inlinable
+    public mutating func write(bytes: UnsafeRawBufferPointer) -> Int {
+        let written = self.set(bytes: bytes, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
         return written
     }

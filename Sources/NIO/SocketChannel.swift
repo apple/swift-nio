@@ -377,11 +377,11 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         }
 
         guard self.isRegistered else {
-            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            promise?.fail(error: ChannelError.inappropriateOperationForState)
             return
         }
 
-        let p = eventLoop.newPromise(of: Void.self)
+        let p = eventLoop.makePromise(of: Void.self)
         p.futureResult.map {
             // It's important to call the methods before we actually notify the original promise for ordering reasons.
             self.becomeActive0(promise: promise)
@@ -698,7 +698,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
         guard self.isRegistered else {
-            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            promise?.fail(error: ChannelError.inappropriateOperationForState)
             return
         }
         do {
@@ -793,25 +793,25 @@ extension DatagramChannel: MulticastChannel {
         self.eventLoop.assertInEventLoop()
 
         guard self.isActive else {
-            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            promise?.fail(error: ChannelError.inappropriateOperationForState)
             return
         }
 
         // We need to check that we have the appropriate address types in all cases. They all need to overlap with
         // the address type of this channel, or this cannot work.
         guard let localAddress = self.localAddress else {
-            promise?.fail(error: MulticastError.unknownLocalAddress)
+            promise?.fail(error: ChannelError.unknownLocalAddress)
             return
         }
 
         guard localAddress.protocolFamily == group.protocolFamily else {
-            promise?.fail(error: MulticastError.badMulticastGroupAddressFamily)
+            promise?.fail(error: ChannelError.badMulticastGroupAddressFamily)
             return
         }
 
         // Ok, now we need to check that the group we've been asked to join is actually a multicast group.
         guard group.isMulticast else {
-            promise?.fail(error: MulticastError.illegalMulticastAddress(group))
+            promise?.fail(error: ChannelError.illegalMulticastAddress(group))
             return
         }
 
@@ -838,7 +838,7 @@ extension DatagramChannel: MulticastChannel {
                 try self.socket.setOption(level: CInt(IPPROTO_IPV6), name: operation.optionName(level: CInt(IPPROTO_IPV6)), value: multicastRequest)
             case (.v4, .some(.v6)), (.v6, .some(.v4)), (.v4, .some(.unixDomainSocket)), (.v6, .some(.unixDomainSocket)):
                 // Mismatched group and interface address: this is an error.
-                throw MulticastError.badInterfaceAddressFamily
+                throw ChannelError.badInterfaceAddressFamily
             }
 
             promise?.succeed(result: ())

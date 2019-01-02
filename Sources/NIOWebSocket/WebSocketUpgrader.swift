@@ -148,7 +148,7 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
         /// We never use the automatic error handling feature of the WebSocketFrameDecoder: we always use the separate channel
         /// handler.
         var upgradeFuture = ctx.pipeline.add(handler: WebSocketFrameEncoder()).then {
-            ctx.pipeline.add(handler: WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize, automaticErrorHandling: false))
+            ctx.pipeline.add(handler: ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize, automaticErrorHandling: false)))
         }
 
         if self.automaticErrorHandling {

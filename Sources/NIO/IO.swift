@@ -79,7 +79,7 @@ extension IOError: CustomStringConvertible {
 }
 
 /// An result for an IO operation that was done on a non-blocking resource.
-public enum IOResult<T: Equatable> {
+enum IOResult<T: Equatable> {
 
     /// Signals that the IO operation could not be completed as otherwise we would need to block.
     case wouldBlock(T)

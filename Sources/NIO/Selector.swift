@@ -663,7 +663,7 @@ internal extension Selector where R == NIORegistration {
     /// Gently close the `Selector` after all registered `Channel`s are closed.
     func closeGently(eventLoop: EventLoop) -> EventLoopFuture<Void> {
         guard self.lifecycleState == .open else {
-            return eventLoop.newFailedFuture(error: IOError(errnoCode: EBADF, reason: "can't close selector gently as it's \(self.lifecycleState)."))
+            return eventLoop.makeFailedFuture(error: IOError(errnoCode: EBADF, reason: "can't close selector gently as it's \(self.lifecycleState)."))
         }
 
         let futures: [EventLoopFuture<Void>] = self.registrations.map { (_, reg: NIORegistration) -> EventLoopFuture<Void> in
@@ -695,7 +695,7 @@ internal extension Selector where R == NIORegistration {
         }
 
         guard futures.count > 0 else {
-            return eventLoop.newSucceededFuture(result: ())
+            return eventLoop.makeSucceededFuture(result: ())
         }
 
         return EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
@@ -713,23 +713,6 @@ enum SelectorStrategy {
     /// Try to select all ready IO at this point in time without blocking at all.
     case now
 }
-
-/// The IO for which we want to be notified.
-@available(*, deprecated, message: "IOEvent was made public by accident, is no longer used internally and will be removed with SwiftNIO 2.0.0")
-public enum IOEvent {
-    /// Something is ready to be read.
-    case read
-
-    /// It's possible to write some data again.
-    case write
-
-    /// Combination of `read` and `write`.
-    case all
-
-    /// Not interested in any event.
-    case none
-}
-
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
 extension kevent {

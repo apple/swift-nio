@@ -41,7 +41,7 @@ extension Collection {
     ///   returns `nil`.
     ///
     /// - Complexity: O(*n*), where *n* is the length of the collection.
-    @_inlineable @_versioned
+    @inlinable
     internal func firstIndex(where predicate: (Element) throws -> Bool) rethrows -> Index? {
         var i = self.startIndex
         while i != self.endIndex {
@@ -76,7 +76,7 @@ extension BidirectionalCollection {
     ///   `predicate`, or `nil` if no elements match.
     ///
     /// - Complexity: O(*n*), where *n* is the length of the collection.
-    @_inlineable @_versioned
+    @inlinable
     internal func lastIndex(where predicate: (Element) throws -> Bool) rethrows -> Index? {
         var i = endIndex
         while i != startIndex {

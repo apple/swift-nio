@@ -24,7 +24,7 @@ private extension Channel {
             }
 
             XCTFail("Could not wait for reads")
-            return self.eventLoop.newSucceededFuture(result: [] as [AddressedEnvelope<ByteBuffer>])
+            return self.eventLoop.makeSucceededFuture(result: [] as [AddressedEnvelope<ByteBuffer>])
         }.wait()
     }
 }
@@ -73,10 +73,10 @@ private class DatagramReadRecorder<DataType>: ChannelInboundHandler {
 
     func notifyForDatagrams(_ count: Int) -> EventLoopFuture<[AddressedEnvelope<DataType>]> {
         guard reads.count < count else {
-            return loop!.newSucceededFuture(result: .init(reads.prefix(count)))
+            return loop!.makeSucceededFuture(result: .init(reads.prefix(count)))
         }
 
-        readWaiters[count] = loop!.newPromise()
+        readWaiters[count] = loop!.makePromise()
         return readWaiters[count]!.futureResult
     }
 }
@@ -170,7 +170,7 @@ final class DatagramChannelTests: XCTestCase {
             XCTAssertTrue(writable)
         }
 
-        let lastWritePromise = self.firstChannel.eventLoop.newPromise(of: Void.self)
+        let lastWritePromise = self.firstChannel.eventLoop.makePromise(of: Void.self)
         // The last write will push us over the edge.
         var writable: Bool = try self.firstChannel.eventLoop.submit {
             self.firstChannel.write(NIOAny(writeData), promise: lastWritePromise)
@@ -192,7 +192,7 @@ final class DatagramChannelTests: XCTestCase {
 
         // Now close the channel. When that completes, all the futures should be complete too.
         let fulfilled = try self.firstChannel.close().map {
-            promises.map { $0.isFulfilled }.reduce(true, { $0 && $1 })
+            promises.map { $0.isFulfilled }.allSatisfy { $0 }
         }.wait()
         XCTAssertTrue(fulfilled)
 
@@ -212,9 +212,9 @@ final class DatagramChannelTests: XCTestCase {
         // We're going to try to write loads, and loads, and loads of data. In this case, one more
         // write than the iovecs max.
 
-        var overall: EventLoopFuture<Void> = self.firstChannel.eventLoop.newSucceededFuture(result: ())
+        var overall: EventLoopFuture<Void> = self.firstChannel.eventLoop.makeSucceededFuture(result: ())
         for _ in 0...Socket.writevLimitIOVectors {
-            let myPromise = self.firstChannel.eventLoop.newPromise(of: Void.self)
+            let myPromise = self.firstChannel.eventLoop.makePromise(of: Void.self)
             var buffer = self.firstChannel.allocator.buffer(capacity: 1)
             buffer.write(string: "a")
             let envelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
@@ -229,11 +229,11 @@ final class DatagramChannelTests: XCTestCase {
     func testSendmmsgLotsOfData() throws {
         var datagrams = 0
 
-        var overall = self.firstChannel.eventLoop.newSucceededFuture(result: ())
+        var overall = self.firstChannel.eventLoop.makeSucceededFuture(result: ())
         // We defer this work to the background thread because otherwise it incurs an enormous number of context
         // switches.
         try self.firstChannel.eventLoop.submit {
-            let myPromise = self.firstChannel.eventLoop.newPromise(of: Void.self)
+            let myPromise = self.firstChannel.eventLoop.makePromise(of: Void.self)
             // For datagrams this buffer cannot be very large, because if it's larger than the path MTU it
             // will cause EMSGSIZE.
             let bufferSize = 1024 * 5
@@ -403,7 +403,7 @@ final class DatagramChannelTests: XCTestCase {
         }
         let socket = try NonRecvFromSocket(error: error)
         let channel = try DatagramChannel(socket: socket, eventLoop: group.next() as! SelectableEventLoop)
-        let promise = channel.eventLoop.newPromise(of: IOError.self)
+        let promise = channel.eventLoop.makePromise(of: IOError.self)
         XCTAssertNoThrow(try channel.register().wait())
         XCTAssertNoThrow(try channel.pipeline.add(handler: RecvFromHandler(promise)).wait())
         XCTAssertNoThrow(try channel.bind(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())

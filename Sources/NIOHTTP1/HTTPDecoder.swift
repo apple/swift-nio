@@ -210,7 +210,7 @@ public enum RemoveAfterUpgradeStrategy {
 /// either the form of `HTTPClientResponsePart` or `HTTPServerRequestPart`: that is,
 /// it produces messages that correspond to the semantic units of HTTP produced by
 /// the remote peer.
-public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
+public class HTTPDecoder<HTTPMessageT>: ChannelInboundHandler, AnyHTTPDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = HTTPMessageT
 
@@ -241,7 +241,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
 
     private func newRequestHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPRequestHead {
         let method = HTTPMethod.from(httpParserMethod: http_method(rawValue: parser.pointee.method))
-        let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
+        let version = HTTPVersion(major: Int(parser.pointee.http_major), minor: Int(parser.pointee.http_minor))
         let request = HTTPRequestHead(version: version, method: method, rawURI: state.currentURI!, headers: HTTPHeaders(buffer: cumulationBuffer!, headers: state.currentHeaders, keepAliveState: parser.keepAliveState))
         self.state.currentHeaders.removeAll(keepingCapacity: true)
         return request
@@ -249,7 +249,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
 
     private func newResponseHead(_ parser: UnsafeMutablePointer<http_parser>!) -> HTTPResponseHead {
         let status = HTTPResponseStatus(statusCode: Int(parser.pointee.status_code), reasonPhrase: state.currentStatus!)
-        let version = HTTPVersion(major: parser.pointee.http_major, minor: parser.pointee.http_minor)
+        let version = HTTPVersion(major: Int(parser.pointee.http_major), minor: Int(parser.pointee.http_minor))
         let response = HTTPResponseHead(version: version, status: status, headers: HTTPHeaders(buffer: cumulationBuffer!, headers: state.currentHeaders, keepAliveState: parser.keepAliveState))
         self.state.currentHeaders.removeAll(keepingCapacity: true)
         return response
@@ -274,7 +274,7 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
         self.cumulationBuffer = nil
     }
     
-    public func decoderAdded(ctx: ChannelHandlerContext) {
+    public func handlerAdded(ctx: ChannelHandlerContext) {
         if HTTPMessageT.self == HTTPServerRequestPart.self {
             c_nio_http_parser_init(&self.parser, HTTP_REQUEST)
         } else if HTTPMessageT.self == HTTPClientResponsePart.self {
@@ -571,6 +571,18 @@ public class HTTPDecoder<HTTPMessageT>: ByteToMessageDecoder, AnyHTTPDecoder {
                 }
             }
         }
+    }
+
+    private func shouldReclaimBytes(buffer: ByteBuffer) -> Bool {
+        // We want to reclaim in the following cases:
+        //
+        // 1. If there is more than 2kB of memory to reclaim
+        // 2. If the buffer is more than 50% reclaimable memory and is at least
+        //    1kB in size.
+        if buffer.readerIndex > 2048 {
+            return true
+        }
+        return buffer.capacity > 1024 && (buffer.capacity - buffer.readerIndex) >= buffer.readerIndex
     }
 
     /// Will discard bytes till readerIndex if it's needed and then call `fn`.

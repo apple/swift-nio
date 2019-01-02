@@ -16,7 +16,7 @@
 /// RangeReplaceableCollection. It defines the append method that is present
 /// on RangeReplaceableCollection, which makes all RangeReplaceableCollections
 /// trivially able to implement this protocol.
-public protocol AppendableCollection: Collection {
+protocol AppendableCollection: Collection {
     mutating func append(_ newElement: Self.Iterator.Element)
 }
 
@@ -210,8 +210,8 @@ extension CircularBuffer: BidirectionalCollection, RandomAccessCollection, Range
             self.removeSubrange(subrange)
         } else {
             var newBuffer: ContiguousArray<E?> = []
-            let capacityDelta = (Int(newElements.count) - subrange.count)
-            let newCapacity = Int(UInt32(self.buffer.count + capacityDelta).nextPowerOf2())
+            let neededNewCapacity = self.count + newElements.count - subrange.count + 1 /* always one spare */
+            let newCapacity = Swift.max(self.capacity, neededNewCapacity.nextPowerOf2())
             newBuffer.reserveCapacity(newCapacity)
 
             // This mapping is required due to an inconsistent ability to append sequences of non-optional

@@ -20,7 +20,7 @@ private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandler
     switch (isChunked, promise) {
     case (true, .some(let p)):
         /* chunked encoding and the user's interested: we need three promises and need to cascade into the users promise */
-        let (w1, w2, w3) = (ctx.eventLoop.newPromise() as EventLoopPromise<Void>, ctx.eventLoop.newPromise() as EventLoopPromise<Void>, ctx.eventLoop.newPromise() as EventLoopPromise<Void>)
+        let (w1, w2, w3) = (ctx.eventLoop.makePromise() as EventLoopPromise<Void>, ctx.eventLoop.makePromise() as EventLoopPromise<Void>, ctx.eventLoop.makePromise() as EventLoopPromise<Void>)
         w1.futureResult.and(w2.futureResult).and(w3.futureResult).map { (_: ((((), ()), ()))) in }.cascade(promise: p)
         (mW1, mW2, mW3) = (w1, w2, w3)
     case (false, .some(let p)):

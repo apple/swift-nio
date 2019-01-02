@@ -150,7 +150,7 @@ final class RepeatedRequests: ChannelInboundHandler {
     init(numberOfRequests: Int, eventLoop: EventLoop) {
         self.remainingNumberOfRequests = numberOfRequests
         self.numberOfRequests = numberOfRequests
-        self.isDonePromise = eventLoop.newPromise()
+        self.isDonePromise = eventLoop.makePromise()
     }
 
     func wait() throws -> Int {

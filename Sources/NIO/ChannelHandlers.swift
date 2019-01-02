@@ -222,7 +222,7 @@ public class IdleStateHandler: ChannelDuplexHandler {
             return
         }
 
-        let writePromise = promise ?? ctx.eventLoop.newPromise()
+        let writePromise = promise ?? ctx.eventLoop.makePromise()
         writePromise.futureResult.whenComplete {
             self.lastWriteCompleteTime = DispatchTime.now()
         }
@@ -236,31 +236,31 @@ public class IdleStateHandler: ChannelDuplexHandler {
         return false
     }
 
-    private func newReadTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
+    private func makeReadTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
         return {
             guard self.shouldReschedule(ctx) else  {
                 return
             }
 
             if self.reading {
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newReadTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.makeReadTimeoutTask(ctx, timeout))
                 return
             }
 
             let diff = TimeAmount.Value(DispatchTime.now().uptimeNanoseconds) - TimeAmount.Value(self.lastReadTime.uptimeNanoseconds)
             if diff >= timeout.nanoseconds {
                 // Reader is idle - set a new timeout and trigger an event through the pipeline
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newReadTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.makeReadTimeoutTask(ctx, timeout))
 
                 ctx.fireUserInboundEventTriggered(IdleStateEvent.read)
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(timeout.nanoseconds - diff), self.newReadTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(timeout.nanoseconds - diff), self.makeReadTimeoutTask(ctx, timeout))
             }
         }
     }
 
-    private func newWriteTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
+    private func makeWriteTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
         return {
             guard self.shouldReschedule(ctx) else  {
                 return
@@ -271,24 +271,24 @@ public class IdleStateHandler: ChannelDuplexHandler {
 
             if diff >= timeout.nanoseconds {
                 // Writer is idle - set a new timeout and notify the callback.
-                self.scheduledWriterTask = ctx.eventLoop.scheduleTask(in: timeout, self.newWriteTimeoutTask(ctx, timeout))
+                self.scheduledWriterTask = ctx.eventLoop.scheduleTask(in: timeout, self.makeWriteTimeoutTask(ctx, timeout))
 
                 ctx.fireUserInboundEventTriggered(IdleStateEvent.write)
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledWriterTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(TimeAmount.Value(timeout.nanoseconds) - TimeAmount.Value(diff)), self.newWriteTimeoutTask(ctx, timeout))
+                self.scheduledWriterTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(TimeAmount.Value(timeout.nanoseconds) - TimeAmount.Value(diff)), self.makeWriteTimeoutTask(ctx, timeout))
             }
         }
     }
 
-    private func newAllTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
+    private func makeAllTimeoutTask(_ ctx: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
         return {
             guard self.shouldReschedule(ctx) else  {
                 return
             }
 
             if self.reading {
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newAllTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.makeAllTimeoutTask(ctx, timeout))
                 return
             }
             let lastRead = self.lastReadTime
@@ -297,12 +297,12 @@ public class IdleStateHandler: ChannelDuplexHandler {
             let diff = TimeAmount.Value(DispatchTime.now().uptimeNanoseconds) - TimeAmount.Value((lastRead > lastWrite ? lastRead : lastWrite).uptimeNanoseconds)
             if diff >= timeout.nanoseconds {
                 // Reader is idle - set a new timeout and trigger an event through the pipeline
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.newAllTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: timeout, self.makeAllTimeoutTask(ctx, timeout))
 
                 ctx.fireUserInboundEventTriggered(IdleStateEvent.all)
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(TimeAmount.Value(timeout.nanoseconds) - diff), self.newAllTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(in: .nanoseconds(TimeAmount.Value(timeout.nanoseconds) - diff), self.makeAllTimeoutTask(ctx, timeout))
             }
         }
     }
@@ -318,9 +318,9 @@ public class IdleStateHandler: ChannelDuplexHandler {
         let now = DispatchTime.now()
         lastReadTime = now
         lastWriteCompleteTime = now
-        scheduledReaderTask = schedule(ctx, readTimeout, newReadTimeoutTask)
-        scheduledWriterTask = schedule(ctx, writeTimeout, newWriteTimeoutTask)
-        scheduledAllTask = schedule(ctx, allTimeout, newAllTimeoutTask)
+        scheduledReaderTask = schedule(ctx, readTimeout, makeReadTimeoutTask)
+        scheduledWriterTask = schedule(ctx, writeTimeout, makeWriteTimeoutTask)
+        scheduledAllTask = schedule(ctx, allTimeout, makeAllTimeoutTask)
     }
 
     private func cancelIdleTasks(_ ctx: ChannelHandlerContext) {

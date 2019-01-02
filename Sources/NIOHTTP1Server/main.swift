@@ -343,7 +343,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                                                     }
                                                     return ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buffer))))
                     }.then { () -> EventLoopFuture<Void> in
-                        let p = ctx.eventLoop.newPromise(of: Void.self)
+                        let p = ctx.eventLoop.makePromise(of: Void.self)
                         self.completeResponse(ctx, trailers: nil, promise: p)
                         return p.futureResult
                     }.thenIfError { error in
@@ -365,7 +365,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                     let response = responseHead(request: request, fileRegion: region)
                     ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
                     ctx.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region)))).then {
-                        let p = ctx.eventLoop.newPromise(of: Void.self)
+                        let p = ctx.eventLoop.makePromise(of: Void.self)
                         self.completeResponse(ctx, trailers: nil, promise: p)
                         return p.futureResult
                     }.thenIfError { (_: Error) in
@@ -385,7 +385,7 @@ private final class HTTPHandler: ChannelInboundHandler {
     private func completeResponse(_ ctx: ChannelHandlerContext, trailers: HTTPHeaders?, promise: EventLoopPromise<Void>?) {
         self.state.responseComplete()
 
-        let promise = self.keepAlive ? promise : (promise ?? ctx.eventLoop.newPromise())
+        let promise = self.keepAlive ? promise : (promise ?? ctx.eventLoop.makePromise())
         if !self.keepAlive {
             promise!.futureResult.whenComplete { ctx.close(promise: nil) }
         }

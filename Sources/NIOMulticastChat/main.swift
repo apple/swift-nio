@@ -86,7 +86,7 @@ let datagramChannel = try datagramBootstrap
         return channel.joinGroup(chatMulticastGroup, interface: targetInterface).map { channel }
     }.then { channel -> EventLoopFuture<Channel> in
         guard let targetInterface = targetInterface else {
-            return channel.eventLoop.newSucceededFuture(result: channel)
+            return channel.eventLoop.makeSucceededFuture(result: channel)
         }
 
         let provider = channel as! SocketOptionProvider

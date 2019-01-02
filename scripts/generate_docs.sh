@@ -71,7 +71,9 @@ for module in "${modules[@]}"; do
 done
 
 for module in "${modules[@]}"; do
-  args=("${jazzy_args[@]}"  --output "$root_path/docs/$version/$module" --module "$module")
+  args=("${jazzy_args[@]}"  --output "$root_path/docs/$version/$module" --module "$module"
+        --module-version $version
+        --root-url "https://apple.github.io/swift-nio/docs/$version/$module")
   if [[ -f "$root_path/.build/sourcekitten/$module.json" ]]; then
     args+=(--sourcekitten-sourcefile "$root_path/.build/sourcekitten/$module.json")
   fi
