@@ -60,7 +60,7 @@ fi
 
 if [[ ! -z "$package_dependency" ]]; then
   swift package dump-package | jq -r ".targets |
-                                      map(select(.name == \"$package_dependency\" and .type == \"regular\") | .dependencies | map(.name)) | .[] | .[]"
+                                      map(select(.name == \"$package_dependency\" and .type == \"regular\") | .dependencies | map(.byName | first)) | .[] | .[]"
   exit 0
 fi
 
@@ -68,14 +68,14 @@ fi
 cd "$here/.."
 if $only_libs; then
     swift package dump-package | jq '.products |
-                                     map(select(.product_type != "library")) |
+                                     map(select(.type | has("library") | not)) |
                                      map(.name) | .[]' | tr -d '"' \
                                      >> "$tmpfile"
 fi
 swift package dump-package | jq '.targets |
                                  map(.name as $name |
                                  select(.name == $name and .type == "regular") |
-                                 { "\($name)": .dependencies | map(.name) } ) |
+                                 { "\($name)": .dependencies | map(.byName | first) } ) |
                                  map(to_entries[]) |
                                  map("\(.key) \(.value | .[])") |
                                  .[]' | \
