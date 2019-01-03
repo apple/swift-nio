@@ -18,7 +18,7 @@ source defines.sh
 token=$(create_token)
 start_server "$token"
 socket=$(get_socket "$token")
-echo -ne 'HTTP/1.1 200 OK\r\ncontent-length: 12\r\n\r\nHello World\r\n' > "$tmp/expected"
+echo -ne 'HTTP/1.1 200 OK\r\ncontent-length: 13\r\n\r\nHello World\r\n' > "$tmp/expected"
 for f in $(seq 2000); do
     echo -e 'GET / HTTP/1.1\r\n\r\n' | do_nc -w10 -U "$socket" > "$tmp/actual"
     assert_equal_files "$tmp/expected" "$tmp/actual"
