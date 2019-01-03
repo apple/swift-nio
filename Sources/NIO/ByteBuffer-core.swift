@@ -324,13 +324,7 @@ public struct ByteBuffer {
     private mutating func _copyStorageAndRebase(capacity: _Capacity, resetIndices: Bool = false) {
         let indexRebaseAmount = resetIndices ? self._readerIndex : 0
         let storageRebaseAmount = self._slice.lowerBound + indexRebaseAmount
-        let _newSlice = storageRebaseAmount ..< min(storageRebaseAmount + _toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity)
-        #if swift(>=4.2)
-        // no need for the conversion anymore
-        let newSlice = _newSlice
-        #else
-        let newSlice = Range(_newSlice)
-        #endif
+        let newSlice = storageRebaseAmount ..< min(storageRebaseAmount + _toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity)
         self._storage = self._storage.reallocSlice(newSlice, capacity: capacity)
         self._moveReaderIndex(to: self._readerIndex - indexRebaseAmount)
         self._moveWriterIndex(to: self._writerIndex - indexRebaseAmount)
