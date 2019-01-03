@@ -339,7 +339,7 @@ class ByteBufferTest: XCTestCase {
 
     func testSetGetData() throws {
         var buffer = allocator.buffer(capacity: 32)
-        let data = Data(bytes: [1, 2, 3])
+        let data = Data([1, 2, 3])
 
         XCTAssertEqual(3, buffer.set(bytes: data, at: 0))
         XCTAssertEqual(0, buffer.readableBytes)
@@ -348,7 +348,7 @@ class ByteBufferTest: XCTestCase {
 
     func testWriteReadData() throws {
         var buffer = allocator.buffer(capacity: 32)
-        let data = Data(bytes: [1, 2, 3])
+        let data = Data([1, 2, 3])
 
         XCTAssertEqual(3, buffer.write(bytes: data))
         XCTAssertEqual(3, buffer.readableBytes)
@@ -494,7 +494,7 @@ class ByteBufferTest: XCTestCase {
         buf.write(integer: value, endianness: .little)
         buf.write(integer: value)
         let actual = buf.getData(at: 4, length: 12)!
-        let expected = Data(bytes: [0x12, 0x34, 0x56, 0x78, 0x78, 0x56, 0x34, 0x12, 0x12, 0x34, 0x56, 0x78])
+        let expected = Data([0x12, 0x34, 0x56, 0x78, 0x78, 0x56, 0x34, 0x12, 0x12, 0x34, 0x56, 0x78])
         XCTAssertEqual(expected, actual)
         let actualA: UInt32 = buf.readInteger(endianness: .big)!
         let actualB: UInt32 = buf.readInteger(endianness: .little)!
