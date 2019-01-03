@@ -548,6 +548,16 @@ public struct ByteBuffer {
         return try body(.init(self._slicedStorageBuffer))
     }
 
+    /// This vends a pointer to the storage of the `ByteBuffer`. It's marked as _very unsafe_ because it might contain
+    /// uninitialised memory and it's undefined behaviour to read it. In most cases you should use `withUnsafeMutableWritableBytes`.
+    ///
+    /// - warning: Do not escape the pointer from the closure for later use.
+    @inlinable
+    public mutating func withVeryUnsafeMutableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> T) rethrows -> T {
+        self._copyStorageAndRebaseIfNeeded() // this will trigger a CoW if necessary
+        return try body(.init(self._slicedStorageBuffer))
+    }
+
     /// Yields a buffer pointer containing this `ByteBuffer`'s readable bytes.
     ///
     /// - warning: Do not escape the pointer from the closure for later use.

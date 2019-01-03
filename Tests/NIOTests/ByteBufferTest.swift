@@ -940,11 +940,13 @@ class ByteBufferTest: XCTestCase {
         testIndexOrLengthFunc({ buf.readSlice(length: $0) })
         testIndexOrLengthFunc({ buf.readBytes(length: $0) })
         testIndexOrLengthFunc({ buf.readData(length: $0) })
+        testIndexOrLengthFunc({ buf.readDispatchData(length: $0) })
 
         testIndexAndLengthFunc(buf.getBytes)
         testIndexAndLengthFunc(buf.getData)
         testIndexAndLengthFunc(buf.getSlice)
         testIndexAndLengthFunc(buf.getString)
+        testIndexAndLengthFunc(buf.getDispatchData)
     }
 
     func testWriteForContiguousCollections() throws {
@@ -1578,6 +1580,111 @@ class ByteBufferTest: XCTestCase {
         let written = self.buf.write(string: slowString as String)
         XCTAssertEqual(10, written)
         XCTAssertEqual("abcäää\n", String(decoding: self.buf.readableBytesView, as: Unicode.UTF8.self))
+    }
+
+    func testWithVeryUnsafeMutableBytesWorksOnEmptyByteBuffer() {
+        var buf = self.allocator.buffer(capacity: 0)
+        XCTAssertEqual(0, buf.capacity)
+        buf.withVeryUnsafeMutableBytes { ptr in
+            XCTAssertEqual(0, ptr.count)
+        }
+    }
+
+    func testWithVeryUnsafeMutableBytesYieldsPointerToWholeStorage() {
+        var buf = self.allocator.buffer(capacity: 16)
+        let capacity = buf.capacity
+        XCTAssertGreaterThanOrEqual(capacity, 16)
+        buf.write(string: "1234")
+        XCTAssertEqual(capacity, buf.capacity)
+        buf.withVeryUnsafeMutableBytes { ptr in
+            XCTAssertEqual(capacity, ptr.count)
+            XCTAssertEqual("1234", String(decoding: ptr[0..<4], as: Unicode.UTF8.self))
+        }
+    }
+
+    func testWithVeryUnsafeMutableBytesYieldsPointerToWholeStorageAndCanBeWritenTo() {
+        var buf = self.allocator.buffer(capacity: 16)
+        let capacity = buf.capacity
+        XCTAssertGreaterThanOrEqual(capacity, 16)
+        buf.write(string: "1234")
+        XCTAssertEqual(capacity, buf.capacity)
+        buf.withVeryUnsafeMutableBytes { ptr in
+            XCTAssertEqual(capacity, ptr.count)
+            XCTAssertEqual("1234", String(decoding: ptr[0..<4], as: Unicode.UTF8.self))
+            UnsafeMutableRawBufferPointer(rebasing: ptr[4..<8]).copyBytes(from: "5678".utf8)
+        }
+        buf.moveWriterIndex(forwardBy: 4)
+        XCTAssertEqual("12345678", buf.readString(length: buf.readableBytes))
+
+        buf.withVeryUnsafeMutableBytes { ptr in
+            XCTAssertEqual(capacity, ptr.count)
+            XCTAssertEqual("12345678", String(decoding: ptr[0..<8], as: Unicode.UTF8.self))
+            ptr[0] = "X".utf8.first!
+            UnsafeMutableRawBufferPointer(rebasing: ptr[8..<16]).copyBytes(from: "abcdefgh".utf8)
+        }
+        buf.moveWriterIndex(forwardBy: 8)
+        XCTAssertEqual("abcdefgh", buf.readString(length: buf.readableBytes))
+        XCTAssertEqual("X", buf.getString(at: 0, length: 1))
+    }
+
+    func testWithVeryUnsafeMutableBytesDoesCoW() {
+        var buf = self.allocator.buffer(capacity: 16)
+        let capacity = buf.capacity
+        XCTAssertGreaterThanOrEqual(capacity, 16)
+        buf.write(string: "1234")
+        let bufCopy = buf
+        XCTAssertEqual(capacity, buf.capacity)
+        buf.withVeryUnsafeMutableBytes { ptr in
+            XCTAssertEqual(capacity, ptr.count)
+            XCTAssertEqual("1234", String(decoding: ptr[0..<4], as: Unicode.UTF8.self))
+            UnsafeMutableRawBufferPointer(rebasing: ptr[0..<8]).copyBytes(from: "abcdefgh".utf8)
+        }
+        buf.moveWriterIndex(forwardBy: 4)
+        XCTAssertEqual("1234", String(decoding: bufCopy.readableBytesView, as: Unicode.UTF8.self))
+        XCTAssertEqual("abcdefgh", String(decoding: buf.readableBytesView, as: Unicode.UTF8.self))
+    }
+
+    func testWithVeryUnsafeMutableBytesDoesCoWonSlices() {
+        var buf = self.allocator.buffer(capacity: 16)
+        let capacity = buf.capacity
+        XCTAssertGreaterThanOrEqual(capacity, 16)
+        buf.write(string: "1234567890")
+        var buf2 = buf.getSlice(at: 4, length: 4)!
+        XCTAssertEqual(capacity, buf.capacity)
+        let capacity2 = buf2.capacity
+        buf2.withVeryUnsafeMutableBytes { ptr in
+            XCTAssertEqual(capacity2, ptr.count)
+            XCTAssertEqual("5678", String(decoding: ptr[0..<4], as: Unicode.UTF8.self))
+            UnsafeMutableRawBufferPointer(rebasing: ptr[0..<4]).copyBytes(from: "QWER".utf8)
+        }
+        XCTAssertEqual("QWER", String(decoding: buf2.readableBytesView, as: Unicode.UTF8.self))
+        XCTAssertEqual("1234567890", String(decoding: buf.readableBytesView, as: Unicode.UTF8.self))
+    }
+
+    func testGetDispatchDataWorks() {
+        self.buf.clear()
+        self.buf.write(string: "abcdefgh")
+
+        XCTAssertEqual(0, self.buf.getDispatchData(at: 7, length: 0)!.count)
+        XCTAssertNil(self.buf.getDispatchData(at: self.buf.capacity, length: 1))
+        XCTAssertEqual("abcdefgh", String(decoding: self.buf.getDispatchData(at: 0, length: 8)!, as: Unicode.UTF8.self))
+        XCTAssertEqual("ef", String(decoding: self.buf.getDispatchData(at: 4, length: 2)!, as: Unicode.UTF8.self))
+    }
+
+    func testGetDispatchDataReadWrite() {
+        var buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 4, alignment: 0)
+        buffer.copyBytes(from: "1234".utf8)
+        defer {
+            buffer.deallocate()
+        }
+        self.buf.clear()
+        self.buf.write(string: "abcdefgh")
+        self.buf.write(dispatchData: DispatchData.empty)
+        self.buf.write(dispatchData: DispatchData(bytes: UnsafeRawBufferPointer(buffer)))
+        XCTAssertEqual(12, self.buf.readableBytes)
+        XCTAssertEqual("abcdefgh1234", String(decoding: self.buf.readDispatchData(length: 12)!, as: Unicode.UTF8.self))
+        XCTAssertNil(self.buf.readDispatchData(length: 1))
+        XCTAssertEqual(0, self.buf.readDispatchData(length: 0)?.count ?? 12)
     }
 }
 
