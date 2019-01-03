@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Dispatch
+
 extension ByteBuffer {
 
     // MARK: Bytes ([UInt8]) APIs
@@ -168,6 +170,78 @@ extension ByteBuffer {
         }
         return self.getString(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
     }
+
+    // MARK: DispatchData APIs
+    /// Write `dispatchData` into this `ByteBuffer`, moving the writer index forward appropriately.
+    ///
+    /// - parameters:
+    ///     - dispatchData: The `DispatchData` instance to write to the `ByteBuffer`.
+    /// - returns: The number of bytes written.
+    @discardableResult
+    public mutating func write(dispatchData: DispatchData) -> Int {
+        let written = self.set(dispatchData: dispatchData, at: self.writerIndex)
+        self._moveWriterIndex(forwardBy: written)
+        return written
+    }
+
+    /// Write `dispatchData` into this `ByteBuffer` at `index`. Does not move the writer index.
+    ///
+    /// - parameters:
+    ///     - dispatchData: The `DispatchData` to write.
+    ///     - index: The index for the first serialized byte.
+    /// - returns: The number of bytes written.
+    @discardableResult
+    public mutating func set(dispatchData: DispatchData, at index: Int) -> Int {
+        let allBytesCount = dispatchData.count
+        self.reserveCapacity(index + allBytesCount)
+        self.withVeryUnsafeMutableBytes { destCompleteStorage in
+            assert(destCompleteStorage.count >= index + allBytesCount)
+            let dest = destCompleteStorage[index ..< index + allBytesCount]
+            dispatchData.copyBytes(to: .init(rebasing: dest), count: dest.count)
+        }
+        return allBytesCount
+    }
+
+    /// Get the bytes at `index` from this `ByteBuffer` as a `DispatchData`. Does not move the reader index.
+    ///
+    /// - note: Please consider using `readDispatchData` which is a safer alternative that automatically maintains the
+    ///         `readerIndex` and won't allow you to read uninitialized memory.
+    /// - warning: This method allows the user to read any of the bytes in the `ByteBuffer`'s storage, including
+    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
+    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
+    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
+    ///           safe to read.
+    /// - parameters:
+    ///     - index: The starting index into `ByteBuffer` containing the string of interest.
+    ///     - length: The number of bytes.
+    /// - returns: A `DispatchData` value deserialized from this `ByteBuffer` or `nil` if the requested bytes aren't contained in this `ByteBuffer`.
+    public func getDispatchData(at index: Int, length: Int) -> DispatchData? {
+        precondition(index >= 0, "index must not be negative")
+        precondition(length >= 0, "length must not be negative")
+        return self.withVeryUnsafeBytes { pointer in
+            guard index <= pointer.count - length else {
+                return nil
+            }
+            return DispatchData(bytes: UnsafeRawBufferPointer(rebasing: pointer[index..<(index+length)]))
+        }
+    }
+
+    /// Read `length` bytes off this `ByteBuffer` and return them as a `DispatchData`. Move the reader index forward by `length`.
+    ///
+    /// - parameters:
+    ///     - length: The number of bytes.
+    /// - returns: A `DispatchData` value containing the bytes from this `ByteBuffer` or `nil` if there aren't at least `length` bytes readable.
+    public mutating func readDispatchData(length: Int) -> DispatchData? {
+        precondition(length >= 0, "length must not be negative")
+        guard self.readableBytes >= length else {
+            return nil
+        }
+        defer {
+            self._moveReaderIndex(forwardBy: length)
+        }
+        return self.getDispatchData(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
+    }
+
 
     // MARK: Other APIs
 

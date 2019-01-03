@@ -308,15 +308,16 @@ public func swiftMain() -> Int {
         let foundationData = "A".data(using: .utf8)!
         @inline(never)
         func doWrites(buffer: inout ByteBuffer) {
-            /* all of those should be 0 allocations */
-
+            /* these ones are zero allocations */
             // buffer.write(bytes: foundationData) // see SR-7542
             buffer.write(bytes: [0x41])
-            buffer.write(bytes: dispatchData)
             buffer.write(bytes: "A".utf8)
             buffer.write(string: "A")
             buffer.write(staticString: "A")
             buffer.write(integer: 0x41, as: UInt8.self)
+
+            /* those down here should be one allocation each (on Linux) */
+            buffer.write(bytes: dispatchData) // see https://bugs.swift.org/browse/SR-9597
         }
         @inline(never)
         func doReads(buffer: inout ByteBuffer) {
