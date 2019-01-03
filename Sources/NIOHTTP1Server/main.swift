@@ -97,6 +97,7 @@ private final class HTTPHandler: ChannelInboundHandler {
     private var handler: ((ChannelHandlerContext, HTTPServerRequestPart) -> Void)?
     private var handlerFuture: EventLoopFuture<Void>?
     private let fileIO: NonBlockingFileIO
+    private let defaultResponse = "Hello World\r\n"
 
     public init(fileIO: NonBlockingFileIO, htdocsPath: String) {
         self.htdocsPath = htdocsPath
@@ -248,7 +249,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         if let howLong = reqHead.uri.chopPrefix("/dynamic/write-delay/") {
             return { ctx, req in
                 self.handleJustWrite(ctx: ctx,
-                                     request: req, string: "Hello World\r\n",
+                                     request: req, string: self.defaultResponse,
                                      delay: TimeAmount.Value(howLong).map { .milliseconds($0) } ?? .seconds(0))
             }
         }
@@ -261,7 +262,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         case "/dynamic/pid":
             return { ctx, req in self.handleJustWrite(ctx: ctx, request: req, string: "\(getpid())") }
         case "/dynamic/write-delay":
-            return { ctx, req in self.handleJustWrite(ctx: ctx, request: req, string: "Hello World\r\n", delay: .milliseconds(100)) }
+            return { ctx, req in self.handleJustWrite(ctx: ctx, request: req, string: self.defaultResponse, delay: .milliseconds(100)) }
         case "/dynamic/info":
             return self.handleInfo
         case "/dynamic/trailers":
@@ -420,7 +421,9 @@ private final class HTTPHandler: ChannelInboundHandler {
             self.state.requestReceived()
 
             var responseHead = httpResponseHead(request: request, status: HTTPResponseStatus.ok)
-            responseHead.headers.add(name: "content-length", value: "12")
+            self.buffer.clear()
+            self.buffer.write(string: defaultResponse)
+            responseHead.headers.add(name: "content-length", value: "\(self.buffer!.readableBytes)")
             let response = HTTPServerResponsePart.head(responseHead)
             ctx.write(self.wrapOutboundOut(response), promise: nil)
         case .body:
@@ -438,8 +441,7 @@ private final class HTTPHandler: ChannelInboundHandler {
     }
 
     func handlerAdded(ctx: ChannelHandlerContext) {
-        self.buffer = ctx.channel.allocator.buffer(capacity: 12)
-        self.buffer.write(staticString: "Hello World!")
+        self.buffer = ctx.channel.allocator.buffer(capacity: 0)
     }
 
     func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
