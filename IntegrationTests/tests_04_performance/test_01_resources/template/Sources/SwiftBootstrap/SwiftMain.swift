@@ -72,7 +72,7 @@ private final class PingHandler: ChannelInboundHandler {
     public init(numberOfRequests: Int, eventLoop: EventLoop) {
         self.numberOfRequests = numberOfRequests
         self.remainingNumberOfRequests = numberOfRequests
-        self.allDone = eventLoop.newPromise()
+        self.allDone = eventLoop.makePromise()
     }
 
     public func channelActive(ctx: ChannelHandlerContext) {
@@ -154,7 +154,7 @@ public func swiftMain() -> Int {
         init(numberOfRequests: Int, eventLoop: EventLoop) {
             self.remainingNumberOfRequests = numberOfRequests
             self.numberOfRequests = numberOfRequests
-            self.isDonePromise = eventLoop.newPromise()
+            self.isDonePromise = eventLoop.makePromise()
         }
 
         func wait() throws -> Int {
@@ -347,11 +347,11 @@ public func swiftMain() -> Int {
         struct MyError: Error { }
         @inline(never)
         func doThenAndFriends(loop: EventLoop) {
-            let p = loop.newPromise(of: Int.self)
+            let p = loop.makePromise(of: Int.self)
             let f = p.futureResult.then { (r: Int) -> EventLoopFuture<Int> in 
                 // This call allocates a new Future, and
                 // so does then(), so this is two Futures.
-                return loop.newSucceededFuture(result: r + 1)
+                return loop.makeSucceededFuture(result: r + 1)
             }.thenThrowing { (r: Int) -> Int in
                 // thenThrowing allocates a new Future, and calls then
                 // which also allocates, so this is two.
@@ -367,7 +367,7 @@ public func swiftMain() -> Int {
             }.thenIfError { (err: Error) -> EventLoopFuture<Int> in
                 // This call allocates a new Future, and so does thenIfError,
                 // so this is two Futures.
-                return loop.newFailedFuture(error: err)
+                return loop.makeFailedFuture(error: err)
             }.thenIfErrorThrowing { (err: Error) -> Int in
                 // thenIfError allocates a new Future, and calls thenIfError,
                 // so this is two Futures
@@ -384,9 +384,9 @@ public func swiftMain() -> Int {
         }
         @inline(never)
         func doAnd(loop: EventLoop) {
-            let p1 = loop.newPromise(of: Int.self)
-            let p2 = loop.newPromise(of: Int.self)
-            let p3 = loop.newPromise(of: Int.self)
+            let p1 = loop.makePromise(of: Int.self)
+            let p2 = loop.makePromise(of: Int.self)
+            let p3 = loop.makePromise(of: Int.self)
 
             // Each call to and() allocates a Future. The calls to
             // and(result:) allocate two.
