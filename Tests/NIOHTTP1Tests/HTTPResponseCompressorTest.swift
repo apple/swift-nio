@@ -505,7 +505,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         }
 
         try sendRequest(acceptEncoding: "deflate;q=2.2, gzip;q=0.3", channel: channel)
-        try assertGzippedResponse(channel: channel, additionalHeaders: HTTPHeaders([("Content-Encoding", "gzip")]))
+        try assertGzippedResponse(channel: channel, additionalHeaders: HTTPHeaders([("Content-Encoding", "deflate")]))
     }
 
     func testRemovingHandlerFailsPendingWrites() throws {
