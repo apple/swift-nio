@@ -206,7 +206,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
                     if bufferedMessages.count > 0 {
                         ctx.fireChannelReadComplete()
                     }
-                }.whenComplete {
+                }.whenComplete { (_: Result<Void, Error>) in
                     ctx.pipeline.remove(ctx: ctx, promise: nil)
                 }
             }

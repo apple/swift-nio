@@ -440,7 +440,7 @@ public final class ClientBootstrap {
                 channel.close(promise: nil)
             }
 
-            connectPromise.futureResult.whenComplete {
+            connectPromise.futureResult.whenComplete { (_: Result<Void, Error>) in
                 cancelTask.cancel()
             }
             return connectPromise.futureResult

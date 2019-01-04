@@ -81,7 +81,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                                     headers: headers)
         ctx.write(self.wrapOutboundOut(.head(responseHead)), promise: nil)
         ctx.write(self.wrapOutboundOut(.body(.byteBuffer(self.responseBody))), promise: nil)
-        ctx.write(self.wrapOutboundOut(.end(nil))).whenComplete {
+        ctx.write(self.wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
             ctx.close(promise: nil)
         }
         ctx.flush()
@@ -95,7 +95,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                                     status: .methodNotAllowed,
                                     headers: headers)
         ctx.write(self.wrapOutboundOut(.head(head)), promise: nil)
-        ctx.write(self.wrapOutboundOut(.end(nil))).whenComplete {
+        ctx.write(self.wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
             ctx.close(promise: nil)
         }
         ctx.flush()
@@ -194,7 +194,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
         var data = ctx.channel.allocator.buffer(capacity: 2)
         data.write(webSocketErrorCode: .protocolError)
         let frame = WebSocketFrame(fin: true, opcode: .connectionClose, data: data)
-        ctx.write(self.wrapOutboundOut(frame)).whenComplete {
+        ctx.write(self.wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
             ctx.close(mode: .output, promise: nil)
         }
         awaitingClose = true

@@ -72,7 +72,7 @@ private class ConnectRecorder: ChannelOutboundHandler {
 
     public func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         let connectPromise = promise ?? ctx.eventLoop.makePromise()
-        connectPromise.futureResult.whenComplete {
+        connectPromise.futureResult.whenComplete { (_: Result<Void, Error>) in
             self.state = .closed
         }
         ctx.close(promise: connectPromise)

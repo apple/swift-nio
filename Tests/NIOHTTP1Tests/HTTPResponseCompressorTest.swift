@@ -36,7 +36,7 @@ private class PromiseOrderer {
         let thisPromiseIndex = promiseArray.count
         promiseArray.append(promise)
 
-        promise.futureResult.whenComplete {
+        promise.futureResult.whenComplete { (_: Result<Void, Error>) in
             let priorFutures = self.promiseArray[0..<thisPromiseIndex]
             let subsequentFutures = self.promiseArray[(thisPromiseIndex + 1)...]
             let allPriorFuturesFired = priorFutures.map { $0.futureResult.isFulfilled }.allSatisfy { $0 }

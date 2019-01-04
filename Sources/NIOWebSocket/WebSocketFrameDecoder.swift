@@ -309,7 +309,7 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
             let frame = WebSocketFrame(fin: true,
                                        opcode: .connectionClose,
                                        data: data)
-            ctx.writeAndFlush(self.wrapInboundOut(frame)).whenComplete {
+            ctx.writeAndFlush(self.wrapInboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
                 ctx.close(promise: nil)
             }
         }

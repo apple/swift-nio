@@ -124,12 +124,12 @@ class HTTPServerClientTest : XCTestCase {
                     b.write(string: replyString)
 
                     let outbound = self.outboundBody(b)
-                    ctx.write(self.wrapOutboundOut(outbound.body)).whenComplete {
+                    ctx.write(self.wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
                         outbound.destructor()
                     }
                     ctx.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete {
+                    }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
                         self.maybeClose(ctx: ctx)
                     }
@@ -148,13 +148,13 @@ class HTTPServerClientTest : XCTestCase {
                         let outbound = self.outboundBody(b)
                         ctx.write(self.wrapOutboundOut(outbound.body)).mapIfError { error in
                             XCTFail("unexpected error \(error)")
-                        }.whenComplete {
+                        }.whenComplete { (_: Result<Void, Error>) in
                             outbound.destructor()
                         }
                     }
                     ctx.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete {
+                    }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
                         self.maybeClose(ctx: ctx)
                     }
@@ -174,7 +174,7 @@ class HTTPServerClientTest : XCTestCase {
                         let outbound = self.outboundBody(b)
                         ctx.write(self.wrapOutboundOut(outbound.body)).mapIfError { error in
                             XCTFail("unexpected error \(error)")
-                        }.whenComplete {
+                        }.whenComplete { (_: Result<Void, Error>) in
                             outbound.destructor()
                         }
                     }
@@ -184,7 +184,7 @@ class HTTPServerClientTest : XCTestCase {
                     trailers.add(name: "X-Should-Trail", value: "sure")
                     ctx.write(self.wrapOutboundOut(.end(trailers))).mapIfError { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete {
+                    }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
                         self.maybeClose(ctx: ctx)
                     }
@@ -209,12 +209,12 @@ class HTTPServerClientTest : XCTestCase {
                     let outbound = self.outboundBody(buf)
                     ctx.writeAndFlush(self.wrapOutboundOut(outbound.body)).mapIfError { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete {
+                    }.whenComplete { (_: Result<Void, Error>) in
                         outbound.destructor()
                     }
                     ctx.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete {
+                    }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
                         self.maybeClose(ctx: ctx)
                     }
@@ -227,7 +227,7 @@ class HTTPServerClientTest : XCTestCase {
                     }
                     ctx.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete {
+                    }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
                         self.maybeClose(ctx: ctx)
                     }
@@ -239,7 +239,7 @@ class HTTPServerClientTest : XCTestCase {
                     }
                     ctx.write(self.wrapOutboundOut(.end(nil))).mapIfError { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete {
+                    }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
                         self.maybeClose(ctx: ctx)
                     }

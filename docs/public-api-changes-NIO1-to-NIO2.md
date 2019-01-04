@@ -28,3 +28,4 @@
 - `ByteBuffer.write(string:)` no longer returns an `Int?`, instead it
   returns `Int` and has had its return value made discardable.
 - removed ContiguousCollection
+- EventLoopFuture.whenComplete now provides Result<T, Error>

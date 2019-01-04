@@ -972,7 +972,7 @@ public class ChannelTests: XCTestCase {
             pwm.markFlushCheckpoint()
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[2])
 
-            ps[0].futureResult.whenComplete {
+            ps[0].futureResult.whenComplete { (_: Result<Void, Error>) in
                 pwm.failAll(error: ChannelError.inputClosed, close: true)
             }
 

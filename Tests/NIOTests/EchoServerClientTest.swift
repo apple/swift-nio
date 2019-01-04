@@ -350,7 +350,7 @@ class EchoServerClientTest : XCTestCase {
                     default:
                         XCTFail("unexpected error: \(err)")
                     }
-                }.whenComplete {
+                }.whenComplete { (_: Result<Void, Error>) in
                     self.channelInactivePromise.succeed(result: ())
                 }
             }
@@ -370,7 +370,7 @@ class EchoServerClientTest : XCTestCase {
                     default:
                         XCTFail("unexpected error: \(err)")
                     }
-                }.whenComplete {
+                }.whenComplete { (_: Result<Void, Error>) in
                     self.channelUnregisteredPromise.succeed(result: ())
                 }
             }
@@ -603,7 +603,7 @@ class EchoServerClientTest : XCTestCase {
             }
 
             private func writeUntilFailed(_ ctx: ChannelHandlerContext, _ buffer: ByteBuffer) {
-                ctx.writeAndFlush(NIOAny(buffer)).whenComplete {
+                ctx.writeAndFlush(NIOAny(buffer)).whenComplete { (_: Result<Void, Error>) in
                     ctx.eventLoop.execute {
                         self.writeUntilFailed(ctx, buffer)
                     }
@@ -635,7 +635,7 @@ class EchoServerClientTest : XCTestCase {
                     ctx.writeAndFlush(NIOAny(buffer))
                 }.then {
                     ctx.close()
-                }.whenComplete {
+                }.whenComplete { (_: Result<Void, Error>) in
                     self.dpGroup.leave()
                 }
             }

@@ -445,10 +445,10 @@ public class SocketChannelTest : XCTestCase {
         let connectPromise = channel.eventLoop.makePromise(of: Void.self)
         let closePromise = channel.eventLoop.makePromise(of: Void.self)
 
-        closePromise.futureResult.whenComplete {
+        closePromise.futureResult.whenComplete { (_: Result<Void, Error>) in
             XCTAssertTrue(connectPromise.futureResult.isFulfilled)
         }
-        connectPromise.futureResult.whenComplete {
+        connectPromise.futureResult.whenComplete { (_: Result<Void, Error>) in
             XCTAssertFalse(closePromise.futureResult.isFulfilled)
         }
 
@@ -510,7 +510,7 @@ public class SocketChannelTest : XCTestCase {
                 XCTAssertEqual(.inactive, state)
                 state = .removed
 
-                ctx.channel.closeFuture.whenComplete {
+                ctx.channel.closeFuture.whenComplete { (_: Result<Void, Error>) in
                     XCTAssertNil(ctx.localAddress)
                     XCTAssertNil(ctx.remoteAddress)
 

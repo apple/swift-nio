@@ -14,14 +14,6 @@
 
 import NIOConcurrencyHelpers
 
-
-/// A `Result`-like type that is used to track the data through the
-/// callback pipeline.
-private enum EventLoopFutureValue<T> {
-    case success(T)
-    case failure(Error)
-}
-
 /// Internal list of callbacks.
 ///
 /// Most of these are closures that pull a value from one future, call a user callback, push the
@@ -187,7 +179,7 @@ public struct EventLoopPromise<T> {
     ///
     /// - parameters:
     ///     - value: The value to fire the future with.
-    private func _resolve(value: EventLoopFutureValue<T>) {
+    private func _resolve(value: Result<T, Error>) {
         if futureResult.eventLoop.inEventLoop {
             _setValue(value: value)._run()
         } else {
@@ -202,7 +194,7 @@ public struct EventLoopPromise<T> {
     /// - parameters:
     ///     - value: The result of the promise.
     /// - returns: The callback list to run.
-    fileprivate func _setValue(value: EventLoopFutureValue<T>) -> CallbackList {
+    fileprivate func _setValue(value: Result<T, Error>) -> CallbackList {
         return futureResult._setValue(value: value)
     }
 }
@@ -333,7 +325,7 @@ public struct EventLoopPromise<T> {
 /// `EventLoopFuture` should be sufficient to guarantee thread-safety.
 public final class EventLoopFuture<T> {
     // TODO: Provide a tracing facility.  It would be nice to be able to set '.debugTrace = true' on any EventLoopFuture or EventLoopPromise and have every subsequent chained EventLoopFuture report the success result or failure error.  That would simplify some debugging scenarios.
-    fileprivate var value: EventLoopFutureValue<T>? {
+    fileprivate var value: Result<T, Error>? {
         didSet {
             _isFulfilled.store(true)
         }
@@ -356,7 +348,7 @@ public final class EventLoopFuture<T> {
     /// the entire chain from the top without recursing.
     fileprivate var callbacks: CallbackList = CallbackList()
 
-    private init(eventLoop: EventLoop, value: EventLoopFutureValue<T>?, file: StaticString, line: UInt) {
+    private init(eventLoop: EventLoop, value: Result<T, Error>?, file: StaticString, line: UInt) {
         self.eventLoop = eventLoop
         self.value = value
         self._isFulfilled = UnsafeEmbeddedAtomic(value: value != nil)
@@ -608,7 +600,7 @@ extension EventLoopFuture {
         }
     }
 
-    fileprivate func _whenCompleteWithValue(_ callback: @escaping (EventLoopFutureValue<T>) -> Void) {
+    fileprivate func _whenCompleteWithValue(_ callback: @escaping (Result<T, Error>) -> Void) {
         _whenComplete {
             callback(self.value!)
             return CallbackList()
@@ -662,16 +654,16 @@ extension EventLoopFuture {
     ///
     /// - parameters:
     ///     - callback: The callback that is called when the `EventLoopFuture` is fulfilled.
-    public func whenComplete(_ callback: @escaping () -> Void) {
+    public func whenComplete(_ callback: @escaping (Result<T, Error>) -> Void) {
         _whenComplete {
-            callback()
+            callback(self.value!)
             return CallbackList()
         }
     }
 
 
     /// Internal:  Set the value and return a list of callbacks that should be invoked as a result.
-    fileprivate func _setValue(value: EventLoopFutureValue<T>) -> CallbackList {
+    fileprivate func _setValue(value: Result<T, Error>) -> CallbackList {
         self.eventLoop.assertInEventLoop()
         if self.value == nil {
             self.value = value
@@ -813,7 +805,7 @@ Further information:
             precondition(MultiThreadedEventLoopGroup.currentEventLoop == nil, explainer(), file: file, line: line)
         }
 
-        var v: EventLoopFutureValue <T>? = nil
+        var v: Result<T, Error>? = nil
         let lock = ConditionLock(value: 0)
         _whenComplete { () -> CallbackList in
             lock.lock()
