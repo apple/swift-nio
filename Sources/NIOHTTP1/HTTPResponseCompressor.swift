@@ -119,8 +119,9 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
                 ctx.write(wrapOutboundOut(.head(responseHead)), promise: promise)
                 return
             }
-
-            responseHead.headers.add(name: "Content-Encoding", value: algorithm!.rawValue)
+            // Previous handlers in the pipeline might have already set this header even though
+            // they should not as it is compressor responsibility to decide what encoding to use
+            responseHead.headers.replaceOrAdd(name: "Content-Encoding", value: algorithm!.rawValue)
             initializeEncoder(encoding: algorithm!)
             pendingResponse.bufferResponseHead(responseHead)
             chainPromise(promise)
