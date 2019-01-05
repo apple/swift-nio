@@ -32,7 +32,7 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
             let frame = WebSocketFrame(fin: true,
                                        opcode: .connectionClose,
                                        data: data)
-            ctx.writeAndFlush(self.wrapOutboundOut(frame)).whenComplete {
+            ctx.writeAndFlush(self.wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
                 ctx.close(promise: nil)
             }
         }

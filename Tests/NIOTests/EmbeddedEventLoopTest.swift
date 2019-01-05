@@ -215,7 +215,7 @@ public class EmbeddedEventLoopTest: XCTestCase {
             XCTFail("Scheduled future completed")
         }.mapIfError { caughtErr in
             XCTAssertTrue(err === caughtErr as? EmbeddedTestError)
-        }.whenComplete {
+        }.whenComplete { (_: Result<Void, Error>) in
             fired = true
         }
 

@@ -606,7 +606,7 @@ internal class HappyEyeballsConnector {
             self.targets.aResultsAvailable(results)
         }.mapIfError { err in
             self.error.dnsAError = err
-        }.whenComplete {
+        }.whenComplete { (_: Result<Void, Error>) in
             self.dnsResolutions += 1
             self.processInput(.resolverACompleted)
         }
@@ -618,7 +618,7 @@ internal class HappyEyeballsConnector {
             self.targets.aaaaResultsAvailable(results)
         }.mapIfError { err in
             self.error.dnsAAAAError = err
-        }.whenComplete {
+        }.whenComplete { (_: Result<Void, Error>) in
             // It's possible that we were waiting to time out here, so if we were we should
             // cancel that.
             self.resolutionTask?.cancel()

@@ -116,7 +116,7 @@ public final class RepeatedTask {
         }
 
         scheduled.futureResult.whenSuccess { future in
-            future.whenComplete {
+            future.whenComplete { (_: Result<Void, Error>) in
                 self.reschedule0()
             }
         }
@@ -957,7 +957,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
             g.enter()
             loop.closeGently().mapIfError { err in
                 q.sync { error = err }
-            }.whenComplete {
+            }.whenComplete { (_: Result<Void, Error>) in
                 g.leave()
             }
         }

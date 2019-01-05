@@ -358,7 +358,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                         } else {
                             return ctx.close()
                         }
-                    }.whenComplete {
+                    }.whenComplete { (_: Result<Void, Error>) in
                         _ = try? file.close()
                     }
                 case .sendfile:
@@ -370,7 +370,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                         return p.futureResult
                     }.thenIfError { (_: Error) in
                         ctx.close()
-                    }.whenComplete {
+                    }.whenComplete { (_: Result<Void, Error>) in
                         _ = try? file.close()
                     }
                 }
@@ -387,7 +387,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
         let promise = self.keepAlive ? promise : (promise ?? ctx.eventLoop.makePromise())
         if !self.keepAlive {
-            promise!.futureResult.whenComplete { ctx.close(promise: nil) }
+            promise!.futureResult.whenComplete { (_: Result<Void, Error>) in ctx.close(promise: nil) }
         }
         self.handler = nil
 
