@@ -210,18 +210,6 @@ private class DummyResolver: Resolver {
 }
 
 extension DummyResolver.Event: Equatable {
-    fileprivate static func ==(lhs: DummyResolver.Event, rhs: DummyResolver.Event) -> Bool {
-        switch (lhs, rhs) {
-        case (.a(let host1, let port1), .a(let host2, let port2)):
-            return host1 == host2 && port1 == port2
-        case (.aaaa(let host1, let port1), .aaaa(let host2, let port2)):
-            return host1 == host2 && port1 == port2
-        case(.cancel, .cancel):
-            return true
-        case (.a, _), (.aaaa, _), (.cancel, _):
-            return false
-        }
-    }
 }
 
 private func defaultChannelBuilder(loop: EventLoop, family: Int32) -> EventLoopFuture<Channel> {

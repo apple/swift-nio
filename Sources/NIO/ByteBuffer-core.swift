@@ -16,12 +16,7 @@ let sysMalloc: @convention(c) (size_t) -> UnsafeMutableRawPointer? = malloc
 let sysRealloc: @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer? = realloc
 let sysFree: @convention(c) (UnsafeMutableRawPointer?) -> Void = free
 
-extension _ByteBufferSlice: Equatable {
-    @usableFromInline
-    static func ==(_ lhs: _ByteBufferSlice, _ rhs: _ByteBufferSlice) -> Bool {
-        return lhs._begin == rhs._begin && lhs.upperBound == rhs.upperBound
-    }
-}
+extension _ByteBufferSlice: Equatable {}
 
 /// The slice of a `ByteBuffer`, it's different from `Range<UInt32>` because the lower bound is actually only
 /// 24 bits (the upper bound is still 32). Before constructing, you need to make sure the lower bound actually

@@ -36,17 +36,6 @@ private let sniHostNameType: UInt8 = 0
 public enum SNIResult: Equatable {
     case fallback
     case hostname(String)
-
-    public static func ==(lhs: SNIResult, rhs: SNIResult) -> Bool {
-        switch (lhs, rhs) {
-        case (.fallback, .fallback):
-            return true
-        case (.hostname(let s1), .hostname(let s2)):
-            return s1 == s2
-        case (.fallback, _), (.hostname, _):
-            return false
-        }
-    }
 }
 
 private enum InternalSNIErrors: Error {

@@ -42,11 +42,7 @@ import CNIOLinux
         }
     }
 
-    extension LinuxCPUSet: Equatable {
-        public static func ==(lhs: LinuxCPUSet, rhs: LinuxCPUSet) -> Bool {
-            return lhs.cpuIds == rhs.cpuIds
-        }
-    }
+    extension LinuxCPUSet: Equatable {}
 
     /// Linux specific extension to `Thread`.
     internal extension Thread {
