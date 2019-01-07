@@ -1076,8 +1076,8 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     }
 
     public func channelRead0(_ data: NIOAny) {
-        assert(self.lifecycleManager.isActive)
         // Do nothing by default
+        // note: we can't assert that we're active here as TailChannelHandler will call this on channelRead
     }
 
     public func errorCaught0(error: Error) {
