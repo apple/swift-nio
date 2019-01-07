@@ -1234,15 +1234,3 @@ public class HappyEyeballsTest : XCTestCase {
         }
     }
 }
-
-#if !swift(>=4.1)
-extension UnsafeMutableRawPointer {
-    public static func allocate(byteCount: Int, alignment: Int) -> UnsafeMutableRawPointer {
-        return UnsafeMutableRawPointer.allocate(bytes: byteCount, alignedTo: alignment)
-    }
-
-    public func deallocate() {
-        self.deallocate(bytes: 1, alignedTo: 1)
-    }
-}
-#endif
