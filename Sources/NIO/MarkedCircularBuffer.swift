@@ -18,12 +18,7 @@
 /// writes and mark how far through the buffer the user has flushed, and therefore how far through the buffer is
 /// safe to write.
 public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollection {
-    // this typealias is so complicated because of SR-6963, when that's fixed we can drop the generic parameters and the where clause
-    #if swift(>=4.2)
     public typealias RangeType<Bound> = Range<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
-    #else
-    public typealias RangeType<Bound> = CountableRange<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
-    #endif
 
     private var buffer: CircularBuffer<E>
     private var markedIndex: Int = -1 /* negative: nothing marked */

@@ -16,48 +16,6 @@ let sysMalloc: @convention(c) (size_t) -> UnsafeMutableRawPointer? = malloc
 let sysRealloc: @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer? = realloc
 let sysFree: @convention(c) (UnsafeMutableRawPointer?) -> Void = free
 
-#if !swift(>=4.1)
-    public extension UnsafeMutableRawPointer {
-        public func copyMemory(from src: UnsafeRawPointer, byteCount: Int) {
-            self.copyBytes(from: src, count: byteCount)
-        }
-    }
-    public extension UnsafeMutableRawBufferPointer {
-        internal static func allocate(byteCount: Int, alignment: Int) -> UnsafeMutableRawBufferPointer {
-            return UnsafeMutableRawBufferPointer.allocate(count: byteCount)
-        }
-
-        internal func initializeMemory<T>(as type: T.Type, repeating repeatedValue: T) -> UnsafeMutableBufferPointer<T> {
-            let ptr = self.bindMemory(to: T.self)
-            ptr.initialize(from: repeatElement(repeatedValue, count: self.count / MemoryLayout<T>.stride))
-            return ptr
-        }
-
-        public func copyMemory(from src: UnsafeRawBufferPointer) {
-            self.copyBytes(from: src)
-        }
-
-        public func bindMemory<T>(to type: T.Type) -> UnsafeMutableBufferPointer<T> {
-            guard let base = self.baseAddress else {
-                return UnsafeMutableBufferPointer<T>(start: nil, count: 0)
-            }
-            let capacity = count / MemoryLayout<T>.stride
-            let ptr = base.bindMemory(to: T.self, capacity: capacity)
-            return UnsafeMutableBufferPointer<T>(start: ptr, count: capacity)
-        }
-    }
-    public extension UnsafeRawBufferPointer {
-        public func bindMemory<T>(to type: T.Type) -> UnsafeBufferPointer<T> {
-            guard let base = self.baseAddress else {
-                return UnsafeBufferPointer<T>(start: nil, count: 0)
-            }
-            let capacity = count / MemoryLayout<T>.stride
-            let ptr = base.bindMemory(to: T.self, capacity: capacity)
-            return UnsafeBufferPointer<T>(start: ptr, count: capacity)
-        }
-    }
-#endif
-
 extension _ByteBufferSlice: Equatable {
     @usableFromInline
     static func ==(_ lhs: _ByteBufferSlice, _ rhs: _ByteBufferSlice) -> Bool {
