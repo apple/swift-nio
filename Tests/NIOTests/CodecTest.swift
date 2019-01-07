@@ -151,34 +151,6 @@ public class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertTrue(inactivePromiser.channelInactivePromise.futureResult.isFulfilled)
     }
 
-    func testDecoderIsNotQuadratic() throws {
-        let channel = EmbeddedChannel()
-        defer {
-            XCTAssertNoThrow(try channel.finish())
-        }
-
-        XCTAssertEqual(testDecoderIsNotQuadratic_mallocs, 0)
-        XCTAssertEqual(testDecoderIsNotQuadratic_reallocs, 0)
-        XCTAssertNoThrow(try channel.pipeline.add(handler: ByteToMessageHandler(ForeverDecoder())).wait())
-
-        let dummyAllocator = ByteBufferAllocator(hookedMalloc: testDecoderIsNotQuadratic_mallocHook,
-                                                 hookedRealloc: testDecoderIsNotQuadratic_reallocHook,
-                                                 hookedFree: testDecoderIsNotQuadratic_freeHook,
-                                                 hookedMemcpy: testDecoderIsNotQuadratic_memcpyHook)
-        channel.allocator = dummyAllocator
-        var inputBuffer = dummyAllocator.buffer(capacity: 8)
-        inputBuffer.write(staticString: "whatwhat")
-
-        for _ in 0..<10 {
-            channel.pipeline.fireChannelRead(NIOAny(inputBuffer))
-        }
-
-        // We get one extra malloc the first time around the loop, when we have aliased the buffer. From then on it's
-        // all reallocs of the underlying buffer.
-        XCTAssertEqual(testDecoderIsNotQuadratic_mallocs, 2)
-        XCTAssertEqual(testDecoderIsNotQuadratic_reallocs, 3)
-    }
-
     func testMemoryIsReclaimedIfMostIsConsumed() throws {
         let channel = EmbeddedChannel()
         defer {

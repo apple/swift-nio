@@ -54,7 +54,8 @@ class ByteBufferTest: XCTestCase {
 
     func testAllocateAndCount() {
         let b = allocator.buffer(capacity: 1024)
-        XCTAssertEqual(1024, b.capacity)
+        XCTAssertGreaterThanOrEqual(b.capacity, 1024)
+        XCTAssertLessThan(b.capacity, 2048)
     }
 
     func testEqualsComparesReadBuffersOnly() throws {
@@ -1070,31 +1071,6 @@ class ByteBufferTest: XCTestCase {
         XCTAssertNil(i)
     }
 
-    func testAllocationOfReallyBigByteBuffer() throws {
-        #if arch(arm) || arch(i386)
-        // this test doesn't work on 32-bit platforms because the address space is only 4GB large and we're trying
-        // to make a 4GB ByteBuffer which just won't fit. Even going down to 2GB won't make it better.
-        return
-        #endif
-        let alloc = ByteBufferAllocator(hookedMalloc: { testAllocationOfReallyBigByteBuffer_mallocHook($0) },
-                                        hookedRealloc: { testAllocationOfReallyBigByteBuffer_reallocHook($0, $1) },
-                                        hookedFree: { testAllocationOfReallyBigByteBuffer_freeHook($0) },
-                                        hookedMemcpy: { testAllocationOfReallyBigByteBuffer_memcpyHook($0, $1, $2) })
-
-        let reallyBigSize = Int(Int32.max)
-        XCTAssertEqual(AllocationExpectationState.begin, testAllocationOfReallyBigByteBuffer_state)
-        var buf = alloc.buffer(capacity: reallyBigSize)
-        XCTAssertEqual(AllocationExpectationState.mallocDone, testAllocationOfReallyBigByteBuffer_state)
-        XCTAssertGreaterThanOrEqual(buf.capacity, reallyBigSize)
-
-        buf.set(bytes: [1], at: 0)
-        /* now make it expand (will trigger realloc) */
-        buf.set(bytes: [1], at: buf.capacity)
-
-        XCTAssertEqual(AllocationExpectationState.reallocDone, testAllocationOfReallyBigByteBuffer_state)
-        XCTAssertEqual(buf.capacity, Int(UInt32.max))
-    }
-
     func testWritableBytesAccountsForSlicing() throws {
         let buf = ByteBufferAllocator().buffer(capacity: 32)
         XCTAssertEqual(buf.capacity, 32)
@@ -1375,7 +1351,7 @@ class ByteBufferTest: XCTestCase {
         for f in UInt8.min...UInt8.max {
             self.buf.write(integer: f)
         }
-        let actual = self.buf._storage.dumpBytes(slice: self.buf._slice, offset: 0, length: self.buf.readableBytes)
+        let actual = self.buf._guts.dumpBytes(slice: self.buf._slice, offset: 0, length: self.buf.readableBytes)
         let expected = """
         [ \
         00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f \
@@ -1473,59 +1449,6 @@ class ByteBufferTest: XCTestCase {
 
         XCTAssertEqual(buf.capacity, oldCapacity)
         XCTAssertEqual(oldPtrVal, newPtrVal)
-    }
-
-    func testReserveCapacityLargerUniquelyReferencedCallsRealloc() throws {
-        testReserveCapacityLarger_reallocCount = 0
-        testReserveCapacityLarger_mallocCount = 0
-
-        let alloc = ByteBufferAllocator(hookedMalloc: testReserveCapacityLarger_mallocHook,
-                                        hookedRealloc: testReserveCapacityLarger_reallocHook,
-                                        hookedFree: testReserveCapacityLarger_freeHook,
-                                        hookedMemcpy: testReserveCapacityLarger_memcpyHook)
-        var buf = alloc.buffer(capacity: 16)
-
-
-        let oldCapacity = buf.capacity
-
-        XCTAssertEqual(testReserveCapacityLarger_mallocCount, 1)
-        XCTAssertEqual(testReserveCapacityLarger_reallocCount, 0)
-        buf.reserveCapacity(32)
-        XCTAssertEqual(testReserveCapacityLarger_mallocCount, 1)
-        XCTAssertEqual(testReserveCapacityLarger_reallocCount, 1)
-        XCTAssertNotEqual(buf.capacity, oldCapacity)
-    }
-
-    func testReserveCapacityLargerMultipleReferenceCallsMalloc() throws {
-        testReserveCapacityLarger_reallocCount = 0
-        testReserveCapacityLarger_mallocCount = 0
-
-        let alloc = ByteBufferAllocator(hookedMalloc: testReserveCapacityLarger_mallocHook,
-                                        hookedRealloc: testReserveCapacityLarger_reallocHook,
-                                        hookedFree: testReserveCapacityLarger_freeHook,
-                                        hookedMemcpy: testReserveCapacityLarger_memcpyHook)
-        var buf = alloc.buffer(capacity: 16)
-        let bufCopy = buf
-
-        withExtendedLifetime(bufCopy) {
-            let oldCapacity = buf.capacity
-            let oldPtrVal = buf.withVeryUnsafeBytes {
-                UInt(bitPattern: $0.baseAddress!)
-            }
-
-            XCTAssertEqual(testReserveCapacityLarger_mallocCount, 1)
-            XCTAssertEqual(testReserveCapacityLarger_reallocCount, 0)
-            buf.reserveCapacity(32)
-            XCTAssertEqual(testReserveCapacityLarger_mallocCount, 2)
-            XCTAssertEqual(testReserveCapacityLarger_reallocCount, 0)
-
-            let newPtrVal = buf.withVeryUnsafeBytes {
-                UInt(bitPattern: $0.baseAddress!)
-            }
-
-            XCTAssertNotEqual(buf.capacity, oldCapacity)
-            XCTAssertNotEqual(oldPtrVal, newPtrVal)
-        }
     }
 
     func testReadWithFunctionsThatReturnNumberOfReadBytesAreDiscardable() {

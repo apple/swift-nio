@@ -23,24 +23,35 @@ extension _ByteBufferSlice: Equatable {}
 /// fits within 24 bits, otherwise the behaviour is undefined.
 @usableFromInline
 struct _ByteBufferSlice {
-    @usableFromInline var upperBound: ByteBuffer._Index
-    @usableFromInline var _begin: _UInt24
-    @usableFromInline var lowerBound: ByteBuffer._Index {
+    @usableFromInline
+    var upperBound: ByteBuffer._Index
+    
+    @usableFromInline
+    var _begin: _UInt24
+    
+    @usableFromInline
+    var lowerBound: ByteBuffer._Index {
         return UInt32(self._begin)
     }
-    @inlinable var count: Int {
+    
+    @inlinable
+    var count: Int {
         return Int(self.upperBound - self.lowerBound)
     }
+    
+    @inlinable
     init() {
         self._begin = 0
         self.upperBound = 0
     }
+    
     static var maxSupportedLowerBound: ByteBuffer._Index {
         return ByteBuffer._Index(_UInt24.max)
     }
 }
 
 extension _ByteBufferSlice {
+    @inlinable
     init(_ range: Range<UInt32>) {
         self = _ByteBufferSlice()
 
@@ -54,25 +65,10 @@ extension _ByteBufferSlice {
 ///
 /// - note: `ByteBufferAllocator` is thread-safe.
 public struct ByteBufferAllocator {
-
     /// Create a fresh `ByteBufferAllocator`. In the future the allocator might use for example allocation pools and
     /// therefore it's recommended to reuse `ByteBufferAllocators` where possible instead of creating fresh ones in
     /// many places.
     public init() {
-        self.init(hookedMalloc: { sysMalloc($0) },
-                  hookedRealloc: { sysRealloc($0, $1) },
-                  hookedFree: { sysFree($0) },
-                  hookedMemcpy: { $0.copyMemory(from: $1, byteCount: $2) })
-    }
-
-    internal init(hookedMalloc: @escaping @convention(c) (size_t) -> UnsafeMutableRawPointer?,
-                  hookedRealloc: @escaping @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer?,
-                  hookedFree: @escaping @convention(c) (UnsafeMutableRawPointer?) -> Void,
-                  hookedMemcpy: @escaping @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, size_t) -> Void) {
-        self.malloc = hookedMalloc
-        self.realloc = hookedRealloc
-        self.free = hookedFree
-        self.memcpy = hookedMemcpy
     }
 
     /// Request a freshly allocated `ByteBuffer` of size `capacity` or larger.
@@ -80,22 +76,8 @@ public struct ByteBufferAllocator {
     /// - parameters:
     ///     - capacity: The capacity of the returned `ByteBuffer`.
     public func buffer(capacity: Int) -> ByteBuffer {
-        return ByteBuffer(allocator: self, startingCapacity: capacity)
+        return ByteBuffer(capacity: capacity)
     }
-
-    internal let malloc: @convention(c) (size_t) -> UnsafeMutableRawPointer?
-    internal let realloc: @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer?
-    internal let free: @convention(c) (UnsafeMutableRawPointer?) -> Void
-    internal let memcpy: @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, size_t) -> Void
-
-}
-
-@inlinable func _toCapacity(_ value: Int) -> ByteBuffer._Capacity {
-    return ByteBuffer._Capacity(truncatingIfNeeded: value)
-}
-
-@inlinable func _toIndex(_ value: Int) -> ByteBuffer._Index {
-    return ByteBuffer._Index(truncatingIfNeeded: value)
 }
 
 /// `ByteBuffer` stores contiguously allocated raw bytes. It is a random and sequential accessible sequence of zero or
@@ -180,6 +162,8 @@ public struct ByteBufferAllocator {
 /// range of the `ByteBuffer`. Because of this it's strongly advised to prefer the usage of methods that start with the `read` prefix and only use the `get` prefixed methods if there is a strong reason
 /// for doing so. In any case, if you use the `get` prefixed methods you are responsible for ensuring that you do not reach into uninitialized memory by taking the `readableBytes` and `readerIndex` into
 /// account, and ensuring that you have previously written into the area covered by the `index` itself.
+
+/*
 public struct ByteBuffer {
     @usableFromInline typealias Slice = _ByteBufferSlice
     @usableFromInline typealias Allocator = ByteBufferAllocator
@@ -646,6 +630,7 @@ public struct ByteBuffer {
         self._moveReaderIndex(to: 0)
     }
 }
+ */
 
 extension ByteBuffer: CustomStringConvertible {
     /// A `String` describing this `ByteBuffer`. Example:
@@ -663,7 +648,7 @@ extension ByteBuffer: CustomStringConvertible {
         readableBytes: \(self.readableBytes), \
         capacity: \(self.capacity), \
         slice: \(self._slice), \
-        storage: \(self._storage.bytes) (\(self._storage.capacity) bytes)\
+        storage: \(self._guts._storage) (\(self._guts._storage.capacity) bytes)\
         }
         """
     }
@@ -677,24 +662,56 @@ extension ByteBuffer: CustomStringConvertible {
     ///
     /// - returns: A description of this `ByteBuffer` useful for debugging.
     public var debugDescription: String {
-        return "\(self.description)\nreadable bytes (max 1k): \(self._storage.dumpBytes(slice: self._slice, offset: self.readerIndex, length: min(1024, self.readableBytes)))"
+        return "\(self.description)\nreadable bytes (max 1k): \(self._guts.dumpBytes(slice: self._slice, offset: self.readerIndex, length: min(1024, self.readableBytes)))"
     }
 }
 
 /* change types to the user visible `Int` */
 extension ByteBuffer {
-    /// Copy the collection of `bytes` into the `ByteBuffer` at `index`.
-    @discardableResult
+    @inline(never)
+    @usableFromInline
+    mutating func _setSlowPath<Bytes: Sequence>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
+        func ensureCapacityAndReturnStorageBase(capacity: Int) -> UnsafeMutablePointer<UInt8> {
+            self._makeStorageUniquelyOwned(bytesAvailable: capacity, at: Int(index))
+            let newBytesPtr = self.withVeryUnsafeMutableBytes { ptr in
+                // yep, escaping the pointer here, naughty, naughty
+                UnsafeMutableRawBufferPointer(rebasing: ptr[Int(index) ..< Int(index) + Int(capacity)])
+            }
+            return newBytesPtr.bindMemory(to: UInt8.self).baseAddress!
+        }
+        let underestimatedByteCount = bytes.underestimatedCount
+        let newPastEndIndex: _Index = index + _toIndex(underestimatedByteCount)
+        self._makeStorageUniquelyOwned(bytesAvailable: bytes.underestimatedCount, at: Int(index))
+        
+        var base = ensureCapacityAndReturnStorageBase(capacity: underestimatedByteCount)
+        var (iterator, idx) = UnsafeMutableBufferPointer(start: base, count: underestimatedByteCount).initialize(from: bytes)
+        assert(idx == underestimatedByteCount)
+        while let b = iterator.next() {
+            base = ensureCapacityAndReturnStorageBase(capacity: idx + 1)
+            base[idx] = b
+            idx += 1
+        }
+        return _toCapacity(idx)
+    }
+    
     @inlinable
-    public mutating func set<Bytes: Sequence>(bytes: Bytes, at index: Int) -> Int where Bytes.Element == UInt8 {
-        return Int(self._set(bytes: bytes, at: _toIndex(index)))
+    mutating func _set<Bytes: Sequence>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
+        if let written = bytes.withContiguousStorageIfAvailable({ bytes in
+            self._set(bytes: UnsafeRawBufferPointer(bytes), at: index)
+        }) {
+            // fast path, we've got access to the contiguous bytes
+            return written
+        } else {
+            return self._setSlowPath(bytes: bytes, at: index)
+        }
     }
 
     /// Copy `bytes` into the `ByteBuffer` at `index`.
     @discardableResult
     @inlinable
     public mutating func set(bytes: UnsafeRawBufferPointer, at index: Int) -> Int {
-        return Int(self._set(bytes: bytes, at: _toIndex(index)))
+        self.setBytes(bytes, at: index)
+        return bytes.count
     }
 
     /// Move the reader index forward by `offset` bytes.
@@ -759,7 +776,7 @@ extension ByteBuffer: Equatable {
             return false
         }
 
-        if lhs._slice == rhs._slice && lhs._storage === rhs._storage {
+        if lhs._slice == rhs._slice && lhs._guts._storage === rhs._guts._storage {
             return true
         }
 

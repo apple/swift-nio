@@ -315,7 +315,7 @@ extension ByteBuffer {
     /// - returns: The number of bytes written.
     @discardableResult
     public mutating func set(buffer: ByteBuffer, at index: Int) -> Int {
-        return buffer.withUnsafeReadableBytes{ p in
+        return buffer.withUnsafeReadableBytes { p in
             self.set(bytes: p, at: index)
         }
     }

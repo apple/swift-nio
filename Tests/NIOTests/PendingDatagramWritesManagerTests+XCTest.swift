@@ -31,8 +31,6 @@ extension PendingDatagramWritesManagerTests {
                 ("testPendingWritesWorkWithPartialWrites", testPendingWritesWorkWithPartialWrites),
                 ("testPendingWritesSpinCountWorksForSingleWrites", testPendingWritesSpinCountWorksForSingleWrites),
                 ("testPendingWritesCancellationWorksCorrectly", testPendingWritesCancellationWorksCorrectly),
-                ("testPendingWritesNoMoreThanWritevLimitIsWritten", testPendingWritesNoMoreThanWritevLimitIsWritten),
-                ("testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk", testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk),
                 ("testPendingWritesWorksWithManyEmptyWrites", testPendingWritesWorksWithManyEmptyWrites),
                 ("testPendingWritesCloseDuringVectorWrite", testPendingWritesCloseDuringVectorWrite),
                 ("testPendingWritesMoreThanWritevIOVectorLimit", testPendingWritesMoreThanWritevIOVectorLimit),
