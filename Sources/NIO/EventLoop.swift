@@ -220,7 +220,7 @@ public protocol EventLoop: EventLoopGroup {
 /// Represents a time _interval_.
 ///
 /// - note: `TimeAmount` should not be used to represent a point in time.
-public struct TimeAmount {
+public struct TimeAmount: Equatable {
     public typealias Value = Int64
 
     /// The nanoseconds representation of the `TimeAmount`.
@@ -288,10 +288,6 @@ public struct TimeAmount {
 extension TimeAmount: Comparable {
     public static func < (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds < rhs.nanoseconds
-    }
-
-    public static func == (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
-        return lhs.nanoseconds == rhs.nanoseconds
     }
 }
 

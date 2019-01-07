@@ -123,26 +123,7 @@ public enum WebSocketErrorCode {
     }
 }
 
-extension WebSocketErrorCode: Equatable {
-    public static func ==(lhs: WebSocketErrorCode, rhs: WebSocketErrorCode) -> Bool {
-        switch (lhs, rhs) {
-        case (.normalClosure, .normalClosure),
-             (.goingAway, .goingAway),
-             (.protocolError, .protocolError),
-             (.unacceptableData, .unacceptableData),
-             (.dataInconsistentWithMessage, .dataInconsistentWithMessage),
-             (.policyViolation, .policyViolation),
-             (.messageTooLarge, .messageTooLarge),
-             (.missingExtension, .missingExtension),
-             (.unexpectedServerError, .unexpectedServerError):
-            return true
-        case (.unknown(let l), .unknown(let r)):
-            return l == r
-        default:
-            return false
-        }
-    }
-}
+extension WebSocketErrorCode: Equatable {}
 
 public extension ByteBuffer {
     /// Read a websocket error code from a byte buffer.
