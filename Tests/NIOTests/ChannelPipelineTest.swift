@@ -902,4 +902,31 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNil(channel.readOutbound())
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
     }
+
+    func testFireChannelReadInInactiveChannelDoesNotCrash() throws {
+        class FireWhenInactiveHandler: ChannelInboundHandler {
+            typealias InboundIn = ()
+            typealias InboundOut = ()
+
+            func channelInactive(ctx: ChannelHandlerContext) {
+                ctx.fireChannelRead(self.wrapInboundOut(()))
+            }
+        }
+        let handler = FireWhenInactiveHandler()
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let server = try assertNoThrowWithValue(ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait())
+        defer {
+            XCTAssertNoThrow(try server.close().wait())
+        }
+        let client = try assertNoThrowWithValue(ClientBootstrap(group: group)
+            .channelInitializer { channel in
+                channel.pipeline.add(handler: handler)
+            }
+            .connect(to: server.localAddress!)
+            .wait())
+        XCTAssertNoThrow(try client.close().wait())
+    }
 }
