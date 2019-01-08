@@ -38,7 +38,11 @@ var targets: [PackageDescription.Target] = [
     .target(name: "NIOHTTP1Server",
             dependencies: ["NIO", "NIOHTTP1", "NIOConcurrencyHelpers"]),
     .target(name: "CNIOHTTPParser"),
-    .target(name: "CNIOZlib"),
+    .target(name: "CNIOZlib",
+            dependencies: [],
+            linkerSettings: [
+                .linkedLibrary("z")
+            ]),
     .target(name: "NIOTLS", dependencies: ["NIO"]),
     .target(name: "NIOChatServer",
             dependencies: ["NIO", "NIOConcurrencyHelpers"]),
@@ -85,7 +89,6 @@ let package = Package(
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio-zlib-support.git", from: "1.0.0"),
     ],
     targets: targets
 )
