@@ -39,10 +39,16 @@ extension DatagramChannelTests {
                 ("testRecvFromFailsWithECONNREFUSED", testRecvFromFailsWithECONNREFUSED),
                 ("testRecvFromFailsWithENOMEM", testRecvFromFailsWithENOMEM),
                 ("testRecvFromFailsWithEFAULT", testRecvFromFailsWithEFAULT),
+                ("testRecvMmsgFailsWithECONNREFUSED", testRecvMmsgFailsWithECONNREFUSED),
+                ("testRecvMmsgFailsWithENOMEM", testRecvMmsgFailsWithENOMEM),
+                ("testRecvMmsgFailsWithEFAULT", testRecvMmsgFailsWithEFAULT),
                 ("testSetGetOptionClosedDatagramChannel", testSetGetOptionClosedDatagramChannel),
                 ("testWritesAreAccountedCorrectly", testWritesAreAccountedCorrectly),
                 ("testSettingTwoDistinctChannelOptionsWorksForDatagramChannel", testSettingTwoDistinctChannelOptionsWorksForDatagramChannel),
                 ("testUnprocessedOutboundUserEventFailsOnDatagramChannel", testUnprocessedOutboundUserEventFailsOnDatagramChannel),
+                ("testBasicMultipleReads", testBasicMultipleReads),
+                ("testMmsgWillTruncateWithoutChangeToAllocator", testMmsgWillTruncateWithoutChangeToAllocator),
+                ("testRecvMmsgForMultipleCycles", testRecvMmsgForMultipleCycles),
            ]
    }
 }
