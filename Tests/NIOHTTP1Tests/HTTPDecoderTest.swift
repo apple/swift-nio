@@ -337,10 +337,6 @@ class HTTPDecoderTest: XCTestCase {
             typealias InboundOut = HTTPClientResponsePart
             typealias OutboundOut = HTTPClientRequestPart
             
-            var upgrading = false
-            
-            var recievedMessages: [NIOAny] = []
-            
             func channelActive(ctx: ChannelHandlerContext) {
                 var upgradeReq = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/")
                 upgradeReq.headers.add(name: "Connection", value: "Upgrade")
@@ -351,14 +347,9 @@ class HTTPDecoderTest: XCTestCase {
             }
             
             func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-                if upgrading {
-                    self.recievedMessages.append(data)
-                }
-                
                 let part = self.unwrapInboundIn(data)
                 switch part {
                 case .end:
-                    self.upgrading = true
                     _ = ctx.pipeline.remove(handler: self).then { _ in
                         ctx.pipeline.add(handler: ByteCollector())
                     }
