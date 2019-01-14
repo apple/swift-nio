@@ -273,10 +273,6 @@ class HTTPDecoderTest: XCTestCase {
             func handlerAdded(ctx: ChannelHandlerContext) {
                 _ = ctx.pipeline.remove(name: "decoder")
             }
-            
-            func handlerRemoved(ctx: ChannelHandlerContext) {
-                XCTAssert(self.called)
-            }
         }
 
         class Receiver: ChannelInboundHandler {
@@ -295,11 +291,13 @@ class HTTPDecoderTest: XCTestCase {
                     break
                 }
             }
+            
+            func channelInactive(ctx: ChannelHandlerContext) {
+                XCTAssertTrue(collector.called)
+            }
         }
         XCTAssertNoThrow(try channel.pipeline.add(name: "decoder", handler: HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes)).wait())
         XCTAssertNoThrow(try channel.pipeline.add(handler: Receiver()).wait())
-        
-        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 8888)).wait())
 
         // This connect call is semantically wrong, but it's how you active embedded channels properly right now.
         XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 8888)).wait())
