@@ -291,7 +291,7 @@ class HTTPDecoderTest: XCTestCase {
                     break
                 }
             }
-            
+
             func channelInactive(ctx: ChannelHandlerContext) {
                 XCTAssertTrue(collector.called)
             }
