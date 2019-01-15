@@ -355,8 +355,8 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - handler: the `ChannelHandler` to remove.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
-    public func remove(handler: ChannelHandler) -> EventLoopFuture<Bool> {
-        let promise = self.eventLoop.makePromise(of: Bool.self)
+    public func remove(handler: ChannelHandler) -> EventLoopFuture<Void> {
+        let promise = self.eventLoop.makePromise(of: Void.self)
         self.remove(handler: handler, promise: promise)
         return promise.futureResult
     }
@@ -366,8 +366,8 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - name: the name that was used to add the `ChannelHandler` to the `ChannelPipeline` before.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
-    public func remove(name: String) -> EventLoopFuture<Bool> {
-        let promise = self.eventLoop.makePromise(of: Bool.self)
+    public func remove(name: String) -> EventLoopFuture<Void> {
+        let promise = self.eventLoop.makePromise(of: Void.self)
         self.remove(name: name, promise: promise)
         return promise.futureResult
     }
@@ -377,8 +377,8 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - ctx: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
-    public func remove(ctx: ChannelHandlerContext) -> EventLoopFuture<Bool> {
-        let promise = self.eventLoop.makePromise(of: Bool.self)
+    public func remove(ctx: ChannelHandlerContext) -> EventLoopFuture<Void> {
+        let promise = self.eventLoop.makePromise(of: Void.self)
         self.remove(ctx: ctx, promise: promise)
         return promise.futureResult
     }
@@ -388,7 +388,7 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - handler: the `ChannelHandler` to remove.
     ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
-    public func remove(handler: ChannelHandler, promise: EventLoopPromise<Bool>?) {
+    public func remove(handler: ChannelHandler, promise: EventLoopPromise<Void>?) {
         let contextFuture = self.context0 {
             return $0.handler === handler
         }.map { ctx in
@@ -405,7 +405,7 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - name: the name that was used to add the `ChannelHandler` to the `ChannelPipeline` before.
     ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
-    public func remove(name: String, promise: EventLoopPromise<Bool>?) {
+    public func remove(name: String, promise: EventLoopPromise<Void>?) {
         let contextFuture = self.context0 {
             $0.name == name
         }.map { ctx in
@@ -422,7 +422,7 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - ctx: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
     ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
-    public func remove(ctx: ChannelHandlerContext, promise: EventLoopPromise<Bool>?) {
+    public func remove(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         if self.eventLoop.inEventLoop {
             self.remove0(ctx: ctx, promise: promise)
         } else {
@@ -504,7 +504,7 @@ public final class ChannelPipeline: ChannelInvoker {
     }
 
     /// Remove a `ChannelHandlerContext` from the `ChannelPipeline`. Must only be called from within the `EventLoop`.
-    private func remove0(ctx: ChannelHandlerContext, promise: EventLoopPromise<Bool>?) {
+    private func remove0(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
 
         let nextCtx = ctx.next
@@ -518,7 +518,7 @@ public final class ChannelPipeline: ChannelInvoker {
 
         do {
             try ctx.invokeHandlerRemoved()
-            promise?.succeed(result: true)
+            promise?.succeed(result: ())
         } catch let err {
             promise?.fail(error: err)
         }

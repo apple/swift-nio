@@ -698,8 +698,8 @@ class ChannelPipelineTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.write(staticString: "Hello, world!")
 
-        let removalPromise = channel.eventLoop.makePromise(of: Bool.self)
-        removalPromise.futureResult.whenSuccess { (_: Bool) in
+        let removalPromise = channel.eventLoop.makePromise(of: Void.self)
+        removalPromise.futureResult.whenSuccess {
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -745,7 +745,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNil(channel.readOutbound())
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
-        channel.pipeline.remove(ctx: context).whenSuccess { (_: Bool) in
+        channel.pipeline.remove(ctx: context).whenSuccess {
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -772,8 +772,8 @@ class ChannelPipelineTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.write(staticString: "Hello, world!")
 
-        let removalPromise = channel.eventLoop.makePromise(of: Bool.self)
-        removalPromise.futureResult.whenSuccess { (_: Bool) in
+        let removalPromise = channel.eventLoop.makePromise(of: Void.self)
+        removalPromise.futureResult.whenSuccess { (_: Void) in
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -819,7 +819,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNil(channel.readOutbound())
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
-        channel.pipeline.remove(name: "TestHandler").whenSuccess { (_: Bool) in
+        channel.pipeline.remove(name: "TestHandler").whenSuccess {
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -847,8 +847,8 @@ class ChannelPipelineTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.write(staticString: "Hello, world!")
 
-        let removalPromise = channel.eventLoop.makePromise(of: Bool.self)
-        removalPromise.futureResult.whenSuccess { (_: Bool) in
+        let removalPromise = channel.eventLoop.makePromise(of: Void.self)
+        removalPromise.futureResult.whenSuccess {
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -895,7 +895,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNil(channel.readOutbound())
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
-        channel.pipeline.remove(handler: handler).whenSuccess { (_: Bool) in
+        channel.pipeline.remove(handler: handler).whenSuccess {
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }

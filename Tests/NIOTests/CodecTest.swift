@@ -392,8 +392,6 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         channel.pipeline.context(handlerType: ByteToMessageHandler<PairOfBytesDecoder>.self).then { ctx in
             return channel.pipeline.remove(ctx: ctx)
-        }.map {
-            XCTAssertTrue($0)
         }.whenFailure { error in
             XCTFail("unexpected error: \(error)")
         }

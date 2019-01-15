@@ -189,7 +189,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
                     self.sendUpgradeResponse(ctx: ctx, upgradeRequest: request, responseHeaders: responseHeaders)
                 }.then {
                     self.removeHandler(ctx: ctx, handler: self.httpEncoder)
-                }.map { (_: Bool) in
+                }.map {
                     self.upgradeCompletionHandler(ctx)
                 }.then {
                     upgrader.upgrade(ctx: ctx, upgradeRequest: request)
@@ -235,11 +235,11 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     }
 
     /// Removes the given channel handler from the channel pipeline.
-    private func removeHandler(ctx: ChannelHandlerContext, handler: ChannelHandler?) -> EventLoopFuture<Bool> {
+    private func removeHandler(ctx: ChannelHandlerContext, handler: ChannelHandler?) -> EventLoopFuture<Void> {
         if let handler = handler {
             return ctx.pipeline.remove(handler: handler)
         } else {
-            return ctx.eventLoop.makeSucceededFuture(result: true)
+            return ctx.eventLoop.makeSucceededFuture(result: ())
         }
     }
 
@@ -249,7 +249,6 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
             return ctx.eventLoop.makeSucceededFuture(result: ())
         }
 
-        return EventLoopFuture<Void>.andAll(self.extraHTTPHandlers.map { ctx.pipeline.remove(handler: $0).map { (_: Bool) in () }},
-                                            eventLoop: ctx.eventLoop)
+        return EventLoopFuture<Void>.andAll(self.extraHTTPHandlers.map { ctx.pipeline.remove(handler: $0).map { }}, eventLoop: ctx.eventLoop)
     }
 }

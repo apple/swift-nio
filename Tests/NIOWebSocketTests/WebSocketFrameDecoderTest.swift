@@ -105,7 +105,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // an encoder because we want to fail gracefully if a frame is written.
         XCTAssertNoThrow(try self.decoderChannel.pipeline.context(handlerType: ByteToMessageHandler<WebSocketFrameDecoder>.self).then {
             self.decoderChannel.pipeline.remove(handler: $0.handler)
-        }.then { (_: Bool) in
+        }.then {
             self.decoderChannel.pipeline.add(handler: handler)
         }.wait())
     }
