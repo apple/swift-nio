@@ -50,6 +50,124 @@ public struct Scheduled<T> {
     }
 }
 
+/// Returned once a task was scheduled to be repeatedly executed on the `EventLoop`.
+///
+/// A `RepeatedTask` allows the user to `cancel()` the repeated scheduling of further tasks.
+public final class RepeatedTask {
+    private let delay: TimeAmount
+    private let eventLoop: EventLoop
+    private var scheduled: Scheduled<EventLoopFuture<Void>>?
+    private var task: ((RepeatedTask) -> EventLoopFuture<Void>)?
+
+    internal init(interval: TimeAmount, eventLoop: EventLoop, task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) {
+        self.delay = interval
+        self.eventLoop = eventLoop
+        self.task = task
+    }
+
+    internal func begin(in delay: TimeAmount) {
+        if self.eventLoop.inEventLoop {
+            self.begin0(in: delay)
+        } else {
+            self.eventLoop.execute {
+                self.begin0(in: delay)
+            }
+        }
+    }
+
+    private func begin0(in delay: TimeAmount) {
+        self.eventLoop.assertInEventLoop()
+        guard let task = self.task else {
+            return
+        }
+        self.scheduled = self.eventLoop.scheduleTask(in: delay) {
+            task(self)
+        }
+        self.reschedule()
+    }
+
+    /// Try to cancel the execution of the repeated task.
+    ///
+    /// Whether the execution of the task is immediately canceled depends on whether the execution of a task has already begun.
+    ///  This means immediate cancellation is not guaranteed.
+    ///
+    /// The safest way to cancel is by using the passed reference of `RepeatedTask` inside the task closure.
+    public func cancel() {
+        if self.eventLoop.inEventLoop {
+            self.cancel0()
+        } else {
+            self.eventLoop.execute {
+                self.cancel0()
+            }
+        }
+    }
+
+    private func cancel0() {
+        self.eventLoop.assertInEventLoop()
+        self.scheduled?.cancel()
+        self.scheduled = nil
+        self.task = nil
+    }
+
+    private func reschedule() {
+        self.eventLoop.assertInEventLoop()
+        guard let scheduled = self.scheduled else {
+            return
+        }
+
+        scheduled.futureResult.whenSuccess { future in
+            future.whenComplete { (_: Result<Void, Error>) in
+                self.reschedule0()
+            }
+        }
+
+        scheduled.futureResult.whenFailure { (_: Error) in
+            self.cancel0()
+        }
+    }
+
+    private func reschedule0() {
+        self.eventLoop.assertInEventLoop()
+        guard self.task != nil else {
+            return
+        }
+        self.scheduled = self.eventLoop.scheduleTask(in: self.delay) {
+            // we need to repeat this as we might have been cancelled in the meantime
+            guard let task = self.task else {
+                return self.eventLoop.makeSucceededFuture(result: ())
+            }
+            return task(self)
+        }
+        self.reschedule()
+    }
+}
+
+/// An iterator over the `EventLoop`s forming an `EventLoopGroup`.
+///
+/// Usually returned by an `EventLoopGroup`'s `makeIterator()` method.
+///
+///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+///     group.makeIterator()?.forEach { loop in
+///         // Do something with each loop
+///     }
+///
+public struct EventLoopIterator: Sequence, IteratorProtocol {
+    public typealias Element = EventLoop
+    private var eventLoops: IndexingIterator<[EventLoop]>
+
+    /// Create an `EventLoopIterator` from an array of `EventLoop`s.
+    public init(_ eventLoops: [EventLoop]) {
+        self.eventLoops = eventLoops.makeIterator()
+    }
+
+    /// Advances to the next `EventLoop` and returns it, or `nil` if no next element exists.
+    ///
+    /// - returns: The next `EventLoop` if a next element exists; otherwise, `nil`.
+    public mutating func next() -> EventLoop? {
+        return self.eventLoops.next()
+    }
+}
+
 /// An EventLoop processes IO / tasks in an endless loop for `Channel`s until it's closed.
 ///
 /// Usually multiple `Channel`s share the same `EventLoop` for processing IO / tasks and so share the same processing `Thread`.
@@ -74,7 +192,7 @@ public struct Scheduled<T> {
 /// }
 /// ```
 ///
-/// Because an `EventLoop` may be shared between multiple `Channel`s its important to _NOT_ block while processing IO / tasks. This also includes long running computations which will have the same
+/// Because an `EventLoop` may be shared between multiple `Channel`s it's important to _NOT_ block while processing IO / tasks. This also includes long running computations which will have the same
 /// effect as blocking in this case.
 public protocol EventLoop: EventLoopGroup {
     /// Returns `true` if the current `Thread` is the same as the `Thread` that is tied to this `EventLoop`. `false` otherwise.
@@ -91,19 +209,19 @@ public protocol EventLoop: EventLoopGroup {
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
 
     /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
+    @discardableResult
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
+
+    /// Checks that this call is run from the `EventLoop`. If this is called from within the `EventLoop` this function
+    /// will have no effect, if called from outside the `EventLoop` it will crash the process with a trap.
+    func preconditionInEventLoop(file: StaticString, line: UInt)
 }
 
 /// Represents a time _interval_.
 ///
 /// - note: `TimeAmount` should not be used to represent a point in time.
-public struct TimeAmount {
-  
-    #if arch(arm) // 32-bit, Raspi/AppleWatch/etc
-        public typealias Value = Int64
-    #else // 64-bit, keeping that at Int for SemVer in the 1.x line.
-        public typealias Value = Int
-    #endif
+public struct TimeAmount: Equatable {
+    public typealias Value = Int64
 
     /// The nanoseconds representation of the `TimeAmount`.
     public let nanoseconds: Value
@@ -171,15 +289,11 @@ extension TimeAmount: Comparable {
     public static func < (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds < rhs.nanoseconds
     }
-
-    public static func == (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
-        return lhs.nanoseconds == rhs.nanoseconds
-    }
 }
 
 extension EventLoop {
     public func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
-        let promise: EventLoopPromise<T> = newPromise(file: #file, line: #line)
+        let promise: EventLoopPromise<T> = makePromise(file: #file, line: #line)
 
         self.execute {
             do {
@@ -193,7 +307,7 @@ extension EventLoop {
     }
 
     /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `Thread`.
-    public func newPromise<T>(file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<T> {
+    public func makePromise<T>(of type: T.Type = T.self, file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<T> {
         return EventLoopPromise<T>(eventLoop: self, file: file, line: line)
     }
 
@@ -202,7 +316,7 @@ extension EventLoop {
     /// - parameters:
     ///     - error: the `Error` that is used by the `EventLoopFuture`.
     /// - returns: a failed `EventLoopFuture`.
-    public func newFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
+    public func makeFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
         return EventLoopFuture<T>(eventLoop: self, error: error, file: "n/a", line: 0)
     }
 
@@ -211,7 +325,7 @@ extension EventLoop {
     /// - parameters:
     ///     - result: the value that is used by the `EventLoopFuture`.
     /// - returns: a succeeded `EventLoopFuture`.
-    public func newSucceededFuture<T>(result: T) -> EventLoopFuture<T> {
+    public func makeSucceededFuture<T>(result: T) -> EventLoopFuture<T> {
         return EventLoopFuture<T>(eventLoop: self, result: result, file: "n/a", line: 0)
     }
 
@@ -221,6 +335,63 @@ extension EventLoop {
 
     public func close() throws {
         // Do nothing
+    }
+
+    /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each task.
+    ///
+    /// - parameters:
+    ///     - initialDelay: The delay after which the first task is executed.
+    ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - task: The closure that will be executed.
+    /// - return: `RepeatedTask`
+    @discardableResult
+    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping (RepeatedTask) throws -> Void) -> RepeatedTask {
+        let futureTask: (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
+            do {
+                try task(repeatedTask)
+                return self.makeSucceededFuture(result: ())
+            } catch {
+                return self.makeFailedFuture(error: error)
+            }
+        }
+        return self.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, futureTask)
+    }
+
+    /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each task.
+    ///
+    /// - parameters:
+    ///     - initialDelay: The delay after which the first task is executed.
+    ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - task: The closure that will be executed.
+    /// - return: `RepeatedTask`
+    @discardableResult
+    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask {
+        let repeated = RepeatedTask(interval: delay, eventLoop: self, task: task)
+        repeated.begin(in: initialDelay)
+        return repeated
+    }
+
+    /// Returns an `EventLoopIterator` over this `EventLoop`.
+    ///
+    /// - returns: `EventLoopIterator`
+    public func makeIterator() -> EventLoopIterator {
+        return EventLoopIterator([self])
+    }
+
+    /// Checks that this call is run from the EventLoop. If this is called from within the EventLoop this function will
+    /// have no effect, if called from outside the EventLoop it will crash the process with a trap if run in debug mode.
+    /// In release mode this function never has any effect.
+    ///
+    /// - note: This is not a customization point so calls to this function can be fully optimized out in release mode.
+    @inlinable
+    public func assertInEventLoop(file: StaticString = #file, line: UInt = #line) {
+        debugOnly {
+            self.preconditionInEventLoop(file: file, line: line)
+        }
+    }
+
+    public func preconditionInEventLoop(file: StaticString = #file, line: UInt = #line) {
+        precondition(self.inEventLoop, file: file, line: line)
     }
 }
 
@@ -346,14 +517,14 @@ internal final class SelectableEventLoop: EventLoop {
 
     /// Is this `SelectableEventLoop` still open (ie. not shutting down or shut down)
     internal var isOpen: Bool {
-        assert(self.inEventLoop)
+        self.assertInEventLoop()
         return self.lifecycleState == .open
     }
 
     /// Register the given `SelectableChannel` with this `SelectableEventLoop`. After this point all I/O for the `SelectableChannel` will be processed by this `SelectableEventLoop` until it
     /// is deregistered by calling `deregister`.
     public func register<C: SelectableChannel>(channel: C) throws {
-        assert(inEventLoop)
+        self.assertInEventLoop()
 
         // Don't allow registration when we're closed.
         guard self.lifecycleState == .open else {
@@ -365,9 +536,9 @@ internal final class SelectableEventLoop: EventLoop {
 
     /// Deregister the given `SelectableChannel` from this `SelectableEventLoop`.
     public func deregister<C: SelectableChannel>(channel: C) throws {
-        assert(inEventLoop)
+        self.assertInEventLoop()
         guard lifecycleState == .open else {
-            // Its possible the EventLoop was closed before we were able to call deregister, so just return in this case as there is no harm.
+            // It's possible the EventLoop was closed before we were able to call deregister, so just return in this case as there is no harm.
             return
         }
         try selector.deregister(selectable: channel.selectable)
@@ -376,7 +547,7 @@ internal final class SelectableEventLoop: EventLoop {
     /// Register the given `SelectableChannel` with this `SelectableEventLoop`. This should be done whenever `channel.interestedEvents` has changed and it should be taken into account when
     /// waiting for new I/O for the given `SelectableChannel`.
     public func reregister<C: SelectableChannel>(channel: C) throws {
-        assert(inEventLoop)
+        self.assertInEventLoop()
         try selector.reregister(selectable: channel.selectable, interested: channel.interestedEvent)
     }
 
@@ -385,7 +556,7 @@ internal final class SelectableEventLoop: EventLoop {
     }
 
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
-        let promise: EventLoopPromise<T> = newPromise()
+        let promise: EventLoopPromise<T> = makePromise()
         let task = ScheduledTask({
             do {
                 promise.succeed(result: try task())
@@ -474,7 +645,7 @@ internal final class SelectableEventLoop: EventLoop {
 
     /// Start processing I/O and tasks for this `SelectableEventLoop`. This method will continue running (and so block) until the `SelectableEventLoop` is closed.
     public func run() throws {
-        precondition(self.inEventLoop, "tried to run the EventLoop on the wrong thread.")
+        self.preconditionInEventLoop()
         defer {
             var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
             tasksLock.withLockVoid {
@@ -518,7 +689,7 @@ internal final class SelectableEventLoop: EventLoop {
                         // Make a copy of the tasks so we can execute these while not holding the lock anymore
                         while tasksCopy.count < tasksCopy.capacity, let task = scheduledTasks.peek() {
                             if task.readyIn(now) <= .nanoseconds(0) {
-                                _ = scheduledTasks.pop()
+                                scheduledTasks.pop()
                                 tasksCopy.append(task.task)
                             } else {
                                 nextReadyTask = task
@@ -566,7 +737,7 @@ internal final class SelectableEventLoop: EventLoop {
     public func closeGently() -> EventLoopFuture<Void> {
         func closeGently0() -> EventLoopFuture<Void> {
             guard self.lifecycleState == .open else {
-                return self.newFailedFuture(error: EventLoopError.shutdown)
+                return self.makeFailedFuture(error: EventLoopError.shutdown)
             }
             self.lifecycleState = .closing
             return self.selector.closeGently(eventLoop: self)
@@ -574,8 +745,8 @@ internal final class SelectableEventLoop: EventLoop {
         if self.inEventLoop {
             return closeGently0()
         } else {
-            let p: EventLoopPromise<Void> = self.newPromise()
-            _ = self.submit {
+            let p = self.makePromise(of: Void.self)
+            self.execute {
                 closeGently0().cascade(promise: p)
             }
             return p.futureResult
@@ -622,6 +793,11 @@ public protocol EventLoopGroup: class {
     /// The virtue of this function is to shut the event loop down. To work around that we call back on a DispatchQueue
     /// instead.
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void)
+
+    /// Returns an `EventLoopIterator` over the `EventLoop`s in this `EventLoopGroup`.
+    ///
+    /// - returns: `EventLoopIterator`
+    func makeIterator() -> EventLoopIterator
 }
 
 extension EventLoopGroup {
@@ -654,6 +830,18 @@ extension EventLoopGroup {
 typealias ThreadInitializer = (Thread) -> Void
 
 /// An `EventLoopGroup` which will create multiple `EventLoop`s, each tied to its own `Thread`.
+///
+/// The effect of initializing a `MultiThreadedEventLoopGroup` is to spawn `numberOfThreads` fresh threads which will
+/// all run their own `EventLoop`. Those threads will not be shut down until `shutdownGracefully` or
+/// `syncShutdownGracefully` is called.
+///
+/// - note: It's good style to call `MultiThreadedEventLoopGroup.shutdownGracefully` or
+///         `MultiThreadedEventLoopGroup.syncShutdownGracefully` when you no longer need this `EventLoopGroup`. In
+///         many cases that is just before your program exits.
+/// - warning: Unit tests often spawn one `MultiThreadedEventLoopGroup` per unit test to force isolation between the
+///            tests. In those cases it's important to shut the `MultiThreadedEventLoopGroup` down at the end of the
+///            test. A good place to start a `MultiThreadedEventLoopGroup` is the `setUp` method of your `XCTestCase`
+///            subclass, a good place to shut it down is the `tearDown` method.
 final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
@@ -695,6 +883,11 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numberOfThreads`.
     ///
+    /// - note: Don't forget to call `shutdownGracefully` or `syncShutdownGracefully` when you no longer need this
+    ///         `EventLoopGroup`. If you forget to shut the `EventLoopGroup` down you will leak `numberOfThreads`
+    ///         (kernel) threads which are costly resources. This is especially important in unit tests where one
+    ///         `MultiThreadedEventLoopGroup` is started per test case.
+    ///
     /// - arguments:
     ///     - numberOfThreads: The number of `Threads` to use.
     public convenience init(numberOfThreads: Int) {
@@ -702,15 +895,6 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         self.init(threadInitializers: initializers)
     }
     
-    /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numThreads`.
-    ///
-    /// - arguments:
-    ///     - numThreads: The number of `Threads` to use.
-    @available(*, deprecated, renamed: "init(numberOfThreads:)")
-    public convenience init(numThreads: Int) {
-        self.init(numberOfThreads: numThreads)
-    }
-
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses the given `ThreadInitializer`s. One `Thread` per `ThreadInitializer` is created and used.
     ///
     /// - arguments:
@@ -732,6 +916,13 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         return threadSpecificEventLoop.currentValue
     }
 
+    /// Returns an `EventLoopIterator` over the `EventLoop`s in this `MultiThreadedEventLoopGroup`.
+    ///
+    /// - returns: `EventLoopIterator`
+    public func makeIterator() -> EventLoopIterator {
+        return EventLoopIterator(self.eventLoops)
+    }
+
     public func next() -> EventLoop {
         return eventLoops[abs(index.add(1) % eventLoops.count)]
     }
@@ -739,11 +930,18 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
     internal func unsafeClose() throws {
         for loop in eventLoops {
             // TODO: Should we log this somehow or just rethrow the first error ?
-            _ = try loop.close0()
+            try loop.close0()
         }
     }
 
-    public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+    /// Shut this `MultiThreadedEventLoopGroup` down which causes the `EventLoop`s and their associated threads to be
+    /// shut down and release their resources.
+    ///
+    /// - parameters:
+    ///    - queue: The `DispatchQueue` to run `handler` on when the shutdown operation completes.
+    ///    - handler: The handler which is called after the shutdown operation completes. The parameter will be `nil`
+    ///               on success and contain the `Error` otherwise.
+    public func shutdownGracefully(queue: DispatchQueue, _ handler: @escaping (Error?) -> Void) {
         // This method cannot perform its final cleanup using EventLoopFutures, because it requires that all
         // our event loops still be alive, and they may not be. Instead, we use Dispatch to manage
         // our shutdown signaling, and then do our cleanup once the DispatchQueue is empty.
@@ -755,7 +953,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
             g.enter()
             loop.closeGently().mapIfError { err in
                 q.sync { error = err }
-            }.whenComplete {
+            }.whenComplete { (_: Result<Void, Error>) in
                 g.leave()
             }
         }
@@ -763,13 +961,13 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         g.notify(queue: q) {
             let failure = self.eventLoops.map { try? $0.close0() }.filter { $0 == nil }.count > 0
 
-            // TODO: In the next major release we should join in the Thread used by the EventLoop before invoking the callback to ensure
-            //       it is really gone.
+            // TODO: For Swift NIO 2.0 we should join in the threads used by the EventLoop before invoking the callback
+            //       to ensure they're really gone (#581).
             if failure {
                 error = EventLoopError.shutdownFailed
             }
 
-            callback(error)
+            handler(error)
         }
     }
 }

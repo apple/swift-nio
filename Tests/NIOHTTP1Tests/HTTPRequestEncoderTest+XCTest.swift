@@ -33,6 +33,7 @@ extension HTTPRequestEncoderTests {
                 ("testNoTransferEncodingHeadersForHEAD", testNoTransferEncodingHeadersForHEAD),
                 ("testNoChunkedEncodingForHTTP10", testNoChunkedEncodingForHTTP10),
                 ("testBody", testBody),
+                ("testCONNECT", testCONNECT),
            ]
    }
 }

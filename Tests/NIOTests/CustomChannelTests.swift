@@ -83,7 +83,7 @@ class CustomChannelTests: XCTestCase {
     func testWritingIntToSpecialChannel() throws {
         let loop = EmbeddedEventLoop()
         let intCore = IntChannelCore()
-        let writePromise: EventLoopPromise<Void> = loop.newPromise()
+        let writePromise = loop.makePromise(of: Void.self)
 
         intCore.write0(NIOAny(5), promise: writePromise)
         XCTAssertNoThrow(try writePromise.futureResult.wait())

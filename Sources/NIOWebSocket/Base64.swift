@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 // The base64 unicode table.
-private let base64Table: [UnicodeScalar] = [
+private let base64Table: [Unicode.Scalar] = [
     "A", "B", "C", "D", "E", "F", "G", "H",
     "I", "J", "K", "L", "M", "N", "O", "P",
     "Q", "R", "S", "T", "U", "V", "W", "X",
@@ -50,12 +50,12 @@ internal extension String {
         self = outputString
     }
 
-    private static func encode(firstByte: UInt8) -> UnicodeScalar {
+    private static func encode(firstByte: UInt8) -> Unicode.Scalar {
         let index = firstByte >> 2
         return base64Table[Int(index)]
     }
 
-    private static func encode(firstByte: UInt8, secondByte: UInt8?) -> UnicodeScalar {
+    private static func encode(firstByte: UInt8, secondByte: UInt8?) -> Unicode.Scalar {
         var index = (firstByte & 0b00000011) << 4
         if let secondByte = secondByte {
             index += (secondByte & 0b11110000) >> 4
@@ -63,7 +63,7 @@ internal extension String {
         return base64Table[Int(index)]
     }
 
-    private static func encode(secondByte: UInt8?, thirdByte: UInt8?) -> UnicodeScalar {
+    private static func encode(secondByte: UInt8?, thirdByte: UInt8?) -> Unicode.Scalar {
         guard let secondByte = secondByte else {
             // No second byte means we are just emitting padding.
             return "="
@@ -75,7 +75,7 @@ internal extension String {
         return base64Table[Int(index)]
     }
 
-    private static func encode(thirdByte: UInt8?) -> UnicodeScalar {
+    private static func encode(thirdByte: UInt8?) -> Unicode.Scalar {
         guard let thirdByte = thirdByte else {
             // No third byte means just padding.
             return "="

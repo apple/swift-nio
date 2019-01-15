@@ -91,7 +91,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
 
     public func handlerAdded(ctx: ChannelHandlerContext) {
         pendingResponse = PartialHTTPResponse(bodyBuffer: ctx.channel.allocator.buffer(capacity: initialByteBufferCapacity))
-        pendingWritePromise = ctx.eventLoop.newPromise()
+        pendingWritePromise = ctx.eventLoop.makePromise()
     }
 
     public func handlerRemoved(ctx: ChannelHandlerContext) {
@@ -119,8 +119,9 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
                 ctx.write(wrapOutboundOut(.head(responseHead)), promise: promise)
                 return
             }
-
-            responseHead.headers.add(name: "Content-Encoding", value: algorithm!.rawValue)
+            // Previous handlers in the pipeline might have already set this header even though
+            // they should not as it is compressor responsibility to decide what encoding to use
+            responseHead.headers.replaceOrAdd(name: "Content-Encoding", value: algorithm!.rawValue)
             initializeEncoder(encoding: algorithm!)
             pendingResponse.bufferResponseHead(responseHead)
             chainPromise(promise)
@@ -247,7 +248,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
         }
 
         // Reset the pending promise.
-        pendingWritePromise = ctx.eventLoop.newPromise()
+        pendingWritePromise = ctx.eventLoop.makePromise()
     }
 }
 /// A buffer object that allows us to keep track of how much of a HTTP response we've seen before
@@ -303,7 +304,7 @@ private struct PartialHTTPResponse {
         head = nil
         end = nil
         body.clear()
-        body.changeCapacity(to: initialBufferSize)
+        body.reserveCapacity(initialBufferSize)
     }
 
     mutating private func compressBody(compressor: inout z_stream, allocator: ByteBufferAllocator, flag: Int32) -> ByteBuffer? {
@@ -367,7 +368,7 @@ private extension z_stream {
             self.next_out = nil
         }
 
-        _ = from.readWithUnsafeMutableReadableBytes { dataPtr in
+        from.readWithUnsafeMutableReadableBytes { dataPtr in
             let typedPtr = dataPtr.baseAddress!.assumingMemoryBound(to: UInt8.self)
             let typedDataPtr = UnsafeMutableBufferPointer(start: typedPtr,
                                                           count: dataPtr.count)
@@ -388,7 +389,7 @@ private extension z_stream {
     private mutating func deflateToBuffer(buffer: inout ByteBuffer, flag: Int32) -> Int32 {
         var rc = Z_OK
 
-        _ = buffer.writeWithUnsafeMutableBytes { outputPtr in
+        buffer.writeWithUnsafeMutableBytes { outputPtr in
             let typedOutputPtr = UnsafeMutableBufferPointer(start: outputPtr.baseAddress!.assumingMemoryBound(to: UInt8.self),
                                                             count: outputPtr.count)
             self.avail_out = UInt32(typedOutputPtr.count)

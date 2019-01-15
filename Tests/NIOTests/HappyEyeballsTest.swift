@@ -63,7 +63,7 @@ private class ConnectRecorder: ChannelOutboundHandler {
 
     public func connect(ctx: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?) {
         self.targetHost = to.toString()
-        let connectPromise = promise ?? ctx.eventLoop.newPromise()
+        let connectPromise = promise ?? ctx.eventLoop.makePromise()
         connectPromise.futureResult.whenSuccess {
             self.state = .connected
         }
@@ -71,8 +71,8 @@ private class ConnectRecorder: ChannelOutboundHandler {
     }
 
     public func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-        let connectPromise = promise ?? ctx.eventLoop.newPromise()
-        connectPromise.futureResult.whenComplete {
+        let connectPromise = promise ?? ctx.eventLoop.makePromise()
+        connectPromise.futureResult.whenComplete { (_: Result<Void, Error>) in
             self.state = .closed
         }
         ctx.close(promise: connectPromise)
@@ -190,8 +190,8 @@ private class DummyResolver: Resolver {
     var events: [Event] = []
 
     init(loop: EventLoop) {
-        self.v4Promise = loop.newPromise()
-        self.v6Promise = loop.newPromise()
+        self.v4Promise = loop.makePromise()
+        self.v6Promise = loop.makePromise()
     }
 
     func initiateAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
@@ -210,24 +210,12 @@ private class DummyResolver: Resolver {
 }
 
 extension DummyResolver.Event: Equatable {
-    fileprivate static func ==(lhs: DummyResolver.Event, rhs: DummyResolver.Event) -> Bool {
-        switch (lhs, rhs) {
-        case (.a(let host1, let port1), .a(let host2, let port2)):
-            return host1 == host2 && port1 == port2
-        case (.aaaa(let host1, let port1), .aaaa(let host2, let port2)):
-            return host1 == host2 && port1 == port2
-        case(.cancel, .cancel):
-            return true
-        case (.a, _), (.aaaa, _), (.cancel, _):
-            return false
-        }
-    }
 }
 
 private func defaultChannelBuilder(loop: EventLoop, family: Int32) -> EventLoopFuture<Channel> {
     let channel = EmbeddedChannel(loop: loop as! EmbeddedEventLoop)
     XCTAssertNoThrow(try channel.pipeline.add(name: CONNECT_RECORDER, handler: ConnectRecorder()).wait())
-    return loop.newSucceededFuture(result: channel)
+    return loop.makeSucceededFuture(result: channel)
 }
 
 private func buildEyeballer(host: String,
@@ -522,12 +510,12 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertEqual(resolver.events, expectedQueries)
 
         // But we should have failed.
-        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
-            XCTAssertEqual(inner.host, "example.com")
-            XCTAssertEqual(inner.port, 80)
-            XCTAssertNil(inner.dnsAError)
-            XCTAssertNil(inner.dnsAAAAError)
-            XCTAssertEqual(inner.connectionErrors.count, 0)
+        if let error = channelFuture.getError() as? NIOConnectionError {
+            XCTAssertEqual(error.host, "example.com")
+            XCTAssertEqual(error.port, 80)
+            XCTAssertNil(error.dnsAError)
+            XCTAssertNil(error.dnsAAAAError)
+            XCTAssertEqual(error.connectionErrors.count, 0)
         } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
         }
@@ -554,12 +542,12 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertEqual(resolver.events, expectedQueries)
 
         // But we should have failed.
-        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
-            XCTAssertEqual(inner.host, "example.com")
-            XCTAssertEqual(inner.port, 80)
-            XCTAssertEqual(inner.dnsAError as? DummyError ?? DummyError(), v4Error)
-            XCTAssertEqual(inner.dnsAAAAError as? DummyError ?? DummyError(), v6Error)
-            XCTAssertEqual(inner.connectionErrors.count, 0)
+        if let error = channelFuture.getError() as? NIOConnectionError {
+            XCTAssertEqual(error.host, "example.com")
+            XCTAssertEqual(error.port, 80)
+            XCTAssertEqual(error.dnsAError as? DummyError ?? DummyError(), v4Error)
+            XCTAssertEqual(error.dnsAAAAError as? DummyError ?? DummyError(), v6Error)
+            XCTAssertEqual(error.connectionErrors.count, 0)
         } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
         }
@@ -689,14 +677,14 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertTrue(channelFuture.isFulfilled)
 
         // Check the error.
-        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
-            XCTAssertEqual(inner.host, "example.com")
-            XCTAssertEqual(inner.port, 80)
-            XCTAssertNil(inner.dnsAError)
-            XCTAssertNil(inner.dnsAAAAError)
-            XCTAssertEqual(inner.connectionErrors.count, 20)
+        if let error = channelFuture.getError() as? NIOConnectionError {
+            XCTAssertEqual(error.host, "example.com")
+            XCTAssertEqual(error.port, 80)
+            XCTAssertNil(error.dnsAError)
+            XCTAssertNil(error.dnsAAAAError)
+            XCTAssertEqual(error.connectionErrors.count, 20)
 
-            for (idx, error) in inner.connectionErrors.enumerated() {
+            for (idx, error) in error.connectionErrors.enumerated() {
                 XCTAssertEqual(error.error as? DummyError, errors[idx])
             }
         } else {
@@ -1021,7 +1009,7 @@ public class HappyEyeballsTest : XCTestCase {
 
         XCTAssertTrue(channelFuture.isFulfilled)
         switch channelFuture.getError() {
-        case .some(ChannelError.connectFailed):
+        case is NIOConnectionError:
             break
         default:
             XCTFail("Got unexpected error: \(String(describing: channelFuture.getError()))")
@@ -1076,7 +1064,7 @@ public class HappyEyeballsTest : XCTestCase {
     func testDelayedChannelCreation() throws {
         var ourChannelFutures: [EventLoopPromise<Channel>] = []
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80) { loop, _ in
-            ourChannelFutures.append(loop.newPromise())
+            ourChannelFutures.append(loop.makePromise())
             return ourChannelFutures.last!.futureResult
         }
         let channelFuture = eyeballer.resolveAndConnect()
@@ -1114,14 +1102,14 @@ public class HappyEyeballsTest : XCTestCase {
         ourChannelFutures[2].fail(error: DummyError())
 
         // Verify that the first channel is the one listed as connected.
-        XCTAssertTrue((try? ourChannelFutures.first!.futureResult.wait()) === (try? channelFuture.wait()))
+        XCTAssertTrue((try ourChannelFutures.first!.futureResult.wait()) === (try channelFuture.wait()))
     }
 
     func testChannelCreationFails() throws {
         var errors: [DummyError] = []
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80) { loop, _ in
             errors.append(DummyError())
-            return loop.newFailedFuture(error: errors.last!)
+            return loop.makeFailedFuture(error: errors.last!)
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
@@ -1141,8 +1129,8 @@ public class HappyEyeballsTest : XCTestCase {
         XCTAssertEqual(errors.count, 20)
 
         XCTAssertTrue(channelFuture.isFulfilled)
-        if case .some(ChannelError.connectFailed(let inner)) = channelFuture.getError() {
-            XCTAssertEqual(inner.connectionErrors.map { $0.error as! DummyError }, errors)
+        if let error = channelFuture.getError() as? NIOConnectionError {
+            XCTAssertEqual(error.connectionErrors.map { $0.error as! DummyError }, errors)
         } else {
             XCTFail("Got unexpected error: \(String(describing: channelFuture.getError()))")
         }
@@ -1246,15 +1234,3 @@ public class HappyEyeballsTest : XCTestCase {
         }
     }
 }
-
-#if !swift(>=4.1)
-extension UnsafeMutableRawPointer {
-    public static func allocate(byteCount: Int, alignment: Int) -> UnsafeMutableRawPointer {
-        return UnsafeMutableRawPointer.allocate(bytes: byteCount, alignedTo: alignment)
-    }
-
-    public func deallocate() {
-        self.deallocate(bytes: 1, alignedTo: 1)
-    }
-}
-#endif

@@ -34,10 +34,14 @@ public class SocketChannelTest : XCTestCase {
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         // Create two channels with different event loops.
-        let channelA = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        let channelA = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
         let channelB: Channel = try {
             while true {
-                let channel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+                let channel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+                    .bind(host: "127.0.0.1", port: 0)
+                    .wait())
                 if channel.eventLoop !== channelA.eventLoop {
                     return channel
                 }
@@ -66,10 +70,10 @@ public class SocketChannelTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let serverChannel = try ServerBootstrap(group: group)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .serverChannelOption(ChannelOptions.backlog, value: 256)
-            .bind(host: "127.0.0.1", port: 0).wait()
+            .bind(host: "127.0.0.1", port: 0).wait())
 
         // The goal of this test is to try to trigger at least one channel to have connection setup that is not
         // instantaneous. Due to the design of NIO this is not really observable to us, and due to the complex
@@ -145,8 +149,10 @@ public class SocketChannelTest : XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
         let socket = try NonAcceptingServerSocket(errors: [error])
-        let serverChannel = try ServerSocketChannel(serverSocket: socket, eventLoop: group.next() as! SelectableEventLoop, group: group)
-        let promise: EventLoopPromise<IOError> = serverChannel.eventLoop.newPromise()
+        let serverChannel = try assertNoThrowWithValue(ServerSocketChannel(serverSocket: socket,
+                                                                           eventLoop: group.next() as! SelectableEventLoop,
+                                                                           group: group))
+        let promise = serverChannel.eventLoop.makePromise(of: IOError.self)
 
         XCTAssertNoThrow(try serverChannel.eventLoop.submit {
             serverChannel.pipeline.add(handler: AcceptHandler(promise)).then {
@@ -174,11 +180,19 @@ public class SocketChannelTest : XCTestCase {
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         // Create two channels with different event loops.
-        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
-        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!)
+            .wait())
 
-        try assertSetGetOptionOnOpenAndClosed(channel: clientChannel, option: ChannelOptions.allowRemoteHalfClosure, value: true)
-        try assertSetGetOptionOnOpenAndClosed(channel: serverChannel, option: ChannelOptions.backlog, value: 100)
+        XCTAssertNoThrow(try assertSetGetOptionOnOpenAndClosed(channel: clientChannel,
+                                                               option: ChannelOptions.allowRemoteHalfClosure,
+                                                               value: true))
+        XCTAssertNoThrow(try assertSetGetOptionOnOpenAndClosed(channel: serverChannel,
+                                                               option: ChannelOptions.backlog,
+                                                               value: 100))
     }
 
     public func testConnect() throws {
@@ -216,10 +230,12 @@ public class SocketChannelTest : XCTestCase {
         }
 
         let eventLoop = group.next()
-        let connectPromise: EventLoopPromise<Void> = eventLoop.newPromise()
+        let connectPromise = eventLoop.makePromise(of: Void.self)
 
-        let channel = try SocketChannel(socket: ConnectSocket(promise: connectPromise), parent: nil, eventLoop: eventLoop as! SelectableEventLoop)
-        let promise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
+        let channel = try assertNoThrowWithValue(SocketChannel(socket: ConnectSocket(promise: connectPromise),
+                                                               parent: nil,
+                                                               eventLoop: eventLoop as! SelectableEventLoop))
+        let promise = channel.eventLoop.makePromise(of: Void.self)
 
         XCTAssertNoThrow(try channel.pipeline.add(handler: ActiveVerificationHandler(promise)).then {
             channel.register()
@@ -238,7 +254,9 @@ public class SocketChannelTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
         do {
             try serverChannel.writeAndFlush("test").wait()
             XCTFail("did not throw")
@@ -253,7 +271,9 @@ public class SocketChannelTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
         do {
             try serverChannel.writeAndFlush("test").wait()
         } catch let err as ChannelError where err == .operationUnsupported {
@@ -267,7 +287,9 @@ public class SocketChannelTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
         do {
             try serverChannel.connect(to: serverChannel.localAddress!).wait()
             XCTFail("Did not throw")
@@ -284,8 +306,12 @@ public class SocketChannelTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
-        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!)
+            .wait())
 
         // Put a write in the channel but don't flush it. We're then going to
         // close the channel. This should trigger an error callback that will
@@ -295,7 +321,7 @@ public class SocketChannelTest : XCTestCase {
         let writeFut = clientChannel.write(buffer).map {
             XCTFail("Must not succeed")
         }.thenIfError { error in
-            XCTAssertEqual(error as? ChannelError, ChannelError.alreadyClosed)
+            XCTAssertEqual(error as? ChannelError, ChannelError.ioOnClosedChannel)
             return clientChannel.close()
         }
         XCTAssertNoThrow(try clientChannel.close().wait())
@@ -392,11 +418,13 @@ public class SocketChannelTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
         defer { XCTAssertNoThrow(try serverChannel.close().wait()) }
 
         let eventLoop = group.next()
-        let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+        let promise = eventLoop.makePromise(of: Void.self)
 
         class ConnectPendingSocket: Socket {
             let promise: EventLoopPromise<Void>
@@ -414,13 +442,13 @@ public class SocketChannelTest : XCTestCase {
         }
 
         let channel = try SocketChannel(socket: ConnectPendingSocket(promise: promise), parent: nil, eventLoop: eventLoop as! SelectableEventLoop)
-        let connectPromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
-        let closePromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
+        let connectPromise = channel.eventLoop.makePromise(of: Void.self)
+        let closePromise = channel.eventLoop.makePromise(of: Void.self)
 
-        closePromise.futureResult.whenComplete {
+        closePromise.futureResult.whenComplete { (_: Result<Void, Error>) in
             XCTAssertTrue(connectPromise.futureResult.isFulfilled)
         }
-        connectPromise.futureResult.whenComplete {
+        connectPromise.futureResult.whenComplete { (_: Result<Void, Error>) in
             XCTAssertFalse(closePromise.futureResult.isFulfilled)
         }
 
@@ -442,7 +470,7 @@ public class SocketChannelTest : XCTestCase {
         do {
             try connectPromise.futureResult.wait()
             XCTFail("Did not throw")
-        } catch let err as ChannelError where err == .alreadyClosed {
+        } catch let err as ChannelError where err == .ioOnClosedChannel {
             // expected
         }
         XCTAssertNoThrow(try closePromise.futureResult.wait())
@@ -482,7 +510,7 @@ public class SocketChannelTest : XCTestCase {
                 XCTAssertEqual(.inactive, state)
                 state = .removed
 
-                ctx.channel.closeFuture.whenComplete {
+                ctx.channel.closeFuture.whenComplete { (_: Result<Void, Error>) in
                     XCTAssertNil(ctx.localAddress)
                     XCTAssertNil(ctx.remoteAddress)
 
@@ -494,13 +522,38 @@ public class SocketChannelTest : XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
-        let handler = AddressVerificationHandler(promise: group.next().newPromise())
-        let serverChannel = try ServerBootstrap(group: group).childChannelInitializer { $0.pipeline.add(handler: handler) }.bind(host: "127.0.0.1", port: 0).wait()
+        let handler = AddressVerificationHandler(promise: group.next().makePromise())
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .childChannelInitializer { $0.pipeline.add(handler: handler) }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait())
         defer { XCTAssertNoThrow(try serverChannel.close().wait()) }
 
-        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+            .connect(to: serverChannel.localAddress!)
+            .wait())
 
         XCTAssertNoThrow(try clientChannel.close().wait())
         XCTAssertNoThrow(try handler.promise.futureResult.wait())
+    }
+
+    func testSocketFlagNONBLOCKWorks() throws {
+        var socket = try assertNoThrowWithValue(try ServerSocket(protocolFamily: PF_INET, setNonBlocking: true))
+        XCTAssertNoThrow(try socket.withUnsafeFileDescriptor { fd in
+            let flags = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0))
+            XCTAssertEqual(O_NONBLOCK, flags & O_NONBLOCK)
+        })
+        XCTAssertNoThrow(try socket.close())
+
+        socket = try assertNoThrowWithValue(ServerSocket(protocolFamily: PF_INET, setNonBlocking: false))
+        XCTAssertNoThrow(try socket.withUnsafeFileDescriptor { fd in
+            var flags = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0))
+            XCTAssertEqual(0, flags & O_NONBLOCK)
+            let ret = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_SETFL, value: O_NONBLOCK))
+            XCTAssertEqual(0, ret)
+            flags = try assertNoThrowWithValue(Posix.fcntl(descriptor: fd, command: F_GETFL, value: 0))
+            XCTAssertEqual(O_NONBLOCK, flags & O_NONBLOCK)
+            })
+        XCTAssertNoThrow(try socket.close())
     }
 }

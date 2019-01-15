@@ -72,7 +72,7 @@ private final class PingHandler: ChannelInboundHandler {
     public init(numberOfRequests: Int, eventLoop: EventLoop) {
         self.numberOfRequests = numberOfRequests
         self.remainingNumberOfRequests = numberOfRequests
-        self.allDone = eventLoop.newPromise()
+        self.allDone = eventLoop.makePromise()
     }
 
     public func channelActive(ctx: ChannelHandlerContext) {
@@ -154,7 +154,7 @@ public func swiftMain() -> Int {
         init(numberOfRequests: Int, eventLoop: EventLoop) {
             self.remainingNumberOfRequests = numberOfRequests
             self.numberOfRequests = numberOfRequests
-            self.isDonePromise = eventLoop.newPromise()
+            self.isDonePromise = eventLoop.makePromise()
         }
 
         func wait() throws -> Int {
@@ -302,21 +302,22 @@ public func swiftMain() -> Int {
 
     measureAndPrint(desc: "bytebuffer_lots_of_rw") {
         let dispatchData = ("A" as StaticString).withUTF8Buffer { ptr in
-            DispatchData(bytes: UnsafeRawBufferPointer(start: UnsafeRawPointer(ptr.baseAddress), count: ptr.count))
+            DispatchData(bytes: UnsafeRawBufferPointer(ptr))
         }
         var buffer = ByteBufferAllocator().buffer(capacity: 7 * 1000)
         let foundationData = "A".data(using: .utf8)!
         @inline(never)
         func doWrites(buffer: inout ByteBuffer) {
-            /* all of those should be 0 allocations */
-
+            /* these ones are zero allocations */
             // buffer.write(bytes: foundationData) // see SR-7542
             buffer.write(bytes: [0x41])
-            buffer.write(bytes: dispatchData)
             buffer.write(bytes: "A".utf8)
             buffer.write(string: "A")
             buffer.write(staticString: "A")
             buffer.write(integer: 0x41, as: UInt8.self)
+
+            /* those down here should be one allocation each (on Linux) */
+            buffer.write(bytes: dispatchData) // see https://bugs.swift.org/browse/SR-9597
         }
         @inline(never)
         func doReads(buffer: inout ByteBuffer) {
@@ -347,11 +348,11 @@ public func swiftMain() -> Int {
         struct MyError: Error { }
         @inline(never)
         func doThenAndFriends(loop: EventLoop) {
-            let p: EventLoopPromise<Int> = loop.newPromise()
+            let p = loop.makePromise(of: Int.self)
             let f = p.futureResult.then { (r: Int) -> EventLoopFuture<Int> in 
                 // This call allocates a new Future, and
                 // so does then(), so this is two Futures.
-                return loop.newSucceededFuture(result: r + 1)
+                return loop.makeSucceededFuture(result: r + 1)
             }.thenThrowing { (r: Int) -> Int in
                 // thenThrowing allocates a new Future, and calls then
                 // which also allocates, so this is two.
@@ -367,7 +368,7 @@ public func swiftMain() -> Int {
             }.thenIfError { (err: Error) -> EventLoopFuture<Int> in
                 // This call allocates a new Future, and so does thenIfError,
                 // so this is two Futures.
-                return loop.newFailedFuture(error: err)
+                return loop.makeFailedFuture(error: err)
             }.thenIfErrorThrowing { (err: Error) -> Int in
                 // thenIfError allocates a new Future, and calls thenIfError,
                 // so this is two Futures
@@ -384,9 +385,9 @@ public func swiftMain() -> Int {
         }
         @inline(never)
         func doAnd(loop: EventLoop) {
-            let p1: EventLoopPromise<Int> = loop.newPromise()
-            let p2: EventLoopPromise<Int> = loop.newPromise()
-            let p3: EventLoopPromise<Int> = loop.newPromise()
+            let p1 = loop.makePromise(of: Int.self)
+            let p2 = loop.makePromise(of: Int.self)
+            let p3 = loop.makePromise(of: Int.self)
 
             // Each call to and() allocates a Future. The calls to
             // and(result:) allocate two.

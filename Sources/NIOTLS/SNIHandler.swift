@@ -33,23 +33,12 @@ private let sniHostNameType: UInt8 = 0
 /// contains the hostname received in the SNI extension. If `fallback`,
 /// then either we could not parse the SNI extension or it was not there
 /// at all.
-public enum SniResult: Equatable {
+public enum SNIResult: Equatable {
     case fallback
     case hostname(String)
-
-    public static func ==(lhs: SniResult, rhs: SniResult) -> Bool {
-        switch (lhs, rhs) {
-        case (.fallback, .fallback):
-            return true
-        case (.hostname(let s1), .hostname(let s2)):
-            return s1 == s2
-        case (.fallback, _), (.hostname, _):
-            return false
-        }
-    }
 }
 
-private enum InternalSniErrors: Error {
+private enum InternalSNIErrors: Error {
     case invalidLengthInRecord
     case invalidRecord
     case recordIncomplete
@@ -58,14 +47,14 @@ private enum InternalSniErrors: Error {
 private extension ByteBuffer {
     mutating func moveReaderIndexIfPossible(forwardBy distance: Int) throws {
         guard self.readableBytes >= distance else {
-            throw InternalSniErrors.invalidLengthInRecord
+            throw InternalSNIErrors.invalidLengthInRecord
         }
         self.moveReaderIndex(forwardBy: distance)
     }
 
     mutating func readIntegerIfPossible<T: FixedWidthInteger>() throws -> T {
         guard let integer: T = self.readInteger() else {
-            throw InternalSniErrors.invalidLengthInRecord
+            throw InternalSNIErrors.invalidLengthInRecord
         }
         return integer
     }
@@ -80,7 +69,7 @@ private extension Sequence where Element == UInt8 {
         decode: while true {
             switch decoder.parseScalar(from: &bytesIterator) {
             case .valid(let v):
-                scalars.append(UnicodeScalar(v[0]))
+                scalars.append(Unicode.Scalar(v[0]))
             case .emptyInput:
                 break decode
             case .error:
@@ -105,21 +94,25 @@ private extension Sequence where Element == UInt8 {
 /// TLS backends that can be used with NIO. It also allows for the pipeline change to
 /// be done asynchronously, providing more flexibility about how the user configures the
 /// pipeline.
-public class SniHandler: ByteToMessageDecoder {
+public class SNIHandler: ByteToMessageDecoder {
     public var cumulationBuffer: ByteBuffer?
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
 
-    private let completionHandler: (SniResult) -> EventLoopFuture<Void>
+    private let completionHandler: (SNIResult) -> EventLoopFuture<Void>
     private var waitingForUser: Bool
 
-    public init(sniCompleteHandler: @escaping (SniResult) -> EventLoopFuture<Void>) {
-        self.cumulationBuffer = nil
+    public init(sniCompleteHandler: @escaping (SNIResult) -> EventLoopFuture<Void>) {
         self.completionHandler = sniCompleteHandler
         self.waitingForUser = false
     }
 
-    // A note to maintainers: this method *never* returns true.
+    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+        ctx.fireChannelRead(NIOAny(buffer))
+        return .needMoreData
+    }
+
+    // A note to maintainers: this method *never* returns `.continue`.
     public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
         // If we've asked the user to mutate the pipeline already, we're not interested in
         // this data. Keep waiting.
@@ -130,7 +123,7 @@ public class SniHandler: ByteToMessageDecoder {
         let serverName: String?
         do {
             serverName = try parseTLSDataForServerName(buffer: buffer)
-        } catch InternalSniErrors.recordIncomplete {
+        } catch InternalSNIErrors.recordIncomplete {
             // Nothing bad here, we just don't have enough data.
             return .needMoreData
         } catch {
@@ -162,7 +155,7 @@ public class SniHandler: ByteToMessageDecoder {
         // First, parse the header.
         let contentLength = try parseRecordHeader(buffer: &tempBuffer)
         guard tempBuffer.readableBytes >= contentLength else {
-            throw InternalSniErrors.recordIncomplete
+            throw InternalSNIErrors.recordIncomplete
         }
 
         // At this point we know we have enough, at least according to the outer layer. We now want to
@@ -171,20 +164,20 @@ public class SniHandler: ByteToMessageDecoder {
         //
         // From this point onwards if we don't have enough data to satisfy a read, this is an error and
         // we will fall back to let the upper layers handle it.
-        tempBuffer = tempBuffer.getSlice(at: tempBuffer.readerIndex, length: Int(contentLength))!
+        tempBuffer = tempBuffer.getSlice(at: tempBuffer.readerIndex, length: Int(contentLength))! // length check above
 
         // Now parse the handshake header. If the length of the handshake message is not exactly the
         // length of this record, something has gone wrong and we should give up.
         let handshakeLength = try parseHandshakeHeader(buffer: &tempBuffer)
         guard tempBuffer.readableBytes == handshakeLength else {
-            throw InternalSniErrors.invalidRecord
+            throw InternalSNIErrors.invalidRecord
         }
 
         // Now parse the client hello header. If the remaining length, which should be entirely extensions,
         // is not exactly the length of this record, something has gone wrong and we should give up.
         let extensionsLength = try parseClientHelloHeader(buffer: &tempBuffer)
         guard tempBuffer.readableBytes == extensionsLength else {
-            throw InternalSniErrors.invalidLengthInRecord
+            throw InternalSNIErrors.invalidLengthInRecord
         }
 
         return try parseExtensionsForServerName(buffer: &tempBuffer)
@@ -200,30 +193,30 @@ public class SniHandler: ByteToMessageDecoder {
         // this function, as we'll only ever read tlsRecordHeaderLength number of bytes
         // here.
         guard buffer.readableBytes >= tlsRecordHeaderLength else {
-            throw InternalSniErrors.recordIncomplete
+            throw InternalSNIErrors.recordIncomplete
         }
 
         // Check the content type.
-        let contentType: UInt8 = buffer.readInteger()!
+        let contentType: UInt8 = buffer.readInteger()! // length check above
         guard contentType == tlsContentTypeHandshake else {
             // Whatever this is, it's not a handshake message, so something has gone
             // wrong. We're going to fall back to the default handler here and let
             // that handler try to clean up this mess.
-            throw InternalSniErrors.invalidRecord
+            throw InternalSNIErrors.invalidRecord
         }
 
         // Now, check the major version.
-        let majorVersion: UInt8 = buffer.readInteger()!
+        let majorVersion: UInt8 = buffer.readInteger()! // length check above
         guard majorVersion == 3 else {
             // A major version of 3 is the major version used for SSLv3 and all subsequent versions
             // of the protocol. If that's not what this is, we don't know what's happening here.
             // Again, let the default handler make sense of this.
-            throw InternalSniErrors.invalidRecord
+            throw InternalSNIErrors.invalidRecord
         }
 
         // Skip the minor version byte, then grab the content length.
         buffer.moveReaderIndex(forwardBy: 1)
-        let contentLength: UInt16 = buffer.readInteger()!
+        let contentLength: UInt16 = buffer.readInteger()! // length check above
         return Int(contentLength)
     }
 
@@ -256,14 +249,14 @@ public class SniHandler: ByteToMessageDecoder {
         // games here to get this to work. If we check that we have 4 bytes up-front
         // we can use unsafe reads: fewer than 4 bytes makes this message bogus.
         guard buffer.readableBytes >= 4 else {
-            throw InternalSniErrors.invalidRecord
+            throw InternalSNIErrors.invalidRecord
         }
 
         let handshakeTypeAndLength: UInt32 = buffer.readInteger()!
         let handshakeType: UInt8 = UInt8((handshakeTypeAndLength & 0xFF000000) >> 24)
         let handshakeLength: UInt32 = handshakeTypeAndLength & 0x00FFFFFF
         guard handshakeType == handshakeTypeClientHello else {
-            throw InternalSniErrors.invalidRecord
+            throw InternalSNIErrors.invalidRecord
         }
 
         return Int(handshakeLength)
@@ -327,7 +320,7 @@ public class SniHandler: ByteToMessageDecoder {
             let extensionLength: UInt16 = try buffer.readIntegerIfPossible()
 
             guard buffer.readableBytes >= extensionLength else {
-                throw InternalSniErrors.invalidLengthInRecord
+                throw InternalSNIErrors.invalidLengthInRecord
             }
 
             guard extensionType == sniExtensionType else {
@@ -379,7 +372,7 @@ public class SniHandler: ByteToMessageDecoder {
         // This also uses unsafe reads: at this point, if the buffer is short then we're screwed.
         let nameBufferLength: UInt16 = try buffer.readIntegerIfPossible()
         guard buffer.readableBytes >= nameBufferLength else {
-            throw InternalSniErrors.invalidLengthInRecord
+            throw InternalSNIErrors.invalidLengthInRecord
         }
 
         // We are never looking for another extension, so this is now all that we care about in the
@@ -402,12 +395,12 @@ public class SniHandler: ByteToMessageDecoder {
                 guard nameLength <= ptr.count else {
                     return nil
                 }
-                return UnsafeRawBufferPointer(start: ptr.baseAddress!, count: min(nameLength, ptr.count)).decodeStringValidatingASCII()
+                return UnsafeRawBufferPointer(rebasing: ptr.prefix(nameLength)).decodeStringValidatingASCII()
             }
             if let hostname = hostname {
                 return hostname
             } else {
-                throw InternalSniErrors.invalidRecord
+                throw InternalSNIErrors.invalidRecord
             }
         }
         return nil
@@ -425,10 +418,10 @@ public class SniHandler: ByteToMessageDecoder {
     /// 3. When the user completes, remove ourselves from the pipeline. This will trigger the
     ///    ByteToMessageDecoder to automatically deliver the buffered bytes to the next handler
     ///    in the pipeline, which is now responsible for the work.
-    private func sniComplete(result: SniResult, ctx: ChannelHandlerContext) {
+    private func sniComplete(result: SNIResult, ctx: ChannelHandlerContext) {
         waitingForUser = true
-        _ = completionHandler(result).then {
-            ctx.pipeline.remove(handler: self)
+        completionHandler(result).whenSuccess {
+            ctx.pipeline.remove(ctx: ctx, promise: nil)
         }
     }
 }

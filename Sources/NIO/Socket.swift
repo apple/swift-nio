@@ -13,15 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 /// The container used for writing multiple buffers via `writev`.
-public typealias IOVector = iovec
+typealias IOVector = iovec
 
 // TODO: scattering support
 /* final but tests */ class Socket: BaseSocket {
 
     /// The maximum number of bytes to write per `writev` call.
-    static var writevLimitBytes: Int {
-        return Int(Int32.max)
-    }
+    static var writevLimitBytes = Int(Int32.max)
 
     /// The maximum number of `IOVector`s to write per `writev` call.
     static let writevLimitIOVectors: Int = Posix.UIO_MAXIOV
@@ -34,7 +32,7 @@ public typealias IOVector = iovec
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if creation of the socket failed.
     init(protocolFamily: CInt, type: CInt, setNonBlocking: Bool = false) throws {
-        let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily, type: type, setNonBlocking: setNonBlocking)
+        let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: type, setNonBlocking: setNonBlocking)
         super.init(descriptor: sock)
     }
 
@@ -54,7 +52,7 @@ public typealias IOVector = iovec
     /// Create a new instance.
     ///
     /// The ownership of the passed in descriptor is transferred to this class. A user must call `close` to close the underlying
-    /// file descriptor once its not needed / used anymore.
+    /// file descriptor once it's not needed / used anymore.
     ///
     /// - parameters:
     ///     - descriptor: The file descriptor to wrap.
@@ -71,11 +69,11 @@ public typealias IOVector = iovec
     func connect(to address: SocketAddress) throws -> Bool {
         switch address {
         case .v4(let addr):
-            return try connectSocket(addr: addr.address)
+            return try self.connectSocket(addr: addr.address)
         case .v6(let addr):
-            return try connectSocket(addr: addr.address)
+            return try self.connectSocket(addr: addr.address)
         case .unixDomainSocket(let addr):
-            return try connectSocket(addr: addr.address)
+            return try self.connectSocket(addr: addr.address)
         }
     }
 
@@ -104,13 +102,12 @@ public typealias IOVector = iovec
     /// Write data to the remote peer.
     ///
     /// - parameters:
-    ///     - pointer: The data to write.
-    ///     - size: The number of bytes to write.
+    ///     - pointer: Pointer (and size) to data to write.
     /// - returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
-    func write(pointer: UnsafePointer<UInt8>, size: Int) throws -> IOResult<Int> {
+    func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
         return try withUnsafeFileDescriptor { fd in
-            try Posix.write(descriptor: fd, pointer: pointer, size: size)
+            try Posix.write(descriptor: fd, pointer: pointer.baseAddress!, size: pointer.count)
         }
     }
 
@@ -129,43 +126,45 @@ public typealias IOVector = iovec
     /// Send data to a destination.
     ///
     /// - parameters:
-    ///     - pointer: The data to send.
-    ///     - size: The number of bytes to send.
+    ///     - pointer: Pointer (and size) to the data to send.
     ///     - destinationPtr: The destination to which the data should be sent.
     /// - returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
-    func sendto(pointer: UnsafePointer<UInt8>, size: Int, destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
+    func sendto(pointer: UnsafeRawBufferPointer, destinationPtr: UnsafePointer<sockaddr>, destinationSize: socklen_t) throws -> IOResult<Int> {
         return try withUnsafeFileDescriptor { fd in
-            try Posix.sendto(descriptor: fd, pointer: UnsafeMutablePointer(mutating: pointer), size: size, destinationPtr: destinationPtr, destinationSize: destinationSize)
+            try Posix.sendto(descriptor: fd, pointer: UnsafeMutableRawPointer(mutating: pointer.baseAddress!),
+                             size: pointer.count, destinationPtr: destinationPtr,
+                             destinationSize: destinationSize)
         }
     }
 
     /// Read data from the socket.
     ///
     /// - parameters:
-    ///     - pointer: The pointer to the storage into which the data should be read.
-    ///     - size: The (max) number of bytes to read.
+    ///     - pointer: The pointer (and size) to the storage into which the data should be read.
     /// - returns: The `IOResult` which indicates how much data could be read and if the operation returned before all could be read (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
-    func read(pointer: UnsafeMutablePointer<UInt8>, size: Int) throws -> IOResult<Int> {
+    func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
         return try withUnsafeFileDescriptor { fd in
-            try Posix.read(descriptor: fd, pointer: pointer, size: size)
+            try Posix.read(descriptor: fd, pointer: pointer.baseAddress!, size: pointer.count)
         }
     }
 
     /// Receive data from the socket.
     ///
     /// - parameters:
-    ///     - pointer: The pointer to the storage into which the data should be read.
-    ///     - size: The (max) number of bytes to read.
+    ///     - pointer: The pointer (and size) to the storage into which the data should be read.
     ///     - storage: The address from which the data was received
     ///     - storageLen: The size of the storage itself.
     /// - returns: The `IOResult` which indicates how much data could be received and if the operation returned before all could be received (because the socket is in non-blocking mode).
     /// - throws: An `IOError` if the operation failed.
-    func recvfrom(pointer: UnsafeMutablePointer<UInt8>, size: Int, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
+    func recvfrom(pointer: UnsafeMutableRawBufferPointer, storage: inout sockaddr_storage, storageLen: inout socklen_t) throws -> IOResult<(Int)> {
         return try withUnsafeFileDescriptor { fd in
             try storage.withMutableSockAddr { (storagePtr, _) in
-                try Posix.recvfrom(descriptor: fd, pointer: pointer, len: size, addr: storagePtr, addrlen: &storageLen)
+                try Posix.recvfrom(descriptor: fd, pointer: pointer.baseAddress!,
+                                   len: pointer.count,
+                                   addr: storagePtr,
+                                   addrlen: &storageLen)
             }
         }
     }

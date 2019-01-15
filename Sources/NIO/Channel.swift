@@ -226,21 +226,21 @@ public extension Channel {
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
-    public func write<T>(_ any: T) -> EventLoopFuture<Void> {
+    func write<T>(_ any: T) -> EventLoopFuture<Void> {
         return self.write(NIOAny(any))
     }
 
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
-    public func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+    func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
         self.write(NIOAny(any), promise: promise)
     }
 
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    public func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
+    func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
         return self.writeAndFlush(NIOAny(any))
     }
 
@@ -248,7 +248,7 @@ public extension Channel {
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    public func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+    func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
         self.writeAndFlush(NIOAny(any), promise: promise)
     }
 }
@@ -269,8 +269,8 @@ public extension ChannelCore {
     ///     - data: The `NIOAny` to unwrap.
     ///     - as: The type to extract from the `NIOAny`.
     /// - returns: The content of the `NIOAny`.
-    @_inlineable
-    public func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
+    @inlinable
+    func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
         return data.forceAs()
     }
 
@@ -283,7 +283,7 @@ public extension ChannelCore {
     ///
     /// - parameters:
     ///     - channel: The `Channel` whose `ChannelPipeline` will be closed.
-    public func removeHandlers(channel: Channel) {
+    func removeHandlers(channel: Channel) {
         channel.pipeline.removeHandlers()
     }
 }
@@ -295,9 +295,6 @@ public enum ChannelError: Error {
 
     /// Connect operation timed out
     case connectTimeout(TimeAmount)
-
-    /// Connect operation failed
-    case connectFailed(NIOConnectionError)
 
     /// Unsupported operation triggered on a `Channel`. For example `connect` on a `ServerSocketChannel`.
     case operationUnsupported
@@ -328,45 +325,25 @@ public enum ChannelError: Error {
 
     /// A `DatagramChannel` `write` was made with an address that was not reachable and so could not be delivered.
     case writeHostUnreachable
-}
 
-/// This should be inside of `ChannelError` but we keep it separate to not break API.
-// TODO: For 2.0: bring this inside of `ChannelError`
-public enum ChannelLifecycleError: Error {
+    /// The local address of the `Channel` could not be determined.
+    case unknownLocalAddress
+
+    /// The address family of the multicast group was not valid for this `Channel`.
+    case badMulticastGroupAddressFamily
+
+    /// The address family of the provided multicast group join is not valid for this `Channel`.
+    case badInterfaceAddressFamily
+
+    /// An attempt was made to join a multicast group that does not correspond to a multicast
+    /// address.
+    case illegalMulticastAddress(SocketAddress)
+
     /// An operation that was inappropriate given the current `Channel` state was attempted.
     case inappropriateOperationForState
 }
 
-extension ChannelError: Equatable {
-    public static func ==(lhs: ChannelError, rhs: ChannelError) -> Bool {
-        switch (lhs, rhs) {
-        case (.connectPending, .connectPending):
-            return true
-        case (.connectTimeout, .connectTimeout):
-            return true
-        case (.operationUnsupported, .operationUnsupported):
-            return true
-        case (.ioOnClosedChannel, .ioOnClosedChannel):
-            return true
-        case (.alreadyClosed, .alreadyClosed):
-            return true
-        case (.outputClosed, .outputClosed):
-            return true
-        case (.inputClosed, .inputClosed):
-            return true
-        case (.eof, .eof):
-            return true
-        case (.writeDataUnsupported, .writeDataUnsupported):
-            return true
-        case (.writeMessageTooLarge, .writeMessageTooLarge):
-            return true
-        case (.writeHostUnreachable, .writeHostUnreachable):
-            return true
-        default:
-            return false
-        }
-    }
-}
+extension ChannelError: Equatable { }
 
 /// An `Channel` related event that is passed through the `ChannelPipeline` to notify the user.
 public enum ChannelEvent: Equatable {

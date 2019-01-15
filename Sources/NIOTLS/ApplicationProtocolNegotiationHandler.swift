@@ -34,17 +34,6 @@ public enum ALPNResult: Equatable {
     /// ALPN negotiation either failed, or never took place. The application
     /// should fall back to a default protocol choice or close the connection.
     case fallback
-
-    public static func ==(lhs: ALPNResult, rhs: ALPNResult) -> Bool {
-        switch (lhs, rhs) {
-        case (.negotiated(let p1), .negotiated(let p2)):
-            return p1 == p2
-        case (.fallback, .fallback):
-            return true
-        case (.fallback, _), (.negotiated, _):
-            return false
-        }
-    }
 }
 
 /// A helper `ChannelInboundHandler` that makes it easy to swap channel pipelines
@@ -118,9 +107,9 @@ public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler {
         }
 
         let switchFuture = completionHandler(result)
-        switchFuture.whenComplete {
+        switchFuture.whenComplete { (_: Result<Void, Error>) in
             self.unbuffer(context: context)
-            _ = context.pipeline.remove(handler: self)
+            context.pipeline.remove(handler: self, promise: nil)
         }
     }
 

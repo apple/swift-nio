@@ -21,7 +21,7 @@ server_pid=$(get_server_pid "$token")
 socket=$(get_socket "$token")
 
 kill -0 "$server_pid"
-echo -e 'GET /dynamic/write-delay/10000 HTTP/1.1\r\n\r\n' | nc -w1 -U "$socket"
+echo -e 'GET /dynamic/write-delay/10000 HTTP/1.1\r\n\r\n' | do_nc -w1 -U "$socket"
 sleep 0.2
 
 # note: the way this test would fail is to leak file descriptors (ie. have some

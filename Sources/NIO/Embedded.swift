@@ -58,8 +58,9 @@ public class EmbeddedEventLoop: EventLoop {
 
     public init() { }
 
+    @discardableResult
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
-        let promise: EventLoopPromise<T> = newPromise()
+        let promise: EventLoopPromise<T> = makePromise()
         let readyTime = now + UInt64(`in`.nanoseconds)
         let task = EmbeddedScheduledTask(readyTime: readyTime) {
             do {
@@ -80,7 +81,7 @@ public class EmbeddedEventLoop: EventLoop {
     // at which point we run everything that's been submitted. Anything newly submitted
     // either gets on that train if it's still moving or waits until the next call to run().
     public func execute(_ task: @escaping () -> Void) {
-        _ = self.scheduleTask(in: .nanoseconds(0), task)
+        self.scheduleTask(in: .nanoseconds(0), task)
     }
 
     public func run() {
@@ -103,7 +104,7 @@ public class EmbeddedEventLoop: EventLoop {
             var tasks = Array<EmbeddedScheduledTask>()
             while let candidateTask = self.scheduledTasks.peek(), candidateTask.readyTime == nextTask.readyTime {
                 tasks.append(candidateTask)
-                _ = self.scheduledTasks.pop()
+                self.scheduledTasks.pop()
             }
 
             // Set the time correctly before we call into user code, then
@@ -146,7 +147,7 @@ class EmbeddedChannelCore: ChannelCore {
     private let pipeline: ChannelPipeline
 
     init(pipeline: ChannelPipeline, eventLoop: EventLoop) {
-        closePromise = eventLoop.newPromise()
+        closePromise = eventLoop.makePromise()
         self.pipeline = pipeline
         self.eventLoop = eventLoop
     }
@@ -157,8 +158,14 @@ class EmbeddedChannelCore: ChannelCore {
         closePromise.succeed(result: ())
     }
 
+    /// Contains the flushed items that went into the `Channel` (and on a regular channel would have hit the network).
     var outboundBuffer: [IOData] = []
+
+    /// Contains the unflushed items that went into the `Channel`
     var pendingOutboundBuffer: [(IOData, EventLoopPromise<Void>?)] = []
+
+    /// Contains the items that travelled the `ChannelPipeline` all the way and hit the tail channel handler. On a
+    /// regular `Channel` these items would be lost.
     var inboundBuffer: [NIOAny] = []
 
     func localAddress0() throws -> SocketAddress {
@@ -251,6 +258,37 @@ class EmbeddedChannelCore: ChannelCore {
     }
 }
 
+/// `EmbeddedChannel` is a `Channel` implementation that does neither any
+/// actual IO nor has a proper eventing mechanism. The prime use-case for
+/// `EmbeddedChannel` is in unit tests when you want to feed the inbound events
+/// and check the outbound events manually.
+///
+/// To feed events through an `EmbeddedChannel`'s `ChannelPipeline` use
+/// `EmbeddedChannel.writeInbound` which accepts data of any type. It will then
+/// forward that data through the `ChannelPipeline` and the subsequent
+/// `ChannelInboundHandler` will receive it through the usual `channelRead`
+/// event. The user is responsible for making sure the first
+/// `ChannelInboundHandler` expects data of that type.
+///
+/// `EmbeddedChannel` automatically collects arriving outbound data and makes it
+/// available one-by-one through `readOutbound`.
+///
+/// - note: Due to [#243](https://github.com/apple/swift-nio/issues/243)
+///   `EmbeddedChannel` expects outbound data to be of `IOData` type. This is an
+///   incorrect and unfortunate assumption that will be fixed with the next
+///   major NIO release when we can change the public API again. If you do need
+///   to collect outbound data that is not `IOData` you can create a custom
+///   `ChannelOutboundHandler`, insert it at the very beginning of the
+///   `ChannelPipeline` and collect the outbound data there. Just don't forward
+///   it using `ctx.write`.
+/// - note: `EmbeddedChannel` is currently only compatible with
+///   `EmbeddedEventLoop`s and cannot be used with `SelectableEventLoop`s from
+///   for example `MultiThreadedEventLoopGroup`.
+/// - warning: Unlike other `Channel`s, `EmbeddedChannel` **is not thread-safe**. This
+///     is because it is intended to be run in the thread that instantiated it. Users are
+///     responsible for ensuring they never call into an `EmbeddedChannel` in an
+///     unsynchronized fashion. `EmbeddedEventLoop`s notes also apply as
+///     `EmbeddedChannel` uses an `EmbeddedEventLoop` as its `EventLoop`.
 public class EmbeddedChannel: Channel {
 
     public var isActive: Bool { return channelcore.isActive }
@@ -295,6 +333,13 @@ public class EmbeddedChannel: Channel {
         return readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
 
+    /// Writes `data` into the `EmbeddedChannel`'s pipeline. This will result in a `channelRead` and a
+    /// `channelReadComplete` event for the first `ChannelHandler`.
+    ///
+    /// - parameters:
+    ///    - data: The data to fire through the pipeline.
+    /// - returns: If the `inboundBuffer` now contains items. The `inboundBuffer` will be empty until some item
+    ///            travels the `ChannelPipeline` all the way and hits the tail channel handler.
     @discardableResult public func writeInbound<T>(_ data: T) throws -> Bool {
         pipeline.fireChannelRead(NIOAny(data))
         pipeline.fireChannelReadComplete()
@@ -345,7 +390,7 @@ public class EmbeddedChannel: Channel {
         }
 
         // This will never throw...
-        _ = try? register().wait()
+        try! register().wait()
     }
 
     public func setOption<T>(option: T, value: T.OptionType) -> EventLoopFuture<Void> where T: ChannelOption {
@@ -355,7 +400,7 @@ public class EmbeddedChannel: Channel {
 
     public func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T: ChannelOption {
         if option is AutoReadOption {
-            return self.eventLoop.newSucceededFuture(result: true as! T.OptionType)
+            return self.eventLoop.makeSucceededFuture(result: true as! T.OptionType)
         }
         fatalError("option \(option) not supported")
     }

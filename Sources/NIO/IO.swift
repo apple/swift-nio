@@ -54,14 +54,10 @@ public struct IOError: Swift.Error {
 /// - parameters:
 ///       - errorCode: the `errno` that was set for the operation.
 ///       - reason: what failed
-/// -returns: the constructed reason.
+/// - returns: the constructed reason.
 private func reasonForError(errnoCode: Int32, reason: String) -> String {
     if let errorDescC = strerror(errnoCode) {
-        let errorDescLen = strlen(errorDescC)
-        return errorDescC.withMemoryRebound(to: UInt8.self, capacity: errorDescLen) { ptr in
-            let errorDescPtr = UnsafeBufferPointer<UInt8>(start: ptr, count: errorDescLen)
-            return "\(reason): \(String(decoding: errorDescPtr, as: UTF8.self)) (errno: \(errnoCode)) "
-        }
+        return "\(reason): \(String(cString: errorDescC)) (errno: \(errnoCode))"
     } else {
         return "\(reason): Broken strerror, unknown error: \(errnoCode)"
     }
@@ -83,7 +79,7 @@ extension IOError: CustomStringConvertible {
 }
 
 /// An result for an IO operation that was done on a non-blocking resource.
-public enum IOResult<T: Equatable> {
+enum IOResult<T: Equatable>: Equatable {
 
     /// Signals that the IO operation could not be completed as otherwise we would need to block.
     case wouldBlock(T)
@@ -91,17 +87,3 @@ public enum IOResult<T: Equatable> {
     /// Signals that the IO operation was completed.
     case processed(T)
 }
-
-extension IOResult: Equatable {
-    public static func ==(lhs: IOResult<T>, rhs: IOResult<T>) -> Bool {
-        switch (lhs, rhs) {
-        case (.wouldBlock(let lhs), .wouldBlock(let rhs)):
-            return lhs == rhs
-        case (.processed(let lhs), .processed(let rhs)):
-            return lhs == rhs
-        case (.wouldBlock, _), (.processed, _):
-            return false
-        }
-    }
-}
-

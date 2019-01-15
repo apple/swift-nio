@@ -46,10 +46,16 @@ public func measure(_ fn: () throws -> Int) rethrows -> [TimeInterval] {
     return measurements
 }
 
+let limitSet = CommandLine.arguments.dropFirst()
+
 public func measureAndPrint(desc: String, fn: () throws -> Int) rethrows -> Void {
-    print("measuring\(warning): \(desc): ", terminator: "")
-    let measurements = try measure(fn)
-    print(measurements.reduce("") { $0 + "\($1), " })
+    if limitSet.count == 0 || limitSet.contains(desc) {
+        print("measuring\(warning): \(desc): ", terminator: "")
+        let measurements = try measure(fn)
+        print(measurements.reduce("") { $0 + "\($1), " })
+    } else {
+        print("skipping '\(desc)', limit set = \(limitSet)")
+    }
 }
 
 // MARK: Utilities
@@ -144,7 +150,7 @@ final class RepeatedRequests: ChannelInboundHandler {
     init(numberOfRequests: Int, eventLoop: EventLoop) {
         self.remainingNumberOfRequests = numberOfRequests
         self.numberOfRequests = numberOfRequests
-        self.isDonePromise = eventLoop.newPromise()
+        self.isDonePromise = eventLoop.makePromise()
     }
 
     func wait() throws -> Int {
@@ -174,7 +180,112 @@ final class RepeatedRequests: ChannelInboundHandler {
     }
 }
 
+private func someString(size: Int) -> String {
+    var s = "A"
+    for f in 1..<size {
+        s += String("\(f)".first!)
+    }
+    return s
+}
+
 // MARK: Performance Tests
+
+measureAndPrint(desc: "write_http_headers") {
+    var headers: [(String, String)] = []
+    for i in 1..<10 {
+        headers.append(("\(i)", "\(i)"))
+    }
+
+    var val = 0
+    for _ in 0..<100_000 {
+        let headers = HTTPHeaders(headers)
+        val += headers.underestimatedCount
+    }
+    return val
+}
+
+measureAndPrint(desc: "bytebuffer_write_12MB_short_string_literals") {
+    let bufferSize = 12 * 1024 * 1024
+    var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
+
+    for _ in 0 ..< 5 {
+        buffer.clear()
+        for _ in 0 ..< (bufferSize / 4) {
+            buffer.write(string: "abcd")
+        }
+    }
+
+    let readableBytes = buffer.readableBytes
+    precondition(readableBytes == bufferSize)
+    return readableBytes
+}
+
+measureAndPrint(desc: "bytebuffer_write_12MB_short_calculated_strings") {
+    let bufferSize = 12 * 1024 * 1024
+    var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
+    let s = someString(size: 4)
+
+    for _ in 0 ..< 5 {
+        buffer.clear()
+        for _ in  0 ..< (bufferSize / 4) {
+            buffer.write(string: s)
+        }
+    }
+
+    let readableBytes = buffer.readableBytes
+    precondition(readableBytes == bufferSize)
+    return readableBytes
+}
+
+measureAndPrint(desc: "bytebuffer_write_12MB_medium_string_literals") {
+    let bufferSize = 12 * 1024 * 1024
+    var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
+
+    for _ in 0 ..< 10 {
+        buffer.clear()
+        for _ in  0 ..< (bufferSize / 24) {
+            buffer.write(string: "012345678901234567890123")
+        }
+    }
+
+    let readableBytes = buffer.readableBytes
+    precondition(readableBytes == bufferSize)
+    return readableBytes
+}
+
+measureAndPrint(desc: "bytebuffer_write_12MB_medium_calculated_strings") {
+    let bufferSize = 12 * 1024 * 1024
+    var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
+    let s = someString(size: 24)
+
+    for _ in 0 ..< 10 {
+        buffer.clear()
+        for _ in 0 ..< (bufferSize / 24) {
+            buffer.write(string: s)
+        }
+    }
+
+    let readableBytes = buffer.readableBytes
+    precondition(readableBytes == bufferSize)
+    return readableBytes
+}
+
+measureAndPrint(desc: "bytebuffer_write_12MB_large_calculated_strings") {
+    let bufferSize = 12 * 1024 * 1024
+    var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
+    let s = someString(size: 1024 * 1024)
+
+    for _ in 0 ..< 10 {
+        buffer.clear()
+        for _ in 0 ..< 12 {
+            buffer.write(string: s)
+        }
+    }
+
+    let readableBytes = buffer.readableBytes
+    precondition(readableBytes == bufferSize)
+    return readableBytes
+}
 
 measureAndPrint(desc: "bytebuffer_lots_of_rw") {
     let dispatchData = ("A" as StaticString).withUTF8Buffer { ptr in

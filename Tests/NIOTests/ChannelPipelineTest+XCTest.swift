@@ -45,6 +45,13 @@ extension ChannelPipelineTest {
                 ("testFindHandlerByTypeReturnsTheFirstOfItsType", testFindHandlerByTypeReturnsTheFirstOfItsType),
                 ("testContextForHeadOrTail", testContextForHeadOrTail),
                 ("testRemoveHeadOrTail", testRemoveHeadOrTail),
+                ("testRemovingByContextWithPromiseStillInChannel", testRemovingByContextWithPromiseStillInChannel),
+                ("testRemovingByContextWithFutureNotInChannel", testRemovingByContextWithFutureNotInChannel),
+                ("testRemovingByNameWithPromiseStillInChannel", testRemovingByNameWithPromiseStillInChannel),
+                ("testRemovingByNameWithFutureNotInChannel", testRemovingByNameWithFutureNotInChannel),
+                ("testRemovingByReferenceWithPromiseStillInChannel", testRemovingByReferenceWithPromiseStillInChannel),
+                ("testRemovingByReferenceWithFutureNotInChannel", testRemovingByReferenceWithFutureNotInChannel),
+                ("testFireChannelReadInInactiveChannelDoesNotCrash", testFireChannelReadInInactiveChannelDoesNotCrash),
            ]
    }
 }

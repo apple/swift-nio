@@ -123,26 +123,7 @@ public enum WebSocketErrorCode {
     }
 }
 
-extension WebSocketErrorCode: Equatable {
-    public static func ==(lhs: WebSocketErrorCode, rhs: WebSocketErrorCode) -> Bool {
-        switch (lhs, rhs) {
-        case (.normalClosure, .normalClosure),
-             (.goingAway, .goingAway),
-             (.protocolError, .protocolError),
-             (.unacceptableData, .unacceptableData),
-             (.dataInconsistentWithMessage, .dataInconsistentWithMessage),
-             (.policyViolation, .policyViolation),
-             (.messageTooLarge, .messageTooLarge),
-             (.missingExtension, .missingExtension),
-             (.unexpectedServerError, .unexpectedServerError):
-            return true
-        case (.unknown(let l), .unknown(let r)):
-            return l == r
-        default:
-            return false
-        }
-    }
-}
+extension WebSocketErrorCode: Equatable {}
 
 public extension ByteBuffer {
     /// Read a websocket error code from a byte buffer.
@@ -150,7 +131,7 @@ public extension ByteBuffer {
     /// This method increments the reader index.
     ///
     /// - returns: The error code, or `nil` if there were not enough readable bytes.
-    public mutating func readWebSocketErrorCode() -> WebSocketErrorCode? {
+    mutating func readWebSocketErrorCode() -> WebSocketErrorCode? {
         return self.readInteger(as: UInt16.self).map { WebSocketErrorCode(networkInteger: $0) }
     }
 
@@ -162,7 +143,7 @@ public extension ByteBuffer {
     /// - parameters:
     ///     - index: The index into the buffer to read the error code from.
     /// - returns: The error code, or `nil` if there were not enough bytes at that index.
-    public func getWebSocketErrorCode(at index: Int) -> WebSocketErrorCode? {
+    func getWebSocketErrorCode(at index: Int) -> WebSocketErrorCode? {
         return self.getInteger(at: index, as: UInt16.self).map { WebSocketErrorCode(networkInteger: $0) }
     }
 
@@ -170,7 +151,7 @@ public extension ByteBuffer {
     ///
     /// - parameters:
     ///     - code: The code to write into the buffer.
-    public mutating func write(webSocketErrorCode code: WebSocketErrorCode) {
+    mutating func write(webSocketErrorCode code: WebSocketErrorCode) {
         self.write(integer: UInt16(webSocketErrorCode: code))
     }
 }
@@ -180,7 +161,7 @@ public extension UInt16 {
     ///
     /// - parameters:
     ///     - code: The `WebSocketErrorCode`.
-    public init(webSocketErrorCode code: WebSocketErrorCode) {
+    init(webSocketErrorCode code: WebSocketErrorCode) {
         switch code {
         case .normalClosure:
             self = 1000
