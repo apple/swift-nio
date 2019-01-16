@@ -29,3 +29,4 @@
   returns `Int` and has had its return value made discardable.
 - removed ContiguousCollection
 - EventLoopFuture.whenComplete now provides Result<T, Error>
+- `ChannelPipeline.remove` now takes and returns an `EventLoopPromise<Void>` instead of an `EventLoopPromise<Bool>`

@@ -96,9 +96,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
             return readCountHandler.readCount
         }.wait())
 
-        try serverChannel.pipeline.remove(name: acceptHandlerName).mapIfError { _ in
-            XCTFail("Handler was not removed")
-        }.wait()
+        XCTAssertNoThrow(try serverChannel.pipeline.remove(name: acceptHandlerName).wait())
 
         if read {
             // Removal should have triggered a read.
