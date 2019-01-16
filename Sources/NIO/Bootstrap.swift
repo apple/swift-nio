@@ -18,6 +18,9 @@
 ///
 /// ```swift
 ///     let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+///     defer {
+///         try! group.syncShutdownGracefully()
+///     }
 ///     let bootstrap = ServerBootstrap(group: group)
 ///         // Specify backlog and enable SO_REUSEADDR for the server itself
 ///         .serverChannelOption(ChannelOptions.backlog, value: 256)
@@ -38,9 +41,6 @@
 ///         .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 ///         .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
 ///         .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
-///     defer {
-///         try! group.syncShutdownGracefully()
-///     }
 ///     let channel = try! bootstrap.bind(host: host, port: port).wait()
 ///     /* the server will now be accepting connections */
 ///
