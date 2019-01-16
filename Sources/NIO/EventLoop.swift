@@ -489,7 +489,7 @@ internal final class SelectableEventLoop: EventLoop {
     internal func promiseCreationStoreRemove<T>(future: EventLoopFuture<T>) -> (file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
         return self.promiseCreationStoreLock.withLock {
-            self._promiseCreationStore[ObjectIdentifier(future)]!
+            self._promiseCreationStore.removeValue(forKey: ObjectIdentifier(future))!
         }
     }
 
