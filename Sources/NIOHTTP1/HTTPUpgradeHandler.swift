@@ -249,6 +249,8 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
             return ctx.eventLoop.makeSucceededFuture(result: ())
         }
 
-        return EventLoopFuture<Void>.andAll(self.extraHTTPHandlers.map { ctx.pipeline.remove(handler: $0).map { }}, eventLoop: ctx.eventLoop)
+        return EventLoopFuture<Void>.andAll(self.extraHTTPHandlers.map {
+            ctx.pipeline.remove(handler: $0)
+        }, eventLoop: ctx.eventLoop)
     }
 }
