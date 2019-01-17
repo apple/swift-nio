@@ -325,6 +325,9 @@ private extension Channel {
 ///
 /// ```swift
 ///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+///     defer {
+///         try! group.syncShutdownGracefully()
+///     }
 ///     let bootstrap = ClientBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
 ///         .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -334,9 +337,6 @@ private extension Channel {
 ///             // resolves to both IPv4 and IPv6 addresses, cf. Happy Eyeballs).
 ///             channel.pipeline.add(handler: MyChannelHandler())
 ///         }
-///     defer {
-///         try! group.syncShutdownGracefully()
-///     }
 ///     try! bootstrap.connect(host: "example.org", port: 12345).wait()
 ///     /* the Channel is now connected */
 /// ```
@@ -536,15 +536,15 @@ public final class ClientBootstrap {
 ///
 /// ```swift
 ///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+///     defer {
+///         try! group.syncShutdownGracefully()
+///     }
 ///     let bootstrap = DatagramBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
 ///         .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 ///         .channelInitializer { channel in
 ///             channel.pipeline.add(handler: MyChannelHandler())
 ///         }
-///     defer {
-///         try! group.syncShutdownGracefully()
-///     }
 ///     let channel = try! bootstrap.bind(host: "127.0.0.1", port: 53).wait()
 ///     /* the Channel is now ready to send/receive datagrams */
 ///
