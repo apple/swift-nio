@@ -173,7 +173,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         case .head(let request):
             self.keepAlive = request.isKeepAlive
             self.state.requestReceived()
-            ctx.writeAndFlush(self.wrapOutboundOut(.head(httpResponseHead(request: request, status: .ok))), promise: nil)
+            ctx.writeAndFlush(self.wrapOutboundOut(.head(httpResponseHead(request: request, status: statusCode))), promise: nil)
         case .body(buffer: _):
             ()
         case .end:
