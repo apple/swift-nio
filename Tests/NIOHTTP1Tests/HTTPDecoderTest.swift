@@ -287,7 +287,7 @@ class HTTPDecoderTest: XCTestCase {
                 let part = self.unwrapInboundIn(data)
                 switch part {
                 case .end:
-                    _ = ctx.pipeline.remove(handler: self).then { _ in
+                    _ = ctx.pipeline.remove(handler: self).flatMap { _ in
                         ctx.pipeline.add(handler: self.collector)
                     }
                 default:

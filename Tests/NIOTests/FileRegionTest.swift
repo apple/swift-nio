@@ -153,14 +153,14 @@ class FileRegionTest : XCTestCase {
             }
             try content.write(toFile: filePath, atomically: false, encoding: .ascii)
             do {
-                () = try clientChannel.writeAndFlush(NIOAny(fr1)).then {
+                () = try clientChannel.writeAndFlush(NIOAny(fr1)).flatMap {
                     let frFuture = clientChannel.write(NIOAny(fr2))
                     var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
                     buffer.write(bytes: bytes)
                     let bbFuture = clientChannel.write(NIOAny(buffer))
                     clientChannel.close(promise: nil)
                     clientChannel.flush()
-                    return frFuture.then { bbFuture }
+                    return frFuture.flatMap { bbFuture }
                 }.wait()
                 XCTFail("no error happened even though we closed before flush")
             } catch let e as ChannelError {

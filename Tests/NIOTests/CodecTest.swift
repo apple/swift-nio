@@ -390,7 +390,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         buffer.write(staticString: "4567890x")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
-        channel.pipeline.context(handlerType: ByteToMessageHandler<PairOfBytesDecoder>.self).then { ctx in
+        channel.pipeline.context(handlerType: ByteToMessageHandler<PairOfBytesDecoder>.self).flatMap { ctx in
             return channel.pipeline.remove(ctx: ctx)
         }.map {
             XCTAssertTrue($0)

@@ -126,7 +126,7 @@ let serverChannel = try ServerBootstrap(group: group)
     .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     .childChannelInitializer { channel in
-        channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).then {
+        channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
             channel.pipeline.add(handler: SimpleHTTPServer())
         }
     }.bind(host: "127.0.0.1", port: 0).wait()
@@ -558,9 +558,9 @@ try measureAndPrint(desc: "no-net_http1_10k_reqs_1_conn") {
         done = true
     }
     try channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true,
-                                                     withErrorHandling: true).then {
+                                                     withErrorHandling: true).flatMap {
         channel.pipeline.add(handler: SimpleHTTPServer())
-    }.then {
+    }.flatMap {
         channel.pipeline.add(handler: measuringHandler, first: true)
     }.wait()
 
@@ -580,7 +580,7 @@ measureAndPrint(desc: "http1_10k_reqs_1_conn") {
     let clientChannel = try! ClientBootstrap(group: group)
         .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
         .channelInitializer { channel in
-            channel.pipeline.addHTTPClientHandlers().then {
+            channel.pipeline.addHTTPClientHandlers().flatMap {
                 channel.pipeline.add(handler: repeatedRequestsHandler)
             }
         }
@@ -601,7 +601,7 @@ measureAndPrint(desc: "http1_10k_reqs_100_conns") {
 
         let clientChannel = try! ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers().then {
+                channel.pipeline.addHTTPClientHandlers().flatMap {
                     channel.pipeline.add(handler: repeatedRequestsHandler)
                 }
             }

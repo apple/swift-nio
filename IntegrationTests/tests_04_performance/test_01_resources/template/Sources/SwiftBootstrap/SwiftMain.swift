@@ -219,7 +219,7 @@ public func swiftMain() -> Int {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
                     channel.pipeline.add(handler: SimpleHTTPServer())
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
@@ -233,7 +233,7 @@ public func swiftMain() -> Int {
 
         let clientChannel = try ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers().then {
+                channel.pipeline.addHTTPClientHandlers().flatMap {
                     channel.pipeline.add(handler: repeatedRequestsHandler)
                 }
             }
@@ -349,32 +349,32 @@ public func swiftMain() -> Int {
         @inline(never)
         func doThenAndFriends(loop: EventLoop) {
             let p = loop.makePromise(of: Int.self)
-            let f = p.futureResult.then { (r: Int) -> EventLoopFuture<Int> in 
+            let f = p.futureResult.flatMap { (r: Int) -> EventLoopFuture<Int> in
                 // This call allocates a new Future, and
-                // so does then(), so this is two Futures.
+                // so does flatMap(), so this is two Futures.
                 return loop.makeSucceededFuture(result: r + 1)
-            }.thenThrowing { (r: Int) -> Int in
-                // thenThrowing allocates a new Future, and calls then
+            }.flatMapThrowing { (r: Int) -> Int in
+                // flatMapThrowing allocates a new Future, and calls `flatMap`
                 // which also allocates, so this is two.
                 return r + 2
             }.map { (r: Int) -> Int in
-                // map allocates a new future, and calls then which
+                // map allocates a new future, and calls `flatMap` which
                 // also allocates, so this is two.
                 return r + 2
-            }.thenThrowing { (r: Int) -> Int in
-                // thenThrowing allocates a future on the error path and
-                // calls then, which also allocates, so this is two.
+            }.flatMapThrowing { (r: Int) -> Int in
+                // flatMapThrowing allocates a future on the error path and
+                // calls `flatMap`, which also allocates, so this is two.
                 throw MyError()
-            }.thenIfError { (err: Error) -> EventLoopFuture<Int> in
-                // This call allocates a new Future, and so does thenIfError,
+            }.flatMapError { (err: Error) -> EventLoopFuture<Int> in
+                // This call allocates a new Future, and so does flatMapError,
                 // so this is two Futures.
                 return loop.makeFailedFuture(error: err)
-            }.thenIfErrorThrowing { (err: Error) -> Int in
-                // thenIfError allocates a new Future, and calls thenIfError,
+            }.flatMapErrorThrowing { (err: Error) -> Int in
+                // flatMapError allocates a new Future, and calls flatMapError,
                 // so this is two Futures
                 throw err
             }.mapIfError { (err: Error) -> Int in
-                // mapIfError allocates a future, and calls thenIfError, so
+                // mapIfError allocates a future, and calls flatMapError, so
                 // this is two Futures.
                 return 1
             }
