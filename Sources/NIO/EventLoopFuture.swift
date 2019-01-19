@@ -749,7 +749,8 @@ extension EventLoopFuture {
     ///
     /// - parameters:
     ///     - promise: The `EventLoopPromise` to fulfill with the results of this future.
-    public func cascade(promise: EventLoopPromise<T>) {
+    public func cascade(promise: EventLoopPromise<T>?) {
+        guard let promise = promise else { return }
         _whenCompleteWithValue { v in
             switch v {
             case .failure(let err):
@@ -769,7 +770,8 @@ extension EventLoopFuture {
     ///
     /// - parameters:
     ///     - promise: The `EventLoopPromise` to fulfill with the results of this future.
-    public func cascadeFailure<U>(promise: EventLoopPromise<U>) {
+    public func cascadeFailure<U>(promise: EventLoopPromise<U>?) {
+        guard let promise = promise else { return }
         self.whenFailure { err in
             promise.fail(error: err)
         }
