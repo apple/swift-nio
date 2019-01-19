@@ -124,11 +124,11 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
             responseHead.headers.replaceOrAdd(name: "Content-Encoding", value: algorithm!.rawValue)
             initializeEncoder(encoding: algorithm!)
             pendingResponse.bufferResponseHead(responseHead)
-            chainPromise(promise)
+            pendingWritePromise.futureResult.cascade(promise: promise)
         case .body(let body):
             if algorithm != nil {
                 pendingResponse.bufferBodyPart(body)
-                chainPromise(promise)
+                pendingWritePromise.futureResult.cascade(promise: promise)
             } else {
                 ctx.write(data, promise: promise)
             }
@@ -141,7 +141,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
             }
 
             pendingResponse.bufferResponseEnd(httpData)
-            chainPromise(promise)
+            pendingWritePromise.futureResult.cascade(promise: promise)
             emitPendingWrites(ctx: ctx)
             algorithm = nil
             deinitializeEncoder()
@@ -210,12 +210,6 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
         // We deliberately discard the result here because we just want to free up
         // the pending data.
         deflateEnd(&stream)
-    }
-
-    private func chainPromise(_ promise: EventLoopPromise<Void>?) {
-        if let promise = promise {
-            pendingWritePromise.futureResult.cascade(promise: promise)
-        }
     }
 
     /// Emits all pending buffered writes to the network, optionally compressing the

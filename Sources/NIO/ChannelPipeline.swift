@@ -395,9 +395,7 @@ public final class ChannelPipeline: ChannelInvoker {
             self.remove0(ctx: ctx, promise: promise)
         }
 
-        if let promise = promise {
-            contextFuture.cascadeFailure(promise: promise)
-        }
+        contextFuture.cascadeFailure(promise: promise)
     }
 
     /// Remove a `ChannelHandler` from the `ChannelPipeline`.
@@ -412,9 +410,7 @@ public final class ChannelPipeline: ChannelInvoker {
             self.remove0(ctx: ctx, promise: promise)
         }
 
-        if let promise = promise {
-            contextFuture.cascadeFailure(promise: promise)
-        }
+        contextFuture.cascadeFailure(promise: promise)
     }
 
     /// Remove a `ChannelHandler` from the `ChannelPipeline`.
