@@ -564,7 +564,7 @@ public class MessageToByteEncoderTest: XCTestCase {
 
         _ = try channel.writeAndFlush(NIOAny(Int32(5))).wait()
 
-        if case .some(.byteBuffer(var buffer)) = channel.readOutbound() {
+        if var buffer = channel.readOutbound()?.tryAsByteBuffer() {
             XCTAssertEqual(Int32(5), buffer.readInteger())
             XCTAssertEqual(0, buffer.readableBytes)
         } else {

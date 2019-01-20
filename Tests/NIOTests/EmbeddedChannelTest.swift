@@ -20,10 +20,10 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.write(string: "hello")
-
+        
         XCTAssertTrue(try channel.writeOutbound(buf))
         XCTAssertTrue(try channel.finish())
-        XCTAssertEqual(.byteBuffer(buf), channel.readOutbound())
+        XCTAssertEqual(buf, channel.readOutbound()?.tryAsByteBuffer())
         XCTAssertNil(channel.readOutbound())
         XCTAssertNil(channel.readInbound())
     }
@@ -140,20 +140,20 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssert(pipelineEventLoop === (channel._unsafe as! EmbeddedChannelCore).eventLoop)
         XCTAssertFalse(try channel.finish())
     }
-
-    func testSendingIncorrectDataOnEmbeddedChannel() {
+    
+    func testSendingAnythingOnEmbeddedChannel() throws {
         let channel = EmbeddedChannel()
-
-        do {
-            try channel.writeAndFlush(NIOAny(5)).wait()
-            XCTFail("Did not throw")
-        } catch ChannelError.writeDataUnsupported {
-            // All good
-        } catch {
-            XCTFail("Got \(error)")
-        }
-
-        XCTAssertFalse(try channel.finish())
+        let buffer = ByteBufferAllocator().buffer(capacity: 5)
+        let fileHandle = FileHandle(descriptor: 1)
+        let fileRegion = try FileRegion(fileHandle: fileHandle)
+        let socketAddress = try SocketAddress(unixDomainSocketPath: "path")
+        
+        try channel.writeAndFlush(1).wait()
+        try channel.writeAndFlush("1").wait()
+        try channel.writeAndFlush(buffer).wait()
+        try channel.writeAndFlush(IOData.byteBuffer(buffer)).wait()
+        try channel.writeAndFlush(IOData.fileRegion(fileRegion)).wait()
+        try channel.writeAndFlush(AddressedEnvelope(remoteAddress: socketAddress, data: buffer)).wait()
     }
 
     func testActiveWhenConnectPromiseFiresAndInactiveWhenClosePromiseFires() throws {

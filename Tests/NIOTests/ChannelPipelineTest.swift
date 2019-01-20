@@ -50,7 +50,7 @@ private extension EmbeddedChannel {
 
     func assertWriteIndexOrder(_ order: [UInt8]) {
         XCTAssertTrue(try self.writeOutbound(self.allocator.buffer(capacity: 32)))
-        guard case .some(.byteBuffer(var outBuffer2)) = self.readOutbound() else {
+        guard var outBuffer2 = self.readOutbound()?.tryAsByteBuffer() else {
             XCTFail("Could not read byte buffer")
             return
         }
@@ -112,8 +112,8 @@ class ChannelPipelineTest: XCTestCase {
         }).wait()
 
         XCTAssertNoThrow(try channel.writeAndFlush(NIOAny("msg")).wait() as Void)
-        if let data = channel.readOutbound() {
-            XCTAssertEqual(IOData.byteBuffer(buf), data)
+        if let data = channel.readOutbound()?.tryAsByteBuffer() {
+            XCTAssertEqual(buf, data)
         } else {
             XCTFail("couldn't read from channel")
         }
@@ -300,24 +300,24 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertEqual([2, 6], channel.readInbound()!)
 
         /* the first thing, we should receive is `[-2]` as it shouldn't hit any `MarkingOutboundHandler`s (`4`) */
-        var outbound = channel.readOutbound()
-        if case .some(.byteBuffer(var buf)) = outbound {
+        var outbound = channel.readOutbound()?.tryAsByteBuffer()
+        if var buf = outbound {
             XCTAssertEqual("[-2]", buf.readString(length: buf.readableBytes))
         } else {
             XCTFail("wrong contents: \(outbound.debugDescription)")
         }
 
         /* the next thing we should receive is `[-2, 4]` as the first `WriteOnReadHandler` (receiving `[2]`) is behind the `MarkingOutboundHandler` (`4`) */
-        outbound = channel.readOutbound()
-        if case .some(.byteBuffer(var buf)) = outbound {
+        outbound = channel.readOutbound()?.tryAsByteBuffer()
+        if var buf = outbound {
             XCTAssertEqual("[-2, 4]", buf.readString(length: buf.readableBytes))
         } else {
             XCTFail("wrong contents: \(outbound.debugDescription)")
         }
 
         /* and finally, we're waiting for `[-2, -6, 4]` as the second `WriteOnReadHandler`s (receiving `[2, 4]`) is behind the `MarkingOutboundHandler` (`4`) */
-        outbound = channel.readOutbound()
-        if case .some(.byteBuffer(var buf)) = outbound {
+        outbound = channel.readOutbound()?.tryAsByteBuffer()
+        if var buf = outbound {
             XCTAssertEqual("[-2, -6, 4]", buf.readString(length: buf.readableBytes))
         } else {
             XCTFail("wrong contents: \(outbound.debugDescription)")
@@ -708,10 +708,7 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
         channel.pipeline.remove(ctx: context, promise: removalPromise)
 
-        guard case .some(.byteBuffer(let receivedBuffer)) = channel.readOutbound() else {
-            XCTFail("No buffer")
-            return
-        }
+        let receivedBuffer = channel.readOutbound()?.tryAsByteBuffer()
         XCTAssertEqual(receivedBuffer, buffer)
 
         do {
@@ -782,10 +779,7 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
         channel.pipeline.remove(name: "TestHandler", promise: removalPromise)
 
-        guard case .some(.byteBuffer(let receivedBuffer)) = channel.readOutbound() else {
-            XCTFail("No buffer")
-            return
-        }
+        let receivedBuffer = channel.readOutbound()?.tryAsByteBuffer()
         XCTAssertEqual(receivedBuffer, buffer)
 
         do {
@@ -857,10 +851,7 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
         channel.pipeline.remove(handler: handler, promise: removalPromise)
 
-        guard case .some(.byteBuffer(let receivedBuffer)) = channel.readOutbound() else {
-            XCTFail("No buffer")
-            return
-        }
+        let receivedBuffer = channel.readOutbound()?.tryAsByteBuffer()
         XCTAssertEqual(receivedBuffer, buffer)
 
         do {

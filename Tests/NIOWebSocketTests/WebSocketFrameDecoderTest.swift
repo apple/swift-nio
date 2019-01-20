@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import NIO
+@testable import NIO
 import NIOWebSocket
 
 private class CloseSwallower: ChannelOutboundHandler {
@@ -79,7 +79,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
     private func frameForFrame(_ frame: WebSocketFrame) -> WebSocketFrame? {
         self.encoderChannel.writeAndFlush(frame, promise: nil)
 
-        while case .some(.byteBuffer(let d)) = self.encoderChannel.readOutbound() {
+        while let d = self.encoderChannel.readOutbound()?.tryAsByteBuffer() {
             XCTAssertNoThrow(try self.decoderChannel.writeInbound(d))
         }
 
@@ -331,7 +331,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // a double-parse edge case.
         self.encoderChannel.write(frame, promise: nil)
         var frameBuffer = self.decoderChannel.allocator.buffer(capacity: 10)
-        while case .some(.byteBuffer(var d)) = self.encoderChannel.readOutbound() {
+        while var d = self.encoderChannel.readOutbound()?.tryAsByteBuffer() {
             frameBuffer.write(buffer: &d)
         }
         XCTAssertNoThrow(try self.decoderChannel.writeInbound(frameBuffer))

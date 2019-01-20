@@ -13,13 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import NIO
+@testable import NIO
 import NIOWebSocket
 
 extension EmbeddedChannel {
     func readAllOutboundBuffers() -> ByteBuffer {
         var buffer = self.allocator.buffer(capacity: 100)
-        while case .some(.byteBuffer(var writtenData)) = self.readOutbound() {
+        while var writtenData = self.readOutbound()?.tryAsByteBuffer() {
             buffer.write(buffer: &writtenData)
         }
 
