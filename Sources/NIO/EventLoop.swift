@@ -208,6 +208,10 @@ public protocol EventLoop: EventLoopGroup {
     /// - returns: `EventLoopFuture` that is notified once the task was executed.
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
 
+    /// Schedule a `task` that is executed by this `SelectableEventLoop` at the given time.
+    @discardableResult
+    func scheduleTask<T>(at: Time, _ task: @escaping () throws -> T) -> Scheduled<T>
+
     /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
     @discardableResult
     func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T>
@@ -288,6 +292,74 @@ public struct TimeAmount: Equatable {
 extension TimeAmount: Comparable {
     public static func < (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds < rhs.nanoseconds
+    }
+}
+
+extension TimeAmount {
+    public static func + (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
+        return TimeAmount(lhs.nanoseconds + rhs.nanoseconds)
+    }
+
+    public static func - (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
+        return TimeAmount(lhs.nanoseconds - rhs.nanoseconds)
+    }
+
+    public static func * (lhs: TimeAmount.Value, rhs: TimeAmount) -> TimeAmount {
+        return TimeAmount(lhs * rhs.nanoseconds)
+    }
+
+    public static func * (lhs: TimeAmount, rhs: TimeAmount.Value) -> TimeAmount {
+        return TimeAmount(lhs.nanoseconds * rhs)
+    }
+}
+
+/// Represents a point in time.
+///
+/// - note: `Time` should not be used to represent an interval
+public struct Time {
+    public typealias Value = UInt64
+
+    /// The nanoseconds representation of the `Time`.
+    public let nanoseconds: Value
+
+    private init(_ nanoseconds: Value) {
+        self.nanoseconds = nanoseconds
+    }
+
+    public static func now() -> Time {
+        return Time(DispatchTime.now().uptimeNanoseconds)
+    }
+
+    public static func exactly(_ nanoseconds: Value) -> Time {
+        return Time(nanoseconds)
+    }
+}
+
+extension Time: Comparable {
+    public static func < (lhs: Time, rhs: Time) -> Bool {
+        return lhs.nanoseconds < rhs.nanoseconds
+    }
+}
+
+extension Time {
+    public static func - (lhs: Time, rhs: Time) -> TimeAmount {
+        return .nanoseconds(TimeAmount.Value(lhs.nanoseconds - rhs.nanoseconds))
+    }
+
+    public static func + (lhs: Time, rhs: TimeAmount) -> Time {
+        if rhs.nanoseconds < 0 {
+            return Time(lhs.nanoseconds - rhs.nanoseconds.magnitude)
+        } else {
+            return Time(lhs.nanoseconds + rhs.nanoseconds.magnitude)
+        }
+    }
+
+    public static func - (lhs: Time, rhs: TimeAmount) -> Time {
+        if rhs.nanoseconds < 0 {
+            return Time(lhs.nanoseconds + rhs.nanoseconds.magnitude)
+        } else {
+            return Time(lhs.nanoseconds - rhs.nanoseconds.magnitude)
+        }
     }
 }
 
@@ -555,7 +627,7 @@ internal final class SelectableEventLoop: EventLoop {
         return thread.isCurrent
     }
 
-    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    public func scheduleTask<T>(at: Time, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = makePromise()
         let task = ScheduledTask({
             do {
@@ -565,7 +637,7 @@ internal final class SelectableEventLoop: EventLoop {
             }
         }, { error in
             promise.fail(error: error)
-        },`in`)
+        }, at)
 
         let scheduled = Scheduled(promise: promise, cancellationTask: {
             self.tasksLock.withLockVoid {
@@ -578,10 +650,14 @@ internal final class SelectableEventLoop: EventLoop {
         return scheduled
     }
 
+    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+        return scheduleTask(at: .now() + `in`, task)
+    }
+
     public func execute(_ task: @escaping () -> Void) {
         schedule0(ScheduledTask(task, { error in
             // do nothing
-        }, .nanoseconds(0)))
+        }, .now()))
     }
 
     /// Add the `ScheduledTask` to be executed.
@@ -634,7 +710,7 @@ internal final class SelectableEventLoop: EventLoop {
             return .block
         }
 
-        let nextReady = sched.readyIn(DispatchTime.now())
+        let nextReady = sched.readyIn(.now())
         if nextReady <= .nanoseconds(0) {
             // Something is ready to be processed just do a non-blocking select of events.
             return .now
@@ -684,7 +760,7 @@ internal final class SelectableEventLoop: EventLoop {
                 tasksLock.withLockVoid {
                     if !scheduledTasks.isEmpty {
                         // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
-                        let now = DispatchTime.now()
+                        let now: Time = .now()
 
                         // Make a copy of the tasks so we can execute these while not holding the lock anymore
                         while tasksCopy.count < tasksCopy.capacity, let task = scheduledTasks.peek() {
@@ -975,19 +1051,19 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 private final class ScheduledTask {
     let task: () -> Void
     private let failFn: (Error) ->()
-    private let readyTime: TimeAmount.Value
+    private let readyTime: Time
 
-    init(_ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: TimeAmount) {
+    init(_ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: Time) {
         self.task = task
         self.failFn = failFn
-        self.readyTime = time.nanoseconds + TimeAmount.Value(DispatchTime.now().uptimeNanoseconds)
+        self.readyTime = time
     }
 
-    func readyIn(_ t: DispatchTime) -> TimeAmount {
-        if readyTime < t.uptimeNanoseconds {
+    func readyIn(_ t: Time) -> TimeAmount {
+        if readyTime < t {
             return .nanoseconds(0)
         }
-        return .nanoseconds(readyTime - TimeAmount.Value(t.uptimeNanoseconds))
+        return readyTime - t
     }
 
     func fail(error: Error) {

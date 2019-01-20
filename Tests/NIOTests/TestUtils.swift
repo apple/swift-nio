@@ -12,9 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Dispatch
 import XCTest
-
 @testable import NIO
 
 func withPipe(_ body: (NIO.FileHandle, NIO.FileHandle) -> [NIO.FileHandle]) throws {
@@ -224,12 +222,12 @@ func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyRece
 
 func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #file, line: UInt = #line) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
-    let endTime = DispatchTime.now().uptimeNanoseconds + UInt64(time.nanoseconds)
+    let endTime = Time.now() + time
 
     repeat {
         if condition() { return }
         usleep(UInt32(testInterval.nanoseconds / 1000))
-    } while (DispatchTime.now().uptimeNanoseconds < endTime)
+    } while (Time.now() < endTime)
 
     if !condition() {
         XCTFail(message)

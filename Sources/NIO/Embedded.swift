@@ -16,9 +16,9 @@ import Dispatch
 
 private final class EmbeddedScheduledTask {
     let task: () -> Void
-    let readyTime: UInt64
+    let readyTime: Time
 
-    init(readyTime: UInt64, task: @escaping () -> Void) {
+    init(readyTime: Time, task: @escaping () -> Void) {
         self.readyTime = readyTime
         self.task = task
     }
@@ -48,7 +48,7 @@ extension EmbeddedScheduledTask: Comparable {
 ///     unsynchronized fashion.
 public class EmbeddedEventLoop: EventLoop {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
-    private var now: UInt64 = 0
+	private var now: Time = .exactly(0)
 
     private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>(ascending: true)
 
@@ -59,10 +59,9 @@ public class EmbeddedEventLoop: EventLoop {
     public init() { }
 
     @discardableResult
-    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    public func scheduleTask<T>(at: Time, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = makePromise()
-        let readyTime = now + UInt64(`in`.nanoseconds)
-        let task = EmbeddedScheduledTask(readyTime: readyTime) {
+        let task = EmbeddedScheduledTask(readyTime: at) {
             do {
                 promise.succeed(result: try task())
             } catch let err {
@@ -77,11 +76,16 @@ public class EmbeddedEventLoop: EventLoop {
         return scheduled
     }
 
+    @discardableResult
+    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+        return scheduleTask(at: now + `in`, task)
+    }
+
     // We're not really running a loop here. Tasks aren't run until run() is called,
     // at which point we run everything that's been submitted. Anything newly submitted
     // either gets on that train if it's still moving or waits until the next call to run().
     public func execute(_ task: @escaping () -> Void) {
-        self.scheduleTask(in: .nanoseconds(0), task)
+        self.scheduleTask(at: now, task)
     }
 
     public func run() {
@@ -92,7 +96,7 @@ public class EmbeddedEventLoop: EventLoop {
     /// Runs the event loop and moves "time" forward by the given amount, running any scheduled
     /// tasks that need to be run.
     public func advanceTime(by: TimeAmount) {
-        let newTime = self.now + UInt64(by.nanoseconds)
+        let newTime = self.now + by
 
         while let nextTask = self.scheduledTasks.peek() {
             guard nextTask.readyTime <= newTime else {
