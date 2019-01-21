@@ -16,6 +16,8 @@
 import PackageDescription
 
 var targets: [PackageDescription.Target] = [
+    .target(name: "_NIO1APIShims",
+            dependencies: ["NIO", "NIOHTTP1", "NIOTLS"]),
     .target(name: "NIO",
             dependencies: ["CNIOLinux",
                            "CNIODarwin",
@@ -82,6 +84,7 @@ let package = Package(
                     targets: ["NIOPerformanceTester"]),
         .executable(name: "NIOMulticastChat", targets: ["NIOMulticastChat"]),
         .library(name: "NIO", targets: ["NIO"]),
+        .library(name: "_NIO1APIShims", targets: ["_NIO1APIShims"]),
         .library(name: "NIOTLS", targets: ["NIOTLS"]),
         .library(name: "NIOHTTP1", targets: ["NIOHTTP1"]),
         .library(name: "NIOConcurrencyHelpers", targets: ["NIOConcurrencyHelpers"]),
