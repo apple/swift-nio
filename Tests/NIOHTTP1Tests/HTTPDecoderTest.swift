@@ -273,6 +273,10 @@ class HTTPDecoderTest: XCTestCase {
             func handlerAdded(ctx: ChannelHandlerContext) {
                 _ = ctx.pipeline.remove(name: "decoder")
             }
+
+            func handlerRemoved(ctx: ChannelHandlerContext) {	
+                XCTAssertTrue(self.called)	
+            } 
         }
 
         class Receiver: ChannelInboundHandler {
@@ -290,10 +294,6 @@ class HTTPDecoderTest: XCTestCase {
                     // ignore
                     break
                 }
-            }
-
-            func channelInactive(ctx: ChannelHandlerContext) {
-                XCTAssertTrue(collector.called)
             }
         }
         XCTAssertNoThrow(try channel.pipeline.add(name: "decoder", handler: HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes)).wait())
