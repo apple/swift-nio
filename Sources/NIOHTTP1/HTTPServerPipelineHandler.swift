@@ -313,7 +313,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
                 // we just received the .end that we're missing so we can fall through to closing the connection
                 fallthrough
             case .quiescingLastRequestEndReceived:
-                ctx.write(data).then {
+                ctx.write(data).flatMap {
                     ctx.close()
                 }.cascade(promise: promise)
             case .acceptingEvents, .quiescingWaitingForRequestEnd:

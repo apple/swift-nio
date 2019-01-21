@@ -685,7 +685,7 @@ internal extension Selector where R == NIORegistration {
                 return closeChannel(chan)
             }
         }.map { future in
-            future.thenIfErrorThrowing { error in
+            future.flatMapErrorThrowing { error in
                 if let error = error as? ChannelError, error == .alreadyClosed {
                     return ()
                 } else {

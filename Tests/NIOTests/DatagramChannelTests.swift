@@ -18,7 +18,7 @@ import XCTest
 
 private extension Channel {
     func waitForDatagrams(count: Int) throws -> [AddressedEnvelope<ByteBuffer>] {
-        return try self.pipeline.context(name: "ByteReadRecorder").then { context in
+        return try self.pipeline.context(name: "ByteReadRecorder").flatMap { context in
             if let future = (context.handler as? DatagramReadRecorder<ByteBuffer>)?.notifyForDatagrams(count) {
                 return future
             }
