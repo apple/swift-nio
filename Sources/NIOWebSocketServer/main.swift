@@ -222,7 +222,7 @@ let bootstrap = ServerBootstrap(group: group)
                             channel.pipeline.remove(handler: httpHandler, promise: nil)
                         }
                     )
-        return channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: config).then {
+        return channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: config).flatMap {
             channel.pipeline.add(handler: httpHandler)
         }
     }

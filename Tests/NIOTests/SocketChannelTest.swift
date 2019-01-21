@@ -155,9 +155,9 @@ public class SocketChannelTest : XCTestCase {
         let promise = serverChannel.eventLoop.makePromise(of: IOError.self)
 
         XCTAssertNoThrow(try serverChannel.eventLoop.submit {
-            serverChannel.pipeline.add(handler: AcceptHandler(promise)).then {
+            serverChannel.pipeline.add(handler: AcceptHandler(promise)).flatMap {
                 serverChannel.register()
-            }.then {
+            }.flatMap {
                 serverChannel.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 0))
             }
         }.wait().wait() as Void)
@@ -237,11 +237,11 @@ public class SocketChannelTest : XCTestCase {
                                                                eventLoop: eventLoop as! SelectableEventLoop))
         let promise = channel.eventLoop.makePromise(of: Void.self)
 
-        XCTAssertNoThrow(try channel.pipeline.add(handler: ActiveVerificationHandler(promise)).then {
+        XCTAssertNoThrow(try channel.pipeline.add(handler: ActiveVerificationHandler(promise)).flatMap {
             channel.register()
-        }.then {
+        }.flatMap {
             channel.connect(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 9999))
-        }.then {
+        }.flatMap {
             channel.close()
         }.wait())
 
@@ -320,7 +320,7 @@ public class SocketChannelTest : XCTestCase {
         buffer.write(staticString: "hello")
         let writeFut = clientChannel.write(buffer).map {
             XCTFail("Must not succeed")
-        }.thenIfError { error in
+        }.flatMapError { error in
             XCTAssertEqual(error as? ChannelError, ChannelError.ioOnClosedChannel)
             return clientChannel.close()
         }

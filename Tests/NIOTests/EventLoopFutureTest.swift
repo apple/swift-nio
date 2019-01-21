@@ -478,7 +478,7 @@ class EventLoopFutureTest : XCTestCase {
         let p = eventLoop.makePromise(of: String.self)
         p.futureResult.map {
             $0.count
-        }.thenThrowing {
+        }.flatMapThrowing {
             1 + $0
         }.whenSuccess {
             ran = true
@@ -497,7 +497,7 @@ class EventLoopFutureTest : XCTestCase {
         let p = eventLoop.makePromise(of: String.self)
         p.futureResult.map {
             $0.count
-        }.thenThrowing { (x: Int) throws -> Int in
+        }.flatMapThrowing { (x: Int) throws -> Int in
             XCTAssertEqual(5, x)
             throw DummyError.dummyError
         }.map { (x: Int) -> Int in
@@ -511,7 +511,7 @@ class EventLoopFutureTest : XCTestCase {
         XCTAssertTrue(ran)
     }
 
-    func testThenIfErrorThrowingWhichDoesNotThrow() {
+    func testflatMapErrorThrowingWhichDoesNotThrow() {
         enum DummyError: Error, Equatable {
             case dummyError
         }
@@ -520,10 +520,10 @@ class EventLoopFutureTest : XCTestCase {
         let p = eventLoop.makePromise(of: String.self)
         p.futureResult.map {
             $0.count
-        }.thenIfErrorThrowing {
+        }.flatMapErrorThrowing {
             XCTAssertEqual(.some(DummyError.dummyError), $0 as? DummyError)
             return 5
-        }.thenIfErrorThrowing { (_: Error) in
+        }.flatMapErrorThrowing { (_: Error) in
             XCTFail("shouldn't have been called")
             return 5
         }.whenSuccess {
@@ -534,7 +534,7 @@ class EventLoopFutureTest : XCTestCase {
         XCTAssertTrue(ran)
     }
 
-    func testThenIfErrorThrowingWhichDoesThrow() {
+    func testflatMapErrorThrowingWhichDoesThrow() {
         enum DummyError: Error, Equatable {
             case dummyError1
             case dummyError2
@@ -544,7 +544,7 @@ class EventLoopFutureTest : XCTestCase {
         let p = eventLoop.makePromise(of: String.self)
         p.futureResult.map {
             $0.count
-        }.thenIfErrorThrowing { (x: Error) throws -> Int in
+        }.flatMapErrorThrowing { (x: Error) throws -> Int in
             XCTAssertEqual(.some(DummyError.dummyError1), x as? DummyError)
             throw DummyError.dummyError2
         }.map { (x: Int) -> Int in
@@ -583,7 +583,7 @@ class EventLoopFutureTest : XCTestCase {
         var prev: EventLoopFuture<Int> = elg.next().makeSucceededFuture(result: 0)
         (1..<20).forEach { (i: Int) in
             let p = elg.next().makePromise(of: Int.self)
-            prev.then { (i2: Int) -> EventLoopFuture<Int> in
+            prev.flatMap { (i2: Int) -> EventLoopFuture<Int> in
                 XCTAssertEqual(i - 1, i2)
                 p.succeed(result: i)
                 return p.futureResult
@@ -605,7 +605,7 @@ class EventLoopFutureTest : XCTestCase {
         var prev: EventLoopFuture<Int> = elg.next().makeSucceededFuture(result: 0)
         (1..<n).forEach { (i: Int) in
             let p = elg.next().makePromise(of: Int.self)
-            prev.then { (i2: Int) -> EventLoopFuture<Int> in
+            prev.flatMap { (i2: Int) -> EventLoopFuture<Int> in
                 XCTAssertEqual(i - 1, i2)
                 if i == n/2 {
                     p.fail(error: DummyError.dummy)
@@ -613,7 +613,7 @@ class EventLoopFutureTest : XCTestCase {
                     p.succeed(result: i)
                 }
                 return p.futureResult
-            }.thenIfError { error in
+            }.flatMapError { error in
                 p.fail(error: error)
                 return p.futureResult
             }.whenSuccess { i2 in
@@ -801,7 +801,7 @@ class EventLoopFutureTest : XCTestCase {
         XCTAssertFalse(loop1 === loop2)
 
         let failingPromise = loop2.makePromise(of: Void.self)
-        let failingFuture = failingPromise.futureResult.thenIfErrorThrowing { error in
+        let failingFuture = failingPromise.futureResult.flatMapErrorThrowing { error in
             XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
             XCTAssertTrue(loop2.inEventLoop)
             throw error

@@ -112,7 +112,7 @@ private extension Channel {
     func state() -> ConnectRecorder.State {
         return try! self.pipeline.context(name: CONNECT_RECORDER).map {
             ($0.handler as! ConnectRecorder).state
-        }.thenIfErrorThrowing {
+        }.flatMapErrorThrowing {
             switch $0 {
             case ChannelPipelineError.notFound:
                 return .closed
@@ -236,7 +236,7 @@ private func buildEyeballer(host: String,
 public class HappyEyeballsTest : XCTestCase {
     func testIPv4OnlyResolution() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
-        let targetFuture = eyeballer.resolveAndConnect().thenThrowing { (channel) -> String? in
+        let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in
             let target = channel.connectTarget()
             _ = try (channel as! EmbeddedChannel).finish()
             return target
@@ -260,7 +260,7 @@ public class HappyEyeballsTest : XCTestCase {
 
     func testIPv6OnlyResolution() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
-        let targetFuture = eyeballer.resolveAndConnect().thenThrowing { (channel) -> String? in
+        let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in
             let target = channel.connectTarget()
             _ = try (channel as! EmbeddedChannel).finish()
             return target
@@ -316,7 +316,7 @@ public class HappyEyeballsTest : XCTestCase {
 
     func testAAAAQueryReturningFirst() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
-        let targetFuture = eyeballer.resolveAndConnect().thenThrowing { (channel) -> String? in
+        let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in
             let target = channel.connectTarget()
             _ = try (channel as! EmbeddedChannel).finish()
             return target
@@ -348,7 +348,7 @@ public class HappyEyeballsTest : XCTestCase {
 
     func testAQueryReturningFirstDelayElapses() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
-        let targetFuture = eyeballer.resolveAndConnect().thenThrowing { (channel) -> String? in
+        let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in
             let target = channel.connectTarget()
             _ = try (channel as! EmbeddedChannel).finish()
             return target
@@ -390,7 +390,7 @@ public class HappyEyeballsTest : XCTestCase {
 
     func testAQueryReturningFirstThenAAAAReturns() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
-        let targetFuture = eyeballer.resolveAndConnect().thenThrowing { (channel) -> String? in
+        let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in
             let target = channel.connectTarget()
             _ = try (channel as! EmbeddedChannel).finish()
             return target
@@ -424,7 +424,7 @@ public class HappyEyeballsTest : XCTestCase {
 
     func testAQueryReturningFirstThenAAAAErrors() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
-        let targetFuture = eyeballer.resolveAndConnect().thenThrowing { (channel) -> String? in
+        let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in
             let target = channel.connectTarget()
             _ = try (channel as! EmbeddedChannel).finish()
             return target
@@ -458,7 +458,7 @@ public class HappyEyeballsTest : XCTestCase {
 
     func testAQueryReturningFirstThenEmptyAAAA() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
-        let targetFuture = eyeballer.resolveAndConnect().thenThrowing { (channel) -> String? in
+        let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in
             let target = channel.connectTarget()
             _ = try (channel as! EmbeddedChannel).finish()
             return target
