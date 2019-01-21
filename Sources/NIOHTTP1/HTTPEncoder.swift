@@ -161,7 +161,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler {
 ///
 /// This channel handler is used to translate messages from a series of
 /// `HTTPServerResponsePart` into the HTTP/1.1 wire format.
-public final class HTTPResponseEncoder: ChannelOutboundHandler {
+public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannelHandler {
     public typealias OutboundIn = HTTPServerResponsePart
     public typealias OutboundOut = IOData
 

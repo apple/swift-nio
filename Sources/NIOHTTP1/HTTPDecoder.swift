@@ -143,7 +143,7 @@ private protocol AnyHTTPDecoder: class {
 /// `ChannelPipeline` than the `HTTPResponseEncoder`.
 ///
 /// Rather than set this up manually, consider using `ChannelPipeline.addHTTPServerHandlers`.
-public final class HTTPRequestDecoder: HTTPDecoder<HTTPServerRequestPart> {
+public final class HTTPRequestDecoder: HTTPDecoder<HTTPServerRequestPart>, RemovableChannelHandler {
     public convenience init() {
         self.init(leftOverBytesStrategy: .dropBytes)
     }

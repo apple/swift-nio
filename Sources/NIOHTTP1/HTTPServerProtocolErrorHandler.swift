@@ -21,7 +21,7 @@ import NIO
 /// servers want. This handler does not suppress the parser errors: it allows them to
 /// continue to pass through the pipeline so that other handlers (e.g. logging ones) can
 /// deal with the error.
-public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler {
+public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler, RemovableChannelHandler {
     public typealias InboundIn = HTTPServerRequestPart
     public typealias InboundOut = HTTPServerRequestPart
     public typealias OutboundIn = HTTPServerResponsePart

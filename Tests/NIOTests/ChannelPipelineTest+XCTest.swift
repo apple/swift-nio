@@ -52,6 +52,7 @@ extension ChannelPipelineTest {
                 ("testRemovingByReferenceWithPromiseStillInChannel", testRemovingByReferenceWithPromiseStillInChannel),
                 ("testRemovingByReferenceWithFutureNotInChannel", testRemovingByReferenceWithFutureNotInChannel),
                 ("testFireChannelReadInInactiveChannelDoesNotCrash", testFireChannelReadInInactiveChannelDoesNotCrash),
+                ("testTeardownDuringFormalRemovalProcess", testTeardownDuringFormalRemovalProcess),
            ]
    }
 }

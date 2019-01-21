@@ -57,7 +57,7 @@ internal func debugOnly(_ body: () -> Void) {
 /// or during a request body upload, it will be delivered immediately. If a half-close is
 /// received immediately after `HTTPServerRequestPart.end`, it will also be passed along
 /// immediately, allowing this signal to be seen by the HTTP server as early as possible.
-public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
+public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableChannelHandler {
     public typealias InboundIn = HTTPServerRequestPart
     public typealias InboundOut = HTTPServerRequestPart
     public typealias OutboundIn = HTTPServerResponsePart

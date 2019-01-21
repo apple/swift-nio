@@ -309,3 +309,37 @@ extension _ChannelInboundHandler {
     }
 }
 
+/// A `RemovableChannelHandler` is a `ChannelHandler` that can be dynamically removed from a `ChannelPipeline` whilst
+/// the `Channel` is operating normally.
+/// A `RemovableChannelHandler` is required to remove itself from the `ChannelPipline` (using
+/// `ChannelHandlerContext.removeHandler`) as soon as possible.
+///
+/// - note: When a `Channel` gets torn down, every `ChannelHandler` in the `Channel`'s `ChannelPipeline` will be
+///         removed from the `ChannelPipeline`. Those removals however happen synchronously and are not going through
+///         the methods of this protocol.
+public protocol RemovableChannelHandler: ChannelHandler {
+    /// Ask the receiving `RemovableChannelHandler` to remove itself from the `ChannelPipeline` as soon as possible.
+    /// The receiving `RemovableChannelHandler` may elect to remove itself sometime after this method call, rather than
+    /// immediately, but if it does so it must take the necessary precautions to handle events arriving between the
+    /// invocation of this method and the call to `ChannelHandlerContext.removeHandler` that triggers the actual
+    /// removal.
+    ///
+    /// - note: Like the other `ChannelHandler` methods, this method should not be invoked by the user directly. To
+    ///         remove a `RemovableChannelHandler` from the `ChannelPipeline`, use `ChannelPipeline.remove`.
+    ///
+    /// - parameters:
+    ///    - ctx: The `ChannelHandlerContext` of the `RemovableChannelHandler` to be removed from the `ChannelPipeline`.
+    ///    - removalToken: The removal token to hand to `ChannelHandlerContext.removeHandler` to trigger the actual
+    ///                    removal from the `ChannelPipeline`.
+    func removeHandler(ctx: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken)
+}
+
+extension RemovableChannelHandler {
+    // Implements the default behaviour which is to synchronously remove the handler from the pipeline. Thanks to this,
+    // stateless `ChannelHandler`s can just use `RemovableChannelHandler` as a marker-protocol and declare themselves
+    // as removable without writing any extra code.
+    public func removeHandler(ctx: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
+        precondition(ctx.handler === self)
+        ctx.leavePipeline(removalToken: removalToken)
+    }
+}

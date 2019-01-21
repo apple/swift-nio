@@ -59,7 +59,7 @@ public protocol HTTPServerProtocolUpgrader {
 /// sufficiently difficult to ensure that the upgrade happens at a safe time while dealing with pipelined
 /// requests that we choose to punt on it entirely and not allow it. As it happens this is mostly fine:
 /// the odds of someone needing to upgrade midway through the lifetime of a connection are very low.
-public class HTTPServerUpgradeHandler: ChannelInboundHandler {
+public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHandler {
     public typealias InboundIn = HTTPServerRequestPart
     public typealias InboundOut = HTTPServerRequestPart
     public typealias OutboundOut = HTTPServerResponsePart
@@ -68,7 +68,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     private let upgradeCompletionHandler: (ChannelHandlerContext) -> Void
 
     private let httpEncoder: HTTPResponseEncoder?
-    private let extraHTTPHandlers: [ChannelHandler]
+    private let extraHTTPHandlers: [RemovableChannelHandler]
 
     /// Whether we've already seen the first request.
     private var seenFirstRequest = false
@@ -88,7 +88,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     ///     this should include the `HTTPDecoder`, but should also include any other handler that cannot tolerate
     ///     receiving non-HTTP data.
     /// - Parameter upgradeCompletionHandler: A block that will be fired when HTTP upgrade is complete.
-    public init(upgraders: [HTTPServerProtocolUpgrader], httpEncoder: HTTPResponseEncoder, extraHTTPHandlers: [ChannelHandler], upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) {
+    public init(upgraders: [HTTPServerProtocolUpgrader], httpEncoder: HTTPResponseEncoder, extraHTTPHandlers: [RemovableChannelHandler], upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) {
         var upgraderMap = [String: HTTPServerProtocolUpgrader]()
         for upgrader in upgraders {
             upgraderMap[upgrader.supportedProtocol.lowercased()] = upgrader
@@ -189,7 +189,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
                     self.sendUpgradeResponse(ctx: ctx, upgradeRequest: request, responseHeaders: responseHeaders)
                 }.flatMap {
                     self.removeHandler(ctx: ctx, handler: self.httpEncoder)
-                }.map { (_: Bool) in
+                }.map {
                     self.upgradeCompletionHandler(ctx)
                 }.flatMap {
                     upgrader.upgrade(ctx: ctx, upgradeRequest: request)
@@ -235,11 +235,11 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     }
 
     /// Removes the given channel handler from the channel pipeline.
-    private func removeHandler(ctx: ChannelHandlerContext, handler: ChannelHandler?) -> EventLoopFuture<Bool> {
+    private func removeHandler(ctx: ChannelHandlerContext, handler: RemovableChannelHandler?) -> EventLoopFuture<Void> {
         if let handler = handler {
             return ctx.pipeline.remove(handler: handler)
         } else {
-            return ctx.eventLoop.makeSucceededFuture(true)
+            return ctx.eventLoop.makeSucceededFuture(())
         }
     }
 
@@ -249,7 +249,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
             return ctx.eventLoop.makeSucceededFuture(())
         }
 
-        return .andAllSucceed(self.extraHTTPHandlers.map { ctx.pipeline.remove(handler: $0).map { (_: Bool) in () }},
+        return .andAllSucceed(self.extraHTTPHandlers.map { ctx.pipeline.remove(handler: $0) },
                               on: ctx.eventLoop)
     }
 }

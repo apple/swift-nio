@@ -355,8 +355,8 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - handler: the `ChannelHandler` to remove.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
-    public func remove(handler: ChannelHandler) -> EventLoopFuture<Bool> {
-        let promise = self.eventLoop.makePromise(of: Bool.self)
+    public func remove(handler: RemovableChannelHandler) -> EventLoopFuture<Void> {
+        let promise = self.eventLoop.makePromise(of: Void.self)
         self.remove(handler: handler, promise: promise)
         return promise.futureResult
     }
@@ -366,8 +366,8 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - name: the name that was used to add the `ChannelHandler` to the `ChannelPipeline` before.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
-    public func remove(name: String) -> EventLoopFuture<Bool> {
-        let promise = self.eventLoop.makePromise(of: Bool.self)
+    public func remove(name: String) -> EventLoopFuture<Void> {
+        let promise = self.eventLoop.makePromise(of: Void.self)
         self.remove(name: name, promise: promise)
         return promise.futureResult
     }
@@ -377,8 +377,8 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - ctx: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
-    public func remove(ctx: ChannelHandlerContext) -> EventLoopFuture<Bool> {
-        let promise = self.eventLoop.makePromise(of: Bool.self)
+    public func remove(ctx: ChannelHandlerContext) -> EventLoopFuture<Void> {
+        let promise = self.eventLoop.makePromise(of: Void.self)
         self.remove(ctx: ctx, promise: promise)
         return promise.futureResult
     }
@@ -388,7 +388,7 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - handler: the `ChannelHandler` to remove.
     ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
-    public func remove(handler: ChannelHandler, promise: EventLoopPromise<Bool>?) {
+    public func remove(handler: RemovableChannelHandler, promise: EventLoopPromise<Void>?) {
         let contextFuture = self.context0 {
             return $0.handler === handler
         }.map { ctx in
@@ -403,7 +403,7 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - name: the name that was used to add the `ChannelHandler` to the `ChannelPipeline` before.
     ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
-    public func remove(name: String, promise: EventLoopPromise<Bool>?) {
+    public func remove(name: String, promise: EventLoopPromise<Void>?) {
         let contextFuture = self.context0 {
             $0.name == name
         }.map { ctx in
@@ -418,12 +418,16 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - ctx: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
     ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
-    public func remove(ctx: ChannelHandlerContext, promise: EventLoopPromise<Bool>?) {
+    public func remove(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+        guard let handler = ctx.handler as? RemovableChannelHandler else {
+            promise?.fail(ChannelError.unremovableHandler)
+            return
+        }
         if self.eventLoop.inEventLoop {
-            self.remove0(ctx: ctx, promise: promise)
+            handler.removeHandler(ctx: ctx, removalToken: .init(promise: promise))
         } else {
             self.eventLoop.execute {
-                self.remove0(ctx: ctx, promise: promise)
+                handler.removeHandler(ctx: ctx, removalToken: .init(promise: promise))
             }
         }
     }
@@ -500,7 +504,7 @@ public final class ChannelPipeline: ChannelInvoker {
     }
 
     /// Remove a `ChannelHandlerContext` from the `ChannelPipeline`. Must only be called from within the `EventLoop`.
-    private func remove0(ctx: ChannelHandlerContext, promise: EventLoopPromise<Bool>?) {
+    internal func remove0(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
 
         let nextCtx = ctx.next
@@ -514,7 +518,7 @@ public final class ChannelPipeline: ChannelInvoker {
 
         do {
             try ctx.invokeHandlerRemoved()
-            promise?.succeed(true)
+            promise?.succeed(())
         } catch let err {
             promise?.fail(err)
         }
@@ -1468,6 +1472,27 @@ public final class ChannelHandlerContext: ChannelInvoker {
         self.eventLoop.assertInEventLoop()
 
         handler.handlerRemoved(ctx: self)
+    }
+}
+
+extension ChannelHandlerContext {
+    /// A `RemovalToken` is handed to a `RemovableChannelHandler` when its `removeHandler` function is invoked. A
+    /// `RemovableChannelHandler` is then required to remove itself from the `ChannelPipeline`. The removal process
+    /// is finalized by handing the `RemovalToken` to the `ChannelHandlerContext.leavePipeline` function.
+    public struct RemovalToken {
+        internal let promise: EventLoopPromise<Void>?
+    }
+
+    /// Synchronously remove the `ChannelHandler` with the given `ChannelHandlerContext`.
+    ///
+    /// - note: This function must only be used from a `RemovableChannelHandler` to remove itself. Calling this method
+    ///         on any other `ChannelHandlerContext` leads to undefined behaviour.
+    ///
+    /// - parameters:
+    ///    - removalToken: The removal token received from `RemovableChannelHandler.removeHandler`
+    public func leavePipeline(removalToken: RemovalToken) {
+        self.eventLoop.preconditionInEventLoop()
+        self.pipeline.remove0(ctx: self, promise: removalToken.promise)
     }
 }
 

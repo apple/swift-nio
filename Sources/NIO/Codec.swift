@@ -251,6 +251,12 @@ public class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
         case last
     }
 
+    private enum RemovalState {
+        case notBeingRemoved
+        case removalStarted
+        case removalCompleted
+    }
+
     private enum State {
         case active
         case leftoversNeedProcessing
@@ -259,6 +265,7 @@ public class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
 
     internal private(set) var decoder: Decoder? // only `nil` if we're already decoding (ie. we're re-entered)
     private var state: State = .active
+    private var removalState: RemovalState = .notBeingRemoved
     private var buffer: B2MDBuffer = B2MDBuffer()
 
     public init(_ decoder: Decoder) {
@@ -266,7 +273,8 @@ public class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     }
 
     deinit {
-        assert(self.state == .done)
+        assert(self.removalState == .removalCompleted, "illegal state in deinit: removalState = \(self.removalState)")
+        assert(self.state == .done, "illegal state in deinit: state = \(self.state)")
     }
 }
 
@@ -321,7 +329,7 @@ extension ByteToMessageHandler {
     }
 
     private func decodeLoop(ctx: ChannelHandlerContext, decodeMode: DecodeMode) throws -> B2MDBuffer.BufferProcessingResult {
-        while true {
+        while decodeMode == .last || self.removalState == .notBeingRemoved {
             let result = try self.withNextBuffer { decoder, buffer in
                 if decodeMode == .normal {
                     return try decoder.decode(ctx: ctx, buffer: &buffer)
@@ -338,6 +346,7 @@ extension ByteToMessageHandler {
                 return .cannotProcessReentrantly
             }
         }
+        return .didProcess(.continue)
     }
 }
 
@@ -351,7 +360,10 @@ extension ByteToMessageHandler: ChannelInboundHandler {
 
 
     public func handlerRemoved(ctx: ChannelHandlerContext) {
-        self.processLeftovers(ctx: ctx)
+        // very likely, the removal state is `.notBeingRemoved` or `.removalCompleted` here but we can't assert it
+        // because the pipeline might be torn down during the formal removal process.
+        self.removalState = .removalCompleted
+        self.state = .done
     }
 
     /// Calls `decode` until there is nothing left to decode.
@@ -428,5 +440,19 @@ extension MessageToByteEncoder {
     /// Default implementation which just allocates a `ByteBuffer` with capacity of `256`.
     public func allocateOutBuffer(ctx: ChannelHandlerContext, data: OutboundIn) throws -> ByteBuffer {
         return ctx.channel.allocator.buffer(capacity: 256)
+    }
+}
+
+extension ByteToMessageHandler: RemovableChannelHandler {
+    public func removeHandler(ctx: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
+        precondition(self.removalState == .notBeingRemoved)
+        self.removalState = .removalStarted
+        ctx.eventLoop.execute {
+            self.processLeftovers(ctx: ctx)
+            assert(self.state != .leftoversNeedProcessing)
+            assert(self.removalState == .removalStarted)
+            self.removalState = .removalCompleted
+            ctx.leavePipeline(removalToken: removalToken)
+        }
     }
 }
