@@ -94,11 +94,33 @@ extension EventLoop {
 }
 
 extension EventLoopFuture {
-    @available(*, deprecated, message: "whenComplete now gets Result<T, Error>")
+    @available(*, deprecated, renamed: "Value")
+    public typealias T = Value
+
+    @available(*, deprecated, message: "whenComplete now gets Result<Value, Error>")
     public func whenComplete(_ body: @escaping () -> Void) {
         self.whenComplete { (_: Result) in
             body()
         }
+    }
+
+    @available(*, deprecated, renamed: "flatMap")
+    public func then<U>(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Value) -> EventLoopFuture<U>) -> EventLoopFuture<U> {
+        return self.flatMap(file: file, line: line, callback)
+    }
+
+    @available(*, deprecated, renamed: "flatMapThrowing")
+    public func thenThrowing<U>(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Value) throws -> U) -> EventLoopFuture<U> {
+        return self.flatMapThrowing(file: file, line: line, callback)
+    }
+
+    @available(*, deprecated, renamed: "flatMapError")
+    public func thenIfError(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) -> EventLoopFuture<Value>) -> EventLoopFuture<Value> {
+        return self.flatMapError(file: file, line: line, callback)
+    }
+
+    public func thenIfErrorThrowing(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) throws -> Value) -> EventLoopFuture<Value> {
+        return self.flatMapErrorThrowing(file: file, line: line, callback)
     }
 }
 
