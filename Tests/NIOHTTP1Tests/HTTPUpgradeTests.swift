@@ -83,7 +83,7 @@ private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
         .childChannelInitializer { channel in
             p.succeed(result: channel)
             let upgradeConfig = (upgraders: upgraders, completionHandler: upgradeCompletionHandler)
-            return channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: pipelining, withServerUpgrade: upgradeConfig).then {
+            return channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: pipelining, withServerUpgrade: upgradeConfig).flatMap {
                 let futureResults = extraHandlers.map { channel.pipeline.add(handler: $0) }
                 return EventLoopFuture<Void>.andAll(futureResults, eventLoop: channel.eventLoop)
             }
@@ -151,7 +151,7 @@ internal func assertResponseIs(response: String, expectedResponseLine: String, e
 
     // For each header, find it in the actual response headers and remove it.
     for expectedHeader in expectedResponseHeaders {
-        guard let index = lines.index(of: expectedHeader) else {
+        guard let index = lines.firstIndex(of: expectedHeader) else {
             XCTFail("Could not find header \"\(expectedHeader)\"")
             return
         }

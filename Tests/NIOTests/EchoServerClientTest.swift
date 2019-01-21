@@ -75,7 +75,7 @@ class EchoServerClientTest : XCTestCase {
         let promise = group.next().makePromise(of: ByteBuffer.self)
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: "X")).then { v2 in
+                channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: "X")).flatMap { v2 in
                     channel.pipeline.add(handler: ByteCountingHandler(numBytes: 10000, promise: promise))
                 }
             }
@@ -350,7 +350,7 @@ class EchoServerClientTest : XCTestCase {
                     default:
                         XCTFail("unexpected error: \(err)")
                     }
-                }.whenComplete {
+                }.whenComplete { (_: Result<Void, Error>) in
                     self.channelInactivePromise.succeed(result: ())
                 }
             }
@@ -370,7 +370,7 @@ class EchoServerClientTest : XCTestCase {
                     default:
                         XCTFail("unexpected error: \(err)")
                     }
-                }.whenComplete {
+                }.whenComplete { (_: Result<Void, Error>) in
                     self.channelUnregisteredPromise.succeed(result: ())
                 }
             }
@@ -444,7 +444,7 @@ class EchoServerClientTest : XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 // When we've received all the bytes we know the connection is up. Remove the handler.
-                _ = bytesReceivedPromise.futureResult.then { (_: ByteBuffer) in
+                _ = bytesReceivedPromise.futureResult.flatMap { (_: ByteBuffer) in
                     channel.pipeline.remove(handler: byteCountingHandler)
                 }
 
@@ -498,7 +498,7 @@ class EchoServerClientTest : XCTestCase {
         let promise = group.next().makePromise(of: ByteBuffer.self)
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite)).then {
+                channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite)).flatMap {
                     channel.pipeline.add(handler: ByteCountingHandler(numBytes: stringToWrite.utf8.count, promise: promise))
                 }
             }
@@ -603,7 +603,7 @@ class EchoServerClientTest : XCTestCase {
             }
 
             private func writeUntilFailed(_ ctx: ChannelHandlerContext, _ buffer: ByteBuffer) {
-                ctx.writeAndFlush(NIOAny(buffer)).whenComplete {
+                ctx.writeAndFlush(NIOAny(buffer)).whenComplete { (_: Result<Void, Error>) in
                     ctx.eventLoop.execute {
                         self.writeUntilFailed(ctx, buffer)
                     }
@@ -627,15 +627,15 @@ class EchoServerClientTest : XCTestCase {
                 buffer.write(string: str)
 
                 // write it four times and then close the connect.
-                ctx.writeAndFlush(NIOAny(buffer)).then {
+                ctx.writeAndFlush(NIOAny(buffer)).flatMap {
                     ctx.writeAndFlush(NIOAny(buffer))
-                }.then {
+                }.flatMap {
                     ctx.writeAndFlush(NIOAny(buffer))
-                }.then {
+                }.flatMap {
                     ctx.writeAndFlush(NIOAny(buffer))
-                }.then {
+                }.flatMap {
                     ctx.close()
-                }.whenComplete {
+                }.whenComplete { (_: Result<Void, Error>) in
                     self.dpGroup.leave()
                 }
             }
@@ -656,7 +656,7 @@ class EchoServerClientTest : XCTestCase {
             //.channelOption(ChannelOptions.autoRead, value: false)
             .channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 2))
             .channelInitializer { channel in
-                channel.pipeline.add(handler: WriteHandler()).then {
+                channel.pipeline.add(handler: WriteHandler()).flatMap {
                     channel.pipeline.add(handler: countingHandler)
                 }
             }.connect(to: serverChannel.localAddress!).wait())
@@ -738,8 +738,8 @@ class EchoServerClientTest : XCTestCase {
                 serverChannel = try ServerBootstrap(group: group)
                     .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
                     .childChannelInitializer { channel in
-                        acceptedRemotePort.store(channel.remoteAddress?.port.map(Int.init) ?? -3)
-                        acceptedLocalPort.store(channel.localAddress?.port.map(Int.init) ?? -4)
+                        acceptedRemotePort.store(channel.remoteAddress?.port ?? -3)
+                        acceptedLocalPort.store(channel.localAddress?.port ?? -4)
                         sem.signal()
                         return channel.eventLoop.makeSucceededFuture(result: ())
                     }.bind(host: host, port: 0).wait()
@@ -769,8 +769,8 @@ class EchoServerClientTest : XCTestCase {
             }
             sem.wait()
             XCTAssertEqual(serverChannel.localAddress?.port, clientChannel.remoteAddress?.port)
-            XCTAssertEqual(acceptedLocalPort.load(), clientChannel.remoteAddress?.port.map(Int.init) ?? -5)
-            XCTAssertEqual(acceptedRemotePort.load(), clientChannel.localAddress?.port.map(Int.init) ?? -6)
+            XCTAssertEqual(acceptedLocalPort.load(), clientChannel.remoteAddress?.port ?? -5)
+            XCTAssertEqual(acceptedRemotePort.load(), clientChannel.localAddress?.port ?? -6)
         }
         XCTAssertTrue(atLeastOneSucceeded)
     }
@@ -801,7 +801,7 @@ class EchoServerClientTest : XCTestCase {
         // but we're trying to connect to (depending on the system configuration and resolver) IPv4 and IPv6
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .connect(host: "localhost", port: Int(serverChannel.localAddress!.port!))
-            .thenIfError {
+            .flatMapError {
                 promise.fail(error: $0)
                 return group.next().makeFailedFuture(error: $0)
             }

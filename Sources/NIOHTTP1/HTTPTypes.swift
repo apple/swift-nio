@@ -263,20 +263,7 @@ public enum HTTPPart<HeadT: Equatable, BodyT: Equatable> {
     case end(HTTPHeaders?)
 }
 
-extension HTTPPart: Equatable {
-    public static func ==(lhs: HTTPPart, rhs: HTTPPart) -> Bool {
-        switch (lhs, rhs) {
-        case (.head(let h1), .head(let h2)):
-            return h1 == h2
-        case (.body(let b1), .body(let b2)):
-            return b1 == b2
-        case (.end(let h1), .end(let h2)):
-            return h1 == h2
-        case (.head, _), (.body, _), (.end, _):
-            return false
-        }
-    }
-}
+extension HTTPPart: Equatable {}
 
 /// The components of a HTTP request from the view of a HTTP client.
 public typealias HTTPClientRequestPart = HTTPPart<HTTPRequestHead, IOData>
@@ -589,10 +576,10 @@ public struct HTTPHeaders: CustomStringConvertible {
             self._storage = self._storage.copy()
         }
         let nameStart = self.buffer.writerIndex
-        let nameLength = self._storage.buffer.write(string: name)!
+        let nameLength = self._storage.buffer.write(string: name)
         self._storage.buffer.write(staticString: headerSeparator)
         let valueStart = self.buffer.writerIndex
-        let valueLength = self._storage.buffer.write(string: value)!
+        let valueLength = self._storage.buffer.write(string: value)
         
         let nameIdx = HTTPHeaderIndex(start: nameStart, length: nameLength)
         self._storage.headers.append(HTTPHeader(name: nameIdx, value: HTTPHeaderIndex(start: valueStart, length: valueLength)))
@@ -828,81 +815,6 @@ public enum HTTPMethod: Equatable {
         case unlikely
     }
 
-    public static func ==(lhs: HTTPMethod, rhs: HTTPMethod) -> Bool {
-        switch (lhs, rhs){
-        case (.GET, .GET):
-            return true
-        case (.PUT, .PUT):
-            return true
-        case (.ACL, .ACL):
-            return true
-        case (.HEAD, .HEAD):
-            return true
-        case (.POST, .POST):
-            return true
-        case (.COPY, .COPY):
-            return true
-        case (.LOCK, .LOCK):
-            return true
-        case (.MOVE, .MOVE):
-            return true
-        case (.BIND, .BIND):
-            return true
-        case (.LINK, .LINK):
-            return true
-        case (.PATCH, .PATCH):
-            return true
-        case (.TRACE, .TRACE):
-            return true
-        case (.MKCOL, .MKCOL):
-            return true
-        case (.MERGE, .MERGE):
-            return true
-        case (.PURGE, .PURGE):
-            return true
-        case (.NOTIFY, .NOTIFY):
-            return true
-        case (.SEARCH, .SEARCH):
-            return true
-        case (.UNLOCK, .UNLOCK):
-            return true
-        case (.REBIND, .REBIND):
-            return true
-        case (.UNBIND, .UNBIND):
-            return true
-        case (.REPORT, .REPORT):
-            return true
-        case (.DELETE, .DELETE):
-            return true
-        case (.UNLINK, .UNLINK):
-            return true
-        case (.CONNECT, .CONNECT):
-            return true
-        case (.MSEARCH, .MSEARCH):
-            return true
-        case (.OPTIONS, .OPTIONS):
-            return true
-        case (.PROPFIND, .PROPFIND):
-            return true
-        case (.CHECKOUT, .CHECKOUT):
-            return true
-        case (.PROPPATCH, .PROPPATCH):
-            return true
-        case (.SUBSCRIBE, .SUBSCRIBE):
-            return true
-        case (.MKCALENDAR, .MKCALENDAR):
-            return true
-        case (.MKACTIVITY, .MKACTIVITY):
-            return true
-        case (.UNSUBSCRIBE, .UNSUBSCRIBE):
-            return true
-        case (.RAW(let l), .RAW(let r)):
-            return l == r
-        default:
-            return false
-        }
-    }
-
     case GET
     case PUT
     case ACL
@@ -955,24 +867,38 @@ public enum HTTPMethod: Equatable {
 
 /// A structure representing a HTTP version.
 public struct HTTPVersion: Equatable {
-    public static func ==(lhs: HTTPVersion, rhs: HTTPVersion) -> Bool {
-        return lhs.major == rhs.major && lhs.minor == rhs.minor
-    }
-
     /// Create a HTTP version.
     ///
     /// - Parameter major: The major version number.
     /// - Parameter minor: The minor version number.
-    public init(major: UInt16, minor: UInt16) {
-        self.major = major
-        self.minor = minor
+    public init(major: Int, minor: Int) {
+        self._major = UInt16(major)
+        self._minor = UInt16(minor)
     }
 
+    private var _minor: UInt16
+    private var _major: UInt16
+
     /// The major version number.
-    public let major: UInt16
+    public var major: Int {
+        get {
+            return Int(self._major)
+        }
+        set {
+            self._major = UInt16(newValue)
+        }
+    }
 
     /// The minor version number.
-    public let minor: UInt16
+    public var minor: Int {
+        get {
+            return Int(self._minor)
+        }
+        set {
+            self._minor = UInt16(newValue)
+        }
+    }
+
 }
 
 extension HTTPParserError: CustomDebugStringConvertible {

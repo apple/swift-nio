@@ -124,19 +124,19 @@ class ChannelPipelineTest: XCTestCase {
 
     func testConnectingDoesntCallBind() throws {
         let channel = EmbeddedChannel()
-        var ipv4SocketAddress = sockaddr_in()
-        ipv4SocketAddress.sin_port = (12345 as UInt16).bigEndian
-        let sa = SocketAddress(ipv4SocketAddress, host: "foobar.com")
-
-        _ = try channel.pipeline.add(handler: NoBindAllowed()).wait()
-        _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<ByteBuffer, ByteBuffer> { data in
-            data
-        }).wait()
-
-        _ = try channel.connect(to: sa).wait()
         defer {
             XCTAssertFalse(try channel.finish())
         }
+        var ipv4SocketAddress = sockaddr_in()
+        ipv4SocketAddress.sin_port = (12345 as in_port_t).bigEndian
+        let sa = SocketAddress(ipv4SocketAddress, host: "foobar.com")
+
+        XCTAssertNoThrow(try channel.pipeline.add(handler: NoBindAllowed()).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: TestChannelOutboundHandler<ByteBuffer, ByteBuffer> { data in
+            data
+        }).wait())
+
+        XCTAssertNoThrow(try channel.connect(to: sa).wait())
     }
 
     private final class TestChannelOutboundHandler<In, Out>: ChannelOutboundHandler {
@@ -184,7 +184,7 @@ class ChannelPipelineTest: XCTestCase {
         let channel = EmbeddedChannel()
 
         let h = FireChannelReadOnRemoveHandler()
-        _ = try channel.pipeline.add(handler: h).then {
+        _ = try channel.pipeline.add(handler: h).flatMap {
             channel.pipeline.remove(handler: h)
         }.wait()
 
@@ -363,7 +363,7 @@ class ChannelPipelineTest: XCTestCase {
                     weakHandlerContext2 = ctx
                 }
                 weakHandler2 = handler2
-                XCTAssertNoThrow(try channel.pipeline.add(handler: handler1).then {
+                XCTAssertNoThrow(try channel.pipeline.add(handler: handler1).flatMap {
                     channel.pipeline.add(handler: handler2)
                     }.wait())
             }()
@@ -901,5 +901,32 @@ class ChannelPipelineTest: XCTestCase {
         }
         XCTAssertNil(channel.readOutbound())
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
+    }
+
+    func testFireChannelReadInInactiveChannelDoesNotCrash() throws {
+        class FireWhenInactiveHandler: ChannelInboundHandler {
+            typealias InboundIn = ()
+            typealias InboundOut = ()
+
+            func channelInactive(ctx: ChannelHandlerContext) {
+                ctx.fireChannelRead(self.wrapInboundOut(()))
+            }
+        }
+        let handler = FireWhenInactiveHandler()
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let server = try assertNoThrowWithValue(ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait())
+        defer {
+            XCTAssertNoThrow(try server.close().wait())
+        }
+        let client = try assertNoThrowWithValue(ClientBootstrap(group: group)
+            .channelInitializer { channel in
+                channel.pipeline.add(handler: handler)
+            }
+            .connect(to: server.localAddress!)
+            .wait())
+        XCTAssertNoThrow(try client.close().wait())
     }
 }

@@ -388,7 +388,7 @@ class ChannelNotificationTest: XCTestCase {
 
         var buffer = clientChannel.allocator.buffer(capacity: 2)
         buffer.write(string: "X")
-        XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).then {
+        XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).flatMap {
             clientChannel.close()
         }.wait())
         XCTAssertNoThrow(try promise.futureResult.wait())

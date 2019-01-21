@@ -86,13 +86,13 @@
 ///
 /// ```
 /// ChannelPipeline p = ...
-/// let future = p.add(name: "1", handler: InboundHandlerA()).then {
+/// let future = p.add(name: "1", handler: InboundHandlerA()).flatMap {
 ///   p.add(name: "2", handler: InboundHandlerB())
-/// }.then {
+/// }.flatMap {
 ///   p.add(name: "3", handler: OutboundHandlerA())
-/// }.then {
+/// }.flatMap {
 ///   p.add(name: "4", handler: OutboundHandlerB())
-/// }.then {
+/// }.flatMap {
 ///   p.add(name: "5", handler: InboundOutboundHandlerX())
 /// }
 /// // Handle the future as well ....
@@ -395,9 +395,7 @@ public final class ChannelPipeline: ChannelInvoker {
             self.remove0(ctx: ctx, promise: promise)
         }
 
-        if let promise = promise {
-            contextFuture.cascadeFailure(promise: promise)
-        }
+        contextFuture.cascadeFailure(promise: promise)
     }
 
     /// Remove a `ChannelHandler` from the `ChannelPipeline`.
@@ -412,9 +410,7 @@ public final class ChannelPipeline: ChannelInvoker {
             self.remove0(ctx: ctx, promise: promise)
         }
 
-        if let promise = promise {
-            contextFuture.cascadeFailure(promise: promise)
-        }
+        contextFuture.cascadeFailure(promise: promise)
     }
 
     /// Remove a `ChannelHandler` from the `ChannelPipeline`.

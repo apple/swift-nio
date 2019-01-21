@@ -79,7 +79,7 @@ extension IOError: CustomStringConvertible {
 }
 
 /// An result for an IO operation that was done on a non-blocking resource.
-public enum IOResult<T: Equatable> {
+enum IOResult<T: Equatable>: Equatable {
 
     /// Signals that the IO operation could not be completed as otherwise we would need to block.
     case wouldBlock(T)
@@ -87,17 +87,3 @@ public enum IOResult<T: Equatable> {
     /// Signals that the IO operation was completed.
     case processed(T)
 }
-
-extension IOResult: Equatable {
-    public static func ==(lhs: IOResult<T>, rhs: IOResult<T>) -> Bool {
-        switch (lhs, rhs) {
-        case (.wouldBlock(let lhs), .wouldBlock(let rhs)):
-            return lhs == rhs
-        case (.processed(let lhs), .processed(let rhs)):
-            return lhs == rhs
-        case (.wouldBlock, _), (.processed, _):
-            return false
-        }
-    }
-}
-

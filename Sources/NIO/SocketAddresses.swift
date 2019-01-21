@@ -126,12 +126,14 @@ public enum SocketAddress: CustomStringConvertible {
     }
 
     /// Get the port associated with the address, if defined.
-    public var port: UInt16? {
+    public var port: Int? {
         switch self {
         case .v4(let addr):
-            return UInt16(bigEndian: addr.address.sin_port)
+            // looks odd but we need to first convert the endianness as `in_port_t` and then make the result an `Int`.
+            return Int(in_port_t(bigEndian: addr.address.sin_port))
         case .v6(let addr):
-            return UInt16(bigEndian: addr.address.sin6_port)
+            // looks odd but we need to first convert the endianness as `in_port_t` and then make the result an `Int`.
+            return Int(in_port_t(bigEndian: addr.address.sin6_port))
         case .unixDomainSocket:
             return nil
         }
@@ -216,7 +218,7 @@ public enum SocketAddress: CustomStringConvertible {
     ///     - port: The target port.
     /// - returns: the `SocketAddress` corresponding to this string and port combination.
     /// - throws: may throw `SocketAddressError.failedToParseIPString` if the IP address cannot be parsed.
-    public init(ipAddress: String, port: UInt16) throws {
+    public init(ipAddress: String, port: Int) throws {
         var ipv4Addr = in_addr()
         var ipv6Addr = in6_addr()
 
@@ -224,13 +226,13 @@ public enum SocketAddress: CustomStringConvertible {
             if inet_pton(AF_INET, $0, &ipv4Addr) == 1 {
                 var addr = sockaddr_in()
                 addr.sin_family = sa_family_t(AF_INET)
-                addr.sin_port = port.bigEndian
+                addr.sin_port = in_port_t(port).bigEndian
                 addr.sin_addr = ipv4Addr
                 return .v4(.init(address: addr, host: ""))
             } else if inet_pton(AF_INET6, $0, &ipv6Addr) == 1 {
                 var addr = sockaddr_in6()
                 addr.sin6_family = sa_family_t(AF_INET6)
-                addr.sin6_port = port.bigEndian
+                addr.sin6_port = in_port_t(port).bigEndian
                 addr.sin6_flowinfo = 0
                 addr.sin6_addr = ipv6Addr
                 addr.sin6_scope_id = 0

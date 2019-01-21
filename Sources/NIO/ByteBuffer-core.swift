@@ -16,54 +16,7 @@ let sysMalloc: @convention(c) (size_t) -> UnsafeMutableRawPointer? = malloc
 let sysRealloc: @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer? = realloc
 let sysFree: @convention(c) (UnsafeMutableRawPointer?) -> Void = free
 
-#if !swift(>=4.1)
-    public extension UnsafeMutableRawPointer {
-        public func copyMemory(from src: UnsafeRawPointer, byteCount: Int) {
-            self.copyBytes(from: src, count: byteCount)
-        }
-    }
-    public extension UnsafeMutableRawBufferPointer {
-        internal static func allocate(byteCount: Int, alignment: Int) -> UnsafeMutableRawBufferPointer {
-            return UnsafeMutableRawBufferPointer.allocate(count: byteCount)
-        }
-
-        internal func initializeMemory<T>(as type: T.Type, repeating repeatedValue: T) -> UnsafeMutableBufferPointer<T> {
-            let ptr = self.bindMemory(to: T.self)
-            ptr.initialize(from: repeatElement(repeatedValue, count: self.count / MemoryLayout<T>.stride))
-            return ptr
-        }
-
-        public func copyMemory(from src: UnsafeRawBufferPointer) {
-            self.copyBytes(from: src)
-        }
-
-        public func bindMemory<T>(to type: T.Type) -> UnsafeMutableBufferPointer<T> {
-            guard let base = self.baseAddress else {
-                return UnsafeMutableBufferPointer<T>(start: nil, count: 0)
-            }
-            let capacity = count / MemoryLayout<T>.stride
-            let ptr = base.bindMemory(to: T.self, capacity: capacity)
-            return UnsafeMutableBufferPointer<T>(start: ptr, count: capacity)
-        }
-    }
-    public extension UnsafeRawBufferPointer {
-        public func bindMemory<T>(to type: T.Type) -> UnsafeBufferPointer<T> {
-            guard let base = self.baseAddress else {
-                return UnsafeBufferPointer<T>(start: nil, count: 0)
-            }
-            let capacity = count / MemoryLayout<T>.stride
-            let ptr = base.bindMemory(to: T.self, capacity: capacity)
-            return UnsafeBufferPointer<T>(start: ptr, count: capacity)
-        }
-    }
-#endif
-
-extension _ByteBufferSlice: Equatable {
-    @usableFromInline
-    static func ==(_ lhs: _ByteBufferSlice, _ rhs: _ByteBufferSlice) -> Bool {
-        return lhs._begin == rhs._begin && lhs.upperBound == rhs.upperBound
-    }
-}
+extension _ByteBufferSlice: Equatable {}
 
 /// The slice of a `ByteBuffer`, it's different from `Range<UInt32>` because the lower bound is actually only
 /// 24 bits (the upper bound is still 32). Before constructing, you need to make sure the lower bound actually
@@ -238,10 +191,10 @@ public struct ByteBuffer {
     public typealias _Index = UInt32
     public typealias _Capacity = UInt32
 
-    @usableFromInline private(set) var _storage: _Storage
-    @usableFromInline private(set) var _readerIndex: _Index = 0
-    @usableFromInline private(set) var _writerIndex: _Index = 0
-    @usableFromInline private(set) var _slice: Slice
+    @usableFromInline var _storage: _Storage
+    @usableFromInline var _readerIndex: _Index = 0
+    @usableFromInline var _writerIndex: _Index = 0
+    @usableFromInline var _slice: Slice
 
     // MARK: Internal _Storage for CoW
     @usableFromInline final class _Storage {
@@ -324,13 +277,7 @@ public struct ByteBuffer {
     private mutating func _copyStorageAndRebase(capacity: _Capacity, resetIndices: Bool = false) {
         let indexRebaseAmount = resetIndices ? self._readerIndex : 0
         let storageRebaseAmount = self._slice.lowerBound + indexRebaseAmount
-        let _newSlice = storageRebaseAmount ..< min(storageRebaseAmount + _toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity)
-        #if swift(>=4.2)
-        // no need for the conversion anymore
-        let newSlice = _newSlice
-        #else
-        let newSlice = Range(_newSlice)
-        #endif
+        let newSlice = storageRebaseAmount ..< min(storageRebaseAmount + _toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity)
         self._storage = self._storage.reallocSlice(newSlice, capacity: capacity)
         self._moveReaderIndex(to: self._readerIndex - indexRebaseAmount)
         self._moveWriterIndex(to: self._writerIndex - indexRebaseAmount)
@@ -395,9 +342,9 @@ public struct ByteBuffer {
     }
 
     @inlinable
-    mutating func _set<S: ContiguousCollection>(bytes: S, at index: _Index) -> _Capacity where S.Element == UInt8 {
+    mutating func _set(bytes: UnsafeRawBufferPointer, at index: _Index) -> _Capacity {
         let bytesCount = bytes.count
-        let newEndIndex: _Index = index + _toIndex(Int(bytesCount))
+        let newEndIndex: _Index = index + _toIndex(bytesCount)
         if !isKnownUniquelyReferenced(&self._storage) {
             let extraCapacity = newEndIndex > self._slice.upperBound ? newEndIndex - self._slice.upperBound : 0
             self._copyStorageAndRebase(extraCapacity: extraCapacity)
@@ -405,21 +352,13 @@ public struct ByteBuffer {
 
         self._ensureAvailableCapacity(_Capacity(bytesCount), at: index)
         let targetPtr = UnsafeMutableRawBufferPointer(rebasing: self._slicedStorageBuffer.dropFirst(Int(index)))
-        bytes.withUnsafeBytes { srcPtr in
-            precondition(srcPtr.count >= bytesCount,
-                         "collection \(bytes) claims count \(bytesCount) but withUnsafeBytes only offers \(srcPtr.count) bytes")
-            targetPtr.copyMemory(from: UnsafeRawBufferPointer(rebasing: srcPtr.prefix(Int(bytesCount))))
-        }
+        targetPtr.copyMemory(from: bytes)
         return _toCapacity(Int(bytesCount))
     }
 
-    @inlinable
-    mutating func _set<S: Sequence>(bytes: S, at index: _Index) -> _Capacity where S.Element == UInt8 {
-        assert(!([Array<S.Element>.self, StaticString.self, ContiguousArray<S.Element>.self,
-                  UnsafeRawBufferPointer.self, UnsafeBufferPointer<UInt8>.self, UnsafeMutableRawBufferPointer.self,
-                  UnsafeMutableBufferPointer<UInt8>.self,
-                  ArraySlice<UInt8>.self].contains(where: { (t: Any.Type) -> Bool in t == type(of: bytes) })),
-               "called the slower set<S: Sequence> function even though \(S.self) is a ContiguousCollection")
+    @inline(never)
+    @usableFromInline
+    mutating func _setSlowPath<Bytes: Sequence>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
         func ensureCapacityAndReturnStorageBase(capacity: Int) -> UnsafeMutablePointer<UInt8> {
             self._ensureAvailableCapacity(_Capacity(capacity), at: index)
             let newBytesPtr = UnsafeMutableRawBufferPointer(rebasing: self._slicedStorageBuffer[Int(index) ..< Int(index) + Int(capacity)])
@@ -441,6 +380,18 @@ public struct ByteBuffer {
             idx += 1
         }
         return _toCapacity(idx)
+    }
+
+    @inlinable
+    mutating func _set<Bytes: Sequence>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
+        if let written = bytes.withContiguousStorageIfAvailable({ bytes in
+            self._set(bytes: UnsafeRawBufferPointer(bytes), at: index)
+        }) {
+            // fast path, we've got access to the contiguous bytes
+            return written
+        } else {
+            return self._setSlowPath(bytes: bytes, at: index)
+        }
     }
 
     // MARK: Public Core API
@@ -547,6 +498,16 @@ public struct ByteBuffer {
     /// - warning: Do not escape the pointer from the closure for later use.
     @inlinable
     public func withVeryUnsafeBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
+        return try body(.init(self._slicedStorageBuffer))
+    }
+
+    /// This vends a pointer to the storage of the `ByteBuffer`. It's marked as _very unsafe_ because it might contain
+    /// uninitialised memory and it's undefined behaviour to read it. In most cases you should use `withUnsafeMutableWritableBytes`.
+    ///
+    /// - warning: Do not escape the pointer from the closure for later use.
+    @inlinable
+    public mutating func withVeryUnsafeMutableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> T) rethrows -> T {
+        self._copyStorageAndRebaseIfNeeded() // this will trigger a CoW if necessary
         return try body(.init(self._slicedStorageBuffer))
     }
 
@@ -695,14 +656,16 @@ extension ByteBuffer: CustomStringConvertible {
     ///
     /// - returns: A description of this `ByteBuffer`.
     public var description: String {
-        return  "ByteBuffer { " +
-            /*    this     */ "readerIndex: \(self.readerIndex), " +
-            /*     is      */ "writerIndex: \(self.writerIndex), " +
-            /*     to      */ "readableBytes: \(self.readableBytes), " +
-            /*    help     */ "capacity: \(self.capacity), " +
-            /*    Xcode    */ "slice: \(self._slice), " +
-            /*   indent    */ "storage: \(self._storage.bytes) (\(self._storage.capacity) bytes)" +
-            /*             */ "}"
+        return """
+        ByteBuffer { \
+        readerIndex: \(self.readerIndex), \
+        writerIndex: \(self.writerIndex), \
+        readableBytes: \(self.readableBytes), \
+        capacity: \(self.capacity), \
+        slice: \(self._slice), \
+        storage: \(self._storage.bytes) (\(self._storage.capacity) bytes)\
+        }
+        """
     }
 
     /// A `String` describing this `ByteBuffer` with some portion of the readable bytes dumped too. Example:
@@ -723,14 +686,14 @@ extension ByteBuffer {
     /// Copy the collection of `bytes` into the `ByteBuffer` at `index`.
     @discardableResult
     @inlinable
-    public mutating func set<S: Sequence>(bytes: S, at index: Int) -> Int where S.Element == UInt8 {
+    public mutating func set<Bytes: Sequence>(bytes: Bytes, at index: Int) -> Int where Bytes.Element == UInt8 {
         return Int(self._set(bytes: bytes, at: _toIndex(index)))
     }
 
-    /// Copy the collection of `bytes` into the `ByteBuffer` at `index`.
+    /// Copy `bytes` into the `ByteBuffer` at `index`.
     @discardableResult
     @inlinable
-    public mutating func set<S: ContiguousCollection>(bytes: S, at index: Int) -> Int where S.Element == UInt8 {
+    public mutating func set(bytes: UnsafeRawBufferPointer, at index: Int) -> Int {
         return Int(self._set(bytes: bytes, at: _toIndex(index)))
     }
 

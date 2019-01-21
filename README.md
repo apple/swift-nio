@@ -22,6 +22,18 @@ SwiftNIO aims to support all of the platforms where Swift is supported. Currentl
 * Ubuntu 14.04+
 * macOS 10.12+
 
+#### Swift versions
+
+The latest released SwiftNIO version supports Swift 4.0, 4.1, and 4.2.
+
+### Compatibility
+
+SwiftNIO follows [SemVer 2.0.0](https://semver.org/#semantic-versioning-200) with a separate document declaring [SwiftNIO's Public API](docs/public-api.md).
+
+What this means for you is that you should depend on SwiftNIO with a version range that covers everything from the minimum SwiftNIO version you require up to the next major version.
+In SwiftPM that can be easily done specifying for example `from: "2.0.0"` meaning that you support SwiftNIO in every version starting from 2.0.0 up to (excluding) 3.0.0.
+SemVer and SwiftNIO's Public API guarantees should result in a working program without having to worry about testing every single version for compatibility.
+
 ### Basic Architecture
 
 The basic building blocks of SwiftNIO are the following 8 types of objects:
@@ -203,30 +215,38 @@ First make sure you have [Docker](https://www.docker.com/community-edition) inst
 
 ## Developing SwiftNIO
 
+*Note*: This section is only relevant if you would like to develop SwiftNIO yourself. You can ignore the information here if you just want to use SwiftNIO as a SwiftPM package.
+
 For the most part, SwiftNIO development is as straightforward as any other SwiftPM project. With that said, we do have a few processes that are worth understanding before you contribute. For details, please see `CONTRIBUTING.md` in this repository.
 
 ### Prerequisites
+
+SwiftNIO's `master` branch is at the moment developing what will become SwiftNIO 2.0.0 which will be Swift 5-only. That means to develop SwiftNIO at the moment, you will need:
+
+- a recent [Swift 5.0 development snapshot](https://swift.org/download/#snapshots)
+- [patch a plist file in your Xcode](https://forums.swift.org/t/how-to-set-swift-version-5-for-recent-dev-snapshots-in-xcode-build-settings/18692/20)
 
 To be able to compile and run SwiftNIO and the integration tests, you need to
 have a few prerequisites installed on your system.
 
 #### macOS
 
-- Xcode 9 or newer
+- Xcode 10.1 or newer, with at the moment a [small patch](https://forums.swift.org/t/how-to-set-swift-version-5-for-recent-dev-snapshots-in-xcode-build-settings/18692/20) to plist file inside Xcode.
 
 ### Linux
 
-- Swift 4.0 or newer
+- Swift 5 development snapshots
+- pkg-config
 - zlib and its development headers
 - netcat (for integration tests only)
 - lsof (for integration tests only)
 - shasum (for integration tests only)
 
-#### Ubuntu
+#### Ubuntu 18.04
 
 ```
 # install swift tarball from https://swift.org/downloads
-apt-get install -y zlib1g-dev netcat-openbsd lsof perl
+apt-get install -y git curl libatomic1 libicu60 libxml2 libz-dev pkg-config clang netcat-openbsd lsof perl
 ```
 
 

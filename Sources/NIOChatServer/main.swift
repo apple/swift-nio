@@ -24,7 +24,7 @@ final class LineDelimiterCodec: ByteToMessageDecoder {
     public var cumulationBuffer: ByteBuffer?
 
     public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        let readable = buffer.withUnsafeReadableBytes { $0.index(of: newLine) }
+        let readable = buffer.withUnsafeReadableBytes { $0.firstIndex(of: newLine) }
         if let r = readable {
             ctx.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: r + 1)!))
             return .continue
@@ -122,7 +122,7 @@ let bootstrap = ServerBootstrap(group: group)
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
         // Add handler that will buffer data until a \n is received
-        channel.pipeline.add(handler: ByteToMessageHandler(LineDelimiterCodec())).then { v in
+        channel.pipeline.add(handler: ByteToMessageHandler(LineDelimiterCodec())).flatMap { v in
             // It's important we use the same handler for all accepted channels. The ChatHandler is thread-safe!
             channel.pipeline.add(handler: chatHandler)
         }

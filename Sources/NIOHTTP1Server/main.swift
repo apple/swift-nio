@@ -97,6 +97,7 @@ private final class HTTPHandler: ChannelInboundHandler {
     private var handler: ((ChannelHandlerContext, HTTPServerRequestPart) -> Void)?
     private var handlerFuture: EventLoopFuture<Void>?
     private let fileIO: NonBlockingFileIO
+    private let defaultResponse = "Hello World\r\n"
 
     public init(fileIO: NonBlockingFileIO, htdocsPath: String) {
         self.htdocsPath = htdocsPath
@@ -172,7 +173,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         case .head(let request):
             self.keepAlive = request.isKeepAlive
             self.state.requestReceived()
-            ctx.writeAndFlush(self.wrapOutboundOut(.head(httpResponseHead(request: request, status: .ok))), promise: nil)
+            ctx.writeAndFlush(self.wrapOutboundOut(.head(httpResponseHead(request: request, status: statusCode))), promise: nil)
         case .body(buffer: _):
             ()
         case .end:
@@ -248,7 +249,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         if let howLong = reqHead.uri.chopPrefix("/dynamic/write-delay/") {
             return { ctx, req in
                 self.handleJustWrite(ctx: ctx,
-                                     request: req, string: "Hello World\r\n",
+                                     request: req, string: self.defaultResponse,
                                      delay: TimeAmount.Value(howLong).map { .milliseconds($0) } ?? .seconds(0))
             }
         }
@@ -261,7 +262,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         case "/dynamic/pid":
             return { ctx, req in self.handleJustWrite(ctx: ctx, request: req, string: "\(getpid())") }
         case "/dynamic/write-delay":
-            return { ctx, req in self.handleJustWrite(ctx: ctx, request: req, string: "Hello World\r\n", delay: .milliseconds(100)) }
+            return { ctx, req in self.handleJustWrite(ctx: ctx, request: req, string: self.defaultResponse, delay: .milliseconds(100)) }
         case "/dynamic/info":
             return self.handleInfo
         case "/dynamic/trailers":
@@ -341,11 +342,11 @@ private final class HTTPHandler: ChannelInboundHandler {
                                                         ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
                                                     }
                                                     return ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buffer))))
-                    }.then { () -> EventLoopFuture<Void> in
+                    }.flatMap { () -> EventLoopFuture<Void> in
                         let p = ctx.eventLoop.makePromise(of: Void.self)
                         self.completeResponse(ctx, trailers: nil, promise: p)
                         return p.futureResult
-                    }.thenIfError { error in
+                    }.flatMapError { error in
                         if !responseStarted {
                             let response = httpResponseHead(request: request, status: .ok)
                             ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
@@ -357,19 +358,19 @@ private final class HTTPHandler: ChannelInboundHandler {
                         } else {
                             return ctx.close()
                         }
-                    }.whenComplete {
+                    }.whenComplete { (_: Result<Void, Error>) in
                         _ = try? file.close()
                     }
                 case .sendfile:
                     let response = responseHead(request: request, fileRegion: region)
                     ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
-                    ctx.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region)))).then {
+                    ctx.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region)))).flatMap {
                         let p = ctx.eventLoop.makePromise(of: Void.self)
                         self.completeResponse(ctx, trailers: nil, promise: p)
                         return p.futureResult
-                    }.thenIfError { (_: Error) in
+                    }.flatMapError { (_: Error) in
                         ctx.close()
-                    }.whenComplete {
+                    }.whenComplete { (_: Result<Void, Error>) in
                         _ = try? file.close()
                     }
                 }
@@ -386,7 +387,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
         let promise = self.keepAlive ? promise : (promise ?? ctx.eventLoop.makePromise())
         if !self.keepAlive {
-            promise!.futureResult.whenComplete { ctx.close(promise: nil) }
+            promise!.futureResult.whenComplete { (_: Result<Void, Error>) in ctx.close(promise: nil) }
         }
         self.handler = nil
 
@@ -420,7 +421,9 @@ private final class HTTPHandler: ChannelInboundHandler {
             self.state.requestReceived()
 
             var responseHead = httpResponseHead(request: request, status: HTTPResponseStatus.ok)
-            responseHead.headers.add(name: "content-length", value: "12")
+            self.buffer.clear()
+            self.buffer.write(string: defaultResponse)
+            responseHead.headers.add(name: "content-length", value: "\(self.buffer!.readableBytes)")
             let response = HTTPServerResponsePart.head(responseHead)
             ctx.write(self.wrapOutboundOut(response), promise: nil)
         case .body:
@@ -438,8 +441,7 @@ private final class HTTPHandler: ChannelInboundHandler {
     }
 
     func handlerAdded(ctx: ChannelHandlerContext) {
-        self.buffer = ctx.channel.allocator.buffer(capacity: 12)
-        self.buffer.write(staticString: "Hello World!")
+        self.buffer = ctx.channel.allocator.buffer(capacity: 0)
     }
 
     func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
@@ -514,7 +516,7 @@ let bootstrap = ServerBootstrap(group: group)
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
-        channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).then {
+        channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap {
             channel.pipeline.add(handler: HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
         }
     }

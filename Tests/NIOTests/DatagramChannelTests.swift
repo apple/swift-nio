@@ -18,7 +18,7 @@ import XCTest
 
 private extension Channel {
     func waitForDatagrams(count: Int) throws -> [AddressedEnvelope<ByteBuffer>] {
-        return try self.pipeline.context(name: "ByteReadRecorder").then { context in
+        return try self.pipeline.context(name: "ByteReadRecorder").flatMap { context in
             if let future = (context.handler as? DatagramReadRecorder<ByteBuffer>)?.notifyForDatagrams(count) {
                 return future
             }
@@ -192,7 +192,7 @@ final class DatagramChannelTests: XCTestCase {
 
         // Now close the channel. When that completes, all the futures should be complete too.
         let fulfilled = try self.firstChannel.close().map {
-            promises.map { $0.isFulfilled }.reduce(true, { $0 && $1 })
+            promises.map { $0.isFulfilled }.allSatisfy { $0 }
         }.wait()
         XCTAssertTrue(fulfilled)
 

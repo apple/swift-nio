@@ -116,7 +116,7 @@ public final class RepeatedTask {
         }
 
         scheduled.futureResult.whenSuccess { future in
-            future.whenComplete {
+            future.whenComplete { (_: Result<Void, Error>) in
                 self.reschedule0()
             }
         }
@@ -155,7 +155,8 @@ public struct EventLoopIterator: Sequence, IteratorProtocol {
     public typealias Element = EventLoop
     private var eventLoops: IndexingIterator<[EventLoop]>
 
-    internal init(_ eventLoops: [EventLoop]) {
+    /// Create an `EventLoopIterator` from an array of `EventLoop`s.
+    public init(_ eventLoops: [EventLoop]) {
         self.eventLoops = eventLoops.makeIterator()
     }
 
@@ -219,7 +220,7 @@ public protocol EventLoop: EventLoopGroup {
 /// Represents a time _interval_.
 ///
 /// - note: `TimeAmount` should not be used to represent a point in time.
-public struct TimeAmount {
+public struct TimeAmount: Equatable {
     public typealias Value = Int64
 
     /// The nanoseconds representation of the `TimeAmount`.
@@ -288,10 +289,6 @@ extension TimeAmount: Comparable {
     public static func < (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds < rhs.nanoseconds
     }
-
-    public static func == (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
-        return lhs.nanoseconds == rhs.nanoseconds
-    }
 }
 
 extension EventLoop {
@@ -328,8 +325,8 @@ extension EventLoop {
     /// - parameters:
     ///     - result: the value that is used by the `EventLoopFuture`.
     /// - returns: a succeeded `EventLoopFuture`.
-    public func makeSucceededFuture<T>(result: T) -> EventLoopFuture<T> {
-        return EventLoopFuture<T>(eventLoop: self, result: result, file: "n/a", line: 0)
+    public func makeSucceededFuture<Success>(result: Success) -> EventLoopFuture<Success> {
+        return EventLoopFuture<Success>(eventLoop: self, result: result, file: "n/a", line: 0)
     }
 
     public func next() -> EventLoop {
@@ -492,7 +489,7 @@ internal final class SelectableEventLoop: EventLoop {
     internal func promiseCreationStoreRemove<T>(future: EventLoopFuture<T>) -> (file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
         return self.promiseCreationStoreLock.withLock {
-            self._promiseCreationStore[ObjectIdentifier(future)]!
+            self._promiseCreationStore.removeValue(forKey: ObjectIdentifier(future))!
         }
     }
 
@@ -956,7 +953,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
             g.enter()
             loop.closeGently().mapIfError { err in
                 q.sync { error = err }
-            }.whenComplete {
+            }.whenComplete { (_: Result<Void, Error>) in
                 g.leave()
             }
         }

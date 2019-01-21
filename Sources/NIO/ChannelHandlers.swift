@@ -223,7 +223,7 @@ public class IdleStateHandler: ChannelDuplexHandler {
         }
 
         let writePromise = promise ?? ctx.eventLoop.makePromise()
-        writePromise.futureResult.whenComplete {
+        writePromise.futureResult.whenComplete { (_: Result<Void, Error>) in
             self.lastWriteCompleteTime = DispatchTime.now()
         }
         ctx.write(data, promise: writePromise)

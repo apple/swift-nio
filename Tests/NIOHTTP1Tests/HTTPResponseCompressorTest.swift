@@ -36,14 +36,14 @@ private class PromiseOrderer {
         let thisPromiseIndex = promiseArray.count
         promiseArray.append(promise)
 
-        promise.futureResult.whenComplete {
+        promise.futureResult.whenComplete { (_: Result<Void, Error>) in
             let priorFutures = self.promiseArray[0..<thisPromiseIndex]
             let subsequentFutures = self.promiseArray[(thisPromiseIndex + 1)...]
-            let allPriorFuturesFired = priorFutures.map { $0.futureResult.isFulfilled }.reduce(true, { $0 && $1 })
-            let allSubsequentFuturesUnfired = subsequentFutures.map { $0.futureResult.isFulfilled }.reduce(false, { $0 || $1 })
+            let allPriorFuturesFired = priorFutures.map { $0.futureResult.isFulfilled }.allSatisfy { $0 }
+            let allSubsequentFuturesUnfired = subsequentFutures.map { $0.futureResult.isFulfilled }.allSatisfy { !$0 }
 
             XCTAssertTrue(allPriorFuturesFired)
-            XCTAssertFalse(allSubsequentFuturesUnfired)
+            XCTAssertTrue(allSubsequentFuturesUnfired)
         }
     }
 
@@ -272,10 +272,11 @@ class HTTPResponseCompressorTest: XCTestCase {
                                           decompressor: z_stream.decompressDeflate)
     }
 
-    private func assertGzippedResponse(channel: EmbeddedChannel, writeStrategy: WriteStrategy = .once) throws {
+    private func assertGzippedResponse(channel: EmbeddedChannel, writeStrategy: WriteStrategy = .once, additionalHeaders: HTTPHeaders = HTTPHeaders()) throws {
         let bodySize = 2048
-        let response = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1),
+        var response = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1),
                                         status: .ok)
+        response.headers = additionalHeaders
         let body = [UInt8](repeating: 60, count: bodySize)
         var bodyBuffer = channel.allocator.buffer(capacity: bodySize)
         bodyBuffer.write(bytes: body)
@@ -495,6 +496,16 @@ class HTTPResponseCompressorTest: XCTestCase {
 
         try sendRequest(acceptEncoding: "deflate;q=2.2, gzip;q=0.3", channel: channel)
         try assertGzippedResponse(channel: channel)
+    }
+
+    func testOverridesContentEncodingHeader() throws {
+        let channel = try compressionChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+
+        try sendRequest(acceptEncoding: "deflate;q=2.2, gzip;q=0.3", channel: channel)
+        try assertGzippedResponse(channel: channel, additionalHeaders: HTTPHeaders([("Content-Encoding", "deflate")]))
     }
 
     func testRemovingHandlerFailsPendingWrites() throws {

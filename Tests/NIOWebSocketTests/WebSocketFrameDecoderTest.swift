@@ -103,9 +103,9 @@ public class WebSocketFrameDecoderTest: XCTestCase {
     private func swapDecoder(for handler: ChannelHandler) {
         // We need to insert a decoder that doesn't do error handling. We still insert
         // an encoder because we want to fail gracefully if a frame is written.
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.context(handlerType: ByteToMessageHandler<WebSocketFrameDecoder>.self).then {
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.context(handlerType: ByteToMessageHandler<WebSocketFrameDecoder>.self).flatMap {
             self.decoderChannel.pipeline.remove(handler: $0.handler)
-        }.then { (_: Bool) in
+        }.flatMap { (_: Bool) in
             self.decoderChannel.pipeline.add(handler: handler)
         }.wait())
     }

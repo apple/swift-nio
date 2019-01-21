@@ -72,7 +72,7 @@ private final class PingHandler: ChannelInboundHandler {
     public init(numberOfRequests: Int, eventLoop: EventLoop) {
         self.numberOfRequests = numberOfRequests
         self.remainingNumberOfRequests = numberOfRequests
-        self.allDone = eventLoop.newPromise()
+        self.allDone = eventLoop.makePromise()
     }
 
     public func channelActive(ctx: ChannelHandlerContext) {
@@ -154,7 +154,7 @@ public func swiftMain() -> Int {
         init(numberOfRequests: Int, eventLoop: EventLoop) {
             self.remainingNumberOfRequests = numberOfRequests
             self.numberOfRequests = numberOfRequests
-            self.isDonePromise = eventLoop.newPromise()
+            self.isDonePromise = eventLoop.makePromise()
         }
 
         func wait() throws -> Int {
@@ -219,7 +219,7 @@ public func swiftMain() -> Int {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
                     channel.pipeline.add(handler: SimpleHTTPServer())
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
@@ -233,7 +233,7 @@ public func swiftMain() -> Int {
 
         let clientChannel = try ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers().then {
+                channel.pipeline.addHTTPClientHandlers().flatMap {
                     channel.pipeline.add(handler: repeatedRequestsHandler)
                 }
             }
@@ -308,15 +308,16 @@ public func swiftMain() -> Int {
         let foundationData = "A".data(using: .utf8)!
         @inline(never)
         func doWrites(buffer: inout ByteBuffer) {
-            /* all of those should be 0 allocations */
-
+            /* these ones are zero allocations */
             // buffer.write(bytes: foundationData) // see SR-7542
             buffer.write(bytes: [0x41])
-            buffer.write(bytes: dispatchData)
             buffer.write(bytes: "A".utf8)
             buffer.write(string: "A")
             buffer.write(staticString: "A")
             buffer.write(integer: 0x41, as: UInt8.self)
+
+            /* those down here should be one allocation each (on Linux) */
+            buffer.write(bytes: dispatchData) // see https://bugs.swift.org/browse/SR-9597
         }
         @inline(never)
         func doReads(buffer: inout ByteBuffer) {
@@ -347,33 +348,33 @@ public func swiftMain() -> Int {
         struct MyError: Error { }
         @inline(never)
         func doThenAndFriends(loop: EventLoop) {
-            let p = loop.newPromise(of: Int.self)
-            let f = p.futureResult.then { (r: Int) -> EventLoopFuture<Int> in 
+            let p = loop.makePromise(of: Int.self)
+            let f = p.futureResult.flatMap { (r: Int) -> EventLoopFuture<Int> in
                 // This call allocates a new Future, and
-                // so does then(), so this is two Futures.
-                return loop.newSucceededFuture(result: r + 1)
-            }.thenThrowing { (r: Int) -> Int in
-                // thenThrowing allocates a new Future, and calls then
+                // so does flatMap(), so this is two Futures.
+                return loop.makeSucceededFuture(result: r + 1)
+            }.flatMapThrowing { (r: Int) -> Int in
+                // flatMapThrowing allocates a new Future, and calls `flatMap`
                 // which also allocates, so this is two.
                 return r + 2
             }.map { (r: Int) -> Int in
-                // map allocates a new future, and calls then which
+                // map allocates a new future, and calls `flatMap` which
                 // also allocates, so this is two.
                 return r + 2
-            }.thenThrowing { (r: Int) -> Int in
-                // thenThrowing allocates a future on the error path and
-                // calls then, which also allocates, so this is two.
+            }.flatMapThrowing { (r: Int) -> Int in
+                // flatMapThrowing allocates a future on the error path and
+                // calls `flatMap`, which also allocates, so this is two.
                 throw MyError()
-            }.thenIfError { (err: Error) -> EventLoopFuture<Int> in
-                // This call allocates a new Future, and so does thenIfError,
+            }.flatMapError { (err: Error) -> EventLoopFuture<Int> in
+                // This call allocates a new Future, and so does flatMapError,
                 // so this is two Futures.
-                return loop.newFailedFuture(error: err)
-            }.thenIfErrorThrowing { (err: Error) -> Int in
-                // thenIfError allocates a new Future, and calls thenIfError,
+                return loop.makeFailedFuture(error: err)
+            }.flatMapErrorThrowing { (err: Error) -> Int in
+                // flatMapError allocates a new Future, and calls flatMapError,
                 // so this is two Futures
                 throw err
             }.mapIfError { (err: Error) -> Int in
-                // mapIfError allocates a future, and calls thenIfError, so
+                // mapIfError allocates a future, and calls flatMapError, so
                 // this is two Futures.
                 return 1
             }
@@ -384,9 +385,9 @@ public func swiftMain() -> Int {
         }
         @inline(never)
         func doAnd(loop: EventLoop) {
-            let p1 = loop.newPromise(of: Int.self)
-            let p2 = loop.newPromise(of: Int.self)
-            let p3 = loop.newPromise(of: Int.self)
+            let p1 = loop.makePromise(of: Int.self)
+            let p2 = loop.makePromise(of: Int.self)
+            let p3 = loop.makePromise(of: Int.self)
 
             // Each call to and() allocates a Future. The calls to
             // and(result:) allocate two.

@@ -365,9 +365,9 @@ public class EventLoopTest : XCTestCase {
         }
         let channel = try SocketChannel(eventLoop: loop, protocolFamily: AF_INET)
         try channel.eventLoop.submit {
-            channel.pipeline.add(handler: wedgeHandler).then {
+            channel.pipeline.add(handler: wedgeHandler).flatMap {
                 channel.register()
-            }.then {
+            }.flatMap {
                 // connecting here to stop epoll from throwing EPOLLHUP at us
                 channel.connect(to: serverChannel.localAddress!)
             }.cascade(promise: connectPromise)
@@ -517,7 +517,7 @@ public class EventLoopTest : XCTestCase {
                                                                protocolFamily: serverSocket.localAddress!.protocolFamily))
         XCTAssertNoThrow(try channel.pipeline.add(handler: assertHandler).wait() as Void)
         XCTAssertNoThrow(try channel.eventLoop.submit {
-            channel.register().then {
+            channel.register().flatMap {
                 channel.connect(to: serverSocket.localAddress!)
             }
         }.wait().wait() as Void)

@@ -659,7 +659,7 @@ public class ChannelTests: XCTestCase {
 
             pwm.failAll(error: ChannelError.operationUnsupported, close: true)
 
-            XCTAssertTrue(ps.map { $0.futureResult.isFulfilled }.reduce(true) { $0 && $1 })
+            XCTAssertTrue(ps.map { $0.futureResult.isFulfilled }.allSatisfy { $0 })
         }
     }
 
@@ -972,7 +972,7 @@ public class ChannelTests: XCTestCase {
             pwm.markFlushCheckpoint()
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[2])
 
-            ps[0].futureResult.whenComplete {
+            ps[0].futureResult.whenComplete { (_: Result<Void, Error>) in
                 pwm.failAll(error: ChannelError.inputClosed, close: true)
             }
 
@@ -1118,7 +1118,7 @@ public class ChannelTests: XCTestCase {
         let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .output, promise: group.next().makePromise())
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: verificationHandler).then {
+                channel.pipeline.add(handler: verificationHandler).flatMap {
                     channel.pipeline.add(handler: byteCountingHandler)
                 }
             }
@@ -1181,7 +1181,7 @@ public class ChannelTests: XCTestCase {
         let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .input, promise: group.next().makePromise())
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: VerifyNoReadHandler()).then {
+                channel.pipeline.add(handler: VerifyNoReadHandler()).flatMap {
                     channel.pipeline.add(handler: verificationHandler)
                 }
             }
@@ -1508,7 +1508,7 @@ public class ChannelTests: XCTestCase {
             public func expectRead(loop: EventLoop) -> EventLoopFuture<Void> {
                 return loop.submit {
                     self.waitingForReadPromise = loop.makePromise()
-                }.then {
+                }.flatMap {
                     self.waitingForReadPromise!.futureResult
                 }
             }
@@ -1964,11 +1964,11 @@ public class ChannelTests: XCTestCase {
         try serverWriteHappenedPromise.futureResult.wait()
         try sc.pipeline.add(handler: ReadDoesNotHappen(hasRegisteredPromise: clientHasRegistered,
                                                        hasUnregisteredPromise: clientHasUnregistered,
-                                                       hasReadPromise: clientHasRead)).then {
+                                                       hasReadPromise: clientHasRead)).flatMap {
                 // this will succeed and should not cause the socket to be read even though there'll be something
                 // available to be read immediately
                 sc.register()
-            }.then {
+            }.flatMap {
                 // this would normally fail but our special Socket subclass will let it succeed.
                 sc.connect(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 123))
             }.wait()
@@ -1983,7 +1983,7 @@ public class ChannelTests: XCTestCase {
             do {
                 try body()
                 XCTFail("didn't throw", file: file, line: line)
-            } catch let error as ChannelLifecycleError where error == .inappropriateOperationForState {
+            } catch let error as ChannelError where error == .inappropriateOperationForState {
                 //OK
             } catch {
                 XCTFail("unexpected error \(error)", file: file, line: line)
@@ -2129,12 +2129,12 @@ public class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try sc.eventLoop.submit {
             // this is pretty delicate at the moment:
             // `bind` must be _synchronously_ follow `register`, otherwise in our current implementation, `epoll` will
-            // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `then` on the eventloop that the
+            // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `flatMap` on the eventloop that the
             // `register` will succeed.
 
-            sc.register().then {
+            sc.register().flatMap {
                 sc.pipeline.add(handler: VerifyThingsAreRightHandler(allDone: allDone))
-            }.then {
+            }.flatMap {
                 sc.connect(to: serverChannel.localAddress!)
             }
         }.wait().wait() as Void)
@@ -2175,8 +2175,8 @@ public class ChannelTests: XCTestCase {
 
         let allDone = group.next().makePromise(of: Void.self)
         let cf = try! sc.eventLoop.submit {
-            sc.pipeline.add(handler: VerifyConnectionFailureHandler(allDone: allDone)).then {
-                sc.register().then {
+            sc.pipeline.add(handler: VerifyConnectionFailureHandler(allDone: allDone)).flatMap {
+                sc.register().flatMap {
                     sc.connect(to: serverChannel.localAddress!)
                 }
             }
@@ -2221,8 +2221,8 @@ public class ChannelTests: XCTestCase {
 
         let allDone = group.next().makePromise(of: Void.self)
         try! sc.eventLoop.submit {
-            let f = sc.pipeline.add(handler: VerifyConnectionFailureHandler(allDone: allDone)).then {
-                sc.register().then {
+            let f = sc.pipeline.add(handler: VerifyConnectionFailureHandler(allDone: allDone)).flatMap {
+                sc.register().flatMap {
                     sc.connect(to: serverChannel.localAddress!)
                 }
             }
@@ -2293,7 +2293,7 @@ public class ChannelTests: XCTestCase {
         }
 
         XCTAssertNoThrow(try sc.eventLoop.submit {
-            sc.register().then {
+            sc.register().flatMap {
                 sc.connect(to: serverChannel.localAddress!)
             }
         }.wait().wait() as Void)
@@ -2304,7 +2304,7 @@ public class ChannelTests: XCTestCase {
                 // this callback must be attached before we call the close
                 let f = p.futureResult.map {
                     XCTFail("shouldn't be reached")
-                }.thenIfError { err in
+                }.flatMapError { err in
                     XCTAssertNotNil(err as? DummyError)
                     return sc.close()
                 }
@@ -2519,7 +2519,7 @@ public class ChannelTests: XCTestCase {
                     XCTAssertTrue(serverChannel.isActive)
                     // we allow auto-read again to make sure that the socket buffer is drained on write error
                     // (cf. https://github.com/apple/swift-nio/issues/593)
-                    ctx.channel.setOption(option: ChannelOptions.autoRead, value: true).then {
+                    ctx.channel.setOption(option: ChannelOptions.autoRead, value: true).flatMap {
                         // let's trigger the write error
                         var buffer = ctx.channel.allocator.buffer(capacity: 16)
                         buffer.write(staticString: "THIS WILL FAIL ANYWAY")

@@ -16,7 +16,7 @@
 /// RangeReplaceableCollection. It defines the append method that is present
 /// on RangeReplaceableCollection, which makes all RangeReplaceableCollections
 /// trivially able to implement this protocol.
-public protocol AppendableCollection: Collection {
+protocol AppendableCollection: Collection {
     mutating func append(_ newElement: Self.Iterator.Element)
 }
 
@@ -24,12 +24,7 @@ public protocol AppendableCollection: Collection {
 /// will automatically expand if more elements than `initialRingCapacity` are stored, it's advantageous to prevent
 /// expansions from happening frequently. Expansions will always force an allocation and a copy to happen.
 public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
-    // this typealias is so complicated because of SR-6963, when that's fixed we can drop the generic parameters and the where clause
-    #if swift(>=4.2)
     public typealias RangeType<Bound> = Range<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
-    #else
-    public typealias RangeType<Bound> = CountableRange<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
-    #endif
     private var buffer: ContiguousArray<E?>
 
     /// The index into the buffer of the first item
@@ -210,8 +205,8 @@ extension CircularBuffer: BidirectionalCollection, RandomAccessCollection, Range
             self.removeSubrange(subrange)
         } else {
             var newBuffer: ContiguousArray<E?> = []
-            let capacityDelta = (Int(newElements.count) - subrange.count)
-            let newCapacity = Int(UInt32(self.buffer.count + capacityDelta).nextPowerOf2())
+            let neededNewCapacity = self.count + newElements.count - subrange.count + 1 /* always one spare */
+            let newCapacity = Swift.max(self.capacity, neededNewCapacity.nextPowerOf2())
             newBuffer.reserveCapacity(newCapacity)
 
             // This mapping is required due to an inconsistent ability to append sequences of non-optional

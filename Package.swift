@@ -1,4 +1,4 @@
-// swift-tools-version:4.2
+// swift-tools-version:5.0
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -16,6 +16,8 @@
 import PackageDescription
 
 var targets: [PackageDescription.Target] = [
+    .target(name: "_NIO1APIShims",
+            dependencies: ["NIO", "NIOHTTP1", "NIOTLS"]),
     .target(name: "NIO",
             dependencies: ["CNIOLinux",
                            "CNIODarwin",
@@ -38,7 +40,11 @@ var targets: [PackageDescription.Target] = [
     .target(name: "NIOHTTP1Server",
             dependencies: ["NIO", "NIOHTTP1", "NIOConcurrencyHelpers"]),
     .target(name: "CNIOHTTPParser"),
-    .target(name: "CNIOZlib"),
+    .target(name: "CNIOZlib",
+            dependencies: [],
+            linkerSettings: [
+                .linkedLibrary("z")
+            ]),
     .target(name: "NIOTLS", dependencies: ["NIO"]),
     .target(name: "NIOChatServer",
             dependencies: ["NIO", "NIOConcurrencyHelpers"]),
@@ -78,6 +84,7 @@ let package = Package(
                     targets: ["NIOPerformanceTester"]),
         .executable(name: "NIOMulticastChat", targets: ["NIOMulticastChat"]),
         .library(name: "NIO", targets: ["NIO"]),
+        .library(name: "_NIO1APIShims", targets: ["_NIO1APIShims"]),
         .library(name: "NIOTLS", targets: ["NIOTLS"]),
         .library(name: "NIOHTTP1", targets: ["NIOHTTP1"]),
         .library(name: "NIOConcurrencyHelpers", targets: ["NIOConcurrencyHelpers"]),
@@ -85,7 +92,6 @@ let package = Package(
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio-zlib-support.git", from: "1.0.0"),
     ],
     targets: targets
 )

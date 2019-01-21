@@ -572,7 +572,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             return
         }
         guard self.lifecycleManager.isPreRegistered else {
-            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            promise?.fail(error: ChannelError.inappropriateOperationForState)
             return
         }
 
@@ -592,7 +592,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
 
         guard self.lifecycleManager.isActive else {
-            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            promise?.fail(error: ChannelError.inappropriateOperationForState)
             return
         }
 
@@ -775,7 +775,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
 
         guard !self.lifecycleManager.isPreRegistered else {
-            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            promise?.fail(error: ChannelError.inappropriateOperationForState)
             return
         }
 
@@ -802,9 +802,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         registerPromise.futureResult.whenFailure { (_: Error) in
             self.close(promise: nil)
         }
-        if let promise = promise {
-            registerPromise.futureResult.cascadeFailure(promise: promise)
-        }
+        registerPromise.futureResult.cascadeFailure(promise: promise)
 
         if self.lifecycleManager.isPreRegistered {
             // we expect kqueue/epoll registration to always succeed which is basically true, except for errors that
@@ -1045,7 +1043,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         }
 
         guard self.lifecycleManager.isPreRegistered else {
-            promise?.fail(error: ChannelLifecycleError.inappropriateOperationForState)
+            promise?.fail(error: ChannelError.inappropriateOperationForState)
             return
         }
 
@@ -1076,8 +1074,8 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     }
 
     public func channelRead0(_ data: NIOAny) {
-        assert(self.lifecycleManager.isActive)
         // Do nothing by default
+        // note: we can't assert that we're active here as TailChannelHandler will call this on channelRead
     }
 
     public func errorCaught0(error: Error) {

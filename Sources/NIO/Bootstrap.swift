@@ -18,6 +18,9 @@
 ///
 /// ```swift
 ///     let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+///     defer {
+///         try! group.syncShutdownGracefully()
+///     }
 ///     let bootstrap = ServerBootstrap(group: group)
 ///         // Specify backlog and enable SO_REUSEADDR for the server itself
 ///         .serverChannelOption(ChannelOptions.backlog, value: 256)
@@ -26,7 +29,7 @@
 ///         // Set the handlers that are applied to the accepted child `Channel`s.
 ///         .childChannelInitializer { channel in
 ///             // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-///             channel.pipeline.add(handler: BackPressureHandler()).then { () in
+///             channel.pipeline.add(handler: BackPressureHandler()).flatMap { () in
 ///                 // make sure to instantiate your `ChannelHandlers` inside of
 ///                 // the closure as it will be invoked once per connection.
 ///                 channel.pipeline.add(handler: MyChannelHandler())
@@ -38,9 +41,6 @@
 ///         .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 ///         .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
 ///         .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
-///     defer {
-///         try! group.syncShutdownGracefully()
-///     }
 ///     let channel = try! bootstrap.bind(host: host, port: port).wait()
 ///     /* the server will now be accepting connections */
 ///
@@ -214,20 +214,20 @@ public final class ServerBootstrap {
         }
 
         return eventLoop.submit {
-            return serverChannelInit(serverChannel).then {
+            return serverChannelInit(serverChannel).flatMap {
                 serverChannel.pipeline.add(handler: AcceptHandler(childChannelInitializer: childChannelInit,
                                                                   childChannelOptions: childChannelOptions))
-            }.then {
+            }.flatMap {
                 serverChannelOptions.applyAll(channel: serverChannel)
-            }.then {
+            }.flatMap {
                 register(eventLoop, serverChannel)
             }.map {
                 serverChannel as Channel
-            }.thenIfError { error in
+            }.flatMapError { error in
                 serverChannel.close0(error: error, mode: .all, promise: nil)
                 return eventLoop.makeFailedFuture(error: error)
             }
-        }.then {
+        }.flatMap {
             $0
         }
     }
@@ -258,7 +258,7 @@ public final class ServerBootstrap {
 
             @inline(__always)
             func setupChildChannel() -> EventLoopFuture<Void> {
-                return self.childChannelOptions.applyAll(channel: accepted).then { () -> EventLoopFuture<Void> in
+                return self.childChannelOptions.applyAll(channel: accepted).flatMap { () -> EventLoopFuture<Void> in
                     childEventLoop.assertInEventLoop()
                     return childChannelInit(accepted)
                 }
@@ -267,7 +267,7 @@ public final class ServerBootstrap {
             @inline(__always)
             func fireThroughPipeline(_ future: EventLoopFuture<Void>) {
                 ctxEventLoop.assertInEventLoop()
-                future.then { (_) -> EventLoopFuture<Void> in
+                future.flatMap { (_) -> EventLoopFuture<Void> in
                     ctxEventLoop.assertInEventLoop()
                     guard !ctx.pipeline.destroyed else {
                         return ctx.eventLoop.makeFailedFuture(error: ChannelError.ioOnClosedChannel)
@@ -285,7 +285,7 @@ public final class ServerBootstrap {
             } else {
                 fireThroughPipeline(childEventLoop.submit {
                     return setupChildChannel()
-                }.then { $0 }.hopTo(eventLoop: ctxEventLoop))
+                }.flatMap { $0 }.hopTo(eventLoop: ctxEventLoop))
             }
         }
 
@@ -307,9 +307,9 @@ private extension Channel {
         // this is pretty delicate at the moment:
         // In many cases `body` must be _synchronously_ follow `register`, otherwise in our current
         // implementation, `epoll` will send us `EPOLLHUP`. To have it run synchronously, we need to invoke the
-        // `then` on the eventloop that the `register` will succeed on.
+        // `flatMap` on the eventloop that the `register` will succeed on.
         self.eventLoop.assertInEventLoop()
-        return self.register().then {
+        return self.register().flatMap {
             self.eventLoop.assertInEventLoop()
             return body(self)
         }
@@ -325,6 +325,9 @@ private extension Channel {
 ///
 /// ```swift
 ///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+///     defer {
+///         try! group.syncShutdownGracefully()
+///     }
 ///     let bootstrap = ClientBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
 ///         .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
@@ -334,9 +337,6 @@ private extension Channel {
 ///             // resolves to both IPv4 and IPv6 addresses, cf. Happy Eyeballs).
 ///             channel.pipeline.add(handler: MyChannelHandler())
 ///         }
-///     defer {
-///         try! group.syncShutdownGracefully()
-///     }
 ///     try! bootstrap.connect(host: "example.org", port: 12345).wait()
 ///     /* the Channel is now connected */
 /// ```
@@ -440,7 +440,7 @@ public final class ClientBootstrap {
                 channel.close(promise: nil)
             }
 
-            connectPromise.futureResult.whenComplete {
+            connectPromise.futureResult.whenComplete { (_: Result<Void, Error>) in
                 cancelTask.cancel()
             }
             return connectPromise.futureResult
@@ -476,15 +476,15 @@ public final class ClientBootstrap {
             return eventLoop.makeFailedFuture(error: error)
         }
 
-        return channelInitializer(channel).then {
+        return channelInitializer(channel).flatMap {
             self.channelOptions.applyAll(channel: channel)
-        }.then {
+        }.flatMap {
             let promise = eventLoop.makePromise(of: Void.self)
             channel.registerAlreadyConfigured0(promise: promise)
             return promise.futureResult
         }.map {
             channel
-        }.thenIfError { error in
+        }.flatMapError { error in
             channel.close0(error: error, mode: .all, promise: nil)
             return channel.eventLoop.makeFailedFuture(error: error)
         }
@@ -508,13 +508,13 @@ public final class ClientBootstrap {
         @inline(__always)
         func setupChannel() -> EventLoopFuture<Channel> {
             eventLoop.assertInEventLoop()
-            channelInitializer(channel).then {
+            channelInitializer(channel).flatMap {
                 channelOptions.applyAll(channel: channel)
-            }.then {
+            }.flatMap {
                 channel.registerAndDoSynchronously(body)
             }.map {
                 channel
-            }.thenIfError { error in
+            }.flatMapError { error in
                 channel.close0(error: error, mode: .all, promise: nil)
                 return channel.eventLoop.makeFailedFuture(error: error)
             }.cascade(promise: promise)
@@ -524,7 +524,7 @@ public final class ClientBootstrap {
         if eventLoop.inEventLoop {
             return setupChannel()
         } else {
-            return eventLoop.submit(setupChannel).then { $0 }
+            return eventLoop.submit(setupChannel).flatMap { $0 }
         }
     }
 }
@@ -536,15 +536,15 @@ public final class ClientBootstrap {
 ///
 /// ```swift
 ///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+///     defer {
+///         try! group.syncShutdownGracefully()
+///     }
 ///     let bootstrap = DatagramBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
 ///         .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 ///         .channelInitializer { channel in
 ///             channel.pipeline.add(handler: MyChannelHandler())
 ///         }
-///     defer {
-///         try! group.syncShutdownGracefully()
-///     }
 ///     let channel = try! bootstrap.bind(host: "127.0.0.1", port: 53).wait()
 ///     /* the Channel is now ready to send/receive datagrams */
 ///
@@ -642,7 +642,7 @@ public final class DatagramBootstrap {
                                        protocolFamily: address.protocolFamily)
         }
         return bind0(makeChannel: makeChannel) { (eventLoop, channel) in
-            channel.register().then {
+            channel.register().flatMap {
                 channel.bind(to: address)
             }
         }
@@ -660,13 +660,13 @@ public final class DatagramBootstrap {
             return eventLoop.makeFailedFuture(error: error)
         }
 
-        return channelInitializer(channel).then {
+        return channelInitializer(channel).flatMap {
             channelOptions.applyAll(channel: channel)
-        }.then {
+        }.flatMap {
             registerAndBind(eventLoop, channel)
         }.map {
             channel
-        }.thenIfError { error in
+        }.flatMapError { error in
             eventLoop.makeFailedFuture(error: error)
         }
     }

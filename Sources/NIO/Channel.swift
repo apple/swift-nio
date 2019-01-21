@@ -296,9 +296,6 @@ public enum ChannelError: Error {
     /// Connect operation timed out
     case connectTimeout(TimeAmount)
 
-    /// Connect operation failed
-    case connectFailed(NIOConnectionError)
-
     /// Unsupported operation triggered on a `Channel`. For example `connect` on a `ServerSocketChannel`.
     case operationUnsupported
 
@@ -328,18 +325,7 @@ public enum ChannelError: Error {
 
     /// A `DatagramChannel` `write` was made with an address that was not reachable and so could not be delivered.
     case writeHostUnreachable
-}
 
-/// This should be inside of `ChannelError` but we keep it separate to not break API.
-// TODO: For 2.0: bring this inside of `ChannelError`. https://github.com/apple/swift-nio/issues/620
-public enum ChannelLifecycleError: Error {
-    /// An operation that was inappropriate given the current `Channel` state was attempted.
-    case inappropriateOperationForState
-}
-
-/// This should be inside of `ChannelError` but we keep it separate to not break API.
-// TODO: For 2.0: bring this inside of `ChannelError`. https://github.com/apple/swift-nio/issues/620
-public enum MulticastError: Error {
     /// The local address of the `Channel` could not be determined.
     case unknownLocalAddress
 
@@ -352,38 +338,12 @@ public enum MulticastError: Error {
     /// An attempt was made to join a multicast group that does not correspond to a multicast
     /// address.
     case illegalMulticastAddress(SocketAddress)
+
+    /// An operation that was inappropriate given the current `Channel` state was attempted.
+    case inappropriateOperationForState
 }
 
-extension ChannelError: Equatable {
-    public static func ==(lhs: ChannelError, rhs: ChannelError) -> Bool {
-        switch (lhs, rhs) {
-        case (.connectPending, .connectPending):
-            return true
-        case (.connectTimeout, .connectTimeout):
-            return true
-        case (.operationUnsupported, .operationUnsupported):
-            return true
-        case (.ioOnClosedChannel, .ioOnClosedChannel):
-            return true
-        case (.alreadyClosed, .alreadyClosed):
-            return true
-        case (.outputClosed, .outputClosed):
-            return true
-        case (.inputClosed, .inputClosed):
-            return true
-        case (.eof, .eof):
-            return true
-        case (.writeDataUnsupported, .writeDataUnsupported):
-            return true
-        case (.writeMessageTooLarge, .writeMessageTooLarge):
-            return true
-        case (.writeHostUnreachable, .writeHostUnreachable):
-            return true
-        default:
-            return false
-        }
-    }
-}
+extension ChannelError: Equatable { }
 
 /// An `Channel` related event that is passed through the `ChannelPipeline` to notify the user.
 public enum ChannelEvent: Equatable {
