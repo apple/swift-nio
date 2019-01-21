@@ -182,8 +182,8 @@ public final class HTTPResponseDecoder: HTTPDecoder<HTTPClientResponsePart>, Cha
         return methods.removeFirst()
     }
 
-    public convenience init() {
-        self.init(type: HTTPClientResponsePart.self, leftOverBytesStrategy: .dropBytes)
+    public convenience init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) {
+        self.init(type: HTTPClientResponsePart.self, leftOverBytesStrategy: leftOverBytesStrategy)
     }
 
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
