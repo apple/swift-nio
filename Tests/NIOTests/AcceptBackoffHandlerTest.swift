@@ -254,16 +254,16 @@ public class AcceptBackoffHandlerTest: XCTestCase {
                                                                            group: group))
 
         XCTAssertNoThrow(try serverChannel.setOption(option: ChannelOptions.autoRead, value: false).wait())
-        XCTAssertNoThrow(try serverChannel.pipeline.add(handler: readCountHandler).then { _ in
+        XCTAssertNoThrow(try serverChannel.pipeline.add(handler: readCountHandler).flatMap { _ in
             serverChannel.pipeline.add(name: self.acceptHandlerName, handler: AcceptBackoffHandler(backoffProvider: backoffProvider))
         }.wait())
 
         XCTAssertNoThrow(try eventLoop.submit {
             // this is pretty delicate at the moment:
             // `bind` must be _synchronously_ follow `register`, otherwise in our current implementation, `epoll` will
-            // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `then` on the eventloop that the
+            // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `flatMap` on the eventloop that the
             // `register` will succeed.
-            serverChannel.register().then { () -> EventLoopFuture<()> in
+            serverChannel.register().flatMap { () -> EventLoopFuture<()> in
                 return serverChannel.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 0))
             }
         }.wait().wait() as Void)

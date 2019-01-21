@@ -454,7 +454,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
         let ch = data.forceAsOther() as SocketChannel
         ch.eventLoop.execute {
-            ch.register().thenThrowing {
+            ch.register().flatMapThrowing {
                 guard ch.isOpen else {
                     throw ChannelError.ioOnClosedChannel
                 }

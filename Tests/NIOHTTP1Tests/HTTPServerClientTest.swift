@@ -337,7 +337,7 @@ class HTTPServerClientTest : XCTestCase {
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
                     channel.pipeline.add(handler: httpHandler)
                 }
             }.bind(host: "127.0.0.1", port: 0).wait())
@@ -348,7 +348,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers().then {
+                channel.pipeline.addHTTPClientHandlers().flatMap {
                     channel.pipeline.add(handler: accumulation)
                 }
             }
@@ -395,7 +395,7 @@ class HTTPServerClientTest : XCTestCase {
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
                     channel.pipeline.add(handler: httpHandler)
                 }
             }.bind(host: "127.0.0.1", port: 0).wait())
@@ -406,7 +406,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers().then {
+                channel.pipeline.addHTTPClientHandlers().flatMap {
                     channel.pipeline.add(handler: accumulation)
                 }
             }
@@ -453,7 +453,7 @@ class HTTPServerClientTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
                     channel.pipeline.add(handler: httpHandler)
                 }
             }.bind(host: "127.0.0.1", port: 0).wait())
@@ -464,7 +464,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers().then {
+                channel.pipeline.addHTTPClientHandlers().flatMap {
                     channel.pipeline.add(handler: accumulation)
                 }
             }
@@ -512,7 +512,7 @@ class HTTPServerClientTest : XCTestCase {
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
                     channel.pipeline.add(handler: httpHandler)
                 }
             }.bind(host: "127.0.0.1", port: 0).wait())
@@ -552,7 +552,7 @@ class HTTPServerClientTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
                     channel.pipeline.add(handler: httpHandler)
                 }
             }.bind(host: "127.0.0.1", port: 0).wait())
@@ -562,7 +562,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers().then {
+                channel.pipeline.addHTTPClientHandlers().flatMap {
                     channel.pipeline.add(handler: accumulation)
                 }
             }
@@ -597,7 +597,7 @@ class HTTPServerClientTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
                     channel.pipeline.add(handler: httpHandler)
                 }
             }.bind(host: "127.0.0.1", port: 0).wait())
@@ -607,7 +607,7 @@ class HTTPServerClientTest : XCTestCase {
 
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers().then {
+                channel.pipeline.addHTTPClientHandlers().flatMap {
                     channel.pipeline.add(handler: accumulation)
                 }
             }

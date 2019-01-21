@@ -68,14 +68,14 @@ final class SocketOptionProviderTest: XCTestCase {
         let v4LoopbackInterface = try! System.enumerateInterfaces().filter { $0.address == v4LoopbackAddress }.first!
 
         self.ipv4DatagramChannel = try? assertNoThrowWithValue(
-            DatagramBootstrap(group: group).bind(host: "127.0.0.1", port: 0).then { channel in
+            DatagramBootstrap(group: group).bind(host: "127.0.0.1", port: 0).flatMap { channel in
                 return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "224.0.2.66", port: 0), interface: v4LoopbackInterface).map { channel }
             }.wait()
         )
 
         // The IPv6 setup is allowed to fail, some hosts don't have IPv6.
        let v6LoopbackInterface = try! System.enumerateInterfaces().filter { $0.address == v6LoopbackAddress }.first
-        self.ipv6DatagramChannel = try? DatagramBootstrap(group: group).bind(host: "::1", port: 0).then { channel in
+        self.ipv6DatagramChannel = try? DatagramBootstrap(group: group).bind(host: "::1", port: 0).flatMap { channel in
             return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "ff12::beeb", port: 0), interface: v6LoopbackInterface).map { channel }
         }.wait()
     }
@@ -92,7 +92,7 @@ final class SocketOptionProviderTest: XCTestCase {
         let provider = try assertNoThrowWithValue(self.convertedChannel())
 
         let newTimeout = timeval(tv_sec: 5, tv_usec: 0)
-        let retrievedTimeout = try assertNoThrowWithValue(provider.unsafeSetSocketOption(level: SocketOptionLevel(SOL_SOCKET), name: SO_RCVTIMEO, value: newTimeout).then {
+        let retrievedTimeout = try assertNoThrowWithValue(provider.unsafeSetSocketOption(level: SocketOptionLevel(SOL_SOCKET), name: SO_RCVTIMEO, value: newTimeout).flatMap {
             provider.unsafeGetSocketOption(level: SocketOptionLevel(SOL_SOCKET), name: SO_RCVTIMEO) as EventLoopFuture<timeval>
         }.wait())
 
@@ -112,7 +112,7 @@ final class SocketOptionProviderTest: XCTestCase {
         let provider = try assertNoThrowWithValue(self.convertedChannel())
 
         let newReuseAddr = 1 as CInt
-        let retrievedReuseAddr = try assertNoThrowWithValue(provider.unsafeSetSocketOption(level: SocketOptionLevel(SOL_SOCKET), name: SO_REUSEADDR, value: newReuseAddr).then {
+        let retrievedReuseAddr = try assertNoThrowWithValue(provider.unsafeSetSocketOption(level: SocketOptionLevel(SOL_SOCKET), name: SO_REUSEADDR, value: newReuseAddr).flatMap {
             provider.unsafeGetSocketOption(level: SocketOptionLevel(SOL_SOCKET), name: SO_REUSEADDR) as EventLoopFuture<CInt>
         }.wait())
 
@@ -150,7 +150,7 @@ final class SocketOptionProviderTest: XCTestCase {
         let newLingerValue = linger(l_onoff: 1, l_linger: 64)
 
         let provider = try self.convertedChannel()
-        XCTAssertNoThrow(try provider.setSoLinger(newLingerValue).then {
+        XCTAssertNoThrow(try provider.setSoLinger(newLingerValue).flatMap {
             provider.getSoLinger()
         }.map {
             XCTAssertEqual($0.l_linger, newLingerValue.l_linger)
@@ -171,7 +171,7 @@ final class SocketOptionProviderTest: XCTestCase {
             return
         }
 
-        XCTAssertNoThrow(try provider.setIPMulticastIF(address).then {
+        XCTAssertNoThrow(try provider.setIPMulticastIF(address).flatMap {
             provider.getIPMulticastIF()
         }.map {
             XCTAssertEqual($0.s_addr, address.s_addr)
@@ -180,7 +180,7 @@ final class SocketOptionProviderTest: XCTestCase {
 
     func testIpMulticastTtl() throws {
         let provider = try assertNoThrowWithValue(self.ipv4MulticastProvider())
-        XCTAssertNoThrow(try provider.setIPMulticastTTL(6).then {
+        XCTAssertNoThrow(try provider.setIPMulticastTTL(6).flatMap {
             provider.getIPMulticastTTL()
         }.map {
             XCTAssertEqual($0, 6)
@@ -189,7 +189,7 @@ final class SocketOptionProviderTest: XCTestCase {
 
     func testIpMulticastLoop() throws {
         let provider = try assertNoThrowWithValue(self.ipv4MulticastProvider())
-        XCTAssertNoThrow(try provider.setIPMulticastLoop(1).then {
+        XCTAssertNoThrow(try provider.setIPMulticastLoop(1).flatMap {
             provider.getIPMulticastLoop()
         }.map {
             XCTAssertNotEqual($0, 0)
@@ -209,7 +209,7 @@ final class SocketOptionProviderTest: XCTestCase {
             return
         }
 
-        XCTAssertNoThrow(try provider.setIPv6MulticastIF(CUnsignedInt(loopbackInterface.interfaceIndex)).then {
+        XCTAssertNoThrow(try provider.setIPv6MulticastIF(CUnsignedInt(loopbackInterface.interfaceIndex)).flatMap {
             provider.getIPv6MulticastIF()
         }.map {
             XCTAssertEqual($0, CUnsignedInt(loopbackInterface.interfaceIndex))
@@ -222,7 +222,7 @@ final class SocketOptionProviderTest: XCTestCase {
             return
         }
 
-        XCTAssertNoThrow(try provider.setIPv6MulticastHops(6).then {
+        XCTAssertNoThrow(try provider.setIPv6MulticastHops(6).flatMap {
             provider.getIPv6MulticastHops()
         }.map {
             XCTAssertEqual($0, 6)
@@ -235,7 +235,7 @@ final class SocketOptionProviderTest: XCTestCase {
             return
         }
 
-        XCTAssertNoThrow(try provider.setIPv6MulticastLoop(1).then {
+        XCTAssertNoThrow(try provider.setIPv6MulticastLoop(1).flatMap {
             provider.getIPv6MulticastLoop()
         }.map {
             XCTAssertNotEqual($0, 0)

@@ -70,7 +70,7 @@ final class MulticastTest: XCTestCase {
         return DatagramBootstrap(group: self.group)
             .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .bind(host: host, port: port)
-            .then { channel in
+            .flatMap { channel in
                 let channel = channel as! MulticastChannel
 
                 do {
@@ -79,7 +79,7 @@ final class MulticastTest: XCTestCase {
                 } catch {
                     return channel.eventLoop.makeFailedFuture(error: error)
                 }
-            }.then { (channel: MulticastChannel) -> EventLoopFuture<MulticastChannel> in
+            }.flatMap { (channel: MulticastChannel) -> EventLoopFuture<MulticastChannel> in
                 let provider = channel as! SocketOptionProvider
 
                 switch channel.localAddress! {

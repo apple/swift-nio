@@ -185,13 +185,13 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
                 // internal handler, then call the user code, and then finally when the user code is done we do
                 // our final cleanup steps, namely we replay the received data we buffered in the meantime and
                 // then remove ourselves from the pipeline.
-                self.removeExtraHandlers(ctx: ctx).then {
+                self.removeExtraHandlers(ctx: ctx).flatMap {
                     self.sendUpgradeResponse(ctx: ctx, upgradeRequest: request, responseHeaders: responseHeaders)
-                }.then {
+                }.flatMap {
                     self.removeHandler(ctx: ctx, handler: self.httpEncoder)
                 }.map { (_: Bool) in
                     self.upgradeCompletionHandler(ctx)
-                }.then {
+                }.flatMap {
                     upgrader.upgrade(ctx: ctx, upgradeRequest: request)
                 }.map {
                     ctx.fireUserInboundEventTriggered(HTTPUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request))
