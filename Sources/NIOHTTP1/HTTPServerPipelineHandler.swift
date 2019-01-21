@@ -315,7 +315,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
             case .quiescingLastRequestEndReceived:
                 ctx.write(data).then {
                     ctx.close()
-                }.cascade(promise: promise ?? ctx.channel.eventLoop.makePromise())
+                }.cascade(promise: promise)
             case .acceptingEvents, .quiescingWaitingForRequestEnd:
                 ctx.write(data, promise: promise)
             }

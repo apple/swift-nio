@@ -26,6 +26,14 @@ SwiftNIO aims to support all of the platforms where Swift is supported. Currentl
 
 The latest released SwiftNIO version supports Swift 4.0, 4.1, and 4.2.
 
+### Compatibility
+
+SwiftNIO follows [SemVer 2.0.0](https://semver.org/#semantic-versioning-200) with a separate document declaring [SwiftNIO's Public API](docs/public-api.md).
+
+What this means for you is that you should depend on SwiftNIO with a version range that covers everything from the minimum SwiftNIO version you require up to the next major version.
+In SwiftPM that can be easily done specifying for example `from: "2.0.0"` meaning that you support SwiftNIO in every version starting from 2.0.0 up to (excluding) 3.0.0.
+SemVer and SwiftNIO's Public API guarantees should result in a working program without having to worry about testing every single version for compatibility.
+
 ### Basic Architecture
 
 The basic building blocks of SwiftNIO are the following 8 types of objects:
