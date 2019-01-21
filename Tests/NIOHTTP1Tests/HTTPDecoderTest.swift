@@ -274,9 +274,9 @@ class HTTPDecoderTest: XCTestCase {
                 _ = ctx.pipeline.remove(name: "decoder")
             }
 
-            func handlerRemoved(ctx: ChannelHandlerContext) {	
-                XCTAssertTrue(self.called)	
-            } 
+            func handlerRemoved(ctx: ChannelHandlerContext) {
+                XCTAssertTrue(self.called)
+            }
         }
 
         class Receiver: ChannelInboundHandler {
