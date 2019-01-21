@@ -259,7 +259,7 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.finish())
     }
 
-    func testDontDropExtraBytes() throws {
+    func testDontDropExtraBytesRequest() throws {
         class ByteCollector: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
             var called: Bool = false
@@ -273,9 +273,9 @@ class HTTPDecoderTest: XCTestCase {
             func handlerAdded(ctx: ChannelHandlerContext) {
                 _ = ctx.pipeline.remove(name: "decoder")
             }
-
+            
             func handlerRemoved(ctx: ChannelHandlerContext) {
-                XCTAssertTrue(self.called)
+                XCTAssert(self.called)
             }
         }
 
@@ -298,6 +298,8 @@ class HTTPDecoderTest: XCTestCase {
         }
         XCTAssertNoThrow(try channel.pipeline.add(name: "decoder", handler: HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes)).wait())
         XCTAssertNoThrow(try channel.pipeline.add(handler: Receiver()).wait())
+        
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 8888)).wait())
 
         // This connect call is semantically wrong, but it's how you active embedded channels properly right now.
         XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 8888)).wait())
@@ -307,6 +309,77 @@ class HTTPDecoderTest: XCTestCase {
 
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         XCTAssertNoThrow(try channel.pipeline.assertDoesNotContain(handlerType: HTTPRequestDecoder.self))
+        XCTAssertNoThrow(try channel.finish())
+    }
+    
+    func testDontDropExtraBytesResponse() throws {
+        class ByteCollector: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            var called: Bool = false
+            
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                var buffer = self.unwrapInboundIn(data)
+                XCTAssertEqual("XXXX", buffer.readString(length: buffer.readableBytes)!)
+                self.called = true
+            }
+            
+            func handlerAdded(ctx: ChannelHandlerContext) {
+                _ = ctx.pipeline.remove(name: "decoder")
+            }
+            
+            func handlerRemoved(ctx: ChannelHandlerContext) {
+                XCTAssert(self.called)
+            }
+        }
+        
+        class Reciever: ChannelInboundHandler {
+            typealias InboundIn = HTTPClientResponsePart
+            typealias InboundOut = HTTPClientResponsePart
+            typealias OutboundOut = HTTPClientRequestPart
+            
+            var upgrading = false
+            
+            var recievedMessages: [NIOAny] = []
+            
+            func channelActive(ctx: ChannelHandlerContext) {
+                var upgradeReq = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/")
+                upgradeReq.headers.add(name: "Connection", value: "Upgrade")
+                upgradeReq.headers.add(name: "Upgrade", value: "myprot")
+                upgradeReq.headers.add(name: "Host", value: "localhost")
+                ctx.write(wrapOutboundOut(.head(upgradeReq)), promise: nil)
+                ctx.writeAndFlush(wrapOutboundOut(.end(nil)), promise: nil)
+            }
+            
+            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                if upgrading {
+                    self.recievedMessages.append(data)
+                }
+                
+                let part = self.unwrapInboundIn(data)
+                switch part {
+                case .end:
+                    self.upgrading = true
+                    _ = ctx.pipeline.remove(handler: self).then { _ in
+                        ctx.pipeline.add(handler: ByteCollector())
+                    }
+                    break
+                default:
+                    // ignore
+                    break
+                }
+            }
+        }
+        
+        XCTAssertNoThrow(try channel.pipeline.add(name: "decoder", handler: HTTPResponseDecoder(leftOverBytesStrategy: .forwardBytes)).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: Reciever()).wait())
+        
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 8888)).wait())
+        
+        var buffer = channel.allocator.buffer(capacity: 32)
+        buffer.write(staticString: "HTTP/1.1 101 Switching Protocols\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\nXXXX")
+        
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(try channel.pipeline.assertDoesNotContain(handlerType: HTTPResponseDecoder.self))
         XCTAssertNoThrow(try channel.finish())
     }
 
