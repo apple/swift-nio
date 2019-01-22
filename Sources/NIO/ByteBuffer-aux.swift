@@ -37,7 +37,10 @@ extension ByteBuffer {
         }
 
         return self.withVeryUnsafeBytes { ptr in
-            Array<UInt8>(ptr[index..<(index+length)])
+            // this is not technically correct because we shouldn't just bind
+            // the memory to `UInt8` but it's not a real issue either and we
+            // need to work around https://bugs.swift.org/browse/SR-9604
+            Array<UInt8>(UnsafeRawBufferPointer(rebasing: ptr[index..<(index+length)]).bindMemory(to: UInt8.self))
         }
     }
 
