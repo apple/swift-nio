@@ -893,4 +893,31 @@ class EventLoopFutureTest : XCTestCase {
         XCTAssertThrowsError(try results[3].get())
         XCTAssertEqual(try results[4].get(), 5)
     }
+
+    func testWhenAllCompleteResolvesAfterFutures() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 6)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        var tally = 0
+        
+        var futures: [EventLoopFuture<Int>] = []
+        for index in 1...5 {
+            futures.append(
+                group.next().makeSucceededFuture(result: index).map {
+                    sleep(UInt32(1 / index))
+                    tally += index
+                    return $0
+                }
+            )
+        }
+
+        let mainFuture = EventLoopFuture<[Result<Int, Error>]>.whenAllComplete(futures, eventLoop: group.next())
+        mainFuture.whenSuccess { _ in tally *= -1 }
+
+        let _ = try mainFuture.wait()
+
+        XCTAssertEqual(tally, -15)
+    }
 }
