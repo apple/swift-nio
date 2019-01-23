@@ -222,12 +222,12 @@ func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyRece
 
 func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #file, line: UInt = #line) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
-    let endTime = Time.now() + time
+    let endTime = NIODeadline.now() + time
 
     repeat {
         if condition() { return }
         usleep(UInt32(testInterval.nanoseconds / 1000))
-    } while (Time.now() < endTime)
+    } while (NIODeadline.now() < endTime)
 
     if !condition() {
         XCTFail(message)

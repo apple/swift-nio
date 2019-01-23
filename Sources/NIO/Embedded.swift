@@ -16,9 +16,9 @@ import Dispatch
 
 private final class EmbeddedScheduledTask {
     let task: () -> Void
-    let readyTime: Time
+    let readyTime: NIODeadline
 
-    init(readyTime: Time, task: @escaping () -> Void) {
+    init(readyTime: NIODeadline, task: @escaping () -> Void) {
         self.readyTime = readyTime
         self.task = task
     }
@@ -48,7 +48,7 @@ extension EmbeddedScheduledTask: Comparable {
 ///     unsynchronized fashion.
 public class EmbeddedEventLoop: EventLoop {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
-	private var now: Time = .exactly(0)
+    private var now: NIODeadline = .exactly(0)
 
     private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>(ascending: true)
 
@@ -59,7 +59,7 @@ public class EmbeddedEventLoop: EventLoop {
     public init() { }
 
     @discardableResult
-    public func scheduleTask<T>(at: Time, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    public func scheduleTask<T>(at: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = makePromise()
         let task = EmbeddedScheduledTask(readyTime: at) {
             do {
@@ -78,14 +78,14 @@ public class EmbeddedEventLoop: EventLoop {
 
     @discardableResult
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
-        return scheduleTask(at: now + `in`, task)
+        return scheduleTask(at: self.now + `in`, task)
     }
 
     // We're not really running a loop here. Tasks aren't run until run() is called,
     // at which point we run everything that's been submitted. Anything newly submitted
     // either gets on that train if it's still moving or waits until the next call to run().
     public func execute(_ task: @escaping () -> Void) {
-        self.scheduleTask(at: now, task)
+        self.scheduleTask(at: self.now, task)
     }
 
     public func run() {

@@ -246,7 +246,7 @@ final class Selector<R: Registration> {
     private typealias EventType = Epoll.epoll_event
     private let eventfd: Int32
     private let timerfd: Int32
-    private var earliestTimer: Time = .exactly(.max)
+    private var earliestTimer: NIODeadline = .exactly(.max)
     #else
     private typealias EventType = kevent
     #endif
@@ -489,7 +489,7 @@ final class Selector<R: Registration> {
             // Only call timerfd_settime if we not already scheduled one that will cover it.
             // This guards against calling timerfd_settime if not needed as this is generally speaking
             // expensive.
-            let next = Time.now() + timeAmount
+            let next = NIODeadline.now() + timeAmount
             if next < self.earliestTimer {
                 self.earliestTimer = next
 

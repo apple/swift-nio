@@ -22,7 +22,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
     public typealias InboundIn = Channel
     public typealias OutboundIn = Channel
 
-    private var nextReadDeadlineNS: Time?
+    private var nextReadDeadlineNS: NIODeadline?
     private let backoffProvider: (IOError) -> TimeAmount?
     private var scheduledRead: Scheduled<Void>?
 
@@ -44,7 +44,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
         guard scheduledRead == nil else { return }
 
         if let deadline = self.nextReadDeadlineNS {
-            let now = Time.now()
+            let now = NIODeadline.now()
             if now >= deadline {
                 // The backoff already expired, just do a read.
                 doRead(ctx)
@@ -89,7 +89,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
         self.nextReadDeadlineNS = nil
     }
 
-    private func scheduleRead(at: Time, ctx: ChannelHandlerContext) {
+    private func scheduleRead(at: NIODeadline, ctx: ChannelHandlerContext) {
         self.scheduledRead = ctx.eventLoop.scheduleTask(at: at) {
             self.doRead(ctx)
         }
@@ -172,8 +172,8 @@ public class IdleStateHandler: ChannelDuplexHandler {
     public let allTimeout: TimeAmount?
 
     private var reading = false
-    private var lastReadTime: Time = .exactly(0)
-    private var lastWriteCompleteTime: Time = .exactly(0)
+    private var lastReadTime: NIODeadline = .exactly(0)
+    private var lastWriteCompleteTime: NIODeadline = .exactly(0)
     private var scheduledReaderTask: Scheduled<Void>?
     private var scheduledWriterTask: Scheduled<Void>?
     private var scheduledAllTask: Scheduled<Void>?
@@ -314,7 +314,7 @@ public class IdleStateHandler: ChannelDuplexHandler {
     }
 
     private func initIdleTasks(_ ctx: ChannelHandlerContext) {
-        let now = Time.now()
+        let now = NIODeadline.now()
         lastReadTime = now
         lastWriteCompleteTime = now
         scheduledReaderTask = schedule(ctx, readTimeout, makeReadTimeoutTask)

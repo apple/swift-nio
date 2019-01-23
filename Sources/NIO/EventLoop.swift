@@ -210,7 +210,7 @@ public protocol EventLoop: EventLoopGroup {
 
     /// Schedule a `task` that is executed by this `SelectableEventLoop` at the given time.
     @discardableResult
-    func scheduleTask<T>(at: Time, _ task: @escaping () throws -> T) -> Scheduled<T>
+    func scheduleTask<T>(at: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T>
 
     /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
     @discardableResult
@@ -311,54 +311,86 @@ extension TimeAmount {
     public static func * (lhs: TimeAmount, rhs: TimeAmount.Value) -> TimeAmount {
         return TimeAmount(lhs.nanoseconds * rhs)
     }
+
+    public static func * (lhs: Int, rhs: TimeAmount) -> TimeAmount {
+        return TimeAmount(TimeAmount.Value(lhs) * rhs.nanoseconds)
+    }
+
+    public static func * (lhs: TimeAmount, rhs: Int) -> TimeAmount {
+        return TimeAmount(lhs.nanoseconds * TimeAmount.Value(rhs))
+    }
 }
 
 /// Represents a point in time.
 ///
-/// - note: `Time` should not be used to represent an interval
-public struct Time {
+/// Stores the time in nanoseconds as returned by `DispatchTime.now().uptimeNanoseconds`
+///
+/// `NIODeadline` allow chaining multiple tasks with the same deadline without needing to
+/// compute new timeouts for each step
+///
+/// ```
+/// func doSomething(deadline: NIODeadline) -> EventLoopFuture<Void> {
+///     return step1(deadline: deadline).then {
+///         step2(deadline: deadline)
+///     }
+/// }
+/// doSomething(deadline: .now() + .seconds(5))
+/// ```
+///
+/// - note: `NIODeadline` should not be used to represent a time interval
+public struct NIODeadline: Equatable, Hashable {
     public typealias Value = UInt64
 
-    /// The nanoseconds representation of the `Time`.
+    /// The nanoseconds representation of the `NIODeadline`.
     public let nanoseconds: Value
 
     private init(_ nanoseconds: Value) {
         self.nanoseconds = nanoseconds
     }
 
-    public static func now() -> Time {
-        return Time(DispatchTime.now().uptimeNanoseconds)
+    public static func now() -> NIODeadline {
+        return NIODeadline(DispatchTime.now().uptimeNanoseconds)
     }
 
-    public static func exactly(_ nanoseconds: Value) -> Time {
-        return Time(nanoseconds)
+    public static func exactly(_ nanoseconds: Value) -> NIODeadline {
+        return NIODeadline(nanoseconds)
     }
 }
 
-extension Time: Comparable {
-    public static func < (lhs: Time, rhs: Time) -> Bool {
+extension NIODeadline: Comparable {
+    public static func < (lhs: NIODeadline, rhs: NIODeadline) -> Bool {
         return lhs.nanoseconds < rhs.nanoseconds
     }
+
+    public static func > (lhs: NIODeadline, rhs: NIODeadline) -> Bool {
+        return lhs.nanoseconds > rhs.nanoseconds
+    }
 }
 
-extension Time {
-    public static func - (lhs: Time, rhs: Time) -> TimeAmount {
+extension NIODeadline: CustomStringConvertible {
+    public var description: String {
+        return self.nanoseconds.description
+    }
+}
+
+extension NIODeadline {
+    public static func - (lhs: NIODeadline, rhs: NIODeadline) -> TimeAmount {
         return .nanoseconds(TimeAmount.Value(lhs.nanoseconds - rhs.nanoseconds))
     }
 
-    public static func + (lhs: Time, rhs: TimeAmount) -> Time {
+    public static func + (lhs: NIODeadline, rhs: TimeAmount) -> NIODeadline {
         if rhs.nanoseconds < 0 {
-            return Time(lhs.nanoseconds - rhs.nanoseconds.magnitude)
+            return NIODeadline(lhs.nanoseconds - rhs.nanoseconds.magnitude)
         } else {
-            return Time(lhs.nanoseconds + rhs.nanoseconds.magnitude)
+            return NIODeadline(lhs.nanoseconds + rhs.nanoseconds.magnitude)
         }
     }
 
-    public static func - (lhs: Time, rhs: TimeAmount) -> Time {
+    public static func - (lhs: NIODeadline, rhs: TimeAmount) -> NIODeadline {
         if rhs.nanoseconds < 0 {
-            return Time(lhs.nanoseconds + rhs.nanoseconds.magnitude)
+            return NIODeadline(lhs.nanoseconds + rhs.nanoseconds.magnitude)
         } else {
-            return Time(lhs.nanoseconds - rhs.nanoseconds.magnitude)
+            return NIODeadline(lhs.nanoseconds - rhs.nanoseconds.magnitude)
         }
     }
 }
@@ -627,7 +659,7 @@ internal final class SelectableEventLoop: EventLoop {
         return thread.isCurrent
     }
 
-    public func scheduleTask<T>(at: Time, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    public func scheduleTask<T>(at: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = makePromise()
         let task = ScheduledTask({
             do {
@@ -760,7 +792,7 @@ internal final class SelectableEventLoop: EventLoop {
                 tasksLock.withLockVoid {
                     if !scheduledTasks.isEmpty {
                         // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
-                        let now: Time = .now()
+                        let now: NIODeadline = .now()
 
                         // Make a copy of the tasks so we can execute these while not holding the lock anymore
                         while tasksCopy.count < tasksCopy.capacity, let task = scheduledTasks.peek() {
@@ -1051,15 +1083,15 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 private final class ScheduledTask {
     let task: () -> Void
     private let failFn: (Error) ->()
-    private let readyTime: Time
+    private let readyTime: NIODeadline
 
-    init(_ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: Time) {
+    init(_ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: NIODeadline) {
         self.task = task
         self.failFn = failFn
         self.readyTime = time
     }
 
-    func readyIn(_ t: Time) -> TimeAmount {
+    func readyIn(_ t: NIODeadline) -> TimeAmount {
         if readyTime < t {
             return .nanoseconds(0)
         }
