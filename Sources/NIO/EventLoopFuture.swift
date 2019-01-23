@@ -983,6 +983,43 @@ extension EventLoopFuture {
     }
 }
 
+extension EventLoopFuture {
+    /// Returns a new `EventLoopFuture` that succeeds when all of the provided `EventLoopFuture`s complete.
+    /// The new `EventLoopFuture` will contain an array of results, maintaining ordering for each of the `EventLoopFuture`s.
+    ///
+    /// The returned `EventLoopFuture` always succeeds, regardless of any failures from the waiting futures.
+    ///
+    /// If it is desired to flatten them into a single `EventLoopFuture` that fails on the first `EventLoopFuture` failure,
+    /// use one of the `reduce` methods instead.
+    /// - Parameter futures: An array of homogenous `EventLoopFuture`s to gather results from.
+    /// - Returns: A new `EventLoopFuture` with all the results of the provided futures.
+    public static func whenAllComplete<InputValue>(_ futures: [EventLoopFuture<InputValue>],
+                                                   eventLoop: EventLoop) -> EventLoopFuture<[Result<InputValue, Error>]> {
+        return eventLoop.makeSucceededFuture(result: [])
+            .flatMap { _ in
+                let promise = eventLoop.makePromise(of: [Result<InputValue, Error>].self)
+
+                var remainingCount = futures.count
+                var results: [Result<InputValue, Error>?] = .init(repeating: nil, count: futures.count)
+
+                for (index, future) in futures.enumerated() {
+                    future
+                        .hopTo(eventLoop: eventLoop)
+                        ._whenComplete {
+                            results[index] = future.value!
+                            remainingCount -= 1
+
+                            guard remainingCount == 0 else { return CallbackList() }
+
+                            return promise._setValue(value: .success(results.compactMap({ $0 })))
+                        }
+                }
+
+                return promise.futureResult
+            }
+    }
+}
+
 public extension EventLoopFuture {
     /// Returns an `EventLoopFuture` that fires when this future completes, but executes its callbacks on the
     /// target event loop instead of the original one.

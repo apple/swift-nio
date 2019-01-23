@@ -859,4 +859,38 @@ class EventLoopFutureTest : XCTestCase {
             XCTAssert(type(of: error) == DummyError.self)
         }
     }
+
+    func testWhenAllCompleteResultsWithFailuresStillSucceed() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let future: EventLoopFuture<[Result<Bool, Error>]> = .whenAllComplete([
+            group.next().makeFailedFuture(error: EventLoopFutureTestError.example),
+            group.next().makeSucceededFuture(result: true)
+        ], eventLoop: group.next())
+        XCTAssertNoThrow(try future.wait())
+    }
+
+    func testWhenAllCompleteResults() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let results = try EventLoopFuture<[Result<Int, Error>]>.whenAllComplete([
+            group.next().makeSucceededFuture(result: 3),
+            group.next().makeFailedFuture(error: EventLoopFutureTestError.example),
+            group.next().makeSucceededFuture(result: 10),
+            group.next().makeFailedFuture(error: EventLoopFutureTestError.example),
+            group.next().makeSucceededFuture(result: 5)
+        ], eventLoop: group.next()).wait()
+
+        XCTAssertEqual(try results[0].get(), 3)
+        XCTAssertThrowsError(try results[1].get())
+        XCTAssertEqual(try results[2].get(), 10)
+        XCTAssertThrowsError(try results[3].get())
+        XCTAssertEqual(try results[4].get(), 5)
+    }
 }
