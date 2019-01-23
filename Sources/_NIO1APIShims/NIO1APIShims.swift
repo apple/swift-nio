@@ -119,6 +119,7 @@ extension EventLoopFuture {
         return self.flatMapError(file: file, line: line, callback)
     }
 
+    @available(*, deprecated, renamed: "flatMapErrorThrowing")
     public func thenIfErrorThrowing(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) throws -> Value) -> EventLoopFuture<Value> {
         return self.flatMapErrorThrowing(file: file, line: line, callback)
     }
