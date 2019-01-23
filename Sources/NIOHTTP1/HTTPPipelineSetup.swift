@@ -38,8 +38,8 @@ public extension ChannelPipeline {
     ///     - first: Whether to add the HTTP client at the head of the channel pipeline,
     ///              or at the tail.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    func addHTTPClientHandlers(first: Bool = false) -> EventLoopFuture<Void> {
-        return addHandlers(HTTPRequestEncoder(), HTTPResponseDecoder(), first: first)
+    func addHTTPClientHandlers(first: Bool = false, leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) -> EventLoopFuture<Void> {
+        return addHandlers(HTTPRequestEncoder(), HTTPResponseDecoder(leftOverBytesStrategy: leftOverBytesStrategy), first: first)
     }
 
     /// Configure a `ChannelPipeline` for use as a HTTP server that can perform a HTTP
