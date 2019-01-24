@@ -900,24 +900,35 @@ class EventLoopFutureTest : XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        var tally = 0
-        
-        var futures: [EventLoopFuture<Int>] = []
-        for index in 1...5 {
-            futures.append(
-                group.next().makeSucceededFuture(result: index).map {
-                    sleep(UInt32(1 / index))
-                    tally += index
-                    return $0
-                }
-            )
-        }
+        let promises = (0..<5).map { _ in group.next().makePromise(of: Int.self) }
+        let futures = promises.map { $0.futureResult }
+
+        var succeeded = false
+        var completedPromises = false
 
         let mainFuture = EventLoopFuture.whenAllComplete(futures, eventLoop: group.next())
-        mainFuture.whenSuccess { _ in tally *= -1 }
+        mainFuture.whenSuccess { _ in
+            XCTAssertTrue(completedPromises)
+            XCTAssertFalse(succeeded)
+            succeeded = true
+        }
 
-        let _ = try mainFuture.wait()
+        // Should be false, as none of the promises have completed yet
+        XCTAssertFalse(succeeded)
 
-        XCTAssertEqual(tally, -15)
+        // complete the first four promises
+        for (index, promise) in promises.dropLast().enumerated() {
+            promise.succeed(result: index)
+        }
+
+        // Should still be false, as one promise hasn't completed yet
+        XCTAssertFalse(succeeded)
+
+        // Complete the last promise
+        completedPromises = true
+        promises.last!.succeed(result: 4)
+
+        let results = try assertNoThrowWithValue(mainFuture.wait().map { try $0.get() })
+        XCTAssertEqual(results, [0, 1, 2, 3, 4])
     }
 }
