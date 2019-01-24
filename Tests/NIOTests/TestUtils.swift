@@ -127,7 +127,7 @@ final class ByteCountingHandler : ChannelInboundHandler {
     func handlerAdded(ctx: ChannelHandlerContext) {
         buffer = ctx.channel.allocator.buffer(capacity: numBytes)
         if self.numBytes == 0 {
-            self.promise.succeed(result: buffer)
+            self.promise.succeed(buffer)
         }
     }
 
@@ -136,7 +136,7 @@ final class ByteCountingHandler : ChannelInboundHandler {
         buffer.write(buffer: &currentBuffer)
 
         if buffer.readableBytes == numBytes {
-            promise.succeed(result: buffer)
+            promise.succeed(buffer)
         }
     }
 

@@ -249,7 +249,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         func channelActive(ctx: ChannelHandlerContext) {
-            promise.succeed(result: ())
+            promise.succeed(())
             ctx.fireChannelActive()
         }
 
@@ -351,7 +351,7 @@ class EchoServerClientTest : XCTestCase {
                         XCTFail("unexpected error: \(err)")
                     }
                 }.whenComplete { (_: Result<Void, Error>) in
-                    self.channelInactivePromise.succeed(result: ())
+                    self.channelInactivePromise.succeed(())
                 }
             }
         }
@@ -371,7 +371,7 @@ class EchoServerClientTest : XCTestCase {
                         XCTFail("unexpected error: \(err)")
                     }
                 }.whenComplete { (_: Result<Void, Error>) in
-                    self.channelUnregisteredPromise.succeed(result: ())
+                    self.channelUnregisteredPromise.succeed(())
                 }
             }
         }
@@ -694,7 +694,7 @@ class EchoServerClientTest : XCTestCase {
             }
 
             public func channelInactive(ctx: ChannelHandlerContext) {
-                self.promise.succeed(result: ())
+                self.promise.succeed(())
             }
         }
 
@@ -741,7 +741,7 @@ class EchoServerClientTest : XCTestCase {
                         acceptedRemotePort.store(channel.remoteAddress?.port ?? -3)
                         acceptedLocalPort.store(channel.localAddress?.port ?? -4)
                         sem.signal()
-                        return channel.eventLoop.makeSucceededFuture(result: ())
+                        return channel.eventLoop.makeSucceededFuture(())
                     }.bind(host: host, port: 0).wait()
             } catch let e as SocketAddressError {
                 if case .unknown(host, port: 0) = e {
@@ -802,8 +802,8 @@ class EchoServerClientTest : XCTestCase {
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .connect(host: "localhost", port: Int(serverChannel.localAddress!.port!))
             .flatMapError {
-                promise.fail(error: $0)
-                return group.next().makeFailedFuture(error: $0)
+                promise.fail($0)
+                return group.next().makeFailedFuture($0)
             }
             .wait())
 

@@ -138,7 +138,7 @@ class ChannelNotificationTest: XCTestCase {
 
             XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
             XCTAssertFalse(self.activeChannelPromise.futureResult.isFulfilled)
-            self.activeChannelPromise.succeed(result: ctx.channel)
+            self.activeChannelPromise.succeed(ctx.channel)
         }
 
         public func channelInactive(ctx: ChannelHandlerContext) {
@@ -370,7 +370,7 @@ class ChannelNotificationTest: XCTestCase {
                 XCTAssertEqual(.readComplete, state)
                 state = .inactive
 
-                promise.succeed(result: ())
+                promise.succeed(())
             }
         }
 
