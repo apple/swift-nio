@@ -1030,10 +1030,10 @@ extension EventLoopFuture {
                     guard remainingCount == 0 else { return }
 
                     // verify that all operations have been completed
-                    assert(results.contains(where: {
+                    assert(!results.contains(where: {
                         guard case let .failure(error) = $0 else { return false }
                         return error is OperationPlaceholderError
-                    }) == false)
+                    }))
 
                     promise.succeed(result: results)
                 }
