@@ -866,7 +866,7 @@ class EventLoopFutureTest : XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let future: EventLoopFuture<[Result<Bool, Error>]> = .whenAllComplete([
+        let future = EventLoopFuture.whenAllComplete([
             group.next().makeFailedFuture(error: EventLoopFutureTestError.example),
             group.next().makeSucceededFuture(result: true)
         ], eventLoop: group.next())
@@ -879,7 +879,7 @@ class EventLoopFutureTest : XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let results = try EventLoopFuture<[Result<Int, Error>]>.whenAllComplete([
+        let results = try EventLoopFuture.whenAllComplete([
             group.next().makeSucceededFuture(result: 3),
             group.next().makeFailedFuture(error: EventLoopFutureTestError.example),
             group.next().makeSucceededFuture(result: 10),
@@ -913,7 +913,7 @@ class EventLoopFutureTest : XCTestCase {
             )
         }
 
-        let mainFuture = EventLoopFuture<[Result<Int, Error>]>.whenAllComplete(futures, eventLoop: group.next())
+        let mainFuture = EventLoopFuture.whenAllComplete(futures, eventLoop: group.next())
         mainFuture.whenSuccess { _ in tally *= -1 }
 
         let _ = try mainFuture.wait()

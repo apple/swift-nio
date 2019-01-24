@@ -996,9 +996,9 @@ extension EventLoopFuture {
     /// use one of the `reduce` methods instead.
     /// - Parameter futures: An array of homogenous `EventLoopFuture`s to gather results from.
     /// - Returns: A new `EventLoopFuture` with all the results of the provided futures.
-    public static func whenAllComplete<InputValue>(_ futures: [EventLoopFuture<InputValue>],
-                                                   eventLoop: EventLoop) -> EventLoopFuture<[Result<InputValue, Error>]> {
-        let promise = eventLoop.makePromise(of: [Result<InputValue, Error>].self)
+    public static func whenAllComplete(_ futures: [EventLoopFuture<Value>],
+                                       eventLoop: EventLoop) -> EventLoopFuture<[Result<Value, Error>]> {
+        let promise = eventLoop.makePromise(of: [Result<Value, Error>].self)
 
         if eventLoop.inEventLoop {
             _whenAllComplete0(promise, futures, eventLoop: eventLoop)
