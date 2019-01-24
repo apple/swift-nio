@@ -74,6 +74,9 @@ private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHand
     }
 }
 
+// starting about swift-5.0-DEVELOPMENT-SNAPSHOT-2019-01-20-a, this doesn't get automatically inlined, which costs
+// 2 extra allocations so we need to help the optimiser out.
+@inline(__always)
 private func writeHead(wrapOutboundOut: (IOData) -> NIOAny, writeStartLine: (inout ByteBuffer) -> Void, ctx: ChannelHandlerContext, headers: HTTPHeaders, promise: EventLoopPromise<Void>?) {
 
     var buffer = ctx.channel.allocator.buffer(capacity: 256)
