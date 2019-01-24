@@ -373,15 +373,15 @@ public func swiftMain() -> Int {
                 // flatMapError allocates a new Future, and calls flatMapError,
                 // so this is two Futures
                 throw err
-            }.mapIfError { (err: Error) -> Int in
-                // mapIfError allocates a future, and calls flatMapError, so
+            }.recover { (err: Error) -> Int in
+                // recover allocates a future, and calls flatMapError, so
                 // this is two Futures.
                 return 1
             }
             p.succeed(0)
             
             // Wait also allocates a lock.
-            try! f.wait()
+            _ = try! f.wait()
         }
         @inline(never)
         func doAnd(loop: EventLoop) {
@@ -401,7 +401,7 @@ public func swiftMain() -> Int {
             p1.succeed(1)
             p2.succeed(1)
             p3.succeed(1)
-            let r = try! f.wait()
+            _ = try! f.wait()
         }
         let el = EmbeddedEventLoop()
         for _ in 0..<1000  {

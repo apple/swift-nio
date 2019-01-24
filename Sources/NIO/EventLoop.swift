@@ -965,7 +965,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
         for loop in self.eventLoops {
             g.enter()
-            loop.closeGently().mapIfError { err in
+            loop.closeGently().recover { err in
                 q.sync { error = err }
             }.whenComplete { (_: Result<Void, Error>) in
                 g.leave()

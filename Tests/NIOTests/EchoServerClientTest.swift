@@ -294,7 +294,7 @@ class EchoServerClientTest : XCTestCase {
             _ = ctx.eventLoop.scheduleTask(in: self.timeAmount) {
                 ctx.writeAndFlush(data, promise: nil)
                 self.group.leave()
-            }.futureResult.mapIfError { e in
+            }.futureResult.recover { e in
                 XCTFail("we failed to schedule the task: \(e)")
                 self.group.leave()
             }
@@ -342,7 +342,7 @@ class EchoServerClientTest : XCTestCase {
                                "channelInactive should fire before channelUnregistered")
                 ctx.close().map {
                     XCTFail("unexpected success")
-                }.mapIfError { err in
+                }.recover { err in
                     switch err {
                     case ChannelError.alreadyClosed:
                         // OK
@@ -362,7 +362,7 @@ class EchoServerClientTest : XCTestCase {
                               "when channelUnregister fires, channelInactive should already have fired")
                 ctx.close().map {
                     XCTFail("unexpected success")
-                }.mapIfError { err in
+                }.recover { err in
                     switch err {
                     case ChannelError.alreadyClosed:
                         // OK
