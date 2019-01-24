@@ -210,7 +210,7 @@ public protocol EventLoop: EventLoopGroup {
 
     /// Schedule a `task` that is executed by this `SelectableEventLoop` at the given time.
     @discardableResult
-    func scheduleTask<T>(at: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T>
+    func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T>
 
     /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
     @discardableResult
@@ -341,56 +341,59 @@ extension TimeAmount {
 public struct NIODeadline: Equatable, Hashable {
     public typealias Value = UInt64
 
-    /// The nanoseconds representation of the `NIODeadline`.
-    public let nanoseconds: Value
+    /// The nanoseconds since boot representation of the `NIODeadline`.
+    public let uptimeNanoseconds: Value
+
+    public static let distantPast = NIODeadline(0)
+    public static let distantFuture = NIODeadline(DispatchTime.distantFuture.uptimeNanoseconds)
 
     private init(_ nanoseconds: Value) {
-        self.nanoseconds = nanoseconds
+        self.uptimeNanoseconds = nanoseconds
     }
 
     public static func now() -> NIODeadline {
         return NIODeadline(DispatchTime.now().uptimeNanoseconds)
     }
 
-    public static func exactly(_ nanoseconds: Value) -> NIODeadline {
+    public static func uptimeNanoseconds(_ nanoseconds: Value) -> NIODeadline {
         return NIODeadline(nanoseconds)
     }
 }
 
 extension NIODeadline: Comparable {
     public static func < (lhs: NIODeadline, rhs: NIODeadline) -> Bool {
-        return lhs.nanoseconds < rhs.nanoseconds
+        return lhs.uptimeNanoseconds < rhs.uptimeNanoseconds
     }
 
     public static func > (lhs: NIODeadline, rhs: NIODeadline) -> Bool {
-        return lhs.nanoseconds > rhs.nanoseconds
+        return lhs.uptimeNanoseconds > rhs.uptimeNanoseconds
     }
 }
 
 extension NIODeadline: CustomStringConvertible {
     public var description: String {
-        return self.nanoseconds.description
+        return self.uptimeNanoseconds.description
     }
 }
 
 extension NIODeadline {
     public static func - (lhs: NIODeadline, rhs: NIODeadline) -> TimeAmount {
-        return .nanoseconds(TimeAmount.Value(lhs.nanoseconds - rhs.nanoseconds))
+        return .nanoseconds(TimeAmount.Value(lhs.uptimeNanoseconds - rhs.uptimeNanoseconds))
     }
 
     public static func + (lhs: NIODeadline, rhs: TimeAmount) -> NIODeadline {
         if rhs.nanoseconds < 0 {
-            return NIODeadline(lhs.nanoseconds - rhs.nanoseconds.magnitude)
+            return NIODeadline(lhs.uptimeNanoseconds - rhs.nanoseconds.magnitude)
         } else {
-            return NIODeadline(lhs.nanoseconds + rhs.nanoseconds.magnitude)
+            return NIODeadline(lhs.uptimeNanoseconds + rhs.nanoseconds.magnitude)
         }
     }
 
     public static func - (lhs: NIODeadline, rhs: TimeAmount) -> NIODeadline {
         if rhs.nanoseconds < 0 {
-            return NIODeadline(lhs.nanoseconds + rhs.nanoseconds.magnitude)
+            return NIODeadline(lhs.uptimeNanoseconds + rhs.nanoseconds.magnitude)
         } else {
-            return NIODeadline(lhs.nanoseconds - rhs.nanoseconds.magnitude)
+            return NIODeadline(lhs.uptimeNanoseconds - rhs.nanoseconds.magnitude)
         }
     }
 }
@@ -659,7 +662,7 @@ internal final class SelectableEventLoop: EventLoop {
         return thread.isCurrent
     }
 
-    public func scheduleTask<T>(at: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = makePromise()
         let task = ScheduledTask({
             do {
@@ -669,7 +672,7 @@ internal final class SelectableEventLoop: EventLoop {
             }
         }, { error in
             promise.fail(error: error)
-        }, at)
+        }, deadline)
 
         let scheduled = Scheduled(promise: promise, cancellationTask: {
             self.tasksLock.withLockVoid {
@@ -683,7 +686,7 @@ internal final class SelectableEventLoop: EventLoop {
     }
 
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
-        return scheduleTask(at: .now() + `in`, task)
+        return scheduleTask(deadline: .now() + `in`, task)
     }
 
     public func execute(_ task: @escaping () -> Void) {

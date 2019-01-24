@@ -90,7 +90,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
     }
 
     private func scheduleRead(at: NIODeadline, ctx: ChannelHandlerContext) {
-        self.scheduledRead = ctx.eventLoop.scheduleTask(at: at) {
+        self.scheduledRead = ctx.eventLoop.scheduleTask(deadline: at) {
             self.doRead(ctx)
         }
     }
@@ -172,8 +172,8 @@ public class IdleStateHandler: ChannelDuplexHandler {
     public let allTimeout: TimeAmount?
 
     private var reading = false
-    private var lastReadTime: NIODeadline = .exactly(0)
-    private var lastWriteCompleteTime: NIODeadline = .exactly(0)
+    private var lastReadTime: NIODeadline = .distantPast
+    private var lastWriteCompleteTime: NIODeadline = .distantPast
     private var scheduledReaderTask: Scheduled<Void>?
     private var scheduledWriterTask: Scheduled<Void>?
     private var scheduledAllTask: Scheduled<Void>?
@@ -253,7 +253,7 @@ public class IdleStateHandler: ChannelDuplexHandler {
                 ctx.fireUserInboundEventTriggered(IdleStateEvent.read)
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(at: self.lastReadTime + timeout, self.makeReadTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(deadline: self.lastReadTime + timeout, self.makeReadTimeoutTask(ctx, timeout))
             }
         }
     }
@@ -274,7 +274,7 @@ public class IdleStateHandler: ChannelDuplexHandler {
                 ctx.fireUserInboundEventTriggered(IdleStateEvent.write)
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledWriterTask = ctx.eventLoop.scheduleTask(at: self.lastWriteCompleteTime + timeout, self.makeWriteTimeoutTask(ctx, timeout))
+                self.scheduledWriterTask = ctx.eventLoop.scheduleTask(deadline: self.lastWriteCompleteTime + timeout, self.makeWriteTimeoutTask(ctx, timeout))
             }
         }
     }
@@ -301,7 +301,7 @@ public class IdleStateHandler: ChannelDuplexHandler {
                 ctx.fireUserInboundEventTriggered(IdleStateEvent.all)
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(at: latestLast + timeout, self.makeAllTimeoutTask(ctx, timeout))
+                self.scheduledReaderTask = ctx.eventLoop.scheduleTask(deadline: latestLast + timeout, self.makeAllTimeoutTask(ctx, timeout))
             }
         }
     }

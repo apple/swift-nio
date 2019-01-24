@@ -246,7 +246,7 @@ final class Selector<R: Registration> {
     private typealias EventType = Epoll.epoll_event
     private let eventfd: Int32
     private let timerfd: Int32
-    private var earliestTimer: NIODeadline = .exactly(.max)
+    private var earliestTimer: NIODeadline = .distantFuture
     #else
     private typealias EventType = kevent
     #endif
@@ -519,7 +519,7 @@ final class Selector<R: Registration> {
                 _ = Glibc.read(timerfd, &val, MemoryLayout<UInt>.size)
 
                 // Processed the earliest set timer so reset it.
-                self.earliestTimer = .exactly(.max)
+                self.earliestTimer = .distantFuture
             default:
                 // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skip it.
                 if let registration = registrations[Int(ev.data.fd)] {

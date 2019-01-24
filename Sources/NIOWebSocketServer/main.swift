@@ -144,7 +144,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
 
         // We can't really check for error here, but it's also not the purpose of the
         // example so let's not worry about it.
-        let theTime = NIODeadline.now().nanoseconds
+        let theTime = NIODeadline.now().uptimeNanoseconds
         var buffer = ctx.channel.allocator.buffer(capacity: 12)
         buffer.write(string: "\(theTime)")
 

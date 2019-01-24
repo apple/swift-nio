@@ -562,7 +562,7 @@ class HTTPUpgradeTestCase: XCTestCase {
 
         // At this time we should have received one user event. We schedule this onto the
         // event loop to guarantee thread safety.
-        XCTAssertNoThrow(try connectedServer.eventLoop.scheduleTask(at: .now()) {
+        XCTAssertNoThrow(try connectedServer.eventLoop.scheduleTask(deadline: .now()) {
             XCTAssertEqual(eventSaver.events.count, 1)
             if case .upgradeComplete(let proto, let req) = eventSaver.events[0] {
                 XCTAssertEqual(proto, "myproto")
