@@ -31,5 +31,6 @@
 - EventLoopFuture.whenComplete now provides Result<T, Error>
 - renamed `EventLoopFuture.then` to `EventLoopFuture.flatMap`
 - renamed `EventLoopFuture.thenIfError` to `EventLoopFuture.flatMapError`
+- renamed `EventLoopFuture.mapIfError` to `EventLoopFuture.recover`
 - renamed `EventLoopFuture.thenThrowing` to `EventLoopFuture.flatMapThrowing`
 - renamed `EventLoopFuture`'s generic parameter from `T` to `Value`

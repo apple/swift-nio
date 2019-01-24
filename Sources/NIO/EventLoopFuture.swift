@@ -566,15 +566,15 @@ extension EventLoopFuture {
     /// can recover from the error and return a new value of type `Value`. The provided callback may not `throw`,
     /// so this function should be used when the error is always recoverable.
     ///
-    /// Operations performed in `mapIfError` should not block, or they will block the entire
-    /// event loop. `mapIfError` is intended for use when you have the ability to synchronously
+    /// Operations performed in `recover` should not block, or they will block the entire
+    /// event loop. `recover` is intended for use when you have the ability to synchronously
     /// recover from errors.
     ///
     /// - parameters:
     ///     - callback: Function that will receive the error value of this `EventLoopFuture` and return
     ///         a new value lifted into a new `EventLoopFuture`.
     /// - returns: A future that will receive the recovered value.
-    public func mapIfError(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) -> Value) -> EventLoopFuture<Value> {
+    public func recover(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) -> Value) -> EventLoopFuture<Value> {
         return flatMapError(file: file, line: line) {
             return EventLoopFuture<Value>(eventLoop: self.eventLoop, result: callback($0), file: file, line: line)
         }
@@ -632,7 +632,7 @@ extension EventLoopFuture {
     /// `EventLoopFuture` has a failure result.
     ///
     /// An observer callback cannot return a value, meaning that this function cannot be chained
-    /// from. If you are attempting to create a computation pipeline, consider `mapIfError` or `flatMapError`.
+    /// from. If you are attempting to create a computation pipeline, consider `recover` or `flatMapError`.
     /// If you find yourself passing the results from this `EventLoopFuture` to a new `EventLoopPromise`
     /// in the body of this function, consider using `cascade` instead.
     ///

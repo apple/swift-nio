@@ -604,7 +604,7 @@ internal class HappyEyeballsConnector {
     private func whenALookupComplete(future: EventLoopFuture<[SocketAddress]>) {
         future.map { results in
             self.targets.aResultsAvailable(results)
-        }.mapIfError { err in
+        }.recover { err in
             self.error.dnsAError = err
         }.whenComplete { (_: Result<Void, Error>) in
             self.dnsResolutions += 1
@@ -616,7 +616,7 @@ internal class HappyEyeballsConnector {
     private func whenAAAALookupComplete(future: EventLoopFuture<[SocketAddress]>) {
         future.map { results in
             self.targets.aaaaResultsAvailable(results)
-        }.mapIfError { err in
+        }.recover { err in
             self.error.dnsAAAAError = err
         }.whenComplete { (_: Result<Void, Error>) in
             // It's possible that we were waiting to time out here, so if we were we should

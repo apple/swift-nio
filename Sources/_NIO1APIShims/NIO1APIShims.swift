@@ -123,6 +123,11 @@ extension EventLoopFuture {
     public func thenIfErrorThrowing(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) throws -> Value) -> EventLoopFuture<Value> {
         return self.flatMapErrorThrowing(file: file, line: line, callback)
     }
+
+    @available(*, deprecated, renamed: "recover")
+    public func mapIfError(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) -> Value) -> EventLoopFuture<Value> {
+        return self.recover(file: file, line: line, callback)
+    }
 }
 
 extension EventLoopGroup {

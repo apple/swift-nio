@@ -805,7 +805,7 @@ class EventLoopFutureTest : XCTestCase {
             XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
             XCTAssertTrue(loop2.inEventLoop)
             throw error
-        }.hopTo(eventLoop: loop1).mapIfError { error in
+        }.hopTo(eventLoop: loop1).recover { error in
             XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
             XCTAssertTrue(loop1.inEventLoop)
         }
