@@ -918,7 +918,7 @@ class EventLoopFutureTest : XCTestCase {
 
         // complete the first four promises
         for (index, promise) in promises.dropLast().enumerated() {
-            promise.succeed(result: index)
+            promise.succeed(index)
         }
 
         // Should still be false, as one promise hasn't completed yet
@@ -926,7 +926,7 @@ class EventLoopFutureTest : XCTestCase {
 
         // Complete the last promise
         completedPromises = true
-        promises.last!.succeed(result: 4)
+        promises.last!.succeed(4)
 
         let results = try assertNoThrowWithValue(mainFuture.wait().map { try $0.get() })
         XCTAssertEqual(results, [0, 1, 2, 3, 4])

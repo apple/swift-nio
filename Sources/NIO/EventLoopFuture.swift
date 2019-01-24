@@ -1035,7 +1035,7 @@ extension EventLoopFuture {
                         return error is OperationPlaceholderError
                     }))
 
-                    promise.succeed(result: results)
+                    promise.succeed(results)
                 }
         }
     }
