@@ -316,8 +316,8 @@ extension EventLoop {
     /// - parameters:
     ///     - error: the `Error` that is used by the `EventLoopFuture`.
     /// - returns: a failed `EventLoopFuture`.
-    public func makeFailedFuture<T>(_ error: Error) -> EventLoopFuture<T> {
-        return EventLoopFuture<T>(eventLoop: self, error: error, file: "n/a", line: 0)
+    public func makeFailedFuture<T>(_ error: Error, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<T> {
+        return EventLoopFuture<T>(eventLoop: self, error: error, file: file, line: line)
     }
 
     /// Creates and returns a new `EventLoopFuture` that is already marked as success. Notifications will be done using this `EventLoop` as execution `Thread`.
@@ -325,8 +325,8 @@ extension EventLoop {
     /// - parameters:
     ///     - result: the value that is used by the `EventLoopFuture`.
     /// - returns: a succeeded `EventLoopFuture`.
-    public func makeSucceededFuture<Success>(_ result: Success) -> EventLoopFuture<Success> {
-        return EventLoopFuture<Success>(eventLoop: self, result: result, file: "n/a", line: 0)
+    public func makeSucceededFuture<Success>(_ value: Success, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Success> {
+        return EventLoopFuture<Success>(eventLoop: self, value: value, file: file, line: line)
     }
 
     public func next() -> EventLoop {

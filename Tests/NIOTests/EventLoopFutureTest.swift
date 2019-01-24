@@ -23,7 +23,7 @@ enum EventLoopFutureTestError : Error {
 class EventLoopFutureTest : XCTestCase {
     func testFutureFulfilledIfHasResult() throws {
         let eventLoop = EmbeddedEventLoop()
-        let f = EventLoopFuture(eventLoop: eventLoop, result: 5, file: #file, line: #line)
+        let f = EventLoopFuture(eventLoop: eventLoop, value: 5, file: #file, line: #line)
         XCTAssertTrue(f.isFulfilled)
     }
 
@@ -827,5 +827,36 @@ class EventLoopFutureTest : XCTestCase {
         let noHoppingFuture = noHoppingPromise.futureResult.hopTo(eventLoop: loop1)
         XCTAssertTrue(noHoppingFuture === noHoppingPromise.futureResult)
         noHoppingPromise.succeed(())
+    }
+
+    func testFlatMapResultHappyPath() {
+        let el = EmbeddedEventLoop()
+        defer {
+            XCTAssertNoThrow(try el.syncShutdownGracefully())
+        }
+
+        let p = el.makePromise(of: Int.self)
+        let f = p.futureResult.flatMapResult { (_: Int) in
+            return Result<String, Never>.success("hello world")
+        }
+        p.succeed(1)
+        XCTAssertNoThrow(XCTAssertEqual("hello world", try f.wait()))
+    }
+
+    func testFlatMapResultFailurePath() {
+        struct DummyError: Error {}
+        let el = EmbeddedEventLoop()
+        defer {
+            XCTAssertNoThrow(try el.syncShutdownGracefully())
+        }
+
+        let p = el.makePromise(of: Int.self)
+        let f = p.futureResult.flatMapResult { (_: Int) in
+            return Result<Int, Error>.failure(DummyError())
+        }
+        p.succeed(1)
+        XCTAssertThrowsError(try f.wait()) { error in
+            XCTAssert(type(of: error) == DummyError.self)
+        }
     }
 }
