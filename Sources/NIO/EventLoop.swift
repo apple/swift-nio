@@ -41,7 +41,7 @@ public struct Scheduled<T> {
     /// Whether this is successful depends on whether the execution of the task already begun.
     ///  This means that cancellation is not guaranteed.
     public func cancel() {
-        promise.fail(error: EventLoopError.cancelled)
+        promise.fail(EventLoopError.cancelled)
     }
 
     /// Returns the `EventLoopFuture` which will be notified once the execution of the scheduled task completes.
@@ -134,7 +134,7 @@ public final class RepeatedTask {
         self.scheduled = self.eventLoop.scheduleTask(in: self.delay) {
             // we need to repeat this as we might have been cancelled in the meantime
             guard let task = self.task else {
-                return self.eventLoop.makeSucceededFuture(result: ())
+                return self.eventLoop.makeSucceededFuture(())
             }
             return task(self)
         }
@@ -297,9 +297,9 @@ extension EventLoop {
 
         self.execute {
             do {
-                promise.succeed(result: try task())
+                promise.succeed(try task())
             } catch let err {
-                promise.fail(error: err)
+                promise.fail(err)
             }
         }
 
@@ -316,7 +316,7 @@ extension EventLoop {
     /// - parameters:
     ///     - error: the `Error` that is used by the `EventLoopFuture`.
     /// - returns: a failed `EventLoopFuture`.
-    public func makeFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
+    public func makeFailedFuture<T>(_ error: Error) -> EventLoopFuture<T> {
         return EventLoopFuture<T>(eventLoop: self, error: error, file: "n/a", line: 0)
     }
 
@@ -325,7 +325,7 @@ extension EventLoop {
     /// - parameters:
     ///     - result: the value that is used by the `EventLoopFuture`.
     /// - returns: a succeeded `EventLoopFuture`.
-    public func makeSucceededFuture<Success>(result: Success) -> EventLoopFuture<Success> {
+    public func makeSucceededFuture<Success>(_ result: Success) -> EventLoopFuture<Success> {
         return EventLoopFuture<Success>(eventLoop: self, result: result, file: "n/a", line: 0)
     }
 
@@ -349,9 +349,9 @@ extension EventLoop {
         let futureTask: (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
             do {
                 try task(repeatedTask)
-                return self.makeSucceededFuture(result: ())
+                return self.makeSucceededFuture(())
             } catch {
-                return self.makeFailedFuture(error: error)
+                return self.makeFailedFuture(error)
             }
         }
         return self.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, futureTask)
@@ -393,6 +393,20 @@ extension EventLoop {
     public func preconditionInEventLoop(file: StaticString = #file, line: UInt = #line) {
         precondition(self.inEventLoop, file: file, line: line)
     }
+}
+
+// to be removed before 2.0
+extension EventLoop {
+    @available(*, deprecated, renamed: "makeFailedFuture(_:)")
+    public func makeFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
+        return self.makeFailedFuture(error)
+    }
+
+    @available(*, deprecated, renamed: "makeSucceededFuture(_:)")
+    public func makeSucceededFuture<Success>(result: Success) -> EventLoopFuture<Success> {
+        return self.makeSucceededFuture(result)
+    }
+
 }
 
 /// Internal representation of a `Registration` to an `Selector`.
@@ -559,12 +573,12 @@ internal final class SelectableEventLoop: EventLoop {
         let promise: EventLoopPromise<T> = makePromise()
         let task = ScheduledTask({
             do {
-                promise.succeed(result: try task())
+                promise.succeed(try task())
             } catch let err {
-                promise.fail(error: err)
+                promise.fail(err)
             }
         }, { error in
-            promise.fail(error: error)
+            promise.fail(error)
         },`in`)
 
         let scheduled = Scheduled(promise: promise, cancellationTask: {
@@ -658,7 +672,7 @@ internal final class SelectableEventLoop: EventLoop {
 
             // Fail all the scheduled tasks.
             for task in scheduledTasksCopy {
-                task.fail(error: EventLoopError.shutdown)
+                task.fail(EventLoopError.shutdown)
             }
         }
         var nextReadyTask: ScheduledTask? = nil
@@ -737,7 +751,7 @@ internal final class SelectableEventLoop: EventLoop {
     public func closeGently() -> EventLoopFuture<Void> {
         func closeGently0() -> EventLoopFuture<Void> {
             guard self.lifecycleState == .open else {
-                return self.makeFailedFuture(error: EventLoopError.shutdown)
+                return self.makeFailedFuture(EventLoopError.shutdown)
             }
             self.lifecycleState = .closing
             return self.selector.closeGently(eventLoop: self)
@@ -990,7 +1004,7 @@ private final class ScheduledTask {
         return .nanoseconds(readyTime - TimeAmount.Value(t.uptimeNanoseconds))
     }
 
-    func fail(error: Error) {
+    func fail(_ error: Error) {
         failFn(error)
     }
 }

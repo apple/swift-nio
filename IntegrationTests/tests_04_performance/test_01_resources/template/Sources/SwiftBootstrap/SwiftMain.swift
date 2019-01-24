@@ -94,7 +94,7 @@ private final class PingHandler: ChannelInboundHandler {
             }
         } else {
             ctx.close(promise: nil)
-            self.allDone.fail(error: PingPongFailure(problem: "wrong buffer received: \(buf.debugDescription)"))
+            self.allDone.fail(PingPongFailure(problem: "wrong buffer received: \(buf.debugDescription)"))
         }
     }
 
@@ -165,7 +165,7 @@ public func swiftMain() -> Int {
 
         func errorCaught(ctx: ChannelHandlerContext, error: Error) {
             ctx.channel.close(promise: nil)
-            self.isDonePromise.fail(error: error)
+            self.isDonePromise.fail(error)
         }
 
         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
@@ -352,7 +352,7 @@ public func swiftMain() -> Int {
             let f = p.futureResult.flatMap { (r: Int) -> EventLoopFuture<Int> in
                 // This call allocates a new Future, and
                 // so does flatMap(), so this is two Futures.
-                return loop.makeSucceededFuture(result: r + 1)
+                return loop.makeSucceededFuture(r + 1)
             }.flatMapThrowing { (r: Int) -> Int in
                 // flatMapThrowing allocates a new Future, and calls `flatMap`
                 // which also allocates, so this is two.
@@ -368,7 +368,7 @@ public func swiftMain() -> Int {
             }.flatMapError { (err: Error) -> EventLoopFuture<Int> in
                 // This call allocates a new Future, and so does flatMapError,
                 // so this is two Futures.
-                return loop.makeFailedFuture(error: err)
+                return loop.makeFailedFuture(err)
             }.flatMapErrorThrowing { (err: Error) -> Int in
                 // flatMapError allocates a new Future, and calls flatMapError,
                 // so this is two Futures
@@ -378,7 +378,7 @@ public func swiftMain() -> Int {
                 // this is two Futures.
                 return 1
             }
-            p.succeed(result: 0)
+            p.succeed(0)
             
             // Wait also allocates a lock.
             _ = try! f.wait()
@@ -395,12 +395,12 @@ public func swiftMain() -> Int {
             let f = p1.futureResult
                         .and(p2.futureResult)
                         .and(p3.futureResult)
-                        .and(result: 1)
-                        .and(result: 1)
+                        .and(value: 1)
+                        .and(value: 1)
 
-            p1.succeed(result: 1)
-            p2.succeed(result: 1)
-            p3.succeed(result: 1)
+            p1.succeed(1)
+            p2.succeed(1)
+            p3.succeed(1)
             _ = try! f.wait()
         }
         let el = EmbeddedEventLoop()

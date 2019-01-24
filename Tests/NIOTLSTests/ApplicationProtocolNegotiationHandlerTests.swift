@@ -40,7 +40,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             XCTFail("Negotiation fired")
-            return loop.makeSucceededFuture(result: ())
+            return loop.makeSucceededFuture(())
         }
 
         try channel.pipeline.add(handler: handler).wait()
@@ -80,7 +80,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.assertContains(handler: handler)
 
         // Now we fire the future.
-        continuePromise.succeed(result: ())
+        continuePromise.succeed(())
 
         // Now the handler should have removed itself from the pipeline.
         try channel.pipeline.assertDoesNotContain(handler: handler)
@@ -102,7 +102,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             XCTFail("Should not be called")
-            return loop.makeSucceededFuture(result: ())
+            return loop.makeSucceededFuture(())
         }
 
         try channel.pipeline.add(handler: handler).wait()
@@ -135,7 +135,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         XCTAssertNil(channel.readInbound())
 
         // Complete the pipeline swap.
-        continuePromise.succeed(result: ())
+        continuePromise.succeed(())
 
         // Now everything should have been unbuffered.
         XCTAssertEqual(channel.readInbound()!, "writes")
@@ -166,7 +166,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         // Now satisfy the future, which forces data unbuffering. As we haven't buffered any data,
         // readComplete should not be fired.
-        continuePromise.succeed(result: ())
+        continuePromise.succeed(())
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 0)
 
         XCTAssertFalse(try channel.finish())
@@ -195,7 +195,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 1)
 
         // Now satisfy the future, which forces data unbuffering. This should fire readComplete.
-        continuePromise.succeed(result: ())
+        continuePromise.succeed(())
         XCTAssertEqual(channel.readInbound()!, "a write")
 
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 2)

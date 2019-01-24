@@ -95,7 +95,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
     }
 
     public func handlerRemoved(ctx: ChannelHandlerContext) {
-        pendingWritePromise?.fail(error: CompressionError.uncompressedWritesPending)
+        pendingWritePromise?.fail(CompressionError.uncompressedWritesPending)
         if algorithm != nil {
             deinitializeEncoder()
             algorithm = nil
@@ -238,7 +238,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
         // If we still have the pending promise, we never emitted a write. Fail the promise,
         // as anything that is listening for its data somehow lost it.
         if let stillPendingPromise = pendingPromise {
-            stillPendingPromise.fail(error: CompressionError.noDataToWrite)
+            stillPendingPromise.fail(CompressionError.noDataToWrite)
         }
 
         // Reset the pending promise.

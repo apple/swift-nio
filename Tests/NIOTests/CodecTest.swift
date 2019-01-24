@@ -46,7 +46,7 @@ private final class ChannelInactivePromiser: ChannelInboundHandler {
     }
 
     func channelInactive(ctx: ChannelHandlerContext) {
-        channelInactivePromise.succeed(result: ())
+        channelInactivePromise.succeed(())
     }
 }
 
@@ -598,7 +598,7 @@ private class PairOfBytesDecoder: ByteToMessageDecoder {
     func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         self.decodeLastCalls += 1
         XCTAssertEqual(1, self.decodeLastCalls)
-        self.lastPromise.succeed(result: buffer)
+        self.lastPromise.succeed(buffer)
         return .needMoreData
     }
 }

@@ -9,7 +9,7 @@
 - `ByteToMessageDecoder`s now need to be wrapped in `ByteToMessageHandler`
   before they can be added to the pipeline.
   before: `pipeline.add(MyDecoder())`, after: `pipeline.add(ByteToMessageHandler(MyDecoder()))`
-- `EventLoop.makePromise`/`makeSucceededFuture`/`makeFailedFuture` instead of `new*`
+- `EventLoop.makePromise`/`makeSucceededFuture`/`makeFailedFuture` instead of `new*`, also `result:`/`error:` labels dropped
 - `SocketAddress.makeAddressResolvingHost(:port:)` instead of
   `SocketAddress.newAddressResolving(host:port:)`
 - changed all ports to `Int` (from `UInt16`)
@@ -34,3 +34,6 @@
 - renamed `EventLoopFuture.mapIfError` to `EventLoopFuture.recover`
 - renamed `EventLoopFuture.thenThrowing` to `EventLoopFuture.flatMapThrowing`
 - renamed `EventLoopFuture`'s generic parameter from `T` to `Value`
+- renamed `EventLoopFuture.and(result:)` to `EventLoopFuture.and(value:)`
+- `EventLoopPromise.succeed(result: Value)` lost its label so is now `EventLoopPromise.succeed(Value)`
+- `EventLoopPromise.fail(error: Error)` lost its label so is now `EventLoopPromise.fail(Error)`

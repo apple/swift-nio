@@ -161,7 +161,7 @@ final class RepeatedRequests: ChannelInboundHandler {
 
     func errorCaught(ctx: ChannelHandlerContext, error: Error) {
         ctx.channel.close(promise: nil)
-        self.isDonePromise.fail(error: error)
+        self.isDonePromise.fail(error)
     }
 
     func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {

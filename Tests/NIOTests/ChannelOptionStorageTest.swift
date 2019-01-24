@@ -80,7 +80,7 @@ class OptionsCollectingChannel: Channel {
 
     func setOption<T>(option: T, value: T.OptionType) -> EventLoopFuture<Void> where T : ChannelOption {
         self.allOptions.append((option, value))
-        return self.eventLoop.makeSucceededFuture(result: ())
+        return self.eventLoop.makeSucceededFuture(())
     }
 
     func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T : ChannelOption {

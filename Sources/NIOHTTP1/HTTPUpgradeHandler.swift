@@ -239,14 +239,14 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
         if let handler = handler {
             return ctx.pipeline.remove(handler: handler)
         } else {
-            return ctx.eventLoop.makeSucceededFuture(result: true)
+            return ctx.eventLoop.makeSucceededFuture(true)
         }
     }
 
     /// Removes any extra HTTP-related handlers from the channel pipeline.
     private func removeExtraHandlers(ctx: ChannelHandlerContext) -> EventLoopFuture<Void> {
         guard self.extraHTTPHandlers.count > 0 else {
-            return ctx.eventLoop.makeSucceededFuture(result: ())
+            return ctx.eventLoop.makeSucceededFuture(())
         }
 
         return EventLoopFuture<Void>.andAll(self.extraHTTPHandlers.map { ctx.pipeline.remove(handler: $0).map { (_: Bool) in () }},

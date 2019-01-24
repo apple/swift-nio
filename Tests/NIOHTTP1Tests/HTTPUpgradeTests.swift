@@ -81,7 +81,7 @@ private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
     let c = try ServerBootstrap(group: group)
         .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
         .childChannelInitializer { channel in
-            p.succeed(result: channel)
+            p.succeed(channel)
             let upgradeConfig = (upgraders: upgraders, completionHandler: upgradeCompletionHandler)
             return channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: pipelining, withServerUpgrade: upgradeConfig).flatMap {
                 let futureResults = extraHandlers.map { channel.pipeline.add(handler: $0) }
@@ -182,7 +182,7 @@ private class ExplodingUpgrader: HTTPProtocolUpgrader {
 
     public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         XCTFail("upgrade called")
-        return ctx.eventLoop.makeSucceededFuture(result: ())
+        return ctx.eventLoop.makeSucceededFuture(())
     }
 }
 
@@ -204,7 +204,7 @@ private class UpgraderSaysNo: HTTPProtocolUpgrader {
 
     public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         XCTFail("upgrade called")
-        return ctx.eventLoop.makeSucceededFuture(result: ())
+        return ctx.eventLoop.makeSucceededFuture(())
     }
 }
 
@@ -227,7 +227,7 @@ private class SuccessfulUpgrader: HTTPProtocolUpgrader {
 
     public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         self.onUpgradeComplete(upgradeRequest)
-        return ctx.eventLoop.makeSucceededFuture(result: ())
+        return ctx.eventLoop.makeSucceededFuture(())
     }
 }
 
@@ -255,7 +255,7 @@ private class UpgradeDelayer: HTTPProtocolUpgrader {
     }
 
     public func unblockUpgrade() {
-        self.upgradePromise!.succeed(result: ())
+        self.upgradePromise!.succeed(())
     }
 }
 
@@ -400,7 +400,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
 
@@ -505,7 +505,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
 
@@ -549,7 +549,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
 
@@ -610,7 +610,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
 
@@ -656,7 +656,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
 
@@ -690,7 +690,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
 
@@ -733,7 +733,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
 
@@ -839,18 +839,18 @@ class HTTPUpgradeTestCase: XCTestCase {
                     XCTAssertEqual("A", stringRead)
                     self.state = .inlineDataRead
                     if stringRead == .some("A") {
-                        self.firstByteDonePromise.succeed(result: ())
+                        self.firstByteDonePromise.succeed(())
                     } else {
-                        self.firstByteDonePromise.fail(error: ReceivedTheWrongThingError.error)
+                        self.firstByteDonePromise.fail(ReceivedTheWrongThingError.error)
                     }
                 case .inlineDataRead:
                     XCTAssertEqual("B", stringRead)
                     self.state = .extraDataRead
                     ctx.channel.close(promise: nil)
                     if stringRead == .some("B") {
-                        self.secondByteDonePromise.succeed(result: ())
+                        self.secondByteDonePromise.succeed(())
                     } else {
-                        self.secondByteDonePromise.fail(error: ReceivedTheWrongThingError.error)
+                        self.secondByteDonePromise.fail(ReceivedTheWrongThingError.error)
                     }
                 default:
                     XCTFail("channel read in wrong state \(self.state)")
@@ -862,7 +862,7 @@ class HTTPUpgradeTestCase: XCTestCase {
                 self.state = .closed
                 ctx.close(mode: mode, promise: promise)
                 
-                self.allDonePromise.succeed(result: ())
+                self.allDonePromise.succeed(())
             }
         }
         
@@ -899,7 +899,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
         XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
         
