@@ -867,8 +867,8 @@ class EventLoopFutureTest : XCTestCase {
         }
 
         let future = EventLoopFuture.whenAllComplete([
-            group.next().makeFailedFuture(error: EventLoopFutureTestError.example),
-            group.next().makeSucceededFuture(result: true)
+            group.next().makeFailedFuture(EventLoopFutureTestError.example),
+            group.next().makeSucceededFuture(true)
         ], eventLoop: group.next())
         XCTAssertNoThrow(try future.wait())
     }
@@ -880,11 +880,11 @@ class EventLoopFutureTest : XCTestCase {
         }
 
         let results = try EventLoopFuture.whenAllComplete([
-            group.next().makeSucceededFuture(result: 3),
-            group.next().makeFailedFuture(error: EventLoopFutureTestError.example),
-            group.next().makeSucceededFuture(result: 10),
-            group.next().makeFailedFuture(error: EventLoopFutureTestError.example),
-            group.next().makeSucceededFuture(result: 5)
+            group.next().makeSucceededFuture(3),
+            group.next().makeFailedFuture(EventLoopFutureTestError.example),
+            group.next().makeSucceededFuture(10),
+            group.next().makeFailedFuture(EventLoopFutureTestError.example),
+            group.next().makeSucceededFuture(5)
         ], eventLoop: group.next()).wait()
 
         XCTAssertEqual(try results[0].get(), 3)
