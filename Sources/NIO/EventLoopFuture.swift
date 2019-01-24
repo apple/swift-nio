@@ -118,9 +118,9 @@ private struct CallbackList: ExpressibleByArrayLiteral {
 ///     let promise = eventLoop.makePromise(of: ResultType.self)
 ///     someAsyncOperationWithACallback(args) { result -> Void in
 ///         // when finished...
-///         promise.succeed(result: result)
+///         promise.succeed(result)
 ///         // if error...
-///         promise.fail(error: error)
+///         promise.fail(error)
 ///     }
 ///     return promise.futureResult
 /// }
@@ -159,7 +159,7 @@ public struct EventLoopPromise<Value> {
     ///
     /// - parameters:
     ///     - result: The successful result of the operation.
-    public func succeed(result: Value) {
+    public func succeed(_ result: Value) {
         _resolve(value: .success(result))
     }
 
@@ -167,7 +167,7 @@ public struct EventLoopPromise<Value> {
     ///
     /// - parameters:
     ///      - error: The error from the operation.
-    public func fail(error: Error) {
+    public func fail(_ error: Error) {
         _resolve(value: .failure(error))
     }
 
@@ -726,10 +726,10 @@ extension EventLoopFuture {
 
     /// Return a new EventLoopFuture that contains this "and" another value.
     /// This is just syntactic sugar for `future.and(loop.newSucceedFuture<NewValue>(result: result))`.
-    public func and<OtherValue>(result: OtherValue,
+    public func and<OtherValue>(value: OtherValue,
                                 file: StaticString = #file,
                                 line: UInt = #line) -> EventLoopFuture<(Value, OtherValue)> {
-        return and(EventLoopFuture<OtherValue>(eventLoop: self.eventLoop, result: result, file: file, line: line))
+        return and(EventLoopFuture<OtherValue>(eventLoop: self.eventLoop, result: value, file: file, line: line))
     }
 }
 
@@ -760,9 +760,9 @@ extension EventLoopFuture {
         _whenCompleteWithValue { v in
             switch v {
             case .failure(let err):
-                promise.fail(error: err)
+                promise.fail(err)
             case .success(let value):
-                promise.succeed(result: value)
+                promise.succeed(value)
             }
         }
     }
@@ -779,7 +779,7 @@ extension EventLoopFuture {
     public func cascadeFailure<NewValue>(promise: EventLoopPromise<NewValue>?) {
         guard let promise = promise else { return }
         self.whenFailure { err in
-            promise.fail(error: err)
+            promise.fail(err)
         }
     }
 }
@@ -905,10 +905,10 @@ extension EventLoopFuture {
                                           _ futures: [EventLoopFuture<InputValue>],
                                           eventLoop: EventLoop,
                                           _ nextPartialResult: @escaping (Value, InputValue) -> Value) -> EventLoopFuture<Value> {
-        let f0 = eventLoop.makeSucceededFuture(result: initialResult)
+        let f0 = eventLoop.makeSucceededFuture(initialResult)
 
         let body = f0.fold(futures) { (t: Value, u: InputValue) -> EventLoopFuture<Value> in
-            eventLoop.makeSucceededFuture(result: nextPartialResult(t, u))
+            eventLoop.makeSucceededFuture(nextPartialResult(t, u))
         }
 
         return body
@@ -938,20 +938,20 @@ extension EventLoopFuture {
         let p0 = eventLoop.makePromise(of: Value.self)
         var result: Value = initialResult
 
-        let f0 = eventLoop.makeSucceededFuture(result: ())
+        let f0 = eventLoop.makeSucceededFuture(())
         let future = f0.fold(futures) { (_: (), value: InputValue) -> EventLoopFuture<Void> in
             eventLoop.assertInEventLoop()
             updateAccumulatingResult(&result, value)
-            return eventLoop.makeSucceededFuture(result: ())
+            return eventLoop.makeSucceededFuture(())
         }
 
         future.whenSuccess {
             eventLoop.assertInEventLoop()
-            p0.succeed(result: result)
+            p0.succeed(result)
         }
         future.whenFailure { (error) in
             eventLoop.assertInEventLoop()
-            p0.fail(error: error)
+            p0.fail(error)
         }
         return p0.futureResult
     }
@@ -984,8 +984,8 @@ public extension EventLoopFuture {
 func executeAndComplete<Value>(_ promise: EventLoopPromise<Value>?, _ body: () throws -> Value) {
     do {
         let result = try body()
-        promise?.succeed(result: result)
+        promise?.succeed(result)
     } catch let e {
-        promise?.fail(error: e)
+        promise?.fail(e)
     }
 }

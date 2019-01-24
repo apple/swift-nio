@@ -82,14 +82,14 @@ extension EventLoop {
         return self.makePromise(of: type, file: file, line: line)
     }
 
-    @available(*, deprecated, renamed: "makeSucceededFuture")
+    @available(*, deprecated, renamed: "makeSucceededFuture(_:)")
     public func newSucceededFuture<T>(result: T) -> EventLoopFuture<T> {
-        return self.makeSucceededFuture(result: result)
+        return self.makeSucceededFuture(result)
     }
 
-    @available(*, deprecated, renamed: "makeFailedFuture")
+    @available(*, deprecated, renamed: "makeFailedFuture(_:)")
     public func newFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
-        return self.makeFailedFuture(error: error)
+        return self.makeFailedFuture(error)
     }
 }
 
@@ -122,6 +122,25 @@ extension EventLoopFuture {
     @available(*, deprecated, renamed: "flatMapErrorThrowing")
     public func thenIfErrorThrowing(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) throws -> Value) -> EventLoopFuture<Value> {
         return self.flatMapErrorThrowing(file: file, line: line, callback)
+    }
+
+    @available(*, deprecated, renamed: "and(value:file:line:)")
+    public func and<OtherValue>(result: OtherValue,
+                                file: StaticString = #file,
+                                line: UInt = #line) -> EventLoopFuture<(Value, OtherValue)> {
+        return self.and(value: result, file: file, line: line)
+    }
+}
+
+extension EventLoopPromise {
+    @available(*, deprecated, renamed: "succeed(_:)")
+    public func succeed(result: Value) {
+        self.succeed(result)
+    }
+
+    @available(*, deprecated, renamed: "fail(_:)")
+    public func fail(error: Error) {
+        self.fail(error)
     }
 }
 

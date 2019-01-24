@@ -314,7 +314,7 @@ public class EventLoopTest : XCTestCase {
             }
 
             func channelActive(ctx: ChannelHandlerContext) {
-                self.channelActivePromise?.succeed(result: ())
+                self.channelActivePromise?.succeed(())
             }
 
             func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
@@ -398,7 +398,7 @@ public class EventLoopTest : XCTestCase {
 
         // Now let it close.
         promiseQueue.sync {
-            promises.forEach { $0.succeed(result: ()) }
+            promises.forEach { $0.succeed(()) }
         }
         XCTAssertNoThrow(try loopCloseFut.wait())
     }

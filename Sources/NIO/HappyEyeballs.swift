@@ -507,7 +507,7 @@ internal class HappyEyeballsConnector {
     /// Cleans up internal state and fails the connection promise.
     private func timedOut() {
         cleanUp()
-        self.resolutionPromise.fail(error: ChannelError.connectTimeout(self.connectTimeout))
+        self.resolutionPromise.fail(ChannelError.connectTimeout(self.connectTimeout))
     }
 
     /// Called when we've attempted to connect to all our resolved targets,
@@ -518,7 +518,7 @@ internal class HappyEyeballsConnector {
     private func failed() {
         precondition(pendingConnections.count == 0, "failed with pending connections")
         cleanUp()
-        self.resolutionPromise.fail(error: self.error)
+        self.resolutionPromise.fail(self.error)
     }
 
     /// Called to connect to a given target.
@@ -547,7 +547,7 @@ internal class HappyEyeballsConnector {
                         channel.close(promise: nil)
                     } else {
                         self.processInput(.connectSuccess)
-                        self.resolutionPromise.succeed(result: channel)
+                        self.resolutionPromise.succeed(channel)
                     }
                 }.whenFailure { err in
                     // The connection attempt failed. If we're in the complete state then there's nothing
