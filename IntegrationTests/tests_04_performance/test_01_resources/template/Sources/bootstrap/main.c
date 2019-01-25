@@ -32,6 +32,15 @@ void *calloc(size_t nmemb, size_t size) {
 void *realloc(void *ptr, size_t size) {
     return replacement_realloc(ptr, size);
 }
+void *reallocf(void *ptr, size_t size) {
+    return replacement_reallocf(ptr, size);
+}
+void *valloc(size_t size) {
+    return replacement_valloc(size);
+}
+int posix_memalign(void **memptr, size_t alignment, size_t size) {
+    return replacement_posix_memalign(memptr, alignment, size);
+}
 #endif
 
 void swift_main(void);

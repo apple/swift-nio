@@ -859,4 +859,76 @@ class EventLoopFutureTest : XCTestCase {
             XCTAssert(type(of: error) == DummyError.self)
         }
     }
+
+    func testWhenAllCompleteResultsWithFailuresStillSucceed() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let future = EventLoopFuture.whenAllComplete([
+            group.next().makeFailedFuture(EventLoopFutureTestError.example),
+            group.next().makeSucceededFuture(true)
+        ], eventLoop: group.next())
+        XCTAssertNoThrow(try future.wait())
+    }
+
+    func testWhenAllCompleteResults() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let results = try EventLoopFuture.whenAllComplete([
+            group.next().makeSucceededFuture(3),
+            group.next().makeFailedFuture(EventLoopFutureTestError.example),
+            group.next().makeSucceededFuture(10),
+            group.next().makeFailedFuture(EventLoopFutureTestError.example),
+            group.next().makeSucceededFuture(5)
+        ], eventLoop: group.next()).wait()
+
+        XCTAssertEqual(try results[0].get(), 3)
+        XCTAssertThrowsError(try results[1].get())
+        XCTAssertEqual(try results[2].get(), 10)
+        XCTAssertThrowsError(try results[3].get())
+        XCTAssertEqual(try results[4].get(), 5)
+    }
+
+    func testWhenAllCompleteResolvesAfterFutures() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 6)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let promises = (0..<5).map { _ in group.next().makePromise(of: Int.self) }
+        let futures = promises.map { $0.futureResult }
+
+        var succeeded = false
+        var completedPromises = false
+
+        let mainFuture = EventLoopFuture.whenAllComplete(futures, eventLoop: group.next())
+        mainFuture.whenSuccess { _ in
+            XCTAssertTrue(completedPromises)
+            XCTAssertFalse(succeeded)
+            succeeded = true
+        }
+
+        // Should be false, as none of the promises have completed yet
+        XCTAssertFalse(succeeded)
+
+        // complete the first four promises
+        for (index, promise) in promises.dropLast().enumerated() {
+            promise.succeed(index)
+        }
+
+        // Should still be false, as one promise hasn't completed yet
+        XCTAssertFalse(succeeded)
+
+        // Complete the last promise
+        completedPromises = true
+        promises.last!.succeed(4)
+
+        let results = try assertNoThrowWithValue(mainFuture.wait().map { try $0.get() })
+        XCTAssertEqual(results, [0, 1, 2, 3, 4])
+    }
 }

@@ -106,6 +106,9 @@ private struct CallbackList: ExpressibleByArrayLiteral {
 
 }
 
+/// Internal error for operations that return results that were not replaced
+private struct OperationPlaceholderError: Error { }
+
 /// A promise to provide a result later.
 ///
 /// This is the provider API for `EventLoopFuture<Value>`. If you want to return an
@@ -979,6 +982,61 @@ extension EventLoopFuture {
             case .failure(let error):
                 return self.eventLoop.makeFailedFuture(error, file: file, line: line)
             }
+        }
+    }
+}
+
+extension EventLoopFuture {
+    /// Returns a new `EventLoopFuture` that succeeds when all of the provided `EventLoopFuture`s complete.
+    /// The new `EventLoopFuture` will contain an array of results, maintaining ordering for each of the `EventLoopFuture`s.
+    ///
+    /// The returned `EventLoopFuture` always succeeds, regardless of any failures from the waiting futures.
+    ///
+    /// If it is desired to flatten them into a single `EventLoopFuture` that fails on the first `EventLoopFuture` failure,
+    /// use one of the `reduce` methods instead.
+    /// - Parameter futures: An array of homogenous `EventLoopFuture`s to gather results from.
+    /// - Returns: A new `EventLoopFuture` with all the results of the provided futures.
+    public static func whenAllComplete(_ futures: [EventLoopFuture<Value>],
+                                       eventLoop: EventLoop) -> EventLoopFuture<[Result<Value, Error>]> {
+        let promise = eventLoop.makePromise(of: [Result<Value, Error>].self)
+
+        if eventLoop.inEventLoop {
+            _whenAllComplete0(promise, futures, eventLoop: eventLoop)
+        } else {
+            eventLoop.execute {
+                _whenAllComplete0(promise, futures, eventLoop: eventLoop)
+            }
+        }
+
+        return promise.futureResult
+    }
+
+    private static func _whenAllComplete0<InputValue>(_ promise: EventLoopPromise<[Result<InputValue, Error>]>,
+                                                      _ futures: [EventLoopFuture<InputValue>],
+                                                      eventLoop: EventLoop) {
+        eventLoop.assertInEventLoop()
+
+        var remainingCount = futures.count
+        var results: [Result<InputValue, Error>] = .init(repeating: .failure(OperationPlaceholderError()), count: futures.count)
+
+        // loop through the futures to chain callbacks to execute on the initiating event loop and grab their index
+        // in the "futures" to store their result in the same location
+        for (index, future) in futures.enumerated() {
+            future.hopTo(eventLoop: eventLoop)
+                .whenComplete { result in
+                    results[index] = result
+                    remainingCount -= 1
+
+                    guard remainingCount == 0 else { return }
+
+                    // verify that all operations have been completed
+                    assert(!results.contains(where: {
+                        guard case let .failure(error) = $0 else { return false }
+                        return error is OperationPlaceholderError
+                    }))
+
+                    promise.succeed(results)
+                }
         }
     }
 }
