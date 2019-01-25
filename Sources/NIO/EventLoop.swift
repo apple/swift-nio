@@ -677,7 +677,7 @@ internal final class SelectableEventLoop: EventLoop {
                 promise.fail(err)
             }
         }, { error in
-            promise.fail(error: error)
+            promise.fail(error)
         }, deadline)
 
         let scheduled = Scheduled(promise: promise, cancellationTask: {
