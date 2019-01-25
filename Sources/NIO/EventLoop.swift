@@ -304,19 +304,11 @@ extension TimeAmount {
         return TimeAmount(lhs.nanoseconds - rhs.nanoseconds)
     }
 
-    public static func * (lhs: TimeAmount.Value, rhs: TimeAmount) -> TimeAmount {
-        return TimeAmount(lhs * rhs.nanoseconds)
-    }
-
-    public static func * (lhs: TimeAmount, rhs: TimeAmount.Value) -> TimeAmount {
-        return TimeAmount(lhs.nanoseconds * rhs)
-    }
-
-    public static func * (lhs: Int, rhs: TimeAmount) -> TimeAmount {
+    public static func * <T: BinaryInteger>(lhs: T, rhs: TimeAmount) -> TimeAmount {
         return TimeAmount(TimeAmount.Value(lhs) * rhs.nanoseconds)
     }
 
-    public static func * (lhs: TimeAmount, rhs: Int) -> TimeAmount {
+    public static func * <T: BinaryInteger>(lhs: TimeAmount, rhs: T) -> TimeAmount {
         return TimeAmount(lhs.nanoseconds * TimeAmount.Value(rhs))
     }
 }
