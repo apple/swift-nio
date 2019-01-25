@@ -21,5 +21,8 @@ void *replacement_malloc(size_t size);
 void replacement_free(void *ptr);
 void *replacement_calloc(size_t nmemb, size_t size);
 void *replacement_realloc(void *ptr, size_t size);
+void *replacement_reallocf(void *ptr, size_t size);
+void *replacement_valloc(size_t size);
+int replacement_posix_memalign(void **memptr, size_t alignment, size_t size);
 
 #endif
