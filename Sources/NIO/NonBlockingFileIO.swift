@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import NIOConcurrencyHelpers
-import Dispatch
 
 /// `NonBlockingFileIO` is a helper that allows you to read files without blocking the calling thread.
 ///

@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Dispatch
-
 private enum SelectorLifecycleState {
     case open
     case closing
@@ -248,7 +246,7 @@ final class Selector<R: Registration> {
     private typealias EventType = Epoll.epoll_event
     private let eventfd: Int32
     private let timerfd: Int32
-    private var earliestTimer: UInt64 = UInt64.max
+    private var earliestTimer: NIODeadline = .distantFuture
     #else
     private typealias EventType = kevent
     #endif
@@ -491,7 +489,7 @@ final class Selector<R: Registration> {
             // Only call timerfd_settime if we not already scheduled one that will cover it.
             // This guards against calling timerfd_settime if not needed as this is generally speaking
             // expensive.
-            let next = DispatchTime.now().uptimeNanoseconds + UInt64(timeAmount.nanoseconds)
+            let next = NIODeadline.now() + timeAmount
             if next < self.earliestTimer {
                 self.earliestTimer = next
 
@@ -521,7 +519,7 @@ final class Selector<R: Registration> {
                 _ = Glibc.read(timerfd, &val, MemoryLayout<UInt>.size)
 
                 // Processed the earliest set timer so reset it.
-                self.earliestTimer = UInt64.max
+                self.earliestTimer = .distantFuture
             default:
                 // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skip it.
                 if let registration = registrations[Int(ev.data.fd)] {
