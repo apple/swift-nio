@@ -14,7 +14,6 @@
 
 import XCTest
 @testable import NIO
-import Dispatch
 import NIOConcurrencyHelpers
 
 

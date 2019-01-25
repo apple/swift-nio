@@ -19,7 +19,7 @@ import NIOConcurrencyHelpers
 public class EventLoopTest : XCTestCase {
 
     public func testSchedule() throws {
-        let nanos = DispatchTime.now().uptimeNanoseconds
+        let nanos: NIODeadline = .now()
         let amount: TimeAmount = .seconds(1)
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -29,7 +29,7 @@ public class EventLoopTest : XCTestCase {
             true
         }.futureResult.wait()
 
-        XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= amount.nanoseconds)
+        XCTAssertTrue(NIODeadline.now() - nanos >= amount)
         XCTAssertTrue(value)
     }
 
@@ -48,7 +48,7 @@ public class EventLoopTest : XCTestCase {
         let clientBootstrap = ClientBootstrap(group: eventLoopGroup)
 
         // Now, schedule two tasks: one that takes a while, one that doesn't.
-        let nanos = DispatchTime.now().uptimeNanoseconds
+        let nanos: NIODeadline = .now()
         let longFuture = eventLoopGroup.next().scheduleTask(in: longAmount) {
             true
         }.futureResult
@@ -60,12 +60,12 @@ public class EventLoopTest : XCTestCase {
         // Ok, the short one has happened. Now we should try connecting them. This connect should happen
         // faster than the final task firing.
         _ = try assertNoThrowWithValue(clientBootstrap.connect(to: serverChannel.localAddress!).wait()) as Channel
-        XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos < longAmount.nanoseconds)
+        XCTAssertTrue(NIODeadline.now() - nanos < longAmount)
 
         // Now wait for the long-delayed task.
         XCTAssertTrue(try assertNoThrowWithValue(try longFuture.wait()))
         // Now we're ok.
-        XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= longAmount.nanoseconds)
+        XCTAssertTrue(NIODeadline.now() - nanos >= longAmount)
     }
 
     public func testScheduleCancelled() throws {
@@ -80,19 +80,19 @@ public class EventLoopTest : XCTestCase {
 
         scheduled.cancel()
 
-        let nanos = DispatchTime.now().uptimeNanoseconds
+        let nanos = NIODeadline.now()
         let amount: TimeAmount = .seconds(2)
         let value = try eventLoopGroup.next().scheduleTask(in: amount) {
             true
         }.futureResult.wait()
 
-        XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= amount.nanoseconds)
+        XCTAssertTrue(NIODeadline.now() - nanos >= amount)
         XCTAssertTrue(value)
         XCTAssertFalse(ran.load())
     }
 
     public func testScheduleRepeatedTask() throws {
-        let nanos = DispatchTime.now().uptimeNanoseconds
+        let nanos: NIODeadline = .now()
         let initialDelay: TimeAmount = .milliseconds(5)
         let delay: TimeAmount = .milliseconds(10)
         let count = 5
@@ -109,7 +109,7 @@ public class EventLoopTest : XCTestCase {
             let initialValue = counter.load()
             _ = counter.add(1)
             if initialValue == 0 {
-                XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds)
+                XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay)
             } else if initialValue == count {
                 expect.fulfill()
                 repeatedTask.cancel()
@@ -119,7 +119,7 @@ public class EventLoopTest : XCTestCase {
         waitForExpectations(timeout: 1) { error in
             XCTAssertNil(error)
             XCTAssertEqual(counter.load(), count + 1)
-            XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds + numericCast(count) * delay.nanoseconds)
+            XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay + TimeAmount.Value(count) * delay)
         }
     }
 
@@ -156,7 +156,7 @@ public class EventLoopTest : XCTestCase {
     }
 
     public func testScheduleRepeatedTaskCancelFromDifferentThread() throws {
-        let nanos = DispatchTime.now().uptimeNanoseconds
+        let nanos: NIODeadline = .now()
         let initialDelay: TimeAmount = .milliseconds(5)
         let delay: TimeAmount = .milliseconds(0) // this will actually force the race from issue #554 to happen frequently
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -191,7 +191,7 @@ public class EventLoopTest : XCTestCase {
 
         waitForExpectations(timeout: 1) { error in
             XCTAssertNil(error)
-            XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds)
+            XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay)
         }
     }
 
@@ -530,23 +530,23 @@ public class EventLoopTest : XCTestCase {
     }
 
     public func testScheduleMultipleTasks() throws {
-        let nanos = DispatchTime.now().uptimeNanoseconds
+        let nanos: NIODeadline = .now()
         let amount: TimeAmount = .seconds(1)
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
-        var array = Array<(Int, DispatchTime)>()
+        var array = Array<(Int, NIODeadline)>()
         let scheduled1 = eventLoopGroup.next().scheduleTask(in: .milliseconds(500)) {
-            array.append((1, DispatchTime.now()))
+            array.append((1, .now()))
         }
 
         let scheduled2 = eventLoopGroup.next().scheduleTask(in: .milliseconds(100)) {
-            array.append((2, DispatchTime.now()))
+            array.append((2, .now()))
         }
 
         let scheduled3 = eventLoopGroup.next().scheduleTask(in: .milliseconds(1000)) {
-            array.append((3, DispatchTime.now()))
+            array.append((3, .now()))
         }
 
         var result = try eventLoopGroup.next().scheduleTask(in: .milliseconds(1000)) {
