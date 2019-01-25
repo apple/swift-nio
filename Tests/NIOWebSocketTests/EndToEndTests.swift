@@ -127,7 +127,7 @@ class EndToEndTests: XCTestCase {
 
     func testBasicUpgradeDance() throws {
         let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { head in HTTPHeaders() },
-                                              upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(result: ()) })
+                                              upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(()) })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
@@ -147,7 +147,7 @@ class EndToEndTests: XCTestCase {
 
     func testUpgradeWithProtocolName() throws {
         let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { head in HTTPHeaders() },
-                                              upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(result: ()) })
+                                              upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(()) })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
@@ -169,7 +169,7 @@ class EndToEndTests: XCTestCase {
         let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { head in nil },
                                               upgradePipelineHandler: { (channel, req) in
                                                   XCTFail("Should not have called")
-                                                  return channel.eventLoop.makeSucceededFuture(result: ())
+                                                  return channel.eventLoop.makeSucceededFuture(())
                                               }
         )
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
@@ -199,7 +199,7 @@ class EndToEndTests: XCTestCase {
 
     func testRequiresVersion13() throws {
         let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { head in HTTPHeaders() },
-                                              upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(result: ()) })
+                                              upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(()) })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
@@ -227,7 +227,7 @@ class EndToEndTests: XCTestCase {
 
     func testRequiresVersionHeader() throws {
         let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { head in HTTPHeaders() },
-                                              upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(result: ()) })
+                                              upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(()) })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
@@ -255,7 +255,7 @@ class EndToEndTests: XCTestCase {
 
     func testRequiresKeyHeader() throws {
         let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { head in HTTPHeaders() },
-                                              upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(result: ()) })
+                                              upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(()) })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
@@ -287,7 +287,7 @@ class EndToEndTests: XCTestCase {
                                             hdrs.add(name: "TestHeader", value: "TestValue")
                                             return hdrs
                                          },
-                                         upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(result: ()) })
+                                         upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(()) })
         let (loop, server, client) = createTestFixtures(upgraders: [upgrader])
         defer {
             XCTAssertNoThrow(try client.finish())
@@ -313,7 +313,7 @@ class EndToEndTests: XCTestCase {
                                          hdrs.add(name: "Target", value: path)
                                          return hdrs
                                      },
-                                     upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(result: ()) })
+                                     upgradePipelineHandler: { (channel, req) in channel.eventLoop.makeSucceededFuture(()) })
         }
         let first = buildHandler(path: "first")
         let second = buildHandler(path: "second")
@@ -379,7 +379,7 @@ class EndToEndTests: XCTestCase {
     func testMaxFrameSize() throws {
         let basicUpgrader = WebSocketUpgrader(maxFrameSize: 16, shouldUpgrade: { head in HTTPHeaders() },
                                               upgradePipelineHandler: { (channel, req) in
-            return channel.eventLoop.makeSucceededFuture(result: ())
+            return channel.eventLoop.makeSucceededFuture(())
         })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
         defer {

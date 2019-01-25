@@ -86,7 +86,7 @@ public struct NonBlockingFileIO {
                                     eventLoop: eventLoop,
                                     chunkHandler: chunkHandler)
         } catch {
-            return eventLoop.makeFailedFuture(error: error)
+            return eventLoop.makeFailedFuture(error)
         }
     }
 
@@ -130,7 +130,7 @@ public struct NonBlockingFileIO {
                     }
                 }
             } else {
-                return eventLoop.makeSucceededFuture(result: ())
+                return eventLoop.makeSucceededFuture(())
             }
         }
 
@@ -161,7 +161,7 @@ public struct NonBlockingFileIO {
                              allocator: allocator,
                              eventLoop: eventLoop)
         } catch {
-            return eventLoop.makeFailedFuture(error: error)
+            return eventLoop.makeFailedFuture(error)
         }
     }
 
@@ -181,7 +181,7 @@ public struct NonBlockingFileIO {
     /// - returns: An `EventLoopFuture` which delivers a `ByteBuffer` if the read was successful or a failure on error.
     public func read(fileHandle: FileHandle, byteCount: Int, allocator: ByteBufferAllocator, eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
         guard byteCount > 0 else {
-            return eventLoop.makeSucceededFuture(result: allocator.buffer(capacity: 0))
+            return eventLoop.makeSucceededFuture(allocator.buffer(capacity: 0))
         }
 
         var buf = allocator.buffer(capacity: byteCount)
@@ -226,7 +226,7 @@ public struct NonBlockingFileIO {
         var byteCount = buffer.readableBytes
 
         guard byteCount > 0 else {
-            return eventLoop.makeSucceededFuture(result: ())
+            return eventLoop.makeSucceededFuture(())
         }
 
         return self.threadPool.runIfActive(eventLoop: eventLoop) {

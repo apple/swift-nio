@@ -153,7 +153,7 @@ class ChannelPipelineTest: XCTestCase {
             do {
                 ctx.write(self.wrapOutboundOut(try body(self.unwrapOutboundIn(data))), promise: promise)
             } catch let err {
-                promise!.fail(error: err)
+                promise!.fail(err)
             }
         }
     }
@@ -167,7 +167,7 @@ class ChannelPipelineTest: XCTestCase {
         }
 
         public func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-            promise!.fail(error: TestFailureError.CalledBind)
+            promise!.fail(TestFailureError.CalledBind)
         }
     }
 

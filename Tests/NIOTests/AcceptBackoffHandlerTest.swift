@@ -160,7 +160,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
             }
 
             public func channelInactive(ctx: ChannelHandlerContext) {
-                promise.succeed(result: ())
+                promise.succeed(())
             }
 
             func waitForInactive() throws {

@@ -156,7 +156,7 @@ class SelectorTest: XCTestCase {
                 XCTAssertTrue(self.hasReConnectEventLoopTickFinished.value)
                 XCTAssertTrue(self.didRead)
                 if !self.didRead {
-                    self.didReadPromise.fail(error: DidNotReadError.didNotReadGotInactive)
+                    self.didReadPromise.fail(DidNotReadError.didNotReadGotInactive)
                     ctx.close(promise: nil)
                 }
             }
@@ -171,7 +171,7 @@ class SelectorTest: XCTestCase {
                 XCTAssertEqual(1, buf.readableBytes)
                 XCTAssertEqual("H", buf.readString(length: 1)!)
                 self.didRead = true
-                self.didReadPromise.succeed(result: ())
+                self.didReadPromise.succeed(())
             }
 
             func channelReadComplete(ctx: ChannelHandlerContext) {
@@ -180,7 +180,7 @@ class SelectorTest: XCTestCase {
                 XCTAssertTrue(self.hasReConnectEventLoopTickFinished.value)
                 XCTAssertTrue(self.didRead)
                 if !self.didRead {
-                    self.didReadPromise.fail(error: DidNotReadError.didNotReadGotReadComplete)
+                    self.didReadPromise.fail(DidNotReadError.didNotReadGotReadComplete)
                     ctx.close(promise: nil)
                 }
             }

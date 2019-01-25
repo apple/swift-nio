@@ -138,7 +138,7 @@ public class SocketChannelTest : XCTestCase {
 
             func errorCaught(ctx: ChannelHandlerContext, error: Error) {
                 if let ioError = error as? IOError {
-                    self.promise.succeed(result: ioError)
+                    self.promise.succeed(ioError)
                 }
             }
         }
@@ -206,7 +206,7 @@ public class SocketChannelTest : XCTestCase {
             }
 
             func channelActive(ctx: ChannelHandlerContext) {
-                promise.succeed(result: ())
+                promise.succeed(())
             }
         }
 
@@ -223,7 +223,7 @@ public class SocketChannelTest : XCTestCase {
             }
 
             override func connect(to address: SocketAddress) throws -> Bool {
-                self.promise.succeed(result: ())
+                self.promise.succeed(())
                 return true
             }
         }
@@ -435,7 +435,7 @@ public class SocketChannelTest : XCTestCase {
             override func connect(to address: SocketAddress) throws -> Bool {
                 // We want to return false here to have a pending connect.
                 _ = try super.connect(to: address)
-                self.promise.succeed(result: ())
+                self.promise.succeed(())
                 return false
             }
         }
@@ -513,7 +513,7 @@ public class SocketChannelTest : XCTestCase {
                     XCTAssertNil(ctx.localAddress)
                     XCTAssertNil(ctx.remoteAddress)
 
-                    self.promise.succeed(result: ())
+                    self.promise.succeed(())
                 }
             }
         }

@@ -167,7 +167,7 @@ public final class ChannelPipeline: ChannelInvoker {
 
         func _add() {
             if self.destroyed {
-                promise.fail(error: ChannelError.ioOnClosedChannel)
+                promise.fail(ChannelError.ioOnClosedChannel)
                 return
             }
 
@@ -259,12 +259,12 @@ public final class ChannelPipeline: ChannelInvoker {
                       promise: EventLoopPromise<Void>) {
         self.eventLoop.assertInEventLoop()
         if self.destroyed {
-            promise.fail(error: ChannelError.ioOnClosedChannel)
+            promise.fail(ChannelError.ioOnClosedChannel)
             return
         }
 
         guard let ctx = self.contextForPredicate0({ $0.handler === relativeHandler }) else {
-            promise.fail(error: ChannelPipelineError.notFound)
+            promise.fail(ChannelPipelineError.notFound)
             return
         }
 
@@ -296,7 +296,7 @@ public final class ChannelPipeline: ChannelInvoker {
         self.eventLoop.assertInEventLoop()
 
         if destroyed {
-            promise.fail(error: ChannelError.ioOnClosedChannel)
+            promise.fail(ChannelError.ioOnClosedChannel)
             return
         }
 
@@ -305,10 +305,10 @@ public final class ChannelPipeline: ChannelInvoker {
 
         do {
             try ctx.invokeHandlerAdded()
-            promise.succeed(result: ())
+            promise.succeed(())
         } catch let err {
             remove0(ctx: ctx, promise: nil)
-            promise.fail(error: err)
+            promise.fail(err)
         }
     }
 
@@ -464,9 +464,9 @@ public final class ChannelPipeline: ChannelInvoker {
 
         func _context0() {
             if let ctx = self.contextForPredicate0(body) {
-                promise.succeed(result: ctx)
+                promise.succeed(ctx)
             } else {
-                promise.fail(error: ChannelPipelineError.notFound)
+                promise.fail(ChannelPipelineError.notFound)
             }
         }
 
@@ -514,9 +514,9 @@ public final class ChannelPipeline: ChannelInvoker {
 
         do {
             try ctx.invokeHandlerRemoved()
-            promise?.succeed(result: true)
+            promise?.succeed(true)
         } catch let err {
-            promise?.fail(error: err)
+            promise?.fail(err)
         }
 
         // We need to keep the current node alive until after the callout in case the user uses the context.
@@ -748,7 +748,7 @@ public final class ChannelPipeline: ChannelInvoker {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeClose(mode: mode, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.alreadyClosed)
+            promise?.fail(ChannelError.alreadyClosed)
         }
     }
 
@@ -768,7 +768,7 @@ public final class ChannelPipeline: ChannelInvoker {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeWrite(data, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
         }
     }
 
@@ -776,7 +776,7 @@ public final class ChannelPipeline: ChannelInvoker {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeWriteAndFlush(data, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
         }
     }
 
@@ -784,7 +784,7 @@ public final class ChannelPipeline: ChannelInvoker {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeBind(to: address, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
         }
     }
 
@@ -792,7 +792,7 @@ public final class ChannelPipeline: ChannelInvoker {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeConnect(to: address, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
         }
     }
 
@@ -800,7 +800,7 @@ public final class ChannelPipeline: ChannelInvoker {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeRegister(promise: promise)
         } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
         }
     }
 
@@ -808,7 +808,7 @@ public final class ChannelPipeline: ChannelInvoker {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeTriggerUserOutboundEvent(event, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
         }
     }
 
@@ -1160,7 +1160,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
         if let outboundNext = self.prev {
             outboundNext.invokeRegister(promise: promise)
         } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
         }
     }
 
@@ -1174,7 +1174,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
         if let outboundNext = self.prev {
             outboundNext.invokeBind(to: address, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
         }
     }
 
@@ -1188,7 +1188,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
         if let outboundNext = self.prev {
             outboundNext.invokeConnect(to: address, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
         }
     }
 
@@ -1203,7 +1203,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
         if let outboundNext = self.prev {
             outboundNext.invokeWrite(data, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
         }
     }
 
@@ -1230,7 +1230,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
         if let outboundNext = self.prev {
             outboundNext.invokeWriteAndFlush(data, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
         }
     }
 
@@ -1254,7 +1254,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
         if let outboundNext = self.prev {
             outboundNext.invokeClose(mode: mode, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.alreadyClosed)
+            promise?.fail(ChannelError.alreadyClosed)
         }
     }
 
@@ -1267,7 +1267,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
         if let outboundNext = self.prev {
             outboundNext.invokeTriggerUserOutboundEvent(event, promise: promise)
         } else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
         }
     }
 

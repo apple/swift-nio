@@ -118,9 +118,9 @@ private struct CallbackList: ExpressibleByArrayLiteral {
 ///     let promise = eventLoop.makePromise(of: ResultType.self)
 ///     someAsyncOperationWithACallback(args) { result -> Void in
 ///         // when finished...
-///         promise.succeed(result: result)
+///         promise.succeed(result)
 ///         // if error...
-///         promise.fail(error: error)
+///         promise.fail(error)
 ///     }
 ///     return promise.futureResult
 /// }
@@ -136,7 +136,7 @@ private struct CallbackList: ExpressibleByArrayLiteral {
 /// * If you just want to get a value back after running something on another thread,
 ///     use `EventLoopFuture<ResultType>.async()`
 /// * If you already have a value and need an `EventLoopFuture<>` object to plug into
-///     some other API, create an already-resolved object with `eventLoop.newSucceededFuture(result)`
+///     some other API, create an already-resolved object with `eventLoop.makeSucceededFuture(result)`
 ///     or `eventLoop.newFailedFuture(error:)`.
 ///
 /// - note: `EventLoopPromise` has reference semantics.
@@ -158,16 +158,16 @@ public struct EventLoopPromise<Value> {
     /// Deliver a successful result to the associated `EventLoopFuture<Value>` object.
     ///
     /// - parameters:
-    ///     - result: The successful result of the operation.
-    public func succeed(result: Value) {
-        _resolve(value: .success(result))
+    ///     - value: The successful result of the operation.
+    public func succeed(_ value: Value) {
+        _resolve(value: .success(value))
     }
 
     /// Deliver an error to the associated `EventLoopFuture<Value>` object.
     ///
     /// - parameters:
     ///      - error: The error from the operation.
-    public func fail(error: Error) {
+    public func fail(_ error: Error) {
         _resolve(value: .failure(error))
     }
 
@@ -366,8 +366,8 @@ public final class EventLoopFuture<Value> {
     }
 
     /// A EventLoopFuture<Value> that has already succeeded
-    convenience init(eventLoop: EventLoop, result: Value, file: StaticString, line: UInt) {
-        self.init(eventLoop: eventLoop, value: .success(result), file: file, line: line)
+    convenience init(eventLoop: EventLoop, value: Value, file: StaticString, line: UInt) {
+        self.init(eventLoop: eventLoop, value: .success(value), file: file, line: line)
     }
 
     /// A EventLoopFuture<Value> that has already failed
@@ -466,7 +466,7 @@ extension EventLoopFuture {
                                 _ callback: @escaping (Value) throws -> NewValue) -> EventLoopFuture<NewValue> {
         return self.flatMap(file: file, line: line) { (value: Value) -> EventLoopFuture<NewValue> in
             do {
-                return EventLoopFuture<NewValue>(eventLoop: self.eventLoop, result: try callback(value), file: file, line: line)
+                return EventLoopFuture<NewValue>(eventLoop: self.eventLoop, value: try callback(value), file: file, line: line)
             } catch {
                 return EventLoopFuture<NewValue>(eventLoop: self.eventLoop, error: error, file: file, line: line)
             }
@@ -490,7 +490,7 @@ extension EventLoopFuture {
     public func flatMapErrorThrowing(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) throws -> Value) -> EventLoopFuture<Value> {
         return self.flatMapError(file: file, line: line) { value in
             do {
-                return EventLoopFuture(eventLoop: self.eventLoop, result: try callback(value), file: file, line: line)
+                return EventLoopFuture(eventLoop: self.eventLoop, value: try callback(value), file: file, line: line)
             } catch {
                 return EventLoopFuture(eventLoop: self.eventLoop, error: error, file: file, line: line)
             }
@@ -525,7 +525,7 @@ extension EventLoopFuture {
             whenSuccess(callback as! (Value) -> Void)
             return self as! EventLoopFuture<NewValue>
         } else {
-            return flatMap { return EventLoopFuture<NewValue>(eventLoop: self.eventLoop, result: callback($0), file: file, line: line) }
+            return self.flatMap(file: file, line: line) { return EventLoopFuture<NewValue>(eventLoop: self.eventLoop, value: callback($0), file: file, line: line) }
         }
     }
 
@@ -566,17 +566,17 @@ extension EventLoopFuture {
     /// can recover from the error and return a new value of type `Value`. The provided callback may not `throw`,
     /// so this function should be used when the error is always recoverable.
     ///
-    /// Operations performed in `mapIfError` should not block, or they will block the entire
-    /// event loop. `mapIfError` is intended for use when you have the ability to synchronously
+    /// Operations performed in `recover` should not block, or they will block the entire
+    /// event loop. `recover` is intended for use when you have the ability to synchronously
     /// recover from errors.
     ///
     /// - parameters:
     ///     - callback: Function that will receive the error value of this `EventLoopFuture` and return
     ///         a new value lifted into a new `EventLoopFuture`.
     /// - returns: A future that will receive the recovered value.
-    public func mapIfError(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) -> Value) -> EventLoopFuture<Value> {
-        return flatMapError(file: file, line: line) {
-            return EventLoopFuture<Value>(eventLoop: self.eventLoop, result: callback($0), file: file, line: line)
+    public func recover(file: StaticString = #file, line: UInt = #line, _ callback: @escaping (Error) -> Value) -> EventLoopFuture<Value> {
+        return self.flatMapError(file: file, line: line) {
+            return EventLoopFuture<Value>(eventLoop: self.eventLoop, value: callback($0), file: file, line: line)
         }
     }
 
@@ -632,7 +632,7 @@ extension EventLoopFuture {
     /// `EventLoopFuture` has a failure result.
     ///
     /// An observer callback cannot return a value, meaning that this function cannot be chained
-    /// from. If you are attempting to create a computation pipeline, consider `mapIfError` or `flatMapError`.
+    /// from. If you are attempting to create a computation pipeline, consider `recover` or `flatMapError`.
     /// If you find yourself passing the results from this `EventLoopFuture` to a new `EventLoopPromise`
     /// in the body of this function, consider using `cascade` instead.
     ///
@@ -725,11 +725,11 @@ extension EventLoopFuture {
     }
 
     /// Return a new EventLoopFuture that contains this "and" another value.
-    /// This is just syntactic sugar for `future.and(loop.newSucceedFuture<NewValue>(result: result))`.
-    public func and<OtherValue>(result: OtherValue,
+    /// This is just syntactic sugar for `future.and(loop.makeSucceedFuture(value))`.
+    public func and<OtherValue>(value: OtherValue,
                                 file: StaticString = #file,
                                 line: UInt = #line) -> EventLoopFuture<(Value, OtherValue)> {
-        return and(EventLoopFuture<OtherValue>(eventLoop: self.eventLoop, result: result, file: file, line: line))
+        return and(EventLoopFuture<OtherValue>(eventLoop: self.eventLoop, value: value, file: file, line: line))
     }
 }
 
@@ -760,9 +760,9 @@ extension EventLoopFuture {
         _whenCompleteWithValue { v in
             switch v {
             case .failure(let err):
-                promise.fail(error: err)
+                promise.fail(err)
             case .success(let value):
-                promise.succeed(result: value)
+                promise.succeed(value)
             }
         }
     }
@@ -779,7 +779,7 @@ extension EventLoopFuture {
     public func cascadeFailure<NewValue>(promise: EventLoopPromise<NewValue>?) {
         guard let promise = promise else { return }
         self.whenFailure { err in
-            promise.fail(error: err)
+            promise.fail(err)
         }
     }
 }
@@ -905,10 +905,10 @@ extension EventLoopFuture {
                                           _ futures: [EventLoopFuture<InputValue>],
                                           eventLoop: EventLoop,
                                           _ nextPartialResult: @escaping (Value, InputValue) -> Value) -> EventLoopFuture<Value> {
-        let f0 = eventLoop.makeSucceededFuture(result: initialResult)
+        let f0 = eventLoop.makeSucceededFuture(initialResult)
 
         let body = f0.fold(futures) { (t: Value, u: InputValue) -> EventLoopFuture<Value> in
-            eventLoop.makeSucceededFuture(result: nextPartialResult(t, u))
+            eventLoop.makeSucceededFuture(nextPartialResult(t, u))
         }
 
         return body
@@ -936,24 +936,50 @@ extension EventLoopFuture {
                                           eventLoop: EventLoop,
                                           _ updateAccumulatingResult: @escaping (inout Value, InputValue) -> Void) -> EventLoopFuture<Value> {
         let p0 = eventLoop.makePromise(of: Value.self)
-        var result: Value = initialResult
+        var value: Value = initialResult
 
-        let f0 = eventLoop.makeSucceededFuture(result: ())
-        let future = f0.fold(futures) { (_: (), value: InputValue) -> EventLoopFuture<Void> in
+        let f0 = eventLoop.makeSucceededFuture(())
+        let future = f0.fold(futures) { (_: (), newValue: InputValue) -> EventLoopFuture<Void> in
             eventLoop.assertInEventLoop()
-            updateAccumulatingResult(&result, value)
-            return eventLoop.makeSucceededFuture(result: ())
+            updateAccumulatingResult(&value, newValue)
+            return eventLoop.makeSucceededFuture(())
         }
 
         future.whenSuccess {
             eventLoop.assertInEventLoop()
-            p0.succeed(result: result)
+            p0.succeed(value)
         }
         future.whenFailure { (error) in
             eventLoop.assertInEventLoop()
-            p0.fail(error: error)
+            p0.fail(error)
         }
         return p0.futureResult
+    }
+
+    /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
+    /// performs a synchronous computation and returns either a new value (of type `NewValue`) or
+    /// an error depending on the `Result` returned by the closure.
+    ///
+    /// Operations performed in `flatMapResult` should not block, or they will block the entire
+    /// event loop. `flatMapResult` is intended for use when you have a data-driven function that
+    /// performs a simple data transformation that can potentially error.
+    ///
+    ///
+    /// - parameters:
+    ///     - body: Function that will receive the value of this `EventLoopFuture` and return
+    ///         a new value or error lifted into a new `EventLoopFuture`.
+    /// - returns: A future that will receive the eventual value.
+    public func flatMapResult<NewValue, SomeError: Error>(file: StaticString = #file,
+                                                          line: UInt = #line,
+                                                          _ body: @escaping (Value) -> Result<NewValue, SomeError>) -> EventLoopFuture<NewValue> {
+        return self.flatMap(file: file, line: line) { value in
+            switch body(value) {
+            case .success(let value):
+                return self.eventLoop.makeSucceededFuture(value, file: file, line: line)
+            case .failure(let error):
+                return self.eventLoop.makeFailedFuture(error, file: file, line: line)
+            }
+        }
     }
 }
 
@@ -984,8 +1010,8 @@ public extension EventLoopFuture {
 func executeAndComplete<Value>(_ promise: EventLoopPromise<Value>?, _ body: () throws -> Value) {
     do {
         let result = try body()
-        promise?.succeed(result: result)
+        promise?.succeed(result)
     } catch let e {
-        promise?.fail(error: e)
+        promise?.fail(e)
     }
 }

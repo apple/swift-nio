@@ -211,7 +211,7 @@ extension Channel {
     }
 
     public func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: ChannelError.operationUnsupported)
+        promise?.fail(ChannelError.operationUnsupported)
     }
 
     public func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {

@@ -63,9 +63,9 @@ public class EmbeddedEventLoop: EventLoop {
         let promise: EventLoopPromise<T> = makePromise()
         let task = EmbeddedScheduledTask(readyTime: deadline) {
             do {
-                promise.succeed(result: try task())
+                promise.succeed(try task())
             } catch let err {
-                promise.fail(error: err)
+                promise.fail(err)
             }
         }
 
@@ -159,7 +159,7 @@ class EmbeddedChannelCore: ChannelCore {
     deinit {
         assert(self.pipeline.destroyed, "leaked an open EmbeddedChannel, maybe forgot to call channel.finish()?")
         isOpen = false
-        closePromise.succeed(result: ())
+        closePromise.succeed(())
     }
 
     /// Contains the flushed items that went into the `Channel` (and on a regular channel would have hit the network).
@@ -182,12 +182,12 @@ class EmbeddedChannelCore: ChannelCore {
 
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         guard self.isOpen else {
-            promise?.fail(error: ChannelError.alreadyClosed)
+            promise?.fail(ChannelError.alreadyClosed)
             return
         }
         isOpen = false
         isActive = false
-        promise?.succeed(result: ())
+        promise?.succeed(())
 
         // As we called register() in the constructor of EmbeddedChannel we also need to ensure we call unregistered here.
         pipeline.fireChannelInactive0()
@@ -196,22 +196,22 @@ class EmbeddedChannelCore: ChannelCore {
         eventLoop.execute {
             // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline
             self.pipeline.removeHandlers()
-            self.closePromise.succeed(result: ())
+            self.closePromise.succeed(())
         }
     }
 
     func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        promise?.succeed(result: ())
+        promise?.succeed(())
     }
 
     func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         isActive = true
-        promise?.succeed(result: ())
+        promise?.succeed(())
         pipeline.fireChannelActive0()
     }
 
     func register0(promise: EventLoopPromise<Void>?) {
-        promise?.succeed(result: ())
+        promise?.succeed(())
         pipeline.fireChannelRegistered0()
     }
 
@@ -223,7 +223,7 @@ class EmbeddedChannelCore: ChannelCore {
 
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         guard let data = data.tryAsIOData() else {
-            promise?.fail(error: ChannelError.writeDataUnsupported)
+            promise?.fail(ChannelError.writeDataUnsupported)
             return
         }
 
@@ -235,7 +235,7 @@ class EmbeddedChannelCore: ChannelCore {
         self.pendingOutboundBuffer.removeAll()
         for dataAndPromise in pendings {
             self.addToBuffer(buffer: &self.outboundBuffer, data: dataAndPromise.0)
-            dataAndPromise.1?.succeed(result: ())
+            dataAndPromise.1?.succeed(())
         }
     }
 
@@ -244,7 +244,7 @@ class EmbeddedChannelCore: ChannelCore {
     }
 
     public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
-        promise?.succeed(result: ())
+        promise?.succeed(())
     }
 
     func channelRead0(_ data: NIOAny) {
@@ -404,7 +404,7 @@ public class EmbeddedChannel: Channel {
 
     public func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T: ChannelOption {
         if option is AutoReadOption {
-            return self.eventLoop.makeSucceededFuture(result: true as! T.OptionType)
+            return self.eventLoop.makeSucceededFuture(true as! T.OptionType)
         }
         fatalError("option \(option) not supported")
     }

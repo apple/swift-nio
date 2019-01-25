@@ -293,7 +293,7 @@ class SNIHandlerTest: XCTestCase {
 
         // Now we're going to complete the promise and run the loop. This should cause the complete
         // ClientHello to be sent on, and the SNIHandler to be removed from the pipeline.
-        continuePromise.succeed(result: ())
+        continuePromise.succeed(())
         loop.run()
 
         let writtenBuffer: ByteBuffer = channel.readInbound() ?? channel.allocator.buffer(capacity: 0)
@@ -335,7 +335,7 @@ class SNIHandlerTest: XCTestCase {
 
         // Now we're going to complete the promise and run the loop. This should cause the complete
         // ClientHello to be sent on, and the SNIHandler to be removed from the pipeline.
-        continuePromise.succeed(result: ())
+        continuePromise.succeed(())
         loop.run()
 
         let writtenBuffer: ByteBuffer? = channel.readInbound()
@@ -358,7 +358,7 @@ class SNIHandlerTest: XCTestCase {
 
         let handler = ByteToMessageHandler(SNIHandler { result in
             XCTFail("Handler was called")
-            return loop.makeSucceededFuture(result: ())
+            return loop.makeSucceededFuture(())
         })
 
         try channel.pipeline.add(handler: handler).wait()
