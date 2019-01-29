@@ -18,13 +18,13 @@ import XCTest
 
 private extension Channel {
     func waitForDatagrams(count: Int) throws -> [AddressedEnvelope<ByteBuffer>] {
-        return try self.pipeline.context(name: "ByteReadRecorder").then { context in
+        return try self.pipeline.context(name: "ByteReadRecorder").flatMap { context in
             if let future = (context.handler as? DatagramReadRecorder<ByteBuffer>)?.notifyForDatagrams(count) {
                 return future
             }
 
             XCTFail("Could not wait for reads")
-            return self.eventLoop.makeSucceededFuture(result: [] as [AddressedEnvelope<ByteBuffer>])
+            return self.eventLoop.makeSucceededFuture([] as [AddressedEnvelope<ByteBuffer>])
         }.wait()
     }
 }
@@ -65,7 +65,7 @@ private class DatagramReadRecorder<DataType>: ChannelInboundHandler {
         reads.append(data)
 
         if let promise = readWaiters.removeValue(forKey: reads.count) {
-            promise.succeed(result: reads)
+            promise.succeed(reads)
         }
 
         ctx.fireChannelRead(self.wrapInboundOut(data))
@@ -73,7 +73,7 @@ private class DatagramReadRecorder<DataType>: ChannelInboundHandler {
 
     func notifyForDatagrams(_ count: Int) -> EventLoopFuture<[AddressedEnvelope<DataType>]> {
         guard reads.count < count else {
-            return loop!.makeSucceededFuture(result: .init(reads.prefix(count)))
+            return loop!.makeSucceededFuture(.init(reads.prefix(count)))
         }
 
         readWaiters[count] = loop!.makePromise()
@@ -212,7 +212,7 @@ final class DatagramChannelTests: XCTestCase {
         // We're going to try to write loads, and loads, and loads of data. In this case, one more
         // write than the iovecs max.
 
-        var overall: EventLoopFuture<Void> = self.firstChannel.eventLoop.makeSucceededFuture(result: ())
+        var overall: EventLoopFuture<Void> = self.firstChannel.eventLoop.makeSucceededFuture(())
         for _ in 0...Socket.writevLimitIOVectors {
             let myPromise = self.firstChannel.eventLoop.makePromise(of: Void.self)
             var buffer = self.firstChannel.allocator.buffer(capacity: 1)
@@ -229,7 +229,7 @@ final class DatagramChannelTests: XCTestCase {
     func testSendmmsgLotsOfData() throws {
         var datagrams = 0
 
-        var overall = self.firstChannel.eventLoop.makeSucceededFuture(result: ())
+        var overall = self.firstChannel.eventLoop.makeSucceededFuture(())
         // We defer this work to the background thread because otherwise it incurs an enormous number of context
         // switches.
         try self.firstChannel.eventLoop.submit {
@@ -376,7 +376,7 @@ final class DatagramChannelTests: XCTestCase {
 
             func errorCaught(ctx: ChannelHandlerContext, error: Error) {
                 if let ioError = error as? IOError {
-                    self.promise.succeed(result: ioError)
+                    self.promise.succeed(ioError)
                 }
             }
         }

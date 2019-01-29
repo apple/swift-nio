@@ -41,7 +41,7 @@ public struct Scheduled<T> {
     /// Whether this is successful depends on whether the execution of the task already begun.
     ///  This means that cancellation is not guaranteed.
     public func cancel() {
-        promise.fail(error: EventLoopError.cancelled)
+        promise.fail(EventLoopError.cancelled)
     }
 
     /// Returns the `EventLoopFuture` which will be notified once the execution of the scheduled task completes.
@@ -134,7 +134,7 @@ public final class RepeatedTask {
         self.scheduled = self.eventLoop.scheduleTask(in: self.delay) {
             // we need to repeat this as we might have been cancelled in the meantime
             guard let task = self.task else {
-                return self.eventLoop.makeSucceededFuture(result: ())
+                return self.eventLoop.makeSucceededFuture(())
             }
             return task(self)
         }
@@ -207,6 +207,10 @@ public protocol EventLoop: EventLoopGroup {
     ///     - task: The closure that will be submitted to the `EventLoop` for execution.
     /// - returns: `EventLoopFuture` that is notified once the task was executed.
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
+
+    /// Schedule a `task` that is executed by this `SelectableEventLoop` at the given time.
+    @discardableResult
+    func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T>
 
     /// Schedule a `task` that is executed by this `SelectableEventLoop` after the given amount of time.
     @discardableResult
@@ -291,15 +295,110 @@ extension TimeAmount: Comparable {
     }
 }
 
+extension TimeAmount {
+    public static func + (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
+        return TimeAmount(lhs.nanoseconds + rhs.nanoseconds)
+    }
+
+    public static func - (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
+        return TimeAmount(lhs.nanoseconds - rhs.nanoseconds)
+    }
+
+    public static func * <T: BinaryInteger>(lhs: T, rhs: TimeAmount) -> TimeAmount {
+        return TimeAmount(TimeAmount.Value(lhs) * rhs.nanoseconds)
+    }
+
+    public static func * <T: BinaryInteger>(lhs: TimeAmount, rhs: T) -> TimeAmount {
+        return TimeAmount(lhs.nanoseconds * TimeAmount.Value(rhs))
+    }
+}
+
+/// Represents a point in time.
+///
+/// Stores the time in nanoseconds as returned by `DispatchTime.now().uptimeNanoseconds`
+///
+/// `NIODeadline` allow chaining multiple tasks with the same deadline without needing to
+/// compute new timeouts for each step
+///
+/// ```
+/// func doSomething(deadline: NIODeadline) -> EventLoopFuture<Void> {
+///     return step1(deadline: deadline).then {
+///         step2(deadline: deadline)
+///     }
+/// }
+/// doSomething(deadline: .now() + .seconds(5))
+/// ```
+///
+/// - note: `NIODeadline` should not be used to represent a time interval
+public struct NIODeadline: Equatable, Hashable {
+    public typealias Value = UInt64
+
+    /// The nanoseconds since boot representation of the `NIODeadline`.
+    public let uptimeNanoseconds: Value
+
+    public static let distantPast = NIODeadline(0)
+    public static let distantFuture = NIODeadline(DispatchTime.distantFuture.uptimeNanoseconds)
+
+    private init(_ nanoseconds: Value) {
+        self.uptimeNanoseconds = nanoseconds
+    }
+
+    public static func now() -> NIODeadline {
+        return NIODeadline(DispatchTime.now().uptimeNanoseconds)
+    }
+
+    public static func uptimeNanoseconds(_ nanoseconds: Value) -> NIODeadline {
+        return NIODeadline(nanoseconds)
+    }
+}
+
+extension NIODeadline: Comparable {
+    public static func < (lhs: NIODeadline, rhs: NIODeadline) -> Bool {
+        return lhs.uptimeNanoseconds < rhs.uptimeNanoseconds
+    }
+
+    public static func > (lhs: NIODeadline, rhs: NIODeadline) -> Bool {
+        return lhs.uptimeNanoseconds > rhs.uptimeNanoseconds
+    }
+}
+
+extension NIODeadline: CustomStringConvertible {
+    public var description: String {
+        return self.uptimeNanoseconds.description
+    }
+}
+
+extension NIODeadline {
+    public static func - (lhs: NIODeadline, rhs: NIODeadline) -> TimeAmount {
+        return .nanoseconds(TimeAmount.Value(lhs.uptimeNanoseconds - rhs.uptimeNanoseconds))
+    }
+
+    public static func + (lhs: NIODeadline, rhs: TimeAmount) -> NIODeadline {
+        if rhs.nanoseconds < 0 {
+            return NIODeadline(lhs.uptimeNanoseconds - rhs.nanoseconds.magnitude)
+        } else {
+            return NIODeadline(lhs.uptimeNanoseconds + rhs.nanoseconds.magnitude)
+        }
+    }
+
+    public static func - (lhs: NIODeadline, rhs: TimeAmount) -> NIODeadline {
+        if rhs.nanoseconds < 0 {
+            return NIODeadline(lhs.uptimeNanoseconds + rhs.nanoseconds.magnitude)
+        } else {
+            return NIODeadline(lhs.uptimeNanoseconds - rhs.nanoseconds.magnitude)
+        }
+    }
+}
+
 extension EventLoop {
     public func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
         let promise: EventLoopPromise<T> = makePromise(file: #file, line: #line)
 
         self.execute {
             do {
-                promise.succeed(result: try task())
+                promise.succeed(try task())
             } catch let err {
-                promise.fail(error: err)
+                promise.fail(err)
             }
         }
 
@@ -316,8 +415,8 @@ extension EventLoop {
     /// - parameters:
     ///     - error: the `Error` that is used by the `EventLoopFuture`.
     /// - returns: a failed `EventLoopFuture`.
-    public func makeFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
-        return EventLoopFuture<T>(eventLoop: self, error: error, file: "n/a", line: 0)
+    public func makeFailedFuture<T>(_ error: Error, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<T> {
+        return EventLoopFuture<T>(eventLoop: self, error: error, file: file, line: line)
     }
 
     /// Creates and returns a new `EventLoopFuture` that is already marked as success. Notifications will be done using this `EventLoop` as execution `Thread`.
@@ -325,8 +424,8 @@ extension EventLoop {
     /// - parameters:
     ///     - result: the value that is used by the `EventLoopFuture`.
     /// - returns: a succeeded `EventLoopFuture`.
-    public func makeSucceededFuture<T>(result: T) -> EventLoopFuture<T> {
-        return EventLoopFuture<T>(eventLoop: self, result: result, file: "n/a", line: 0)
+    public func makeSucceededFuture<Success>(_ value: Success, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Success> {
+        return EventLoopFuture<Success>(eventLoop: self, value: value, file: file, line: line)
     }
 
     public func next() -> EventLoop {
@@ -349,9 +448,9 @@ extension EventLoop {
         let futureTask: (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
             do {
                 try task(repeatedTask)
-                return self.makeSucceededFuture(result: ())
+                return self.makeSucceededFuture(())
             } catch {
-                return self.makeFailedFuture(error: error)
+                return self.makeFailedFuture(error)
             }
         }
         return self.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, futureTask)
@@ -393,6 +492,20 @@ extension EventLoop {
     public func preconditionInEventLoop(file: StaticString = #file, line: UInt = #line) {
         precondition(self.inEventLoop, file: file, line: line)
     }
+}
+
+// to be removed before 2.0
+extension EventLoop {
+    @available(*, deprecated, renamed: "makeFailedFuture(_:)")
+    public func makeFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
+        return self.makeFailedFuture(error)
+    }
+
+    @available(*, deprecated, renamed: "makeSucceededFuture(_:)")
+    public func makeSucceededFuture<Success>(result: Success) -> EventLoopFuture<Success> {
+        return self.makeSucceededFuture(result)
+    }
+
 }
 
 /// Internal representation of a `Registration` to an `Selector`.
@@ -489,7 +602,7 @@ internal final class SelectableEventLoop: EventLoop {
     internal func promiseCreationStoreRemove<T>(future: EventLoopFuture<T>) -> (file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
         return self.promiseCreationStoreLock.withLock {
-            self._promiseCreationStore[ObjectIdentifier(future)]!
+            self._promiseCreationStore.removeValue(forKey: ObjectIdentifier(future))!
         }
     }
 
@@ -555,17 +668,17 @@ internal final class SelectableEventLoop: EventLoop {
         return thread.isCurrent
     }
 
-    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = makePromise()
         let task = ScheduledTask({
             do {
-                promise.succeed(result: try task())
+                promise.succeed(try task())
             } catch let err {
-                promise.fail(error: err)
+                promise.fail(err)
             }
         }, { error in
-            promise.fail(error: error)
-        },`in`)
+            promise.fail(error)
+        }, deadline)
 
         let scheduled = Scheduled(promise: promise, cancellationTask: {
             self.tasksLock.withLockVoid {
@@ -578,10 +691,14 @@ internal final class SelectableEventLoop: EventLoop {
         return scheduled
     }
 
+    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+        return scheduleTask(deadline: .now() + `in`, task)
+    }
+
     public func execute(_ task: @escaping () -> Void) {
         schedule0(ScheduledTask(task, { error in
             // do nothing
-        }, .nanoseconds(0)))
+        }, .now()))
     }
 
     /// Add the `ScheduledTask` to be executed.
@@ -634,7 +751,7 @@ internal final class SelectableEventLoop: EventLoop {
             return .block
         }
 
-        let nextReady = sched.readyIn(DispatchTime.now())
+        let nextReady = sched.readyIn(.now())
         if nextReady <= .nanoseconds(0) {
             // Something is ready to be processed just do a non-blocking select of events.
             return .now
@@ -658,7 +775,7 @@ internal final class SelectableEventLoop: EventLoop {
 
             // Fail all the scheduled tasks.
             for task in scheduledTasksCopy {
-                task.fail(error: EventLoopError.shutdown)
+                task.fail(EventLoopError.shutdown)
             }
         }
         var nextReadyTask: ScheduledTask? = nil
@@ -684,7 +801,7 @@ internal final class SelectableEventLoop: EventLoop {
                 tasksLock.withLockVoid {
                     if !scheduledTasks.isEmpty {
                         // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
-                        let now = DispatchTime.now()
+                        let now: NIODeadline = .now()
 
                         // Make a copy of the tasks so we can execute these while not holding the lock anymore
                         while tasksCopy.count < tasksCopy.capacity, let task = scheduledTasks.peek() {
@@ -737,7 +854,7 @@ internal final class SelectableEventLoop: EventLoop {
     public func closeGently() -> EventLoopFuture<Void> {
         func closeGently0() -> EventLoopFuture<Void> {
             guard self.lifecycleState == .open else {
-                return self.makeFailedFuture(error: EventLoopError.shutdown)
+                return self.makeFailedFuture(EventLoopError.shutdown)
             }
             self.lifecycleState = .closing
             return self.selector.closeGently(eventLoop: self)
@@ -951,7 +1068,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 
         for loop in self.eventLoops {
             g.enter()
-            loop.closeGently().mapIfError { err in
+            loop.closeGently().recover { err in
                 q.sync { error = err }
             }.whenComplete { (_: Result<Void, Error>) in
                 g.leave()
@@ -975,22 +1092,22 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
 private final class ScheduledTask {
     let task: () -> Void
     private let failFn: (Error) ->()
-    private let readyTime: TimeAmount.Value
+    private let readyTime: NIODeadline
 
-    init(_ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: TimeAmount) {
+    init(_ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: NIODeadline) {
         self.task = task
         self.failFn = failFn
-        self.readyTime = time.nanoseconds + TimeAmount.Value(DispatchTime.now().uptimeNanoseconds)
+        self.readyTime = time
     }
 
-    func readyIn(_ t: DispatchTime) -> TimeAmount {
-        if readyTime < t.uptimeNanoseconds {
+    func readyIn(_ t: NIODeadline) -> TimeAmount {
+        if readyTime < t {
             return .nanoseconds(0)
         }
-        return .nanoseconds(readyTime - TimeAmount.Value(t.uptimeNanoseconds))
+        return readyTime - t
     }
 
-    func fail(error: Error) {
+    func fail(_ error: Error) {
         failFn(error)
     }
 }

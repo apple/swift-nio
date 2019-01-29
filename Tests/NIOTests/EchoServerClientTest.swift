@@ -75,7 +75,7 @@ class EchoServerClientTest : XCTestCase {
         let promise = group.next().makePromise(of: ByteBuffer.self)
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: "X")).then { v2 in
+                channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: "X")).flatMap { v2 in
                     channel.pipeline.add(handler: ByteCountingHandler(numBytes: 10000, promise: promise))
                 }
             }
@@ -249,7 +249,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         func channelActive(ctx: ChannelHandlerContext) {
-            promise.succeed(result: ())
+            promise.succeed(())
             ctx.fireChannelActive()
         }
 
@@ -294,7 +294,7 @@ class EchoServerClientTest : XCTestCase {
             _ = ctx.eventLoop.scheduleTask(in: self.timeAmount) {
                 ctx.writeAndFlush(data, promise: nil)
                 self.group.leave()
-            }.futureResult.mapIfError { e in
+            }.futureResult.recover { e in
                 XCTFail("we failed to schedule the task: \(e)")
                 self.group.leave()
             }
@@ -342,7 +342,7 @@ class EchoServerClientTest : XCTestCase {
                                "channelInactive should fire before channelUnregistered")
                 ctx.close().map {
                     XCTFail("unexpected success")
-                }.mapIfError { err in
+                }.recover { err in
                     switch err {
                     case ChannelError.alreadyClosed:
                         // OK
@@ -351,7 +351,7 @@ class EchoServerClientTest : XCTestCase {
                         XCTFail("unexpected error: \(err)")
                     }
                 }.whenComplete { (_: Result<Void, Error>) in
-                    self.channelInactivePromise.succeed(result: ())
+                    self.channelInactivePromise.succeed(())
                 }
             }
         }
@@ -362,7 +362,7 @@ class EchoServerClientTest : XCTestCase {
                               "when channelUnregister fires, channelInactive should already have fired")
                 ctx.close().map {
                     XCTFail("unexpected success")
-                }.mapIfError { err in
+                }.recover { err in
                     switch err {
                     case ChannelError.alreadyClosed:
                         // OK
@@ -371,7 +371,7 @@ class EchoServerClientTest : XCTestCase {
                         XCTFail("unexpected error: \(err)")
                     }
                 }.whenComplete { (_: Result<Void, Error>) in
-                    self.channelUnregisteredPromise.succeed(result: ())
+                    self.channelUnregisteredPromise.succeed(())
                 }
             }
         }
@@ -444,7 +444,7 @@ class EchoServerClientTest : XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 // When we've received all the bytes we know the connection is up. Remove the handler.
-                _ = bytesReceivedPromise.futureResult.then { (_: ByteBuffer) in
+                _ = bytesReceivedPromise.futureResult.flatMap { (_: ByteBuffer) in
                     channel.pipeline.remove(handler: byteCountingHandler)
                 }
 
@@ -498,7 +498,7 @@ class EchoServerClientTest : XCTestCase {
         let promise = group.next().makePromise(of: ByteBuffer.self)
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite)).then {
+                channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite)).flatMap {
                     channel.pipeline.add(handler: ByteCountingHandler(numBytes: stringToWrite.utf8.count, promise: promise))
                 }
             }
@@ -627,13 +627,13 @@ class EchoServerClientTest : XCTestCase {
                 buffer.write(string: str)
 
                 // write it four times and then close the connect.
-                ctx.writeAndFlush(NIOAny(buffer)).then {
+                ctx.writeAndFlush(NIOAny(buffer)).flatMap {
                     ctx.writeAndFlush(NIOAny(buffer))
-                }.then {
+                }.flatMap {
                     ctx.writeAndFlush(NIOAny(buffer))
-                }.then {
+                }.flatMap {
                     ctx.writeAndFlush(NIOAny(buffer))
-                }.then {
+                }.flatMap {
                     ctx.close()
                 }.whenComplete { (_: Result<Void, Error>) in
                     self.dpGroup.leave()
@@ -656,7 +656,7 @@ class EchoServerClientTest : XCTestCase {
             //.channelOption(ChannelOptions.autoRead, value: false)
             .channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 2))
             .channelInitializer { channel in
-                channel.pipeline.add(handler: WriteHandler()).then {
+                channel.pipeline.add(handler: WriteHandler()).flatMap {
                     channel.pipeline.add(handler: countingHandler)
                 }
             }.connect(to: serverChannel.localAddress!).wait())
@@ -694,7 +694,7 @@ class EchoServerClientTest : XCTestCase {
             }
 
             public func channelInactive(ctx: ChannelHandlerContext) {
-                self.promise.succeed(result: ())
+                self.promise.succeed(())
             }
         }
 
@@ -741,7 +741,7 @@ class EchoServerClientTest : XCTestCase {
                         acceptedRemotePort.store(channel.remoteAddress?.port ?? -3)
                         acceptedLocalPort.store(channel.localAddress?.port ?? -4)
                         sem.signal()
-                        return channel.eventLoop.makeSucceededFuture(result: ())
+                        return channel.eventLoop.makeSucceededFuture(())
                     }.bind(host: host, port: 0).wait()
             } catch let e as SocketAddressError {
                 if case .unknown(host, port: 0) = e {
@@ -801,9 +801,9 @@ class EchoServerClientTest : XCTestCase {
         // but we're trying to connect to (depending on the system configuration and resolver) IPv4 and IPv6
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .connect(host: "localhost", port: Int(serverChannel.localAddress!.port!))
-            .thenIfError {
-                promise.fail(error: $0)
-                return group.next().makeFailedFuture(error: $0)
+            .flatMapError {
+                promise.fail($0)
+                return group.next().makeFailedFuture($0)
             }
             .wait())
 

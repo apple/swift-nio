@@ -97,28 +97,28 @@ private struct SocketChannelLifecycleManager {
         case (.fresh, .beginRegistration):
             self.currentState = .preRegistered
             return { promise, pipeline in
-                promise?.succeed(result: ())
+                promise?.succeed(())
                 pipeline.fireChannelRegistered0()
             }
 
         case (.fresh, .close):
             self.currentState = .closed
             return { (promise, _: ChannelPipeline) in
-                promise?.succeed(result: ())
+                promise?.succeed(())
             }
 
         // origin: .preRegistered
         case (.preRegistered, .finishRegistration):
             self.currentState = .fullyRegistered
             return { (promise, _: ChannelPipeline) in
-                promise?.succeed(result: ())
+                promise?.succeed(())
             }
 
         // origin: .fullyRegistered
         case (.fullyRegistered, .activate):
             self.currentState = .activated
             return { promise, pipeline in
-                promise?.succeed(result: ())
+                promise?.succeed(())
                 pipeline.fireChannelActive0()
             }
 
@@ -126,7 +126,7 @@ private struct SocketChannelLifecycleManager {
         case (.preRegistered, .close), (.fullyRegistered, .close):
             self.currentState = .closed
             return { promise, pipeline in
-                promise?.succeed(result: ())
+                promise?.succeed(())
                 pipeline.fireChannelUnregistered0()
             }
 
@@ -134,7 +134,7 @@ private struct SocketChannelLifecycleManager {
         case (.activated, .close):
             self.currentState = .closed
             return { promise, pipeline in
-                promise?.succeed(result: ())
+                promise?.succeed(())
                 pipeline.fireChannelInactive0()
                 pipeline.fireChannelUnregistered0()
             }
@@ -515,9 +515,9 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     public func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T: ChannelOption {
         if eventLoop.inEventLoop {
             do {
-                return eventLoop.makeSucceededFuture(result: try getOption0(option: option))
+                return eventLoop.makeSucceededFuture(try getOption0(option: option))
             } catch {
-                return eventLoop.makeFailedFuture(error: error)
+                return eventLoop.makeFailedFuture(error)
             }
         } else {
             return eventLoop.submit { try self.getOption0(option: option) }
@@ -568,11 +568,11 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
             return
         }
         guard self.lifecycleManager.isPreRegistered else {
-            promise?.fail(error: ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError.inappropriateOperationForState)
             return
         }
 
@@ -587,12 +587,12 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
         guard self.isOpen else {
             // Channel was already closed, fail the promise and not even queue it.
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
             return
         }
 
         guard self.lifecycleManager.isActive else {
-            promise?.fail(error: ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError.inappropriateOperationForState)
             return
         }
 
@@ -698,12 +698,12 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            promise?.fail(error: ChannelError.alreadyClosed)
+            promise?.fail(ChannelError.alreadyClosed)
             return
         }
 
         guard mode == .all else {
-            promise?.fail(error: ChannelError.operationUnsupported)
+            promise?.fail(ChannelError.operationUnsupported)
             return
         }
 
@@ -727,7 +727,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             p = promise
         } catch {
             errorCallouts.append { (_: ChannelPipeline) in
-                promise?.fail(error: error)
+                promise?.fail(error)
                 // Set p to nil as we want to ensure we pass nil to becomeInactive0(...) so we not try to notify the promise again.
             }
             p = nil
@@ -749,7 +749,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
 
         if let connectPromise = self.pendingConnect {
             self.pendingConnect = nil
-            connectPromise.fail(error: error)
+            connectPromise.fail(error)
         }
 
         callouts(p, self.pipeline)
@@ -758,7 +758,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline
             self.pipeline.removeHandlers()
 
-            self.closePromise.succeed(result: ())
+            self.closePromise.succeed(())
 
             // Now reset the addresses as we notified all handlers / futures.
             self.unsetCachedAddressesFromSocket()
@@ -770,12 +770,12 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
             return
         }
 
         guard !self.lifecycleManager.isPreRegistered else {
-            promise?.fail(error: ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError.inappropriateOperationForState)
             return
         }
 
@@ -785,7 +785,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
             // `close0`'s error is about the result of the `close` operation, ...
             self.close0(error: error, mode: .all, promise: nil)
             // ... therefore we need to fail the registration `promise` separately.
-            promise?.fail(error: error)
+            promise?.fail(error)
             return
         }
 
@@ -802,9 +802,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         registerPromise.futureResult.whenFailure { (_: Error) in
             self.close(promise: nil)
         }
-        if let promise = promise {
-            registerPromise.futureResult.cascadeFailure(promise: promise)
-        }
+        registerPromise.futureResult.cascadeFailure(promise: promise)
 
         if self.lifecycleManager.isPreRegistered {
             // we expect kqueue/epoll registration to always succeed which is basically true, except for errors that
@@ -818,7 +816,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     }
 
     public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
-        promise?.succeed(result: ())
+        promise?.succeed(())
     }
 
     // Methods invoked from the EventLoop itself
@@ -1035,17 +1033,17 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
             return
         }
 
         guard pendingConnect == nil else {
-            promise?.fail(error: ChannelError.connectPending)
+            promise?.fail(ChannelError.connectPending)
             return
         }
 
         guard self.lifecycleManager.isPreRegistered else {
-            promise?.fail(error: ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError.inappropriateOperationForState)
             return
         }
 

@@ -46,7 +46,7 @@ private final class ChannelInactivePromiser: ChannelInboundHandler {
     }
 
     func channelInactive(ctx: ChannelHandlerContext) {
-        channelInactivePromise.succeed(result: ())
+        channelInactivePromise.succeed(())
     }
 }
 
@@ -390,7 +390,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         buffer.write(staticString: "4567890x")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
-        channel.pipeline.context(handlerType: ByteToMessageHandler<PairOfBytesDecoder>.self).then { ctx in
+        channel.pipeline.context(handlerType: ByteToMessageHandler<PairOfBytesDecoder>.self).flatMap { ctx in
             return channel.pipeline.remove(ctx: ctx)
         }.map {
             XCTAssertTrue($0)
@@ -598,7 +598,7 @@ private class PairOfBytesDecoder: ByteToMessageDecoder {
     func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         self.decodeLastCalls += 1
         XCTAssertEqual(1, self.decodeLastCalls)
-        self.lastPromise.succeed(result: buffer)
+        self.lastPromise.succeed(buffer)
         return .needMoreData
     }
 }

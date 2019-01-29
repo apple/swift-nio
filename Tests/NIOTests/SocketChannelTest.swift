@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 import XCTest
 @testable import NIO
-import Dispatch
 import NIOConcurrencyHelpers
 
 private extension Array {
@@ -139,7 +138,7 @@ public class SocketChannelTest : XCTestCase {
 
             func errorCaught(ctx: ChannelHandlerContext, error: Error) {
                 if let ioError = error as? IOError {
-                    self.promise.succeed(result: ioError)
+                    self.promise.succeed(ioError)
                 }
             }
         }
@@ -155,9 +154,9 @@ public class SocketChannelTest : XCTestCase {
         let promise = serverChannel.eventLoop.makePromise(of: IOError.self)
 
         XCTAssertNoThrow(try serverChannel.eventLoop.submit {
-            serverChannel.pipeline.add(handler: AcceptHandler(promise)).then {
+            serverChannel.pipeline.add(handler: AcceptHandler(promise)).flatMap {
                 serverChannel.register()
-            }.then {
+            }.flatMap {
                 serverChannel.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 0))
             }
         }.wait().wait() as Void)
@@ -207,7 +206,7 @@ public class SocketChannelTest : XCTestCase {
             }
 
             func channelActive(ctx: ChannelHandlerContext) {
-                promise.succeed(result: ())
+                promise.succeed(())
             }
         }
 
@@ -224,7 +223,7 @@ public class SocketChannelTest : XCTestCase {
             }
 
             override func connect(to address: SocketAddress) throws -> Bool {
-                self.promise.succeed(result: ())
+                self.promise.succeed(())
                 return true
             }
         }
@@ -237,11 +236,11 @@ public class SocketChannelTest : XCTestCase {
                                                                eventLoop: eventLoop as! SelectableEventLoop))
         let promise = channel.eventLoop.makePromise(of: Void.self)
 
-        XCTAssertNoThrow(try channel.pipeline.add(handler: ActiveVerificationHandler(promise)).then {
+        XCTAssertNoThrow(try channel.pipeline.add(handler: ActiveVerificationHandler(promise)).flatMap {
             channel.register()
-        }.then {
+        }.flatMap {
             channel.connect(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 9999))
-        }.then {
+        }.flatMap {
             channel.close()
         }.wait())
 
@@ -320,7 +319,7 @@ public class SocketChannelTest : XCTestCase {
         buffer.write(staticString: "hello")
         let writeFut = clientChannel.write(buffer).map {
             XCTFail("Must not succeed")
-        }.thenIfError { error in
+        }.flatMapError { error in
             XCTAssertEqual(error as? ChannelError, ChannelError.ioOnClosedChannel)
             return clientChannel.close()
         }
@@ -436,7 +435,7 @@ public class SocketChannelTest : XCTestCase {
             override func connect(to address: SocketAddress) throws -> Bool {
                 // We want to return false here to have a pending connect.
                 _ = try super.connect(to: address)
-                self.promise.succeed(result: ())
+                self.promise.succeed(())
                 return false
             }
         }
@@ -514,7 +513,7 @@ public class SocketChannelTest : XCTestCase {
                     XCTAssertNil(ctx.localAddress)
                     XCTAssertNil(ctx.remoteAddress)
 
-                    self.promise.succeed(result: ())
+                    self.promise.succeed(())
                 }
             }
         }

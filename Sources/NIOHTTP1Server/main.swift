@@ -173,7 +173,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         case .head(let request):
             self.keepAlive = request.isKeepAlive
             self.state.requestReceived()
-            ctx.writeAndFlush(self.wrapOutboundOut(.head(httpResponseHead(request: request, status: .ok))), promise: nil)
+            ctx.writeAndFlush(self.wrapOutboundOut(.head(httpResponseHead(request: request, status: statusCode))), promise: nil)
         case .body(buffer: _):
             ()
         case .end:
@@ -342,11 +342,11 @@ private final class HTTPHandler: ChannelInboundHandler {
                                                         ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
                                                     }
                                                     return ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buffer))))
-                    }.then { () -> EventLoopFuture<Void> in
+                    }.flatMap { () -> EventLoopFuture<Void> in
                         let p = ctx.eventLoop.makePromise(of: Void.self)
                         self.completeResponse(ctx, trailers: nil, promise: p)
                         return p.futureResult
-                    }.thenIfError { error in
+                    }.flatMapError { error in
                         if !responseStarted {
                             let response = httpResponseHead(request: request, status: .ok)
                             ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
@@ -364,11 +364,11 @@ private final class HTTPHandler: ChannelInboundHandler {
                 case .sendfile:
                     let response = responseHead(request: request, fileRegion: region)
                     ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
-                    ctx.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region)))).then {
+                    ctx.writeAndFlush(self.wrapOutboundOut(.body(.fileRegion(region)))).flatMap {
                         let p = ctx.eventLoop.makePromise(of: Void.self)
                         self.completeResponse(ctx, trailers: nil, promise: p)
                         return p.futureResult
-                    }.thenIfError { (_: Error) in
+                    }.flatMapError { (_: Error) in
                         ctx.close()
                     }.whenComplete { (_: Result<Void, Error>) in
                         _ = try? file.close()
@@ -516,7 +516,7 @@ let bootstrap = ServerBootstrap(group: group)
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
-        channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).then {
+        channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap {
             channel.pipeline.add(handler: HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
         }
     }

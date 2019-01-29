@@ -73,7 +73,7 @@ var datagramBootstrap = DatagramBootstrap(group: group)
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), value: 1)
     .channelInitializer { channel in
-        return channel.pipeline.add(handler: ChatMessageEncoder()).then {
+        return channel.pipeline.add(handler: ChatMessageEncoder()).flatMap {
             channel.pipeline.add(handler: ChatMessageDecoder())
         }
     }
@@ -81,12 +81,12 @@ var datagramBootstrap = DatagramBootstrap(group: group)
     // We cast our channel to MulticastChannel to obtain the multicast operations.
 let datagramChannel = try datagramBootstrap
     .bind(host: "0.0.0.0", port: 7654)
-    .then { channel -> EventLoopFuture<Channel> in
+    .flatMap { channel -> EventLoopFuture<Channel> in
         let channel = channel as! MulticastChannel
         return channel.joinGroup(chatMulticastGroup, interface: targetInterface).map { channel }
-    }.then { channel -> EventLoopFuture<Channel> in
+    }.flatMap { channel -> EventLoopFuture<Channel> in
         guard let targetInterface = targetInterface else {
-            return channel.eventLoop.makeSucceededFuture(result: channel)
+            return channel.eventLoop.makeSucceededFuture(channel)
         }
 
         let provider = channel as! SocketOptionProvider

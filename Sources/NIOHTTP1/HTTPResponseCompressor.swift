@@ -95,7 +95,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
     }
 
     public func handlerRemoved(ctx: ChannelHandlerContext) {
-        pendingWritePromise?.fail(error: CompressionError.uncompressedWritesPending)
+        pendingWritePromise?.fail(CompressionError.uncompressedWritesPending)
         if algorithm != nil {
             deinitializeEncoder()
             algorithm = nil
@@ -124,11 +124,11 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
             responseHead.headers.replaceOrAdd(name: "Content-Encoding", value: algorithm!.rawValue)
             initializeEncoder(encoding: algorithm!)
             pendingResponse.bufferResponseHead(responseHead)
-            chainPromise(promise)
+            pendingWritePromise.futureResult.cascade(promise: promise)
         case .body(let body):
             if algorithm != nil {
                 pendingResponse.bufferBodyPart(body)
-                chainPromise(promise)
+                pendingWritePromise.futureResult.cascade(promise: promise)
             } else {
                 ctx.write(data, promise: promise)
             }
@@ -141,7 +141,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
             }
 
             pendingResponse.bufferResponseEnd(httpData)
-            chainPromise(promise)
+            pendingWritePromise.futureResult.cascade(promise: promise)
             emitPendingWrites(ctx: ctx)
             algorithm = nil
             deinitializeEncoder()
@@ -212,12 +212,6 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
         deflateEnd(&stream)
     }
 
-    private func chainPromise(_ promise: EventLoopPromise<Void>?) {
-        if let promise = promise {
-            pendingWritePromise.futureResult.cascade(promise: promise)
-        }
-    }
-
     /// Emits all pending buffered writes to the network, optionally compressing the
     /// data. Resets the pending write buffer and promise.
     ///
@@ -244,7 +238,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
         // If we still have the pending promise, we never emitted a write. Fail the promise,
         // as anything that is listening for its data somehow lost it.
         if let stillPendingPromise = pendingPromise {
-            stillPendingPromise.fail(error: CompressionError.noDataToWrite)
+            stillPendingPromise.fail(CompressionError.noDataToWrite)
         }
 
         // Reset the pending promise.

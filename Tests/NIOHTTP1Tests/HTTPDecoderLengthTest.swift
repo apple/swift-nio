@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import Dispatch
 import NIO
 import NIOHTTP1
 

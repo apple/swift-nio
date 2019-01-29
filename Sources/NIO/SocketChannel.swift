@@ -224,7 +224,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             switch mode {
             case .output:
                 if outputShutdown {
-                    promise?.fail(error: ChannelError.outputClosed)
+                    promise?.fail(ChannelError.outputClosed)
                     return
                 }
                 try socket.shutdown(how: .WR)
@@ -232,13 +232,13 @@ final class SocketChannel: BaseSocketChannel<Socket> {
                 // Fail all pending writes and so ensure all pending promises are notified
                 pendingWrites.failAll(error: error, close: false)
                 unregisterForWritable()
-                promise?.succeed(result: ())
+                promise?.succeed(())
 
                 pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
 
             case .input:
                 if inputShutdown {
-                    promise?.fail(error: ChannelError.inputClosed)
+                    promise?.fail(ChannelError.inputClosed)
                     return
                 }
                 switch error {
@@ -251,7 +251,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
                 }
                 inputShutdown = true
                 unregisterForReadable()
-                promise?.succeed(result: ())
+                promise?.succeed(())
 
                 pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
             case .all:
@@ -262,7 +262,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
                 super.close0(error: error, mode: mode, promise: promise)
             }
         } catch let err {
-            promise?.fail(error: err)
+            promise?.fail(err)
         }
     }
 
@@ -292,12 +292,12 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         if outputShutdown {
-            promise?.fail(error: ChannelError.outputClosed)
+            promise?.fail(ChannelError.outputClosed)
             return
         }
 
         guard let data = data.tryAsIOData() else {
-            promise?.fail(error: ChannelError.writeDataUnsupported)
+            promise?.fail(ChannelError.writeDataUnsupported)
             return
         }
 
@@ -372,12 +372,12 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            promise?.fail(error: ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError.ioOnClosedChannel)
             return
         }
 
         guard self.isRegistered else {
-            promise?.fail(error: ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError.inappropriateOperationForState)
             return
         }
 
@@ -386,7 +386,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             // It's important to call the methods before we actually notify the original promise for ordering reasons.
             self.becomeActive0(promise: promise)
         }.whenFailure{ error in
-            promise?.fail(error: error)
+            promise?.fail(error)
         }
         executeAndComplete(p) {
             try socket.bind(to: address)
@@ -454,7 +454,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
         let ch = data.forceAsOther() as SocketChannel
         ch.eventLoop.execute {
-            ch.register().thenThrowing {
+            ch.register().flatMapThrowing {
                 guard ch.isOpen else {
                     throw ChannelError.ioOnClosedChannel
                 }
@@ -466,7 +466,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: ChannelError.operationUnsupported)
+        promise?.fail(ChannelError.operationUnsupported)
     }
 
     override func markFlushPoint() {
@@ -648,7 +648,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     /// Buffer a write in preparation for a flush.
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         guard let data = data.tryAsByteEnvelope() else {
-            promise?.fail(error: ChannelError.writeDataUnsupported)
+            promise?.fail(ChannelError.writeDataUnsupported)
             return
         }
 
@@ -698,7 +698,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
         guard self.isRegistered else {
-            promise?.fail(error: ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError.inappropriateOperationForState)
             return
         }
         do {
@@ -706,7 +706,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             self.updateCachedAddressesFromSocket(updateRemote: false)
             becomeActive0(promise: promise)
         } catch let err {
-            promise?.fail(error: err)
+            promise?.fail(err)
         }
     }
 }
@@ -793,25 +793,25 @@ extension DatagramChannel: MulticastChannel {
         self.eventLoop.assertInEventLoop()
 
         guard self.isActive else {
-            promise?.fail(error: ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError.inappropriateOperationForState)
             return
         }
 
         // We need to check that we have the appropriate address types in all cases. They all need to overlap with
         // the address type of this channel, or this cannot work.
         guard let localAddress = self.localAddress else {
-            promise?.fail(error: ChannelError.unknownLocalAddress)
+            promise?.fail(ChannelError.unknownLocalAddress)
             return
         }
 
         guard localAddress.protocolFamily == group.protocolFamily else {
-            promise?.fail(error: ChannelError.badMulticastGroupAddressFamily)
+            promise?.fail(ChannelError.badMulticastGroupAddressFamily)
             return
         }
 
         // Ok, now we need to check that the group we've been asked to join is actually a multicast group.
         guard group.isMulticast else {
-            promise?.fail(error: ChannelError.illegalMulticastAddress(group))
+            promise?.fail(ChannelError.illegalMulticastAddress(group))
             return
         }
 
@@ -841,9 +841,9 @@ extension DatagramChannel: MulticastChannel {
                 throw ChannelError.badInterfaceAddressFamily
             }
 
-            promise?.succeed(result: ())
+            promise?.succeed(())
         } catch {
-            promise?.fail(error: error)
+            promise?.fail(error)
             return
         }
     }

@@ -420,7 +420,7 @@ extension MessageToByteEncoder {
             try encode(ctx: ctx, data: data, out: &buffer)
             ctx.write(self.wrapOutboundOut(buffer), promise: promise)
         } catch let err {
-            promise?.fail(error: err)
+            promise?.fail(err)
         }
     }
 

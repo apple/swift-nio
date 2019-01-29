@@ -16,9 +16,9 @@ import Dispatch
 
 private final class EmbeddedScheduledTask {
     let task: () -> Void
-    let readyTime: UInt64
+    let readyTime: NIODeadline
 
-    init(readyTime: UInt64, task: @escaping () -> Void) {
+    init(readyTime: NIODeadline, task: @escaping () -> Void) {
         self.readyTime = readyTime
         self.task = task
     }
@@ -48,7 +48,7 @@ extension EmbeddedScheduledTask: Comparable {
 ///     unsynchronized fashion.
 public class EmbeddedEventLoop: EventLoop {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
-    private var now: UInt64 = 0
+    private var now: NIODeadline = .uptimeNanoseconds(0)
 
     private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>(ascending: true)
 
@@ -59,14 +59,13 @@ public class EmbeddedEventLoop: EventLoop {
     public init() { }
 
     @discardableResult
-    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = makePromise()
-        let readyTime = now + UInt64(`in`.nanoseconds)
-        let task = EmbeddedScheduledTask(readyTime: readyTime) {
+        let task = EmbeddedScheduledTask(readyTime: deadline) {
             do {
-                promise.succeed(result: try task())
+                promise.succeed(try task())
             } catch let err {
-                promise.fail(error: err)
+                promise.fail(err)
             }
         }
 
@@ -77,11 +76,16 @@ public class EmbeddedEventLoop: EventLoop {
         return scheduled
     }
 
+    @discardableResult
+    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+        return scheduleTask(deadline: self.now + `in`, task)
+    }
+
     // We're not really running a loop here. Tasks aren't run until run() is called,
     // at which point we run everything that's been submitted. Anything newly submitted
     // either gets on that train if it's still moving or waits until the next call to run().
     public func execute(_ task: @escaping () -> Void) {
-        self.scheduleTask(in: .nanoseconds(0), task)
+        self.scheduleTask(deadline: self.now, task)
     }
 
     public func run() {
@@ -92,7 +96,7 @@ public class EmbeddedEventLoop: EventLoop {
     /// Runs the event loop and moves "time" forward by the given amount, running any scheduled
     /// tasks that need to be run.
     public func advanceTime(by: TimeAmount) {
-        let newTime = self.now + UInt64(by.nanoseconds)
+        let newTime = self.now + by
 
         while let nextTask = self.scheduledTasks.peek() {
             guard nextTask.readyTime <= newTime else {
@@ -155,7 +159,7 @@ class EmbeddedChannelCore: ChannelCore {
     deinit {
         assert(self.pipeline.destroyed, "leaked an open EmbeddedChannel, maybe forgot to call channel.finish()?")
         isOpen = false
-        closePromise.succeed(result: ())
+        closePromise.succeed(())
     }
 
     /// Contains the flushed items that went into the `Channel` (and on a regular channel would have hit the network).
@@ -178,12 +182,12 @@ class EmbeddedChannelCore: ChannelCore {
 
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         guard self.isOpen else {
-            promise?.fail(error: ChannelError.alreadyClosed)
+            promise?.fail(ChannelError.alreadyClosed)
             return
         }
         isOpen = false
         isActive = false
-        promise?.succeed(result: ())
+        promise?.succeed(())
 
         // As we called register() in the constructor of EmbeddedChannel we also need to ensure we call unregistered here.
         pipeline.fireChannelInactive0()
@@ -192,22 +196,22 @@ class EmbeddedChannelCore: ChannelCore {
         eventLoop.execute {
             // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline
             self.pipeline.removeHandlers()
-            self.closePromise.succeed(result: ())
+            self.closePromise.succeed(())
         }
     }
 
     func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        promise?.succeed(result: ())
+        promise?.succeed(())
     }
 
     func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         isActive = true
-        promise?.succeed(result: ())
+        promise?.succeed(())
         pipeline.fireChannelActive0()
     }
 
     func register0(promise: EventLoopPromise<Void>?) {
-        promise?.succeed(result: ())
+        promise?.succeed(())
         pipeline.fireChannelRegistered0()
     }
 
@@ -219,7 +223,7 @@ class EmbeddedChannelCore: ChannelCore {
 
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         guard let data = data.tryAsIOData() else {
-            promise?.fail(error: ChannelError.writeDataUnsupported)
+            promise?.fail(ChannelError.writeDataUnsupported)
             return
         }
 
@@ -231,7 +235,7 @@ class EmbeddedChannelCore: ChannelCore {
         self.pendingOutboundBuffer.removeAll()
         for dataAndPromise in pendings {
             self.addToBuffer(buffer: &self.outboundBuffer, data: dataAndPromise.0)
-            dataAndPromise.1?.succeed(result: ())
+            dataAndPromise.1?.succeed(())
         }
     }
 
@@ -240,7 +244,7 @@ class EmbeddedChannelCore: ChannelCore {
     }
 
     public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
-        promise?.succeed(result: ())
+        promise?.succeed(())
     }
 
     func channelRead0(_ data: NIOAny) {
@@ -400,7 +404,7 @@ public class EmbeddedChannel: Channel {
 
     public func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T: ChannelOption {
         if option is AutoReadOption {
-            return self.eventLoop.makeSucceededFuture(result: true as! T.OptionType)
+            return self.eventLoop.makeSucceededFuture(true as! T.OptionType)
         }
         fatalError("option \(option) not supported")
     }

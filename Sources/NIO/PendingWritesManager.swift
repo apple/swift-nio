@@ -355,7 +355,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
             channelWritabilityFlag.store(true)
         }
 
-        promise?.succeed(result: ())
+        promise?.succeed(())
         return result
     }
 
@@ -416,7 +416,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
             self.isOpen = false
         }
 
-        self.state.removeAll()?.fail(error: error)
+        self.state.removeAll()?.fail(error)
 
         assert(self.state.isEmpty)
     }

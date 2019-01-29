@@ -26,6 +26,14 @@ SwiftNIO aims to support all of the platforms where Swift is supported. Currentl
 
 The latest released SwiftNIO version supports Swift 4.0, 4.1, and 4.2.
 
+### Compatibility
+
+SwiftNIO follows [SemVer 2.0.0](https://semver.org/#semantic-versioning-200) with a separate document declaring [SwiftNIO's Public API](docs/public-api.md).
+
+What this means for you is that you should depend on SwiftNIO with a version range that covers everything from the minimum SwiftNIO version you require up to the next major version.
+In SwiftPM that can be easily done specifying for example `from: "2.0.0"` meaning that you support SwiftNIO in every version starting from 2.0.0 up to (excluding) 3.0.0.
+SemVer and SwiftNIO's Public API guarantees should result in a working program without having to worry about testing every single version for compatibility.
+
 ### Basic Architecture
 
 The basic building blocks of SwiftNIO are the following 8 types of objects:
@@ -109,7 +117,7 @@ An [`EventLoopFuture<T>`][elf] is essentially a container for the return value o
 
 If you had to poll the future to detect when it completed that would be quite inefficient, so [`EventLoopFuture<T>`][elf] is designed to have managed callbacks. Essentially, you can hang callbacks off the future that will be executed when a result is available. The [`EventLoopFuture<T>`][elf] will even carefully arrange the scheduling to ensure that these callbacks always execute on the event loop that initially created the promise, which helps ensure that you don't need too much synchronization around [`EventLoopFuture<T>`][elf] callbacks.
 
-Another important topic for consideration is the difference between how the promise passed to `close` works as opposed to `closeFuture` on a [`Channel`][c]. For example, the promise passed into `close` will succeed after the [`Channel`][c] is closed down but before the [`ChannelPipeline`][cp] is completely cleared out. This will allow you to take action on the [`ChannelPipeline`][cp] before it is completely cleared out, if needed. If it is desired to wait for the [`Channel`][c] to close down and the [`ChannelPipeline`][cp] to be cleared out without any futher action, then the better option would be to wait for the `closeFuture` to succeed.
+Another important topic for consideration is the difference between how the promise passed to `close` works as opposed to `closeFuture` on a [`Channel`][c]. For example, the promise passed into `close` will succeed after the [`Channel`][c] is closed down but before the [`ChannelPipeline`][cp] is completely cleared out. This will allow you to take action on the [`ChannelPipeline`][cp] before it is completely cleared out, if needed. If it is desired to wait for the [`Channel`][c] to close down and the [`ChannelPipeline`][cp] to be cleared out without any further action, then the better option would be to wait for the `closeFuture` to succeed.
 
 There are several functions for applying callbacks to [`EventLoopFuture<T>`][elf], depending on how and when you want them to execute. Details of these functions is left to the API documentation.
 

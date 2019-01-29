@@ -185,13 +185,13 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
                 // internal handler, then call the user code, and then finally when the user code is done we do
                 // our final cleanup steps, namely we replay the received data we buffered in the meantime and
                 // then remove ourselves from the pipeline.
-                self.removeExtraHandlers(ctx: ctx).then {
+                self.removeExtraHandlers(ctx: ctx).flatMap {
                     self.sendUpgradeResponse(ctx: ctx, upgradeRequest: request, responseHeaders: responseHeaders)
-                }.then {
+                }.flatMap {
                     self.removeHandler(ctx: ctx, handler: self.httpEncoder)
                 }.map { (_: Bool) in
                     self.upgradeCompletionHandler(ctx)
-                }.then {
+                }.flatMap {
                     upgrader.upgrade(ctx: ctx, upgradeRequest: request)
                 }.map {
                     ctx.fireUserInboundEventTriggered(HTTPServerUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request))
@@ -239,14 +239,14 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
         if let handler = handler {
             return ctx.pipeline.remove(handler: handler)
         } else {
-            return ctx.eventLoop.makeSucceededFuture(result: true)
+            return ctx.eventLoop.makeSucceededFuture(true)
         }
     }
 
     /// Removes any extra HTTP-related handlers from the channel pipeline.
     private func removeExtraHandlers(ctx: ChannelHandlerContext) -> EventLoopFuture<Void> {
         guard self.extraHTTPHandlers.count > 0 else {
-            return ctx.eventLoop.makeSucceededFuture(result: ())
+            return ctx.eventLoop.makeSucceededFuture(())
         }
 
         return EventLoopFuture<Void>.andAll(self.extraHTTPHandlers.map { ctx.pipeline.remove(handler: $0).map { (_: Bool) in () }},

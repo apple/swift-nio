@@ -153,7 +153,7 @@ class ChannelPipelineTest: XCTestCase {
             do {
                 ctx.write(self.wrapOutboundOut(try body(self.unwrapOutboundIn(data))), promise: promise)
             } catch let err {
-                promise!.fail(error: err)
+                promise!.fail(err)
             }
         }
     }
@@ -167,7 +167,7 @@ class ChannelPipelineTest: XCTestCase {
         }
 
         public func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-            promise!.fail(error: TestFailureError.CalledBind)
+            promise!.fail(TestFailureError.CalledBind)
         }
     }
 
@@ -184,7 +184,7 @@ class ChannelPipelineTest: XCTestCase {
         let channel = EmbeddedChannel()
 
         let h = FireChannelReadOnRemoveHandler()
-        _ = try channel.pipeline.add(handler: h).then {
+        _ = try channel.pipeline.add(handler: h).flatMap {
             channel.pipeline.remove(handler: h)
         }.wait()
 
@@ -363,7 +363,7 @@ class ChannelPipelineTest: XCTestCase {
                     weakHandlerContext2 = ctx
                 }
                 weakHandler2 = handler2
-                XCTAssertNoThrow(try channel.pipeline.add(handler: handler1).then {
+                XCTAssertNoThrow(try channel.pipeline.add(handler: handler1).flatMap {
                     channel.pipeline.add(handler: handler2)
                     }.wait())
             }()

@@ -94,7 +94,7 @@ private final class PingHandler: ChannelInboundHandler {
             }
         } else {
             ctx.close(promise: nil)
-            self.allDone.fail(error: PingPongFailure(problem: "wrong buffer received: \(buf.debugDescription)"))
+            self.allDone.fail(PingPongFailure(problem: "wrong buffer received: \(buf.debugDescription)"))
         }
     }
 
@@ -165,7 +165,7 @@ public func swiftMain() -> Int {
 
         func errorCaught(ctx: ChannelHandlerContext, error: Error) {
             ctx.channel.close(promise: nil)
-            self.isDonePromise.fail(error: error)
+            self.isDonePromise.fail(error)
         }
 
         func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
@@ -219,7 +219,7 @@ public func swiftMain() -> Int {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).then {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
                     channel.pipeline.add(handler: SimpleHTTPServer())
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
@@ -233,7 +233,7 @@ public func swiftMain() -> Int {
 
         let clientChannel = try ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers().then {
+                channel.pipeline.addHTTPClientHandlers().flatMap {
                     channel.pipeline.add(handler: repeatedRequestsHandler)
                 }
             }
@@ -349,39 +349,39 @@ public func swiftMain() -> Int {
         @inline(never)
         func doThenAndFriends(loop: EventLoop) {
             let p = loop.makePromise(of: Int.self)
-            let f = p.futureResult.then { (r: Int) -> EventLoopFuture<Int> in 
+            let f = p.futureResult.flatMap { (r: Int) -> EventLoopFuture<Int> in
                 // This call allocates a new Future, and
-                // so does then(), so this is two Futures.
-                return loop.makeSucceededFuture(result: r + 1)
-            }.thenThrowing { (r: Int) -> Int in
-                // thenThrowing allocates a new Future, and calls then
+                // so does flatMap(), so this is two Futures.
+                return loop.makeSucceededFuture(r + 1)
+            }.flatMapThrowing { (r: Int) -> Int in
+                // flatMapThrowing allocates a new Future, and calls `flatMap`
                 // which also allocates, so this is two.
                 return r + 2
             }.map { (r: Int) -> Int in
-                // map allocates a new future, and calls then which
+                // map allocates a new future, and calls `flatMap` which
                 // also allocates, so this is two.
                 return r + 2
-            }.thenThrowing { (r: Int) -> Int in
-                // thenThrowing allocates a future on the error path and
-                // calls then, which also allocates, so this is two.
+            }.flatMapThrowing { (r: Int) -> Int in
+                // flatMapThrowing allocates a future on the error path and
+                // calls `flatMap`, which also allocates, so this is two.
                 throw MyError()
-            }.thenIfError { (err: Error) -> EventLoopFuture<Int> in
-                // This call allocates a new Future, and so does thenIfError,
+            }.flatMapError { (err: Error) -> EventLoopFuture<Int> in
+                // This call allocates a new Future, and so does flatMapError,
                 // so this is two Futures.
-                return loop.makeFailedFuture(error: err)
-            }.thenIfErrorThrowing { (err: Error) -> Int in
-                // thenIfError allocates a new Future, and calls thenIfError,
+                return loop.makeFailedFuture(err)
+            }.flatMapErrorThrowing { (err: Error) -> Int in
+                // flatMapError allocates a new Future, and calls flatMapError,
                 // so this is two Futures
                 throw err
-            }.mapIfError { (err: Error) -> Int in
-                // mapIfError allocates a future, and calls thenIfError, so
+            }.recover { (err: Error) -> Int in
+                // recover allocates a future, and calls flatMapError, so
                 // this is two Futures.
                 return 1
             }
-            p.succeed(result: 0)
+            p.succeed(0)
             
             // Wait also allocates a lock.
-            try! f.wait()
+            _ = try! f.wait()
         }
         @inline(never)
         func doAnd(loop: EventLoop) {
@@ -395,13 +395,13 @@ public func swiftMain() -> Int {
             let f = p1.futureResult
                         .and(p2.futureResult)
                         .and(p3.futureResult)
-                        .and(result: 1)
-                        .and(result: 1)
+                        .and(value: 1)
+                        .and(value: 1)
 
-            p1.succeed(result: 1)
-            p2.succeed(result: 1)
-            p3.succeed(result: 1)
-            let r = try! f.wait()
+            p1.succeed(1)
+            p2.succeed(1)
+            p3.succeed(1)
+            _ = try! f.wait()
         }
         let el = EmbeddedEventLoop()
         for _ in 0..<1000  {
