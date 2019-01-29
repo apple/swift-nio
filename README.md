@@ -231,7 +231,8 @@ have a few prerequisites installed on your system.
 
 #### macOS
 
-- Xcode 10.1 or newer, with at the moment a [small patch](https://forums.swift.org/t/how-to-set-swift-version-5-for-recent-dev-snapshots-in-xcode-build-settings/18692/20) to plist file inside Xcode.
+- Xcode 10.2 beta or newer (or Xcode 10.1 with at the moment a [small patch](https://forums.swift.org/t/how-to-set-swift-version-5-for-recent-dev-snapshots-in-xcode-build-settings/18692/20) to plist file inside Xcode)
+- A recent Swift 5.0 Development Toolchain from [swift.org/download](https://swift.org/download/#swift-50-development). To get a good idea of a toolchain version that definitely works, have a look at what [our CI uses](https://github.com/apple/swift-nio/blob/master/docker/docker-compose.1804.50.yaml#L10-L11) at the moment. Downloading the version our CI uses should give you pretty good certainty that the version actually works.
 
 ### Linux
 
