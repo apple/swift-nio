@@ -97,17 +97,17 @@ public final class RepeatedTask {
     ///
     /// If the promise parameter is not `nil`, the passed promise is fulfilled when cancellation is complete.
     /// Passing a promise does not prevent fulfillment of any promise provided on original task creation.
-    public func cancel(andNotify promise: EventLoopPromise<Void>? = nil) {
+    public func cancel(promise: EventLoopPromise<Void>? = nil) {
         if self.eventLoop.inEventLoop {
-            self.cancel0(andNotify: promise)
+            self.cancel0(localCancellationPromise: promise)
         } else {
             self.eventLoop.execute {
-                self.cancel0(andNotify: promise)
+                self.cancel0(localCancellationPromise: promise)
             }
         }
     }
 
-    private func cancel0(andNotify localCancellationPromise: EventLoopPromise<Void>?) {
+    private func cancel0(localCancellationPromise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
         self.scheduled?.cancel()
         self.scheduled = nil
@@ -129,8 +129,8 @@ public final class RepeatedTask {
         // promises for nil so as not to otherwise invoke `execute()` unnecessarily.
         if self.cancellationPromise != nil || localCancellationPromise != nil {
             self.eventLoop.execute {
-                self.cancellationPromise?.succeed(result: ())
-                localCancellationPromise?.succeed(result: ())
+                self.cancellationPromise?.succeed(())
+                localCancellationPromise?.succeed(())
             }
         }
     }
@@ -148,7 +148,7 @@ public final class RepeatedTask {
         }
 
         scheduled.futureResult.whenFailure { (_: Error) in
-            self.cancel0(andNotify: nil)
+            self.cancel0(localCancellationPromise: nil)
         }
     }
 

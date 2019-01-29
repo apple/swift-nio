@@ -588,7 +588,7 @@ public class EventLoopTest : XCTestCase {
             let task = loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(0), notifying: promise1) { task in
                 XCTFail()
             }
-            task.cancel(andNotify: promise2)
+            task.cancel(promise: promise2)
         }
         Thread.sleep(until: .init(timeIntervalSinceNow: 0.1))
         let res = XCTWaiter.wait(for: [expect1, expect2], timeout: 1.0)
@@ -614,7 +614,7 @@ public class EventLoopTest : XCTestCase {
         let expect2 = XCTestExpectation(description: "Cancellation-specific promise was fulfilled")
         promise1.futureResult.whenSuccess { expect1.fulfill() }
         promise2.futureResult.whenSuccess { expect2.fulfill() }
-        task.cancel(andNotify: promise2)
+        task.cancel(promise: promise2)
         XCTAssertEqual(XCTWaiter.wait(for: [expect1, expect2], timeout: 1.0), .completed)
     }
 
@@ -629,7 +629,7 @@ public class EventLoopTest : XCTestCase {
         let promise2: EventLoopPromise<Void> = loop.makePromise()
         let semaphore = DispatchSemaphore(value: 0)
         loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(0), notifying: promise1) { task -> Void in
-            task.cancel(andNotify: promise2)
+            task.cancel(promise: promise2)
             semaphore.wait()
         }
         let expectFail1 = XCTestExpectation(description: "Initializer promise was wrongly fulfilled")
