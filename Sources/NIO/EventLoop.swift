@@ -56,12 +56,14 @@ public struct Scheduled<T> {
 public final class RepeatedTask {
     private let delay: TimeAmount
     private let eventLoop: EventLoop
+    private let cancellationPromise: EventLoopPromise<Void>?
     private var scheduled: Scheduled<EventLoopFuture<Void>>?
     private var task: ((RepeatedTask) -> EventLoopFuture<Void>)?
 
-    internal init(interval: TimeAmount, eventLoop: EventLoop, task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) {
+    internal init(interval: TimeAmount, eventLoop: EventLoop, cancellationPromise: EventLoopPromise<Void>? = nil, task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) {
         self.delay = interval
         self.eventLoop = eventLoop
+        self.cancellationPromise = cancellationPromise
         self.task = task
     }
 
@@ -92,21 +94,45 @@ public final class RepeatedTask {
     ///  This means immediate cancellation is not guaranteed.
     ///
     /// The safest way to cancel is by using the passed reference of `RepeatedTask` inside the task closure.
-    public func cancel() {
+    ///
+    /// If the promise parameter is not `nil`, the passed promise is fulfilled when cancellation is complete.
+    /// Passing a promise does not prevent fulfillment of any promise provided on original task creation.
+    public func cancel(promise: EventLoopPromise<Void>? = nil) {
         if self.eventLoop.inEventLoop {
-            self.cancel0()
+            self.cancel0(localCancellationPromise: promise)
         } else {
             self.eventLoop.execute {
-                self.cancel0()
+                self.cancel0(localCancellationPromise: promise)
             }
         }
     }
 
-    private func cancel0() {
+    private func cancel0(localCancellationPromise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
         self.scheduled?.cancel()
         self.scheduled = nil
         self.task = nil
+
+        // Possible states at this time are:
+        //  1) Task is scheduled but has not yet executed.
+        //  2) Task is currently executing and invoked `cancel()` on itself.
+        //  3) Task is currently executing and `cancel0()` has been reentrantly invoked.
+        //  4) NOT VALID: Task is currently executing and has NOT invoked `cancel()` (`EventLoop` guarantees serial execution)
+        //  5) NOT VALID: Task has completed execution in a success state (`reschedule()` ensures state #2).
+        //  6) Task has completed execution in a failure state.
+        //  7) Task has been fully cancelled at a previous time.
+        //
+        // It is desirable that the task has fully completed any execution before any cancellation promise is
+        // fulfilled. States 2 and 3 occur during execution, so the requirement is implemented by deferring
+        // fulfillment to the next `EventLoop` cycle. The delay is harmless to other states and distinguishing
+        // them from 2 and 3 is not practical (or necessarily possible), so is used unconditionally. Check the
+        // promises for nil so as not to otherwise invoke `execute()` unnecessarily.
+        if self.cancellationPromise != nil || localCancellationPromise != nil {
+            self.eventLoop.execute {
+                self.cancellationPromise?.succeed(())
+                localCancellationPromise?.succeed(())
+            }
+        }
     }
 
     private func reschedule() {
@@ -122,7 +148,7 @@ public final class RepeatedTask {
         }
 
         scheduled.futureResult.whenFailure { (_: Error) in
-            self.cancel0()
+            self.cancel0(localCancellationPromise: nil)
         }
     }
 
@@ -441,10 +467,11 @@ extension EventLoop {
     /// - parameters:
     ///     - initialDelay: The delay after which the first task is executed.
     ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - promise: If non-nil, a promise to fulfill when the task is cancelled and all execution is complete.
     ///     - task: The closure that will be executed.
     /// - return: `RepeatedTask`
     @discardableResult
-    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping (RepeatedTask) throws -> Void) -> RepeatedTask {
+    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, notifying promise: EventLoopPromise<Void>? = nil, _ task: @escaping (RepeatedTask) throws -> Void) -> RepeatedTask {
         let futureTask: (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
             do {
                 try task(repeatedTask)
@@ -453,7 +480,7 @@ extension EventLoop {
                 return self.makeFailedFuture(error)
             }
         }
-        return self.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, futureTask)
+        return self.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, notifying: promise, futureTask)
     }
 
     /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each task.
@@ -461,11 +488,12 @@ extension EventLoop {
     /// - parameters:
     ///     - initialDelay: The delay after which the first task is executed.
     ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - promise: If non-nil, a promise to fulfill when the task is cancelled and all execution is complete.
     ///     - task: The closure that will be executed.
     /// - return: `RepeatedTask`
     @discardableResult
-    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, _ task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask {
-        let repeated = RepeatedTask(interval: delay, eventLoop: self, task: task)
+    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, notifying promise: EventLoopPromise<Void>? = nil, _ task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask {
+        let repeated = RepeatedTask(interval: delay, eventLoop: self, cancellationPromise: promise, task: task)
         repeated.begin(in: initialDelay)
         return repeated
     }
