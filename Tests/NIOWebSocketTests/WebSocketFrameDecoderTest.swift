@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-@testable import NIO
+import NIO
 import NIOWebSocket
 
 private class CloseSwallower: ChannelOutboundHandler {
@@ -79,7 +79,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
     private func frameForFrame(_ frame: WebSocketFrame) -> WebSocketFrame? {
         self.encoderChannel.writeAndFlush(frame, promise: nil)
 
-        while let d = self.encoderChannel.readOutbound()?.tryAsByteBuffer() {
+        while let d = self.encoderChannel.readOutbound(as: ByteBuffer.self) {
             XCTAssertNoThrow(try self.decoderChannel.writeInbound(d))
         }
 
@@ -88,7 +88,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
             return nil
         }
         // Should only have gotten one frame!
-        XCTAssertNil(self.decoderChannel.readInbound() as WebSocketFrame?)
+        XCTAssertNil(self.decoderChannel.readInbound(as: WebSocketFrame.self))
         return producedFrame
     }
 
@@ -331,14 +331,14 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // a double-parse edge case.
         self.encoderChannel.write(frame, promise: nil)
         var frameBuffer = self.decoderChannel.allocator.buffer(capacity: 10)
-        while var d = self.encoderChannel.readOutbound()?.tryAsByteBuffer() {
+        while var d = self.encoderChannel.readOutbound(as: ByteBuffer.self) {
             frameBuffer.write(buffer: &d)
         }
         XCTAssertNoThrow(try self.decoderChannel.writeInbound(frameBuffer))
 
         // No data should have been sent or received.
         XCTAssertNil(self.decoderChannel.readOutbound())
-        XCTAssertNil(self.decoderChannel.readInbound() as WebSocketFrame?)
+        XCTAssertNil(self.decoderChannel.readInbound(as: WebSocketFrame.self))
     }
 
     public func testDecoderRejectsOverlongFramesWithNoAutomaticErrorHandling() throws {

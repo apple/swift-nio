@@ -57,11 +57,11 @@ private func interactInMemory(_ first: EmbeddedChannel, _ second: EmbeddedChanne
     repeat {
         operated = false
 
-        if let data = first.readOutbound()?.tryAsByteBuffer() {
+        if let data = first.readOutbound(as: ByteBuffer.self) {
             operated = true
             try second.writeInbound(data)
         }
-        if let data = second.readOutbound()?.tryAsByteBuffer() {
+        if let data = second.readOutbound(as: ByteBuffer.self) {
             operated = true
             try first.writeInbound(data)
         }

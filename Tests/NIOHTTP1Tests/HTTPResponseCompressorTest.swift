@@ -199,8 +199,8 @@ class HTTPResponseCompressorTest: XCTestCase {
         clientChannel.write(NIOAny(HTTPClientRequestPart.head(requestHead)), promise: nil)
         clientChannel.write(NIOAny(HTTPClientRequestPart.end(nil)), promise: nil)
 
-        while let b = channel.readOutbound()?.tryAsByteBuffer() {
-                try clientChannel.writeInbound(b)
+        while let b = channel.readOutbound(as: ByteBuffer.self) {
+            try clientChannel.writeInbound(b)
         }
 
         // The first inbound datum will be the response head. The rest will be byte buffers, until

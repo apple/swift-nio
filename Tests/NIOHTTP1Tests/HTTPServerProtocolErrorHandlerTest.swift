@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-@testable import NIO
+import NIO
 import NIOHTTP1
 
 class HTTPServerProtocolErrorHandlerTest: XCTestCase {
@@ -34,7 +34,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.closeFuture.wait())
 
         // We expect exactly one ByteBuffer in the output.
-        guard var written = channel.readOutbound()?.tryAsByteBuffer() else {
+        guard var written = channel.readOutbound(as: ByteBuffer.self) else {
             XCTFail("No writes")
             return
         }
@@ -127,7 +127,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.closeFuture.wait())
 
         // We expect exactly one ByteBuffer in the output.
-        guard var written = channel.readOutbound()?.tryAsByteBuffer() else {
+        guard var written = channel.readOutbound(as: ByteBuffer.self) else {
             XCTFail("No writes")
             return
         }

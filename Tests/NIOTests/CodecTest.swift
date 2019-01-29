@@ -285,7 +285,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         inputBuffer.clear()
 
         func readOneInboundString() -> String {
-            switch channel.readInbound() as ByteBuffer? {
+            switch channel.readInbound(as: ByteBuffer.self) {
             case .some(let buffer):
                 return String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self)
             case .none:
@@ -300,7 +300,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertEqual("3", readOneInboundString())
         XCTAssertEqual("4", readOneInboundString())
         XCTAssertEqual("5", readOneInboundString())
-        XCTAssertNil(channel.readInbound() as IOData?)
+        XCTAssertNil(channel.readInbound(as: IOData.self))
         XCTAssertTrue(testDecoder.hasReentranced)
     }
 
@@ -338,9 +338,9 @@ public class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         XCTAssertFalse(channel.isActive)
 
-        XCTAssertEqual("1", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
-        XCTAssertEqual("23", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
-        XCTAssertEqual("4567890", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
+        XCTAssertEqual("1", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
+        XCTAssertEqual("23", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
+        XCTAssertEqual("4567890", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
         XCTAssertNil(channel.readInbound())
     }
 
@@ -361,11 +361,11 @@ public class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.close().wait())
         XCTAssertFalse(channel.isActive)
 
-        XCTAssertEqual("12", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
-        XCTAssertEqual("34", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
-        XCTAssertEqual("56", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
-        XCTAssertEqual("78", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
-        XCTAssertEqual("90", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
+        XCTAssertEqual("12", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
+        XCTAssertEqual("34", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
+        XCTAssertEqual("56", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
+        XCTAssertEqual("78", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
+        XCTAssertEqual("90", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
         XCTAssertNil(channel.readInbound())
 
         XCTAssertNoThrow(XCTAssertEqual("x", String(decoding: try lastPromise.futureResult.wait().readableBytesView,
@@ -398,11 +398,11 @@ public class ByteToMessageDecoderTest: XCTestCase {
             XCTFail("unexpected error: \(error)")
         }
 
-        XCTAssertEqual("12", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
-        XCTAssertEqual("34", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
-        XCTAssertEqual("56", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
-        XCTAssertEqual("78", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
-        XCTAssertEqual("90", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
+        XCTAssertEqual("12", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
+        XCTAssertEqual("34", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
+        XCTAssertEqual("56", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
+        XCTAssertEqual("78", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
+        XCTAssertEqual("90", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
         XCTAssertNil(channel.readInbound())
 
         XCTAssertNoThrow(XCTAssertEqual("x", String(decoding: try lastPromise.futureResult.wait().readableBytesView,
@@ -445,16 +445,16 @@ public class ByteToMessageDecoderTest: XCTestCase {
         buffer.write(staticString: "4567890qwer")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
-        XCTAssertEqual(1, (channel.readInbound() as Int?))
-        XCTAssertEqual(2, (channel.readInbound() as Int?))
-        XCTAssertEqual(3, (channel.readInbound() as Int?))
-        XCTAssertEqual(4, (channel.readInbound() as Int?))
+        XCTAssertEqual(1, channel.readInbound())
+        XCTAssertEqual(2, channel.readInbound())
+        XCTAssertEqual(3, channel.readInbound())
+        XCTAssertEqual(4, channel.readInbound())
         XCTAssertNil(channel.readInbound())
 
         XCTAssertNoThrow(try channel.close().wait())
         XCTAssertFalse(channel.isActive)
 
-        XCTAssertEqual(-4, (channel.readInbound() as Int?))
+        XCTAssertEqual(-4, channel.readInbound())
         XCTAssertNil(channel.readInbound())
     }
 
@@ -482,11 +482,11 @@ public class ByteToMessageDecoderTest: XCTestCase {
         buffer.write(staticString: "0123456789abcdef")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
-        XCTAssertEqual("0123456789abcdef", (channel.readInbound() as String?))
-        XCTAssertEqual("01234567", (channel.readInbound() as String?))
-        XCTAssertEqual("0123", (channel.readInbound() as String?))
-        XCTAssertEqual("01", (channel.readInbound() as String?))
-        XCTAssertEqual("0", (channel.readInbound() as String?))
+        XCTAssertEqual("0123456789abcdef", channel.readInbound())
+        XCTAssertEqual("01234567", channel.readInbound())
+        XCTAssertEqual("0123", channel.readInbound())
+        XCTAssertEqual("01", channel.readInbound())
+        XCTAssertEqual("0", channel.readInbound())
         XCTAssertNil(channel.readInbound())
     }
 
@@ -516,8 +516,8 @@ public class ByteToMessageDecoderTest: XCTestCase {
         buffer.write(staticString: "0123456789abcdefQWER")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
-        XCTAssertEqual("0123456789abcdef", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)})
-        XCTAssertEqual("QWER", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)})
+        XCTAssertEqual("0123456789abcdef", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)})
+        XCTAssertEqual("QWER", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)})
         XCTAssertNil(channel.readInbound())
     }
 
@@ -564,7 +564,7 @@ public class MessageToByteEncoderTest: XCTestCase {
 
         _ = try channel.writeAndFlush(NIOAny(Int32(5))).wait()
 
-        if var buffer = channel.readOutbound()?.tryAsByteBuffer() {
+        if var buffer = channel.readOutbound(as: ByteBuffer.self) {
             XCTAssertEqual(Int32(5), buffer.readInteger())
             XCTAssertEqual(0, buffer.readableBytes)
         } else {

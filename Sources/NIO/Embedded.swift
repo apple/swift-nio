@@ -324,11 +324,11 @@ public class EmbeddedChannel: Channel {
     // Embedded channels never have parents.
     public let parent: Channel? = nil
 
-    public func readOutbound() -> NIOAny? {
+    public func readOutbound<T>(as type: T.Type = T.self) -> T? {
         return readFromBuffer(buffer: &channelcore.outboundBuffer)
     }
 
-    public func readInbound<T>() -> T? {
+    public func readInbound<T>(as type: T.Type = T.self) -> T? {
         return readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
 
@@ -356,13 +356,6 @@ public class EmbeddedChannel: Channel {
             channelcore.error = nil
             throw error
         }
-    }
-
-    private func readFromBuffer(buffer: inout [NIOAny]) -> NIOAny? {
-        if buffer.isEmpty {
-            return nil
-        }
-        return buffer.removeFirst()
     }
 
     private func readFromBuffer<T>(buffer: inout [NIOAny]) -> T? {

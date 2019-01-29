@@ -64,7 +64,7 @@ extension ChannelPipeline {
 extension EmbeddedChannel {
     func readAllOutboundBuffers() -> ByteBuffer {
         var buffer = self.allocator.buffer(capacity: 100)
-        while var writtenData = self.readOutbound()?.tryAsByteBuffer() {
+        while var writtenData = self.readOutbound(as: ByteBuffer.self) {
             buffer.write(buffer: &writtenData)
         }
 

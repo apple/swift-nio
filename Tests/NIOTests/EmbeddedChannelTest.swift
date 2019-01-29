@@ -23,7 +23,7 @@ class EmbeddedChannelTest: XCTestCase {
         
         XCTAssertTrue(try channel.writeOutbound(buf))
         XCTAssertTrue(try channel.finish())
-        XCTAssertEqual(buf, channel.readOutbound()?.tryAsByteBuffer())
+        XCTAssertEqual(buf, channel.readOutbound())
         XCTAssertNil(channel.readOutbound())
         XCTAssertNil(channel.readInbound())
     }
@@ -144,10 +144,13 @@ class EmbeddedChannelTest: XCTestCase {
     func testSendingAnythingOnEmbeddedChannel() throws {
         let channel = EmbeddedChannel()
         let buffer = ByteBufferAllocator().buffer(capacity: 5)
-        let fileHandle = FileHandle(descriptor: 1)
-        let fileRegion = try FileRegion(fileHandle: fileHandle)
         let socketAddress = try SocketAddress(unixDomainSocketPath: "path")
-        
+        let handle = FileHandle(descriptor: 1)
+        let fileRegion = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
+        defer {
+            // fake descriptor, so shouldn't be closed.
+            XCTAssertNoThrow(try handle.takeDescriptorOwnership())
+        }
         try channel.writeAndFlush(1).wait()
         try channel.writeAndFlush("1").wait()
         try channel.writeAndFlush(buffer).wait()
@@ -184,7 +187,7 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertNil(channel.readOutbound())
         XCTAssertFalse(writeFuture.isFulfilled)
         channel.flush()
-        XCTAssertNotNil(channel.readOutbound())
+        XCTAssertNotNil(channel.readOutbound(as: ByteBuffer.self))
         XCTAssertTrue(writeFuture.isFulfilled)
         XCTAssertNoThrow(try XCTAssertFalse(channel.finish()))
     }
