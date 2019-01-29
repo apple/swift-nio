@@ -159,7 +159,7 @@ public final class BlockingIOThreadPool {
                 // This should never happen
                 fatalError("start() called while in shuttingDown")
             case .stopped:
-                self.state = .running(CircularBuffer(initialRingCapacity: 16))
+                self.state = .running(CircularBuffer(initialCapacity: 16))
             }
         }
         self.queues.enumerated().forEach { idAndQueue in
