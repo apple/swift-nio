@@ -241,3 +241,17 @@ extension SocketAddress {
         return try self.makeAddressResolvingHost(host, port: port)
     }
 }
+
+extension CircularBuffer {
+    @available(*, deprecated, renamed: "init(initialCapacity:)")
+    public init(initialRingCapacity: Int) {
+        self = .init(initialCapacity: initialRingCapacity)
+    }
+}
+
+extension MarkedCircularBuffer {
+    @available(*, deprecated, renamed: "init(initialCapacity:)")
+    public init(initialRingCapacity: Int) {
+        self = .init(initialCapacity: initialRingCapacity)
+    }
+}

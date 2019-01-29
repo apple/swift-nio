@@ -26,9 +26,9 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
     /// Create a new instance.
     ///
     /// - paramaters:
-    ///     - initialRingCapacity: The initial capacity of the internal storage.
-    public init(initialRingCapacity: Int) {
-        self.buffer = CircularBuffer(initialRingCapacity: initialRingCapacity)
+    ///     - initialCapacity: The initial capacity of the internal storage.
+    public init(initialCapacity: Int) {
+        self.buffer = CircularBuffer(initialCapacity: initialCapacity)
     }
 
     // MARK: Forwarding

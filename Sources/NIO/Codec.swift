@@ -155,7 +155,7 @@ private struct B2MDBuffer {
     }
 
     private var state: State = .ready
-    private var buffers: CircularBuffer<ByteBuffer> = CircularBuffer(initialRingCapacity: 4)
+    private var buffers: CircularBuffer<ByteBuffer> = CircularBuffer(initialCapacity: 4)
 }
 
 // MARK: B2MDBuffer Main API
