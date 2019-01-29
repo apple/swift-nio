@@ -78,7 +78,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
     private var algorithm: CompressionAlgorithm?
 
     // A queue of accept headers.
-    private var acceptQueue = CircularBuffer<[String]>(initialRingCapacity: 8)
+    private var acceptQueue = CircularBuffer<[String]>(initialCapacity: 8)
 
     private var pendingResponse: PartialHTTPResponse!
     private var pendingWritePromise: EventLoopPromise<Void>!

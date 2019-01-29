@@ -130,7 +130,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
 private struct PendingDatagramWritesState {
     fileprivate typealias DatagramWritePromiseFiller = (EventLoopPromise<Void>, Error?)
 
-    private var pendingWrites = MarkedCircularBuffer<PendingDatagramWrite>(initialRingCapacity: 16)
+    private var pendingWrites = MarkedCircularBuffer<PendingDatagramWrite>(initialCapacity: 16)
     private var chunks: Int = 0
     public private(set) var bytes: Int64 = 0
 

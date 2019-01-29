@@ -17,7 +17,7 @@ import NIO
 
 class MarkedCircularBufferTests: XCTestCase {
     func testEmptyMark() throws {
-        var buf = MarkedCircularBuffer<Int>(initialRingCapacity: 8)
+        var buf = MarkedCircularBuffer<Int>(initialCapacity: 8)
         XCTAssertFalse(buf.hasMark)
         XCTAssertNil(buf.markedElement)
         XCTAssertNil(buf.markedElementIndex)
@@ -29,7 +29,7 @@ class MarkedCircularBufferTests: XCTestCase {
     }
 
     func testSimpleMark() throws {
-        var buf = MarkedCircularBuffer<Int>(initialRingCapacity: 8)
+        var buf = MarkedCircularBuffer<Int>(initialCapacity: 8)
 
         for i in 1...4 { buf.append(i) }
         buf.mark()
@@ -45,7 +45,7 @@ class MarkedCircularBufferTests: XCTestCase {
     }
 
     func testPassingTheMark() throws {
-        var buf = MarkedCircularBuffer<Int>(initialRingCapacity: 8)
+        var buf = MarkedCircularBuffer<Int>(initialCapacity: 8)
 
         for i in 1...4 { buf.append(i) }
         buf.mark()
@@ -65,7 +65,7 @@ class MarkedCircularBufferTests: XCTestCase {
     }
 
     func testMovingTheMark() throws {
-        var buf = MarkedCircularBuffer<Int>(initialRingCapacity: 8)
+        var buf = MarkedCircularBuffer<Int>(initialCapacity: 8)
 
         for i in 1...8 {
             buf.append(i)
@@ -78,7 +78,7 @@ class MarkedCircularBufferTests: XCTestCase {
         }
     }
     func testIndices() throws {
-        var buf = MarkedCircularBuffer<Int>(initialRingCapacity: 4)
+        var buf = MarkedCircularBuffer<Int>(initialCapacity: 4)
         for i in 1...4 {
             buf.append(i)
         }
@@ -86,7 +86,7 @@ class MarkedCircularBufferTests: XCTestCase {
     }
 
     func testFirst() throws {
-        var buf = MarkedCircularBuffer<Int>(initialRingCapacity: 4)
+        var buf = MarkedCircularBuffer<Int>(initialCapacity: 4)
         for i in 1...4 {
             buf.append(i)
         }
@@ -94,7 +94,7 @@ class MarkedCircularBufferTests: XCTestCase {
     }
 
     func testCount() throws {
-        var buf = MarkedCircularBuffer<Int>(initialRingCapacity: 4)
+        var buf = MarkedCircularBuffer<Int>(initialCapacity: 4)
         for i in 1...4 {
             buf.append(i)
         }
@@ -102,7 +102,7 @@ class MarkedCircularBufferTests: XCTestCase {
     }
 
     func testSubscript() throws {
-        var buf = MarkedCircularBuffer<Int>(initialRingCapacity: 4)
+        var buf = MarkedCircularBuffer<Int>(initialCapacity: 4)
         for i in 1...4 {
             buf.append(i)
         }
@@ -111,7 +111,7 @@ class MarkedCircularBufferTests: XCTestCase {
     }
 
     func testIsEmpty() throws {
-        var buf = MarkedCircularBuffer<Int>(initialRingCapacity: 4)
+        var buf = MarkedCircularBuffer<Int>(initialCapacity: 4)
         for i in 1...4 {
             buf.append(i)
         }

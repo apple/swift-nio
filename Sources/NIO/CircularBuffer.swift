@@ -21,7 +21,7 @@ protocol AppendableCollection: Collection {
 }
 
 /// An automatically expanding ring buffer implementation backed by a `ContiguousArray`. Even though this implementation
-/// will automatically expand if more elements than `initialRingCapacity` are stored, it's advantageous to prevent
+/// will automatically expand if more elements than `initialCapacity` are stored, it's advantageous to prevent
 /// expansions from happening frequently. Expansions will always force an allocation and a copy to happen.
 public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
     public typealias RangeType<Bound> = Range<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
@@ -39,17 +39,17 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
         return self.buffer.count - 1
     }
 
-    /// Allocates a buffer that can hold up to `initialRingCapacity` elements and initialise an empty ring backed by
-    /// the buffer. When the ring grows to more than `initialRingCapacity` elements the buffer will be expanded.
-    public init(initialRingCapacity: Int) {
-        let capacity = Int(UInt32(initialRingCapacity).nextPowerOf2())
+    /// Allocates a buffer that can hold up to `initialCapacity` elements and initialise an empty ring backed by
+    /// the buffer. When the ring grows to more than `initialCapacity` elements the buffer will be expanded.
+    public init(initialCapacity: Int) {
+        let capacity = Int(UInt32(initialCapacity).nextPowerOf2())
         self.buffer = ContiguousArray<E?>(repeating: nil, count: capacity)
         assert(self.buffer.count == capacity)
     }
 
     /// Allocates an empty buffer.
     public init() {
-        self.init(initialRingCapacity: 16)
+        self.init(initialCapacity: 16)
     }
 
     /// Append an element to the end of the ring buffer.
@@ -235,7 +235,7 @@ extension CircularBuffer: BidirectionalCollection, RandomAccessCollection, Range
         case 1:
             remove(at: bounds.lowerBound)
         case self.count:
-            self = .init(initialRingCapacity: self.buffer.count)
+            self = .init(initialCapacity: self.buffer.count)
         default:
             replaceSubrange(bounds, with: [])
         }
