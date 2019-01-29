@@ -3,7 +3,7 @@
 ##
 ## This source file is part of the SwiftNIO open source project
 ##
-## Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+## Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
@@ -45,7 +45,7 @@ for language in swift-or-c bash dtrace; do
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -64,7 +64,7 @@ EOF
 ##
 ## This source file is part of the SwiftNIO open source project
 ##
-## Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+## Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
@@ -83,7 +83,7 @@ EOF
  *
  *  This source file is part of the SwiftNIO open source project
  *
- *  Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+ *  Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
  *  Licensed under Apache License v2.0
  *
  *  See LICENSE.txt for license information
