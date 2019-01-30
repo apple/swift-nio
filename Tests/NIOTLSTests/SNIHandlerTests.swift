@@ -330,7 +330,7 @@ class SNIHandlerTest: XCTestCase {
         // The callback should have fired, but the handler should not have
         // sent on any data and should still be in the pipeline.
         XCTAssertTrue(called)
-        XCTAssertNil(channel.readInbound() as ByteBuffer?)
+        XCTAssertNil(channel.readInbound(as: ByteBuffer.self))
         try channel.pipeline.assertContains(handler: handler)
 
         // Now we're going to complete the promise and run the loop. This should cause the complete
@@ -369,7 +369,7 @@ class SNIHandlerTest: XCTestCase {
 
         // The callback should not have fired, the handler should still be in the pipeline,
         // and no data should have been written.
-        XCTAssertNil(channel.readInbound() as ByteBuffer?)
+        XCTAssertNil(channel.readInbound(as: ByteBuffer.self))
         try channel.pipeline.assertContains(handler: handler)
 
         XCTAssertNoThrow(try channel.finish())

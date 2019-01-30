@@ -33,7 +33,7 @@ class HTTPRequestEncoderTests: XCTestCase {
         var request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:1), method: method, uri: "/uri")
         request.headers = headers
         try channel.writeOutbound(HTTPClientRequestPart.head(request))
-        if case .some(.byteBuffer(let buffer)) = channel.readOutbound() {
+        if let buffer = channel.readOutbound(as: ByteBuffer.self) {
             return buffer
         } else {
             fatalError("Could not read ByteBuffer from channel")
@@ -83,15 +83,9 @@ class HTTPRequestEncoderTests: XCTestCase {
         // This request contains neither Transfer-Encoding: chunked or Content-Length.
         let request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:0), method: .GET, uri: "/uri")
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(request)))
-        let writtenData: IOData = channel.readOutbound()!
-
-        switch writtenData {
-        case .byteBuffer(let b):
-            let writtenResponse = b.getString(at: b.readerIndex, length: b.readableBytes)!
-            XCTAssertEqual(writtenResponse, "GET /uri HTTP/1.0\r\n\r\n")
-        case .fileRegion:
-            XCTFail("Unexpected file region")
-        }
+        let writtenData = channel.readOutbound(as: ByteBuffer.self)!
+        let writtenResponse = writtenData.getString(at: writtenData.readerIndex, length: writtenData.readableBytes)!
+        XCTAssertEqual(writtenResponse, "GET /uri HTTP/1.0\r\n\r\n")
     }
 
     func testBody() throws {
@@ -135,7 +129,7 @@ class HTTPRequestEncoderTests: XCTestCase {
     }
 
     private func assertOutboundContainsOnly(_ channel: EmbeddedChannel, _ expected: String) {
-        if case .some(.byteBuffer(let buffer)) = channel.readOutbound() {
+        if let buffer = channel.readOutbound(as: ByteBuffer.self) {
             buffer.assertContainsOnly(expected)
         } else {
             fatalError("Could not read ByteBuffer from channel")

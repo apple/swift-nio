@@ -163,10 +163,10 @@ class EmbeddedChannelCore: ChannelCore {
     }
 
     /// Contains the flushed items that went into the `Channel` (and on a regular channel would have hit the network).
-    var outboundBuffer: [IOData] = []
+    var outboundBuffer: [NIOAny] = []
 
     /// Contains the unflushed items that went into the `Channel`
-    var pendingOutboundBuffer: [(IOData, EventLoopPromise<Void>?)] = []
+    var pendingOutboundBuffer: [(NIOAny, EventLoopPromise<Void>?)] = []
 
     /// Contains the items that travelled the `ChannelPipeline` all the way and hit the tail channel handler. On a
     /// regular `Channel` these items would be lost.
@@ -222,11 +222,6 @@ class EmbeddedChannelCore: ChannelCore {
     }
 
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
-        guard let data = data.tryAsIOData() else {
-            promise?.fail(ChannelError.writeDataUnsupported)
-            return
-        }
-
         self.pendingOutboundBuffer.append((data, promise))
     }
 
@@ -329,11 +324,11 @@ public class EmbeddedChannel: Channel {
     // Embedded channels never have parents.
     public let parent: Channel? = nil
 
-    public func readOutbound() -> IOData? {
+    public func readOutbound<T>(as type: T.Type = T.self) -> T? {
         return readFromBuffer(buffer: &channelcore.outboundBuffer)
     }
 
-    public func readInbound<T>() -> T? {
+    public func readInbound<T>(as type: T.Type = T.self) -> T? {
         return readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
 
@@ -361,13 +356,6 @@ public class EmbeddedChannel: Channel {
             channelcore.error = nil
             throw error
         }
-    }
-
-    private func readFromBuffer(buffer: inout [IOData]) -> IOData? {
-        if buffer.isEmpty {
-            return nil
-        }
-        return buffer.removeFirst()
     }
 
     private func readFromBuffer<T>(buffer: inout [NIOAny]) -> T? {
