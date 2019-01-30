@@ -28,6 +28,8 @@
 - `ByteBuffer.write(string:)` no longer returns an `Int?`, instead it
   returns `Int` and has had its return value made discardable.
 - removed ContiguousCollection
+- CircularBuffer(initialRingCapacity:) is now CircularBuffer(initialCapacity:)
+- MarkedCircularBuffer(initialRingCapacity:) is now MarkedCircularBuffer(initialCapacity:)
 - EventLoopFuture.whenComplete now provides Result<T, Error>
 - renamed `EventLoopFuture.then` to `EventLoopFuture.flatMap`
 - renamed `EventLoopFuture.thenIfError` to `EventLoopFuture.flatMapError`

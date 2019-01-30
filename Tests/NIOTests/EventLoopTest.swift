@@ -570,4 +570,77 @@ public class EventLoopTest : XCTestCase {
         XCTAssertTrue(result.isEmpty)
 
     }
+    
+    public func testRepeatedTaskThatIsImmediatelyCancelledNotifies() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let loop = eventLoopGroup.next()
+        let promise1: EventLoopPromise<Void> = loop.makePromise()
+        let promise2: EventLoopPromise<Void> = loop.makePromise()
+        let expect1 = XCTestExpectation(description: "Initializer promise was fulfilled")
+        let expect2 = XCTestExpectation(description: "Cancellation-specific promise was fulfilled")
+        promise1.futureResult.whenSuccess { expect1.fulfill() }
+        promise2.futureResult.whenSuccess { expect2.fulfill() }
+        loop.execute {
+            let task = loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(0), notifying: promise1) { task in
+                XCTFail()
+            }
+            task.cancel(promise: promise2)
+        }
+        Thread.sleep(until: .init(timeIntervalSinceNow: 0.1))
+        let res = XCTWaiter.wait(for: [expect1, expect2], timeout: 1.0)
+        XCTAssertEqual(res, .completed)
+    }
+
+    public func testRepeatedTaskThatIsCancelledAfterRunningAtLeastTwiceNotifies() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let loop = eventLoopGroup.next()
+        let promise1: EventLoopPromise<Void> = loop.makePromise()
+        let promise2: EventLoopPromise<Void> = loop.makePromise()
+        let expectRuns = XCTestExpectation(description: "Repeated task has run")
+        expectRuns.expectedFulfillmentCount = 2
+        let task = loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(10), notifying: promise1) { task in
+            expectRuns.fulfill()
+        }
+        XCTAssertEqual(XCTWaiter.wait(for: [expectRuns], timeout: 0.05), .completed)
+        let expect1 = XCTestExpectation(description: "Initializer promise was fulfilled")
+        let expect2 = XCTestExpectation(description: "Cancellation-specific promise was fulfilled")
+        promise1.futureResult.whenSuccess { expect1.fulfill() }
+        promise2.futureResult.whenSuccess { expect2.fulfill() }
+        task.cancel(promise: promise2)
+        XCTAssertEqual(XCTWaiter.wait(for: [expect1, expect2], timeout: 1.0), .completed)
+    }
+
+    public func testRepeatedTaskThatCancelsItselfNotifiesOnlyWhenFinished() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let loop = eventLoopGroup.next()
+        let promise1: EventLoopPromise<Void> = loop.makePromise()
+        let promise2: EventLoopPromise<Void> = loop.makePromise()
+        let semaphore = DispatchSemaphore(value: 0)
+        loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(0), notifying: promise1) { task -> Void in
+            task.cancel(promise: promise2)
+            semaphore.wait()
+        }
+        let expectFail1 = XCTestExpectation(description: "Initializer promise was wrongly fulfilled")
+        let expectFail2 = XCTestExpectation(description: "Cancellation-specific promise was wrongly fulfilled")
+        let expect1 = XCTestExpectation(description: "Initializer promise was fulfilled")
+        let expect2 = XCTestExpectation(description: "Cancellation-specific promise was fulfilled")
+        promise1.futureResult.whenSuccess { expectFail1.fulfill(); expect1.fulfill() }
+        promise2.futureResult.whenSuccess { expectFail2.fulfill(); expect2.fulfill() }
+        XCTAssertEqual(XCTWaiter.wait(for: [expectFail1, expectFail2], timeout: 0.5), .timedOut)
+        semaphore.signal()
+        XCTAssertEqual(XCTWaiter.wait(for: [expect1, expect2], timeout: 0.5), .completed)
+    }
+
 }

@@ -155,7 +155,7 @@ private struct B2MDBuffer {
     }
 
     private var state: State = .ready
-    private var buffers: CircularBuffer<ByteBuffer> = CircularBuffer(initialRingCapacity: 4)
+    private var buffers: CircularBuffer<ByteBuffer> = CircularBuffer(initialCapacity: 4)
 }
 
 // MARK: B2MDBuffer Main API
@@ -169,7 +169,7 @@ extension B2MDBuffer {
         case .ready where self.buffers.count > 0:
             var buffer = self.buffers.removeFirst()
             buffer.writeBuffers(self.buffers)
-            self.buffers.removeAll(keepingCapacity: true)
+            self.buffers.removeAll(keepingCapacity: self.buffers.capacity < 16) // don't grow too much
             if buffer.readableBytes > 0 {
                 self.state = .processingInProgress
                 return .available(buffer)
@@ -192,7 +192,7 @@ extension B2MDBuffer {
             var buffer = buffer
             buffer.clear()
             buffer.writeBuffers(self.buffers)
-            self.buffers.removeAll(keepingCapacity: true)
+            self.buffers.removeAll(keepingCapacity: self.buffers.capacity < 16) // don't grow too much
             self.buffers.append(buffer)
         }
     }
@@ -210,11 +210,11 @@ private extension ByteBuffer {
         guard buffers.count > 0 else {
             return
         }
-        var allReadableBytes: Int = 0
+        var requiredCapacity: Int = self.writerIndex
         for buffer in buffers {
-            allReadableBytes += buffer.readableBytes
+            requiredCapacity += buffer.readableBytes
         }
-        self.reserveCapacity(self.writerIndex + allReadableBytes)
+        self.reserveCapacity(requiredCapacity)
         for var buffer in buffers {
             self.write(buffer: &buffer)
         }
@@ -223,11 +223,12 @@ private extension ByteBuffer {
 
 private extension B2MDBuffer {
     func _testOnlyOneBuffer() -> ByteBuffer? {
-        if buffers.count == 0 {
+        switch self.buffers.count {
+        case 0:
             return nil
-        } else if buffers.count == 1 {
+        case 1:
             return self.buffers.first
-        } else {
+        default:
             let firstIndex = self.buffers.startIndex
             var firstBuffer = self.buffers[firstIndex]
             for var buffer in self.buffers[self.buffers.index(after: firstIndex)...] {
