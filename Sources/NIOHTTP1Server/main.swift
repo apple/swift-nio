@@ -471,8 +471,8 @@ if arguments.dropFirst().first == .some("--disable-half-closure") {
     arguments = arguments.dropFirst()
 }
 let arg1 = arguments.dropFirst().first
-let arg2 = arguments.dropFirst().dropFirst().first
-let arg3 = arguments.dropFirst().dropFirst().dropFirst().first
+let arg2 = arguments.dropFirst(2).first
+let arg3 = arguments.dropFirst(3).first
 
 let defaultHost = "::1"
 let defaultPort = 8888

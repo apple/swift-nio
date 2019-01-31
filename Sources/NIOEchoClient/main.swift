@@ -70,7 +70,7 @@ defer {
 // First argument is the program path
 let arguments = CommandLine.arguments
 let arg1 = arguments.dropFirst().first
-let arg2 = arguments.dropFirst().dropFirst().first
+let arg2 = arguments.dropFirst(2).first
 
 let defaultHost = "::1"
 let defaultPort: Int = 9999
