@@ -59,8 +59,10 @@ public extension ByteBuffer {
     ///         start each time.
     mutating func webSocketMask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
         self.withUnsafeMutableReadableBytes {
-            for (index, byte) in $0.enumerated() {
+            var index = 0
+            for byte in $0 {
                 $0[index] = byte ^ maskingKey[(index + indexOffset) % 4]
+                index += 1
             }
         }
     }
