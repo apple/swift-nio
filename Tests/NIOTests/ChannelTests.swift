@@ -2506,6 +2506,18 @@ public class ChannelTests: XCTestCase {
                 self.allDonePromise = allDonePromise
             }
 
+            private func veryNasty_blockUntilReadBufferIsNonEmpty(channel: Channel) throws {
+                struct ThisIsNotASocketChannelError: Error {}
+                guard let channel = channel as? SocketChannel else {
+                    throw ThisIsNotASocketChannelError()
+                }
+                try channel.socket.withUnsafeFileDescriptor { fd in
+                    var pollFd: pollfd = .init(fd: fd, events: Int16(POLLIN), revents: 0)
+                    let nfds = try Posix.poll(fds: &pollFd, nfds: 1, timeout: -1)
+                    XCTAssertEqual(1, nfds)
+                }
+            }
+
             func channelActive(ctx: ChannelHandlerContext) {
                 XCTAssert(serverChannel.eventLoop === ctx.eventLoop)
                 self.serverChannel.whenSuccess { serverChannel in
@@ -2523,11 +2535,22 @@ public class ChannelTests: XCTestCase {
                         // let's trigger the write error
                         var buffer = ctx.channel.allocator.buffer(capacity: 16)
                         buffer.write(staticString: "THIS WILL FAIL ANYWAY")
+
+                        // this needs to be in a function as otherwise the Swift compiler believes this is throwing
+                        func workaroundSR487() {
+                            // this test only tests the correct condition if the bytes sent from the other side have already
+                            // arrived at the time the write fails. So this is a hack that makes sure they do have arrived.
+                            // (https://github.com/apple/swift-nio/issues/657)
+                            XCTAssertNoThrow(try self.veryNasty_blockUntilReadBufferIsNonEmpty(channel: ctx.channel))
+                        }
+                        workaroundSR487()
+
                         return ctx.writeAndFlush(self.wrapOutboundOut(buffer))
                     }.map {
                         XCTFail("this should have failed")
                     }.whenFailure { error in
-                        XCTAssertEqual(ChannelError.ioOnClosedChannel, error as? ChannelError)
+                        XCTAssertEqual(ChannelError.ioOnClosedChannel, error as? ChannelError,
+                                       "unexpected error: \(error)")
                         XCTAssertTrue(inSameStackFrame)
                         self.allDonePromise.succeed(())
                     }
