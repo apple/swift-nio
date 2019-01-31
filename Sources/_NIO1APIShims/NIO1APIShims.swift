@@ -255,3 +255,12 @@ extension MarkedCircularBuffer {
         self = .init(initialCapacity: initialRingCapacity)
     }
 }
+
+@available(*, deprecated, renamed: "HTTPServerProtocolUpgrader")
+public typealias HTTPProtocolUpgrader = HTTPServerProtocolUpgrader
+
+@available(*, deprecated, renamed: "HTTPServerUpgradeEvents")
+public typealias HTTPUpgradeEvents = HTTPServerUpgradeEvents
+
+@available(*, deprecated, renamed: "HTTPServerUpgradeErrors")
+public typealias HTTPUpgradeErrors = HTTPServerUpgradeErrors

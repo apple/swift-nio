@@ -18,7 +18,7 @@ import NIO
 ///
 /// See the documentation for `HTTPServerUpgradeHandler` for details on these
 /// properties.
-public typealias HTTPUpgradeConfiguration = (upgraders: [HTTPProtocolUpgrader], completionHandler: (ChannelHandlerContext) -> Void)
+public typealias HTTPUpgradeConfiguration = (upgraders: [HTTPServerProtocolUpgrader], completionHandler: (ChannelHandlerContext) -> Void)
 
 public extension ChannelPipeline {
     /// Configure a `ChannelPipeline` for use as a HTTP client.
@@ -51,7 +51,7 @@ public extension ChannelPipeline {
     ///         clients that pipeline themselves.
     ///     - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
     ///         HTTP upgrade. Defaults to `nil`, which will not add the handler to the pipeline. If
-    ///         provided should be a tuple of an array of `HTTPProtocolUpgrader` and the upgrade
+    ///         provided should be a tuple of an array of `HTTPServerProtocolUpgrader` and the upgrade
     ///         completion handler. See the documentation on `HTTPServerUpgradeHandler` for more
     ///         details.
     ///     - errorHandling: Whether to provide assistance handling protocol errors (e.g.

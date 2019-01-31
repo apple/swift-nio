@@ -39,3 +39,4 @@
 - renamed `EventLoopFuture.and(result:)` to `EventLoopFuture.and(value:)`
 - `EventLoopPromise.succeed(result: Value)` lost its label so is now `EventLoopPromise.succeed(Value)`
 - `EventLoopPromise.fail(error: Error)` lost its label so is now `EventLoopPromise.fail(Error)`
+- renamed `HTTPProtocolUpgrader` to `HTTPServerProtocolUpgrader`

@@ -74,7 +74,7 @@ extension EmbeddedChannel {
 
 private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
                                               pipelining: Bool,
-                                              upgraders: [HTTPProtocolUpgrader],
+                                              upgraders: [HTTPServerProtocolUpgrader],
                                               extraHandlers: [ChannelHandler],
                                               _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) throws -> (Channel, EventLoopFuture<Channel>) {
     let p = group.next().makePromise(of: Channel.self)
@@ -125,7 +125,7 @@ private func connectedClientChannel(group: EventLoopGroup, serverAddress: Socket
 }
 
 private func setUpTestWithAutoremoval(pipelining: Bool = false,
-                                      upgraders: [HTTPProtocolUpgrader],
+                                      upgraders: [HTTPServerProtocolUpgrader],
                                       extraHandlers: [ChannelHandler],
                                       _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) throws -> (EventLoopGroup, Channel, Channel, Channel) {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -162,7 +162,7 @@ internal func assertResponseIs(response: String, expectedResponseLine: String, e
     XCTAssertEqual(lines.count, 0)
 }
 
-private class ExplodingUpgrader: HTTPProtocolUpgrader {
+private class ExplodingUpgrader: HTTPServerProtocolUpgrader {
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String]
 
@@ -186,7 +186,7 @@ private class ExplodingUpgrader: HTTPProtocolUpgrader {
     }
 }
 
-private class UpgraderSaysNo: HTTPProtocolUpgrader {
+private class UpgraderSaysNo: HTTPServerProtocolUpgrader {
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String] = []
 
@@ -208,7 +208,7 @@ private class UpgraderSaysNo: HTTPProtocolUpgrader {
     }
 }
 
-private class SuccessfulUpgrader: HTTPProtocolUpgrader {
+private class SuccessfulUpgrader: HTTPServerProtocolUpgrader {
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String]
     private let onUpgradeComplete: (HTTPRequestHead) -> ()
@@ -231,7 +231,7 @@ private class SuccessfulUpgrader: HTTPProtocolUpgrader {
     }
 }
 
-private class UpgradeDelayer: HTTPProtocolUpgrader {
+private class UpgradeDelayer: HTTPServerProtocolUpgrader {
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String] = []
 
@@ -359,7 +359,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         do {
             try channel.writeInbound(data)
             XCTFail("Writing of bad data did not error")
-        } catch HTTPUpgradeErrors.invalidHTTPOrdering {
+        } catch HTTPServerUpgradeErrors.invalidHTTPOrdering {
             // Nothing to see here.
         }
 
@@ -528,7 +528,7 @@ class HTTPUpgradeTestCase: XCTestCase {
     func testUpgradeFiresUserEvent() throws {
         // The user event is fired last, so we don't see it until both other callbacks
         // have fired.
-        let eventSaver = UserEventSaver<HTTPUpgradeEvents>()
+        let eventSaver = UserEventSaver<HTTPServerUpgradeEvents>()
 
         let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: []) { req in
             XCTAssertEqual(eventSaver.events.count, 0)

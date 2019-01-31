@@ -38,7 +38,7 @@ fileprivate extension HTTPHeaders {
     }
 }
 
-/// A `HTTPProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
+/// A `HTTPServerProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
 ///
 /// Users may frequently want to offer multiple websocket endpoints on the same port. For this
 /// reason, this `WebSocketUpgrader` only knows how to do the required parts of the upgrade and to
@@ -48,7 +48,7 @@ fileprivate extension HTTPHeaders {
 ///
 /// This upgrader assumes that the `HTTPServerUpgradeHandler` will appropriately mutate the pipeline to
 /// remove the HTTP `ChannelHandler`s.
-public final class WebSocketUpgrader: HTTPProtocolUpgrader {
+public final class WebSocketUpgrader: HTTPServerProtocolUpgrader {
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"
 
