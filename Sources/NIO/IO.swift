@@ -29,8 +29,8 @@ public struct IOError: Swift.Error {
     /// - note: At the moment, this constructor is more expensive than `IOError(errnoCode:function:)` as the `String` will incur reference counting
     ///
     /// - parameters:
-    ///       - errorCode: the `errno` that was set for the operation.
-    ///       - reason: the actual reason (in an human-readable form).
+    ///     - errorCode: the `errno` that was set for the operation.
+    ///     - reason: the actual reason (in an human-readable form).
     public init(errnoCode: Int32, reason: String) {
         self.errnoCode = errnoCode
         self.reason = .reason(reason)
@@ -41,8 +41,8 @@ public struct IOError: Swift.Error {
     /// - note: This constructor is the cheapest way to create an `IOError`.
     ///
     /// - parameters:
-    ///       - errorCode: the `errno` that was set for the operation.
-    ///       - function: The function the error happened in, the human readable description will be generated automatically when needed.
+    ///     - errorCode: the `errno` that was set for the operation.
+    ///     - function: The function the error happened in, the human readable description will be generated automatically when needed.
     public init(errnoCode: Int32, function: StaticString) {
         self.errnoCode = errnoCode
         self.reason = .function(function)
@@ -52,8 +52,8 @@ public struct IOError: Swift.Error {
 /// Returns a reason to use when constructing a `IOError`.
 ///
 /// - parameters:
-///       - errorCode: the `errno` that was set for the operation.
-///       - reason: what failed
+///     - errorCode: the `errno` that was set for the operation.
+///     - reason: what failed
 /// - returns: the constructed reason.
 private func reasonForError(errnoCode: Int32, reason: String) -> String {
     if let errorDescC = strerror(errnoCode) {
