@@ -58,8 +58,8 @@ public enum SocketOption: ChannelOption {
     /// Create a new `SocketOption`.
     ///
     /// - parameters:
-    ///       - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
-    ///       - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
+    ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
+    ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
     public init(level: SocketOptionLevel, name: SocketOptionName) {
         self = .const((level, name))
     }

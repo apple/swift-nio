@@ -18,22 +18,22 @@ public protocol ChannelOutboundInvoker {
     /// Register on an `EventLoop` and so have all its IO handled.
     ///
     /// - parameters:
-    ///       - promise: the `EventLoopPromise` that will be notified once the operation completes,
-    ///                  or `nil` if not interested in the outcome of the operation.
+    ///     - promise: the `EventLoopPromise` that will be notified once the operation completes,
+    ///                or `nil` if not interested in the outcome of the operation.
     func register(promise: EventLoopPromise<Void>?)
 
     /// Bind to a `SocketAddress`.
     /// - parameters:
-    ///       - to: the `SocketAddress` to which we should bind the `Channel`.
-    ///       - promise: the `EventLoopPromise` that will be notified once the operation completes,
-    ///                  or `nil` if not interested in the outcome of the operation.
+    ///     - to: the `SocketAddress` to which we should bind the `Channel`.
+    ///     - promise: the `EventLoopPromise` that will be notified once the operation completes,
+    ///                or `nil` if not interested in the outcome of the operation.
     func bind(to: SocketAddress, promise: EventLoopPromise<Void>?)
 
     /// Connect to a `SocketAddress`.
     /// - parameters:
-    ///       - to: the `SocketAddress` to which we should connect the `Channel`.
-    ///       - promise: the `EventLoopPromise` that will be notified once the operation completes,
-    ///                  or `nil` if not interested in the outcome of the operation.
+    ///     - to: the `SocketAddress` to which we should connect the `Channel`.
+    ///     - promise: the `EventLoopPromise` that will be notified once the operation completes,
+    ///                or `nil` if not interested in the outcome of the operation.
     func connect(to: SocketAddress, promise: EventLoopPromise<Void>?)
 
     /// Write data to the remote peer.
@@ -42,9 +42,9 @@ public protocol ChannelOutboundInvoker {
     /// Calling `write` multiple times and then `flush` may allow the `Channel` to `write` multiple data objects to the remote peer with one syscall.
     ///
     /// - parameters:
-    ///       - data: the data to write
-    ///       - promise: the `EventLoopPromise` that will be notified once the operation completes,
-    ///                  or `nil` if not interested in the outcome of the operation.
+    ///     - data: the data to write
+    ///     - promise: the `EventLoopPromise` that will be notified once the operation completes,
+    ///                or `nil` if not interested in the outcome of the operation.
     func write(_ data: NIOAny, promise: EventLoopPromise<Void>?)
 
     /// Flush data that was previously written via `write` to the remote peer.
@@ -53,9 +53,9 @@ public protocol ChannelOutboundInvoker {
     /// Shortcut for calling `write` and `flush`.
     ///
     /// - parameters:
-    ///       - data: the data to write
-    ///       - promise: the `EventLoopPromise` that will be notified once the `write` operation completes,
-    ///                  or `nil` if not interested in the outcome of the operation.
+    ///     - data: the data to write
+    ///     - promise: the `EventLoopPromise` that will be notified once the `write` operation completes,
+    ///                or `nil` if not interested in the outcome of the operation.
     func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?)
 
     /// Signal that we want to read from the `Channel` once there is data ready.
@@ -68,16 +68,16 @@ public protocol ChannelOutboundInvoker {
     /// Close the `Channel` and so the connection if one exists.
     ///
     /// - parameters:
-    ///       - mode: the `CloseMode` that is used
-    ///       - promise: the `EventLoopPromise` that will be notified once the operation completes,
-    ///                  or `nil` if not interested in the outcome of the operation.
+    ///     - mode: the `CloseMode` that is used
+    ///     - promise: the `EventLoopPromise` that will be notified once the operation completes,
+    ///                or `nil` if not interested in the outcome of the operation.
     func close(mode: CloseMode, promise: EventLoopPromise<Void>?)
 
     /// Trigger a custom user outbound event which will flow through the `ChannelPipeline`.
     ///
     /// - parameters:
-    ///       - promise: the `EventLoopPromise` that will be notified once the operation completes,
-    ///                  or `nil` if not interested in the outcome of the operation.
+    ///     - promise: the `EventLoopPromise` that will be notified once the operation completes,
+    ///                or `nil` if not interested in the outcome of the operation.
     func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?)
 
     /// The `EventLoop` which is used by this `ChannelOutboundInvoker` for execution.
@@ -101,7 +101,7 @@ extension ChannelOutboundInvoker {
 
     /// Bind to a `SocketAddress`.
     /// - parameters:
-    ///       - to: the `SocketAddress` to which we should bind the `Channel`.
+    ///     - to: the `SocketAddress` to which we should bind the `Channel`.
     /// - returns: the future which will be notified once the operation completes.
     public func bind(to address: SocketAddress, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
         let promise = makePromise(file: file, line: line)
@@ -111,7 +111,7 @@ extension ChannelOutboundInvoker {
 
     /// Connect to a `SocketAddress`.
     /// - parameters:
-    ///       - to: the `SocketAddress` to which we should connect the `Channel`.
+    ///     - to: the `SocketAddress` to which we should connect the `Channel`.
     /// - returns: the future which will be notified once the operation completes.
     public func connect(to address: SocketAddress, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
         let promise = makePromise(file: file, line: line)
@@ -125,7 +125,7 @@ extension ChannelOutboundInvoker {
     /// Calling `write` multiple times and then `flush` may allow the `Channel` to `write` multiple data objects to the remote peer with one syscall.
     ///
     /// - parameters:
-    ///       - data: the data to write
+    ///     - data: the data to write
     /// - returns: the future which will be notified once the operation completes.
     public func write(_ data: NIOAny, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
         let promise = makePromise(file: file, line: line)
@@ -136,7 +136,7 @@ extension ChannelOutboundInvoker {
     /// Shortcut for calling `write` and `flush`.
     ///
     /// - parameters:
-    ///       - data: the data to write
+    ///     - data: the data to write
     /// - returns: the future which will be notified once the `write` operation completes.
     public func writeAndFlush(_ data: NIOAny, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
         let promise = makePromise(file: file, line: line)
@@ -147,7 +147,7 @@ extension ChannelOutboundInvoker {
     /// Close the `Channel` and so the connection if one exists.
     ///
     /// - parameters:
-    ///       - mode: the `CloseMode` that is used
+    ///     - mode: the `CloseMode` that is used
     /// - returns: the future which will be notified once the operation completes.
     public func close(mode: CloseMode = .all, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
         let promise = makePromise(file: file, line: line)
@@ -158,7 +158,7 @@ extension ChannelOutboundInvoker {
     /// Trigger a custom user outbound event which will flow through the `ChannelPipeline`.
     ///
     /// - parameters:
-    ///       - event: the event itself.
+    ///     - event: the event itself.
     /// - returns: the future which will be notified once the operation completes.
     public func triggerUserOutboundEvent(_ event: Any, file: StaticString = #file, line: UInt = #line) -> EventLoopFuture<Void> {
         let promise = makePromise(file: file, line: line)
@@ -195,7 +195,7 @@ public protocol ChannelInboundInvoker {
     /// Called once there is some data read for a `Channel` that needs processing.
     ///
     /// - parameters:
-    ///       - data: the data that was read and is ready to be processed.
+    ///     - data: the data that was read and is ready to be processed.
     func fireChannelRead(_ data: NIOAny)
 
     /// Called once there is no more data to read immediately on a `Channel`. Any new data received will be handled later.
@@ -217,13 +217,13 @@ public protocol ChannelInboundInvoker {
     /// the `EventLoopFuture` or `EventLoopPromise` will be notified.
     ///
     /// - parameters:
-    ///       - error: the error we encountered.
+    ///     - error: the error we encountered.
     func fireErrorCaught(_ error: Error)
 
     /// Trigger a custom user inbound event which will flow through the `ChannelPipeline`.
     ///
     /// - parameters:
-    ///       - event: the event itself.
+    ///     - event: the event itself.
     func fireUserInboundEventTriggered(_ event: Any)
 }
 
