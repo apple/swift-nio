@@ -41,7 +41,6 @@ needs to be listed here.
 - Jason Toffaletti <toffaletti@gmail.com>
 - Jim Dovey <jimdovey@mac.com>
 - Johannes Weiss <johannesweiss@apple.com>
-- Johannes Weiß <johannesweiss@apple.com>
 - John Connolly <connoljo2@gmail.com>
 - Jovan Milenkovic <jovan.milenkovic@htecgroup.com>
 - JovanMilenkovic <jovanmilenkovic@live.com>
