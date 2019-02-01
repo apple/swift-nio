@@ -219,7 +219,8 @@ public func swiftMain() -> Int {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true,
+                                                             withErrorHandling: false).flatMap {
                     channel.pipeline.add(handler: SimpleHTTPServer())
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
