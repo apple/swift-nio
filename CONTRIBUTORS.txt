@@ -81,7 +81,6 @@ needs to be listed here.
 - Wilson Ding <hello@wilsonding.com>
 - fadi-botros <botros_fadi@yahoo.com>
 - sun_ <sunlubo.sun@gmail.com>
-- tomer doron <tomer@apple.com>
 
 **Updating this list**
 
