@@ -55,13 +55,12 @@ public extension ChannelPipeline {
     ///         completion handler. See the documentation on `HTTPServerUpgradeHandler` for more
     ///         details.
     ///     - errorHandling: Whether to provide assistance handling protocol errors (e.g.
-    ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `false` for
-    ///         backward-compatibility reasons.
+    ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     func configureHTTPServerPipeline(first: Bool = false,
                                      withPipeliningAssistance pipelining: Bool = true,
                                      withServerUpgrade upgrade: HTTPUpgradeConfiguration? = nil,
-                                     withErrorHandling errorHandling: Bool = false) -> EventLoopFuture<Void> {
+                                     withErrorHandling errorHandling: Bool = true) -> EventLoopFuture<Void> {
         let responseEncoder = HTTPResponseEncoder()
         let requestDecoder = HTTPRequestDecoder(leftOverBytesStrategy: upgrade == nil ? .dropBytes : .forwardBytes)
 
