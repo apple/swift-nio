@@ -76,7 +76,6 @@ needs to be listed here.
 - Tanner <me@tanner.xyz>
 - Tiago Martinho <martinho@thoughtworks.com>
 - Tibor Bödecs <mail.tib@gmail.com>
-- Tim <0xtimc@gmail.com>
 - Tim Condon <0xtimc@gmail.com>
 - Tim Kientzle <tkientzle@apple.com>
 - Tomer Doron <tomerd@apple.com>
