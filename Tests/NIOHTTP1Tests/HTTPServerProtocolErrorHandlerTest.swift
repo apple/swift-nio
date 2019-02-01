@@ -34,7 +34,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.closeFuture.wait())
 
         // We expect exactly one ByteBuffer in the output.
-        guard case .some(.byteBuffer(var written)) = channel.readOutbound() else {
+        guard var written = channel.readOutbound(as: ByteBuffer.self) else {
             XCTFail("No writes")
             return
         }
@@ -113,7 +113,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
 
         }
         let channel = EmbeddedChannel()
-        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).then {
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap {
             channel.pipeline.add(handler: DelayWriteHandler())
         }.wait())
 
@@ -127,7 +127,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.closeFuture.wait())
 
         // We expect exactly one ByteBuffer in the output.
-        guard case .some(.byteBuffer(var written)) = channel.readOutbound() else {
+        guard var written = channel.readOutbound(as: ByteBuffer.self) else {
             XCTFail("No writes")
             return
         }

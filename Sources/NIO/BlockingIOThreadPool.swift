@@ -159,7 +159,7 @@ public final class BlockingIOThreadPool {
                 // This should never happen
                 fatalError("start() called while in shuttingDown")
             case .stopped:
-                self.state = .running(CircularBuffer(initialRingCapacity: 16))
+                self.state = .running(CircularBuffer(initialCapacity: 16))
             }
         }
         self.queues.enumerated().forEach { idAndQueue in
@@ -193,13 +193,13 @@ public extension BlockingIOThreadPool {
         let promise = eventLoop.makePromise(of: T.self)
         self.submit { shouldRun in
             guard case shouldRun = BlockingIOThreadPool.WorkItemState.active else {
-                promise.fail(error: ChannelError.ioOnClosedChannel)
+                promise.fail(ChannelError.ioOnClosedChannel)
                 return
             }
             do {
-                try promise.succeed(result: body())
+                try promise.succeed(body())
             } catch {
-                promise.fail(error: error)
+                promise.fail(error)
             }
         }
         return promise.futureResult

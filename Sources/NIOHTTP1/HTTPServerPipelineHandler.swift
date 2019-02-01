@@ -148,7 +148,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
     /// The buffered HTTP requests that are not going to be addressed yet. In general clients
     /// don't pipeline, so this initially allocates no space for data at all. Clients that
     /// do pipeline will cause dynamic resizing of the buffer, which is generally acceptable.
-    private var eventBuffer = CircularBuffer<BufferedEvent>(initialRingCapacity: 0)
+    private var eventBuffer = CircularBuffer<BufferedEvent>(initialCapacity: 0)
 
     enum NextExpectedMessageType {
         case head
@@ -313,7 +313,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler {
                 // we just received the .end that we're missing so we can fall through to closing the connection
                 fallthrough
             case .quiescingLastRequestEndReceived:
-                ctx.write(data).then {
+                ctx.write(data).flatMap {
                     ctx.close()
                 }.cascade(promise: promise)
             case .acceptingEvents, .quiescingWaitingForRequestEnd:

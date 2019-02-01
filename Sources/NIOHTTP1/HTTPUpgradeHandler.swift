@@ -14,15 +14,15 @@
 
 import NIO
 
-/// Errors that may be raised by the `HTTPProtocolUpgrader`.
-public enum HTTPUpgradeErrors: Error {
+/// Errors that may be raised by the `HTTPServerProtocolUpgrader`.
+public enum HTTPServerUpgradeErrors: Error {
     case invalidHTTPOrdering
 }
 
-/// User events that may be fired by the `HTTPProtocolUpgrader`.
-public enum HTTPUpgradeEvents {
+/// User events that may be fired by the `HTTPServerProtocolUpgrader`.
+public enum HTTPServerUpgradeEvents {
     /// Fired when HTTP upgrade has completed and the
-    /// `HTTPProtocolUpgrader` is about to remove itself from the
+    /// `HTTPServerProtocolUpgrader` is about to remove itself from the
     /// `ChannelPipeline`.
     case upgradeComplete(toProtocol: String, upgradeRequest: HTTPRequestHead)
 }
@@ -30,7 +30,7 @@ public enum HTTPUpgradeEvents {
 
 /// An object that implements `ProtocolUpgrader` knows how to handle HTTP upgrade to
 /// a protocol.
-public protocol HTTPProtocolUpgrader {
+public protocol HTTPServerProtocolUpgrader {
     /// The protocol this upgrader knows how to support.
     var supportedProtocol: String { get }
 
@@ -64,7 +64,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     public typealias InboundOut = HTTPServerRequestPart
     public typealias OutboundOut = HTTPServerResponsePart
 
-    private let upgraders: [String: HTTPProtocolUpgrader]
+    private let upgraders: [String: HTTPServerProtocolUpgrader]
     private let upgradeCompletionHandler: (ChannelHandlerContext) -> Void
 
     private let httpEncoder: HTTPResponseEncoder?
@@ -79,7 +79,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
 
     /// Create a `HTTPServerUpgradeHandler`.
     ///
-    /// - Parameter upgraders: All `HTTPProtocolUpgrader` objects that this pipeline will be able
+    /// - Parameter upgraders: All `HTTPServerProtocolUpgrader` objects that this pipeline will be able
     ///     to use to handle HTTP upgrade.
     /// - Parameter httpEncoder: The `HTTPResponseEncoder` encoding responses from this handler and which will
     ///     be removed from the pipeline once the upgrade response is sent. This is used to ensure
@@ -88,8 +88,8 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
     ///     this should include the `HTTPDecoder`, but should also include any other handler that cannot tolerate
     ///     receiving non-HTTP data.
     /// - Parameter upgradeCompletionHandler: A block that will be fired when HTTP upgrade is complete.
-    public init(upgraders: [HTTPProtocolUpgrader], httpEncoder: HTTPResponseEncoder, extraHTTPHandlers: [ChannelHandler], upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) {
-        var upgraderMap = [String: HTTPProtocolUpgrader]()
+    public init(upgraders: [HTTPServerProtocolUpgrader], httpEncoder: HTTPResponseEncoder, extraHTTPHandlers: [ChannelHandler], upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) {
+        var upgraderMap = [String: HTTPServerProtocolUpgrader]()
         for upgrader in upgraders {
             upgraderMap[upgrader.supportedProtocol.lowercased()] = upgrader
         }
@@ -111,7 +111,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
         if let upgrade = self.upgrade {
             switch requestPart {
             case .head:
-                ctx.fireErrorCaught(HTTPUpgradeErrors.invalidHTTPOrdering)
+                ctx.fireErrorCaught(HTTPServerUpgradeErrors.invalidHTTPOrdering)
                 notUpgrading(ctx: ctx, data: data)
                 return
             case .body:
@@ -129,7 +129,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
             // by the time the body comes in we should be out of the pipeline. That means that if we don't think we're
             // upgrading, the only thing we should see is a request head. Anything else in an error.
             guard case .head(let request) = requestPart else {
-                ctx.fireErrorCaught(HTTPUpgradeErrors.invalidHTTPOrdering)
+                ctx.fireErrorCaught(HTTPServerUpgradeErrors.invalidHTTPOrdering)
                 notUpgrading(ctx: ctx, data: data)
                 return
             }
@@ -185,16 +185,16 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
                 // internal handler, then call the user code, and then finally when the user code is done we do
                 // our final cleanup steps, namely we replay the received data we buffered in the meantime and
                 // then remove ourselves from the pipeline.
-                self.removeExtraHandlers(ctx: ctx).then {
+                self.removeExtraHandlers(ctx: ctx).flatMap {
                     self.sendUpgradeResponse(ctx: ctx, upgradeRequest: request, responseHeaders: responseHeaders)
-                }.then {
+                }.flatMap {
                     self.removeHandler(ctx: ctx, handler: self.httpEncoder)
                 }.map { (_: Bool) in
                     self.upgradeCompletionHandler(ctx)
-                }.then {
+                }.flatMap {
                     upgrader.upgrade(ctx: ctx, upgradeRequest: request)
                 }.map {
-                    ctx.fireUserInboundEventTriggered(HTTPUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request))
+                    ctx.fireUserInboundEventTriggered(HTTPServerUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request))
                         
                     self.upgrade = nil
                         
@@ -239,14 +239,14 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
         if let handler = handler {
             return ctx.pipeline.remove(handler: handler)
         } else {
-            return ctx.eventLoop.makeSucceededFuture(result: true)
+            return ctx.eventLoop.makeSucceededFuture(true)
         }
     }
 
     /// Removes any extra HTTP-related handlers from the channel pipeline.
     private func removeExtraHandlers(ctx: ChannelHandlerContext) -> EventLoopFuture<Void> {
         guard self.extraHTTPHandlers.count > 0 else {
-            return ctx.eventLoop.makeSucceededFuture(result: ())
+            return ctx.eventLoop.makeSucceededFuture(())
         }
 
         return EventLoopFuture<Void>.andAll(self.extraHTTPHandlers.map { ctx.pipeline.remove(handler: $0).map { (_: Bool) in () }},

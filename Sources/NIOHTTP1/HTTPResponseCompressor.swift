@@ -78,7 +78,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
     private var algorithm: CompressionAlgorithm?
 
     // A queue of accept headers.
-    private var acceptQueue = CircularBuffer<[String]>(initialRingCapacity: 8)
+    private var acceptQueue = CircularBuffer<[String]>(initialCapacity: 8)
 
     private var pendingResponse: PartialHTTPResponse!
     private var pendingWritePromise: EventLoopPromise<Void>!
@@ -95,7 +95,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
     }
 
     public func handlerRemoved(ctx: ChannelHandlerContext) {
-        pendingWritePromise?.fail(error: CompressionError.uncompressedWritesPending)
+        pendingWritePromise?.fail(CompressionError.uncompressedWritesPending)
         if algorithm != nil {
             deinitializeEncoder()
             algorithm = nil
@@ -238,7 +238,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
         // If we still have the pending promise, we never emitted a write. Fail the promise,
         // as anything that is listening for its data somehow lost it.
         if let stillPendingPromise = pendingPromise {
-            stillPendingPromise.fail(error: CompressionError.noDataToWrite)
+            stillPendingPromise.fail(CompressionError.noDataToWrite)
         }
 
         // Reset the pending promise.

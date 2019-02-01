@@ -102,7 +102,7 @@ internal enum OverallWriteResult {
 ///  - `didWrite` when a number of bytes have been written.
 ///  - `failAll` if for some reason all outstanding writes need to be discarded and the corresponding `EventLoopPromise` needs to be failed.
 private struct PendingStreamWritesState {
-    private var pendingWrites = MarkedCircularBuffer<PendingStreamWrite>(initialRingCapacity: 16)
+    private var pendingWrites = MarkedCircularBuffer<PendingStreamWrite>(initialCapacity: 16)
     public private(set) var bytes: Int64 = 0
 
     public var flushedChunks: Int {
@@ -355,7 +355,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
             channelWritabilityFlag.store(true)
         }
 
-        promise?.succeed(result: ())
+        promise?.succeed(())
         return result
     }
 
@@ -416,7 +416,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
             self.isOpen = false
         }
 
-        self.state.removeAll()?.fail(error: error)
+        self.state.removeAll()?.fail(error)
 
         assert(self.state.isEmpty)
     }

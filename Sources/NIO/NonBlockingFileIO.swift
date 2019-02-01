@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import NIOConcurrencyHelpers
-import Dispatch
 
 /// `NonBlockingFileIO` is a helper that allows you to read files without blocking the calling thread.
 ///
@@ -87,7 +86,7 @@ public struct NonBlockingFileIO {
                                     eventLoop: eventLoop,
                                     chunkHandler: chunkHandler)
         } catch {
-            return eventLoop.makeFailedFuture(error: error)
+            return eventLoop.makeFailedFuture(error)
         }
     }
 
@@ -124,14 +123,14 @@ public struct NonBlockingFileIO {
             if remainingReads > 1 || (remainingReads == 1 && lastReadSize > 0) {
                 let readSize = remainingReads > 1 ? chunkSize : lastReadSize
                 assert(readSize > 0)
-                return self.read(fileHandle: fileHandle, byteCount: readSize, allocator: allocator, eventLoop: eventLoop).then { buffer in
-                    chunkHandler(buffer).then { () -> EventLoopFuture<Void> in
+                return self.read(fileHandle: fileHandle, byteCount: readSize, allocator: allocator, eventLoop: eventLoop).flatMap { buffer in
+                    chunkHandler(buffer).flatMap { () -> EventLoopFuture<Void> in
                         eventLoop.assertInEventLoop()
                         return _read(remainingReads: remainingReads - 1)
                     }
                 }
             } else {
-                return eventLoop.makeSucceededFuture(result: ())
+                return eventLoop.makeSucceededFuture(())
             }
         }
 
@@ -162,7 +161,7 @@ public struct NonBlockingFileIO {
                              allocator: allocator,
                              eventLoop: eventLoop)
         } catch {
-            return eventLoop.makeFailedFuture(error: error)
+            return eventLoop.makeFailedFuture(error)
         }
     }
 
@@ -182,7 +181,7 @@ public struct NonBlockingFileIO {
     /// - returns: An `EventLoopFuture` which delivers a `ByteBuffer` if the read was successful or a failure on error.
     public func read(fileHandle: FileHandle, byteCount: Int, allocator: ByteBufferAllocator, eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
         guard byteCount > 0 else {
-            return eventLoop.makeSucceededFuture(result: allocator.buffer(capacity: 0))
+            return eventLoop.makeSucceededFuture(allocator.buffer(capacity: 0))
         }
 
         var buf = allocator.buffer(capacity: byteCount)
@@ -227,7 +226,7 @@ public struct NonBlockingFileIO {
         var byteCount = buffer.readableBytes
 
         guard byteCount > 0 else {
-            return eventLoop.makeSucceededFuture(result: ())
+            return eventLoop.makeSucceededFuture(())
         }
 
         return self.threadPool.runIfActive(eventLoop: eventLoop) {

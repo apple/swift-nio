@@ -130,7 +130,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
 private struct PendingDatagramWritesState {
     fileprivate typealias DatagramWritePromiseFiller = (EventLoopPromise<Void>, Error?)
 
-    private var pendingWrites = MarkedCircularBuffer<PendingDatagramWrite>(initialRingCapacity: 16)
+    private var pendingWrites = MarkedCircularBuffer<PendingDatagramWrite>(initialCapacity: 16)
     private var chunks: Int = 0
     public private(set) var bytes: Int64 = 0
 
@@ -289,7 +289,7 @@ private struct PendingDatagramWritesState {
             w.promise.map { promises.append($0) }
         }
 
-        promises.forEach { $0.fail(error: error) }
+        promises.forEach { $0.fail(error) }
     }
 
     /// Returns the best mechanism to write pending data at the current point in time.
@@ -528,9 +528,9 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     private func fulfillPromise(_ promise: PendingDatagramWritesState.DatagramWritePromiseFiller?) {
         if let promise = promise, let error = promise.1 {
-            promise.0.fail(error: error)
+            promise.0.fail(error)
         } else if let promise = promise {
-            promise.0.succeed(result: ())
+            promise.0.succeed(())
         }
     }
 

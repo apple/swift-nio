@@ -175,15 +175,15 @@ public final class HTTPResponseDecoder: HTTPDecoder<HTTPClientResponsePart>, Cha
     /// Because we have to handle pipelining, this is a FIFO buffer instead of a single
     /// state variable. However, most users will never pipeline, so we initialize the buffer
     /// to a base size of 1 to avoid allocating too much memory in the average case.
-    private var methods: CircularBuffer<HTTPMethod> = CircularBuffer(initialRingCapacity: 1)
+    private var methods: CircularBuffer<HTTPMethod> = CircularBuffer(initialCapacity: 1)
 
     /// The method of the request the next response will be responding to.
     fileprivate override func popRequestMethod() -> HTTPMethod? {
         return methods.removeFirst()
     }
 
-    public convenience init() {
-        self.init(type: HTTPClientResponsePart.self, leftOverBytesStrategy: .dropBytes)
+    public convenience init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) {
+        self.init(type: HTTPClientResponsePart.self, leftOverBytesStrategy: leftOverBytesStrategy)
     }
 
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {

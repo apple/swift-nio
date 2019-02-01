@@ -48,7 +48,7 @@ let bootstrap = ServerBootstrap(group: group)
     // Set the handlers that are appled to the accepted Channels
     .childChannelInitializer { channel in
         // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
-        channel.pipeline.add(handler: BackPressureHandler()).then { v in
+        channel.pipeline.add(handler: BackPressureHandler()).flatMap { v in
             channel.pipeline.add(handler: EchoHandler())
         }
     }
@@ -65,7 +65,7 @@ defer {
 // First argument is the program path
 let arguments = CommandLine.arguments
 let arg1 = arguments.dropFirst().first
-let arg2 = arguments.dropFirst().dropFirst().first
+let arg2 = arguments.dropFirst(2).first
 
 let defaultHost = "::1"
 let defaultPort = 9999
