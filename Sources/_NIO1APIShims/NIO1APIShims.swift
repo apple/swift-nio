@@ -135,6 +135,16 @@ extension EventLoopFuture {
                                 line: UInt = #line) -> EventLoopFuture<(Value, OtherValue)> {
         return self.and(value: result, file: file, line: line)
     }
+
+    @available(*, deprecated, renamed: "cascade(to:)")
+    public func cascade(promise: EventLoopPromise<Value>?) {
+        self.cascade(to: promise)
+    }
+
+    @available(*, deprecated, renamed: "cascadeFailure(to:)")
+    public func cascadeFailure<NewValue>(promise: EventLoopPromise<NewValue>?) {
+        self.cascadeFailure(to: promise)
+    }
 }
 
 extension EventLoopPromise {

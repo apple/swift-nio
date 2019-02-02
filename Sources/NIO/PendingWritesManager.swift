@@ -196,7 +196,7 @@ private struct PendingStreamWritesState {
                     /* we wrote at least the whole head item, so drop it and succeed the promise */
                     if let promise = self.fullyWrittenFirst() {
                         if let p = promise0 {
-                            p.futureResult.cascade(promise: promise)
+                            p.futureResult.cascade(to: promise)
                         } else {
                             promise0 = promise
                         }
@@ -230,7 +230,7 @@ private struct PendingStreamWritesState {
         while !self.pendingWrites.isEmpty {
             if let p = self.fullyWrittenFirst() {
                 if let promise = promise0 {
-                    promise.futureResult.cascade(promise: p)
+                    promise.futureResult.cascade(to: p)
                 } else {
                     promise0 = p
                 }

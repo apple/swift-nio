@@ -2475,7 +2475,7 @@ public class ChannelTests: XCTestCase {
             func channelActive(ctx: ChannelHandlerContext) {
                 var buffer = ctx.channel.allocator.buffer(capacity: 1)
                 buffer.write(staticString: "X")
-                ctx.channel.writeAndFlush(self.wrapOutboundOut(buffer)).map { ctx.channel }.cascade(promise: self.channelAvailablePromise)
+                ctx.channel.writeAndFlush(self.wrapOutboundOut(buffer)).map { ctx.channel }.cascade(to: self.channelAvailablePromise)
             }
         }
 

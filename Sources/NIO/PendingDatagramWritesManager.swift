@@ -239,7 +239,7 @@ private struct PendingDatagramWritesState {
 
             switch (promiseFiller, thisWriteFiller) {
             case (.some(let all), .some(let this)):
-                all.0.futureResult.cascade(promise: this.0)
+                all.0.futureResult.cascade(to: this.0)
             case (.none, .some(let this)):
                 promiseFiller = this
             case (.some, .none),

@@ -168,7 +168,7 @@ final class RepeatedRequests: ChannelInboundHandler {
         let reqPart = self.unwrapInboundIn(data)
         if case .end(nil) = reqPart {
             if self.remainingNumberOfRequests <= 0 {
-                ctx.channel.close().map { self.doneRequests }.cascade(promise: self.isDonePromise)
+                ctx.channel.close().map { self.doneRequests }.cascade(to: self.isDonePromise)
             } else {
                 self.doneRequests += 1
                 self.remainingNumberOfRequests -= 1
