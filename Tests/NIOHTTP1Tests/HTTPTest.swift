@@ -113,7 +113,7 @@ class HTTPTest: XCTestCase {
                 bodyData = nil
             }
             channel.pipeline.flush()
-            XCTAssertNoThrow(try EventLoopFuture<Void>.andAll(writeFutures, eventLoop: channel.eventLoop).wait())
+            XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(writeFutures, on: channel.eventLoop).wait())
             XCTAssertEqual(2 * expecteds.count, step)
 
             if body != nil {
@@ -149,7 +149,7 @@ class HTTPTest: XCTestCase {
                     try chan.writeInbound(buf)
                 })
             }
-            return EventLoopFuture<Void>.andAll(writeFutures, eventLoop: chan.eventLoop)
+            return EventLoopFuture.andAllSucceed(writeFutures, on: chan.eventLoop)
         })
 
         XCTAssertEqual(bd1, bd2)

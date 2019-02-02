@@ -696,7 +696,7 @@ internal extension Selector where R == NIORegistration {
             return eventLoop.makeSucceededFuture(())
         }
 
-        return EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
+        return .andAllSucceed(futures, on: eventLoop)
     }
 }
 

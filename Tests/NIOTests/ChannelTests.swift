@@ -100,9 +100,9 @@ public class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try clientChannel.close().wait())
 
         // Wait for the close promises. These fire last.
-        XCTAssertNoThrow(try EventLoopFuture<Void>.andAll([clientChannel.closeFuture,
+        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed([clientChannel.closeFuture,
                                                            serverAcceptedChannel.closeFuture],
-                                                          eventLoop: group.next()).map {
+                                                           on: group.next()).map {
             XCTAssertEqual(clientLifecycleHandler.currentState, .unregistered)
             XCTAssertEqual(serverLifecycleHandler.currentState, .unregistered)
             XCTAssertEqual(clientLifecycleHandler.stateHistory, [.unregistered, .registered, .active, .inactive, .unregistered])
