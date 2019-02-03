@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// An configuration option that can be set on a `Channel` to configure different behaviour.
+/// A configuration option that can be set on a `Channel` to configure different behaviour.
 public protocol ChannelOption {
     associatedtype AssociatedValueType
     associatedtype OptionType
@@ -45,7 +45,7 @@ public typealias SocketOptionName = Int32
     public typealias SocketOptionValue = Int32
 #endif
 
-/// `SocketOption` allows to specify configuration settings that are directly applied to the underlying socket file descriptor.
+/// `SocketOption` allows users to specify configuration settings that are directly applied to the underlying socket file descriptor.
 ///
 /// Valid options are typically found in the various man pages like `man 4 tcp`.
 public enum SocketOption: ChannelOption {
@@ -80,7 +80,7 @@ public enum AllocatorOption: ChannelOption {
     case const(())
 }
 
-/// `RecvAllocatorOption` allows to specify the `RecvByteBufferAllocator` to use.
+/// `RecvAllocatorOption` allows users to specify the `RecvByteBufferAllocator` to use.
 public enum RecvAllocatorOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = RecvByteBufferAllocator
@@ -88,7 +88,7 @@ public enum RecvAllocatorOption: ChannelOption {
     case const(())
 }
 
-/// `AutoReadOption` allows to configure if a `Channel` should automatically call `Channel.read` again once all data was read from the transport or
+/// `AutoReadOption` allows users to configure if a `Channel` should automatically call `Channel.read` again once all data was read from the transport or
 /// if the user is responsible to call `Channel.read` manually.
 public enum AutoReadOption: ChannelOption {
     public typealias AssociatedValueType = ()
@@ -107,7 +107,7 @@ public enum WriteSpinOption: ChannelOption {
     case const(())
 }
 
-/// `MaxMessagesPerReadOption` allows to configure the maximum number of read calls to the underlying transport are performed before wait again until
+/// `MaxMessagesPerReadOption` allows users to configure the maximum number of read calls to the underlying transport are performed before wait again until
 /// there is more to read and be notified.
 public enum MaxMessagesPerReadOption: ChannelOption {
     public typealias AssociatedValueType = ()
@@ -116,7 +116,7 @@ public enum MaxMessagesPerReadOption: ChannelOption {
     case const(())
 }
 
-/// `BacklogOption` allows to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
+/// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
 public enum BacklogOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = Int32
@@ -153,7 +153,7 @@ public struct WriteBufferWaterMark {
     }
 }
 
-/// `WriteBufferWaterMarkOption` allows to configure when a `Channel` should be marked as writable or not. Once the amount of bytes queued in a
+/// `WriteBufferWaterMarkOption` allows users to configure when a `Channel` should be marked as writable or not. Once the amount of bytes queued in a
 /// `Channel`s outbound buffer is larger than `WriteBufferWaterMark.high` the channel will be marked as non-writable and so
 /// `Channel.isWritable` will return `false`. Once we were able to write some data out of the outbound buffer and the amount of bytes queued
 /// falls below `WriteBufferWaterMark.low` the `Channel` will become writable again. Once this happens `Channel.writable` will return
@@ -165,7 +165,7 @@ public enum WriteBufferWaterMarkOption: ChannelOption {
     case const(())
 }
 
-/// `ConnectTimeoutOption` allows to configure the `TimeAmount` after which a connect will fail if it was not established in the meantime. May be
+/// `ConnectTimeoutOption` allows users to configure the `TimeAmount` after which a connect will fail if it was not established in the meantime. May be
 /// `nil`, in which case the connection attempt will never time out.
 public enum ConnectTimeoutOption: ChannelOption {
     public typealias AssociatedValueType = ()
