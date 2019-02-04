@@ -997,7 +997,21 @@ extension EventLoopFuture {
     }
 }
 
+// MARK: whenAll
+
 extension EventLoopFuture {
+    /// Returns a new `EventLoopFuture` that succeeds only if all of the provided futures succeed.
+    /// The new `EventLoopFuture` will contain all of the values fulfilled by the futures.
+    ///
+    /// The returned `EventLoopFuture` will fail as soon as any of the futures fails.
+    /// - Parameters:
+    ///     - futures: An array of homogenous `EventLoopFuture`s to wait on for fulfilled values.
+    ///     - on: The `EventLoop` on which the new `EventLoopFuture` callbacks will fire.
+    /// - Returns: A new `EventLoopFuture` with all of the values fulfilled by the provided futures.
+    public static func whenAllSucceed(_ futures: [EventLoopFuture<Value>], on eventLoop: EventLoop) -> EventLoopFuture<[Value]> {
+        return .reduce(into: [], futures, eventLoop: eventLoop) { (results, value) in results.append(value) }
+    }
+
     /// Returns a new `EventLoopFuture` that succeeds when all of the provided `EventLoopFuture`s complete.
     /// The new `EventLoopFuture` will contain an array of results, maintaining ordering for each of the `EventLoopFuture`s.
     ///
@@ -1005,10 +1019,12 @@ extension EventLoopFuture {
     ///
     /// If it is desired to flatten them into a single `EventLoopFuture` that fails on the first `EventLoopFuture` failure,
     /// use one of the `reduce` methods instead.
-    /// - Parameter futures: An array of homogenous `EventLoopFuture`s to gather results from.
+    /// - Parameters:
+    ///     - futures: An array of homogenous `EventLoopFuture`s to gather results from.
+    ///     - on: The `EventLoop` on which the new `EventLoopFuture` callbacks will fire.
     /// - Returns: A new `EventLoopFuture` with all the results of the provided futures.
     public static func whenAllComplete(_ futures: [EventLoopFuture<Value>],
-                                       eventLoop: EventLoop) -> EventLoopFuture<[Result<Value, Error>]> {
+                                       on eventLoop: EventLoop) -> EventLoopFuture<[Result<Value, Error>]> {
         let promise = eventLoop.makePromise(of: [Result<Value, Error>].self)
 
         if eventLoop.inEventLoop {
