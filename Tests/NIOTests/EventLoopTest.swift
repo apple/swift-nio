@@ -370,7 +370,7 @@ public class EventLoopTest : XCTestCase {
             }.flatMap {
                 // connecting here to stop epoll from throwing EPOLLHUP at us
                 channel.connect(to: serverChannel.localAddress!)
-            }.cascade(promise: connectPromise)
+            }.cascade(to: connectPromise)
         }.wait()
 
         // Wait for the connect to complete.

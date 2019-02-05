@@ -148,7 +148,7 @@ final class MulticastTest: XCTestCase {
         // If we receive a datagram, or the reader promise fails, we must fail the timeoutPromise.
         receivedMulticastDatagram.futureResult.map { (_: AddressedEnvelope<ByteBuffer>) in
             timeoutPromise.fail(ReceivedDatagramError())
-        }.cascadeFailure(promise: timeoutPromise)
+        }.cascadeFailure(to: timeoutPromise)
 
         var messageBuffer = sender.allocator.buffer(capacity: 24)
         messageBuffer.write(staticString: "hello, world!")

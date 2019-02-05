@@ -802,7 +802,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
         registerPromise.futureResult.whenFailure { (_: Error) in
             self.close(promise: nil)
         }
-        registerPromise.futureResult.cascadeFailure(promise: promise)
+        registerPromise.futureResult.cascadeFailure(to: promise)
 
         if self.lifecycleManager.isPreRegistered {
             // we expect kqueue/epoll registration to always succeed which is basically true, except for errors that

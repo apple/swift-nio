@@ -892,7 +892,7 @@ internal final class SelectableEventLoop: EventLoop {
         } else {
             let p = self.makePromise(of: Void.self)
             self.execute {
-                closeGently0().cascade(promise: p)
+                closeGently0().cascade(to: p)
             }
             return p.futureResult
         }

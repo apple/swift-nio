@@ -172,7 +172,7 @@ public func swiftMain() -> Int {
             let respPart = self.unwrapInboundIn(data)
             if case .end(nil) = respPart {
                 if self.remainingNumberOfRequests <= 0 {
-                    ctx.channel.close().map { self.numberOfRequests - self.remainingNumberOfRequests }.cascade(promise: self.isDonePromise)
+                    ctx.channel.close().map { self.numberOfRequests - self.remainingNumberOfRequests }.cascade(to: self.isDonePromise)
                 } else {
                     self.remainingNumberOfRequests -= 1
                     ctx.write(self.wrapOutboundOut(.head(RepeatedRequests.requestHead)), promise: nil)

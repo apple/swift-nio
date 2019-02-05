@@ -273,7 +273,7 @@ public struct EventLoopPromise<Value> {
 /// At the end of an `EventLoopFuture` chain, you can use `whenSuccess()` or `whenFailure()` to add an
 /// observer callback that will be invoked with the result or error at that point. (Note: If you ever
 /// find yourself invoking `promise.succeed()` from inside a `whenSuccess()` callback, you probably should
-/// use `flatMap()` or `cascade(promise:)` instead.)
+/// use `flatMap()` or `cascade(to:)` instead.)
 ///
 /// `EventLoopFuture` objects are typically obtained by:
 /// * Using `EventLoopFuture<Value>.async` or a similar wrapper function.
@@ -440,7 +440,7 @@ extension EventLoopFuture {
                         next._setValue(value: futureU.value!)
                     }
                 } else {
-                    futureU.cascade(promise: next)
+                    futureU.cascade(to: next)
                     return CallbackList()
                 }
             case .failure(let error):
@@ -557,7 +557,7 @@ extension EventLoopFuture {
                         next._setValue(value: t.value!)
                     }
                 } else {
-                    t.cascade(promise: next)
+                    t.cascade(to: next)
                     return CallbackList()
                 }
             }
@@ -736,14 +736,16 @@ extension EventLoopFuture {
     }
 }
 
-extension EventLoopFuture {
+// MARK: cascade
 
-    /// Fulfill the given `EventLoopPromise` with the results from this `EventLoopFuture`.
+extension EventLoopFuture {
+    /// Fulfills the given `EventLoopPromise` with the results from this `EventLoopFuture`.
     ///
     /// This is useful when allowing users to provide promises for you to fulfill, but
     /// when you are calling functions that return their own promises. They allow you to
-    /// tidy up your computational pipelines. For example:
+    /// tidy up your computational pipelines.
     ///
+    /// For example:
     /// ```
     /// doWork().flatMap {
     ///     doMoreWork($0)
@@ -753,37 +755,46 @@ extension EventLoopFuture {
     ///     maybeRecoverFromError($0)
     /// }.map {
     ///     transformData($0)
-    /// }.cascade(promise: userPromise)
+    /// }.cascade(to: userPromise)
     /// ```
     ///
-    /// - parameters:
-    ///     - promise: The `EventLoopPromise` to fulfill with the results of this future.
-    public func cascade(promise: EventLoopPromise<Value>?) {
+    /// - Parameter to: The `EventLoopPromise` to fulfill with the results of this future.
+    public func cascade(to promise: EventLoopPromise<Value>?) {
         guard let promise = promise else { return }
-        _whenCompleteWithValue { v in
-            switch v {
-            case .failure(let err):
-                promise.fail(err)
-            case .success(let value):
-                promise.succeed(value)
+        self.whenComplete { result in
+            switch result {
+            case let .success(value): promise.succeed(value)
+            case let .failure(error): promise.fail(error)
             }
         }
     }
 
-    /// Fulfill the given `EventLoopPromise` with the error result from this `EventLoopFuture`,
-    /// if one exists.
+    /// Fulfills the given `EventLoopPromise` only when this `EventLoopFuture` succeeds.
+    ///
+    /// If you are doing work that fulfills a type that doesn't match the expected `EventLoopPromise` value, add an
+    /// intermediate `map`.
+    ///
+    /// For example:
+    /// ```
+    /// let boolPromise = eventLoop.makePromise(of: Bool.self)
+    /// doWorkReturningInt().map({ $0 >= 0 }).cascade(to: boolPromise)
+    /// ```
+    ///
+    /// - Parameter to: The `EventLoopPromise` to fulfill when a successful result is available.
+    public func cascadeSuccess(to promise: EventLoopPromise<Value>?) {
+        guard let promise = promise else { return }
+        self.whenSuccess { promise.succeed($0) }
+    }
+
+    /// Fails the given `EventLoopPromise` with the error from this `EventLoopFuture` if encountered.
     ///
     /// This is an alternative variant of `cascade` that allows you to potentially return early failures in
-    /// error cases, while passing the user `EventLoopPromise` onwards. In general, however, `cascade` is
-    /// more broadly useful.
+    /// error cases, while passing the user `EventLoopPromise` onwards.
     ///
-    /// - parameters:
-    ///     - promise: The `EventLoopPromise` to fulfill with the results of this future.
-    public func cascadeFailure<NewValue>(promise: EventLoopPromise<NewValue>?) {
+    /// - Parameter to: The `EventLoopPromise` that should fail with the error of this `EventLoopFuture`.
+    public func cascadeFailure<NewValue>(to promise: EventLoopPromise<NewValue>?) {
         guard let promise = promise else { return }
-        self.whenFailure { err in
-            promise.fail(err)
-        }
+        self.whenFailure { promise.fail($0) }
     }
 }
 
@@ -1075,7 +1086,7 @@ public extension EventLoopFuture {
             return self
         }
         let hoppingPromise = target.makePromise(of: Value.self)
-        self.cascade(promise: hoppingPromise)
+        self.cascade(to: hoppingPromise)
         return hoppingPromise.futureResult
     }
 }

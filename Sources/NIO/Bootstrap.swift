@@ -517,7 +517,7 @@ public final class ClientBootstrap {
             }.flatMapError { error in
                 channel.close0(error: error, mode: .all, promise: nil)
                 return channel.eventLoop.makeFailedFuture(error)
-            }.cascade(promise: promise)
+            }.cascade(to: promise)
             return promise.futureResult
         }
 
@@ -729,7 +729,7 @@ public final class DatagramBootstrap {
 
             applier(channel)(key, value).map {
                 applyNext()
-            }.cascadeFailure(promise: applyPromise)
+            }.cascadeFailure(to: applyPromise)
         }
         applyNext()
 
