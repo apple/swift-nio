@@ -881,22 +881,6 @@ extension EventLoopFuture {
 
 extension EventLoopFuture {
     /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
-    ///
-    /// This extension is only available when you have a collection of `EventLoopFuture`s that do not provide
-    /// result data: that is, they are completion notifiers. In this case, you can wait for all of them. The
-    /// returned `EventLoopFuture` will fail as soon as any of the futures fails: otherwise, it will succeed
-    /// only when all of them do.
-    ///
-    /// - parameters:
-    ///     - futures: An array of `EventLoopFuture<Void>` to wait for.
-    ///     - eventLoop: The `EventLoop` on which the new `EventLoopFuture` callbacks will fire.
-    /// - returns: A new `EventLoopFuture`.
-    public static func andAll(_ futures: [EventLoopFuture<Void>], eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        let body = EventLoopFuture<Void>.reduce((), futures, eventLoop: eventLoop) { (_: (), _: ()) in }
-        return body
-    }
-
-    /// Returns a new `EventLoopFuture` that fires only when all the provided futures complete.
     /// The new `EventLoopFuture` contains the result of reducing the `initialResult` with the
     /// values of the `[EventLoopFuture<NewValue>]`.
     ///
@@ -997,9 +981,23 @@ extension EventLoopFuture {
     }
 }
 
-// MARK: whenAll
-
+// "fail fast" reduce
 extension EventLoopFuture {
+    /// Returns a new `EventLoopFuture` that succeeds only if all of the provided futures succeed.
+    ///
+    /// This method acts as a successful completion notifier - values fulfilled by each future are discarded.
+    ///
+    /// The returned `EventLoopFuture` fails as soon as any of the provided futures fail.
+    ///
+    /// If it is desired to always succeed, regardless of failures, use `andAllComplete` instead.
+    /// - Parameters:
+    ///     - futures: An array of homogenous `EventLoopFutures`s to wait for.
+    ///     - on: The `EventLoop` on which the new `EventLoopFuture` callbacks will execute on.
+    /// - Returns: A new `EventLoopFuture` that waits for the other futures to succeed.
+    public static func andAllSucceed(_ futures: [EventLoopFuture<Value>], on eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        return .reduce((), futures, eventLoop: eventLoop) { (_: (), _: Value) in }
+    }
+
     /// Returns a new `EventLoopFuture` that succeeds only if all of the provided futures succeed.
     /// The new `EventLoopFuture` will contain all of the values fulfilled by the futures.
     ///
@@ -1010,6 +1008,33 @@ extension EventLoopFuture {
     /// - Returns: A new `EventLoopFuture` with all of the values fulfilled by the provided futures.
     public static func whenAllSucceed(_ futures: [EventLoopFuture<Value>], on eventLoop: EventLoop) -> EventLoopFuture<[Value]> {
         return .reduce(into: [], futures, eventLoop: eventLoop) { (results, value) in results.append(value) }
+    }
+}
+
+// "fail slow" reduce
+extension EventLoopFuture {
+    /// Returns a new `EventLoopFuture` that succeeds when all of the provided `EventLoopFuture`s complete.
+    ///
+    /// The returned `EventLoopFuture` always succeeds, acting as a completion notification.
+    /// Values fulfilled by each future are discarded.
+    ///
+    /// If the results are needed, use `whenAllComplete` instead.
+    /// - Parameters:
+    ///     - futures: An array of homogenous `EventLoopFuture`s to wait for.
+    ///     - on: The `EventLoop` on which the new `EventLoopFuture` callbacks will execute on.
+    /// - Returns: A new `EventLoopFuture` that succeeds after all futures complete.
+    public static func andAllComplete(_ futures: [EventLoopFuture<Value>], on eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        let promise = eventLoop.makePromise(of: Void.self)
+
+        if eventLoop.inEventLoop {
+            _reduceCompletions0(promise, futures, eventLoop, onResult: { _, _ in })
+        } else {
+            eventLoop.execute {
+                _reduceCompletions0(promise, futures, eventLoop, onResult: { _, _ in })
+            }
+        }
+
+        return promise.futureResult
     }
 
     /// Returns a new `EventLoopFuture` that succeeds when all of the provided `EventLoopFuture`s complete.
@@ -1025,44 +1050,55 @@ extension EventLoopFuture {
     /// - Returns: A new `EventLoopFuture` with all the results of the provided futures.
     public static func whenAllComplete(_ futures: [EventLoopFuture<Value>],
                                        on eventLoop: EventLoop) -> EventLoopFuture<[Result<Value, Error>]> {
-        let promise = eventLoop.makePromise(of: [Result<Value, Error>].self)
+        let promise = eventLoop.makePromise(of: Void.self)
+
+        var results: [Result<Value, Error>] = .init(repeating: .failure(OperationPlaceholderError()), count: futures.count)
+        let callback = { (index: Int, result: Result<Value, Error>) in
+            results[index] = result
+        }
 
         if eventLoop.inEventLoop {
-            _whenAllComplete0(promise, futures, eventLoop: eventLoop)
+            _reduceCompletions0(promise, futures, eventLoop, onResult: callback)
         } else {
             eventLoop.execute {
-                _whenAllComplete0(promise, futures, eventLoop: eventLoop)
+                _reduceCompletions0(promise, futures, eventLoop, onResult: callback)
             }
         }
 
-        return promise.futureResult
+        return promise.futureResult.map {
+            // verify that all operations have been completed
+            assert(!results.contains(where: {
+                guard case let .failure(error) = $0 else { return false }
+                return error is OperationPlaceholderError
+            }))
+
+            return results
+        }
     }
 
-    private static func _whenAllComplete0<InputValue>(_ promise: EventLoopPromise<[Result<InputValue, Error>]>,
-                                                      _ futures: [EventLoopFuture<InputValue>],
-                                                      eventLoop: EventLoop) {
+    /// Loops through the futures array and attaches callbacks to execute `onResult` on the provided `EventLoop` when
+    /// they complete. The `onResult` will receive the index of the future that fulfilled the provided `Result`.
+    ///
+    /// Once all the futures have completed, the provided promise will succeed.
+    private static func _reduceCompletions0<InputValue>(_ promise: EventLoopPromise<Void>,
+                                                        _ futures: [EventLoopFuture<InputValue>],
+                                                        _ eventLoop: EventLoop,
+                                                        onResult: @escaping (Int, Result<InputValue, Error>) -> Void) {
         eventLoop.assertInEventLoop()
 
         var remainingCount = futures.count
-        var results: [Result<InputValue, Error>] = .init(repeating: .failure(OperationPlaceholderError()), count: futures.count)
 
         // loop through the futures to chain callbacks to execute on the initiating event loop and grab their index
-        // in the "futures" to store their result in the same location
+        // in the "futures" to pass their result to the caller
         for (index, future) in futures.enumerated() {
             future.hopTo(eventLoop: eventLoop)
                 .whenComplete { result in
-                    results[index] = result
+                    onResult(index, result)
                     remainingCount -= 1
 
                     guard remainingCount == 0 else { return }
 
-                    // verify that all operations have been completed
-                    assert(!results.contains(where: {
-                        guard case let .failure(error) = $0 else { return false }
-                        return error is OperationPlaceholderError
-                    }))
-
-                    promise.succeed(results)
+                    promise.succeed(())
                 }
         }
     }

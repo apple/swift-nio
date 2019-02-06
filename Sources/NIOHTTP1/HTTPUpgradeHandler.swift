@@ -249,7 +249,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler {
             return ctx.eventLoop.makeSucceededFuture(())
         }
 
-        return EventLoopFuture<Void>.andAll(self.extraHTTPHandlers.map { ctx.pipeline.remove(handler: $0).map { (_: Bool) in () }},
-                                            eventLoop: ctx.eventLoop)
+        return .andAllSucceed(self.extraHTTPHandlers.map { ctx.pipeline.remove(handler: $0).map { (_: Bool) in () }},
+                              on: ctx.eventLoop)
     }
 }

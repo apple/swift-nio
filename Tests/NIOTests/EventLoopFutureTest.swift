@@ -232,7 +232,7 @@ class EventLoopFutureTest : XCTestCase {
         let eventLoop = EmbeddedEventLoop()
         let futures: [EventLoopFuture<Void>] = []
 
-        let fN: EventLoopFuture<Void> = EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
+        let fN = EventLoopFuture.andAllSucceed(futures, on: eventLoop)
 
         XCTAssert(fN.isFulfilled)
     }
@@ -242,7 +242,7 @@ class EventLoopFutureTest : XCTestCase {
         let promises: [EventLoopPromise<Void>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
         let futures = promises.map { $0.futureResult }
 
-        let fN: EventLoopFuture<Void> = EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
+        let fN = EventLoopFuture.andAllSucceed(futures, on: eventLoop)
         _ = promises.map { $0.succeed(()) }
         () = try fN.wait()
     }
@@ -253,7 +253,7 @@ class EventLoopFutureTest : XCTestCase {
         let promises: [EventLoopPromise<Void>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
         let futures = promises.map { $0.futureResult }
 
-        let fN: EventLoopFuture<Void> = EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
+        let fN = EventLoopFuture.andAllSucceed(futures, on: eventLoop)
         _ = promises.map { $0.fail(E()) }
         do {
             () = try fN.wait()
@@ -276,7 +276,7 @@ class EventLoopFutureTest : XCTestCase {
 
         let futures = promises.map { $0.futureResult }
 
-        let fN: EventLoopFuture<Void> = EventLoopFuture<Void>.andAll(futures, eventLoop: eventLoop)
+        let fN = EventLoopFuture.andAllSucceed(futures, on: eventLoop)
         do {
             () = try fN.wait()
             XCTFail("should've thrown an error")
@@ -638,7 +638,7 @@ class EventLoopFutureTest : XCTestCase {
         let ps = (0..<n).map { (_: Int) -> EventLoopPromise<Void> in
             elg.next().makePromise()
         }
-        let allOfEm = EventLoopFuture<Void>.andAll(ps.map { $0.futureResult }, eventLoop: elg.next())
+        let allOfEm = EventLoopFuture.andAllSucceed(ps.map { $0.futureResult }, on: elg.next())
         ps.reversed().forEach { p in
             DispatchQueue.global().async {
                 p.succeed(())
@@ -656,7 +656,7 @@ class EventLoopFutureTest : XCTestCase {
         let ps = (0..<n).map { (_: Int) -> EventLoopPromise<Void> in
             elg.next().makePromise()
         }
-        let allOfEm = EventLoopFuture<Void>.andAll(ps.map { $0.futureResult }, eventLoop: fireBackEl.next())
+        let allOfEm = EventLoopFuture.andAllSucceed(ps.map { $0.futureResult }, on: fireBackEl.next())
         ps.reversed().enumerated().forEach { idx, p in
             DispatchQueue.global().async {
                 if idx == n / 2 {

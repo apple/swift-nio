@@ -85,7 +85,7 @@ private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
             let upgradeConfig = (upgraders: upgraders, completionHandler: upgradeCompletionHandler)
             return channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: pipelining, withServerUpgrade: upgradeConfig).flatMap {
                 let futureResults = extraHandlers.map { channel.pipeline.add(handler: $0) }
-                return EventLoopFuture<Void>.andAll(futureResults, eventLoop: channel.eventLoop)
+                return EventLoopFuture.andAllSucceed(futureResults, on: channel.eventLoop)
             }
         }.bind(host: "127.0.0.1", port: 0).wait()
     return (c, p.futureResult)

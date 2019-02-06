@@ -145,6 +145,11 @@ extension EventLoopFuture {
     public func cascadeFailure<NewValue>(promise: EventLoopPromise<NewValue>?) {
         self.cascadeFailure(to: promise)
     }
+
+    @available(*, deprecated, renamed: "andAllSucceed(_:on:)")
+    public func andAll(_ futures: [EventLoopFuture<Void>], eventLoop: EventLoop) -> EventLoopFuture<Void> {
+        return .andAllSucceed(futures, on: eventLoop)
+    }
 }
 
 extension EventLoopPromise {
