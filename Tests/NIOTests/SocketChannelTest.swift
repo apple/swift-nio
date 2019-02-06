@@ -555,4 +555,63 @@ public class SocketChannelTest : XCTestCase {
             })
         XCTAssertNoThrow(try socket.close())
     }
+    
+    func testInstantTCPConnectionResetThrowsError() throws {
+        #if !os(Linux)
+            // This test checks that we correctly fail with an error rather than
+            // asserting or silently ignoring if a client aborts the connection
+            // early with a RST during or immediately after accept().
+            let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+
+            // Handler that checks for the expected error.
+            final class ErrorHandler: ChannelInboundHandler {
+                typealias InboundIn = Channel
+                typealias InboundOut = Channel
+
+                private let promise: EventLoopPromise<IOError>
+
+                init(_ promise: EventLoopPromise<IOError>) {
+                    self.promise = promise
+                }
+
+                func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+                    XCTFail("Should not accept a Channel but got \(self.unwrapInboundIn(data))")
+                    self.promise.fail(ChannelError.inappropriateOperationForState) // any old error will do
+                }
+
+                func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+                    if let ioError = error as? IOError, ioError.errnoCode == EINVAL {
+                        self.promise.succeed(ioError)
+                    } else {
+                        self.promise.fail(error)
+                    }
+                }
+            }
+
+            // Build server channel; after this point the server called listen()
+            let serverPromise = group.next().makePromise(of: IOError.self)
+            let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+                .serverChannelOption(ChannelOptions.backlog, value: 256)
+                .serverChannelOption(ChannelOptions.autoRead, value: false)
+                .serverChannelInitializer { channel in channel.pipeline.add(handler: ErrorHandler(serverPromise)) }
+                .bind(host: "127.0.0.1", port: 0)
+                .wait())
+
+            // Make a client socket to mess with the server. Setting SO_LINGER forces RST instead of FIN.
+            let clientSocket = try assertNoThrowWithValue(Socket(protocolFamily: AF_INET, type: Posix.SOCK_STREAM))
+            XCTAssertNoThrow(try clientSocket.setOption(level: SOL_SOCKET, name: SO_LINGER, value: linger(l_onoff: 1, l_linger: 0)))
+            XCTAssertNoThrow(try clientSocket.connect(to: serverChannel.localAddress!))
+            XCTAssertNoThrow(try clientSocket.close())
+        
+            // Trigger accept() in the server
+            serverChannel.read()
+        
+            // Wait for the server to have something
+            let result = try assertNoThrowWithValue(serverPromise.futureResult.wait())
+        
+            XCTAssertEqual(result.errnoCode, EINVAL)
+        #endif
+    }
 }
