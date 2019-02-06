@@ -285,8 +285,8 @@ class SelectorTest: XCTestCase {
                 }
 
                 // if all the new re-connected channels have read, then we're happy here.
-                EventLoopFuture<Void>.andAll(reconnectedChannelsHaveRead,
-                                             eventLoop: ctx.eventLoop).cascade(to: self.everythingWasReadPromise)
+                EventLoopFuture.andAllSucceed(reconnectedChannelsHaveRead, on: ctx.eventLoop)
+                    .cascade(to: self.everythingWasReadPromise)
                 // let's also remove all the channels so this code will not be triggered again.
                 self.allChannels.value.removeAll()
             }
