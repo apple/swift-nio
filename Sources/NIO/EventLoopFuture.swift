@@ -309,7 +309,7 @@ public struct EventLoopPromise<Value> {
 /// This presents a problem: how do you ensure thread-safety when registering callbacks on an arbitrary
 /// `EventLoopFuture`? The short answer is that when you are holding an `EventLoopFuture`, you can always obtain a
 /// new `EventLoopFuture` whose callbacks will execute on your event loop. You do this by calling
-/// `EventLoopFuture.hopTo(eventLoop:)`. This function returns a new `EventLoopFuture` whose callbacks are guaranteed
+/// `EventLoopFuture.hop(to:)`. This function returns a new `EventLoopFuture` whose callbacks are guaranteed
 /// to fire on the provided event loop. As an added bonus, `hopTo` will check whether the provided `EventLoopFuture`
 /// was already scheduled to dispatch on the event loop in question, and avoid doing any work if that was the case.
 ///
@@ -705,7 +705,7 @@ extension EventLoopFuture {
             return CallbackList()
         }
 
-        let hopOver = other.hopTo(eventLoop: self.eventLoop)
+        let hopOver = other.hop(to: self.eventLoop)
         hopOver._whenComplete { () -> CallbackList in
             self.eventLoop.assertInEventLoop()
             switch other.value! {
@@ -898,7 +898,7 @@ extension EventLoopFuture {
     /// - returns: A new `EventLoopFuture` with the reduced value.
     public static func reduce<InputValue>(_ initialResult: Value,
                                           _ futures: [EventLoopFuture<InputValue>],
-                                          eventLoop: EventLoop,
+                                          on eventLoop: EventLoop,
                                           _ nextPartialResult: @escaping (Value, InputValue) -> Value) -> EventLoopFuture<Value> {
         let f0 = eventLoop.makeSucceededFuture(initialResult)
 
@@ -928,7 +928,7 @@ extension EventLoopFuture {
     /// - returns: A new `EventLoopFuture` with the combined value.
     public static func reduce<InputValue>(into initialResult: Value,
                                           _ futures: [EventLoopFuture<InputValue>],
-                                          eventLoop: EventLoop,
+                                          on eventLoop: EventLoop,
                                           _ updateAccumulatingResult: @escaping (inout Value, InputValue) -> Void) -> EventLoopFuture<Value> {
         let p0 = eventLoop.makePromise(of: Value.self)
         var value: Value = initialResult
@@ -992,7 +992,7 @@ extension EventLoopFuture {
     ///     - on: The `EventLoop` on which the new `EventLoopFuture` callbacks will execute on.
     /// - Returns: A new `EventLoopFuture` that waits for the other futures to succeed.
     public static func andAllSucceed(_ futures: [EventLoopFuture<Value>], on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        return .reduce((), futures, eventLoop: eventLoop) { (_: (), _: Value) in }
+        return .reduce((), futures, on: eventLoop) { (_: (), _: Value) in }
     }
 
     /// Returns a new `EventLoopFuture` that succeeds only if all of the provided futures succeed.
@@ -1004,7 +1004,7 @@ extension EventLoopFuture {
     ///     - on: The `EventLoop` on which the new `EventLoopFuture` callbacks will fire.
     /// - Returns: A new `EventLoopFuture` with all of the values fulfilled by the provided futures.
     public static func whenAllSucceed(_ futures: [EventLoopFuture<Value>], on eventLoop: EventLoop) -> EventLoopFuture<[Value]> {
-        return .reduce(into: [], futures, eventLoop: eventLoop) { (results, value) in results.append(value) }
+        return .reduce(into: [], futures, on: eventLoop) { (results, value) in results.append(value) }
     }
 }
 
@@ -1088,7 +1088,7 @@ extension EventLoopFuture {
         // loop through the futures to chain callbacks to execute on the initiating event loop and grab their index
         // in the "futures" to pass their result to the caller
         for (index, future) in futures.enumerated() {
-            future.hopTo(eventLoop: eventLoop)
+            future.hop(to: eventLoop)
                 .whenComplete { result in
                     onResult(index, result)
                     remainingCount -= 1
@@ -1111,9 +1111,9 @@ public extension EventLoopFuture {
     /// the one you're hopping *to*, allowing you to avoid doing allocations in that case.
     ///
     /// - parameters:
-    ///     - target: The `EventLoop` that the returned `EventLoopFuture` will run on.
+    ///     - to: The `EventLoop` that the returned `EventLoopFuture` will run on.
     /// - returns: An `EventLoopFuture` whose callbacks run on `target` instead of the original loop.
-    func hopTo(eventLoop target: EventLoop) -> EventLoopFuture<Value> {
+    func hop(to target: EventLoop) -> EventLoopFuture<Value> {
         if target === self.eventLoop {
             // We're already on that event loop, nothing to do here. Save an allocation.
             return self
