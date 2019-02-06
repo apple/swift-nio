@@ -136,8 +136,6 @@ private struct OperationPlaceholderError: Error { }
 ///
 /// * If you have an `EventLoopFuture` and want to do something else after it completes,
 ///     use `.flatMap()`
-/// * If you just want to get a value back after running something on another thread,
-///     use `EventLoopFuture<ResultType>.async()`
 /// * If you already have a value and need an `EventLoopFuture<>` object to plug into
 ///     some other API, create an already-resolved object with `eventLoop.makeSucceededFuture(result)`
 ///     or `eventLoop.newFailedFuture(error:)`.
@@ -276,7 +274,6 @@ public struct EventLoopPromise<Value> {
 /// use `flatMap()` or `cascade(to:)` instead.)
 ///
 /// `EventLoopFuture` objects are typically obtained by:
-/// * Using `EventLoopFuture<Value>.async` or a similar wrapper function.
 /// * Using `.flatMap()` on an existing future to create a new future for the next step in a series of operations.
 /// * Initializing an `EventLoopFuture` that already has a value or an error
 ///
@@ -335,7 +332,7 @@ public final class EventLoopFuture<Value> {
     }
 
     private let _isFulfilled: UnsafeEmbeddedAtomic<Bool>
-    
+
     /// The `EventLoop` which is tied to the `EventLoopFuture` and is used to notify all registered callbacks.
     public let eventLoop: EventLoop
 
@@ -389,7 +386,7 @@ public final class EventLoopFuture<Value> {
                 precondition(isFulfilled, "leaking an unfulfilled Promise")
             }
         }
-        
+
         self._isFulfilled.destroy()
     }
 }
