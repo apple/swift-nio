@@ -15,6 +15,15 @@
 import NIOConcurrencyHelpers
 import Dispatch
 
+/// A model representing how ownership of threading objects should be handled.
+///
+/// - `internal` defines that whatever object operating under this model is wholely responsible for its own threading resources.
+/// - `external` defines that the object is borrowing the provided `EventLoopGroup` for its necessary tasks, but is not responsible for releasing it.
+public enum ThreadOwnershipModel {
+    case `internal`(threadCount: Int)
+    case external(EventLoopGroup)
+}
+
 /// Returned once a task was scheduled on the `EventLoop` for later execution.
 ///
 /// A `Scheduled` allows the user to either `cancel()` the execution of the scheduled task (if possible) or obtain a reference to the `EventLoopFuture` that
