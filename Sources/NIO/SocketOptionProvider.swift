@@ -207,6 +207,30 @@ public extension SocketOptionProvider {
     func getIPv6MulticastLoop() -> EventLoopFuture<CUnsignedInt> {
         return self.unsafeGetSocketOption(level: IPPROTO_IPV6, name: IPV6_MULTICAST_LOOP)
     }
+
+    #if os(Linux) || os(FreeBSD)
+    /// Gets the value of the socket option TCP_INFO.
+    ///
+    /// This socket option cannot be set.
+    ///
+    /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+    ///     any error that occurred while retrieving the socket option.
+    func getTCPInfo() -> EventLoopFuture<tcp_info> {
+        return self.unsafeGetSocketOption(level: IPPROTO_TCP, name: TCP_INFO)
+    }
+    #endif
+
+    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    /// Gets the value of the socket option TCP_CONNECTION_INFO.
+    ///
+    /// This socket option cannot be set.
+    ///
+    /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+    ///     any error that occurred while retrieving the socket option.
+    func getTCPConnectionInfo() -> EventLoopFuture<tcp_connection_info> {
+        return self.unsafeGetSocketOption(level: IPPROTO_TCP, name: TCP_CONNECTION_INFO)
+    }
+    #endif
 }
 
 
