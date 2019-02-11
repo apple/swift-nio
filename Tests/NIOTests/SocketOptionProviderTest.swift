@@ -241,4 +241,26 @@ final class SocketOptionProviderTest: XCTestCase {
             XCTAssertNotEqual($0, 0)
         }.wait())
     }
+
+    func testTCPInfo() throws {
+        // This test only runs on Linux and FreeBSD.
+        #if os(Linux) || os(FreeBSD)
+        let channel = self.clientChannel! as! SocketOptionProvider
+        let tcpInfo = try assertNoThrowWithValue(channel.getTCPInfo().wait())
+
+        // We just need to sanity check something here to ensure that the data is vaguely reasonable.
+        XCTAssertEqual(tcpInfo.tcpi_state, UInt8(TCP_ESTABLISHED))
+        #endif
+    }
+
+    func testTCPConnectionInfo() throws {
+        // This test only runs on Darwin.
+        #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        let channel = self.clientChannel! as! SocketOptionProvider
+        let tcpConnectionInfo = try assertNoThrowWithValue(channel.getTCPConnectionInfo().wait())
+
+        // We just need to sanity check something here to ensure that the data is vaguely reasonable.
+        XCTAssertEqual(tcpConnectionInfo.tcpi_state, UInt8(TSI_S_ESTABLISHED))
+        #endif
+    }
 }
