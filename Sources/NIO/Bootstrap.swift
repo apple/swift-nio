@@ -29,10 +29,10 @@
 ///         // Set the handlers that are applied to the accepted child `Channel`s.
 ///         .childChannelInitializer { channel in
 ///             // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-///             channel.pipeline.add(handler: BackPressureHandler()).flatMap { () in
+///             channel.pipeline.addHandler(BackPressureHandler()).flatMap { () in
 ///                 // make sure to instantiate your `ChannelHandlers` inside of
 ///                 // the closure as it will be invoked once per connection.
-///                 channel.pipeline.add(handler: MyChannelHandler())
+///                 channel.pipeline.addHandler(MyChannelHandler())
 ///             }
 ///         }
 ///
@@ -219,7 +219,7 @@ public final class ServerBootstrap {
 
         return eventLoop.submit {
             return serverChannelInit(serverChannel).flatMap {
-                serverChannel.pipeline.add(handler: AcceptHandler(childChannelInitializer: childChannelInit,
+                serverChannel.pipeline.addHandler(AcceptHandler(childChannelInitializer: childChannelInit,
                                                                   childChannelOptions: childChannelOptions))
             }.flatMap {
                 serverChannelOptions.applyAll(channel: serverChannel)
@@ -339,7 +339,7 @@ private extension Channel {
 ///             // always instantiate the handler _within_ the closure as
 ///             // it may be called multiple times (for example if the hostname
 ///             // resolves to both IPv4 and IPv6 addresses, cf. Happy Eyeballs).
-///             channel.pipeline.add(handler: MyChannelHandler())
+///             channel.pipeline.addHandler(MyChannelHandler())
 ///         }
 ///     try! bootstrap.connect(host: "example.org", port: 12345).wait()
 ///     /* the Channel is now connected */
@@ -549,7 +549,7 @@ public final class ClientBootstrap {
 ///         // Enable SO_REUSEADDR.
 ///         .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 ///         .channelInitializer { channel in
-///             channel.pipeline.add(handler: MyChannelHandler())
+///             channel.pipeline.addHandler(MyChannelHandler())
 ///         }
 ///     let channel = try! bootstrap.bind(host: "127.0.0.1", port: 53).wait()
 ///     /* the Channel is now ready to send/receive datagrams */

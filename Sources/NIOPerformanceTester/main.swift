@@ -127,7 +127,7 @@ let serverChannel = try ServerBootstrap(group: group)
     .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     .childChannelInitializer { channel in
         channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
-            channel.pipeline.add(handler: SimpleHTTPServer())
+            channel.pipeline.addHandler(SimpleHTTPServer())
         }
     }.bind(host: "127.0.0.1", port: 0).wait()
 
@@ -559,9 +559,9 @@ try measureAndPrint(desc: "no-net_http1_10k_reqs_1_conn") {
     }
     try channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true,
                                                      withErrorHandling: true).flatMap {
-        channel.pipeline.add(handler: SimpleHTTPServer())
+        channel.pipeline.addHandler(SimpleHTTPServer())
     }.flatMap {
-        channel.pipeline.add(handler: measuringHandler, first: true)
+        channel.pipeline.addHandler(measuringHandler, position: .first)
     }.wait()
 
     measuringHandler.kickOff(channel: channel)
@@ -581,7 +581,7 @@ measureAndPrint(desc: "http1_10k_reqs_1_conn") {
         .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
         .channelInitializer { channel in
             channel.pipeline.addHTTPClientHandlers().flatMap {
-                channel.pipeline.add(handler: repeatedRequestsHandler)
+                channel.pipeline.addHandler(repeatedRequestsHandler)
             }
         }
         .connect(to: serverChannel.localAddress!)
@@ -602,7 +602,7 @@ measureAndPrint(desc: "http1_10k_reqs_100_conns") {
         let clientChannel = try! ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().flatMap {
-                    channel.pipeline.add(handler: repeatedRequestsHandler)
+                    channel.pipeline.addHandler(repeatedRequestsHandler)
                 }
             }
             .connect(to: serverChannel.localAddress!)

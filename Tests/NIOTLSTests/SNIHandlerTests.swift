@@ -270,7 +270,7 @@ class SNIHandlerTest: XCTestCase {
             return continuePromise.futureResult
         })
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // The handler will run when the last byte of the extension data is sent.
         // We don't know when that is, so don't try to predict it. However,
@@ -321,7 +321,7 @@ class SNIHandlerTest: XCTestCase {
             return continuePromise.futureResult
         })
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // Ok, let's go.
         try channel.writeInbound(buffer)
@@ -361,7 +361,7 @@ class SNIHandlerTest: XCTestCase {
             return loop.makeSucceededFuture(())
         })
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // Ok, let's go.
         try channel.writeInbound(buffer)

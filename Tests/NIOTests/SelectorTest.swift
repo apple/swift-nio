@@ -255,7 +255,7 @@ class SelectorTest: XCTestCase {
                     reconnectedChannelsHaveRead.append(p.futureResult)
                     let newChannel = ClientBootstrap(group: ctx.eventLoop)
                         .channelInitializer { channel in
-                            channel.pipeline.add(handler: HappyWhenReadHandler(hasReConnectEventLoopTickFinished: self.hasReConnectEventLoopTickFinished,
+                            channel.pipeline.addHandler(HappyWhenReadHandler(hasReConnectEventLoopTickFinished: self.hasReConnectEventLoopTickFinished,
                                                                                didReadPromise: p)).map {
                                                                                 hasBeenAdded = true
                             }
@@ -337,7 +337,7 @@ class SelectorTest: XCTestCase {
         let tempDir = createTemporaryDirectory()
         let secondServerChannel = try! ServerBootstrap(group: el)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: ServerHandler(allServerChannels: allServerChannels,
+                channel.pipeline.addHandler(ServerHandler(allServerChannels: allServerChannels,
                                                             numberOfConnectedChannels: numberOfConnectedChannels))
             }
             .bind(to: SocketAddress(unixDomainSocketPath: "\(tempDir)/server-sock.uds"))
@@ -349,7 +349,7 @@ class SelectorTest: XCTestCase {
                 ClientBootstrap(group: el)
                     .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
                     .channelInitializer { channel in
-                        channel.pipeline.add(handler: CloseEveryOtherAndOpenNewOnesHandler(allChannels: allChannels,
+                        channel.pipeline.addHandler(CloseEveryOtherAndOpenNewOnesHandler(allChannels: allChannels,
                                                                                            hasReConnectEventLoopTickFinished: hasReConnectEventLoopTickFinished,
                                                                                            serverAddress: secondServerChannel.localAddress!,
                                                                                            everythingWasReadPromise: everythingWasReadPromise))

@@ -73,8 +73,8 @@ var datagramBootstrap = DatagramBootstrap(group: group)
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), value: 1)
     .channelInitializer { channel in
-        return channel.pipeline.add(handler: ChatMessageEncoder()).flatMap {
-            channel.pipeline.add(handler: ChatMessageDecoder())
+        return channel.pipeline.addHandler(ChatMessageEncoder()).flatMap {
+            channel.pipeline.addHandler(ChatMessageDecoder())
         }
     }
 

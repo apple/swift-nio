@@ -84,7 +84,7 @@ private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
             p.succeed(channel)
             let upgradeConfig = (upgraders: upgraders, completionHandler: upgradeCompletionHandler)
             return channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: pipelining, withServerUpgrade: upgradeConfig).flatMap {
-                let futureResults = extraHandlers.map { channel.pipeline.add(handler: $0) }
+                let futureResults = extraHandlers.map { channel.pipeline.addHandler($0) }
                 return EventLoopFuture.andAllSucceed(futureResults, on: channel.eventLoop)
             }
         }.bind(host: "127.0.0.1", port: 0).wait()
@@ -354,7 +354,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         }
         let data = HTTPServerRequestPart.body(ByteBuffer.forString("hello"))
 
-        XCTAssertNoThrow(try channel.pipeline.add(handler: handler).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         do {
             try channel.writeInbound(data)
@@ -402,7 +402,7 @@ class HTTPUpgradeTestCase: XCTestCase {
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
@@ -507,7 +507,7 @@ class HTTPUpgradeTestCase: XCTestCase {
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto, exploder\r\nKafkaesque: yup\r\nConnection: upgrade, kafkaesque\r\n\r\n"
@@ -551,7 +551,7 @@ class HTTPUpgradeTestCase: XCTestCase {
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade,kafkaesque\r\n\r\n"
@@ -612,7 +612,7 @@ class HTTPUpgradeTestCase: XCTestCase {
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: noproto,myproto\r\nKafkaesque: yup\r\nConnection: upgrade, kafkaesque\r\n\r\n"
@@ -658,7 +658,7 @@ class HTTPUpgradeTestCase: XCTestCase {
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nWeirdcase: yup\r\nConnection: upgrade,weirdcase\r\n\r\n"
@@ -692,7 +692,7 @@ class HTTPUpgradeTestCase: XCTestCase {
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\n"
@@ -735,7 +735,7 @@ class HTTPUpgradeTestCase: XCTestCase {
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
 
         // This request is safe to upgrade, but is immediately followed by non-HTTP data that will probably
         // blow up the HTTP parser.
@@ -885,7 +885,7 @@ class HTTPUpgradeTestCase: XCTestCase {
                                                                                         XCTAssertNil(upgradeRequest)
                                                                                         upgradeHandlerCbFired = true
                                                                                         
-                                                                                        _ = ctx.channel.pipeline.add(handler: CheckWeReadInlineAndExtraData(firstByteDonePromise: firstByteDonePromise,
+                                                                                        _ = ctx.channel.pipeline.addHandler(CheckWeReadInlineAndExtraData(firstByteDonePromise: firstByteDonePromise,
                                                                                                                                                             secondByteDonePromise: secondByteDonePromise,
                                                                                                                                                             allDonePromise: allDonePromise))
         }
@@ -901,7 +901,7 @@ class HTTPUpgradeTestCase: XCTestCase {
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
             completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
         
         // This request is safe to upgrade.
         var request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"

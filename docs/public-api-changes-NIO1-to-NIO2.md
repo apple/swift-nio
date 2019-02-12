@@ -58,3 +58,8 @@
 - `CircularBuffer` and `MarkedCircularBuffer`'s indices are now opaque
 - all `ChannelOption`s are now required to be  `Equatable`
 - rename `FileHandle` to `NIOFileHandle`
+- rename all `ChannelPipeline.add(name:handler:...)`s to `ChannelPipeline.addHandler(_:name:...)`
+- rename all `ChannelPipeline.remove(...)`s to `ChannelPipeline.removeHandler(...)`
+- change `ChannelPipeline.addHandler[s](_:first:)` to  `ChannelPipeline.addHandler(_:postion:)` where `position` can be `.first`, `.last`, `.before(ChannelHandler)`, and `.after(ChannelHandler)`
+- change  `ChannelPipeline.addHandler(_:before:)` to  `ChannelPipeline.addHandler(_:postion:)` where `position` can be `.first`, `.last`, `.before(ChannelHandler)`, and `.after(ChannelHandler)`
+- change  `ChannelPipeline.addHandler(_:after:)` to  `ChannelPipeline.addHandler(_:postion:)` where `position` can be `.first`, `.last`, `.before(ChannelHandler)`, and `.after(ChannelHandler)`

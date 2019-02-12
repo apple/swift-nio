@@ -55,6 +55,7 @@ extension ChannelPipelineTest {
                 ("testTeardownDuringFormalRemovalProcess", testTeardownDuringFormalRemovalProcess),
                 ("testVariousChannelRemovalAPIsGoThroughRemovableChannelHandler", testVariousChannelRemovalAPIsGoThroughRemovableChannelHandler),
                 ("testNonRemovableChannelHandlerIsNotRemovable", testNonRemovableChannelHandlerIsNotRemovable),
+                ("testAddMultipleHandlers", testAddMultipleHandlers),
            ]
    }
 }

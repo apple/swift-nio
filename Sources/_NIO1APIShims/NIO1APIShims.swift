@@ -78,7 +78,57 @@ extension StaticString: Collection {
 extension ChannelPipeline {
     @available(*, deprecated, message: "please use ByteToMessageHandler(myByteToMessageDecoder)")
     public func add<Decoder: ByteToMessageDecoder>(handler decoder: Decoder) -> EventLoopFuture<Void> {
-        return self.add(handler: ByteToMessageHandler(decoder))
+        return self.addHandler(ByteToMessageHandler(decoder))
+    }
+
+    @available(*, deprecated, renamed: "addHandler(_:position:)")
+    public func add(handler: ChannelHandler, first: Bool = false) -> EventLoopFuture<Void> {
+        return self.addHandler(handler, position: first ? .first : .last)
+    }
+
+    @available(*, deprecated, renamed: "addHandler(_:name:position:)")
+    public func add(name: String, handler: ChannelHandler, first: Bool = false) -> EventLoopFuture<Void> {
+        return self.addHandler(handler, name: name, position: first ? .first : .last)
+    }
+
+    @available(*, deprecated, renamed: "addHandler(_:name:position:)")
+    public func add(name: String? = nil, handler: ChannelHandler, after: ChannelHandler) -> EventLoopFuture<Void> {
+        return self.addHandler(handler, name: name, position: .after(after))
+    }
+
+    @available(*, deprecated, renamed: "addHandler(_:name:position:)")
+    public func add(name: String? = nil, handler: ChannelHandler, before: ChannelHandler) -> EventLoopFuture<Void> {
+        return self.addHandler(handler, name: name, position: .before(before))
+    }
+
+    @available(*, deprecated, renamed: "removeHandler(_:)")
+    public func remove(handler: RemovableChannelHandler) -> EventLoopFuture<Void> {
+        return self.removeHandler(handler)
+    }
+
+    @available(*, deprecated, renamed: "removeHandler(name:)")
+    public func remove(name: String) -> EventLoopFuture<Void> {
+        return self.removeHandler(name: name)
+    }
+
+    @available(*, deprecated, renamed: "removeHandler(ctx:)")
+    public func remove(ctx: ChannelHandlerContext) -> EventLoopFuture<Void> {
+        return self.removeHandler(ctx: ctx)
+    }
+
+    @available(*, deprecated, renamed: "removeHandler(_:promise:)")
+    public func remove(handler: RemovableChannelHandler, promise: EventLoopPromise<Void>?) {
+        return self.removeHandler(handler, promise: promise)
+    }
+
+    @available(*, deprecated, renamed: "removeHandler(name:promise:)")
+    public func remove(name: String, promise: EventLoopPromise<Void>?) {
+        return self.removeHandler(name: name, promise: promise)
+    }
+
+    @available(*, deprecated, renamed: "removeHandler(ctx:promise:)")
+    public func remove(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+        return self.removeHandler(ctx: ctx, promise: promise)
     }
 }
 

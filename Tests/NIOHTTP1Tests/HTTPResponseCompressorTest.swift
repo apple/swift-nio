@@ -333,8 +333,8 @@ class HTTPResponseCompressorTest: XCTestCase {
 
     private func compressionChannel() throws -> EmbeddedChannel {
         let channel = EmbeddedChannel()
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseCompressor()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseCompressor()).wait())
         return channel
     }
 

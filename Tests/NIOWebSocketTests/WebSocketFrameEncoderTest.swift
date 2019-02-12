@@ -39,7 +39,7 @@ public class WebSocketFrameEncoderTest: XCTestCase {
     public override func setUp() {
         self.channel = EmbeddedChannel()
         self.buffer = channel.allocator.buffer(capacity: 128)
-        XCTAssertNoThrow(try self.channel.pipeline.add(handler: WebSocketFrameEncoder()).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(WebSocketFrameEncoder()).wait())
     }
 
     public override func tearDown() {

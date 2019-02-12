@@ -114,7 +114,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         }
         let channel = EmbeddedChannel()
         XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap {
-            channel.pipeline.add(handler: DelayWriteHandler())
+            channel.pipeline.addHandler(DelayWriteHandler())
         }.wait())
 
         var buffer = channel.allocator.buffer(capacity: 1024)

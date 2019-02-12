@@ -78,10 +78,10 @@ class HTTPTest: XCTestCase {
             defer {
                 XCTAssertNoThrow(try channel.finish())
             }
-            try channel.pipeline.add(handler: HTTPRequestDecoder()).wait()
+            try channel.pipeline.addHandler(HTTPRequestDecoder()).wait()
             var bodyData: [UInt8]? = nil
             var allBodyDatas: [[UInt8]] = []
-            try channel.pipeline.add(handler: TestChannelInboundHandler { reqPart in
+            try channel.pipeline.addHandler(TestChannelInboundHandler { reqPart in
                 switch reqPart {
                 case .head(var req):
                     XCTAssertEqual((index * 2), step)

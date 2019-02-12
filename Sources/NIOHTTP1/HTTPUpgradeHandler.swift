@@ -207,7 +207,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
                         ctx.fireChannelReadComplete()
                     }
                 }.whenComplete { (_: Result<Void, Error>) in
-                    ctx.pipeline.remove(ctx: ctx, promise: nil)
+                    ctx.pipeline.removeHandler(ctx: ctx, promise: nil)
                 }
             }
         }
@@ -226,7 +226,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
     private func notUpgrading(ctx: ChannelHandlerContext, data: NIOAny) {
         assert(self.receivedMessages.count == 0)
         ctx.fireChannelRead(data)
-        ctx.pipeline.remove(ctx: ctx, promise: nil)
+        ctx.pipeline.removeHandler(ctx: ctx, promise: nil)
     }
 
     /// Builds the initial mandatory HTTP headers for HTTP ugprade responses.
@@ -237,7 +237,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
     /// Removes the given channel handler from the channel pipeline.
     private func removeHandler(ctx: ChannelHandlerContext, handler: RemovableChannelHandler?) -> EventLoopFuture<Void> {
         if let handler = handler {
-            return ctx.pipeline.remove(handler: handler)
+            return ctx.pipeline.removeHandler(handler)
         } else {
             return ctx.eventLoop.makeSucceededFuture(())
         }
@@ -249,7 +249,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
             return ctx.eventLoop.makeSucceededFuture(())
         }
 
-        return .andAllSucceed(self.extraHTTPHandlers.map { ctx.pipeline.remove(handler: $0) },
+        return .andAllSucceed(self.extraHTTPHandlers.map { ctx.pipeline.removeHandler($0) },
                               on: ctx.eventLoop)
     }
 }

@@ -65,8 +65,8 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         self.decoderChannel = EmbeddedChannel()
         self.encoderChannel = EmbeddedChannel()
         self.buffer = decoderChannel.allocator.buffer(capacity: 128)
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: ByteToMessageHandler(WebSocketFrameDecoder())).wait())
-        XCTAssertNoThrow(try self.encoderChannel.pipeline.add(handler: WebSocketFrameEncoder()).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder())).wait())
+        XCTAssertNoThrow(try self.encoderChannel.pipeline.addHandler(WebSocketFrameEncoder()).wait())
     }
 
     public override func tearDown() {
@@ -110,14 +110,14 @@ public class WebSocketFrameDecoderTest: XCTestCase {
                 throw ChannelError.unremovableHandler
             }
         }.flatMap {
-            self.decoderChannel.pipeline.remove(handler: $0)
+            self.decoderChannel.pipeline.removeHandler($0)
         }
 
         // we need to run the event loop here because removal is not synchronous
         (self.decoderChannel.eventLoop as! EmbeddedEventLoop).run()
 
         XCTAssertNoThrow(try f.flatMap {
-            self.decoderChannel.pipeline.add(handler: handler)
+            self.decoderChannel.pipeline.addHandler(handler)
         }.wait())
     }
 
@@ -171,7 +171,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // We need a new decoder channel here, because the max length would otherwise trigger an error.
         _ = try! self.decoderChannel.finish()
         self.decoderChannel = EmbeddedChannel()
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: 80000))).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: 80000))).wait())
 
         self.buffer.writeBytes(Array(repeating: UInt8(4), count: 66000))
         let frame = WebSocketFrame(fin: true,
@@ -233,7 +233,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
     }
 
     public func testDecoderRejectsOverlongFrames() throws {
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
 
         // A fake frame header that claims that the length of the frame is 16385 bytes,
         // larger than the frame max.
@@ -254,7 +254,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
     }
 
     public func testDecoderRejectsFragmentedControlFrames() throws {
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
         self.buffer.writeBytes([0x09, 0x00])
@@ -274,7 +274,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
     }
 
     public func testDecoderRejectsMultibyteControlFrameLengths() throws {
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
 
         // A fake frame header that claims this is a ping frame with 126 bytes of data.
         self.buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
@@ -295,8 +295,8 @@ public class WebSocketFrameDecoderTest: XCTestCase {
 
     func testIgnoresFurtherDataAfterRejectedFrame() throws {
         let swallower = CloseSwallower()
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: swallower, first: true).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(swallower, position: .first).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
         self.buffer.writeBytes([0x09, 0x00])
@@ -327,12 +327,12 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         swallower.allowClose()
 
         // Take the handler out for cleanliness.
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.remove(handler: swallower).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.removeHandler(swallower).wait())
     }
 
     public func testClosingSynchronouslyOnChannelRead() throws {
         // We're going to send a connectionClose frame and confirm we only see it once.
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: SynchronousCloser()).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(SynchronousCloser()).wait())
 
         var errorCodeBuffer = self.encoderChannel.allocator.buffer(capacity: 4)
         errorCodeBuffer.write(webSocketErrorCode: .normalClosure)
@@ -356,7 +356,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // We need to insert a decoder that doesn't do error handling. We still insert
         // an encoder because we want to fail gracefully if a frame is written.
         self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder(automaticErrorHandling: false)))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
 
         // A fake frame header that claims that the length of the frame is 16385 bytes,
         // larger than the frame max.
@@ -380,7 +380,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // We need to insert a decoder that doesn't do error handling. We still insert
         // an encoder because we want to fail gracefully if a frame is written.
         self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder(automaticErrorHandling: false)))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
         self.buffer.writeBytes([0x09, 0x00])
@@ -403,7 +403,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // We need to insert a decoder that doesn't do error handling. We still insert
         // an encoder because we want to fail gracefully if a frame is written.
         self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder(automaticErrorHandling: false)))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
 
         // A fake frame header that claims this is a ping frame with 126 bytes of data.
         self.buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
@@ -426,7 +426,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // We need to insert a decoder that doesn't do error handling. We still insert
         // an encoder because we want to fail gracefully if a frame is written.
          self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder(automaticErrorHandling: false)))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
         self.buffer.writeBytes([0x09, 0x00])
@@ -458,8 +458,8 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // We need to insert a decoder that doesn't do error handling, and then a separate error
         // handler.
         self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder(automaticErrorHandling: false)))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketProtocolErrorHandler()).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims that the length of the frame is 16385 bytes,
         // larger than the frame max.
@@ -483,8 +483,8 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // We need to insert a decoder that doesn't do error handling, and then a separate error
         // handler.
         self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder(automaticErrorHandling: false)))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketProtocolErrorHandler()).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
         self.buffer.writeBytes([0x09, 0x00])
@@ -507,8 +507,8 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // We need to insert a decoder that doesn't do error handling, and then a separate error
         // handler.
         self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder(automaticErrorHandling: false)))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketProtocolErrorHandler()).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims this is a ping frame with 126 bytes of data.
         self.buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
@@ -532,9 +532,9 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // We need to insert a decoder that doesn't do error handling, and then a separate error
         // handler.
         self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder(automaticErrorHandling: false)))
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketProtocolErrorHandler()).wait())
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: swallower, first: true).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketFrameEncoder(), position: .first).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(WebSocketProtocolErrorHandler()).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.addHandler(swallower, position: .first).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
         self.buffer.writeBytes([0x09, 0x00])
@@ -565,6 +565,6 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         swallower.allowClose()
 
         // Take the handler out for cleanliness.
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.remove(handler: swallower).wait())
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.removeHandler(swallower).wait())
     }
 }

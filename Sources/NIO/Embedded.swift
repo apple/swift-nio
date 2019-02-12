@@ -378,7 +378,7 @@ public class EmbeddedChannel: Channel {
 
         if let handler = handler {
             // This will be propagated via fireErrorCaught
-            _ = try? _pipeline.add(handler: handler).wait()
+            _ = try? _pipeline.addHandler(handler).wait()
         }
 
         // This will never throw...

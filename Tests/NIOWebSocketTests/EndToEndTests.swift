@@ -340,7 +340,7 @@ class EndToEndTests: XCTestCase {
         let recorder = WebSocketRecorderHandler()
         let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { head in HTTPHeaders() },
                                               upgradePipelineHandler: { (channel, req) in
-                                                channel.pipeline.add(handler: recorder)
+                                                channel.pipeline.addHandler(recorder)
 
         })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
@@ -360,7 +360,7 @@ class EndToEndTests: XCTestCase {
                          expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"])
 
         // Put a frame encoder in the client pipeline.
-        XCTAssertNoThrow(try client.pipeline.add(handler: WebSocketFrameEncoder()).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(WebSocketFrameEncoder()).wait())
 
         var data = client.allocator.buffer(capacity: 12)
         data.writeString("hello, world")
@@ -405,7 +405,7 @@ class EndToEndTests: XCTestCase {
         let recorder = WebSocketRecorderHandler()
         let basicUpgrader = WebSocketUpgrader(shouldUpgrade: { head in HTTPHeaders() },
                                               upgradePipelineHandler: { (channel, req) in
-                                                channel.pipeline.add(handler: recorder)
+                                                channel.pipeline.addHandler(recorder)
 
         })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])
@@ -451,7 +451,7 @@ class EndToEndTests: XCTestCase {
         let basicUpgrader = WebSocketUpgrader(automaticErrorHandling: false,
                                               shouldUpgrade: { head in HTTPHeaders() },
                                               upgradePipelineHandler: { (channel, req) in
-                                                channel.pipeline.add(handler: recorder)
+                                                channel.pipeline.addHandler(recorder)
 
         })
         let (loop, server, client) = createTestFixtures(upgraders: [basicUpgrader])

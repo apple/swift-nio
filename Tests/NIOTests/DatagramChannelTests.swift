@@ -90,7 +90,7 @@ final class DatagramChannelTests: XCTestCase {
         return try DatagramBootstrap(group: group)
             .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .channelInitializer { channel in
-                channel.pipeline.add(name: "ByteReadRecorder", handler: DatagramReadRecorder<ByteBuffer>())
+                channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
             }
             .bind(host: "127.0.0.1", port: 0)
             .wait()
@@ -405,7 +405,7 @@ final class DatagramChannelTests: XCTestCase {
         let channel = try DatagramChannel(socket: socket, eventLoop: group.next() as! SelectableEventLoop)
         let promise = channel.eventLoop.makePromise(of: IOError.self)
         XCTAssertNoThrow(try channel.register().wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: RecvFromHandler(promise)).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(RecvFromHandler(promise)).wait())
         XCTAssertNoThrow(try channel.bind(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())
 
         XCTAssertEqual(active, try channel.eventLoop.submit {

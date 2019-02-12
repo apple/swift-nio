@@ -24,12 +24,12 @@ extension ChannelPipeline {
     /// Configure a `ChannelPipeline` for use as a HTTP client.
     ///
     /// - parameters:
-    ///     - first: Whether to add the HTTP client at the head of the channel pipeline,
-    ///              or at the tail.
+    ///     - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    public func addHTTPClientHandlers(first: Bool = false,
+    public func addHTTPClientHandlers(position: ChannelPipeline.Position = .last,
                                       leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) -> EventLoopFuture<Void> {
-        return addHandlers(HTTPRequestEncoder(), HTTPResponseDecoder(leftOverBytesStrategy: leftOverBytesStrategy), first: first)
+        return addHandlers(HTTPRequestEncoder(), HTTPResponseDecoder(leftOverBytesStrategy: leftOverBytesStrategy),
+                           position: position)
     }
 
     /// Configure a `ChannelPipeline` for use as a HTTP server.
@@ -45,8 +45,7 @@ extension ChannelPipeline {
     /// features.
     ///
     /// - parameters:
-    ///     - first: Whether to add the HTTP server at the head of the channel pipeline,
-    ///         or at the tail.
+    ///     - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
     ///     - pipelining: Whether to provide assistance handling HTTP clients that pipeline
     ///         their requests. Defaults to `true`. If `false`, users will need to handle
     ///         clients that pipeline themselves.
@@ -58,7 +57,7 @@ extension ChannelPipeline {
     ///     - errorHandling: Whether to provide assistance handling protocol errors (e.g.
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    public func configureHTTPServerPipeline(first: Bool = false,
+    public func configureHTTPServerPipeline(position: ChannelPipeline.Position = .last,
                                             withPipeliningAssistance pipelining: Bool = true,
                                             withServerUpgrade upgrade: HTTPUpgradeConfiguration? = nil,
                                             withErrorHandling errorHandling: Bool = true) -> EventLoopFuture<Void> {
@@ -83,7 +82,7 @@ extension ChannelPipeline {
             handlers.append(upgrader)
         }
 
-        return self.addHandlers(handlers, first: first)
+        return self.addHandlers(handlers, position: position)
     }
 }
 

@@ -82,12 +82,12 @@ public class ChannelTests: XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
                 serverAcceptedChannelPromise.succeed(channel)
-                return channel.pipeline.add(handler: serverLifecycleHandler)
+                return channel.pipeline.addHandler(serverLifecycleHandler)
             }.bind(host: "127.0.0.1", port: 0).wait())
 
         let clientLifecycleHandler = ChannelLifecycleHandler()
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .channelInitializer({ (channel: Channel) in channel.pipeline.add(handler: clientLifecycleHandler) })
+            .channelInitializer({ (channel: Channel) in channel.pipeline.addHandler(clientLifecycleHandler) })
             .connect(to: serverChannel.localAddress!).wait())
 
         var buffer = clientChannel.allocator.buffer(capacity: 1)
@@ -1118,8 +1118,8 @@ public class ChannelTests: XCTestCase {
         let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .output, promise: group.next().makePromise())
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: verificationHandler).flatMap {
-                    channel.pipeline.add(handler: byteCountingHandler)
+                channel.pipeline.addHandler(verificationHandler).flatMap {
+                    channel.pipeline.addHandler(byteCountingHandler)
                 }
             }
             .connect(to: try! server.localAddress())
@@ -1181,8 +1181,8 @@ public class ChannelTests: XCTestCase {
         let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .input, promise: group.next().makePromise())
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: VerifyNoReadHandler()).flatMap {
-                    channel.pipeline.add(handler: verificationHandler)
+                channel.pipeline.addHandler(VerifyNoReadHandler()).flatMap {
+                    channel.pipeline.addHandler(verificationHandler)
                 }
             }
             .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
@@ -1237,7 +1237,7 @@ public class ChannelTests: XCTestCase {
 
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: verificationHandler)
+                channel.pipeline.addHandler(verificationHandler)
             }
             .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             .connect(to: try! server.localAddress())
@@ -1385,7 +1385,7 @@ public class ChannelTests: XCTestCase {
 
             let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
                 .channelInitializer {
-                    $0.pipeline.add(handler: StuffHandler(promise: promise))
+                    $0.pipeline.addHandler(StuffHandler(promise: promise))
                 }
                 .connect(to: serverChannel.localAddress!).wait())
             weakClientChannel = clientChannel
@@ -1477,7 +1477,7 @@ public class ChannelTests: XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { ch in
-                ch.pipeline.add(handler: AddressVerificationHandler())
+                ch.pipeline.addHandler(AddressVerificationHandler())
             }
             .bind(host: "127.0.0.1", port: 0).wait())
 
@@ -1541,7 +1541,7 @@ public class ChannelTests: XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer {
-                $0.pipeline.add(handler: readDelayer)
+                $0.pipeline.addHandler(readDelayer)
             }
             .bind(host: "127.0.0.1", port: 0).wait())
 
@@ -1598,7 +1598,7 @@ public class ChannelTests: XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { ch in
-                ch.pipeline.add(handler: handler)
+                ch.pipeline.addHandler(handler)
             }
             .bind(host: "127.0.0.1", port: 0).wait())
 
@@ -1654,7 +1654,7 @@ public class ChannelTests: XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { ch in
-                ch.pipeline.add(handler: VerifyEOFReadOrderingAndCloseInChannelReadHandler())
+                ch.pipeline.addHandler(VerifyEOFReadOrderingAndCloseInChannelReadHandler())
             }
             .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
             .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8))
@@ -1705,7 +1705,7 @@ public class ChannelTests: XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { ch in
-                ch.pipeline.add(handler: CloseWhenWeGetEOFHandler(allDone: allDone))
+                ch.pipeline.addHandler(CloseWhenWeGetEOFHandler(allDone: allDone))
             }
             // maxMessagesPerRead is large so that we definitely spin and seen the EOF
             .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 10)
@@ -1756,7 +1756,7 @@ public class ChannelTests: XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { ch in
-                ch.pipeline.add(handler: ChannelInactiveVerificationHandler(promise))
+                ch.pipeline.addHandler(ChannelInactiveVerificationHandler(promise))
             }
             .bind(host: "127.0.0.1", port: 0).wait())
 
@@ -1844,7 +1844,7 @@ public class ChannelTests: XCTestCase {
             let collector = ChannelCollector(group: group)
             let serverBoot = ServerBootstrap(group: group)
                 .childChannelInitializer { channel in
-                    return channel.pipeline.add(handler: CheckActiveHandler(channelCollector: collector))
+                    return channel.pipeline.addHandler(CheckActiveHandler(channelCollector: collector))
             }
             let listeningChannel = try serverBoot.bind(host: "127.0.0.1", port: 0).wait()
             let clientBoot = ClientBootstrap(group: group)
@@ -1951,7 +1951,7 @@ public class ChannelTests: XCTestCase {
 
         let bootstrap = try assertNoThrowWithValue(ServerBootstrap(group: serverEL)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: WriteImmediatelyHandler(writeDonePromise: serverWriteHappenedPromise))
+                channel.pipeline.addHandler(WriteImmediatelyHandler(writeDonePromise: serverWriteHappenedPromise))
             }
             .bind(host: "127.0.0.1", port: 0).wait())
 
@@ -1962,7 +1962,7 @@ public class ChannelTests: XCTestCase {
         // again which our special `Socket` subclass will let succeed.
         _ = try sc.selectable.connect(to: bootstrap.localAddress!)
         try serverWriteHappenedPromise.futureResult.wait()
-        try sc.pipeline.add(handler: ReadDoesNotHappen(hasRegisteredPromise: clientHasRegistered,
+        try sc.pipeline.addHandler(ReadDoesNotHappen(hasRegisteredPromise: clientHasRegistered,
                                                        hasUnregisteredPromise: clientHasUnregistered,
                                                        hasReadPromise: clientHasRead)).flatMap {
                 // this will succeed and should not cause the socket to be read even though there'll be something
@@ -2133,7 +2133,7 @@ public class ChannelTests: XCTestCase {
             // `register` will succeed.
 
             sc.register().flatMap {
-                sc.pipeline.add(handler: VerifyThingsAreRightHandler(allDone: allDone))
+                sc.pipeline.addHandler(VerifyThingsAreRightHandler(allDone: allDone))
             }.flatMap {
                 sc.connect(to: serverChannel.localAddress!)
             }
@@ -2175,7 +2175,7 @@ public class ChannelTests: XCTestCase {
 
         let allDone = group.next().makePromise(of: Void.self)
         let cf = try! sc.eventLoop.submit {
-            sc.pipeline.add(handler: VerifyConnectionFailureHandler(allDone: allDone)).flatMap {
+            sc.pipeline.addHandler(VerifyConnectionFailureHandler(allDone: allDone)).flatMap {
                 sc.register().flatMap {
                     sc.connect(to: serverChannel.localAddress!)
                 }
@@ -2221,7 +2221,7 @@ public class ChannelTests: XCTestCase {
 
         let allDone = group.next().makePromise(of: Void.self)
         try! sc.eventLoop.submit {
-            let f = sc.pipeline.add(handler: VerifyConnectionFailureHandler(allDone: allDone)).flatMap {
+            let f = sc.pipeline.addHandler(VerifyConnectionFailureHandler(allDone: allDone)).flatMap {
                 sc.register().flatMap {
                     sc.connect(to: serverChannel.localAddress!)
                 }
@@ -2378,7 +2378,7 @@ public class ChannelTests: XCTestCase {
         do {
             let clientChannel = try ClientBootstrap(group: group)
                 .channelInitializer { channel in
-                    channel.pipeline.add(handler: FailRegistrationAndDelayCloseHandler())
+                    channel.pipeline.addHandler(FailRegistrationAndDelayCloseHandler())
                 }
                 .connect(to: serverChannel.localAddress!)
                 .wait()
@@ -2397,7 +2397,7 @@ public class ChannelTests: XCTestCase {
         }
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: FailRegistrationAndDelayCloseHandler())
+                channel.pipeline.addHandler(FailRegistrationAndDelayCloseHandler())
             }
             .bind(host: "localhost", port: 0).wait())
         defer {
@@ -2417,7 +2417,7 @@ public class ChannelTests: XCTestCase {
         do {
             let serverChannel = try ServerBootstrap(group: group)
                 .serverChannelInitializer { channel in
-                    channel.pipeline.add(handler: FailRegistrationAndDelayCloseHandler())
+                    channel.pipeline.addHandler(FailRegistrationAndDelayCloseHandler())
                 }
                 .bind(host: "localhost", port: 0).wait()
             XCTFail("shouldn't be reached")
@@ -2573,7 +2573,7 @@ public class ChannelTests: XCTestCase {
         let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
             .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: WriteWhenActiveHandler(channelAvailablePromise: serverChannelAvailablePromise))
+                channel.pipeline.addHandler(WriteWhenActiveHandler(channelAvailablePromise: serverChannelAvailablePromise))
             }
             .bind(host: "127.0.0.1", port: 0)
             .wait())
@@ -2586,7 +2586,7 @@ public class ChannelTests: XCTestCase {
                                                          eventLoop: singleThreadedELG.next() as! SelectableEventLoop))
         XCTAssertNoThrow(try c.setOption(ChannelOptions.autoRead, value: false).wait())
         XCTAssertNoThrow(try c.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
-        XCTAssertNoThrow(try c.pipeline.add(handler: MakeChannelInactiveInReadCausedByWriteErrorHandler(serverChannel: serverChannelAvailablePromise.futureResult,
+        XCTAssertNoThrow(try c.pipeline.addHandler(MakeChannelInactiveInReadCausedByWriteErrorHandler(serverChannel: serverChannelAvailablePromise.futureResult,
                                                                                                         allDonePromise: allDonePromise)).wait())
         XCTAssertNoThrow(try c.register().wait())
         XCTAssertNoThrow(try c.connect(to: server.localAddress!).wait())

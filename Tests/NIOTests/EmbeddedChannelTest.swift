@@ -42,7 +42,7 @@ class EmbeddedChannelTest: XCTestCase {
 
     func testWriteInboundByteBufferReThrow() throws {
         let channel = EmbeddedChannel()
-        _ = try channel.pipeline.add(handler: ExceptionThrowingInboundHandler()).wait()
+        _ = try channel.pipeline.addHandler(ExceptionThrowingInboundHandler()).wait()
         do {
             try channel.writeInbound("msg")
             XCTFail()
@@ -54,7 +54,7 @@ class EmbeddedChannelTest: XCTestCase {
 
     func testWriteOutboundByteBufferReThrow() throws {
         let channel = EmbeddedChannel()
-        _ = try channel.pipeline.add(handler: ExceptionThrowingOutboundHandler()).wait()
+        _ = try channel.pipeline.addHandler(ExceptionThrowingOutboundHandler()).wait()
         do {
             try channel.writeOutbound("msg")
             XCTFail()
@@ -80,7 +80,7 @@ class EmbeddedChannelTest: XCTestCase {
     func testCloseOnInactiveIsOk() throws {
         let channel = EmbeddedChannel()
         let inactiveHandler = CloseInChannelInactiveHandler()
-        _ = try channel.pipeline.add(handler: inactiveHandler).wait()
+        _ = try channel.pipeline.addHandler(inactiveHandler).wait()
         XCTAssertFalse(try channel.finish())
 
         // channelInactive should fire only once.
