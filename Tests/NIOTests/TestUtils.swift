@@ -110,7 +110,7 @@ internal extension Channel {
     }
 }
 
-final class ByteCountingHandler : ChannelInboundHandler {
+final class ByteCountingHandler : ChannelInboundHandler, RemovableChannelHandler {
     typealias InboundIn = ByteBuffer
 
     private let numBytes: Int

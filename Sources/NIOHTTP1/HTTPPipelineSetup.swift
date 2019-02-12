@@ -64,7 +64,7 @@ public extension ChannelPipeline {
         let responseEncoder = HTTPResponseEncoder()
         let requestDecoder = HTTPRequestDecoder(leftOverBytesStrategy: upgrade == nil ? .dropBytes : .forwardBytes)
 
-        var handlers: [ChannelHandler] = [responseEncoder, requestDecoder]
+        var handlers: [RemovableChannelHandler] = [responseEncoder, requestDecoder]
 
         if pipelining {
             handlers.append(HTTPServerPipelineHandler())

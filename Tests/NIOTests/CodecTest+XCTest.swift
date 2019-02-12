@@ -38,6 +38,9 @@ extension ByteToMessageDecoderTest {
                 ("testStructsWorkAsByteToMessageDecoders", testStructsWorkAsByteToMessageDecoders),
                 ("testReentrantChannelReadWhileWholeBufferIsBeingProcessed", testReentrantChannelReadWhileWholeBufferIsBeingProcessed),
                 ("testReentrantChannelCloseInChannelRead", testReentrantChannelCloseInChannelRead),
+                ("testHandlerRemoveInChannelRead", testHandlerRemoveInChannelRead),
+                ("testChannelCloseInChannelRead", testChannelCloseInChannelRead),
+                ("testDecodeLoopGetsInterruptedWhenRemovalIsTriggered", testDecodeLoopGetsInterruptedWhenRemovalIsTriggered),
            ]
    }
 }

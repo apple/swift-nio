@@ -278,7 +278,7 @@ class HTTPDecoderTest: XCTestCase {
             }
         }
 
-        class Receiver: ChannelInboundHandler {
+        class Receiver: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = HTTPServerRequestPart
             let collector = ByteCollector()
 
@@ -329,7 +329,7 @@ class HTTPDecoderTest: XCTestCase {
             }
         }
         
-        class Reciever: ChannelInboundHandler {
+        class Reciever: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = HTTPClientResponsePart
             typealias InboundOut = HTTPClientResponsePart
             typealias OutboundOut = HTTPClientRequestPart

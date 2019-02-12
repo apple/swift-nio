@@ -40,7 +40,7 @@ let websocketResponse = """
 </html>
 """
 
-private final class HTTPHandler: ChannelInboundHandler {
+private final class HTTPHandler: ChannelInboundHandler, RemovableChannelHandler {
     typealias InboundIn = HTTPServerRequestPart
     typealias OutboundOut = HTTPServerResponsePart
 
@@ -216,8 +216,8 @@ let bootstrap = ServerBootstrap(group: group)
     .childChannelInitializer { channel in
         let httpHandler = HTTPHandler()
         let config: HTTPUpgradeConfiguration = (
-                        upgraders: [ upgrader ], 
-                        completionHandler: { _ in 
+                        upgraders: [ upgrader ],
+                        completionHandler: { _ in
                             channel.pipeline.remove(handler: httpHandler, promise: nil)
                         }
                     )

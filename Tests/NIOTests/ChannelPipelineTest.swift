@@ -171,7 +171,7 @@ class ChannelPipelineTest: XCTestCase {
         }
     }
 
-    private final class FireChannelReadOnRemoveHandler: ChannelInboundHandler {
+    private final class FireChannelReadOnRemoveHandler: ChannelInboundHandler, RemovableChannelHandler {
         typealias InboundIn = Never
         typealias InboundOut = Int
 
@@ -330,7 +330,7 @@ class ChannelPipelineTest: XCTestCase {
     }
 
     func testChannelInfrastructureIsNotLeaked() throws {
-        class SomeHandler: ChannelInboundHandler {
+        class SomeHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
 
             let body: (ChannelHandlerContext) -> Void
@@ -347,7 +347,7 @@ class ChannelPipelineTest: XCTestCase {
             let channel = EmbeddedChannel()
             let loop = channel.eventLoop as! EmbeddedEventLoop
 
-            weak var weakHandler1: ChannelHandler?
+            weak var weakHandler1: RemovableChannelHandler?
             weak var weakHandler2: ChannelHandler?
             weak var weakHandlerContext1: ChannelHandlerContext?
             weak var weakHandlerContext2: ChannelHandlerContext?
@@ -680,7 +680,7 @@ class ChannelPipelineTest: XCTestCase {
     }
 
     func testRemovingByContextWithPromiseStillInChannel() throws {
-        class NoOpHandler: ChannelInboundHandler {
+        class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
         class DummyError: Error { }
@@ -698,8 +698,8 @@ class ChannelPipelineTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.write(staticString: "Hello, world!")
 
-        let removalPromise = channel.eventLoop.makePromise(of: Bool.self)
-        removalPromise.futureResult.whenSuccess { (_: Bool) in
+        let removalPromise = channel.eventLoop.makePromise(of: Void.self)
+        removalPromise.futureResult.whenSuccess {
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -708,7 +708,12 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
         channel.pipeline.remove(ctx: context, promise: removalPromise)
 
-        XCTAssertEqual(channel.readOutbound(), buffer)
+        XCTAssertNoThrow(try removalPromise.futureResult.wait())
+        guard case .some(.byteBuffer(let receivedBuffer)) = channel.readOutbound(as: IOData.self) else {
+            XCTFail("No buffer")
+            return
+        }
+        XCTAssertEqual(receivedBuffer, buffer)
 
         do {
             try channel.throwIfErrorCaught()
@@ -741,7 +746,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNil(channel.readOutbound())
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
-        channel.pipeline.remove(ctx: context).whenSuccess { (_: Bool) in
+        channel.pipeline.remove(ctx: context).whenSuccess {
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -768,8 +773,8 @@ class ChannelPipelineTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.write(staticString: "Hello, world!")
 
-        let removalPromise = channel.eventLoop.makePromise(of: Bool.self)
-        removalPromise.futureResult.whenSuccess { (_: Bool) in
+        let removalPromise = channel.eventLoop.makePromise(of: Void.self)
+        removalPromise.futureResult.whenSuccess {
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -811,7 +816,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNil(channel.readOutbound())
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
-        channel.pipeline.remove(name: "TestHandler").whenSuccess { (_: Bool) in
+        channel.pipeline.remove(name: "TestHandler").whenSuccess {
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -820,7 +825,7 @@ class ChannelPipelineTest: XCTestCase {
     }
 
     func testRemovingByReferenceWithPromiseStillInChannel() throws {
-        class NoOpHandler: ChannelInboundHandler {
+        class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
         class DummyError: Error { }
@@ -839,8 +844,8 @@ class ChannelPipelineTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.write(staticString: "Hello, world!")
 
-        let removalPromise = channel.eventLoop.makePromise(of: Bool.self)
-        removalPromise.futureResult.whenSuccess { (_: Bool) in
+        let removalPromise = channel.eventLoop.makePromise(of: Void.self)
+        removalPromise.futureResult.whenSuccess {
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -862,7 +867,7 @@ class ChannelPipelineTest: XCTestCase {
     }
 
     func testRemovingByReferenceWithFutureNotInChannel() throws {
-        class NoOpHandler: ChannelInboundHandler {
+        class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
         class DummyError: Error { }
@@ -883,7 +888,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNil(channel.readOutbound())
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
-        channel.pipeline.remove(handler: handler).whenSuccess { (_: Bool) in
+        channel.pipeline.remove(handler: handler).whenSuccess {
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -916,5 +921,55 @@ class ChannelPipelineTest: XCTestCase {
             .connect(to: server.localAddress!)
             .wait())
         XCTAssertNoThrow(try client.close().wait())
+    }
+
+    func testTeardownDuringFormalRemovalProcess() {
+        class NeverCompleteRemovalHandler: ChannelInboundHandler, RemovableChannelHandler {
+            typealias InboundIn = Never
+
+            private let removalTokenPromise: EventLoopPromise<ChannelHandlerContext.RemovalToken>
+            private let handlerRemovedPromise: EventLoopPromise<Void>
+
+            init(removalTokenPromise: EventLoopPromise<ChannelHandlerContext.RemovalToken>,
+                 handlerRemovedPromise: EventLoopPromise<Void>) {
+                self.removalTokenPromise = removalTokenPromise
+                self.handlerRemovedPromise = handlerRemovedPromise
+            }
+
+            func handlerRemoved(ctx: ChannelHandlerContext) {
+                self.handlerRemovedPromise.succeed(())
+            }
+
+            func removeHandler(ctx: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
+                self.removalTokenPromise.succeed(removalToken)
+            }
+        }
+
+        let eventLoop = EmbeddedEventLoop()
+        let removalTokenPromise = eventLoop.makePromise(of: ChannelHandlerContext.RemovalToken.self)
+        let handlerRemovedPromise = eventLoop.makePromise(of: Void.self)
+
+        let channel = EmbeddedChannel(handler: NeverCompleteRemovalHandler(removalTokenPromise: removalTokenPromise,
+                                                                           handlerRemovedPromise: handlerRemovedPromise),
+                                      loop: eventLoop)
+
+        // pretend we're real and connect
+        XCTAssertNoThrow(try channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5)).wait())
+
+        // let's trigger the removal process
+        XCTAssertNoThrow(try channel.pipeline.context(handlerType: NeverCompleteRemovalHandler.self).map { handler in
+            channel.pipeline.remove(ctx: handler, promise: nil)
+        }.wait())
+
+        XCTAssertNoThrow(try removalTokenPromise.futureResult.map { removalToken in
+            // we know that the removal process has been started, so let's tear down the pipeline
+            func workaroundSR9815withAUselessFunction() {
+                XCTAssertNoThrow(XCTAssertFalse(try channel.finish()))
+            }
+            workaroundSR9815withAUselessFunction()
+        }.wait())
+
+        // verify that the handler has now been removed, despite the fact it should be mid-removal
+        XCTAssertNoThrow(try handlerRemovedPromise.futureResult.wait())
     }
 }

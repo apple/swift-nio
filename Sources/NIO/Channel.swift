@@ -341,6 +341,9 @@ public enum ChannelError: Error {
 
     /// An operation that was inappropriate given the current `Channel` state was attempted.
     case inappropriateOperationForState
+
+    /// An attempt was made to remove a ChannelHandler that is not removable.
+    case unremovableHandler
 }
 
 extension ChannelError: Equatable { }

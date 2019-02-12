@@ -95,7 +95,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
             return readCountHandler.readCount
         }.wait())
 
-        XCTAssertTrue(try serverChannel.pipeline.remove(name: acceptHandlerName).wait())
+        XCTAssertNoThrow(try serverChannel.pipeline.remove(name: acceptHandlerName).wait())
 
         if read {
             // Removal should have triggered a read.
