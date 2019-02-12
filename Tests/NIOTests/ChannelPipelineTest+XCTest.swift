@@ -53,6 +53,8 @@ extension ChannelPipelineTest {
                 ("testRemovingByReferenceWithFutureNotInChannel", testRemovingByReferenceWithFutureNotInChannel),
                 ("testFireChannelReadInInactiveChannelDoesNotCrash", testFireChannelReadInInactiveChannelDoesNotCrash),
                 ("testTeardownDuringFormalRemovalProcess", testTeardownDuringFormalRemovalProcess),
+                ("testVariousChannelRemovalAPIsGoThroughRemovableChannelHandler", testVariousChannelRemovalAPIsGoThroughRemovableChannelHandler),
+                ("testNonRemovableChannelHandlerIsNotRemovable", testNonRemovableChannelHandlerIsNotRemovable),
            ]
    }
 }

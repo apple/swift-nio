@@ -329,7 +329,7 @@ class HTTPDecoderTest: XCTestCase {
             }
         }
         
-        class Reciever: ChannelInboundHandler, RemovableChannelHandler {
+        class Receiver: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = HTTPClientResponsePart
             typealias InboundOut = HTTPClientResponsePart
             typealias OutboundOut = HTTPClientRequestPart
@@ -359,7 +359,7 @@ class HTTPDecoderTest: XCTestCase {
         }
         
         XCTAssertNoThrow(try channel.pipeline.add(name: "decoder", handler: HTTPResponseDecoder(leftOverBytesStrategy: .forwardBytes)).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: Reciever()).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: Receiver()).wait())
         
         XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 8888)).wait())
         

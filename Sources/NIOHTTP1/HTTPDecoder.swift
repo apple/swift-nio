@@ -165,7 +165,7 @@ public final class HTTPRequestDecoder: HTTPDecoder<HTTPServerRequestPart>, Remov
 /// were for accurate decoding.
 ///
 /// Rather than set this up manually, consider using `ChannelPipeline.addHTTPClientHandlers`.
-public final class HTTPResponseDecoder: HTTPDecoder<HTTPClientResponsePart>, ChannelOutboundHandler {
+public final class HTTPResponseDecoder: HTTPDecoder<HTTPClientResponsePart>, ChannelOutboundHandler, RemovableChannelHandler {
     public typealias OutboundIn = HTTPClientRequestPart
     public typealias OutboundOut = HTTPClientRequestPart
 

@@ -755,7 +755,7 @@ class ChannelPipelineTest: XCTestCase {
     }
 
     func testRemovingByNameWithPromiseStillInChannel() throws {
-        class NoOpHandler: ChannelInboundHandler {
+        class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
         class DummyError: Error { }
@@ -774,9 +774,11 @@ class ChannelPipelineTest: XCTestCase {
         buffer.writeStaticString("Hello, world!")
 
         let removalPromise = channel.eventLoop.makePromise(of: Void.self)
-        removalPromise.futureResult.whenSuccess {
+        removalPromise.futureResult.map {
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
+        }.whenFailure {
+            XCTFail("unexpected error: \($0)")
         }
 
         XCTAssertNil(channel.readOutbound())
@@ -971,5 +973,73 @@ class ChannelPipelineTest: XCTestCase {
 
         // verify that the handler has now been removed, despite the fact it should be mid-removal
         XCTAssertNoThrow(try handlerRemovedPromise.futureResult.wait())
+    }
+
+    func testVariousChannelRemovalAPIsGoThroughRemovableChannelHandler() {
+        class Handler: ChannelInboundHandler, RemovableChannelHandler {
+            typealias InboundIn = Never
+
+            var removeHandlerCalled = false
+            var withinRemoveHandler = false
+
+            func removeHandler(ctx: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
+                self.removeHandlerCalled = true
+                self.withinRemoveHandler = true
+                defer {
+                    self.withinRemoveHandler = false
+                }
+                ctx.leavePipeline(removalToken: removalToken)
+            }
+
+            func handlerRemoved(ctx: ChannelHandlerContext) {
+                XCTAssertTrue(self.removeHandlerCalled)
+                XCTAssertTrue(self.withinRemoveHandler)
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        let allHandlers = [Handler(), Handler(), Handler()]
+        XCTAssertNoThrow(try channel.pipeline.add(name: "the first one to remove", handler: allHandlers[0]).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: allHandlers[1]).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(name: "the last one to remove", handler: allHandlers[2]).wait())
+
+        let lastContext = try! channel.pipeline.context(name: "the last one to remove").wait()
+
+        XCTAssertNoThrow(try channel.pipeline.remove(name: "the first one to remove").wait())
+        XCTAssertNoThrow(try channel.pipeline.remove(handler: allHandlers[1]).wait())
+        XCTAssertNoThrow(try channel.pipeline.remove(ctx: lastContext).wait())
+
+        allHandlers.forEach {
+            XCTAssertTrue($0.removeHandlerCalled)
+            XCTAssertFalse($0.withinRemoveHandler)
+        }
+    }
+
+    func testNonRemovableChannelHandlerIsNotRemovable() {
+        class NonRemovableHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+        }
+
+        let channel = EmbeddedChannel()
+        let allHandlers = [NonRemovableHandler(), NonRemovableHandler(), NonRemovableHandler()]
+        XCTAssertNoThrow(try channel.pipeline.add(name: "1", handler: allHandlers[0]).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(name: "2", handler: allHandlers[1]).wait())
+
+        let lastContext = try! channel.pipeline.context(name: "1").wait()
+
+        XCTAssertThrowsError(try channel.pipeline.remove(name: "2").wait()) { error in
+            if let error = error as? ChannelError {
+                XCTAssertEqual(ChannelError.unremovableHandler, error)
+            } else {
+                XCTFail("unexpected error: \(error)")
+            }
+        }
+        XCTAssertThrowsError(try channel.pipeline.remove(ctx: lastContext).wait()) { error in
+            if let error = error as? ChannelError {
+                XCTAssertEqual(ChannelError.unremovableHandler, error)
+            } else {
+                XCTFail("unexpected error: \(error)")
+            }
+        }
     }
 }

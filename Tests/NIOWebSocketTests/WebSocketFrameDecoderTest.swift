@@ -103,7 +103,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
     private func swapDecoder(for handler: ChannelHandler) {
         // We need to insert a decoder that doesn't do error handling. We still insert
         // an encoder because we want to fail gracefully if a frame is written.
-        XCTAssertNoThrow(try self.decoderChannel.pipeline.context(handlerType: ByteToMessageHandler<WebSocketFrameDecoder>.self).flatMapThrowing {
+        let f = self.decoderChannel.pipeline.context(handlerType: ByteToMessageHandler<WebSocketFrameDecoder>.self).flatMapThrowing {
             if let handler = $0.handler as? RemovableChannelHandler {
                 return handler
             } else {
@@ -111,7 +111,12 @@ public class WebSocketFrameDecoderTest: XCTestCase {
             }
         }.flatMap {
             self.decoderChannel.pipeline.remove(handler: $0)
-        }.flatMap {
+        }
+
+        // we need to run the event loop here because removal is not synchronous
+        (self.decoderChannel.eventLoop as! EmbeddedEventLoop).run()
+
+        XCTAssertNoThrow(try f.flatMap {
             self.decoderChannel.pipeline.add(handler: handler)
         }.wait())
     }

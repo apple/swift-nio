@@ -307,7 +307,7 @@ public final class ChannelPipeline: ChannelInvoker {
             try ctx.invokeHandlerAdded()
             promise.succeed(())
         } catch let err {
-            remove0(ctx: ctx, promise: nil)
+            removeHandlerFromPipeline(ctx: ctx, promise: nil)
             promise.fail(err)
         }
     }
@@ -392,7 +392,7 @@ public final class ChannelPipeline: ChannelInvoker {
         let contextFuture = self.context0 {
             return $0.handler === handler
         }.map { ctx in
-            self.remove0(ctx: ctx, promise: promise)
+            self.remove(ctx: ctx, promise: promise)
         }
 
         contextFuture.cascadeFailure(to: promise)
@@ -407,7 +407,7 @@ public final class ChannelPipeline: ChannelInvoker {
         let contextFuture = self.context0 {
             $0.name == name
         }.map { ctx in
-            self.remove0(ctx: ctx, promise: promise)
+            self.remove(ctx: ctx, promise: promise)
         }
 
         contextFuture.cascadeFailure(to: promise)
@@ -503,8 +503,10 @@ public final class ChannelPipeline: ChannelInvoker {
         return nil
     }
 
-    /// Remove a `ChannelHandlerContext` from the `ChannelPipeline`. Must only be called from within the `EventLoop`.
-    internal func remove0(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+    /// Remove a `ChannelHandlerContext` from the `ChannelPipeline` directly without going through the
+    /// `RemovableChannelHandler` API. This must only be used to clear the pipeline on `Channel` tear down and
+    /// as a result of the `leavePipeline` call in the `RemovableChannelHandler` API.
+    internal func removeHandlerFromPipeline(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
 
         let nextCtx = ctx.next
@@ -546,9 +548,9 @@ public final class ChannelPipeline: ChannelInvoker {
 
         if let head = self.head {
             while let ctx = head.next {
-                remove0(ctx: ctx, promise: nil)
+                removeHandlerFromPipeline(ctx: ctx, promise: nil)
             }
-            remove0(ctx: self.head!, promise: nil)
+            removeHandlerFromPipeline(ctx: self.head!, promise: nil)
         }
         self.head = nil
         self.tail = nil
@@ -1492,7 +1494,7 @@ extension ChannelHandlerContext {
     ///    - removalToken: The removal token received from `RemovableChannelHandler.removeHandler`
     public func leavePipeline(removalToken: RemovalToken) {
         self.eventLoop.preconditionInEventLoop()
-        self.pipeline.remove0(ctx: self, promise: removalToken.promise)
+        self.pipeline.removeHandlerFromPipeline(ctx: self, promise: removalToken.promise)
     }
 }
 

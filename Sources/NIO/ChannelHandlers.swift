@@ -18,7 +18,7 @@
 
 /// A `ChannelHandler` that implements a backoff for a `ServerChannel` when accept produces an `IOError`.
 /// These errors are often recoverable by reducing the rate at which we call accept.
-public final class AcceptBackoffHandler: ChannelDuplexHandler {
+public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelHandler {
     public typealias InboundIn = Channel
     public typealias OutboundIn = Channel
 
@@ -107,7 +107,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler {
  ChannelHandler implementation which enforces back-pressure by stopping to read from the remote peer when it cannot write back fast enough.
  It will start reading again once pending data was written.
 */
-public class BackPressureHandler: ChannelDuplexHandler {
+public class BackPressureHandler: ChannelDuplexHandler, RemovableChannelHandler {
     public typealias OutboundIn = NIOAny
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer
@@ -151,7 +151,7 @@ public class BackPressureHandler: ChannelDuplexHandler {
 }
 
 /// Triggers an IdleStateEvent when a Channel has not performed read, write, or both operation for a while.
-public class IdleStateHandler: ChannelDuplexHandler {
+public class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandler {
     public typealias InboundIn = NIOAny
     public typealias InboundOut = NIOAny
     public typealias OutboundIn = NIOAny
