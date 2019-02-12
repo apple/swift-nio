@@ -155,9 +155,17 @@ public struct CircularBuffer<E>: CustomStringConvertible, AppendableCollection {
 
     /// Removes all members from the circular buffer whist keeping the capacity.
     public mutating func removeAll(keepingCapacity: Bool = false) {
+        if keepingCapacity {
+            for index in 0..<self.count {
+                self.buffer[self.bufferIndex(ofIndex: index)] = nil
+            }
+        } else {
+            self.buffer.removeAll(keepingCapacity: false)
+            self.buffer.append(nil)
+        }
         self.headIdx = 0
         self.tailIdx = 0
-        self.buffer = ContiguousArray<E?>(repeating: nil, count: keepingCapacity ? self.buffer.count : 1)
+        assert(self.buffer.allSatisfy { $0 == nil})
     }
 
     // MARK: CustomStringConvertible implementation

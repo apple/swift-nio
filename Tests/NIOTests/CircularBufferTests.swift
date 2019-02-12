@@ -554,4 +554,88 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(capacity0, capacity3)
     }
 
+    func testExpandRemoveAllKeepingAndNotKeepingCapacityAndExpandAgain() {
+        for shouldKeepCapacity in [false, true] {
+            var ring = CircularBuffer<Int>(initialCapacity: 4)
+
+            (0..<16).forEach { ring.append($0) }
+            (0..<4).forEach { _ in ring.removeFirst() }
+            (16..<20).forEach { ring.append($0) }
+            XCTAssertEqual(Array(4..<20), Array(ring))
+
+            ring.removeAll(keepingCapacity: shouldKeepCapacity)
+
+            (0..<8).forEach { ring.append($0) }
+            (0..<4).forEach { _ in ring.removeFirst() }
+            (8..<64).forEach { ring.append($0) }
+
+            XCTAssertEqual(Array(4..<64), Array(ring))
+        }
+    }
+
+    func testRemoveAllNilsOutTheContents() {
+        class Dummy {}
+
+        weak var dummy1: Dummy? = nil
+        weak var dummy2: Dummy? = nil
+        weak var dummy3: Dummy? = nil
+        weak var dummy4: Dummy? = nil
+        weak var dummy5: Dummy? = nil
+        weak var dummy6: Dummy? = nil
+        weak var dummy7: Dummy? = nil
+        weak var dummy8: Dummy? = nil
+
+        var ring: CircularBuffer<Dummy> = .init(initialCapacity: 4)
+
+        ({
+            for _ in 0..<2 {
+                ring.append(Dummy())
+            }
+
+            dummy1 = ring.dropFirst(0).first
+            dummy2 = ring.dropFirst(1).first
+
+            XCTAssertNotNil(dummy1)
+            XCTAssertNotNil(dummy2)
+
+            ring.removeFirst()
+
+            for _ in 2..<8 {
+                ring.append(Dummy())
+            }
+
+            dummy3 = ring.dropFirst(1).first
+            dummy4 = ring.dropFirst(2).first
+            dummy5 = ring.dropFirst(3).first
+            dummy6 = ring.dropFirst(4).first
+            dummy7 = ring.dropFirst(5).first
+            dummy8 = ring.dropFirst(6).first
+
+            XCTAssertNotNil(dummy3)
+            XCTAssertNotNil(dummy4)
+            XCTAssertNotNil(dummy5)
+            XCTAssertNotNil(dummy6)
+            XCTAssertNotNil(dummy7)
+            XCTAssertNotNil(dummy8)
+        })()
+
+        XCTAssertNotNil(dummy2)
+        XCTAssertNotNil(dummy3)
+        XCTAssertNotNil(dummy4)
+        XCTAssertNotNil(dummy5)
+        XCTAssertNotNil(dummy6)
+        XCTAssertNotNil(dummy7)
+        XCTAssertNotNil(dummy8)
+
+        ring.removeAll(keepingCapacity: true)
+
+        assert(dummy1 == nil, within: .seconds(1))
+        assert(dummy2 == nil, within: .seconds(1))
+        assert(dummy3 == nil, within: .seconds(1))
+        assert(dummy4 == nil, within: .seconds(1))
+        assert(dummy5 == nil, within: .seconds(1))
+        assert(dummy6 == nil, within: .seconds(1))
+        assert(dummy7 == nil, within: .seconds(1))
+        assert(dummy8 == nil, within: .seconds(1))
+    }
 }
