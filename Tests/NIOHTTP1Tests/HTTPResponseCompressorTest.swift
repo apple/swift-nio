@@ -74,7 +74,7 @@ private extension ByteBuffer {
 
     mutating func merge<S: Sequence>(_ others: S) -> ByteBuffer where S.Element == ByteBuffer {
         for var buffer in others {
-            self.write(buffer: &buffer)
+            self.writeBuffer(&buffer)
         }
         return self
     }
@@ -237,7 +237,7 @@ class HTTPResponseCompressorTest: XCTestCase {
                                         status: .ok)
         let body = [UInt8](repeating: 60, count: bodySize)
         var bodyBuffer = channel.allocator.buffer(capacity: bodySize)
-        bodyBuffer.write(bytes: body)
+        bodyBuffer.writeBytes(body)
 
         var bodyChunks = [ByteBuffer]()
         for index in stride(from: 0, to: bodyBuffer.readableBytes, by: 2) {
@@ -275,7 +275,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         response.headers = additionalHeaders
         let body = [UInt8](repeating: 60, count: bodySize)
         var bodyBuffer = channel.allocator.buffer(capacity: bodySize)
-        bodyBuffer.write(bytes: body)
+        bodyBuffer.writeBytes(body)
 
         var bodyChunks = [ByteBuffer]()
         for index in stride(from: 0, to: bodyBuffer.readableBytes, by: 2) {
@@ -312,7 +312,7 @@ class HTTPResponseCompressorTest: XCTestCase {
                                         status: .ok)
         let body = [UInt8](repeating: 60, count: bodySize)
         var bodyBuffer = channel.allocator.buffer(capacity: bodySize)
-        bodyBuffer.write(bytes: body)
+        bodyBuffer.writeBytes(body)
 
         var bodyChunks = [ByteBuffer]()
         for index in stride(from: 0, to: bodyBuffer.readableBytes, by: 2) {

@@ -453,7 +453,7 @@ class NonBlockingFileIOTest: XCTestCase {
 
     func testWriting() throws {
         var buffer = allocator.buffer(capacity: 3)
-        buffer.write(staticString: "123")
+        buffer.writeStaticString("123")
 
         try withTemporaryFile(content: "") { (fileHandle, path) in
             try self.fileIO.write(fileHandle: fileHandle,

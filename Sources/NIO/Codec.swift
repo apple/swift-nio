@@ -216,7 +216,7 @@ private extension ByteBuffer {
         }
         self.reserveCapacity(requiredCapacity)
         for var buffer in buffers {
-            self.write(buffer: &buffer)
+            self.writeBuffer(&buffer)
         }
     }
 }
@@ -232,7 +232,7 @@ private extension B2MDBuffer {
             let firstIndex = self.buffers.startIndex
             var firstBuffer = self.buffers[firstIndex]
             for var buffer in self.buffers[self.buffers.index(after: firstIndex)...] {
-                firstBuffer.write(buffer: &buffer)
+                firstBuffer.writeBuffer(&buffer)
             }
             return firstBuffer
         }

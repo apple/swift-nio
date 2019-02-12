@@ -132,8 +132,8 @@ extension ByteBuffer {
     ///     - encoding: The encoding to use to encode the string.
     /// - returns: The number of bytes written.
     @discardableResult
-    public mutating func write(string: String, encoding: String.Encoding) throws -> Int {
-        let written = try self.set(string: string, encoding: encoding, at: self.writerIndex)
+    public mutating func writeString(_ string: String, encoding: String.Encoding) throws -> Int {
+        let written = try self.setString(string, encoding: encoding, at: self.writerIndex)
         self.moveWriterIndex(forwardBy: written)
         return written
     }
@@ -146,10 +146,10 @@ extension ByteBuffer {
     ///     - index: The index for the first serialized byte.
     /// - returns: The number of bytes written.
     @discardableResult
-    public mutating func set(string: String, encoding: String.Encoding, at index: Int) throws -> Int {
+    public mutating func setString(_ string: String, encoding: String.Encoding, at index: Int) throws -> Int {
         guard let data = string.data(using: encoding) else {
             throw ByteBufferFoundationError.failedToEncodeString
         }
-        return self.set(bytes: data, at: index)
+        return self.setBytes(data, at: index)
     }
 }

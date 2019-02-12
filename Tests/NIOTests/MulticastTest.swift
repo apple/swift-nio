@@ -123,7 +123,7 @@ final class MulticastTest: XCTestCase {
         XCTAssertNoThrow(try multicastChannel.pipeline.add(handler: PromiseOnReadHandler(promise: receivedMulticastDatagram)).wait())
 
         var messageBuffer = sender.allocator.buffer(capacity: 24)
-        messageBuffer.write(staticString: "hello, world!")
+        messageBuffer.writeStaticString("hello, world!")
 
         XCTAssertNoThrow(
             try sender.writeAndFlush(AddressedEnvelope(remoteAddress: multicastAddress, data: messageBuffer)).wait(),
@@ -151,7 +151,7 @@ final class MulticastTest: XCTestCase {
         }.cascadeFailure(to: timeoutPromise)
 
         var messageBuffer = sender.allocator.buffer(capacity: 24)
-        messageBuffer.write(staticString: "hello, world!")
+        messageBuffer.writeStaticString("hello, world!")
 
         XCTAssertNoThrow(
             try sender.writeAndFlush(AddressedEnvelope(remoteAddress: multicastAddress, data: messageBuffer)).wait(),

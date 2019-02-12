@@ -280,7 +280,7 @@ private struct PartialHTTPResponse {
     mutating func bufferBodyPart(_ bodyPart: IOData) {
         switch bodyPart {
         case .byteBuffer(var buffer):
-            body.write(buffer: &buffer)
+            body.writeBuffer(&buffer)
         case .fileRegion:
             fatalError("Cannot currently compress file regions")
         }

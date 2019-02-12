@@ -50,7 +50,7 @@ private final class EchoHandler: ChannelInboundHandler {
 
         // We are connected. It's time to send the message to the server to initialize the ping-pong sequence.
         var buffer = ctx.channel.allocator.buffer(capacity: line.utf8.count)
-        buffer.write(string: line)
+        buffer.writeString(line)
         self.numBytes = buffer.readableBytes
         ctx.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
     }

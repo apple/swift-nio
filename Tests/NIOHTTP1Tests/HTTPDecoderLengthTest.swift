@@ -19,7 +19,7 @@ import NIOHTTP1
 extension ByteBuffer {
     init(string: String) {
         self = ByteBufferAllocator().buffer(capacity: string.utf8.count)
-        self.write(string: string)
+        self.writeString(string)
     }
 }
 
@@ -203,17 +203,17 @@ class HTTPDecoderLengthTest: XCTestCase {
         // We now want to send a HTTP/1.1 response. This response may contain some length framing fields that RFC 7230 says MUST
         // be ignored.
         var response = channel.allocator.buffer(capacity: 256)
-        response.write(string: "HTTP/1.1 \(responseStatus.code) \(responseStatus.reasonPhrase)\r\nServer: example\r\n")
+        response.writeString("HTTP/1.1 \(responseStatus.code) \(responseStatus.reasonPhrase)\r\nServer: example\r\n")
 
         switch responseFramingField {
         case .contentLength:
-            response.write(staticString: "Content-Length: 16\r\n")
+            response.writeStaticString("Content-Length: 16\r\n")
         case .transferEncoding:
-            response.write(staticString: "Transfer-Encoding: chunked\r\n")
+            response.writeStaticString("Transfer-Encoding: chunked\r\n")
         case .neither:
             break
         }
-        response.write(staticString: "\r\n")
+        response.writeStaticString("\r\n")
 
         XCTAssertNoThrow(try channel.writeInbound(IOData.byteBuffer(response)))
 

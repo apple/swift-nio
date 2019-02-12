@@ -60,7 +60,7 @@ class FileRegionTest : XCTestCase {
             try content.write(toFile: filePath, atomically: false, encoding: .ascii)
             try clientChannel.writeAndFlush(NIOAny(fr)).wait()
             var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
-            buffer.write(bytes: bytes)
+            buffer.writeBytes(bytes)
             try countingHandler.assertReceived(buffer: buffer)
         }
     }
@@ -156,7 +156,7 @@ class FileRegionTest : XCTestCase {
                 () = try clientChannel.writeAndFlush(NIOAny(fr1)).flatMap {
                     let frFuture = clientChannel.write(NIOAny(fr2))
                     var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
-                    buffer.write(bytes: bytes)
+                    buffer.writeBytes(bytes)
                     let bbFuture = clientChannel.write(NIOAny(buffer))
                     clientChannel.close(promise: nil)
                     clientChannel.flush()
@@ -170,7 +170,7 @@ class FileRegionTest : XCTestCase {
             }
 
             var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
-            buffer.write(bytes: bytes)
+            buffer.writeBytes(bytes)
             try countingHandler.assertReceived(buffer: buffer)
         }
     }

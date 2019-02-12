@@ -314,7 +314,7 @@ class ChannelNotificationTest: XCTestCase {
 
         let channel = try acceptedChannelPromise.futureResult.wait()
         var buffer = channel.allocator.buffer(capacity: 8)
-        buffer.write(string: "test")
+        buffer.writeString("test")
 
 
         while (try? channel.writeAndFlush(buffer).wait()) != nil {
@@ -387,7 +387,7 @@ class ChannelNotificationTest: XCTestCase {
             .connect(to: serverChannel.localAddress!).wait())
 
         var buffer = clientChannel.allocator.buffer(capacity: 2)
-        buffer.write(string: "X")
+        buffer.writeString("X")
         XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).flatMap {
             clientChannel.close()
         }.wait())

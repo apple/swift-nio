@@ -152,7 +152,7 @@ public extension ByteBuffer {
     /// - parameters:
     ///     - code: The code to write into the buffer.
     mutating func write(webSocketErrorCode code: WebSocketErrorCode) {
-        self.write(integer: UInt16(webSocketErrorCode: code))
+        self.writeInteger(UInt16(webSocketErrorCode: code))
     }
 }
 
