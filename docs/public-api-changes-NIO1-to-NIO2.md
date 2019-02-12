@@ -25,7 +25,7 @@
 - `markedElementIndex()`, `markedElement()` and `hasMark()` are now computed variables instead of functions.
 - `ByteBuffer.set(string:at:)` no longer returns an `Int?`, instead it
   returns `Int` and has had its return value made discardable.
-- `ByteBuffer.write(string:)` no longer returns an `Int?`, instead it
+- `ByteBuffer.write(string:)` (now named `ByteBuffer.writeString(_:)`) no longer returns an `Int?`, instead it
   returns `Int` and has had its return value made discardable.
 - removed ContiguousCollection
 - CircularBuffer(initialRingCapacity:) is now CircularBuffer(initialCapacity:)
@@ -43,4 +43,6 @@
 - `EventLoopFuture.cascade(promise: EventLoopPromise)` had its label changed to `EventLoopFuture.cascade(to: EventLoopPromise)`
 - `EventLoopFuture.cascadeFailure(promise: EventLoopPromise)` had its label changed to `EventLoopFuture.cascade(to: EventLoopPromise)`
 - renamed `EventLoopFuture.andAll(_:eventLoop:)` to `EventLoopFuture.andAllSucceed(_:on:)`
-- all ChannelPipeline.remove(...) now return `EventLoopFuture<Void>` instead of `EventLoopFuture<Bool>`
+- all `ChannelPipeline.remove(...)` now return `EventLoopFuture<Void>` instead of `EventLoopFuture<Bool>`
+- `ByteBuffer.set(<type>, ...)` is now `ByteBuffer.set<Type>`
+- `ByteBuffer.write(<type>, ...)` is now `ByteBuffer.write<Type>`

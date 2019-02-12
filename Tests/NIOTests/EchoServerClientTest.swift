@@ -48,7 +48,7 @@ class EchoServerClientTest : XCTestCase {
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
 
         for i in 0..<numBytes {
-            buffer.write(integer: UInt8(i % 256))
+            buffer.writeInteger(UInt8(i % 256))
         }
 
         try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
@@ -126,7 +126,7 @@ class EchoServerClientTest : XCTestCase {
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
 
         for i in 0..<numBytes {
-            buffer.write(integer: UInt8(i % 256))
+            buffer.writeInteger(UInt8(i % 256))
         }
 
         XCTAssertNoThrow(try clientChannel.writeAndFlush(NIOAny(buffer)).wait())
@@ -170,7 +170,7 @@ class EchoServerClientTest : XCTestCase {
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
 
         for i in 0..<numBytes {
-            buffer.write(integer: UInt8(i % 256))
+            buffer.writeInteger(UInt8(i % 256))
         }
 
         try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
@@ -232,7 +232,7 @@ class EchoServerClientTest : XCTestCase {
 
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
         for i in 0..<numBytes {
-            buffer.write(integer: UInt8(i % 256))
+            buffer.writeInteger(UInt8(i % 256))
         }
         XCTAssertNoThrow(try clientChannel.writeAndFlush(NIOAny(buffer)).wait())
 
@@ -389,7 +389,7 @@ class EchoServerClientTest : XCTestCase {
 
         func channelActive(ctx: ChannelHandlerContext) {
             var dataToWrite = ctx.channel.allocator.buffer(capacity: toWrite.utf8.count)
-            dataToWrite.write(string: toWrite)
+            dataToWrite.writeString(toWrite)
             ctx.writeAndFlush(NIOAny(dataToWrite), promise: nil)
             ctx.fireChannelActive()
         }
@@ -464,7 +464,7 @@ class EchoServerClientTest : XCTestCase {
 
         // First we confirm that the channel really is up by sending in the appropriate number of bytes.
         var bytesToWrite = clientChannel.allocator.buffer(capacity: writingBytes.utf8.count)
-        bytesToWrite.write(string: writingBytes)
+        bytesToWrite.writeString(writingBytes)
         let lastWriteFuture = clientChannel.writeAndFlush(NIOAny(bytesToWrite))
 
         // When we've received all the bytes we know the connection is up.
@@ -570,7 +570,7 @@ class EchoServerClientTest : XCTestCase {
             .connect(to: serverChannel.localAddress!).wait())
 
         var buffer = clientChannel.allocator.buffer(capacity: str.utf8.count)
-        buffer.write(string: str)
+        buffer.writeString(str)
         try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         try countingHandler.assertReceived(buffer: buffer)
@@ -598,7 +598,7 @@ class EchoServerClientTest : XCTestCase {
 
             func channelActive(ctx: ChannelHandlerContext) {
                 var buffer = ctx.channel.allocator.buffer(capacity: 4)
-                buffer.write(string: "test")
+                buffer.writeString("test")
                 writeUntilFailed(ctx, buffer)
             }
 
@@ -624,7 +624,7 @@ class EchoServerClientTest : XCTestCase {
             func channelActive(ctx: ChannelHandlerContext) {
                 ctx.fireChannelActive()
                 var buffer = ctx.channel.allocator.buffer(capacity: str.utf8.count)
-                buffer.write(string: str)
+                buffer.writeString(str)
 
                 // write it four times and then close the connect.
                 ctx.writeAndFlush(NIOAny(buffer)).flatMap {
@@ -666,10 +666,10 @@ class EchoServerClientTest : XCTestCase {
         dpGroup.wait()
 
         var completeBuffer = clientChannel.allocator.buffer(capacity: str.utf8.count * 4)
-        completeBuffer.write(string: str)
-        completeBuffer.write(string: str)
-        completeBuffer.write(string: str)
-        completeBuffer.write(string: str)
+        completeBuffer.writeString(str)
+        completeBuffer.writeString(str)
+        completeBuffer.writeString(str)
+        completeBuffer.writeString(str)
 
         try countingHandler.assertReceived(buffer: completeBuffer)
 
@@ -814,7 +814,7 @@ class EchoServerClientTest : XCTestCase {
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
 
         for i in 0..<numBytes {
-            buffer.write(integer: UInt8(i % 256))
+            buffer.writeInteger(UInt8(i % 256))
         }
 
         try clientChannel.writeAndFlush(NIOAny(buffer)).wait()

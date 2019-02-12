@@ -19,7 +19,7 @@ class EmbeddedChannelTest: XCTestCase {
     func testWriteOutboundByteBuffer() throws {
         let channel = EmbeddedChannel()
         var buf = channel.allocator.buffer(capacity: 1024)
-        buf.write(string: "hello")
+        buf.writeString("hello")
         
         XCTAssertTrue(try channel.writeOutbound(buf))
         XCTAssertTrue(try channel.finish())
@@ -31,7 +31,7 @@ class EmbeddedChannelTest: XCTestCase {
     func testWriteInboundByteBuffer() throws {
         let channel = EmbeddedChannel()
         var buf = channel.allocator.buffer(capacity: 1024)
-        buf.write(string: "hello")
+        buf.writeString("hello")
 
         XCTAssertTrue(try channel.writeInbound(buf))
         XCTAssertTrue(try channel.finish())
@@ -182,7 +182,7 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
 
         var buf = ByteBufferAllocator().buffer(capacity: 1)
-        buf.write(bytes: [1])
+        buf.writeBytes([1])
         let writeFuture = channel.write(buf)
         XCTAssertNil(channel.readOutbound())
         XCTAssertFalse(writeFuture.isFulfilled)

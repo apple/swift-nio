@@ -37,8 +37,8 @@ private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHandler
     if isChunked {
         var buffer = ctx.channel.allocator.buffer(capacity: 32)
         let len = String(readableBytes, radix: 16)
-        buffer.write(string: len)
-        buffer.write(staticString: "\r\n")
+        buffer.writeString(len)
+        buffer.writeStaticString("\r\n")
         ctx.write(wrapOutboundOut(.byteBuffer(buffer)), promise: mW1)
 
         ctx.write(wrapOutboundOut(chunk), promise: mW2)
@@ -57,11 +57,11 @@ private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, ctx: ChannelHand
         var buffer: ByteBuffer
         if let trailers = trailers {
             buffer = ctx.channel.allocator.buffer(capacity: 256)
-            buffer.write(staticString: "0\r\n")
+            buffer.writeStaticString("0\r\n")
             buffer.write(headers: trailers) // Includes trailing CRLF.
         } else {
             buffer = ctx.channel.allocator.buffer(capacity: 8)
-            buffer.write(staticString: "0\r\n\r\n")
+            buffer.writeStaticString("0\r\n\r\n")
         }
         ctx.write(wrapOutboundOut(.byteBuffer(buffer)), promise: p)
     case (false, .some(let p)):
@@ -188,367 +188,367 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
 
 private extension ByteBuffer {
     private mutating func write(status: HTTPResponseStatus) {
-        self.write(string: String(status.code))
+        self.writeString(String(status.code))
         self.writeWhitespace()
-        self.write(string: status.reasonPhrase)
+        self.writeString(status.reasonPhrase)
     }
 
     mutating func write(response: HTTPResponseHead) {
         switch (response.version.major, response.version.minor, response.status) {
         // Optimization for HTTP/1.0
         case (1, 0, .custom(_, _)):
-            self.write(staticString: "HTTP/1.0 ")
+            self.writeStaticString("HTTP/1.0 ")
             self.write(status: response.status)
-            self.write(staticString: "\r\n")
+            self.writeStaticString("\r\n")
         case (1, 0, .continue):
-            self.write(staticString: "HTTP/1.0 100 Continue\r\n")
+            self.writeStaticString("HTTP/1.0 100 Continue\r\n")
         case (1, 0, .switchingProtocols):
-            self.write(staticString: "HTTP/1.0 101 Switching Protocols\r\n")
+            self.writeStaticString("HTTP/1.0 101 Switching Protocols\r\n")
         case (1, 0, .processing):
-            self.write(staticString: "HTTP/1.0 102 Processing\r\n")
+            self.writeStaticString("HTTP/1.0 102 Processing\r\n")
         case (1, 0, .ok):
-            self.write(staticString: "HTTP/1.0 200 OK\r\n")
+            self.writeStaticString("HTTP/1.0 200 OK\r\n")
         case (1, 0, .created):
-            self.write(staticString: "HTTP/1.0 201 Created\r\n")
+            self.writeStaticString("HTTP/1.0 201 Created\r\n")
         case (1, 0, .accepted):
-            self.write(staticString: "HTTP/1.0 202 Accepted\r\n")
+            self.writeStaticString("HTTP/1.0 202 Accepted\r\n")
         case (1, 0, .nonAuthoritativeInformation):
-            self.write(staticString: "HTTP/1.0 203 Non-Authoritative Information\r\n")
+            self.writeStaticString("HTTP/1.0 203 Non-Authoritative Information\r\n")
         case (1, 0, .noContent):
-            self.write(staticString: "HTTP/1.0 204 No Content\r\n")
+            self.writeStaticString("HTTP/1.0 204 No Content\r\n")
         case (1, 0, .resetContent):
-            self.write(staticString: "HTTP/1.0 205 Reset Content\r\n")
+            self.writeStaticString("HTTP/1.0 205 Reset Content\r\n")
         case (1, 0, .partialContent):
-            self.write(staticString: "HTTP/1.0 206 Partial Content\r\n")
+            self.writeStaticString("HTTP/1.0 206 Partial Content\r\n")
         case (1, 0, .multiStatus):
-            self.write(staticString: "HTTP/1.0 207 Multi-Status\r\n")
+            self.writeStaticString("HTTP/1.0 207 Multi-Status\r\n")
         case (1, 0, .alreadyReported):
-            self.write(staticString: "HTTP/1.0 208 Already Reported\r\n")
+            self.writeStaticString("HTTP/1.0 208 Already Reported\r\n")
         case (1, 0, .imUsed):
-            self.write(staticString: "HTTP/1.0 226 IM Used\r\n")
+            self.writeStaticString("HTTP/1.0 226 IM Used\r\n")
         case (1, 0, .multipleChoices):
-            self.write(staticString: "HTTP/1.0 300 Multiple Choices\r\n")
+            self.writeStaticString("HTTP/1.0 300 Multiple Choices\r\n")
         case (1, 0, .movedPermanently):
-            self.write(staticString: "HTTP/1.0 301 Moved Permanently\r\n")
+            self.writeStaticString("HTTP/1.0 301 Moved Permanently\r\n")
         case (1, 0, .found):
-            self.write(staticString: "HTTP/1.0 302 Found\r\n")
+            self.writeStaticString("HTTP/1.0 302 Found\r\n")
         case (1, 0, .seeOther):
-            self.write(staticString: "HTTP/1.0 303 See Other\r\n")
+            self.writeStaticString("HTTP/1.0 303 See Other\r\n")
         case (1, 0, .notModified):
-            self.write(staticString: "HTTP/1.0 304 Not Modified\r\n")
+            self.writeStaticString("HTTP/1.0 304 Not Modified\r\n")
         case (1, 0, .useProxy):
-            self.write(staticString: "HTTP/1.0 305 Use Proxy\r\n")
+            self.writeStaticString("HTTP/1.0 305 Use Proxy\r\n")
         case (1, 0, .temporaryRedirect):
-            self.write(staticString: "HTTP/1.0 307 Tempory Redirect\r\n")
+            self.writeStaticString("HTTP/1.0 307 Tempory Redirect\r\n")
         case (1, 0, .permanentRedirect):
-            self.write(staticString: "HTTP/1.0 308 Permanent Redirect\r\n")
+            self.writeStaticString("HTTP/1.0 308 Permanent Redirect\r\n")
         case (1, 0, .badRequest):
-            self.write(staticString: "HTTP/1.0 400 Bad Request\r\n")
+            self.writeStaticString("HTTP/1.0 400 Bad Request\r\n")
         case (1, 0, .unauthorized):
-            self.write(staticString: "HTTP/1.0 401 Unauthorized\r\n")
+            self.writeStaticString("HTTP/1.0 401 Unauthorized\r\n")
         case (1, 0, .paymentRequired):
-            self.write(staticString: "HTTP/1.0 402 Payment Required\r\n")
+            self.writeStaticString("HTTP/1.0 402 Payment Required\r\n")
         case (1, 0, .forbidden):
-            self.write(staticString: "HTTP/1.0 403 Forbidden\r\n")
+            self.writeStaticString("HTTP/1.0 403 Forbidden\r\n")
         case (1, 0, .notFound):
-            self.write(staticString: "HTTP/1.0 404 Not Found\r\n")
+            self.writeStaticString("HTTP/1.0 404 Not Found\r\n")
         case (1, 0, .methodNotAllowed):
-            self.write(staticString: "HTTP/1.0 405 Method Not Allowed\r\n")
+            self.writeStaticString("HTTP/1.0 405 Method Not Allowed\r\n")
         case (1, 0, .notAcceptable):
-            self.write(staticString: "HTTP/1.0 406 Not Acceptable\r\n")
+            self.writeStaticString("HTTP/1.0 406 Not Acceptable\r\n")
         case (1, 0, .proxyAuthenticationRequired):
-            self.write(staticString: "HTTP/1.0 407 Proxy Authentication Required\r\n")
+            self.writeStaticString("HTTP/1.0 407 Proxy Authentication Required\r\n")
         case (1, 0, .requestTimeout):
-            self.write(staticString: "HTTP/1.0 408 Request Timeout\r\n")
+            self.writeStaticString("HTTP/1.0 408 Request Timeout\r\n")
         case (1, 0, .conflict):
-            self.write(staticString: "HTTP/1.0 409 Conflict\r\n")
+            self.writeStaticString("HTTP/1.0 409 Conflict\r\n")
         case (1, 0, .gone):
-            self.write(staticString: "HTTP/1.0 410 Gone\r\n")
+            self.writeStaticString("HTTP/1.0 410 Gone\r\n")
         case (1, 0, .lengthRequired):
-            self.write(staticString: "HTTP/1.0 411 Length Required\r\n")
+            self.writeStaticString("HTTP/1.0 411 Length Required\r\n")
         case (1, 0, .preconditionFailed):
-            self.write(staticString: "HTTP/1.0 412 Precondition Failed\r\n")
+            self.writeStaticString("HTTP/1.0 412 Precondition Failed\r\n")
         case (1, 0, .payloadTooLarge):
-            self.write(staticString: "HTTP/1.0 413 Payload Too Large\r\n")
+            self.writeStaticString("HTTP/1.0 413 Payload Too Large\r\n")
         case (1, 0, .uriTooLong):
-            self.write(staticString: "HTTP/1.0 414 URI Too Long\r\n")
+            self.writeStaticString("HTTP/1.0 414 URI Too Long\r\n")
         case (1, 0, .unsupportedMediaType):
-            self.write(staticString: "HTTP/1.0 415 Unsupported Media Type\r\n")
+            self.writeStaticString("HTTP/1.0 415 Unsupported Media Type\r\n")
         case (1, 0, .rangeNotSatisfiable):
-            self.write(staticString: "HTTP/1.0 416 Range Not Satisfiable\r\n")
+            self.writeStaticString("HTTP/1.0 416 Range Not Satisfiable\r\n")
         case (1, 0, .expectationFailed):
-            self.write(staticString: "HTTP/1.0 417 Expectation Failed\r\n")
+            self.writeStaticString("HTTP/1.0 417 Expectation Failed\r\n")
         case (1, 0, .misdirectedRequest):
-            self.write(staticString: "HTTP/1.0 421 Misdirected Request\r\n")
+            self.writeStaticString("HTTP/1.0 421 Misdirected Request\r\n")
         case (1, 0, .unprocessableEntity):
-            self.write(staticString: "HTTP/1.0 422 Unprocessable Entity\r\n")
+            self.writeStaticString("HTTP/1.0 422 Unprocessable Entity\r\n")
         case (1, 0, .locked):
-            self.write(staticString: "HTTP/1.0 423 Locked\r\n")
+            self.writeStaticString("HTTP/1.0 423 Locked\r\n")
         case (1, 0, .failedDependency):
-            self.write(staticString: "HTTP/1.0 424 Failed Dependency\r\n")
+            self.writeStaticString("HTTP/1.0 424 Failed Dependency\r\n")
         case (1, 0, .upgradeRequired):
-            self.write(staticString: "HTTP/1.0 426 Upgrade Required\r\n")
+            self.writeStaticString("HTTP/1.0 426 Upgrade Required\r\n")
         case (1, 0, .preconditionRequired):
-            self.write(staticString: "HTTP/1.0 428 Precondition Required\r\n")
+            self.writeStaticString("HTTP/1.0 428 Precondition Required\r\n")
         case (1, 0, .tooManyRequests):
-            self.write(staticString: "HTTP/1.0 429 Too Many Requests\r\n")
+            self.writeStaticString("HTTP/1.0 429 Too Many Requests\r\n")
         case (1, 0, .requestHeaderFieldsTooLarge):
-            self.write(staticString: "HTTP/1.0 431 Request Header Fields Too Large\r\n")
+            self.writeStaticString("HTTP/1.0 431 Request Header Fields Too Large\r\n")
         case (1, 0, .unavailableForLegalReasons):
-            self.write(staticString: "HTTP/1.0 451 Unavailable For Legal Reasons\r\n")
+            self.writeStaticString("HTTP/1.0 451 Unavailable For Legal Reasons\r\n")
         case (1, 0, .internalServerError):
-            self.write(staticString: "HTTP/1.0 500 Internal Server Error\r\n")
+            self.writeStaticString("HTTP/1.0 500 Internal Server Error\r\n")
         case (1, 0, .notImplemented):
-            self.write(staticString: "HTTP/1.0 501 Not Implemented\r\n")
+            self.writeStaticString("HTTP/1.0 501 Not Implemented\r\n")
         case (1, 0, .badGateway):
-            self.write(staticString: "HTTP/1.0 502 Bad Gateway\r\n")
+            self.writeStaticString("HTTP/1.0 502 Bad Gateway\r\n")
         case (1, 0, .serviceUnavailable):
-            self.write(staticString: "HTTP/1.0 503 Service Unavailable\r\n")
+            self.writeStaticString("HTTP/1.0 503 Service Unavailable\r\n")
         case (1, 0, .gatewayTimeout):
-            self.write(staticString: "HTTP/1.0 504 Gateway Timeout\r\n")
+            self.writeStaticString("HTTP/1.0 504 Gateway Timeout\r\n")
         case (1, 0, .httpVersionNotSupported):
-            self.write(staticString: "HTTP/1.0 505 HTTP Version Not Supported\r\n")
+            self.writeStaticString("HTTP/1.0 505 HTTP Version Not Supported\r\n")
         case (1, 0, .variantAlsoNegotiates):
-            self.write(staticString: "HTTP/1.0 506 Variant Also Negotiates\r\n")
+            self.writeStaticString("HTTP/1.0 506 Variant Also Negotiates\r\n")
         case (1, 0, .insufficientStorage):
-            self.write(staticString: "HTTP/1.0 507 Insufficient Storage\r\n")
+            self.writeStaticString("HTTP/1.0 507 Insufficient Storage\r\n")
         case (1, 0, .loopDetected):
-            self.write(staticString: "HTTP/1.0 508 Loop Detected\r\n")
+            self.writeStaticString("HTTP/1.0 508 Loop Detected\r\n")
         case (1, 0, .notExtended):
-            self.write(staticString: "HTTP/1.0 510 Not Extended\r\n")
+            self.writeStaticString("HTTP/1.0 510 Not Extended\r\n")
         case (1, 0, .networkAuthenticationRequired):
-            self.write(staticString: "HTTP/1.1 511 Network Authentication Required\r\n")
+            self.writeStaticString("HTTP/1.1 511 Network Authentication Required\r\n")
 
         // Optimization for HTTP/1.1
         case (1, 1, .custom(_, _)):
-            self.write(staticString: "HTTP/1.1 ")
+            self.writeStaticString("HTTP/1.1 ")
             self.write(status: response.status)
-            self.write(staticString: "\r\n")
+            self.writeStaticString("\r\n")
         case (1, 1, .continue):
-            self.write(staticString: "HTTP/1.1 100 Continue\r\n")
+            self.writeStaticString("HTTP/1.1 100 Continue\r\n")
         case (1, 1, .switchingProtocols):
-            self.write(staticString: "HTTP/1.1 101 Switching Protocols\r\n")
+            self.writeStaticString("HTTP/1.1 101 Switching Protocols\r\n")
         case (1, 1, .processing):
-            self.write(staticString: "HTTP/1.1 102 Processing\r\n")
+            self.writeStaticString("HTTP/1.1 102 Processing\r\n")
         case (1, 1, .ok):
-            self.write(staticString: "HTTP/1.1 200 OK\r\n")
+            self.writeStaticString("HTTP/1.1 200 OK\r\n")
         case (1, 1, .created):
-            self.write(staticString: "HTTP/1.1 201 Created\r\n")
+            self.writeStaticString("HTTP/1.1 201 Created\r\n")
         case (1, 1, .accepted):
-            self.write(staticString: "HTTP/1.1 202 Accepted\r\n")
+            self.writeStaticString("HTTP/1.1 202 Accepted\r\n")
         case (1, 1, .nonAuthoritativeInformation):
-            self.write(staticString: "HTTP/1.1 203 Non-Authoritative Information\r\n")
+            self.writeStaticString("HTTP/1.1 203 Non-Authoritative Information\r\n")
         case (1, 1, .noContent):
-            self.write(staticString: "HTTP/1.1 204 No Content\r\n")
+            self.writeStaticString("HTTP/1.1 204 No Content\r\n")
         case (1, 1, .resetContent):
-            self.write(staticString: "HTTP/1.1 205 Reset Content\r\n")
+            self.writeStaticString("HTTP/1.1 205 Reset Content\r\n")
         case (1, 1, .partialContent):
-            self.write(staticString: "HTTP/1.1 206 Partial Content\r\n")
+            self.writeStaticString("HTTP/1.1 206 Partial Content\r\n")
         case (1, 1, .multiStatus):
-            self.write(staticString: "HTTP/1.1 207 Multi-Status\r\n")
+            self.writeStaticString("HTTP/1.1 207 Multi-Status\r\n")
         case (1, 1, .alreadyReported):
-            self.write(staticString: "HTTP/1.1 208 Already Reported\r\n")
+            self.writeStaticString("HTTP/1.1 208 Already Reported\r\n")
         case (1, 1, .imUsed):
-            self.write(staticString: "HTTP/1.1 226 IM Used\r\n")
+            self.writeStaticString("HTTP/1.1 226 IM Used\r\n")
         case (1, 1, .multipleChoices):
-            self.write(staticString: "HTTP/1.1 300 Multiple Choices\r\n")
+            self.writeStaticString("HTTP/1.1 300 Multiple Choices\r\n")
         case (1, 1, .movedPermanently):
-            self.write(staticString: "HTTP/1.1 301 Moved Permanently\r\n")
+            self.writeStaticString("HTTP/1.1 301 Moved Permanently\r\n")
         case (1, 1, .found):
-            self.write(staticString: "HTTP/1.1 302 Found\r\n")
+            self.writeStaticString("HTTP/1.1 302 Found\r\n")
         case (1, 1, .seeOther):
-            self.write(staticString: "HTTP/1.1 303 See Other\r\n")
+            self.writeStaticString("HTTP/1.1 303 See Other\r\n")
         case (1, 1, .notModified):
-            self.write(staticString: "HTTP/1.1 304 Not Modified\r\n")
+            self.writeStaticString("HTTP/1.1 304 Not Modified\r\n")
         case (1, 1, .useProxy):
-            self.write(staticString: "HTTP/1.1 305 Use Proxy\r\n")
+            self.writeStaticString("HTTP/1.1 305 Use Proxy\r\n")
         case (1, 1, .temporaryRedirect):
-            self.write(staticString: "HTTP/1.1 307 Tempory Redirect\r\n")
+            self.writeStaticString("HTTP/1.1 307 Tempory Redirect\r\n")
         case (1, 1, .permanentRedirect):
-            self.write(staticString: "HTTP/1.1 308 Permanent Redirect\r\n")
+            self.writeStaticString("HTTP/1.1 308 Permanent Redirect\r\n")
         case (1, 1, .badRequest):
-            self.write(staticString: "HTTP/1.1 400 Bad Request\r\n")
+            self.writeStaticString("HTTP/1.1 400 Bad Request\r\n")
         case (1, 1, .unauthorized):
-            self.write(staticString: "HTTP/1.1 401 Unauthorized\r\n")
+            self.writeStaticString("HTTP/1.1 401 Unauthorized\r\n")
         case (1, 1, .paymentRequired):
-            self.write(staticString: "HTTP/1.1 402 Payment Required\r\n")
+            self.writeStaticString("HTTP/1.1 402 Payment Required\r\n")
         case (1, 1, .forbidden):
-            self.write(staticString: "HTTP/1.1 403 Forbidden\r\n")
+            self.writeStaticString("HTTP/1.1 403 Forbidden\r\n")
         case (1, 1, .notFound):
-            self.write(staticString: "HTTP/1.1 404 Not Found\r\n")
+            self.writeStaticString("HTTP/1.1 404 Not Found\r\n")
         case (1, 1, .methodNotAllowed):
-            self.write(staticString: "HTTP/1.1 405 Method Not Allowed\r\n")
+            self.writeStaticString("HTTP/1.1 405 Method Not Allowed\r\n")
         case (1, 1, .notAcceptable):
-            self.write(staticString: "HTTP/1.1 406 Not Acceptable\r\n")
+            self.writeStaticString("HTTP/1.1 406 Not Acceptable\r\n")
         case (1, 1, .proxyAuthenticationRequired):
-            self.write(staticString: "HTTP/1.1 407 Proxy Authentication Required\r\n")
+            self.writeStaticString("HTTP/1.1 407 Proxy Authentication Required\r\n")
         case (1, 1, .requestTimeout):
-            self.write(staticString: "HTTP/1.1 408 Request Timeout\r\n")
+            self.writeStaticString("HTTP/1.1 408 Request Timeout\r\n")
         case (1, 1, .conflict):
-            self.write(staticString: "HTTP/1.1 409 Conflict\r\n")
+            self.writeStaticString("HTTP/1.1 409 Conflict\r\n")
         case (1, 1, .gone):
-            self.write(staticString: "HTTP/1.1 410 Gone\r\n")
+            self.writeStaticString("HTTP/1.1 410 Gone\r\n")
         case (1, 1, .lengthRequired):
-            self.write(staticString: "HTTP/1.1 411 Length Required\r\n")
+            self.writeStaticString("HTTP/1.1 411 Length Required\r\n")
         case (1, 1, .preconditionFailed):
-            self.write(staticString: "HTTP/1.1 412 Precondition Failed\r\n")
+            self.writeStaticString("HTTP/1.1 412 Precondition Failed\r\n")
         case (1, 1, .payloadTooLarge):
-            self.write(staticString: "HTTP/1.1 413 Payload Too Large\r\n")
+            self.writeStaticString("HTTP/1.1 413 Payload Too Large\r\n")
         case (1, 1, .uriTooLong):
-            self.write(staticString: "HTTP/1.1 414 URI Too Long\r\n")
+            self.writeStaticString("HTTP/1.1 414 URI Too Long\r\n")
         case (1, 1, .unsupportedMediaType):
-            self.write(staticString: "HTTP/1.1 415 Unsupported Media Type\r\n")
+            self.writeStaticString("HTTP/1.1 415 Unsupported Media Type\r\n")
         case (1, 1, .rangeNotSatisfiable):
-            self.write(staticString: "HTTP/1.1 416 Request Range Not Satisified\r\n")
+            self.writeStaticString("HTTP/1.1 416 Request Range Not Satisified\r\n")
         case (1, 1, .expectationFailed):
-            self.write(staticString: "HTTP/1.1 417 Expectation Failed\r\n")
+            self.writeStaticString("HTTP/1.1 417 Expectation Failed\r\n")
         case (1, 1, .misdirectedRequest):
-            self.write(staticString: "HTTP/1.1 421 Misdirected Request\r\n")
+            self.writeStaticString("HTTP/1.1 421 Misdirected Request\r\n")
         case (1, 1, .unprocessableEntity):
-            self.write(staticString: "HTTP/1.1 422 Unprocessable Entity\r\n")
+            self.writeStaticString("HTTP/1.1 422 Unprocessable Entity\r\n")
         case (1, 1, .locked):
-            self.write(staticString: "HTTP/1.1 423 Locked\r\n")
+            self.writeStaticString("HTTP/1.1 423 Locked\r\n")
         case (1, 1, .failedDependency):
-            self.write(staticString: "HTTP/1.1 424 Failed Dependency\r\n")
+            self.writeStaticString("HTTP/1.1 424 Failed Dependency\r\n")
         case (1, 1, .upgradeRequired):
-            self.write(staticString: "HTTP/1.1 426 Upgrade Required\r\n")
+            self.writeStaticString("HTTP/1.1 426 Upgrade Required\r\n")
         case (1, 1, .preconditionRequired):
-            self.write(staticString: "HTTP/1.1 428 Precondition Required\r\n")
+            self.writeStaticString("HTTP/1.1 428 Precondition Required\r\n")
         case (1, 1, .tooManyRequests):
-            self.write(staticString: "HTTP/1.1 429 Too Many Requests\r\n")
+            self.writeStaticString("HTTP/1.1 429 Too Many Requests\r\n")
         case (1, 1, .requestHeaderFieldsTooLarge):
-            self.write(staticString: "HTTP/1.1 431 Range Not Satisfiable\r\n")
+            self.writeStaticString("HTTP/1.1 431 Range Not Satisfiable\r\n")
         case (1, 1, .unavailableForLegalReasons):
-            self.write(staticString: "HTTP/1.1 451 Unavailable For Legal Reasons\r\n")
+            self.writeStaticString("HTTP/1.1 451 Unavailable For Legal Reasons\r\n")
         case (1, 1, .internalServerError):
-            self.write(staticString: "HTTP/1.1 500 Internal Server Error\r\n")
+            self.writeStaticString("HTTP/1.1 500 Internal Server Error\r\n")
         case (1, 1, .notImplemented):
-            self.write(staticString: "HTTP/1.1 501 Not Implemented\r\n")
+            self.writeStaticString("HTTP/1.1 501 Not Implemented\r\n")
         case (1, 1, .badGateway):
-            self.write(staticString: "HTTP/1.1 502 Bad Gateway\r\n")
+            self.writeStaticString("HTTP/1.1 502 Bad Gateway\r\n")
         case (1, 1, .serviceUnavailable):
-            self.write(staticString: "HTTP/1.1 503 Service Unavailable\r\n")
+            self.writeStaticString("HTTP/1.1 503 Service Unavailable\r\n")
         case (1, 1, .gatewayTimeout):
-            self.write(staticString: "HTTP/1.1 504 Gateway Timeout\r\n")
+            self.writeStaticString("HTTP/1.1 504 Gateway Timeout\r\n")
         case (1, 1, .httpVersionNotSupported):
-            self.write(staticString: "HTTP/1.1 505 HTTP Version Not Supported\r\n")
+            self.writeStaticString("HTTP/1.1 505 HTTP Version Not Supported\r\n")
         case (1, 1, .variantAlsoNegotiates):
-            self.write(staticString: "HTTP/1.1 506 Variant Also Negotiates\r\n")
+            self.writeStaticString("HTTP/1.1 506 Variant Also Negotiates\r\n")
         case (1, 1, .insufficientStorage):
-            self.write(staticString: "HTTP/1.1 507 Insufficient Storage\r\n")
+            self.writeStaticString("HTTP/1.1 507 Insufficient Storage\r\n")
         case (1, 1, .loopDetected):
-            self.write(staticString: "HTTP/1.1 508 Loop Detected\r\n")
+            self.writeStaticString("HTTP/1.1 508 Loop Detected\r\n")
         case (1, 1, .notExtended):
-            self.write(staticString: "HTTP/1.1 510 Not Extended\r\n")
+            self.writeStaticString("HTTP/1.1 510 Not Extended\r\n")
         case (1, 1, .networkAuthenticationRequired):
-            self.write(staticString: "HTTP/1.1 511 Network Authentication Required\r\n")
+            self.writeStaticString("HTTP/1.1 511 Network Authentication Required\r\n")
 
         // Fallback for non-known HTTP version
         default:
             self.write(version: response.version)
             self.writeWhitespace()
             self.write(status: response.status)
-            self.write(staticString: "\r\n")
+            self.writeStaticString("\r\n")
         }
     }
 
     private mutating func write(version: HTTPVersion) {
         switch (version.minor, version.major) {
         case (1, 0):
-            self.write(staticString: "HTTP/1.0")
+            self.writeStaticString("HTTP/1.0")
         case (1, 1):
-            self.write(staticString: "HTTP/1.1")
+            self.writeStaticString("HTTP/1.1")
         default:
-            self.write(staticString: "HTTP/")
-            self.write(string: String(version.major))
-            self.write(staticString: ".")
-            self.write(string: String(version.minor))
+            self.writeStaticString("HTTP/")
+            self.writeString(String(version.major))
+            self.writeStaticString(".")
+            self.writeString(String(version.minor))
         }
     }
 
     mutating func write(request: HTTPRequestHead) {
         self.write(method: request.method)
         self.writeWhitespace()
-        self.write(string: request.uri)
+        self.writeString(request.uri)
         self.writeWhitespace()
         self.write(version: request.version)
-        self.write(staticString: "\r\n")
+        self.writeStaticString("\r\n")
     }
 
     mutating func writeWhitespace() {
-        self.write(integer: 32, as: UInt8.self)
+        self.writeInteger(32, as: UInt8.self)
     }
 
     private mutating func write(method: HTTPMethod) {
         switch method {
         case .GET:
-            self.write(staticString: "GET")
+            self.writeStaticString("GET")
         case .PUT:
-            self.write(staticString: "PUT")
+            self.writeStaticString("PUT")
         case .ACL:
-            self.write(staticString: "ACL")
+            self.writeStaticString("ACL")
         case .HEAD:
-            self.write(staticString: "HEAD")
+            self.writeStaticString("HEAD")
         case .POST:
-            self.write(staticString: "POST")
+            self.writeStaticString("POST")
         case .COPY:
-            self.write(staticString: "COPY")
+            self.writeStaticString("COPY")
         case .LOCK:
-            self.write(staticString: "LOCK")
+            self.writeStaticString("LOCK")
         case .MOVE:
-            self.write(staticString: "MOVE")
+            self.writeStaticString("MOVE")
         case .BIND:
-            self.write(staticString: "BIND")
+            self.writeStaticString("BIND")
         case .LINK:
-            self.write(staticString: "LINK")
+            self.writeStaticString("LINK")
         case .PATCH:
-            self.write(staticString: "PATCH")
+            self.writeStaticString("PATCH")
         case .TRACE:
-            self.write(staticString: "TRACE")
+            self.writeStaticString("TRACE")
         case .MKCOL:
-            self.write(staticString: "MKCOL")
+            self.writeStaticString("MKCOL")
         case .MERGE:
-            self.write(staticString: "MERGE")
+            self.writeStaticString("MERGE")
         case .PURGE:
-            self.write(staticString: "PURGE")
+            self.writeStaticString("PURGE")
         case .NOTIFY:
-            self.write(staticString: "NOTIFY")
+            self.writeStaticString("NOTIFY")
         case .SEARCH:
-            self.write(staticString: "SEARCH")
+            self.writeStaticString("SEARCH")
         case .UNLOCK:
-            self.write(staticString: "UNLOCK")
+            self.writeStaticString("UNLOCK")
         case .REBIND:
-            self.write(staticString: "REBIND")
+            self.writeStaticString("REBIND")
         case .UNBIND:
-            self.write(staticString: "UNBIND")
+            self.writeStaticString("UNBIND")
         case .REPORT:
-            self.write(staticString: "REPORT")
+            self.writeStaticString("REPORT")
         case .DELETE:
-            self.write(staticString: "DELETE")
+            self.writeStaticString("DELETE")
         case .UNLINK:
-            self.write(staticString: "UNLINK")
+            self.writeStaticString("UNLINK")
         case .CONNECT:
-            self.write(staticString: "CONNECT")
+            self.writeStaticString("CONNECT")
         case .MSEARCH:
-            self.write(staticString: "MSEARCH")
+            self.writeStaticString("MSEARCH")
         case .OPTIONS:
-            self.write(staticString: "OPTIONS")
+            self.writeStaticString("OPTIONS")
         case .PROPFIND:
-            self.write(staticString: "PROPFIND")
+            self.writeStaticString("PROPFIND")
         case .CHECKOUT:
-            self.write(staticString: "CHECKOUT")
+            self.writeStaticString("CHECKOUT")
         case .PROPPATCH:
-            self.write(staticString: "PROPPATCH")
+            self.writeStaticString("PROPPATCH")
         case .SUBSCRIBE:
-            self.write(staticString: "SUBSCRIBE")
+            self.writeStaticString("SUBSCRIBE")
         case .MKCALENDAR:
-            self.write(staticString: "MKCALENDAR")
+            self.writeStaticString("MKCALENDAR")
         case .MKACTIVITY:
-            self.write(staticString: "MKACTIVITY")
+            self.writeStaticString("MKACTIVITY")
         case .UNSUBSCRIBE:
-            self.write(staticString: "UNSUBSCRIBE")
+            self.writeStaticString("UNSUBSCRIBE")
         case .RAW(let value):
-            self.write(string: value)
+            self.writeString(value)
         }
     }
 }

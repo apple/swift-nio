@@ -40,7 +40,7 @@ private final class ChatMessageEncoder: ChannelOutboundHandler {
     func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let message = self.unwrapOutboundIn(data)
         var buffer = ctx.channel.allocator.buffer(capacity: message.data.utf8.count)
-        buffer.write(string: message.data)
+        buffer.writeString(message.data)
         ctx.write(self.wrapOutboundOut(AddressedEnvelope(remoteAddress: message.remoteAddress, data: buffer)), promise: promise)
     }
 }

@@ -48,7 +48,7 @@ private final class HTTPHandler: ChannelInboundHandler, RemovableChannelHandler 
 
     func channelRegistered(ctx: ChannelHandlerContext) {
         var buffer = ctx.channel.allocator.buffer(capacity: websocketResponse.utf8.count)
-        buffer.write(string: websocketResponse)
+        buffer.writeString(websocketResponse)
         self.responseBody = buffer
     }
 
@@ -146,7 +146,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
         // example so let's not worry about it.
         let theTime = NIODeadline.now().uptimeNanoseconds
         var buffer = ctx.channel.allocator.buffer(capacity: 12)
-        buffer.write(string: "\(theTime)")
+        buffer.writeString("\(theTime)")
 
         let frame = WebSocketFrame(fin: true, opcode: .text, data: buffer)
         ctx.writeAndFlush(self.wrapOutboundOut(frame)).map {

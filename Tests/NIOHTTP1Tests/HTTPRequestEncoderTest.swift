@@ -99,7 +99,7 @@ class HTTPRequestEncoderTests: XCTestCase {
         request.headers.add(name: "content-length", value: "4")
 
         var buf = channel.allocator.buffer(capacity: 4)
-        buf.write(staticString: "test")
+        buf.writeStaticString("test")
 
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(request)))
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.body(.byteBuffer(buf))))

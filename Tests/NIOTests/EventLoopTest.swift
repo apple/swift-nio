@@ -282,7 +282,7 @@ public class EventLoopTest : XCTestCase {
 
             var buffer = clientChannel.allocator.buffer(capacity: numBytes)
             for i in 0..<numBytes {
-                buffer.write(integer: UInt8(i % 256))
+                buffer.writeInteger(UInt8(i % 256))
             }
 
             try clientChannel.writeAndFlush(NIOAny(buffer)).wait()

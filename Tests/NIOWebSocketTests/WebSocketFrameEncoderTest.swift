@@ -20,7 +20,7 @@ extension EmbeddedChannel {
     func readAllOutboundBuffers() -> ByteBuffer {
         var buffer = self.allocator.buffer(capacity: 100)
         while var writtenData = self.readOutbound(as: ByteBuffer.self) {
-            buffer.write(buffer: &writtenData)
+            buffer.writeBuffer(&writtenData)
         }
 
         return buffer
@@ -56,7 +56,7 @@ public class WebSocketFrameEncoderTest: XCTestCase {
 
     func testBasicFrameEncoding() throws {
         let dataString = "hello, world!"
-        self.buffer.write(string: "hello, world!")
+        self.buffer.writeString("hello, world!")
         let frame = WebSocketFrame(fin: true, opcode: .binary, data: self.buffer)
         let expectedBytes = [0x82, UInt8(dataString.count)] + Array(dataString.utf8)
         assertFrameEncodes(frame: frame, expectedBytes: expectedBytes)
@@ -64,7 +64,7 @@ public class WebSocketFrameEncoderTest: XCTestCase {
 
     func test16BitFrameLength() throws {
         let dataBytes = Array(repeating: UInt8(4), count: 1000)
-        self.buffer.write(bytes: dataBytes)
+        self.buffer.writeBytes(dataBytes)
         let frame = WebSocketFrame(fin: true, opcode: .text, data: self.buffer)
         let expectedBytes = [0x81, UInt8(126), UInt8(0x03), UInt8(0xE8)] + dataBytes
         assertFrameEncodes(frame: frame, expectedBytes: expectedBytes)
@@ -72,7 +72,7 @@ public class WebSocketFrameEncoderTest: XCTestCase {
 
     func test64BitFrameLength() throws {
         let dataBytes = Array(repeating: UInt8(4), count: 65536)
-        self.buffer.write(bytes: dataBytes)
+        self.buffer.writeBytes(dataBytes)
 
         let frame = WebSocketFrame(fin: true, opcode: .binary, data: self.buffer)
         self.channel.writeAndFlush(frame, promise: nil)
@@ -94,7 +94,7 @@ public class WebSocketFrameEncoderTest: XCTestCase {
 
     func testEncodesExtensionDataCorrectly() throws {
         let dataBytes: [UInt8] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        self.buffer.write(bytes: dataBytes)
+        self.buffer.writeBytes(dataBytes)
 
         let frame = WebSocketFrame(fin: false,
                                    opcode: .text,
@@ -107,7 +107,7 @@ public class WebSocketFrameEncoderTest: XCTestCase {
     func testMasksDataCorrectly() throws {
         let dataBytes: [UInt8] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         let maskKey: WebSocketMaskingKey = [0x80, 0x08, 0x10, 0x01]
-        self.buffer.write(bytes: dataBytes)
+        self.buffer.writeBytes(dataBytes)
 
         let frame = WebSocketFrame(fin: true,
                                    opcode: .binary,

@@ -124,7 +124,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             IO: SwiftNIO Electric Boogaloo™️\r\n
             """
             self.buffer.clear()
-            self.buffer.write(string: response)
+            self.buffer.writeString(response)
             var headers = HTTPHeaders()
             headers.add(name: "Content-Length", value: "\(response.utf8.count)")
             ctx.write(self.wrapOutboundOut(.head(httpResponseHead(request: self.infoSavedRequestHead!, status: .ok, headers: headers))), promise: nil)
@@ -150,7 +150,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             }
         case .body(buffer: var buf):
             if balloonInMemory {
-                self.buffer.write(buffer: &buf)
+                self.buffer.writeBuffer(&buf)
             } else {
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buf))), promise: nil)
             }
@@ -180,7 +180,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             self.state.requestComplete()
             ctx.eventLoop.scheduleTask(in: delay) { () -> Void in
                 var buf = ctx.channel.allocator.buffer(capacity: string.utf8.count)
-                buf.write(string: string)
+                buf.writeString(string)
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(buf))), promise: nil)
                 var trailers: HTTPHeaders? = nil
                 if let trailer = trailer {
@@ -202,7 +202,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             func doNext() {
                 self.buffer.clear()
                 self.continuousCount += 1
-                self.buffer.write(string: "line \(self.continuousCount)\n")
+                self.buffer.writeString("line \(self.continuousCount)\n")
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).map {
                     ctx.eventLoop.scheduleTask(in: .milliseconds(400), doNext)
                 }.whenFailure { (_: Error) in
@@ -226,7 +226,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             self.state.requestReceived()
             func doNext() {
                 self.buffer.clear()
-                self.buffer.write(string: strings[self.continuousCount])
+                self.buffer.writeString(strings[self.continuousCount])
                 self.continuousCount += 1
                 ctx.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(self.buffer)))).whenSuccess {
                     if self.continuousCount < strings.count {
@@ -286,20 +286,20 @@ private final class HTTPHandler: ChannelInboundHandler {
             let response = { () -> HTTPResponseHead in
                 switch error {
                 case let e as IOError where e.errnoCode == ENOENT:
-                    body.write(staticString: "IOError (not found)\r\n")
+                    body.writeStaticString("IOError (not found)\r\n")
                     return httpResponseHead(request: request, status: .notFound)
                 case let e as IOError:
-                    body.write(staticString: "IOError (other)\r\n")
-                    body.write(string: e.description)
-                    body.write(staticString: "\r\n")
+                    body.writeStaticString("IOError (other)\r\n")
+                    body.writeString(e.description)
+                    body.writeStaticString("\r\n")
                     return httpResponseHead(request: request, status: .notFound)
                 default:
-                    body.write(string: "\(type(of: error)) error\r\n")
+                    body.writeString("\(type(of: error)) error\r\n")
                     return httpResponseHead(request: request, status: .internalServerError)
                 }
             }()
-            body.write(string: "\(error)")
-            body.write(staticString: "\r\n")
+            body.writeString("\(error)")
+            body.writeStaticString("\r\n")
             ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
             ctx.write(self.wrapOutboundOut(.body(.byteBuffer(body))), promise: nil)
             ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
@@ -351,7 +351,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                             let response = httpResponseHead(request: request, status: .ok)
                             ctx.write(self.wrapOutboundOut(.head(response)), promise: nil)
                             var buffer = ctx.channel.allocator.buffer(capacity: 100)
-                            buffer.write(string: "fail: \(error)")
+                            buffer.writeString("fail: \(error)")
                             ctx.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
                             self.state.responseComplete()
                             return ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)))
@@ -422,7 +422,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
             var responseHead = httpResponseHead(request: request, status: HTTPResponseStatus.ok)
             self.buffer.clear()
-            self.buffer.write(string: defaultResponse)
+            self.buffer.writeString(defaultResponse)
             responseHead.headers.add(name: "content-length", value: "\(self.buffer!.readableBytes)")
             let response = HTTPServerResponsePart.head(responseHead)
             ctx.write(self.wrapOutboundOut(response), promise: nil)

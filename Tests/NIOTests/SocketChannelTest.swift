@@ -316,7 +316,7 @@ public class SocketChannelTest : XCTestCase {
         // close the channel. This should trigger an error callback that will
         // re-close the channel, which should fail with `alreadyClosed`.
         var buffer = clientChannel.allocator.buffer(capacity: 12)
-        buffer.write(staticString: "hello")
+        buffer.writeStaticString("hello")
         let writeFut = clientChannel.write(buffer).map {
             XCTFail("Must not succeed")
         }.flatMapError { error in

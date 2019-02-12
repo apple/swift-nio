@@ -37,7 +37,7 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
     private func responseBody(allocator: ByteBufferAllocator) -> ByteBuffer {
         var buffer = allocator.buffer(capacity: self.bodyLength)
         for i in 0..<self.bodyLength {
-            buffer.write(integer: UInt8(i % Int(UInt8.max)))
+            buffer.writeInteger(UInt8(i % Int(UInt8.max)))
         }
         return buffer
     }
@@ -77,7 +77,7 @@ private final class PingHandler: ChannelInboundHandler {
 
     public func channelActive(ctx: ChannelHandlerContext) {
         self.pingBuffer = ctx.channel.allocator.buffer(capacity: 1)
-        self.pingBuffer.write(integer: PingHandler.pingCode)
+        self.pingBuffer.writeInteger(PingHandler.pingCode)
 
         ctx.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
     }
@@ -112,7 +112,7 @@ private final class PongHandler: ChannelInboundHandler {
 
     public func channelActive(ctx: ChannelHandlerContext) {
         self.pongBuffer = ctx.channel.allocator.buffer(capacity: 1)
-        self.pongBuffer.write(integer: PongHandler.pongCode)
+        self.pongBuffer.writeInteger(PongHandler.pongCode)
     }
 
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
@@ -310,15 +310,15 @@ public func swiftMain() -> Int {
         @inline(never)
         func doWrites(buffer: inout ByteBuffer) {
             /* these ones are zero allocations */
-            // buffer.write(bytes: foundationData) // see SR-7542
-            buffer.write(bytes: [0x41])
-            buffer.write(bytes: "A".utf8)
-            buffer.write(string: "A")
-            buffer.write(staticString: "A")
-            buffer.write(integer: 0x41, as: UInt8.self)
+            // buffer.writeBytes(foundationData) // see SR-7542
+            buffer.writeBytes([0x41])
+            buffer.writeBytes("A".utf8)
+            buffer.writeString("A")
+            buffer.writeStaticString("A")
+            buffer.writeInteger(0x41, as: UInt8.self)
 
             /* those down here should be one allocation each (on Linux) */
-            buffer.write(bytes: dispatchData) // see https://bugs.swift.org/browse/SR-9597
+            buffer.writeBytes(dispatchData) // see https://bugs.swift.org/browse/SR-9597
         }
         @inline(never)
         func doReads(buffer: inout ByteBuffer) {

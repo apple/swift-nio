@@ -71,8 +71,8 @@ extension ByteBuffer {
     ///     - string: The string to write.
     /// - returns: The number of bytes written.
     @discardableResult
-    public mutating func write(staticString string: StaticString) -> Int {
-        let written = self.set(staticString: string, at: self.writerIndex)
+    public mutating func writeStaticString(_ string: StaticString) -> Int {
+        let written = self.setStaticString(string, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
         return written
     }
@@ -83,10 +83,10 @@ extension ByteBuffer {
     ///     - string: The string to write.
     ///     - index: The index for the first serialized byte.
     /// - returns: The number of bytes written.
-    public mutating func set(staticString string: StaticString, at index: Int) -> Int {
+    public mutating func setStaticString(_ string: StaticString, at index: Int) -> Int {
         // please do not replace the code below with code that uses `string.withUTF8Buffer { ... }` (see SR-7541)
-        return self.set(bytes: UnsafeRawBufferPointer(start: string.utf8Start,
-                                                      count: string.utf8CodeUnitCount), at: index)
+        return self.setBytes(UnsafeRawBufferPointer(start: string.utf8Start,
+                                                    count: string.utf8CodeUnitCount), at: index)
     }
 
     // MARK: String APIs
@@ -96,8 +96,8 @@ extension ByteBuffer {
     ///     - string: The string to write.
     /// - returns: The number of bytes written.
     @discardableResult
-    public mutating func write(string: String) -> Int {
-        let written = self.set(string: string, at: self.writerIndex)
+    public mutating func writeString(_ string: String) -> Int {
+        let written = self.setString(string, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
         return written
     }
@@ -107,11 +107,11 @@ extension ByteBuffer {
     mutating func _setStringSlowpath(_ string: String, at index: Int) -> Int {
         // slow path, let's try to force the string to be native
         if let written = (string + "").utf8.withContiguousStorageIfAvailable({ utf8Bytes in
-            self.set(bytes: utf8Bytes, at: index)
+            self.setBytes(utf8Bytes, at: index)
         }) {
             return written
         } else {
-            return self.set(bytes: string.utf8, at: index)
+            return self.setBytes(string.utf8, at: index)
         }
     }
 
@@ -123,9 +123,9 @@ extension ByteBuffer {
     /// - returns: The number of bytes written.
     @discardableResult
     @inlinable
-    public mutating func set(string: String, at index: Int) -> Int {
+    public mutating func setString(_ string: String, at index: Int) -> Int {
         if let written = string.utf8.withContiguousStorageIfAvailable({ utf8Bytes in
-            self.set(bytes: utf8Bytes, at: index)
+            self.setBytes(utf8Bytes, at: index)
         }) {
             // fast path, directly available
             return written
@@ -181,8 +181,8 @@ extension ByteBuffer {
     ///     - dispatchData: The `DispatchData` instance to write to the `ByteBuffer`.
     /// - returns: The number of bytes written.
     @discardableResult
-    public mutating func write(dispatchData: DispatchData) -> Int {
-        let written = self.set(dispatchData: dispatchData, at: self.writerIndex)
+    public mutating func writeDispatchData(_ dispatchData: DispatchData) -> Int {
+        let written = self.setDispatchData(dispatchData, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
         return written
     }
@@ -194,7 +194,7 @@ extension ByteBuffer {
     ///     - index: The index for the first serialized byte.
     /// - returns: The number of bytes written.
     @discardableResult
-    public mutating func set(dispatchData: DispatchData, at index: Int) -> Int {
+    public mutating func setDispatchData(_ dispatchData: DispatchData, at index: Int) -> Int {
         let allBytesCount = dispatchData.count
         self.reserveCapacity(index + allBytesCount)
         self.withVeryUnsafeMutableBytes { destCompleteStorage in
@@ -319,7 +319,7 @@ extension ByteBuffer {
     @discardableResult
     public mutating func set(buffer: ByteBuffer, at index: Int) -> Int {
         return buffer.withUnsafeReadableBytes{ p in
-            self.set(bytes: p, at: index)
+            self.setBytes(p, at: index)
         }
     }
 
@@ -330,7 +330,7 @@ extension ByteBuffer {
     ///     - buffer: The `ByteBuffer` to write.
     /// - returns: The number of bytes written to this `ByteBuffer` which is equal to the number of bytes read from `buffer`.
     @discardableResult
-    public mutating func write(buffer: inout ByteBuffer) -> Int {
+    public mutating func writeBuffer(_ buffer: inout ByteBuffer) -> Int {
         let written = set(buffer: buffer, at: writerIndex)
         self._moveWriterIndex(forwardBy: written)
         buffer._moveReaderIndex(forwardBy: written)
@@ -344,8 +344,8 @@ extension ByteBuffer {
     /// - returns: The number of bytes written or `bytes.count`.
     @discardableResult
     @inlinable
-    public mutating func write<Bytes: Sequence>(bytes: Bytes) -> Int where Bytes.Element == UInt8 {
-        let written = self.set(bytes: bytes, at: self.writerIndex)
+    public mutating func writeBytes<Bytes: Sequence>(_ bytes: Bytes) -> Int where Bytes.Element == UInt8 {
+        let written = self.setBytes(bytes, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
         return written
     }
@@ -357,8 +357,8 @@ extension ByteBuffer {
     /// - returns: The number of bytes written or `bytes.count`.
     @discardableResult
     @inlinable
-    public mutating func write(bytes: UnsafeRawBufferPointer) -> Int {
-        let written = self.set(bytes: bytes, at: self.writerIndex)
+    public mutating func writeBytes(_ bytes: UnsafeRawBufferPointer) -> Int {
+        let written = self.setBytes(bytes, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
         return written
     }

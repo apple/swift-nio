@@ -21,7 +21,7 @@ extension EmbeddedChannel {
     func readAllInboundBuffers() -> ByteBuffer {
         var buffer = self.allocator.buffer(capacity: 100)
         while var writtenData: ByteBuffer = self.readInbound() {
-            buffer.write(buffer: &writtenData)
+            buffer.writeBuffer(&writtenData)
         }
 
         return buffer
@@ -46,7 +46,7 @@ extension ByteBuffer {
 extension EmbeddedChannel {
     func writeString(_ string: String) -> EventLoopFuture<Void> {
         var buffer = self.allocator.buffer(capacity: string.utf8.count)
-        buffer.write(string: string)
+        buffer.writeString(string)
         return self.writeAndFlush(buffer)
     }
 }
@@ -181,7 +181,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         var buffer = server.allocator.buffer(capacity: upgradeRequest.utf8.count)
-        buffer.write(string: upgradeRequest)
+        buffer.writeString(upgradeRequest)
 
         // Write this directly to the server.
         do {
@@ -209,7 +209,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "12", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         var buffer = server.allocator.buffer(capacity: upgradeRequest.utf8.count)
-        buffer.write(string: upgradeRequest)
+        buffer.writeString(upgradeRequest)
 
         // Write this directly to the server.
         do {
@@ -237,7 +237,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         var buffer = server.allocator.buffer(capacity: upgradeRequest.utf8.count)
-        buffer.write(string: upgradeRequest)
+        buffer.writeString(upgradeRequest)
 
         // Write this directly to the server.
         do {
@@ -265,7 +265,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13"])
         var buffer = server.allocator.buffer(capacity: upgradeRequest.utf8.count)
-        buffer.write(string: upgradeRequest)
+        buffer.writeString(upgradeRequest)
 
         // Write this directly to the server.
         do {
@@ -363,7 +363,7 @@ class EndToEndTests: XCTestCase {
         XCTAssertNoThrow(try client.pipeline.add(handler: WebSocketFrameEncoder()).wait())
 
         var data = client.allocator.buffer(capacity: 12)
-        data.write(string: "hello, world")
+        data.writeString("hello, world")
 
         // Let's send a frame or two, to confirm that this works.
         let dataFrame = WebSocketFrame(fin: true, opcode: .binary, data: data)
@@ -426,7 +426,7 @@ class EndToEndTests: XCTestCase {
 
         // Send a fake frame header that claims this is a ping frame with 126 bytes of data.
         var data = client.allocator.buffer(capacity: 12)
-        data.write(bytes: [0x89, 0x7E, 0x00, 0x7E])
+        data.writeBytes([0x89, 0x7E, 0x00, 0x7E])
         XCTAssertNoThrow(try client.writeAndFlush(data).wait())
 
         do {
@@ -472,7 +472,7 @@ class EndToEndTests: XCTestCase {
 
         // Send a fake frame header that claims this is a ping frame with 126 bytes of data.
         var data = client.allocator.buffer(capacity: 12)
-        data.write(bytes: [0x89, 0x7E, 0x00, 0x7E])
+        data.writeBytes([0x89, 0x7E, 0x00, 0x7E])
         XCTAssertNoThrow(try client.writeAndFlush(data).wait())
 
         do {

@@ -121,7 +121,7 @@ class HTTPServerClientTest : XCTestCase {
                     let r = HTTPServerResponsePart.head(head)
                     ctx.write(self.wrapOutboundOut(r), promise: nil)
                     var b = ctx.channel.allocator.buffer(capacity: replyString.count)
-                    b.write(string: replyString)
+                    b.writeString(replyString)
 
                     let outbound = self.outboundBody(b)
                     ctx.write(self.wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
@@ -143,7 +143,7 @@ class HTTPServerClientTest : XCTestCase {
                     var b = ctx.channel.allocator.buffer(capacity: 1024)
                     for i in 1...10 {
                         b.clear()
-                        b.write(string: "\(i)")
+                        b.writeString("\(i)")
 
                         let outbound = self.outboundBody(b)
                         ctx.write(self.wrapOutboundOut(outbound.body)).recover { error in
@@ -169,7 +169,7 @@ class HTTPServerClientTest : XCTestCase {
                     var b = ctx.channel.allocator.buffer(capacity: 1024)
                     for i in 1...10 {
                         b.clear()
-                        b.write(string: "\(i)")
+                        b.writeString("\(i)")
 
                         let outbound = self.outboundBody(b)
                         ctx.write(self.wrapOutboundOut(outbound.body)).recover { error in
@@ -198,7 +198,7 @@ class HTTPServerClientTest : XCTestCase {
                             return srcPtr.count
                         }
                     }
-                    buf.write(bytes: HTTPServerClientTest.massiveResponseBytes)
+                    buf.writeBytes(HTTPServerClientTest.massiveResponseBytes)
                     var head = HTTPResponseHead(version: req.version, status: .ok)
                     head.headers.add(name: "Connection", value: "close")
                     head.headers.add(name: "Content-Length", value: "\(HTTPServerClientTest.massiveResponseLength)")
@@ -529,7 +529,7 @@ class HTTPServerClientTest : XCTestCase {
         }
 
         var buffer = clientChannel.allocator.buffer(capacity: numBytes)
-        buffer.write(staticString: "GET /massive-response HTTP/1.1\r\nHost: nio.net\r\n\r\n")
+        buffer.writeStaticString("GET /massive-response HTTP/1.1\r\nHost: nio.net\r\n\r\n")
 
         try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
         accumulation.syncWaitForCompletion()

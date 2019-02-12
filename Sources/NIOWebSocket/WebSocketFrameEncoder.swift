@@ -64,24 +64,24 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
         switch data.length {
         case 0...maxOneByteSize:
             buffer = ctx.channel.allocator.buffer(capacity: baseLength)
-            buffer.write(integer: data.firstByte)
-            buffer.write(integer: UInt8(data.length) | maskBitMask)
+            buffer.writeInteger(data.firstByte)
+            buffer.writeInteger(UInt8(data.length) | maskBitMask)
         case (maxOneByteSize + 1)...maxTwoByteSize:
             buffer = ctx.channel.allocator.buffer(capacity: baseLength + 2)
-            buffer.write(integer: data.firstByte)
-            buffer.write(integer: UInt8(126) | maskBitMask)
-            buffer.write(integer: UInt16(data.length))
+            buffer.writeInteger(data.firstByte)
+            buffer.writeInteger(UInt8(126) | maskBitMask)
+            buffer.writeInteger(UInt16(data.length))
         case (maxTwoByteSize + 1)...maxNIOFrameSize:
             buffer = ctx.channel.allocator.buffer(capacity: baseLength + 8)
-            buffer.write(integer: data.firstByte)
-            buffer.write(integer: UInt8(127) | maskBitMask)
-            buffer.write(integer: UInt64(data.length))
+            buffer.writeInteger(data.firstByte)
+            buffer.writeInteger(UInt8(127) | maskBitMask)
+            buffer.writeInteger(UInt64(data.length))
         default:
             fatalError("NIO cannot serialize frames longer than \(maxNIOFrameSize)")
         }
 
         if let maskKey = data.maskKey {
-            buffer.write(bytes: maskKey)
+            buffer.writeBytes(maskKey)
         }
 
         // Ok, frame header away!

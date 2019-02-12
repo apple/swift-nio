@@ -278,7 +278,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let secondAddress = try SocketAddress(ipAddress: "127.0.0.2", port: 65535)
         var buffer = alloc.buffer(capacity: 12)
         let emptyBuffer = buffer
-        _ = buffer.write(string: "1234")
+        _ = buffer.writeString("1234")
 
         try withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
@@ -314,7 +314,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let firstAddress = try SocketAddress(ipAddress: "fe80::1", port: 65535)
         let secondAddress = try SocketAddress(ipAddress: "fe80::2", port: 65535)
         var buffer = alloc.buffer(capacity: 12)
-        _ = buffer.write(string: "1234")
+        buffer.writeString("1234")
 
         try withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<4).map { (_: Int) in el.makePromise() }
@@ -363,7 +363,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
         var buffer = alloc.buffer(capacity: 12)
-        buffer.write(bytes: Array<UInt8>(repeating: 0xff, count: 12))
+        buffer.writeBytes(Array<UInt8>(repeating: 0xff, count: 12))
 
         try withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0...pwm.writeSpinCount+1).map { (_: UInt) in el.makePromise() }
@@ -402,7 +402,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
         var buffer = alloc.buffer(capacity: 12)
-        _ = buffer.write(string: "1234")
+        buffer.writeString("1234")
 
         try withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
@@ -550,7 +550,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
         var buffer = alloc.buffer(capacity: 12)
-        buffer.write(string: "1234")
+        buffer.writeString("1234")
 
         try withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
@@ -581,7 +581,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
         var buffer = alloc.buffer(capacity: 12)
-        buffer.write(string: "1234")
+        buffer.writeString("1234")
 
         try withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0...Socket.writevLimitIOVectors).map { (_: Int) in el.makePromise() }

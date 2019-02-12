@@ -131,7 +131,7 @@ final class ByteCountingHandler : ChannelInboundHandler, RemovableChannelHandler
 
     func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         var currentBuffer = self.unwrapInboundIn(data)
-        buffer.write(buffer: &currentBuffer)
+        buffer.writeBuffer(&currentBuffer)
 
         if buffer.readableBytes == numBytes {
             promise.succeed(buffer)

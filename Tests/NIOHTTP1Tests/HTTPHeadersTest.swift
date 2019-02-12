@@ -146,7 +146,7 @@ class HTTPHeadersTest : XCTestCase {
     
     func testKeepAliveStateStartsWithClose() {
         var buffer = ByteBufferAllocator().buffer(capacity: 32)
-        buffer.write(string: "Connection: close\r\n")
+        buffer.writeString("Connection: close\r\n")
         var headers = HTTPHeaders(buffer: buffer, headers: [HTTPHeader(name: HTTPHeaderIndex(start: 0, length: 10), value: HTTPHeaderIndex(start: 12, length: 5))], keepAliveState: .close)
         
         XCTAssertEqual("close", headers["connection"].first)
@@ -164,7 +164,7 @@ class HTTPHeadersTest : XCTestCase {
     
     func testKeepAliveStateStartsWithKeepAlive() {
         var buffer = ByteBufferAllocator().buffer(capacity: 32)
-        buffer.write(string: "Connection: keep-alive\r\n")
+        buffer.writeString("Connection: keep-alive\r\n")
         var headers = HTTPHeaders(buffer: buffer, headers: [HTTPHeader(name: HTTPHeaderIndex(start: 0, length: 10), value: HTTPHeaderIndex(start: 12, length: 10))], keepAliveState: .keepAlive)
         
         XCTAssertEqual("keep-alive", headers["connection"].first)
@@ -273,14 +273,14 @@ class HTTPHeadersTest : XCTestCase {
         var locations: [HTTPHeader] = []
         for (name, value) in originalHeaders {
             let nstart = buf.writerIndex
-            buf.write(string: name)
+            buf.writeString(name)
             let nameLoc = HTTPHeaderIndex(start: nstart, length: buf.writerIndex - nstart)
-            buf.write(string: ": ")
+            buf.writeString(": ")
             
             let vstart = buf.writerIndex
-            buf.write(string: value)
+            buf.writeString(value)
             let valueLoc = HTTPHeaderIndex(start: vstart, length: buf.writerIndex - vstart)
-            buf.write(string: "\r\n")
+            buf.writeString("\r\n")
             
             locations.append(HTTPHeader(name: nameLoc, value: valueLoc))
         }

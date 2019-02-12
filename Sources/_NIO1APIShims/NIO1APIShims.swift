@@ -12,7 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Dispatch
+import Foundation
 import NIO
+import NIOFoundationCompat
 import NIOHTTP1
 import NIOTLS
 
@@ -268,6 +271,83 @@ extension MarkedCircularBuffer {
     @available(*, deprecated, renamed: "init(initialCapacity:)")
     public init(initialRingCapacity: Int) {
         self = .init(initialCapacity: initialRingCapacity)
+    }
+}
+
+extension ByteBuffer {
+    @available(*, deprecated, renamed: "writeStaticString(_:)")
+    public mutating func write(staticString: StaticString) -> Int {
+        return self.writeStaticString(staticString)
+    }
+
+    @available(*, deprecated, renamed: "setStaticString(_:at:)")
+    public mutating func set(staticString: StaticString, at index: Int) -> Int {
+        return self.setStaticString(staticString, at: index)
+    }
+
+    @available(*, deprecated, renamed: "writeString(_:)")
+    public mutating func write(string: String) -> Int {
+        return self.writeString(string)
+    }
+
+    @available(*, deprecated, renamed: "setString(at:)")
+    public mutating func set(string: String, at index: Int) -> Int {
+        return self.setString(string, at: index)
+    }
+
+    @available(*, deprecated, renamed: "writeDispatchData(_:)")
+    public mutating func write(dispatchData: DispatchData) -> Int {
+        return self.writeDispatchData(dispatchData)
+    }
+
+    @available(*, deprecated, renamed: "setDispatchData(_:)")
+    public mutating func set(dispatchData: DispatchData, at index: Int) -> Int {
+        return self.setDispatchData(dispatchData, at: index)
+    }
+
+    @available(*, deprecated, renamed: "writeBuffer(_:)")
+    public mutating func write(buffer: inout ByteBuffer) -> Int {
+        return self.writeBuffer(&buffer)
+    }
+
+    @available(*, deprecated, renamed: "writeBytes(_:)")
+    public mutating func write<Bytes: Sequence>(bytes: Bytes) -> Int where Bytes.Element == UInt8 {
+        return self.writeBytes(bytes)
+    }
+
+    @available(*, deprecated, renamed: "writeBytes(_:)")
+    public mutating func write(bytes: UnsafeRawBufferPointer) -> Int {
+        return self.writeBytes(bytes)
+    }
+
+    @available(*, deprecated, renamed: "setBytes(at:)")
+    public mutating func set<Bytes: Sequence>(bytes: Bytes, at index: Int) -> Int where Bytes.Element == UInt8 {
+        return self.setBytes(bytes, at: index)
+    }
+
+    @available(*, deprecated, renamed: "setBytes(at:)")
+    public mutating func set(bytes: UnsafeRawBufferPointer, at index: Int) -> Int {
+        return self.setBytes(bytes, at: index)
+    }
+
+    @available(*, deprecated, renamed: "writeInteger(_:endianness:as:)")
+    public mutating func write<T: FixedWidthInteger>(integer: T, endianness: Endianness = .big, as type: T.Type = T.self) -> Int {
+        return self.writeInteger(integer, endianness: endianness, as: type)
+    }
+
+    @available(*, deprecated, renamed: "setInteger(_:at:endianness:as:)")
+    public mutating func set<T: FixedWidthInteger>(integer: T, at index: Int, endianness: Endianness = .big, as type: T.Type = T.self) -> Int {
+        return self.setInteger(integer, at: index, endianness: endianness, as: type)
+    }
+
+    @available(*, deprecated, renamed: "writeString(_:encoding:)")
+    public mutating func write(string: String, encoding: String.Encoding) throws -> Int {
+        return try self.writeString(string, encoding: encoding)
+    }
+
+    @available(*, deprecated, renamed: "setString(at:encoding:at:)")
+    public mutating func set(string: String, encoding: String.Encoding, at index: Int) throws -> Int {
+        return try self.setString(string, encoding: encoding, at: index)
     }
 }
 
