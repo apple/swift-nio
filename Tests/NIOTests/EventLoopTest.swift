@@ -436,7 +436,7 @@ public class EventLoopTest : XCTestCase {
             let group = MultiThreadedEventLoopGroup(pinnedCPUIds: [0])
             let eventLoop = group.next()
             let set = try eventLoop.submit {
-                NIO.Thread.current.affinity
+                NIOThread.current.affinity
             }.wait()
 
             XCTAssertEqual(LinuxCPUSet(0), set)

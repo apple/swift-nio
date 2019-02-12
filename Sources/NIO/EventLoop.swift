@@ -196,7 +196,7 @@ public struct EventLoopIterator: Sequence, IteratorProtocol {
 
 /// An EventLoop processes IO / tasks in an endless loop for `Channel`s until it's closed.
 ///
-/// Usually multiple `Channel`s share the same `EventLoop` for processing IO / tasks and so share the same processing `Thread`.
+/// Usually multiple `Channel`s share the same `EventLoop` for processing IO / tasks and so share the same processing `NIOThread`.
 /// For a better understanding of how such an `EventLoop` works internally the following pseudo code may be helpful:
 ///
 /// ```
@@ -221,7 +221,7 @@ public struct EventLoopIterator: Sequence, IteratorProtocol {
 /// Because an `EventLoop` may be shared between multiple `Channel`s it's important to _NOT_ block while processing IO / tasks. This also includes long running computations which will have the same
 /// effect as blocking in this case.
 public protocol EventLoop: EventLoopGroup {
-    /// Returns `true` if the current `Thread` is the same as the `Thread` that is tied to this `EventLoop`. `false` otherwise.
+    /// Returns `true` if the current `NIOThread` is the same as the `NIOThread` that is tied to this `EventLoop`. `false` otherwise.
     var inEventLoop: Bool { get }
 
     /// Submit a given task to be executed by the `EventLoop`
@@ -431,12 +431,12 @@ extension EventLoop {
         return promise.futureResult
     }
 
-    /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `Thread`.
+    /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `NIOThread`.
     public func makePromise<T>(of type: T.Type = T.self, file: StaticString = #file, line: UInt = #line) -> EventLoopPromise<T> {
         return EventLoopPromise<T>(eventLoop: self, file: file, line: line)
     }
 
-    /// Creates and returns a new `EventLoopFuture` that is already marked as failed. Notifications will be done using this `EventLoop` as execution `Thread`.
+    /// Creates and returns a new `EventLoopFuture` that is already marked as failed. Notifications will be done using this `EventLoop` as execution `NIOThread`.
     ///
     /// - parameters:
     ///     - error: the `Error` that is used by the `EventLoopFuture`.
@@ -445,7 +445,7 @@ extension EventLoop {
         return EventLoopFuture<T>(eventLoop: self, error: error, file: file, line: line)
     }
 
-    /// Creates and returns a new `EventLoopFuture` that is already marked as success. Notifications will be done using this `EventLoop` as execution `Thread`.
+    /// Creates and returns a new `EventLoopFuture` that is already marked as success. Notifications will be done using this `EventLoop` as execution `NIOThread`.
     ///
     /// - parameters:
     ///     - result: the value that is used by the `EventLoopFuture`.
@@ -593,11 +593,11 @@ private enum EventLoopLifecycleState {
 }
 
 /// `EventLoop` implementation that uses a `Selector` to get notified once there is more I/O or tasks to process.
-/// The whole processing of I/O and tasks is done by a `Thread` that is tied to the `SelectableEventLoop`. This `Thread`
+/// The whole processing of I/O and tasks is done by a `NIOThread` that is tied to the `SelectableEventLoop`. This `NIOThread`
 /// is guaranteed to never change!
 internal final class SelectableEventLoop: EventLoop {
     private let selector: NIO.Selector<NIORegistration>
-    private let thread: Thread
+    private let thread: NIOThread
     private var scheduledTasks = PriorityQueue<ScheduledTask>(ascending: true)
     private var tasksCopy = ContiguousArray<() -> Void>()
 
@@ -634,7 +634,7 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
-    public init(thread: Thread) throws {
+    public init(thread: NIOThread) throws {
         self.selector = try NIO.Selector()
         self.thread = thread
         self._iovecs = UnsafeMutablePointer.allocate(capacity: Socket.writevLimitIOVectors)
@@ -971,10 +971,10 @@ extension EventLoopGroup {
     }
 }
 
-/// Called per `Thread` that is created for an EventLoop to do custom initialization of the `Thread` before the actual `EventLoop` is run on it.
-typealias ThreadInitializer = (Thread) -> Void
+/// Called per `NIOThread` that is created for an EventLoop to do custom initialization of the `NIOThread` before the actual `EventLoop` is run on it.
+typealias ThreadInitializer = (NIOThread) -> Void
 
-/// An `EventLoopGroup` which will create multiple `EventLoop`s, each tied to its own `Thread`.
+/// An `EventLoopGroup` which will create multiple `EventLoop`s, each tied to its own `NIOThread`.
 ///
 /// The effect of initializing a `MultiThreadedEventLoopGroup` is to spawn `numberOfThreads` fresh threads which will
 /// all run their own `EventLoop`. Those threads will not be shut down until `shutdownGracefully` or
@@ -1003,7 +1003,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         var _loop: SelectableEventLoop! = nil
 
         loopUpAndRunningGroup.enter()
-        Thread.spawnAndRun(name: name) { t in
+        NIOThread.spawnAndRun(name: name) { t in
             initializer(t)
 
             do {
@@ -1040,7 +1040,7 @@ final public class MultiThreadedEventLoopGroup: EventLoopGroup {
         self.init(threadInitializers: initializers)
     }
     
-    /// Creates a `MultiThreadedEventLoopGroup` instance which uses the given `ThreadInitializer`s. One `Thread` per `ThreadInitializer` is created and used.
+    /// Creates a `MultiThreadedEventLoopGroup` instance which uses the given `ThreadInitializer`s. One `NIOThread` per `ThreadInitializer` is created and used.
     ///
     /// - arguments:
     ///     - threadInitializers: The `ThreadInitializer`s to use.
