@@ -275,7 +275,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     }
 
     // MARK: Computed Properties
-    public final var _unsafe: ChannelCore { return self }
+    public final var _channelCore: ChannelCore { return self }
 
     // This is `Channel` API so must be thread-safe.
     public final var localAddress: SocketAddress? {

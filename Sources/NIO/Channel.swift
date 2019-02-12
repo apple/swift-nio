@@ -14,7 +14,9 @@
 
 import NIOConcurrencyHelpers
 
-/// The core `Channel` methods for NIO-internal use only.
+/// The core `Channel` methods that are for internal use of the `Channel` implementation only.
+///
+/// - warning: If you are not implementing a custom `Channel` type, you should never call any of these.
 ///
 /// - note: All methods must be called from the `EventLoop` thread.
 public protocol ChannelCore: class {
@@ -134,10 +136,10 @@ public protocol Channel: class, ChannelOutboundInvoker {
     /// or `channelInactive` can be expected next when `handlerAdded` was received.
     var isActive: Bool { get }
 
-    /// Reach out to the `ChannelCore`.
+    /// Reach out to the `_ChannelCore`.
     ///
     /// - warning: Unsafe, this is for use in NIO's core only.
-    var _unsafe: ChannelCore { get }
+    var _channelCore: ChannelCore { get }
 }
 
 /// A `SelectableChannel` is a `Channel` that can be used with a `Selector` which notifies a user when certain events

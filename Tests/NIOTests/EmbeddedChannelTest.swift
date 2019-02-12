@@ -137,7 +137,7 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
         let pipelineEventLoop = channel.pipeline.eventLoop
         XCTAssert(pipelineEventLoop === channel.eventLoop)
-        XCTAssert(pipelineEventLoop === (channel._unsafe as! EmbeddedChannelCore).eventLoop)
+        XCTAssert(pipelineEventLoop === (channel._channelCore as! EmbeddedChannelCore).eventLoop)
         XCTAssertFalse(try channel.finish())
     }
     

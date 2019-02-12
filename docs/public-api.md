@@ -15,7 +15,7 @@ If we prefix something with an underscore or put it into one of NIO's internal m
 ##### Examples
 
  - ✅ `channel.close(promise: nil)`
- - ❌ `channel._unsafe.flush0()`, underscored property
+ - ❌ `channel._channelCore.flush0()`, underscored property
  - ❌ `import CNIOAtomics`, module name doesn't start with NIO
  - ❌ `ByteBuffer(_enableSuperSpecialAllocationMode: true)`, as the initialiser's first argument is underscored
 
