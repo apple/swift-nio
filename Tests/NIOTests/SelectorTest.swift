@@ -317,7 +317,7 @@ class SelectorTest: XCTestCase {
 
             func channelActive(ctx: ChannelHandlerContext) {
                 var buf = ctx.channel.allocator.buffer(capacity: 1)
-                buf.write(string: "H")
+                buf.writeString("H")
                 ctx.channel.writeAndFlush(buf, promise: nil)
                 self.number += 1
                 self.allServerChannels.value.append(ctx.channel)

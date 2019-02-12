@@ -108,7 +108,7 @@ class BaseObjectTest: XCTestCase {
         let handle = FileHandle(descriptor: -1)
         var bb1 = ByteBufferAllocator().buffer(capacity: 1024)
         let bb2 = ByteBufferAllocator().buffer(capacity: 1024)
-        bb1.write(string: "hello")
+        bb1.writeString("hello")
         let fr = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
         defer {
             // fake descriptor, so shouldn't be closed.

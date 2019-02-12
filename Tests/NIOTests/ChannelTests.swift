@@ -91,7 +91,7 @@ public class ChannelTests: XCTestCase {
             .connect(to: serverChannel.localAddress!).wait())
 
         var buffer = clientChannel.allocator.buffer(capacity: 1)
-        buffer.write(string: "a")
+        buffer.writeString("a")
         try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         let serverAcceptedChannel = try serverAcceptedChannelPromise.futureResult.wait()
@@ -128,11 +128,11 @@ public class ChannelTests: XCTestCase {
         var buffer = clientChannel.allocator.buffer(capacity: 1)
         for _ in 0..<Socket.writevLimitIOVectors {
             buffer.clear()
-            buffer.write(string: "a")
+            buffer.writeString("a")
             clientChannel.write(NIOAny(buffer), promise: nil)
         }
         buffer.clear()
-        buffer.write(string: "a")
+        buffer.writeString("a")
         try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         // Start shutting stuff down.
@@ -155,7 +155,7 @@ public class ChannelTests: XCTestCase {
         let bufferSize = 1024 * 1024 * 2
         var buffer = clientChannel.allocator.buffer(capacity: bufferSize)
         for _ in 0..<bufferSize {
-            buffer.write(staticString: "a")
+            buffer.writeStaticString("a")
         }
 
 
@@ -424,7 +424,7 @@ public class ChannelTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         var buffer = alloc.buffer(capacity: 12)
         let emptyBuffer = buffer
-        _ = buffer.write(string: "1234")
+        _ = buffer.writeString("1234")
 
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
@@ -460,7 +460,7 @@ public class ChannelTests: XCTestCase {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator()
         var buffer = alloc.buffer(capacity: 12)
-        _ = buffer.write(string: "1234")
+        _ = buffer.writeString("1234")
 
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<4).map { (_: Int) in el.makePromise() }
@@ -510,7 +510,7 @@ public class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */)
             buffer.clear()
-            buffer.write(bytes: Array<UInt8>(repeating: 0xff, count: numberOfBytes))
+            buffer.writeBytes(Array<UInt8>(repeating: 0xff, count: numberOfBytes))
             let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             pwm.markFlushCheckpoint()
@@ -548,7 +548,7 @@ public class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */)
             buffer.clear()
-            buffer.write(bytes: [0xff] as [UInt8])
+            buffer.writeBytes([0xff] as [UInt8])
             let ps: [EventLoopPromise<Void>] = (0..<numberOfBytes).map { (_: Int) in
                 let p = el.makePromise(of: Void.self)
                 _ = pwm.add(data: .byteBuffer(buffer), promise: p)
@@ -603,7 +603,7 @@ public class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let numberOfWrites = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */)
             buffer.clear()
-            buffer.write(bytes: Array<UInt8>(repeating: 0xff, count: 1))
+            buffer.writeBytes(Array<UInt8>(repeating: 0xff, count: 1))
             let handle = FileHandle(descriptor: -1)
             defer {
                 /* fake file handle, so don't actually close */
@@ -639,7 +639,7 @@ public class ChannelTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         var buffer = alloc.buffer(capacity: 12)
         let emptyBuffer = buffer
-        _ = buffer.write(string: "1234")
+        _ = buffer.writeString("1234")
 
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
@@ -821,7 +821,7 @@ public class ChannelTests: XCTestCase {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator()
         var buffer = alloc.buffer(capacity: 12)
-        _ = buffer.write(string: "1234")
+        _ = buffer.writeString("1234")
 
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<5).map { (_: Int) in el.makePromise() }
@@ -877,7 +877,7 @@ public class ChannelTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         var buffer = alloc.buffer(capacity: 12)
         let emptyBuffer = buffer
-        _ = buffer.write(string: "1234")
+        _ = buffer.writeString("1234")
 
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
@@ -963,7 +963,7 @@ public class ChannelTests: XCTestCase {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator()
         var buffer = alloc.buffer(capacity: 12)
-        buffer.write(string: "1234")
+        buffer.writeString("1234")
 
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
@@ -994,7 +994,7 @@ public class ChannelTests: XCTestCase {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator()
         var buffer = alloc.buffer(capacity: 12)
-        buffer.write(string: "1234")
+        buffer.writeString("1234")
 
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0...Socket.writevLimitIOVectors).map { (_: Int) in el.makePromise() }
@@ -1134,7 +1134,7 @@ public class ChannelTests: XCTestCase {
         }
 
         var buffer = channel.allocator.buffer(capacity: 12)
-        buffer.write(string: "1234")
+        buffer.writeString("1234")
 
         try channel.writeAndFlush(NIOAny(buffer)).wait()
         try channel.close(mode: .output).wait()
@@ -1202,7 +1202,7 @@ public class ChannelTests: XCTestCase {
         verificationHandler.waitForEvent()
 
         var buffer = channel.allocator.buffer(capacity: 12)
-        buffer.write(string: "1234")
+        buffer.writeString("1234")
 
         let written = try buffer.withUnsafeReadableBytes { p in
             try accepted.write(pointer: UnsafeRawBufferPointer(rebasing: p.prefix(4)))
@@ -1256,7 +1256,7 @@ public class ChannelTests: XCTestCase {
         verificationHandler.waitForEvent()
 
         var buffer = channel.allocator.buffer(capacity: 12)
-        buffer.write(string: "1234")
+        buffer.writeString("1234")
 
         try channel.writeAndFlush(NIOAny(buffer)).wait()
     }
@@ -1551,7 +1551,7 @@ public class ChannelTests: XCTestCase {
         // We send a first write and expect it to arrive.
         var buffer = clientChannel.allocator.buffer(capacity: 12)
         let firstReadPromise = readDelayer.expectRead(loop: serverChannel.eventLoop)
-        buffer.write(staticString: "hello, world")
+        buffer.writeStaticString("hello, world")
         XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
         XCTAssertNoThrow(try firstReadPromise.wait())
 
@@ -1605,7 +1605,7 @@ public class ChannelTests: XCTestCase {
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .connect(to: serverChannel.localAddress!).wait())
         var buffer = clientChannel.allocator.buffer(capacity: 8)
-        buffer.write(string: "test")
+        buffer.writeString("test")
         try clientChannel.writeAndFlush(buffer).wait()
 
         // Wait for 100 ms. No data should be delivered.
@@ -1663,7 +1663,7 @@ public class ChannelTests: XCTestCase {
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .connect(to: serverChannel.localAddress!).wait())
         var buffer = clientChannel.allocator.buffer(capacity: 8)
-        buffer.write(string: "01234567")
+        buffer.writeString("01234567")
         for _ in 0..<20 {
             XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
         }
@@ -1717,7 +1717,7 @@ public class ChannelTests: XCTestCase {
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .connect(to: serverChannel.localAddress!).wait())
         var buf = clientChannel.allocator.buffer(capacity: 16)
-        buf.write(staticString: "012345678")
+        buf.writeStaticString("012345678")
         XCTAssertNoThrow(try clientChannel.writeAndFlush(buf).wait())
         XCTAssertNoThrow(try clientChannel.writeAndFlush(buf).wait())
         XCTAssertNoThrow(try clientChannel.close().wait())
@@ -1763,7 +1763,7 @@ public class ChannelTests: XCTestCase {
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .connect(to: serverChannel.localAddress!).wait())
         var buffer = clientChannel.allocator.buffer(capacity: 8)
-        buffer.write(string: "test")
+        buffer.writeString("test")
         try clientChannel.writeAndFlush(buffer).wait()
         try clientChannel.close().wait()
         try promise.futureResult.wait()
@@ -1939,7 +1939,7 @@ public class ChannelTests: XCTestCase {
 
             func channelActive(ctx: ChannelHandlerContext) {
                 var buffer = ctx.channel.allocator.buffer(capacity: 4)
-                buffer.write(string: "foo")
+                buffer.writeString("foo")
                 ctx.writeAndFlush(NIOAny(buffer), promise: self.writeDonePromise)
             }
         }
@@ -2115,7 +2115,7 @@ public class ChannelTests: XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: serverEL)
             .childChannelInitializer { channel in
                 var buffer = channel.allocator.buffer(capacity: 4)
-                buffer.write(string: "foo")
+                buffer.writeString("foo")
                 return channel.write(NIOAny(buffer))
             }
             .bind(host: "127.0.0.1", port: 0)
@@ -2474,7 +2474,7 @@ public class ChannelTests: XCTestCase {
 
             func channelActive(ctx: ChannelHandlerContext) {
                 var buffer = ctx.channel.allocator.buffer(capacity: 1)
-                buffer.write(staticString: "X")
+                buffer.writeStaticString("X")
                 ctx.channel.writeAndFlush(self.wrapOutboundOut(buffer)).map { ctx.channel }.cascade(to: self.channelAvailablePromise)
             }
         }
@@ -2534,7 +2534,7 @@ public class ChannelTests: XCTestCase {
                     ctx.channel.setOption(option: ChannelOptions.autoRead, value: true).flatMap {
                         // let's trigger the write error
                         var buffer = ctx.channel.allocator.buffer(capacity: 16)
-                        buffer.write(staticString: "THIS WILL FAIL ANYWAY")
+                        buffer.writeStaticString("THIS WILL FAIL ANYWAY")
 
                         // this needs to be in a function as otherwise the Swift compiler believes this is throwing
                         func workaroundSR487() {

@@ -250,7 +250,7 @@ class SNIHandlerTest: XCTestCase {
         let data = Data(base64Encoded: string, options: .ignoreUnknownCharacters)!
         let allocator = ByteBufferAllocator()
         var buffer = allocator.buffer(capacity: data.count)
-        buffer.write(bytes: data)
+        buffer.writeBytes(data)
         return buffer
     }
 

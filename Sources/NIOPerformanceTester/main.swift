@@ -95,7 +95,7 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
             switch req.uri {
             case "/perf-test-1":
                 var buffer = ctx.channel.allocator.buffer(capacity: self.cachedBody.count)
-                buffer.write(bytes: self.cachedBody)
+                buffer.writeBytes(self.cachedBody)
                 ctx.write(self.wrapOutboundOut(.head(self.cachedHead)), promise: nil)
                 ctx.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
                 ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
@@ -211,7 +211,7 @@ measureAndPrint(desc: "bytebuffer_write_12MB_short_string_literals") {
     for _ in 0 ..< 5 {
         buffer.clear()
         for _ in 0 ..< (bufferSize / 4) {
-            buffer.write(string: "abcd")
+            buffer.writeString("abcd")
         }
     }
 
@@ -228,7 +228,7 @@ measureAndPrint(desc: "bytebuffer_write_12MB_short_calculated_strings") {
     for _ in 0 ..< 5 {
         buffer.clear()
         for _ in  0 ..< (bufferSize / 4) {
-            buffer.write(string: s)
+            buffer.writeString(s)
         }
     }
 
@@ -244,7 +244,7 @@ measureAndPrint(desc: "bytebuffer_write_12MB_medium_string_literals") {
     for _ in 0 ..< 10 {
         buffer.clear()
         for _ in  0 ..< (bufferSize / 24) {
-            buffer.write(string: "012345678901234567890123")
+            buffer.writeString("012345678901234567890123")
         }
     }
 
@@ -261,7 +261,7 @@ measureAndPrint(desc: "bytebuffer_write_12MB_medium_calculated_strings") {
     for _ in 0 ..< 10 {
         buffer.clear()
         for _ in 0 ..< (bufferSize / 24) {
-            buffer.write(string: s)
+            buffer.writeString(s)
         }
     }
 
@@ -278,7 +278,7 @@ measureAndPrint(desc: "bytebuffer_write_12MB_large_calculated_strings") {
     for _ in 0 ..< 10 {
         buffer.clear()
         for _ in 0 ..< 12 {
-            buffer.write(string: s)
+            buffer.writeString(s)
         }
     }
 
@@ -297,13 +297,13 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
     func doWrites(buffer: inout ByteBuffer) {
         /* all of those should be 0 allocations */
 
-        // buffer.write(bytes: foundationData) // see SR-7542
-        buffer.write(bytes: [0x41])
-        buffer.write(bytes: dispatchData)
-        buffer.write(bytes: "A".utf8)
-        buffer.write(string: "A")
-        buffer.write(staticString: "A")
-        buffer.write(integer: 0x41, as: UInt8.self)
+        // buffer.writeBytes(foundationData) // see SR-7542
+        buffer.writeBytes([0x41])
+        buffer.writeBytes(dispatchData)
+        buffer.writeBytes("A".utf8)
+        buffer.writeString("A")
+        buffer.writeStaticString("A")
+        buffer.writeInteger(0x41, as: UInt8.self)
     }
     @inline(never)
     func doReads(buffer: inout ByteBuffer) {
@@ -331,132 +331,132 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
 }
 
 func writeExampleHTTPResponseAsString(buffer: inout ByteBuffer) {
-    buffer.write(string: "HTTP/1.1 200 OK")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Connection")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "close")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Proxy-Connection")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "close")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Via")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "HTTP/1.1 localhost (IBM-PROXY-WTE)")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Date")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "Tue, 08 May 2018 13:42:56 GMT")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Server")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "Apache/2.2.15 (Red Hat)")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Strict-Transport-Security")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "max-age=15768000; includeSubDomains")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Last-Modified")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "Tue, 08 May 2018 13:39:13 GMT")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "ETag")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "357031-1809-56bb1e96a6240")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Accept-Ranges")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "bytes")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Content-Length")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "6153")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Content-Type")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "text/html; charset=UTF-8")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "\r\n")
+    buffer.writeString("HTTP/1.1 200 OK")
+    buffer.writeString("\r\n")
+    buffer.writeString("Connection")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("close")
+    buffer.writeString("\r\n")
+    buffer.writeString("Proxy-Connection")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("close")
+    buffer.writeString("\r\n")
+    buffer.writeString("Via")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("HTTP/1.1 localhost (IBM-PROXY-WTE)")
+    buffer.writeString("\r\n")
+    buffer.writeString("Date")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("Tue, 08 May 2018 13:42:56 GMT")
+    buffer.writeString("\r\n")
+    buffer.writeString("Server")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("Apache/2.2.15 (Red Hat)")
+    buffer.writeString("\r\n")
+    buffer.writeString("Strict-Transport-Security")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("max-age=15768000; includeSubDomains")
+    buffer.writeString("\r\n")
+    buffer.writeString("Last-Modified")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("Tue, 08 May 2018 13:39:13 GMT")
+    buffer.writeString("\r\n")
+    buffer.writeString("ETag")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("357031-1809-56bb1e96a6240")
+    buffer.writeString("\r\n")
+    buffer.writeString("Accept-Ranges")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("bytes")
+    buffer.writeString("\r\n")
+    buffer.writeString("Content-Length")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("6153")
+    buffer.writeString("\r\n")
+    buffer.writeString("Content-Type")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("text/html; charset=UTF-8")
+    buffer.writeString("\r\n")
+    buffer.writeString("\r\n")
 }
 
 func writeExampleHTTPResponseAsStaticString(buffer: inout ByteBuffer) {
-    buffer.write(staticString: "HTTP/1.1 200 OK")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Connection")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "close")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Proxy-Connection")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "close")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Via")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "HTTP/1.1 localhost (IBM-PROXY-WTE)")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Date")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "Tue, 08 May 2018 13:42:56 GMT")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Server")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "Apache/2.2.15 (Red Hat)")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Strict-Transport-Security")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "max-age=15768000; includeSubDomains")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Last-Modified")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "Tue, 08 May 2018 13:39:13 GMT")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "ETag")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "357031-1809-56bb1e96a6240")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Accept-Ranges")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "bytes")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Content-Length")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "6153")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Content-Type")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "text/html; charset=UTF-8")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "\r\n")
+    buffer.writeStaticString("HTTP/1.1 200 OK")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Connection")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("close")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Proxy-Connection")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("close")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Via")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("HTTP/1.1 localhost (IBM-PROXY-WTE)")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Date")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("Tue, 08 May 2018 13:42:56 GMT")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Server")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("Apache/2.2.15 (Red Hat)")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Strict-Transport-Security")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("max-age=15768000; includeSubDomains")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Last-Modified")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("Tue, 08 May 2018 13:39:13 GMT")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("ETag")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("357031-1809-56bb1e96a6240")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Accept-Ranges")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("bytes")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Content-Length")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("6153")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Content-Type")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("text/html; charset=UTF-8")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("\r\n")
 }
 
 measureAndPrint(desc: "bytebuffer_write_http_response_ascii_only_as_string") {
     var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
     for _ in 0..<20_000 {
         writeExampleHTTPResponseAsString(buffer: &buffer)
-        buffer.write(string: htmlASCIIOnly)
+        buffer.writeString(htmlASCIIOnly)
         buffer.clear()
     }
     return buffer.readableBytes
@@ -466,7 +466,7 @@ measureAndPrint(desc: "bytebuffer_write_http_response_ascii_only_as_staticstring
     var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
     for _ in 0..<20_000 {
         writeExampleHTTPResponseAsStaticString(buffer: &buffer)
-        buffer.write(staticString: htmlASCIIOnlyStaticString)
+        buffer.writeStaticString(htmlASCIIOnlyStaticString)
         buffer.clear()
     }
     return buffer.readableBytes
@@ -476,7 +476,7 @@ measureAndPrint(desc: "bytebuffer_write_http_response_some_nonascii_as_string") 
     var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
     for _ in 0..<20_000 {
         writeExampleHTTPResponseAsString(buffer: &buffer)
-        buffer.write(string: htmlMostlyASCII)
+        buffer.writeString(htmlMostlyASCII)
         buffer.clear()
     }
     return buffer.readableBytes
@@ -486,7 +486,7 @@ measureAndPrint(desc: "bytebuffer_write_http_response_some_nonascii_as_staticstr
     var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
     for _ in 0..<20_000 {
         writeExampleHTTPResponseAsStaticString(buffer: &buffer)
-        buffer.write(staticString: htmlMostlyASCIIStaticString)
+        buffer.writeStaticString(htmlMostlyASCIIStaticString)
         buffer.clear()
     }
     return buffer.readableBytes
@@ -513,7 +513,7 @@ try measureAndPrint(desc: "no-net_http1_10k_reqs_1_conn") {
 
         func handlerAdded(ctx: ChannelHandlerContext) {
             self.requestBuffer = ctx.channel.allocator.buffer(capacity: 512)
-            self.requestBuffer.write(string: """
+            self.requestBuffer.writeString("""
                                              GET /perf-test-2 HTTP/1.1\r
                                              Host: example.com\r
                                              X-Some-Header-1: foo\r

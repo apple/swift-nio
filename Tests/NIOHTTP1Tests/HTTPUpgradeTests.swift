@@ -65,7 +65,7 @@ extension EmbeddedChannel {
     func readAllOutboundBuffers() -> ByteBuffer {
         var buffer = self.allocator.buffer(capacity: 100)
         while var writtenData = self.readOutbound(as: ByteBuffer.self) {
-            buffer.write(buffer: &writtenData)
+            buffer.writeBuffer(&writtenData)
         }
 
         return buffer
@@ -298,7 +298,7 @@ private class DataRecorder<T>: ChannelInboundHandler {
 private extension ByteBuffer {
     static func forString(_ string: String) -> ByteBuffer {
         var buf = ByteBufferAllocator().buffer(capacity: string.utf8.count)
-        buf.write(string: string)
+        buf.writeString(string)
         return buf
     }
 }

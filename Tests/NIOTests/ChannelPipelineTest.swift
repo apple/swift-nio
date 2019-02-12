@@ -30,13 +30,13 @@ private final class IndexWritingHandler: ChannelDuplexHandler {
 
     func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         var buf = self.unwrapInboundIn(data)
-        buf.write(integer: UInt8(self.index))
+        buf.writeInteger(UInt8(self.index))
         ctx.fireChannelRead(self.wrapInboundOut(buf))
     }
 
     func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         var buf = self.unwrapOutboundIn(data)
-        buf.write(integer: UInt8(self.index))
+        buf.writeInteger(UInt8(self.index))
         ctx.write(self.wrapOutboundOut(buf), promise: promise)
     }
 }
@@ -99,7 +99,7 @@ class ChannelPipelineTest: XCTestCase {
         let channel = EmbeddedChannel()
 
         var buf = channel.allocator.buffer(capacity: 1024)
-        buf.write(string: "hello")
+        buf.writeString("hello")
 
         _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<Int, ByteBuffer> { data in
             XCTAssertEqual(1, data)
@@ -278,7 +278,7 @@ class ChannelPipelineTest: XCTestCase {
             func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
                 let data = self.unwrapOutboundIn(data)
                 var buf = ctx.channel.allocator.buffer(capacity: 123)
-                buf.write(string: String(describing: data))
+                buf.writeString(String(describing: data))
                 ctx.write(self.wrapOutboundOut(buf), promise: promise)
             }
         }
@@ -433,7 +433,7 @@ class ChannelPipelineTest: XCTestCase {
 
         let countHandler = ReceiveIntHandler()
         var buffer = channel.allocator.buffer(capacity: 12)
-        buffer.write(staticString: "hello, world")
+        buffer.writeStaticString("hello, world")
 
         XCTAssertNoThrow(try channel.pipeline.add(handler: countHandler).wait())
         XCTAssertFalse(try channel.writeInbound(buffer))
@@ -696,7 +696,7 @@ class ChannelPipelineTest: XCTestCase {
         let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
 
         var buffer = channel.allocator.buffer(capacity: 1024)
-        buffer.write(staticString: "Hello, world!")
+        buffer.writeStaticString("Hello, world!")
 
         let removalPromise = channel.eventLoop.makePromise(of: Void.self)
         removalPromise.futureResult.whenSuccess {
@@ -742,7 +742,7 @@ class ChannelPipelineTest: XCTestCase {
         let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
 
         var buffer = channel.allocator.buffer(capacity: 1024)
-        buffer.write(staticString: "Hello, world!")
+        buffer.writeStaticString("Hello, world!")
 
         XCTAssertNil(channel.readOutbound())
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
@@ -771,7 +771,7 @@ class ChannelPipelineTest: XCTestCase {
         let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
 
         var buffer = channel.allocator.buffer(capacity: 1024)
-        buffer.write(staticString: "Hello, world!")
+        buffer.writeStaticString("Hello, world!")
 
         let removalPromise = channel.eventLoop.makePromise(of: Void.self)
         removalPromise.futureResult.whenSuccess {
@@ -812,7 +812,7 @@ class ChannelPipelineTest: XCTestCase {
         let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
 
         var buffer = channel.allocator.buffer(capacity: 1024)
-        buffer.write(staticString: "Hello, world!")
+        buffer.writeStaticString("Hello, world!")
 
         XCTAssertNil(channel.readOutbound())
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
@@ -842,7 +842,7 @@ class ChannelPipelineTest: XCTestCase {
         let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
 
         var buffer = channel.allocator.buffer(capacity: 1024)
-        buffer.write(staticString: "Hello, world!")
+        buffer.writeStaticString("Hello, world!")
 
         let removalPromise = channel.eventLoop.makePromise(of: Void.self)
         removalPromise.futureResult.whenSuccess {
@@ -884,7 +884,7 @@ class ChannelPipelineTest: XCTestCase {
         let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
 
         var buffer = channel.allocator.buffer(capacity: 1024)
-        buffer.write(staticString: "Hello, world!")
+        buffer.writeStaticString("Hello, world!")
 
         XCTAssertNil(channel.readOutbound())
         XCTAssertNoThrow(try channel.throwIfErrorCaught())

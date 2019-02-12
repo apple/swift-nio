@@ -123,7 +123,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
 
     public func testFramesWithExtensionDataDontRoundTrip() throws {
         // We don't know what the extensions are, so all data goes in...well...data.
-        self.buffer.write(bytes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        self.buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         let frame = WebSocketFrame(fin: false,
                                    opcode: .binary,
                                    data: self.buffer.getSlice(at: self.buffer.readerIndex, length: 5)!,
@@ -132,7 +132,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
     }
 
     public func testFramesWithExtensionDataCanBeRecovered() throws {
-        self.buffer.write(bytes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        self.buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         let frame = WebSocketFrame(fin: false,
                                    opcode: .binary,
                                    data: self.buffer.getSlice(at: self.buffer.readerIndex, length: 5)!,
@@ -144,7 +144,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
     }
 
     public func testFramesWithReservedBitsSetRoundTrip() throws {
-        self.buffer.write(bytes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        self.buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         let frame = WebSocketFrame(fin: false,
                                    rsv1: true,
                                    rsv2: true,
@@ -155,7 +155,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
     }
 
     public func testFramesWith16BitLengthsRoundTrip() throws {
-        self.buffer.write(bytes: Array(repeating: UInt8(4), count: 300))
+        self.buffer.writeBytes(Array(repeating: UInt8(4), count: 300))
         let frame = WebSocketFrame(fin: true,
                                    opcode: .binary,
                                    data: self.buffer)
@@ -168,7 +168,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         self.decoderChannel = EmbeddedChannel()
         XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: 80000))).wait())
 
-        self.buffer.write(bytes: Array(repeating: UInt8(4), count: 66000))
+        self.buffer.writeBytes(Array(repeating: UInt8(4), count: 66000))
         let frame = WebSocketFrame(fin: true,
                                    opcode: .binary,
                                    data: self.buffer)
@@ -176,7 +176,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
     }
 
     public func testMaskedFramesRoundTripWithMaskingIntact() throws {
-        self.buffer.write(bytes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        self.buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         let frame = WebSocketFrame(fin: false,
                                    opcode: .binary,
                                    maskKey: [0x80, 0x77, 0x11, 0x33],
@@ -199,7 +199,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
     }
 
     public func testMaskedFramesRoundTripWithMaskingIntactEvenWithExtensions() throws {
-        self.buffer.write(bytes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        self.buffer.writeBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
         let frame = WebSocketFrame(fin: false,
                                    opcode: .binary,
                                    maskKey: [0x80, 0x77, 0x11, 0x33],
@@ -232,7 +232,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
 
         // A fake frame header that claims that the length of the frame is 16385 bytes,
         // larger than the frame max.
-        self.buffer.write(bytes: [0x81, 0xFE, 0x40, 0x01])
+        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
 
         do {
             try self.decoderChannel.writeInbound(self.buffer)
@@ -252,7 +252,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
-        self.buffer.write(bytes: [0x09, 0x00])
+        self.buffer.writeBytes([0x09, 0x00])
 
         do {
             try self.decoderChannel.writeInbound(self.buffer)
@@ -272,7 +272,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
 
         // A fake frame header that claims this is a ping frame with 126 bytes of data.
-        self.buffer.write(bytes: [0x89, 0x7E, 0x00, 0x7E])
+        self.buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
 
         do {
             try self.decoderChannel.writeInbound(self.buffer)
@@ -294,7 +294,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: swallower, first: true).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
-        self.buffer.write(bytes: [0x09, 0x00])
+        self.buffer.writeBytes([0x09, 0x00])
 
         do {
             try self.decoderChannel.writeInbound(self.buffer)
@@ -312,7 +312,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // Now write another broken frame, this time an overlong frame.
         // No error should occur here.
         self.buffer.clear()
-        self.buffer.write(bytes: [0x81, 0xFE, 0x40, 0x01])
+        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
         XCTAssertNoThrow(try self.decoderChannel.writeInbound(self.buffer))
 
         // No extra data should have been sent.
@@ -338,7 +338,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         self.encoderChannel.write(frame, promise: nil)
         var frameBuffer = self.decoderChannel.allocator.buffer(capacity: 10)
         while var d = self.encoderChannel.readOutbound(as: ByteBuffer.self) {
-            frameBuffer.write(buffer: &d)
+            frameBuffer.writeBuffer(&d)
         }
         XCTAssertNoThrow(try self.decoderChannel.writeInbound(frameBuffer))
 
@@ -355,7 +355,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
 
         // A fake frame header that claims that the length of the frame is 16385 bytes,
         // larger than the frame max.
-        self.buffer.write(bytes: [0x81, 0xFE, 0x40, 0x01])
+        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
 
         do {
             try self.decoderChannel.writeInbound(self.buffer)
@@ -378,7 +378,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
-        self.buffer.write(bytes: [0x09, 0x00])
+        self.buffer.writeBytes([0x09, 0x00])
 
         do {
             try self.decoderChannel.writeInbound(self.buffer)
@@ -401,7 +401,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
 
         // A fake frame header that claims this is a ping frame with 126 bytes of data.
-        self.buffer.write(bytes: [0x89, 0x7E, 0x00, 0x7E])
+        self.buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
 
         do {
             try self.decoderChannel.writeInbound(self.buffer)
@@ -424,7 +424,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketFrameEncoder(), first: true).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
-        self.buffer.write(bytes: [0x09, 0x00])
+        self.buffer.writeBytes([0x09, 0x00])
 
         do {
             try self.decoderChannel.writeInbound(self.buffer)
@@ -442,7 +442,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // Now write another broken frame, this time an overlong frame.
         // No error should occur here.
         self.buffer.clear()
-        self.buffer.write(bytes: [0x81, 0xFE, 0x40, 0x01])
+        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
         XCTAssertNoThrow(try self.decoderChannel.writeInbound(self.buffer))
 
         // No extra data should have been sent.
@@ -458,7 +458,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
 
         // A fake frame header that claims that the length of the frame is 16385 bytes,
         // larger than the frame max.
-        self.buffer.write(bytes: [0x81, 0xFE, 0x40, 0x01])
+        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
 
         do {
             try self.decoderChannel.writeInbound(self.buffer)
@@ -482,7 +482,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
-        self.buffer.write(bytes: [0x09, 0x00])
+        self.buffer.writeBytes([0x09, 0x00])
 
         do {
             try self.decoderChannel.writeInbound(self.buffer)
@@ -506,7 +506,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: WebSocketProtocolErrorHandler()).wait())
 
         // A fake frame header that claims this is a ping frame with 126 bytes of data.
-        self.buffer.write(bytes: [0x89, 0x7E, 0x00, 0x7E])
+        self.buffer.writeBytes([0x89, 0x7E, 0x00, 0x7E])
 
         do {
             try self.decoderChannel.writeInbound(self.buffer)
@@ -532,7 +532,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(try self.decoderChannel.pipeline.add(handler: swallower, first: true).wait())
 
         // A fake frame header that claims this is a fragmented ping frame.
-        self.buffer.write(bytes: [0x09, 0x00])
+        self.buffer.writeBytes([0x09, 0x00])
 
         do {
             try self.decoderChannel.writeInbound(self.buffer)
@@ -550,7 +550,7 @@ public class WebSocketFrameDecoderTest: XCTestCase {
         // Now write another broken frame, this time an overlong frame.
         // No error should occur here.
         self.buffer.clear()
-        self.buffer.write(bytes: [0x81, 0xFE, 0x40, 0x01])
+        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
         XCTAssertNoThrow(try self.decoderChannel.writeInbound(self.buffer))
 
         // No extra data should have been sent.

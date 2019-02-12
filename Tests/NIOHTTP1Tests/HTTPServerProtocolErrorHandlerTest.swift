@@ -22,7 +22,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).wait())
 
         var buffer = channel.allocator.buffer(capacity: 1024)
-        buffer.write(staticString: "GET / HTTP/1.1\r\nContent-Length: -4\r\n\r\n")
+        buffer.writeStaticString("GET / HTTP/1.1\r\nContent-Length: -4\r\n\r\n")
         do {
             try channel.writeInbound(buffer)
         } catch HTTPParserError.invalidContentLength {
@@ -118,7 +118,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         }.wait())
 
         var buffer = channel.allocator.buffer(capacity: 1024)
-        buffer.write(staticString: "GET / HTTP/1.1\r\n\r\nGET / HTTP/1.1\r\n\r\nGET / HT")
+        buffer.writeStaticString("GET / HTTP/1.1\r\n\r\nGET / HTTP/1.1\r\n\r\nGET / HT")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         XCTAssertNoThrow(try channel.close().wait())
         (channel.eventLoop as! EmbeddedEventLoop).run()

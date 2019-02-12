@@ -57,8 +57,8 @@ final class ChatHandler: ChannelInboundHandler {
 
         // 64 should be good enough for the ipaddress
         var buffer = ctx.channel.allocator.buffer(capacity: read.readableBytes + 64)
-        buffer.write(string: "(\(ctx.remoteAddress!)) - ")
-        buffer.write(buffer: &read)
+        buffer.writeString("(\(ctx.remoteAddress!)) - ")
+        buffer.writeBuffer(&read)
         self.channelsSyncQueue.async {
             // broadcast the message to all the connected clients except the one that wrote it.
             self.writeToAll(channels: self.channels.filter { id != $0.key }, buffer: buffer)
@@ -84,7 +84,7 @@ final class ChatHandler: ChannelInboundHandler {
         }
 
         var buffer = channel.allocator.buffer(capacity: 64)
-        buffer.write(string: "(ChatServer) - Welcome to: \(ctx.localAddress!)\n")
+        buffer.writeString("(ChatServer) - Welcome to: \(ctx.localAddress!)\n")
         ctx.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
     }
 
@@ -100,7 +100,7 @@ final class ChatHandler: ChannelInboundHandler {
 
     private func writeToAll(channels: [ObjectIdentifier: Channel], allocator: ByteBufferAllocator, message: String) {
         var buffer =  allocator.buffer(capacity: message.utf8.count)
-        buffer.write(string: message)
+        buffer.writeString(message)
         self.writeToAll(channels: channels, buffer: buffer)
     }
 

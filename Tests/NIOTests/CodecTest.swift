@@ -109,7 +109,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         _ = try channel.pipeline.add(handler: ByteToMessageHandler(ByteToInt32Decoder())).wait()
 
         var buffer = channel.allocator.buffer(capacity: 32)
-        buffer.write(integer: Int32(1))
+        buffer.writeInteger(Int32(1))
         let writerIndex = buffer.writerIndex
         buffer.moveWriterIndex(to: writerIndex - 1)
 
@@ -119,8 +119,8 @@ public class ByteToMessageDecoderTest: XCTestCase {
         channel.pipeline.fireChannelRead(NIOAny(buffer.getSlice(at: writerIndex - 1, length: 1)!))
 
         var buffer2 = channel.allocator.buffer(capacity: 32)
-        buffer2.write(integer: Int32(2))
-        buffer2.write(integer: Int32(3))
+        buffer2.writeInteger(Int32(2))
+        buffer2.writeInteger(Int32(3))
         channel.pipeline.fireChannelRead(NIOAny(buffer2))
 
         XCTAssertNoThrow(try channel.finish())
@@ -141,7 +141,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         _ = try channel.pipeline.add(handler: inactivePromiser).wait()
 
         var buffer = channel.allocator.buffer(capacity: 32)
-        buffer.write(integer: Int32(1))
+        buffer.writeInteger(Int32(1))
         channel.pipeline.fireChannelRead(NIOAny(buffer))
         XCTAssertEqual(Int32(1), channel.readInbound())
 
@@ -167,7 +167,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
                                                  hookedMemcpy: testDecoderIsNotQuadratic_memcpyHook)
         channel.allocator = dummyAllocator
         var inputBuffer = dummyAllocator.buffer(capacity: 8)
-        inputBuffer.write(staticString: "whatwhat")
+        inputBuffer.writeStaticString("whatwhat")
 
         for _ in 0..<10 {
             channel.pipeline.fireChannelRead(NIOAny(inputBuffer))
@@ -191,7 +191,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         // We're going to send in 513 bytes. This will cause a chunk to be passed on, and will leave
         // a 512-byte empty region in a 513 byte buffer. This will not cause a shrink.
         var buffer = channel.allocator.buffer(capacity: 513)
-        buffer.write(bytes: Array(repeating: 0x04, count: 513))
+        buffer.writeBytes(Array(repeating: 0x04, count: 513))
         XCTAssertTrue(try channel.writeInbound(buffer))
 
         XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 1)
@@ -216,7 +216,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         // We're going to send in 5119 bytes. This will be held.
         var buffer = channel.allocator.buffer(capacity: 5119)
-        buffer.write(bytes: Array(repeating: 0x04, count: 5119))
+        buffer.writeBytes(Array(repeating: 0x04, count: 5119))
         XCTAssertFalse(try channel.writeInbound(buffer))
 
         XCTAssertEqual(decoder.cumulationBuffer!.readableBytes, 5119)
@@ -251,13 +251,13 @@ public class ByteToMessageDecoderTest: XCTestCase {
                     // this is the first time, let's fireChannelRead
                     self.hasReentranced = true
                     reentrantWriteBuffer.clear()
-                    reentrantWriteBuffer.write(staticString: "3")
+                    reentrantWriteBuffer.writeStaticString("3")
                     ctx.channel.pipeline.fireChannelRead(self.wrapInboundOut(reentrantWriteBuffer))
                 }
                 ctx.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: 1)!))
                 if self.numberOfDecodeCalls == 2 {
                     reentrantWriteBuffer.clear()
-                    reentrantWriteBuffer.write(staticString: "4")
+                    reentrantWriteBuffer.writeStaticString("4")
                     ctx.channel.pipeline.fireChannelRead(self.wrapInboundOut(reentrantWriteBuffer))
                 }
                 return .continue
@@ -270,17 +270,17 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         var inputBuffer = channel.allocator.buffer(capacity: 4)
         /* 1 */
-        inputBuffer.write(staticString: "1")
+        inputBuffer.writeStaticString("1")
         XCTAssertTrue(try channel.writeInbound(inputBuffer))
         inputBuffer.clear()
 
         /* 2 */
-        inputBuffer.write(staticString: "2")
+        inputBuffer.writeStaticString("2")
         XCTAssertTrue(try channel.writeInbound(inputBuffer))
         inputBuffer.clear()
 
         /* 3 */
-        inputBuffer.write(staticString: "5")
+        inputBuffer.writeStaticString("5")
         XCTAssertTrue(try channel.writeInbound(inputBuffer))
         inputBuffer.clear()
 
@@ -328,13 +328,13 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         var buffer = channel.allocator.buffer(capacity: 16)
         buffer.clear()
-        buffer.write(staticString: "1")
+        buffer.writeStaticString("1")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         buffer.clear()
-        buffer.write(staticString: "23")
+        buffer.writeStaticString("23")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         buffer.clear()
-        buffer.write(staticString: "4567890")
+        buffer.writeStaticString("4567890")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         XCTAssertFalse(channel.isActive)
 
@@ -350,13 +350,13 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         var buffer = channel.allocator.buffer(capacity: 16)
         buffer.clear()
-        buffer.write(staticString: "1")
+        buffer.writeStaticString("1")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         buffer.clear()
-        buffer.write(staticString: "23")
+        buffer.writeStaticString("23")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         buffer.clear()
-        buffer.write(staticString: "4567890x")
+        buffer.writeStaticString("4567890x")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         XCTAssertNoThrow(try channel.close().wait())
         XCTAssertFalse(channel.isActive)
@@ -382,13 +382,13 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         var buffer = channel.allocator.buffer(capacity: 16)
         buffer.clear()
-        buffer.write(staticString: "1")
+        buffer.writeStaticString("1")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         buffer.clear()
-        buffer.write(staticString: "23")
+        buffer.writeStaticString("23")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         buffer.clear()
-        buffer.write(staticString: "4567890x")
+        buffer.writeStaticString("4567890x")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
         channel.pipeline.context(handlerType: ByteToMessageHandler<PairOfBytesDecoder>.self).flatMap { ctx in
@@ -437,13 +437,13 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         var buffer = channel.allocator.buffer(capacity: 16)
         buffer.clear()
-        buffer.write(staticString: "1")
+        buffer.writeStaticString("1")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         buffer.clear()
-        buffer.write(staticString: "23")
+        buffer.writeStaticString("23")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         buffer.clear()
-        buffer.write(staticString: "4567890qwer")
+        buffer.writeStaticString("4567890qwer")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
         XCTAssertEqual(1, channel.readInbound())
@@ -480,7 +480,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         }
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(ProcessAndReentrantylyProcessExponentiallyLessStuffDecoder()))
         var buffer = channel.allocator.buffer(capacity: 16)
-        buffer.write(staticString: "0123456789abcdef")
+        buffer.writeStaticString("0123456789abcdef")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
         XCTAssertEqual("0123456789abcdef", channel.readInbound())
@@ -514,7 +514,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         }
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(Take16BytesThenCloseAndPassOnDecoder()))
         var buffer = channel.allocator.buffer(capacity: 16)
-        buffer.write(staticString: "0123456789abcdefQWER")
+        buffer.writeStaticString("0123456789abcdefQWER")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
         XCTAssertEqual("0123456789abcdef", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)})
@@ -545,7 +545,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         }
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(Take16BytesThenCloseAndPassOnDecoder()))
         var buffer = channel.allocator.buffer(capacity: 16)
-        buffer.write(staticString: "0123456789abcdefQWER")
+        buffer.writeStaticString("0123456789abcdefQWER")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
         XCTAssertEqual("0123456789abcdef", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)})
@@ -584,7 +584,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(Take16BytesThenCloseAndPassOnDecoder()))
         XCTAssertNoThrow(try channel.pipeline.add(handler: DoNotForwardChannelInactiveHandler(), first: true).wait())
         var buffer = channel.allocator.buffer(capacity: 16)
-        buffer.write(staticString: "0123456789abcdefQWER")
+        buffer.writeStaticString("0123456789abcdefQWER")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
         XCTAssertEqual("0123456789abcdef", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)})
@@ -630,7 +630,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         }
 
         var buffer = channel.allocator.buffer(capacity: 9)
-        buffer.write(staticString: "012345678")
+        buffer.writeStaticString("012345678")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         (channel.eventLoop as! EmbeddedEventLoop).run()
         XCTAssertEqual(1, handler.decoder?.callsToDecode)
@@ -649,7 +649,7 @@ public class MessageToByteEncoderTest: XCTestCase {
 
         public func encode(ctx: ChannelHandlerContext, data value: Int32, out: inout ByteBuffer) throws {
             XCTAssertEqual(MemoryLayout<Int32>.size, out.writableBytes)
-            out.write(integer: value)
+            out.writeInteger(value)
         }
 
         public func allocateOutBuffer(ctx: ChannelHandlerContext, data: Int32) throws -> ByteBuffer {
@@ -663,7 +663,7 @@ public class MessageToByteEncoderTest: XCTestCase {
 
         public func encode(ctx: ChannelHandlerContext, data value: Int32, out: inout ByteBuffer) throws {
             XCTAssertEqual(MemoryLayout<Int32>.size, 256)
-            out.write(integer: value)
+            out.writeInteger(value)
         }
     }
 

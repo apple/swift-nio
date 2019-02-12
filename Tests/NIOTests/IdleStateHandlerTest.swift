@@ -68,7 +68,7 @@ class IdleStateHandlerTest : XCTestCase {
             public func channelActive(ctx: ChannelHandlerContext) {
                 if writeToChannel {
                     var buffer = ctx.channel.allocator.buffer(capacity: 4)
-                    buffer.write(staticString: "test")
+                    buffer.writeStaticString("test")
                     ctx.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
                 }
             }
@@ -91,7 +91,7 @@ class IdleStateHandlerTest : XCTestCase {
             .wait())
         if !writeToChannel {
             var buffer = clientChannel.allocator.buffer(capacity: 4)
-            buffer.write(staticString: "test")
+            buffer.writeStaticString("test")
             XCTAssertNoThrow(try clientChannel.writeAndFlush(NIOAny(buffer)).wait())
         }
         XCTAssertNoThrow(try clientChannel.closeFuture.wait())

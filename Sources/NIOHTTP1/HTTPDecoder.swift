@@ -606,7 +606,7 @@ public class HTTPDecoder<HTTPMessageT>: ChannelInboundHandler, AnyHTTPDecoder {
         if self.cumulationBuffer == nil {
             self.cumulationBuffer = buffer
         } else {
-            self.cumulationBuffer!.write(buffer: &buffer)
+            self.cumulationBuffer!.writeBuffer(&buffer)
         }
 
         do {
