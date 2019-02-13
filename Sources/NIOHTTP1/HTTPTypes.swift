@@ -397,7 +397,7 @@ private extension UInt8 {
     }
 }
 
-/* private but tests */ internal extension HTTPHeaders {
+extension HTTPHeaders {
     func isKeepAlive(version: HTTPVersion) -> Bool {
         switch self._storage.keepAliveState {
         case .close:
@@ -714,7 +714,7 @@ public struct HTTPHeaders: CustomStringConvertible {
     }
 }
 
-internal extension ByteBuffer {
+extension ByteBuffer {
 
     /// Serializes this HTTP header block to bytes suitable for writing to the wire.
     ///
@@ -738,6 +738,7 @@ internal extension ByteBuffer {
         self.writeStaticString(crlf)
     }
 }
+
 extension HTTPHeaders: Sequence {
     public typealias Element = (name: String, value: String)
 
@@ -762,13 +763,13 @@ extension HTTPHeaders: Sequence {
     }
 }
 
-/* private but tests */ internal extension Character {
+extension Character {
     var isASCIIWhitespace: Bool {
         return self == " " || self == "\t" || self == "\r" || self == "\n" || self == "\r\n"
     }
 }
 
-/* private but tests */ internal extension String {
+extension String {
     func trimASCIIWhitespace() -> Substring {
         return self.dropFirst(0).trimWhitespace()
     }

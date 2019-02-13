@@ -45,7 +45,7 @@ import CNIOLinux
     extension LinuxCPUSet: Equatable {}
 
     /// Linux specific extension to `Thread`.
-    internal extension Thread {
+    extension Thread {
         /// Specify the thread-affinity of the `Thread` itself.
         var affinity: LinuxCPUSet {
             get {
