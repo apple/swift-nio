@@ -186,3 +186,65 @@ public struct ChannelOptions {
     /// - seealso: `AllowRemoteHalfClosureOption`.
     public static let allowRemoteHalfClosure = AllowRemoteHalfClosureOption()
 }
+
+extension ChannelOptions {
+    /// A type-safe storage facility for `ChannelOption`s. You will only ever need this if you implement your own
+    /// `Channel` that needs to store `ChannelOption`s.
+    public struct Storage {
+        @usableFromInline
+        internal var _storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
+
+        /// Add `Options`, a `ChannelOption` to the `ChannelOptions.Storage`.
+        ///
+        /// - parameters:
+        ///    - key: the key for the option
+        ///    - value: the value for the option
+        @inlinable
+        public mutating func append<Option: ChannelOption>(key newKey: Option, value newValue: Option.Value) {
+            func applier(_ t: Channel) -> (Any, Any) -> EventLoopFuture<Void> {
+                return { (option, value) in
+                    return t.setOption(option as! Option, value: value as! Option.Value)
+                }
+            }
+            var hasSet = false
+            self._storage = self._storage.map { currentKeyAndValue in
+                let (currentKey, _) = currentKeyAndValue
+                if let currentKey = currentKey as? Option, currentKey == newKey {
+                    hasSet = true
+                    return (currentKey, (newValue, applier))
+                } else {
+                    return currentKeyAndValue
+                }
+            }
+            if !hasSet {
+                self._storage.append((newKey, (newValue, applier)))
+            }
+        }
+
+        /// Apply all stored `ChannelOption`s to `Channel`.
+        ///
+        /// - parameters:
+        ///    - channel: The `Channel` to apply the `ChannelOption`s to
+        /// - returns:
+        ///    - An `EventLoopFuture` that is fulfilled when all `ChannelOption`s have been applied to the `Channel`.
+        public func applyAllChannelOptions(to channel: Channel) -> EventLoopFuture<Void> {
+            let applyPromise = channel.eventLoop.makePromise(of: Void.self)
+            var it = self._storage.makeIterator()
+
+            func applyNext() {
+                guard let (key, (value, applier)) = it.next() else {
+                    // If we reached the end, everything is applied.
+                    applyPromise.succeed(())
+                    return
+                }
+
+                applier(channel)(key, value).map {
+                    applyNext()
+                }.cascadeFailure(to: applyPromise)
+            }
+            applyNext()
+
+            return applyPromise.futureResult
+        }
+    }
+}

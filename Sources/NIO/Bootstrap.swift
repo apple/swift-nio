@@ -60,9 +60,9 @@ public final class ServerBootstrap {
     private var serverChannelInit: ((Channel) -> EventLoopFuture<Void>)?
     private var childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
     @usableFromInline
-    internal var _serverChannelOptions = ChannelOptionStorage()
+    internal var _serverChannelOptions = ChannelOptions.Storage()
     @usableFromInline
-    internal var _childChannelOptions = ChannelOptionStorage()
+    internal var _childChannelOptions = ChannelOptions.Storage()
 
     /// Create a `ServerBootstrap` for the `EventLoopGroup` `group`.
     ///
@@ -123,7 +123,7 @@ public final class ServerBootstrap {
     ///     - value: The value for the option.
     @inlinable
     public func serverChannelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
-        self._serverChannelOptions.put(key: option, value: value)
+        self._serverChannelOptions.append(key: option, value: value)
         return self
     }
 
@@ -134,7 +134,7 @@ public final class ServerBootstrap {
     ///     - value: The value for the option.
     @inlinable
     public func childChannelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
-        self._childChannelOptions.put(key: option, value: value)
+        self._childChannelOptions.append(key: option, value: value)
         return self
     }
 
@@ -220,9 +220,9 @@ public final class ServerBootstrap {
         return eventLoop.submit {
             return serverChannelInit(serverChannel).flatMap {
                 serverChannel.pipeline.addHandler(AcceptHandler(childChannelInitializer: childChannelInit,
-                                                                  childChannelOptions: childChannelOptions))
+                                                                childChannelOptions: childChannelOptions))
             }.flatMap {
-                serverChannelOptions.applyAll(channel: serverChannel)
+                serverChannelOptions.applyAllChannelOptions(to: serverChannel)
             }.flatMap {
                 register(eventLoop, serverChannel)
             }.map {
@@ -240,9 +240,9 @@ public final class ServerBootstrap {
         public typealias InboundIn = SocketChannel
 
         private let childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
-        private let childChannelOptions: ChannelOptionStorage
+        private let childChannelOptions: ChannelOptions.Storage
 
-        init(childChannelInitializer: ((Channel) -> EventLoopFuture<Void>)?, childChannelOptions: ChannelOptionStorage) {
+        init(childChannelInitializer: ((Channel) -> EventLoopFuture<Void>)?, childChannelOptions: ChannelOptions.Storage) {
             self.childChannelInit = childChannelInitializer
             self.childChannelOptions = childChannelOptions
         }
@@ -262,7 +262,7 @@ public final class ServerBootstrap {
 
             @inline(__always)
             func setupChildChannel() -> EventLoopFuture<Void> {
-                return self.childChannelOptions.applyAll(channel: accepted).flatMap { () -> EventLoopFuture<Void> in
+                return self.childChannelOptions.applyAllChannelOptions(to: accepted).flatMap { () -> EventLoopFuture<Void> in
                     childEventLoop.assertInEventLoop()
                     return childChannelInit(accepted)
                 }
@@ -351,7 +351,7 @@ public final class ClientBootstrap {
     private let group: EventLoopGroup
     private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
     @usableFromInline
-    internal var _channelOptions = ChannelOptionStorage()
+    internal var _channelOptions = ChannelOptions.Storage()
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
     private var resolver: Resolver?
 
@@ -392,7 +392,7 @@ public final class ClientBootstrap {
     ///     - value: The value for the option.
     @inlinable
     public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
-        self._channelOptions.put(key: option, value: value)
+        self._channelOptions.append(key: option, value: value)
         return self
     }
 
@@ -483,7 +483,7 @@ public final class ClientBootstrap {
         }
 
         return channelInitializer(channel).flatMap {
-            self._channelOptions.applyAll(channel: channel)
+            self._channelOptions.applyAllChannelOptions(to: channel)
         }.flatMap {
             let promise = eventLoop.makePromise(of: Void.self)
             channel.registerAlreadyConfigured0(promise: promise)
@@ -515,7 +515,7 @@ public final class ClientBootstrap {
         func setupChannel() -> EventLoopFuture<Channel> {
             eventLoop.assertInEventLoop()
             channelInitializer(channel).flatMap {
-                channelOptions.applyAll(channel: channel)
+                channelOptions.applyAllChannelOptions(to: channel)
             }.flatMap {
                 channel.registerAndDoSynchronously(body)
             }.map {
@@ -563,7 +563,7 @@ public final class DatagramBootstrap {
     private let group: EventLoopGroup
     private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
     @usableFromInline
-    internal var _channelOptions = ChannelOptionStorage()
+    internal var _channelOptions = ChannelOptions.Storage()
 
     /// Create a `DatagramBootstrap` on the `EventLoopGroup` `group`.
     ///
@@ -590,7 +590,7 @@ public final class DatagramBootstrap {
     ///     - value: The value for the option.
     @inlinable
     public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
-        self._channelOptions.put(key: option, value: value)
+        self._channelOptions.append(key: option, value: value)
         return self
     }
 
@@ -669,7 +669,7 @@ public final class DatagramBootstrap {
         }
 
         return channelInitializer(channel).flatMap {
-            channelOptions.applyAll(channel: channel)
+            channelOptions.applyAllChannelOptions(to: channel)
         }.flatMap {
             registerAndBind(eventLoop, channel)
         }.map {
@@ -677,54 +677,5 @@ public final class DatagramBootstrap {
         }.flatMapError { error in
             eventLoop.makeFailedFuture(error)
         }
-    }
-}
-
-@usableFromInline
-/* for tests */ internal struct ChannelOptionStorage {
-    @usableFromInline
-    internal var _storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
-
-    @inlinable
-    mutating func put<Option: ChannelOption>(key: Option,
-                                             value newValue: Option.Value) {
-        func applier(_ channel: Channel) -> (Any, Any) -> EventLoopFuture<Void> {
-            return { (option, value) in
-                return channel.setOption(option as! Option, value: value as! Option.Value)
-            }
-        }
-        var hasSet = false
-        self._storage = self._storage.map { typeAndValue in
-            let (type, value) = typeAndValue
-            if type is Option && type as! Option == key {
-                hasSet = true
-                return (key, (newValue, applier))
-            } else {
-                return (type, value)
-            }
-        }
-        if !hasSet {
-            self._storage.append((key, (newValue, applier)))
-        }
-    }
-
-    func applyAll(channel: Channel) -> EventLoopFuture<Void> {
-        let applyPromise = channel.eventLoop.makePromise(of: Void.self)
-        var it = self._storage.makeIterator()
-
-        func applyNext() {
-            guard let (key, (value, applier)) = it.next() else {
-                // If we reached the end, everything is applied.
-                applyPromise.succeed(())
-                return
-            }
-
-            applier(channel)(key, value).map {
-                applyNext()
-            }.cascadeFailure(to: applyPromise)
-        }
-        applyNext()
-
-        return applyPromise.futureResult
     }
 }
