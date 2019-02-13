@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 /// A configuration option that can be set on a `Channel` to configure different behaviour.
-public protocol ChannelOption {
+public protocol ChannelOption: Equatable {
     associatedtype AssociatedValueType
     associatedtype OptionType
 
@@ -70,6 +70,13 @@ public enum SocketOption: ChannelOption {
             return (level, name)
         }
     }
+
+    public static func == (lhs: SocketOption, rhs: SocketOption) -> Bool {
+        switch (lhs, rhs) {
+        case (.const(let lLevel, let lName), .const(let rLevel, let rName)):
+            return lLevel == rLevel && lName == rName
+        }
+    }
 }
 
 /// `AllocatorOption` allows to specify the `ByteBufferAllocator` to use.
@@ -77,7 +84,7 @@ public enum AllocatorOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = ByteBufferAllocator
 
-    case const(())
+    case const
 }
 
 /// `RecvAllocatorOption` allows users to specify the `RecvByteBufferAllocator` to use.
@@ -85,7 +92,7 @@ public enum RecvAllocatorOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = RecvByteBufferAllocator
 
-    case const(())
+    case const
 }
 
 /// `AutoReadOption` allows users to configure if a `Channel` should automatically call `Channel.read` again once all data was read from the transport or
@@ -94,7 +101,7 @@ public enum AutoReadOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = Bool
 
-    case const(())
+    case const
 }
 
 /// `WriteSpinOption` allows users to configure the number of repetitions of a only partially successful write call before considering the `Channel` not writable.
@@ -104,7 +111,7 @@ public enum WriteSpinOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = UInt
 
-    case const(())
+    case const
 }
 
 /// `MaxMessagesPerReadOption` allows users to configure the maximum number of read calls to the underlying transport are performed before wait again until
@@ -113,7 +120,7 @@ public enum MaxMessagesPerReadOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = UInt
 
-    case const(())
+    case const
 }
 
 /// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
@@ -121,7 +128,7 @@ public enum BacklogOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = Int32
 
-    case const(())
+    case const
 }
 
 /// The watermark used to detect when `Channel.isWritable` returns `true` or `false`.
@@ -162,7 +169,7 @@ public enum WriteBufferWaterMarkOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = WriteBufferWaterMark
 
-    case const(())
+    case const
 }
 
 /// `ConnectTimeoutOption` allows users to configure the `TimeAmount` after which a connect will fail if it was not established in the meantime. May be
@@ -171,7 +178,7 @@ public enum ConnectTimeoutOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = TimeAmount?
 
-    case const(())
+    case const
 }
 
 /// `AllowRemoteHalfClosureOption` allows users to configure whether the `Channel` will close itself when its remote
@@ -183,7 +190,7 @@ public enum AllowRemoteHalfClosureOption: ChannelOption {
     public typealias AssociatedValueType = ()
     public typealias OptionType = Bool
 
-    case const(())
+    case const
 }
 
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
@@ -192,29 +199,29 @@ public struct ChannelOptions {
     public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> SocketOption in .const((level, name)) }
 
     /// - seealso: `AllocatorOption`.
-    public static let allocator = AllocatorOption.const(())
+    public static let allocator = AllocatorOption.const
 
     /// - seealso: `RecvAllocatorOption`.
-    public static let recvAllocator = RecvAllocatorOption.const(())
+    public static let recvAllocator = RecvAllocatorOption.const
 
     /// - seealso: `AutoReadOption`.
-    public static let autoRead = AutoReadOption.const(())
+    public static let autoRead = AutoReadOption.const
 
     /// - seealso: `MaxMessagesPerReadOption`.
-    public static let maxMessagesPerRead = MaxMessagesPerReadOption.const(())
+    public static let maxMessagesPerRead = MaxMessagesPerReadOption.const
 
     /// - seealso: `BacklogOption`.
-    public static let backlog = BacklogOption.const(())
+    public static let backlog = BacklogOption.const
 
     /// - seealso: `WriteSpinOption`.
-    public static let writeSpin = WriteSpinOption.const(())
+    public static let writeSpin = WriteSpinOption.const
 
     /// - seealso: `WriteBufferWaterMarkOption`.
-    public static let writeBufferWaterMark = WriteBufferWaterMarkOption.const(())
+    public static let writeBufferWaterMark = WriteBufferWaterMarkOption.const
 
     /// - seealso: `ConnectTimeoutOption`.
-    public static let connectTimeout = ConnectTimeoutOption.const(())
+    public static let connectTimeout = ConnectTimeoutOption.const
 
     /// - seealso: `AllowRemoteHalfClosureOption`.
-    public static let allowRemoteHalfClosure = AllowRemoteHalfClosureOption.const(())
+    public static let allowRemoteHalfClosure = AllowRemoteHalfClosureOption.const
 }

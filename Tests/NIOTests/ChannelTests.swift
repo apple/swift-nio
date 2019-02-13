@@ -2726,12 +2726,3 @@ fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {
         ctx.fireChannelUnregistered()
     }
 }
-
-extension SocketOption: Equatable {
-    public static func == (lhs: SocketOption, rhs: SocketOption) -> Bool {
-        switch (lhs, rhs) {
-        case (.const(let lLevel, let lName), .const(let rLevel, let rName)):
-            return lLevel == rLevel && lName == rName
-        }
-    }
-}
