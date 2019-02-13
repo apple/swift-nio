@@ -46,3 +46,6 @@
 - all `ChannelPipeline.remove(...)` now return `EventLoopFuture<Void>` instead of `EventLoopFuture<Bool>`
 - `ByteBuffer.set(<type>, ...)` is now `ByteBuffer.set<Type>`
 - `ByteBuffer.write(<type>, ...)` is now `ByteBuffer.write<Type>`
+- renamed `EventLoopFuture.hopTo(eventLoop:)` to `EventLoopFuture.hop(to:)`
+- `EventLoopFuture.reduce(into:_:eventLoop:_:)` had its label signature changed to `EventLoopFuture.reduce(into:_:on:_:)`
+- `EventLoopFuture.reduce(_:_:eventLoop:_:` had its label signature changed to `EventLoopFuture.reduce(_:_:on:_:)`
