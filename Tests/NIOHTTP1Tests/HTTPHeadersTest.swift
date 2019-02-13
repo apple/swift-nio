@@ -50,6 +50,37 @@ class HTTPHeadersTest : XCTestCase {
         }
     }
 
+    func testDictionaryLiteralAlternative() {
+        let headers: HTTPHeaders = [ "User-Agent": "1",
+                                     "host": "2",
+                                     "X-SOMETHING": "3",
+                                     "SET-COOKIE": "foo=bar",
+                                     "Set-Cookie": "buz=cux"]
+
+        // looking up headers value is case-insensitive
+        XCTAssertEqual(["1"], headers["User-Agent"])
+        XCTAssertEqual(["1"], headers["User-agent"])
+        XCTAssertEqual(["2"], headers["Host"])
+        XCTAssertEqual(["foo=bar", "buz=cux"], headers["set-cookie"])
+
+        for (key,value) in headers {
+            switch key {
+            case "User-Agent":
+                XCTAssertEqual("1", value)
+            case "host":
+                XCTAssertEqual("2", value)
+            case "X-SOMETHING":
+                XCTAssertEqual("3", value)
+            case "SET-COOKIE":
+                XCTAssertEqual("foo=bar", value)
+            case "Set-Cookie":
+                XCTAssertEqual("buz=cux", value)
+            default:
+                XCTFail("Unexpected key: \(key)")
+            }
+        }
+    }
+
     func testWriteHeadersSeparately() {
         let originalHeaders = [ ("User-Agent", "1"),
                                 ("host", "2"),
