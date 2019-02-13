@@ -285,7 +285,7 @@ public final class ServerBootstrap {
             } else {
                 fireThroughPipeline(childEventLoop.submit {
                     return setupChildChannel()
-                }.flatMap { $0 }.hopTo(eventLoop: ctxEventLoop))
+                }.flatMap { $0 }.hop(to: ctxEventLoop))
             }
         }
 

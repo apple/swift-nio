@@ -153,6 +153,27 @@ extension EventLoopFuture {
     public func andAll(_ futures: [EventLoopFuture<Void>], eventLoop: EventLoop) -> EventLoopFuture<Void> {
         return .andAllSucceed(futures, on: eventLoop)
     }
+
+    @available(*, deprecated, renamed: "hop(to:)")
+    public func hopTo(eventLoop: EventLoop) -> EventLoopFuture<Value> {
+        return self.hop(to: eventLoop)
+    }
+
+    @available(*, deprecated, renamed: "reduce(_:_:on:_:)")
+    public static func reduce<InputValue>(_ initialResult: Value,
+                                          _ futures: [EventLoopFuture<InputValue>],
+                                          eventLoop: EventLoop,
+                                          _ nextPartialResult: @escaping (Value, InputValue) -> Value) -> EventLoopFuture<Value> {
+        return .reduce(initialResult, futures, on: eventLoop, nextPartialResult)
+    }
+
+    @available(*, deprecated, renamed: "reduce(into:_:on:_:)")
+    public static func reduce<InputValue>(into initialResult: Value,
+                                          _ futures: [EventLoopFuture<InputValue>],
+                                          eventLoop: EventLoop,
+                                          _ updateAccumulatingResult: @escaping (inout Value, InputValue) -> Void) -> EventLoopFuture<Value> {
+        return .reduce(into: initialResult, futures, on: eventLoop, updateAccumulatingResult)
+    }
 }
 
 extension EventLoopPromise {
