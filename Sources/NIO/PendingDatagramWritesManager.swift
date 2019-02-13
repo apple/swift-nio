@@ -260,8 +260,8 @@ private struct PendingDatagramWritesState {
     /// - returns: All the promises that must be fired, and a `WriteResult` that indicates if we could write
     ///     everything or not.
     private mutating func didScalarWrite(written: Int) -> (DatagramWritePromiseFiller?, OneWriteOperationResult) {
-        precondition(written <= self.pendingWrites[0].data.readableBytes,
-                     "Appeared to write more bytes (\(written)) than the datagram contained (\(self.pendingWrites[0].data.readableBytes))")
+        precondition(written <= self.pendingWrites.first!.data.readableBytes,
+                     "Appeared to write more bytes (\(written)) than the datagram contained (\(self.pendingWrites.first!.data.readableBytes))")
         let writeFiller = self.wroteFirst()
         // If we no longer have a mark, we wrote everything.
         let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
@@ -295,10 +295,10 @@ private struct PendingDatagramWritesState {
     /// Returns the best mechanism to write pending data at the current point in time.
     var currentBestWriteMechanism: WriteMechanism {
         switch self.pendingWrites.markedElementIndex {
-        case .some(let e) where e > 0:
+        case .some(let e) where self.pendingWrites.startIndex.distance(to: e) > 0:
             return .vectorBufferWrite
         case .some(let e):
-            assert(e == 0)  // The compiler can't prove this, but it must be so.
+            assert(e.distance(to: self.pendingWrites.startIndex) == 0)  // The compiler can't prove this, but it must be so.
             return .scalarBufferWrite
         default:
             return .nothingToBeWritten
@@ -310,19 +310,19 @@ private struct PendingDatagramWritesState {
 extension PendingDatagramWritesState {
     struct FlushedDatagramWriteSequence: Sequence, IteratorProtocol {
         private let pendingWrites: PendingDatagramWritesState
-        private var index: Int
-        private let markedIndex: Int
+        private var index: CircularBuffer<PendingDatagramWrite>.Index
+        private let markedIndex: CircularBuffer<PendingDatagramWrite>.Index?
 
         init(_ pendingWrites: PendingDatagramWritesState) {
             self.pendingWrites = pendingWrites
             self.index = pendingWrites.pendingWrites.startIndex
-            self.markedIndex = pendingWrites.pendingWrites.markedElementIndex ?? -1
+            self.markedIndex = pendingWrites.pendingWrites.markedElementIndex
         }
 
         mutating func next() -> PendingDatagramWrite? {
-            while self.index <= self.markedIndex {
+            while let markedIndex = self.markedIndex, self.index.distance(to: markedIndex) >= 0 {
                 let element = self.pendingWrites.pendingWrites[index]
-                index += 1
+                index = index.advanced(by: 1)
                 return element
             }
 
