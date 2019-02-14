@@ -1101,7 +1101,7 @@ extension EventLoopFuture {
     }
 }
 
-public extension EventLoopFuture {
+extension EventLoopFuture {
     /// Returns an `EventLoopFuture` that fires when this future completes, but executes its callbacks on the
     /// target event loop instead of the original one.
     ///
@@ -1113,7 +1113,7 @@ public extension EventLoopFuture {
     /// - parameters:
     ///     - to: The `EventLoop` that the returned `EventLoopFuture` will run on.
     /// - returns: An `EventLoopFuture` whose callbacks run on `target` instead of the original loop.
-    func hop(to target: EventLoop) -> EventLoopFuture<Value> {
+    public func hop(to target: EventLoop) -> EventLoopFuture<Value> {
         if target === self.eventLoop {
             // We're already on that event loop, nothing to do here. Save an allocation.
             return self

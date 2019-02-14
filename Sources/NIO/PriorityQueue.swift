@@ -76,7 +76,7 @@ extension PriorityQueue: Sequence {
     }
 }
 
-internal extension PriorityQueue {
+extension PriorityQueue {
     var count: Int {
         return self.heap.count
     }

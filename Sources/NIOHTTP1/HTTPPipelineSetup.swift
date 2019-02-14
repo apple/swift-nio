@@ -20,14 +20,15 @@ import NIO
 /// properties.
 public typealias HTTPUpgradeConfiguration = (upgraders: [HTTPServerProtocolUpgrader], completionHandler: (ChannelHandlerContext) -> Void)
 
-public extension ChannelPipeline {
+extension ChannelPipeline {
     /// Configure a `ChannelPipeline` for use as a HTTP client.
     ///
     /// - parameters:
     ///     - first: Whether to add the HTTP client at the head of the channel pipeline,
     ///              or at the tail.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    func addHTTPClientHandlers(first: Bool = false, leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) -> EventLoopFuture<Void> {
+    public func addHTTPClientHandlers(first: Bool = false,
+                                      leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) -> EventLoopFuture<Void> {
         return addHandlers(HTTPRequestEncoder(), HTTPResponseDecoder(leftOverBytesStrategy: leftOverBytesStrategy), first: first)
     }
 
@@ -57,10 +58,10 @@ public extension ChannelPipeline {
     ///     - errorHandling: Whether to provide assistance handling protocol errors (e.g.
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    func configureHTTPServerPipeline(first: Bool = false,
-                                     withPipeliningAssistance pipelining: Bool = true,
-                                     withServerUpgrade upgrade: HTTPUpgradeConfiguration? = nil,
-                                     withErrorHandling errorHandling: Bool = true) -> EventLoopFuture<Void> {
+    public func configureHTTPServerPipeline(first: Bool = false,
+                                            withPipeliningAssistance pipelining: Bool = true,
+                                            withServerUpgrade upgrade: HTTPUpgradeConfiguration? = nil,
+                                            withErrorHandling errorHandling: Bool = true) -> EventLoopFuture<Void> {
         let responseEncoder = HTTPResponseEncoder()
         let requestDecoder = HTTPRequestDecoder(leftOverBytesStrategy: upgrade == nil ? .dropBytes : .forwardBytes)
 
