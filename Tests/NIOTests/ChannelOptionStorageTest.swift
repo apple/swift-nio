@@ -91,7 +91,7 @@ class OptionsCollectingChannel: Channel {
 
     var isActive: Bool { fatalError() }
 
-    var _unsafe: ChannelCore { fatalError() }
+    var _channelCore: ChannelCore { fatalError() }
 
     var eventLoop: EventLoop {
         return EmbeddedEventLoop()

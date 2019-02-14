@@ -372,6 +372,13 @@ extension ByteBuffer {
     }
 }
 
+extension Channel {
+    @available(*, deprecated, renamed: "_channelCore")
+    var _unsafe: ChannelCore {
+        return self._channelCore
+    }
+}
+
 @available(*, deprecated, renamed: "HTTPServerProtocolUpgrader")
 public typealias HTTPProtocolUpgrader = HTTPServerProtocolUpgrader
 

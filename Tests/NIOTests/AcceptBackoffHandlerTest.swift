@@ -213,7 +213,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
             serverChannel.read()
             let readCount = readCountHandler.readCount
             // Directly trigger a read again without going through the pipeline. This will allow us to use serverChannel.readable()
-            serverChannel._unsafe.read0()
+            serverChannel._channelCore.read0()
             serverChannel.readable()
             return readCount
         }.wait())
