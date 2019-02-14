@@ -430,7 +430,7 @@ private extension UInt8 {
 /// field when needed. It also supports recomposing headers to a maximally joined
 /// or split representation, such that header fields that are able to be repeated
 /// can be represented appropriately.
-public struct HTTPHeaders: CustomStringConvertible {
+public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiteral {
 
     private final class _Storage {
         var buffer: ByteBuffer
@@ -556,6 +556,14 @@ public struct HTTPHeaders: CustomStringConvertible {
         }
     }
     
+    /// Construct a `HTTPHeaders` structure.
+    ///
+    /// - parameters
+    ///     - elements: name, value pairs provided by a dictionary literal.
+    public init(dictionaryLiteral elements: (String, String)...) {
+        self.init(elements)
+    }
+
     private func isConnectionHeader(_ header: HTTPHeaderIndex) -> Bool {
          return self.buffer.equalCaseInsensitiveASCII(view: "connection".utf8, at: header)
     }
