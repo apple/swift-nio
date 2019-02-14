@@ -81,7 +81,7 @@ extension WebSocketOpcode: CustomStringConvertible {
     }
 }
 
-public extension UInt8 {
+extension UInt8 {
     /// Create a UInt8 corresponding to a given `WebSocketOpcode`.
     ///
     /// This places the opcode in the four least-significant bits, in
@@ -89,18 +89,18 @@ public extension UInt8 {
     ///
     /// - parameters:
     ///     - opcode: The `WebSocketOpcode`.
-    init(webSocketOpcode opcode: WebSocketOpcode) {
+    public init(webSocketOpcode opcode: WebSocketOpcode) {
         precondition(opcode.networkRepresentation < 0x10)
         self = opcode.networkRepresentation
     }
 }
 
-public extension Int {
+extension Int {
     /// Create a UInt8 corresponding to the integer value for a given `WebSocketOpcode`.
     ///
     /// - parameters:
     ///     - opcode: The `WebSocketOpcode`.
-    init(webSocketOpcode opcode: WebSocketOpcode) {
+    public init(webSocketOpcode opcode: WebSocketOpcode) {
         precondition(opcode.networkRepresentation < 0x10)
         self = Int(opcode.networkRepresentation)
     }

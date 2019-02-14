@@ -176,7 +176,7 @@ public struct ThreadSpecificVariable<T: AnyObject> {
 }
 
 extension Thread: Equatable {
-    public static func ==(lhs: Thread, rhs: Thread) -> Bool {
+    static func ==(lhs: Thread, rhs: Thread) -> Bool {
         return pthread_equal(lhs.pthread, rhs.pthread) != 0
     }
 }

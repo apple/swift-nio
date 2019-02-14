@@ -27,7 +27,7 @@ public enum NIOWebSocketError: Error {
     case multiByteControlFrameLength
 }
 
-internal extension WebSocketErrorCode {
+extension WebSocketErrorCode {
     init(_ error: NIOWebSocketError) {
         switch error {
         case .invalidFrameLength:
@@ -39,12 +39,12 @@ internal extension WebSocketErrorCode {
     }
 }
 
-public extension ByteBuffer {
+extension ByteBuffer {
     /// Applies the WebSocket unmasking operation.
     ///
     /// - parameters:
     ///     - maskingKey: The masking key.
-    mutating func webSocketUnmask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
+    public mutating func webSocketUnmask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
         /// Shhhh: secretly unmasking and masking are the same operation!
         webSocketMask(maskingKey, indexOffset: indexOffset)
     }
@@ -57,7 +57,7 @@ public extension ByteBuffer {
     ///         This is used when masking multiple "contiguous" byte buffers, to ensure that
     ///         the masking key is applied uniformly to the collection rather than from the
     ///         start each time.
-    mutating func webSocketMask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
+    public mutating func webSocketMask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
         self.withUnsafeMutableReadableBytes {
             for (index, byte) in $0.enumerated() {
                 $0[index] = byte ^ maskingKey[(index + indexOffset) % 4]

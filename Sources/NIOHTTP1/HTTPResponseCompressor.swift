@@ -15,7 +15,7 @@
 import CNIOZlib
 import NIO
 
-internal extension String {
+extension String {
     /// Test if this `Collection` starts with the unicode scalars of `needle`.
     ///
     /// - note: This will be faster than `String.startsWith` as no unicode normalisations are performed.
