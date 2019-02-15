@@ -4,6 +4,7 @@
 - renamed `SniResult` to `SNIResult`
 - renamed `SniHandler` to `SNIHandler`
 - made `EventLoopGroup.makeIterator()` a required method
+- `Channel._unsafe` is now `Channel._channelCore`
 - `TimeAmount.Value` is now `Int64` (from `Int` on 64 bit platforms, no change
   for 32 bit platforms)
 - `ByteToMessageDecoder`s now need to be wrapped in `ByteToMessageHandler`

@@ -24,7 +24,7 @@ private let base64Table: [Unicode.Scalar] = [
     "4", "5", "6", "7", "8", "9", "+", "/",
 ]
 
-internal extension String {
+extension String {
     /// Base64 encode an array of UInt8 to a string, without the use of Foundation.
     ///
     /// This function performs the world's most naive Base64 encoding: no attempts to use a larger

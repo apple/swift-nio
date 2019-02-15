@@ -935,35 +935,35 @@ extension ChannelPipeline {
     private init() { }
 
     func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
-        ctx.channel._unsafe.register0(promise: promise)
+        ctx.channel._channelCore.register0(promise: promise)
     }
 
     func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        ctx.channel._unsafe.bind0(to: address, promise: promise)
+        ctx.channel._channelCore.bind0(to: address, promise: promise)
     }
 
     func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        ctx.channel._unsafe.connect0(to: address, promise: promise)
+        ctx.channel._channelCore.connect0(to: address, promise: promise)
     }
 
     func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        ctx.channel._unsafe.write0(data, promise: promise)
+        ctx.channel._channelCore.write0(data, promise: promise)
     }
 
     func flush(ctx: ChannelHandlerContext) {
-        ctx.channel._unsafe.flush0()
+        ctx.channel._channelCore.flush0()
     }
 
     func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-        ctx.channel._unsafe.close0(error: mode.error, mode: mode, promise: promise)
+        ctx.channel._channelCore.close0(error: mode.error, mode: mode, promise: promise)
     }
 
     func read(ctx: ChannelHandlerContext) {
-        ctx.channel._unsafe.read0()
+        ctx.channel._channelCore.read0()
     }
 
     func triggerUserOutboundEvent(ctx: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
-        ctx.channel._unsafe.triggerUserOutboundEvent0(event, promise: promise)
+        ctx.channel._channelCore.triggerUserOutboundEvent0(event, promise: promise)
     }
 
 }
@@ -1019,11 +1019,11 @@ private extension CloseMode {
     }
 
     func errorCaught(ctx: ChannelHandlerContext, error: Error) {
-        ctx.channel._unsafe.errorCaught0(error: error)
+        ctx.channel._channelCore.errorCaught0(error: error)
     }
 
     func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        ctx.channel._unsafe.channelRead0(data)
+        ctx.channel._channelCore.channelRead0(data)
     }
 }
 
@@ -1063,7 +1063,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     public var remoteAddress: SocketAddress? {
         do {
             // Fast-path access to the remoteAddress.
-            return try self.channel._unsafe.remoteAddress0()
+            return try self.channel._channelCore.remoteAddress0()
         } catch ChannelError.ioOnClosedChannel {
             // Channel was closed already but we may still have the address cached so try to access it via the Channel
             // so we are able to use it in channelInactive(...) / handlerRemoved(...) methods.
@@ -1076,7 +1076,7 @@ public final class ChannelHandlerContext: ChannelInvoker {
     public var localAddress: SocketAddress? {
         do {
             // Fast-path access to the localAddress.
-            return try self.channel._unsafe.localAddress0()
+            return try self.channel._channelCore.localAddress0()
         } catch ChannelError.ioOnClosedChannel {
             // Channel was closed already but we may still have the address cached so try to access it via the Channel
             // so we are able to use it in channelInactive(...) / handlerRemoved(...) methods.

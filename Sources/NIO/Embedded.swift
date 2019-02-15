@@ -295,7 +295,7 @@ public class EmbeddedChannel: Channel {
 
     private lazy var channelcore: EmbeddedChannelCore = EmbeddedChannelCore(pipeline: self._pipeline, eventLoop: self.eventLoop)
 
-    public var _unsafe: ChannelCore {
+    public var _channelCore: ChannelCore {
         return channelcore
     }
 

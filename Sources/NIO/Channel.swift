@@ -14,7 +14,9 @@
 
 import NIOConcurrencyHelpers
 
-/// The core `Channel` methods for NIO-internal use only.
+/// The core `Channel` methods that are for internal use of the `Channel` implementation only.
+///
+/// - warning: If you are not implementing a custom `Channel` type, you should never call any of these.
 ///
 /// - note: All methods must be called from the `EventLoop` thread.
 public protocol ChannelCore: class {
@@ -134,10 +136,10 @@ public protocol Channel: class, ChannelOutboundInvoker {
     /// or `channelInactive` can be expected next when `handlerAdded` was received.
     var isActive: Bool { get }
 
-    /// Reach out to the `ChannelCore`.
+    /// Reach out to the `_ChannelCore`.
     ///
     /// - warning: Unsafe, this is for use in NIO's core only.
-    var _unsafe: ChannelCore { get }
+    var _channelCore: ChannelCore { get }
 }
 
 /// A `SelectableChannel` is a `Channel` that can be used with a `Selector` which notifies a user when certain events
@@ -221,26 +223,26 @@ extension Channel {
 
 
 /// Provides special extension to make writing data to the `Channel` easier by removing the need to wrap data in `NIOAny` manually.
-public extension Channel {
+extension Channel {
 
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
-    func write<T>(_ any: T) -> EventLoopFuture<Void> {
+    public func write<T>(_ any: T) -> EventLoopFuture<Void> {
         return self.write(NIOAny(any))
     }
 
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
-    func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+    public func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
         self.write(NIOAny(any), promise: promise)
     }
 
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
+    public func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
         return self.writeAndFlush(NIOAny(any))
     }
 
@@ -248,12 +250,12 @@ public extension Channel {
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+    public func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
         self.writeAndFlush(NIOAny(any), promise: promise)
     }
 }
 
-public extension ChannelCore {
+extension ChannelCore {
     /// Unwraps the given `NIOAny` as a specific concrete type.
     ///
     /// This method is intended for use when writing custom `ChannelCore` implementations.
@@ -270,7 +272,7 @@ public extension ChannelCore {
     ///     - as: The type to extract from the `NIOAny`.
     /// - returns: The content of the `NIOAny`.
     @inlinable
-    func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
+    public func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
         return data.forceAs()
     }
 
@@ -283,7 +285,7 @@ public extension ChannelCore {
     ///
     /// - parameters:
     ///     - channel: The `Channel` whose `ChannelPipeline` will be closed.
-    func removeHandlers(channel: Channel) {
+    public func removeHandlers(channel: Channel) {
         channel.pipeline.removeHandlers()
     }
 }

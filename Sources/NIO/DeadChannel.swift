@@ -113,5 +113,5 @@ internal final class DeadChannel: Channel {
 
     let isWritable = false
     let isActive = false
-    let _unsafe: ChannelCore = DeadChannelCore()
+    let _channelCore: ChannelCore = DeadChannelCore()
 }

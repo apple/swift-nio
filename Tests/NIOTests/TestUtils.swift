@@ -98,7 +98,7 @@ func openTemporaryFile() -> (CInt, String) {
     return (fd, String(decoding: templateBytes, as: Unicode.UTF8.self))
 }
 
-internal extension Channel {
+extension Channel {
     func syncCloseAcceptingAlreadyClosed() throws {
         do {
             try self.close().wait()

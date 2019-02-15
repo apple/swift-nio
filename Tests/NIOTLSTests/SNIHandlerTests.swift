@@ -226,7 +226,7 @@ private let ludicrouslyTruncatedPacket = "FgMBAAEB"
 
 private let fuzzingInputOne = "FgMAAAQAAgo="
 
-internal extension ChannelPipeline {
+extension ChannelPipeline {
     func contains(handler: ChannelHandler) throws -> Bool {
         do {
             _ = try self.context(handler: handler).wait()

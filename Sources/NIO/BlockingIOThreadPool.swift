@@ -181,7 +181,7 @@ public final class BlockingIOThreadPool {
     }
 }
 
-public extension BlockingIOThreadPool {
+extension BlockingIOThreadPool {
     /// Runs the submitted closure if the thread pool is still active, otherwise fails the promise.
     /// The closure will be run on the thread pool so can do blocking work.
     ///
@@ -189,7 +189,7 @@ public extension BlockingIOThreadPool {
     ///     - eventLoop: The `EventLoop` the returned `EventLoopFuture` will fire on.
     ///     - body: The closure which performs some blocking work to be done on the thread pool.
     /// - returns: The `EventLoopFuture` of `promise` fulfilled with the result (or error) of the passed closure.
-    func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
+    public func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
         let promise = eventLoop.makePromise(of: T.self)
         self.submit { shouldRun in
             guard case shouldRun = BlockingIOThreadPool.WorkItemState.active else {
