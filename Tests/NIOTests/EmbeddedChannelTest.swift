@@ -145,7 +145,7 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
         let buffer = ByteBufferAllocator().buffer(capacity: 5)
         let socketAddress = try SocketAddress(unixDomainSocketPath: "path")
-        let handle = FileHandle(descriptor: 1)
+        let handle = NIOFileHandle(descriptor: 1)
         let fileRegion = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
         defer {
             // fake descriptor, so shouldn't be closed.

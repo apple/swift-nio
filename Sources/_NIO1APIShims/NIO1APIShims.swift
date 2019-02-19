@@ -48,6 +48,9 @@ public typealias SniResult = SNIResult
 @available(*, deprecated, renamed: "SNIHandler")
 public typealias SniHandler = SNIHandler
 
+@available(*, deprecated, renamed: "NIOFileHandle")
+public typealias FileHandle = NIOFileHandle
+
 @available(*, deprecated, message: "don't use the StaticString: Collection extension please")
 extension StaticString: Collection {
     @available(*, deprecated, message: "don't use the StaticString: Collection extension please")

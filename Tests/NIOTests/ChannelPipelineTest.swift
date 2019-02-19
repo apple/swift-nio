@@ -208,7 +208,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertTrue(loop.inEventLoop)
         do {
-            let handle = FileHandle(descriptor: -1)
+            let handle = NIOFileHandle(descriptor: -1)
             let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 0)
             defer {
                 // fake descriptor, so shouldn't be closed.

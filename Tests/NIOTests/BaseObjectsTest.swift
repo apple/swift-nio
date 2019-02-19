@@ -51,7 +51,7 @@ class BaseObjectTest: XCTestCase {
     }
 
     func testNIOFileRegionConversion() {
-        let handle = FileHandle(descriptor: -1)
+        let handle = NIOFileHandle(descriptor: -1)
         let expected = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
         defer {
             // fake descriptor, so shouldn't be closed.
@@ -73,7 +73,7 @@ class BaseObjectTest: XCTestCase {
     }
 
     func testBadConversions() {
-        let handle = FileHandle(descriptor: -1)
+        let handle = NIOFileHandle(descriptor: -1)
         let bb = ByteBufferAllocator().buffer(capacity: 1024)
         let fr = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
         defer {
@@ -94,7 +94,7 @@ class BaseObjectTest: XCTestCase {
     }
 
     func testFileRegionFromIOData() {
-        let handle = FileHandle(descriptor: -1)
+        let handle = NIOFileHandle(descriptor: -1)
         let expected = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
         defer {
             // fake descriptor, so shouldn't be closed.
@@ -105,7 +105,7 @@ class BaseObjectTest: XCTestCase {
     }
 
     func testIODataEquals() {
-        let handle = FileHandle(descriptor: -1)
+        let handle = NIOFileHandle(descriptor: -1)
         var bb1 = ByteBufferAllocator().buffer(capacity: 1024)
         let bb2 = ByteBufferAllocator().buffer(capacity: 1024)
         bb1.writeString("hello")

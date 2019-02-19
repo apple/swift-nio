@@ -14,7 +14,7 @@
 
 import CNIOLinux
 
-private typealias ThreadBoxValue = (body: (Thread) -> Void, name: String?)
+private typealias ThreadBoxValue = (body: (NIOThread) -> Void, name: String?)
 private typealias ThreadBox = Box<ThreadBoxValue>
 
 
@@ -35,7 +35,7 @@ private func sys_pthread_setname_np(_ p: pthread_t, _ pointer: UnsafePointer<Int
 /// A Thread that executes some runnable block.
 ///
 /// All methods exposed are thread-safe.
-final class Thread {
+final class NIOThread {
 
     /// The pthread_t used by this instance.
     private let pthread: pthread_t
@@ -43,12 +43,12 @@ final class Thread {
     /// Create a new instance
     ///
     /// - arguments:
-    ///     - pthread: The `pthread_t` that is wrapped and used by the `Thread`.
+    ///     - pthread: The `pthread_t` that is wrapped and used by the `NIOThread`.
     private init(pthread: pthread_t) {
         self.pthread = pthread
     }
 
-    /// Execute the given body with the `pthread_t` that is used by this `Thread` as argument.
+    /// Execute the given body with the `pthread_t` that is used by this `NIOThread` as argument.
     ///
     /// - warning: Do not escape `pthread_t` from the closure for later use.
     ///
@@ -59,7 +59,7 @@ final class Thread {
         return try body(self.pthread)
     }
 
-    /// Get current name of the `Thread` or `nil` if not set.
+    /// Get current name of the `NIOThread` or `nil` if not set.
     var name: String? {
         get {
             // 64 bytes should be good enough as on Linux the limit is usually 16 and it's very unlikely a user will ever set something longer anyway.
@@ -71,12 +71,12 @@ final class Thread {
         }
     }
 
-    /// Spawns and runs some task in a `Thread`.
+    /// Spawns and runs some task in a `NIOThread`.
     ///
     /// - arguments:
-    ///     - name: The name of the `Thread` or `nil` if no specific name should be set.
-    ///     - body: The function to execute within the spawned `Thread`.
-    static func spawnAndRun(name: String? = nil, body: @escaping (Thread) -> Void) {
+    ///     - name: The name of the `NIOThread` or `nil` if no specific name should be set.
+    ///     - body: The function to execute within the spawned `NIOThread`.
+    static func spawnAndRun(name: String? = nil, body: @escaping (NIOThread) -> Void) {
         // Unfortunately the pthread_create method take a different first argument depending on if it's on Linux or macOS, so ensure we use the correct one.
         #if os(Linux)
             var pt: pthread_t = pthread_t()
@@ -101,7 +101,7 @@ final class Thread {
                 // this is non-critical so we ignore the result here, we've seen EPERM in containers.
             }
 
-            body(Thread(pthread: pt))
+            body(NIOThread(pthread: pt))
             return nil
         }, Unmanaged.passRetained(box).toOpaque())
 
@@ -116,9 +116,9 @@ final class Thread {
         return pthread_equal(pthread, pthread_self()) != 0
     }
 
-    /// Returns the current running `Thread`.
-    static var current: Thread {
-        return Thread(pthread: pthread_self())
+    /// Returns the current running `NIOThread`.
+    static var current: NIOThread {
+        return NIOThread(pthread: pthread_self())
     }
 }
 
@@ -175,8 +175,8 @@ public struct ThreadSpecificVariable<T: AnyObject> {
     }
 }
 
-extension Thread: Equatable {
-    static func ==(lhs: Thread, rhs: Thread) -> Bool {
+extension NIOThread: Equatable {
+    static func ==(lhs: NIOThread, rhs: NIOThread) -> Bool {
         return pthread_equal(lhs.pthread, rhs.pthread) != 0
     }
 }
