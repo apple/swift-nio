@@ -252,7 +252,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
                                                                            eventLoop: eventLoop,
                                                                            group: group))
 
-        XCTAssertNoThrow(try serverChannel.setOption(option: ChannelOptions.autoRead, value: false).wait())
+        XCTAssertNoThrow(try serverChannel.setOption(ChannelOptions.autoRead, value: false).wait())
         XCTAssertNoThrow(try serverChannel.pipeline.add(handler: readCountHandler).flatMap { _ in
             serverChannel.pipeline.add(name: self.acceptHandlerName, handler: AcceptBackoffHandler(backoffProvider: backoffProvider))
         }.wait())

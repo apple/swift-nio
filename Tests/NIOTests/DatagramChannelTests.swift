@@ -154,7 +154,7 @@ final class DatagramChannelTests: XCTestCase {
     }
 
     func testDatagramChannelHasWatermark() throws {
-        _ = try self.firstChannel.setOption(option: ChannelOptions.writeBufferWaterMark, value: WriteBufferWaterMark(low: 1, high: 1024)).wait()
+        _ = try self.firstChannel.setOption(ChannelOptions.writeBufferWaterMark, value: WriteBufferWaterMark(low: 1, high: 1024)).wait()
 
         var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeBytes([UInt8](repeating: 5, count: 256))

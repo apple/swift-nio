@@ -70,7 +70,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         assert(pendingWrites.isEmpty)
     }
 
-    override func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
+    override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
@@ -87,11 +87,11 @@ final class SocketChannel: BaseSocketChannel<Socket> {
         case _ as WriteBufferWaterMarkOption:
             pendingWrites.waterMark = value as! WriteBufferWaterMark
         default:
-            try super.setOption0(option: option, value: value)
+            try super.setOption0(option, value: value)
         }
     }
 
-    override func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
+    override func getOption0<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
@@ -100,15 +100,15 @@ final class SocketChannel: BaseSocketChannel<Socket> {
 
         switch option {
         case _ as ConnectTimeoutOption:
-            return connectTimeout as! T.OptionType
+            return connectTimeout as! Option.Value
         case _ as AllowRemoteHalfClosureOption:
-            return allowRemoteHalfClosure as! T.OptionType
+            return allowRemoteHalfClosure as! Option.Value
         case _ as WriteSpinOption:
-            return pendingWrites.writeSpinCount as! T.OptionType
+            return pendingWrites.writeSpinCount as! Option.Value
         case _ as WriteBufferWaterMarkOption:
-            return pendingWrites.waterMark as! T.OptionType
+            return pendingWrites.waterMark as! Option.Value
         default:
-            return try super.getOption0(option: option)
+            return try super.getOption0(option)
         }
     }
 
@@ -338,7 +338,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         return .serverSocketChannel(self, interested)
     }
 
-    override func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
+    override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
@@ -349,11 +349,11 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         case _ as BacklogOption:
             backlog = value as! Int32
         default:
-            try super.setOption0(option: option, value: value)
+            try super.setOption0(option, value: value)
         }
     }
 
-    override func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
+    override func getOption0<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
@@ -362,9 +362,9 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
         switch option {
         case _ as BacklogOption:
-            return backlog as! T.OptionType
+            return backlog as! Option.Value
         default:
-            return try super.getOption0(option: option)
+            return try super.getOption0(option)
         }
     }
 
@@ -544,7 +544,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     // MARK: Datagram Channel overrides required by BaseSocketChannel
 
-    override func setOption0<T: ChannelOption>(option: T, value: T.OptionType) throws {
+    override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
@@ -557,11 +557,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         case _ as WriteBufferWaterMarkOption:
             pendingWrites.waterMark = value as! WriteBufferWaterMark
         default:
-            try super.setOption0(option: option, value: value)
+            try super.setOption0(option, value: value)
         }
     }
 
-    override func getOption0<T: ChannelOption>(option: T) throws -> T.OptionType {
+    override func getOption0<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
@@ -570,11 +570,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
         switch option {
         case _ as WriteSpinOption:
-            return pendingWrites.writeSpinCount as! T.OptionType
+            return pendingWrites.writeSpinCount as! Option.Value
         case _ as WriteBufferWaterMarkOption:
-            return pendingWrites.waterMark as! T.OptionType
+            return pendingWrites.waterMark as! Option.Value
         default:
-            return try super.getOption0(option: option)
+            return try super.getOption0(option)
         }
     }
 

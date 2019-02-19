@@ -123,10 +123,10 @@ public protocol Channel: class, ChannelOutboundInvoker {
     var parent: Channel? { get }
 
     /// Set `option` to `value` on this `Channel`.
-    func setOption<T: ChannelOption>(option: T, value: T.OptionType) -> EventLoopFuture<Void>
+    func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void>
 
     /// Get the value of `option` for this `Channel`.
-    func getOption<T: ChannelOption>(option: T) -> EventLoopFuture<T.OptionType>
+    func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value>
 
     /// Returns if this `Channel` is currently writable.
     var isWritable: Bool { get }
