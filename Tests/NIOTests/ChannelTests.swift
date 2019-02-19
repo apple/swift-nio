@@ -2531,7 +2531,7 @@ public class ChannelTests: XCTestCase {
                     XCTAssertTrue(serverChannel.isActive)
                     // we allow auto-read again to make sure that the socket buffer is drained on write error
                     // (cf. https://github.com/apple/swift-nio/issues/593)
-                    ctx.channel.setOption(option: ChannelOptions.autoRead, value: true).flatMap {
+                    ctx.channel.setOption(ChannelOptions.autoRead, value: true).flatMap {
                         // let's trigger the write error
                         var buffer = ctx.channel.allocator.buffer(capacity: 16)
                         buffer.writeStaticString("THIS WILL FAIL ANYWAY")
@@ -2584,8 +2584,8 @@ public class ChannelTests: XCTestCase {
         let c = try assertNoThrowWithValue(SocketChannel(socket: WriteAlwaysFailingSocket(),
                                                          parent: nil,
                                                          eventLoop: singleThreadedELG.next() as! SelectableEventLoop))
-        XCTAssertNoThrow(try c.setOption(option: ChannelOptions.autoRead, value: false).wait())
-        XCTAssertNoThrow(try c.setOption(option: ChannelOptions.allowRemoteHalfClosure, value: true).wait())
+        XCTAssertNoThrow(try c.setOption(ChannelOptions.autoRead, value: false).wait())
+        XCTAssertNoThrow(try c.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
         XCTAssertNoThrow(try c.pipeline.add(handler: MakeChannelInactiveInReadCausedByWriteErrorHandler(serverChannel: serverChannelAvailablePromise.futureResult,
                                                                                                         allDonePromise: allDonePromise)).wait())
         XCTAssertNoThrow(try c.register().wait())

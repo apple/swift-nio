@@ -212,7 +212,7 @@ class SelectorTest: XCTestCase {
 
             func channelActive(ctx: ChannelHandlerContext) {
                 // collect all the channels
-                ctx.channel.getOption(option: ChannelOptions.allowRemoteHalfClosure).whenSuccess { halfClosureAllowed in
+                ctx.channel.getOption(ChannelOptions.allowRemoteHalfClosure).whenSuccess { halfClosureAllowed in
                     precondition(halfClosureAllowed,
                                  "the test configuration is bogus: half-closure is dis-allowed which breaks the setup of this test")
                 }

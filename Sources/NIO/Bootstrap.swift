@@ -122,7 +122,7 @@ public final class ServerBootstrap {
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
     @inlinable
-    public func serverChannelOption<Option: ChannelOption>(_ option: Option, value: Option.OptionType) -> Self {
+    public func serverChannelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
         self._serverChannelOptions.put(key: option, value: value)
         return self
     }
@@ -133,7 +133,7 @@ public final class ServerBootstrap {
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
     @inlinable
-    public func childChannelOption<Option: ChannelOption>(_ option: Option, value: Option.OptionType) -> Self {
+    public func childChannelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
         self._childChannelOptions.put(key: option, value: value)
         return self
     }
@@ -391,7 +391,7 @@ public final class ClientBootstrap {
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
     @inlinable
-    public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.OptionType) -> Self {
+    public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
         self._channelOptions.put(key: option, value: value)
         return self
     }
@@ -589,7 +589,7 @@ public final class DatagramBootstrap {
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
     @inlinable
-    public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.OptionType) -> Self {
+    public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
         self._channelOptions.put(key: option, value: value)
         return self
     }
@@ -686,17 +686,17 @@ public final class DatagramBootstrap {
     internal var _storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
 
     @inlinable
-    mutating func put<K: ChannelOption>(key: K,
-                                        value newValue: K.OptionType) {
-        func applier(_ t: Channel) -> (Any, Any) -> EventLoopFuture<Void> {
-            return { (x, y) in
-                return t.setOption(option: x as! K, value: y as! K.OptionType)
+    mutating func put<Option: ChannelOption>(key: Option,
+                                             value newValue: Option.Value) {
+        func applier(_ channel: Channel) -> (Any, Any) -> EventLoopFuture<Void> {
+            return { (option, value) in
+                return channel.setOption(option as! Option, value: value as! Option.Value)
             }
         }
         var hasSet = false
         self._storage = self._storage.map { typeAndValue in
             let (type, value) = typeAndValue
-            if type is K && type as! K == key {
+            if type is Option && type as! Option == key {
                 hasSet = true
                 return (key, (newValue, applier))
             } else {
