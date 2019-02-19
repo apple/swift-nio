@@ -106,7 +106,7 @@ private struct PendingStreamWritesState {
     public private(set) var bytes: Int64 = 0
 
     public var flushedChunks: Int {
-        return self.pendingWrites.markedElementIndex.map { $0 + 1 } ?? 0
+        return self.pendingWrites.markedElementIndex.map { self.pendingWrites.startIndex.distance(to: $0) + 1 } ?? 0
     }
 
     /// Subtract `bytes` from the number of outstanding bytes to write.
@@ -130,7 +130,7 @@ private struct PendingStreamWritesState {
     /// - parameters:
     ///     - bytes: How many bytes of the item were written.
     private mutating func partiallyWrittenFirst(bytes: Int) {
-        self.pendingWrites[0].data.moveReaderIndex(forwardBy: bytes)
+        self.pendingWrites[self.pendingWrites.startIndex].data.moveReaderIndex(forwardBy: bytes)
         self.subtractOutstanding(bytes: bytes)
     }
 
@@ -162,7 +162,7 @@ private struct PendingStreamWritesState {
 
     /// Get the outstanding write at `index`.
     public subscript(index: Int) -> PendingStreamWrite {
-        return self.pendingWrites[index]
+        return self.pendingWrites[self.pendingWrites.startIndex.advanced(by: index)]
     }
 
     /// Mark the flush checkpoint.
@@ -190,7 +190,7 @@ private struct PendingStreamWritesState {
             assert(written >= 0, "allegedly written a negative amount of bytes: \(written)")
             var unaccountedWrites = written
             for _ in 0..<itemCount {
-                let headItemReadableBytes = self.pendingWrites[0].data.readableBytes
+                let headItemReadableBytes = self.pendingWrites.first!.data.readableBytes
                 if unaccountedWrites >= headItemReadableBytes {
                     unaccountedWrites -= headItemReadableBytes
                     /* we wrote at least the whole head item, so drop it and succeed the promise */
@@ -245,14 +245,15 @@ private struct PendingStreamWritesState {
         case 0:
             return .nothingToBeWritten
         case 1:
-            switch self.pendingWrites[0].data {
+            switch self.pendingWrites.first!.data {
             case .byteBuffer:
                 return .scalarBufferWrite
             case .fileRegion:
                 return .scalarFileWrite
             }
         default:
-            switch (self.pendingWrites[0].data, self.pendingWrites[1].data) {
+            let startIndex = self.pendingWrites.startIndex
+            switch (self.pendingWrites[startIndex].data, self.pendingWrites[startIndex.advanced(by: 1)].data) {
             case (.byteBuffer, .byteBuffer):
                 return .vectorBufferWrite
             case (.byteBuffer, .fileRegion):

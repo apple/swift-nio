@@ -37,11 +37,11 @@ class MarkedCircularBufferTests: XCTestCase {
 
         XCTAssertTrue(buf.hasMark)
         XCTAssertEqual(buf.markedElement, 4)
-        XCTAssertEqual(buf.markedElementIndex, 3)
+        XCTAssertEqual(buf.markedElementIndex, buf.startIndex.advanced(by: 3))
 
-        for i in 0..<3 { XCTAssertFalse(buf.isMarked(index: i)) }
-        XCTAssertTrue(buf.isMarked(index: 3))
-        for i in 4..<8 { XCTAssertFalse(buf.isMarked(index: i)) }
+        for i in 0..<3 { XCTAssertFalse(buf.isMarked(index: buf.startIndex.advanced(by: i))) }
+        XCTAssertTrue(buf.isMarked(index: buf.startIndex.advanced(by: 3)))
+        for i in 4..<8 { XCTAssertFalse(buf.isMarked(index: buf.startIndex.advanced(by: i))) }
     }
 
     func testPassingTheMark() throws {
@@ -55,7 +55,7 @@ class MarkedCircularBufferTests: XCTestCase {
             XCTAssertEqual(buf.removeFirst(), j)
             XCTAssertTrue(buf.hasMark)
             XCTAssertEqual(buf.markedElement, 4)
-            XCTAssertEqual(buf.markedElementIndex, 3 - j)
+            XCTAssertEqual(buf.markedElementIndex, buf.startIndex.advanced(by: 3 - j))
         }
 
         XCTAssertEqual(buf.removeFirst(), 4)
@@ -73,8 +73,8 @@ class MarkedCircularBufferTests: XCTestCase {
 
             XCTAssertTrue(buf.hasMark)
             XCTAssertEqual(buf.markedElement, i)
-            XCTAssertEqual(buf.markedElementIndex, i - 1)
-            XCTAssertTrue(buf.isMarked(index: i - 1))
+            XCTAssertEqual(buf.markedElementIndex, buf.startIndex.advanced(by: i - 1))
+            XCTAssertTrue(buf.isMarked(index: buf.startIndex.advanced(by: i - 1)))
         }
     }
     func testIndices() throws {
@@ -82,7 +82,7 @@ class MarkedCircularBufferTests: XCTestCase {
         for i in 1...4 {
             buf.append(i)
         }
-        XCTAssertEqual(buf.indices, 0..<4)
+        XCTAssertEqual(buf.indices, buf.startIndex ..< buf.startIndex.advanced(by: 4))
     }
 
     func testFirst() throws {
@@ -106,8 +106,8 @@ class MarkedCircularBufferTests: XCTestCase {
         for i in 1...4 {
             buf.append(i)
         }
-        XCTAssertEqual(buf[0], 1)
-        XCTAssertEqual(buf[3], 4)
+        XCTAssertEqual(buf[buf.startIndex], 1)
+        XCTAssertEqual(buf[buf.startIndex.advanced(by: 3)], 4)
     }
 
     func testIsEmpty() throws {

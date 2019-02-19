@@ -55,5 +55,6 @@
 - renamed `EventLoopFuture.hopTo(eventLoop:)` to `EventLoopFuture.hop(to:)`
 - `EventLoopFuture.reduce(into:_:eventLoop:_:)` had its label signature changed to `EventLoopFuture.reduce(into:_:on:_:)`
 - `EventLoopFuture.reduce(_:_:eventLoop:_:` had its label signature changed to `EventLoopFuture.reduce(_:_:on:_:)`
+- `CircularBuffer` and `MarkedCircularBuffer`'s indices are now opaque
 - all `ChannelOption`s are now required to be  `Equatable`
 - rename `FileHandle` to `NIOFileHandle`

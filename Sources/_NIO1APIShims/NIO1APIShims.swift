@@ -199,18 +199,45 @@ extension EventLoopGroup {
 }
 
 extension MarkedCircularBuffer {
+    @available(*, deprecated, renamed: "Element")
+    public typealias E = Element
+
+    func _makeIndex(value: Int) -> Index {
+        return self.startIndex.advanced(by: value)
+    }
+
+    @available(*, deprecated, renamed: "init(initialCapacity:)")
+    public init(initialRingCapacity: Int) {
+        self = .init(initialCapacity: initialRingCapacity)
+    }
+
+    @available(*, deprecated, message: "please use MarkedCircularBuffer.Index instead of Int")
+    public func index(after i: Int) -> Int {
+        return i + 1
+    }
+
+    @available(*, deprecated, message: "please use MarkedCircularBuffer.Index instead of Int")
+    public func index(before: Int) -> Int {
+        return before - 1
+    }
+
+    @available(*, deprecated, message: "please use MarkedCircularBuffer.Index instead of Int")
+    public func isMarked(index: Int) -> Bool {
+        return self.isMarked(index: self._makeIndex(value: index))
+    }
+
     @available(*, deprecated, message: "hasMark is now a property, remove `()`")
     public func hasMark() -> Bool {
         return self.hasMark
     }
 
     @available(*, deprecated, message: "markedElement is now a property, remove `()`")
-    public func markedElement() -> Element? {
+    public func markedElement() -> E? {
         return self.markedElement
     }
 
     @available(*, deprecated, message: "markedElementIndex is now a property, remove `()`")
-    public func markedElementIndex() -> Int? {
+    public func markedElementIndex() -> Index? {
         return self.markedElementIndex
     }
 }
@@ -285,16 +312,41 @@ extension SocketAddress {
 }
 
 extension CircularBuffer {
+    func _makeIndex(value: Int) -> Index {
+        return self.startIndex.advanced(by: value)
+    }
+
+    @available(*, deprecated, renamed: "Element")
+    public typealias E = Element
+
     @available(*, deprecated, renamed: "init(initialCapacity:)")
     public init(initialRingCapacity: Int) {
         self = .init(initialCapacity: initialRingCapacity)
     }
-}
 
-extension MarkedCircularBuffer {
-    @available(*, deprecated, renamed: "init(initialCapacity:)")
-    public init(initialRingCapacity: Int) {
-        self = .init(initialCapacity: initialRingCapacity)
+    @available(*, deprecated, message: "please use CircularBuffer.Index instead of Int")
+    public subscript(index: Int) -> E {
+        return self[_makeIndex(value: index)]
+    }
+
+    @available(*, deprecated, message: "please use CircularBuffer.Index instead of Int")
+    public func index(after: Int) -> Int {
+        return after + 1
+    }
+
+    @available(*, deprecated, message: "please use CircularBuffer.Index instead of Int")
+    public func index(before: Int) -> Int {
+        return before - 1
+    }
+
+    @available(*, deprecated, message: "please use CircularBuffer.Index instead of Int")
+    public mutating func removeSubrange(_ bounds: Range<Int>) {
+        return self.removeSubrange(_makeIndex(value: bounds.lowerBound) ..< _makeIndex(value: bounds.upperBound))
+    }
+
+    @available(*, deprecated, message: "please use CircularBuffer.Index instead of Int")
+    public mutating func remove(at position: Int) -> E {
+        return self.remove(at: _makeIndex(value: position))
     }
 }
 
