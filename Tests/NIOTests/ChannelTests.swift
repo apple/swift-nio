@@ -604,7 +604,7 @@ public class ChannelTests: XCTestCase {
             let numberOfWrites = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */)
             buffer.clear()
             buffer.writeBytes(Array<UInt8>(repeating: 0xff, count: 1))
-            let handle = FileHandle(descriptor: -1)
+            let handle = NIOFileHandle(descriptor: -1)
             defer {
                 /* fake file handle, so don't actually close */
                 XCTAssertNoThrow(try handle.takeDescriptorOwnership())
@@ -748,8 +748,8 @@ public class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<2).map { (_: Int) in el.makePromise() }
 
-            let fh1 = FileHandle(descriptor: -1)
-            let fh2 = FileHandle(descriptor: -2)
+            let fh1 = NIOFileHandle(descriptor: -1)
+            let fh2 = NIOFileHandle(descriptor: -2)
             let fr1 = FileRegion(fileHandle: fh1, readerIndex: 12, endIndex: 14)
             let fr2 = FileRegion(fileHandle: fh2, readerIndex: 0, endIndex: 2)
             defer {
@@ -797,7 +797,7 @@ public class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.makePromise() }
 
-            let fh = FileHandle(descriptor: -1)
+            let fh = NIOFileHandle(descriptor: -1)
             let fr = FileRegion(fileHandle: fh, readerIndex: 99, endIndex: 99)
             defer {
                 // fake descriptor, so shouldn't be closed.
@@ -826,8 +826,8 @@ public class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<5).map { (_: Int) in el.makePromise() }
 
-            let fh1 = FileHandle(descriptor: -1)
-            let fh2 = FileHandle(descriptor: -1)
+            let fh1 = NIOFileHandle(descriptor: -1)
+            let fh2 = NIOFileHandle(descriptor: -1)
             let fr1 = FileRegion(fileHandle: fh1, readerIndex: 99, endIndex: 99)
             let fr2 = FileRegion(fileHandle: fh1, readerIndex: 0, endIndex: 10)
             defer {
@@ -1028,7 +1028,7 @@ public class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.makePromise() }
 
-            let fh = FileHandle(descriptor: -1)
+            let fh = NIOFileHandle(descriptor: -1)
             let fr = FileRegion(fileHandle: fh, readerIndex: 0, endIndex: 8192)
             defer {
                 // fake descriptor, so shouldn't be closed.
