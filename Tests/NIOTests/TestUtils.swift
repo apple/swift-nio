@@ -162,20 +162,20 @@ final class NonAcceptingServerSocket: ServerSocket {
     }
 }
 
-func assertSetGetOptionOnOpenAndClosed<T: ChannelOption>(channel: Channel, option: T, value: T.OptionType) throws {
-    _ = try channel.setOption(option: option, value: value).wait()
-    _ = try channel.getOption(option: option).wait()
+func assertSetGetOptionOnOpenAndClosed<Option: ChannelOption>(channel: Channel, option: Option, value: Option.Value) throws {
+    _ = try channel.setOption(option, value: value).wait()
+    _ = try channel.getOption(option).wait()
     try channel.close().wait()
     try channel.closeFuture.wait()
 
     do {
-        _ = try channel.setOption(option: option, value: value).wait()
+        _ = try channel.setOption(option, value: value).wait()
     } catch let err as ChannelError where err == .ioOnClosedChannel {
         // expected
     }
 
     do {
-        _ = try channel.getOption(option: option).wait()
+        _ = try channel.getOption(option).wait()
     } catch let err as ChannelError where err == .ioOnClosedChannel {
         // expected
     }
@@ -236,7 +236,7 @@ func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testI
 
 func getBoolSocketOption<IntType: SignedInteger>(channel: Channel, level: IntType, name: SocketOptionName,
                                                  file: StaticString = #file, line: UInt = #line) throws -> Bool {
-    return try assertNoThrowWithValue(channel.getOption(option: ChannelOptions.socket(SocketOptionLevel(level),
+    return try assertNoThrowWithValue(channel.getOption(ChannelOptions.socket(SocketOptionLevel(level),
                                                                                       name)),
                                       file: file,
                                       line: line).wait() != 0

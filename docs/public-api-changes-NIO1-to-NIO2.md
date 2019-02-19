@@ -23,6 +23,11 @@
 - Made `WebSocketOpcode` a struct. Removed `WebSocketOpcode.unknownControl` and
   `WebSocketOpcode.unknownNonControl` values: these should be replaced by
   simply instantiating `WebSocketOpcode` with the value.
+- `Channel.setOption(option:value:)` has been renamed `Channel.setOption(_:value:)`
+- `Channel.getOption(option:value:)` has been renamed `Channel.getOption(_:value:)`
+- `ChannelOption.AssociatedValueType` has been removed
+- `ChannelOption.OptionType` has been renamed `ChannelOption.Value`
+- the default `ChannelOption`s have been switched changed from `case FooOption { case const }` to a `struct FooOption { public init() {} }`
 - `markedElementIndex()`, `markedElement()` and `hasMark()` are now computed variables instead of functions.
 - `ByteBuffer.set(string:at:)` no longer returns an `Int?`, instead it
   returns `Int` and has had its return value made discardable.

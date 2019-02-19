@@ -432,6 +432,21 @@ extension Channel {
     var _unsafe: ChannelCore {
         return self._channelCore
     }
+
+    @available(*, deprecated, renamed: "setOption(_:value:)")
+    func setOption<Option: ChannelOption>(option: Option, value: Option.Value) -> EventLoopFuture<Void> {
+        return self.setOption(option, value: value)
+    }
+
+    @available(*, deprecated, renamed: "getOption(_:)")
+    func getOption<Option: ChannelOption>(option: Option) -> EventLoopFuture<Option.Value> {
+        return self.getOption(option)
+    }
+}
+
+extension ChannelOption {
+    @available(*, deprecated, renamed: "Value")
+    public typealias OptionType = Value
 }
 
 @available(*, deprecated, renamed: "HTTPServerProtocolUpgrader")
