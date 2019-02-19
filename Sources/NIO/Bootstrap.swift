@@ -59,8 +59,10 @@ public final class ServerBootstrap {
     private let childGroup: EventLoopGroup
     private var serverChannelInit: ((Channel) -> EventLoopFuture<Void>)?
     private var childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
-    private var serverChannelOptions = ChannelOptionStorage()
-    private var childChannelOptions = ChannelOptionStorage()
+    @usableFromInline
+    internal var _serverChannelOptions = ChannelOptionStorage()
+    @usableFromInline
+    internal var _childChannelOptions = ChannelOptionStorage()
 
     /// Create a `ServerBootstrap` for the `EventLoopGroup` `group`.
     ///
@@ -119,8 +121,9 @@ public final class ServerBootstrap {
     /// - parameters:
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
-    public func serverChannelOption<T: ChannelOption>(_ option: T, value: T.OptionType) -> Self {
-        serverChannelOptions.put(key: option, value: value)
+    @inlinable
+    public func serverChannelOption<Option: ChannelOption>(_ option: Option, value: Option.OptionType) -> Self {
+        self._serverChannelOptions.put(key: option, value: value)
         return self
     }
 
@@ -129,8 +132,9 @@ public final class ServerBootstrap {
     /// - parameters:
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
-    public func childChannelOption<T: ChannelOption>(_ option: T, value: T.OptionType) -> Self {
-        childChannelOptions.put(key: option, value: value)
+    @inlinable
+    public func childChannelOption<Option: ChannelOption>(_ option: Option, value: Option.OptionType) -> Self {
+        self._childChannelOptions.put(key: option, value: value)
         return self
     }
 
@@ -201,10 +205,10 @@ public final class ServerBootstrap {
     private func bind0(makeServerChannel: (_ eventLoop: SelectableEventLoop, _ childGroup: EventLoopGroup) throws -> ServerSocketChannel, _ register: @escaping (EventLoop, ServerSocketChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
         let eventLoop = self.group.next()
         let childEventLoopGroup = self.childGroup
-        let serverChannelOptions = self.serverChannelOptions
+        let serverChannelOptions = self._serverChannelOptions
         let serverChannelInit = self.serverChannelInit ?? { _ in eventLoop.makeSucceededFuture(()) }
         let childChannelInit = self.childChannelInit
-        let childChannelOptions = self.childChannelOptions
+        let childChannelOptions = self._childChannelOptions
 
         let serverChannel: ServerSocketChannel
         do {
@@ -346,7 +350,8 @@ public final class ClientBootstrap {
 
     private let group: EventLoopGroup
     private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
-    private var channelOptions = ChannelOptionStorage()
+    @usableFromInline
+    internal var _channelOptions = ChannelOptionStorage()
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
     private var resolver: Resolver?
 
@@ -385,8 +390,9 @@ public final class ClientBootstrap {
     /// - parameters:
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
-    public func channelOption<T: ChannelOption>(_ option: T, value: T.OptionType) -> Self {
-        channelOptions.put(key: option, value: value)
+    @inlinable
+    public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.OptionType) -> Self {
+        self._channelOptions.put(key: option, value: value)
         return self
     }
 
@@ -477,7 +483,7 @@ public final class ClientBootstrap {
         }
 
         return channelInitializer(channel).flatMap {
-            self.channelOptions.applyAll(channel: channel)
+            self._channelOptions.applyAll(channel: channel)
         }.flatMap {
             let promise = eventLoop.makePromise(of: Void.self)
             channel.registerAlreadyConfigured0(promise: promise)
@@ -494,7 +500,7 @@ public final class ClientBootstrap {
                          protocolFamily: Int32,
                          _ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
-        let channelOptions = self.channelOptions
+        let channelOptions = self._channelOptions
 
         let promise = eventLoop.makePromise(of: Channel.self)
         let channel: SocketChannel
@@ -556,7 +562,8 @@ public final class DatagramBootstrap {
 
     private let group: EventLoopGroup
     private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
-    private var channelOptions = ChannelOptionStorage()
+    @usableFromInline
+    internal var _channelOptions = ChannelOptionStorage()
 
     /// Create a `DatagramBootstrap` on the `EventLoopGroup` `group`.
     ///
@@ -581,8 +588,9 @@ public final class DatagramBootstrap {
     /// - parameters:
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
-    public func channelOption<T: ChannelOption>(_ option: T, value: T.OptionType) -> Self {
-        channelOptions.put(key: option, value: value)
+    @inlinable
+    public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.OptionType) -> Self {
+        self._channelOptions.put(key: option, value: value)
         return self
     }
 
@@ -651,7 +659,7 @@ public final class DatagramBootstrap {
     private func bind0(makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel, _ registerAndBind: @escaping (EventLoop, DatagramChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
         let eventLoop = self.group.next()
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
-        let channelOptions = self.channelOptions
+        let channelOptions = self._channelOptions
 
         let channel: DatagramChannel
         do {
@@ -672,39 +680,23 @@ public final class DatagramBootstrap {
     }
 }
 
+@usableFromInline
 /* for tests */ internal struct ChannelOptionStorage {
-    private var storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
+    @usableFromInline
+    internal var _storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
 
-    mutating func put<K: ChannelOption & Equatable>(key: K, value: K.OptionType) {
-        return self.put(key: key, value: value, equalsFunc: ==)
-    }
-
-    // HACK: this function should go for NIO 2.0, all ChannelOptions should be equatable
-    mutating func put<K: ChannelOption>(key: K, value: K.OptionType) {
-        if K.self == SocketOption.self {
-            return self.put(key: key as! SocketOption, value: value as! SocketOptionValue) { lhs, rhs in
-                switch (lhs, rhs) {
-                case (.const(let lLevel, let lName), .const(let rLevel, let rName)):
-                    return lLevel == rLevel && lName == rName
-                }
-            }
-        } else {
-            return self.put(key: key, value: value) { _, _ in true }
-        }
-    }
-
+    @inlinable
     mutating func put<K: ChannelOption>(key: K,
-                                        value newValue: K.OptionType,
-                                        equalsFunc: (K, K) -> Bool) {
+                                        value newValue: K.OptionType) {
         func applier(_ t: Channel) -> (Any, Any) -> EventLoopFuture<Void> {
             return { (x, y) in
                 return t.setOption(option: x as! K, value: y as! K.OptionType)
             }
         }
         var hasSet = false
-        self.storage = self.storage.map { typeAndValue in
+        self._storage = self._storage.map { typeAndValue in
             let (type, value) = typeAndValue
-            if type is K && equalsFunc(type as! K, key) {
+            if type is K && type as! K == key {
                 hasSet = true
                 return (key, (newValue, applier))
             } else {
@@ -712,13 +704,13 @@ public final class DatagramBootstrap {
             }
         }
         if !hasSet {
-            self.storage.append((key, (newValue, applier)))
+            self._storage.append((key, (newValue, applier)))
         }
     }
 
     func applyAll(channel: Channel) -> EventLoopFuture<Void> {
         let applyPromise = channel.eventLoop.makePromise(of: Void.self)
-        var it = self.storage.makeIterator()
+        var it = self._storage.makeIterator()
 
         func applyNext() {
             guard let (key, (value, applier)) = it.next() else {
