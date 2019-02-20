@@ -153,7 +153,7 @@ extension EventLoopFuture {
     }
 
     @available(*, deprecated, renamed: "andAllSucceed(_:on:)")
-    public func andAll(_ futures: [EventLoopFuture<Void>], eventLoop: EventLoop) -> EventLoopFuture<Void> {
+    public static func andAll(_ futures: [EventLoopFuture<Void>], eventLoop: EventLoop) -> EventLoopFuture<Void> {
         return .andAllSucceed(futures, on: eventLoop)
     }
 
@@ -429,17 +429,17 @@ extension ByteBuffer {
 
 extension Channel {
     @available(*, deprecated, renamed: "_channelCore")
-    var _unsafe: ChannelCore {
+    public var _unsafe: ChannelCore {
         return self._channelCore
     }
 
     @available(*, deprecated, renamed: "setOption(_:value:)")
-    func setOption<Option: ChannelOption>(option: Option, value: Option.Value) -> EventLoopFuture<Void> {
+    public func setOption<Option: ChannelOption>(option: Option, value: Option.Value) -> EventLoopFuture<Void> {
         return self.setOption(option, value: value)
     }
 
     @available(*, deprecated, renamed: "getOption(_:)")
-    func getOption<Option: ChannelOption>(option: Option) -> EventLoopFuture<Option.Value> {
+    public func getOption<Option: ChannelOption>(option: Option) -> EventLoopFuture<Option.Value> {
         return self.getOption(option)
     }
 }
