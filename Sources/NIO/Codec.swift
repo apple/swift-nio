@@ -63,9 +63,10 @@ public protocol ByteToMessageDecoder {
     /// - parameters:
     ///     - ctx: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
     ///     - buffer: The `ByteBuffer` from which we decode.
+    ///     - seenEOF: `true` if EOF has been seen. Usually if this is `false` the handler has been removed.
     /// - returns: `DecodingState.continue` if we should continue calling this method or `DecodingState.needMoreData` if it should be called
     //             again when more data is present in the `ByteBuffer`.
-    mutating func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws  -> DecodingState
+    mutating func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws  -> DecodingState
 
     /// Called once this `ByteToMessageDecoder` is removed from the `ChannelPipeline`.
     ///
@@ -106,10 +107,6 @@ extension ByteToMessageDecoder {
             return true
         }
         return buffer.capacity > 1024 && (buffer.capacity - buffer.readerIndex) >= buffer.readerIndex
-    }
-
-    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        return .needMoreData
     }
 
     public func wrapInboundOut(_ value: InboundOut) -> NIOAny {
@@ -156,13 +153,19 @@ private struct B2MDBuffer {
 
     private var state: State = .ready
     private var buffers: CircularBuffer<ByteBuffer> = CircularBuffer(initialCapacity: 4)
+    private let emptyByteBuffer: ByteBuffer
+
+    init(emptyByteBuffer: ByteBuffer) {
+        assert(emptyByteBuffer.readableBytes == 0)
+        self.emptyByteBuffer = emptyByteBuffer
+    }
 }
 
 // MARK: B2MDBuffer Main API
 extension B2MDBuffer {
     /// Start processing some bytes if possible, if we receive a returned buffer (through `.available(ByteBuffer)`)
     /// we _must_ indicate the processing has finished by calling `finishProcessing`.
-    mutating func startProcessing() -> BufferAvailability {
+    mutating func startProcessing(allowEmptyBuffer: Bool) -> BufferAvailability {
         switch self.state {
         case .processingInProgress:
             return .bufferAlreadyBeingProcessed
@@ -170,7 +173,7 @@ extension B2MDBuffer {
             var buffer = self.buffers.removeFirst()
             buffer.writeBuffers(self.buffers)
             self.buffers.removeAll(keepingCapacity: self.buffers.capacity < 16) // don't grow too much
-            if buffer.readableBytes > 0 {
+            if buffer.readableBytes > 0 || allowEmptyBuffer {
                 self.state = .processingInProgress
                 return .available(buffer)
             } else {
@@ -178,6 +181,10 @@ extension B2MDBuffer {
             }
         case .ready:
             assert(self.buffers.count == 0)
+            if allowEmptyBuffer {
+                self.state = .processingInProgress
+                return .available(self.emptyByteBuffer)
+            }
             return .nothingAvailable
         }
     }
@@ -266,7 +273,9 @@ public class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     internal private(set) var decoder: Decoder? // only `nil` if we're already decoding (ie. we're re-entered)
     private var state: State = .active
     private var removalState: RemovalState = .notBeingRemoved
-    private var buffer: B2MDBuffer = B2MDBuffer()
+    // sadly to construct a B2MDBuffer we need an empty ByteBuffer which we can only get from the allocator, so IUO.
+    private var buffer: B2MDBuffer!
+    private var seenEOF: Bool = false
 
     public init(_ decoder: Decoder) {
         self.decoder = decoder
@@ -287,8 +296,8 @@ extension ByteToMessageHandler {
 
 // MARK: ByteToMessageHandler's Main API
 extension ByteToMessageHandler {
-    private func withNextBuffer(_ body: (inout Decoder, inout ByteBuffer) throws -> DecodingState) rethrows -> B2MDBuffer.BufferProcessingResult {
-        switch self.buffer.startProcessing() {
+    private func withNextBuffer(allowEmptyBuffer: Bool, _ body: (inout Decoder, inout ByteBuffer) throws -> DecodingState) rethrows -> B2MDBuffer.BufferProcessingResult {
+        switch self.buffer.startProcessing(allowEmptyBuffer: allowEmptyBuffer) {
         case .bufferAlreadyBeingProcessed:
             return .cannotProcessReentrantly
         case .nothingAvailable:
@@ -329,12 +338,14 @@ extension ByteToMessageHandler {
     }
 
     private func decodeLoop(ctx: ChannelHandlerContext, decodeMode: DecodeMode) throws -> B2MDBuffer.BufferProcessingResult {
+        var allowEmptyBuffer = decodeMode == .last
         while decodeMode == .last || self.removalState == .notBeingRemoved {
-            let result = try self.withNextBuffer { decoder, buffer in
+            let result = try self.withNextBuffer(allowEmptyBuffer: allowEmptyBuffer) { decoder, buffer in
                 if decodeMode == .normal {
                     return try decoder.decode(ctx: ctx, buffer: &buffer)
                 } else {
-                    return try decoder.decodeLast(ctx: ctx, buffer: &buffer)
+                    allowEmptyBuffer = false
+                    return try decoder.decodeLast(ctx: ctx, buffer: &buffer, seenEOF: self.seenEOF)
                 }
             }
             switch result {
@@ -354,6 +365,7 @@ extension ByteToMessageHandler {
 extension ByteToMessageHandler: ChannelInboundHandler {
 
     public func handlerAdded(ctx: ChannelHandlerContext) {
+        self.buffer = B2MDBuffer(emptyByteBuffer: ctx.channel.allocator.buffer(capacity: 0))
         // here we can force it because we know that the decoder isn't in use if we're just adding this handler
         self.decoder!.decoderAdded(ctx: ctx)
     }
@@ -398,9 +410,20 @@ extension ByteToMessageHandler: ChannelInboundHandler {
 
     /// Call `decodeLast` before forward the event through the pipeline.
     public func channelInactive(ctx: ChannelHandlerContext) {
+        self.seenEOF = true
+
         self.processLeftovers(ctx: ctx)
 
         ctx.fireChannelInactive()
+    }
+
+    public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+        if event as? ChannelEvent == .some(.inputClosed) {
+            self.seenEOF = true
+
+            self.processLeftovers(ctx: ctx)
+        }
+        ctx.fireUserInboundEventTriggered(event)
     }
 }
 

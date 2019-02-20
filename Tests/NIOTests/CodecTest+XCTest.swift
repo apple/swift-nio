@@ -41,6 +41,11 @@ extension ByteToMessageDecoderTest {
                 ("testHandlerRemoveInChannelRead", testHandlerRemoveInChannelRead),
                 ("testChannelCloseInChannelRead", testChannelCloseInChannelRead),
                 ("testDecodeLoopGetsInterruptedWhenRemovalIsTriggered", testDecodeLoopGetsInterruptedWhenRemovalIsTriggered),
+                ("testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelClosed", testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelClosed),
+                ("testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelHalfClosure", testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelHalfClosure),
+                ("testDecodeLastHasSeenEOFFalseOnHandlerRemoved", testDecodeLastHasSeenEOFFalseOnHandlerRemoved),
+                ("testDecodeLastHasSeenEOFFalseOnHandlerRemovedEvenIfNoData", testDecodeLastHasSeenEOFFalseOnHandlerRemovedEvenIfNoData),
+                ("testDecodeLastHasSeenEOFTrueOnChannelInactive", testDecodeLastHasSeenEOFTrueOnChannelInactive),
            ]
    }
 }
