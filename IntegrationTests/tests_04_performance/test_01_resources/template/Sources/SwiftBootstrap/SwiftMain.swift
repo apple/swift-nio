@@ -221,7 +221,7 @@ public func swiftMain() -> Int {
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true,
                                                              withErrorHandling: false).flatMap {
-                    channel.pipeline.add(handler: SimpleHTTPServer())
+                    channel.pipeline.addHandler(SimpleHTTPServer())
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
 
@@ -235,7 +235,7 @@ public func swiftMain() -> Int {
         let clientChannel = try ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().flatMap {
-                    channel.pipeline.add(handler: repeatedRequestsHandler)
+                    channel.pipeline.addHandler(repeatedRequestsHandler)
                 }
             }
             .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
@@ -253,7 +253,7 @@ public func swiftMain() -> Int {
             .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
             .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: PongHandler())
+                channel.pipeline.addHandler(PongHandler())
             }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
@@ -263,7 +263,7 @@ public func swiftMain() -> Int {
         let pingHandler = PingHandler(numberOfRequests: numberOfRequests, eventLoop: group.next())
         _ = try ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: pingHandler)
+                channel.pipeline.addHandler(pingHandler)
             }
             .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
             .channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))

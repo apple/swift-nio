@@ -29,7 +29,7 @@ class HTTPRequestEncoderTests: XCTestCase {
             XCTAssertEqual(.some(false), try? channel.finish())
         }
 
-        try channel.pipeline.add(handler: HTTPRequestEncoder()).wait()
+        try channel.pipeline.addHandler(HTTPRequestEncoder()).wait()
         var request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:1), method: method, uri: "/uri")
         request.headers = headers
         try channel.writeOutbound(HTTPClientRequestPart.head(request))
@@ -78,7 +78,7 @@ class HTTPRequestEncoderTests: XCTestCase {
             XCTAssertEqual(.some(false), try? channel.finish())
         }
 
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
 
         // This request contains neither Transfer-Encoding: chunked or Content-Length.
         let request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:0), method: .GET, uri: "/uri")
@@ -94,7 +94,7 @@ class HTTPRequestEncoderTests: XCTestCase {
             XCTAssertEqual(.some(false), try? channel.finish())
         }
 
-        try channel.pipeline.add(handler: HTTPRequestEncoder()).wait()
+        try channel.pipeline.addHandler(HTTPRequestEncoder()).wait()
         var request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:1), method: .POST, uri: "/uri")
         request.headers.add(name: "content-length", value: "4")
 
@@ -117,7 +117,7 @@ class HTTPRequestEncoderTests: XCTestCase {
         }
 
         let uri = "server.example.com:80"
-        try channel.pipeline.add(handler: HTTPRequestEncoder()).wait()
+        try channel.pipeline.addHandler(HTTPRequestEncoder()).wait()
         var request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:1), method: .CONNECT, uri: uri)
         request.headers.add(name: "Host", value: uri)
 

@@ -31,7 +31,7 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testDoesNotDecodeRealHTTP09Request() throws {
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder()).wait())
 
         // This is an invalid HTTP/0.9 simple request (too many CRLFs), but we need to
         // trigger https://github.com/nodejs/http-parser/issues/386 or http_parser won't
@@ -52,7 +52,7 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testDoesNotDecodeFakeHTTP09Request() throws {
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder()).wait())
 
         // This is a HTTP/1.1-formatted request that claims to be HTTP/0.9.
         var buffer = channel.allocator.buffer(capacity: 64)
@@ -71,7 +71,7 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testDoesNotDecodeHTTP2XRequest() throws {
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder()).wait())
 
         // This is a hypothetical HTTP/2.0 protocol request, assuming it is
         // byte for byte identical (which such a protocol would never be).
@@ -91,7 +91,7 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testToleratesHTTP13Request() throws {
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder()).wait())
 
         // We tolerate higher versions of HTTP/1 than we know about because RFC 7230
         // says that these should be treated like HTTP/1.1 by our users.
@@ -103,8 +103,8 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testDoesNotDecodeRealHTTP09Response() throws {
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseDecoder()).wait())
 
         // We need to prime the decoder by seeing a GET request.
         try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 0, minor: 9), method: .GET, uri: "/")))
@@ -127,8 +127,8 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testDoesNotDecodeFakeHTTP09Response() throws {
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseDecoder()).wait())
 
         // We need to prime the decoder by seeing a GET request.
         try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 0, minor: 9), method: .GET, uri: "/")))
@@ -150,8 +150,8 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testDoesNotDecodeHTTP2XResponse() throws {
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseDecoder()).wait())
 
         // We need to prime the decoder by seeing a GET request.
         try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 2, minor: 0), method: .GET, uri: "/")))
@@ -174,8 +174,8 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testToleratesHTTP13Response() throws {
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseDecoder()).wait())
 
         // We need to prime the decoder by seeing a GET request.
         try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 2, minor: 0), method: .GET, uri: "/")))
@@ -208,8 +208,8 @@ class HTTPDecoderTest: XCTestCase {
             }
         }
 
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: Receiver()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(Receiver()).wait())
 
         // This is a hypothetical HTTP/2.0 protocol response, assuming it is
         // byte for byte identical (which such a protocol would never be).
@@ -241,14 +241,14 @@ class HTTPDecoderTest: XCTestCase {
                 switch part {
                 case .end:
                     // ignore
-                    _ = ctx.pipeline.remove(name: "decoder")
+                    _ = ctx.pipeline.removeHandler(name: "decoder")
                 default:
                     break
                 }
             }
         }
-        XCTAssertNoThrow(try channel.pipeline.add(name: "decoder", handler: HTTPRequestDecoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: Receiver()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder(), name: "decoder").wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(Receiver()).wait())
 
         var buffer = channel.allocator.buffer(capacity: 64)
         buffer.writeStaticString("OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\nXXXX")
@@ -270,7 +270,7 @@ class HTTPDecoderTest: XCTestCase {
             }
 
             func handlerAdded(ctx: ChannelHandlerContext) {
-                _ = ctx.pipeline.remove(name: "decoder")
+                _ = ctx.pipeline.removeHandler(name: "decoder")
             }
 
             func handlerRemoved(ctx: ChannelHandlerContext) {
@@ -286,8 +286,8 @@ class HTTPDecoderTest: XCTestCase {
                 let part = self.unwrapInboundIn(data)
                 switch part {
                 case .end:
-                    _ = ctx.pipeline.remove(handler: self).flatMap { _ in
-                        ctx.pipeline.add(handler: self.collector)
+                    _ = ctx.pipeline.removeHandler(self).flatMap { _ in
+                        ctx.pipeline.addHandler(self.collector)
                     }
                 default:
                     // ignore
@@ -295,8 +295,9 @@ class HTTPDecoderTest: XCTestCase {
                 }
             }
         }
-        XCTAssertNoThrow(try channel.pipeline.add(name: "decoder", handler: HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes)).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: Receiver()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes),
+                                                         name: "decoder").wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(Receiver()).wait())
 
         // This connect call is semantically wrong, but it's how you active embedded channels properly right now.
         XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 8888)).wait())
@@ -321,7 +322,7 @@ class HTTPDecoderTest: XCTestCase {
             }
             
             func handlerAdded(ctx: ChannelHandlerContext) {
-                _ = ctx.pipeline.remove(name: "decoder")
+                _ = ctx.pipeline.removeHandler(name: "decoder")
             }
             
             func handlerRemoved(ctx: ChannelHandlerContext) {
@@ -347,8 +348,8 @@ class HTTPDecoderTest: XCTestCase {
                 let part = self.unwrapInboundIn(data)
                 switch part {
                 case .end:
-                    _ = ctx.pipeline.remove(handler: self).flatMap { _ in
-                        ctx.pipeline.add(handler: ByteCollector())
+                    _ = ctx.pipeline.removeHandler(self).flatMap { _ in
+                        ctx.pipeline.addHandler(ByteCollector())
                     }
                     break
                 default:
@@ -358,8 +359,9 @@ class HTTPDecoderTest: XCTestCase {
             }
         }
         
-        XCTAssertNoThrow(try channel.pipeline.add(name: "decoder", handler: HTTPResponseDecoder(leftOverBytesStrategy: .forwardBytes)).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: Receiver()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseDecoder(leftOverBytesStrategy: .forwardBytes),
+                                                         name: "decoder").wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(Receiver()).wait())
         
         XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 8888)).wait())
         
@@ -372,7 +374,7 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testExtraCRLF() throws {
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder()).wait())
 
         // This is a simple HTTP/1.1 request with a few too many CRLFs before it, to trigger
         // https://github.com/nodejs/http-parser/pull/432.
@@ -401,7 +403,7 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testSOURCEDoesntExplodeUs() throws {
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder()).wait())
 
         // This is a simple HTTP/1.1 request with the SOURCE verb which is newly added to
         // http_parser.
@@ -430,7 +432,7 @@ class HTTPDecoderTest: XCTestCase {
     }
 
     func testExtraCarriageReturnBetweenSubsequentRequests() throws {
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestDecoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestDecoder()).wait())
 
         // This is a simple HTTP/1.1 request with an extra \r between first and second message, designed to hit the code
         // changed in https://github.com/nodejs/http-parser/pull/432 .

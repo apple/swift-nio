@@ -214,7 +214,7 @@ extension DummyResolver.Event: Equatable {
 
 private func defaultChannelBuilder(loop: EventLoop, family: Int32) -> EventLoopFuture<Channel> {
     let channel = EmbeddedChannel(loop: loop as! EmbeddedEventLoop)
-    XCTAssertNoThrow(try channel.pipeline.add(name: CONNECT_RECORDER, handler: ConnectRecorder()).wait())
+    XCTAssertNoThrow(try channel.pipeline.addHandler(ConnectRecorder(), name: CONNECT_RECORDER).wait())
     return loop.makeSucceededFuture(channel)
 }
 
@@ -562,7 +562,7 @@ public class HappyEyeballsTest : XCTestCase {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .hours(1)) {
             let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
             channelFuture.whenSuccess { channel in
-                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                try! channel.pipeline.addHandler(ConnectionDelayer(), name: CONNECT_DELAYER, position: .first).wait()
                 channels.append(channel)
             }
             return channelFuture
@@ -631,7 +631,7 @@ public class HappyEyeballsTest : XCTestCase {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .hours(1)) {
             let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
             channelFuture.whenSuccess { channel in
-                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                try! channel.pipeline.addHandler(ConnectionDelayer(), name: CONNECT_DELAYER, position: .first).wait()
                 channels.append(channel)
             }
             return channelFuture
@@ -701,7 +701,7 @@ public class HappyEyeballsTest : XCTestCase {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .hours(1)) {
             let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
             channelFuture.whenSuccess { channel in
-                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                try! channel.pipeline.addHandler(ConnectionDelayer(), name: CONNECT_DELAYER, position: .first).wait()
                 channels.append(channel)
             }
             return channelFuture
@@ -784,7 +784,7 @@ public class HappyEyeballsTest : XCTestCase {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .milliseconds(100)) {
             let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
             channelFuture.whenSuccess { channel in
-                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                try! channel.pipeline.addHandler(ConnectionDelayer(), name: CONNECT_DELAYER, position: .first).wait()
                 channels.append(channel)
             }
             return channelFuture
@@ -829,7 +829,7 @@ public class HappyEyeballsTest : XCTestCase {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .milliseconds(100)) {
             let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
             channelFuture.whenSuccess { channel in
-                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                try! channel.pipeline.addHandler(ConnectionDelayer(), name: CONNECT_DELAYER, position: .first).wait()
                 channels.append(channel)
             }
             return channelFuture
@@ -884,7 +884,7 @@ public class HappyEyeballsTest : XCTestCase {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .hours(1)) {
             let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
             channelFuture.whenSuccess { channel in
-                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                try! channel.pipeline.addHandler(ConnectionDelayer(), name: CONNECT_DELAYER, position: .first).wait()
                 channels.append(channel)
             }
             return channelFuture
@@ -930,7 +930,7 @@ public class HappyEyeballsTest : XCTestCase {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .milliseconds(100)) {
             let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
             channelFuture.whenSuccess { channel in
-                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                try! channel.pipeline.addHandler(ConnectionDelayer(), name: CONNECT_DELAYER, position: .first).wait()
                 channels.append(channel)
             }
             return channelFuture
@@ -975,7 +975,7 @@ public class HappyEyeballsTest : XCTestCase {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80) {
             let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
             channelFuture.whenSuccess { channel in
-                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                try! channel.pipeline.addHandler(ConnectionDelayer(), name: CONNECT_DELAYER, position: .first).wait()
                 channels.append(channel)
             }
             return channelFuture
@@ -1025,7 +1025,7 @@ public class HappyEyeballsTest : XCTestCase {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80) {
             let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
             channelFuture.whenSuccess { channel in
-                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                try! channel.pipeline.addHandler(ConnectionDelayer(), name: CONNECT_DELAYER, position: .first).wait()
                 channels.append(channel)
             }
             return channelFuture
@@ -1145,7 +1145,7 @@ public class HappyEyeballsTest : XCTestCase {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .milliseconds(250)) {
             let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
             channelFuture.whenSuccess { channel in
-                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                try! channel.pipeline.addHandler(ConnectionDelayer(), name: CONNECT_DELAYER, position: .first).wait()
                 channels.append(channel)
             }
             return channelFuture
@@ -1194,7 +1194,7 @@ public class HappyEyeballsTest : XCTestCase {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .milliseconds(50)) {
             let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
             channelFuture.whenSuccess { channel in
-                try! channel.pipeline.add(name: CONNECT_DELAYER, handler: ConnectionDelayer(), first: true).wait()
+                try! channel.pipeline.addHandler(ConnectionDelayer(), name: CONNECT_DELAYER, position: .first).wait()
                 channels.append(channel)
             }
             return channelFuture

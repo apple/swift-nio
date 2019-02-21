@@ -160,9 +160,11 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - name: the name to use for the `ChannelHandler` when its added. If none is specified it will generate a name.
     ///     - handler: the `ChannelHandler` to add
-    ///     - first: `true` to add this handler to the front of the `ChannelPipeline`, `false to add it last
+    ///     - position: The position in the `ChannelPipeline` to add `handler`. Defaults to `.last`.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was added.
-    public func add(name: String? = nil, handler: ChannelHandler, first: Bool = false) -> EventLoopFuture<Void> {
+    public func addHandler(_ handler: ChannelHandler,
+                           name: String? = nil,
+                           position: ChannelPipeline.Position = .last) -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
 
         func _add() {
@@ -171,10 +173,31 @@ public final class ChannelPipeline: ChannelInvoker {
                 return
             }
 
-            if first {
-                self.add0(name: name, handler: handler, relativeContext: head!, operation: self.add0(context:after:), promise: promise)
-            } else {
-                self.add0(name: name, handler: handler, relativeContext: tail!, operation: self.add0(context:before:), promise: promise)
+            switch position {
+            case .first:
+                self.add0(name: name,
+                          handler: handler,
+                          relativeContext: head!,
+                          operation: self.add0(context:after:),
+                          promise: promise)
+            case .last:
+                self.add0(name: name,
+                          handler: handler,
+                          relativeContext: tail!,
+                          operation: self.add0(context:before:),
+                          promise: promise)
+            case .before(let beforeHandler):
+                self.add0(name: name,
+                          handler: handler,
+                          relativeHandler: beforeHandler,
+                          operation: self.add0(context:before:),
+                          promise: promise)
+            case .after(let afterHandler):
+                self.add0(name: name,
+                          handler: handler,
+                          relativeHandler: afterHandler,
+                          operation: self.add0(context:after:),
+                          promise: promise)
             }
         }
 
@@ -183,52 +206,6 @@ public final class ChannelPipeline: ChannelInvoker {
         } else {
             self.eventLoop.execute {
                 _add()
-            }
-        }
-
-        return promise.futureResult
-    }
-
-    /// Add a `ChannelHandler` to the `ChannelPipeline` immediately after a `ChannelHandler` that is already present
-    /// in the `ChannelPipeline`.
-    ///
-    /// - parameters:
-    ///     - name: The name to use for the `ChannelHandler` when its added. If none is specified, a name will be
-    ///         automatically generated.
-    ///     - handler: The `ChannelHandler` to add.
-    ///     - after: The pre-existing `ChannelHandler` that `handler` should be inserted immediately after.
-    /// - returns: An `EventLoopFuture` that will be notified when the `ChannelHandler` is added.
-    public func add(name: String? = nil, handler: ChannelHandler, after: ChannelHandler) -> EventLoopFuture<Void> {
-        let promise = self.eventLoop.makePromise(of: Void.self)
-
-        if self.eventLoop.inEventLoop {
-            self.add0(name: name, handler: handler, relativeHandler: after, operation: self.add0(context:after:), promise: promise)
-        } else {
-            self.eventLoop.execute {
-                self.add0(name: name, handler: handler, relativeHandler: after, operation: self.add0(context:after:), promise: promise)
-            }
-        }
-
-        return promise.futureResult
-    }
-
-    /// Add a `ChannelHandler` to the `ChannelPipeline` immediately before a `ChannelHandler` that is already present
-    /// in the `ChannelPipeline`.
-    ///
-    /// - parameters:
-    ///     - name: The name to use for the `ChannelHandler` when its added. If none is specified, a name will be
-    ///         automatically generated.
-    ///     - handler: The `ChannelHandler` to add.
-    ///     - after: The pre-existing `ChannelHandler` that `handler` should be inserted immediately before.
-    /// - returns: An `EventLoopFuture` that will be notified when the `ChannelHandler` is added.
-    public func add(name: String? = nil, handler: ChannelHandler, before: ChannelHandler) -> EventLoopFuture<Void> {
-        let promise = self.eventLoop.makePromise(of: Void.self)
-
-        if self.eventLoop.inEventLoop {
-            self.add0(name: name, handler: handler, relativeHandler: before, operation: self.add0(context:before:), promise: promise)
-        } else {
-            self.eventLoop.execute {
-                self.add0(name: name, handler: handler, relativeHandler: before, operation: self.add0(context:before:), promise: promise)
             }
         }
 
@@ -355,9 +332,9 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - handler: the `ChannelHandler` to remove.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
-    public func remove(handler: RemovableChannelHandler) -> EventLoopFuture<Void> {
+    public func removeHandler(_ handler: RemovableChannelHandler) -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
-        self.remove(handler: handler, promise: promise)
+        self.removeHandler(handler, promise: promise)
         return promise.futureResult
     }
 
@@ -366,9 +343,9 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - name: the name that was used to add the `ChannelHandler` to the `ChannelPipeline` before.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
-    public func remove(name: String) -> EventLoopFuture<Void> {
+    public func removeHandler(name: String) -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
-        self.remove(name: name, promise: promise)
+        self.removeHandler(name: name, promise: promise)
         return promise.futureResult
     }
 
@@ -377,9 +354,9 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - ctx: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
-    public func remove(ctx: ChannelHandlerContext) -> EventLoopFuture<Void> {
+    public func removeHandler(ctx: ChannelHandlerContext) -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
-        self.remove(ctx: ctx, promise: promise)
+        self.removeHandler(ctx: ctx, promise: promise)
         return promise.futureResult
     }
 
@@ -388,11 +365,11 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - handler: the `ChannelHandler` to remove.
     ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
-    public func remove(handler: RemovableChannelHandler, promise: EventLoopPromise<Void>?) {
+    public func removeHandler(_ handler: RemovableChannelHandler, promise: EventLoopPromise<Void>?) {
         let contextFuture = self.context0 {
             return $0.handler === handler
         }.map { ctx in
-            self.remove(ctx: ctx, promise: promise)
+            self.removeHandler(ctx: ctx, promise: promise)
         }
 
         contextFuture.cascadeFailure(to: promise)
@@ -403,11 +380,11 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - name: the name that was used to add the `ChannelHandler` to the `ChannelPipeline` before.
     ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
-    public func remove(name: String, promise: EventLoopPromise<Void>?) {
+    public func removeHandler(name: String, promise: EventLoopPromise<Void>?) {
         let contextFuture = self.context0 {
             $0.name == name
         }.map { ctx in
-            self.remove(ctx: ctx, promise: promise)
+            self.removeHandler(ctx: ctx, promise: promise)
         }
 
         contextFuture.cascadeFailure(to: promise)
@@ -418,7 +395,7 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - ctx: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
     ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
-    public func remove(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+    public func removeHandler(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         guard let handler = ctx.handler as? RemovableChannelHandler else {
             promise?.fail(ChannelError.unremovableHandler)
             return
@@ -900,16 +877,27 @@ extension ChannelPipeline {
     ///
     /// - parameters:
     ///     - handlers: The array of `ChannelHandler`s to be added.
-    ///     - first: If `true`, the supplied `ChannelHandler`s will be added to the front of the pipeline.
-    ///              If `false`, they will be added to the back.
+    ///     - position: The position in the `ChannelPipeline` to add `handlers`. Defaults to `.last`.
     ///
     /// - returns: A future that will be completed when all of the supplied `ChannelHandler`s were added.
-    public func addHandlers(_ handlers: [ChannelHandler], first: Bool) -> EventLoopFuture<Void> {
+    public func addHandlers(_ handlers: [ChannelHandler],
+                            position: ChannelPipeline.Position = .last) -> EventLoopFuture<Void> {
         var handlers = handlers
-        if first {
-            handlers = handlers.reversed()
+        let individualPosition: ChannelPipeline.Position
+        switch position {
+        case .first:
+            handlers.reverse()
+            individualPosition = .first
+        case .last:
+            individualPosition = .last
+        case .before(let handler):
+            individualPosition = .before(handler)
+        case .after(let handler):
+            handlers.reverse()
+            individualPosition = .after(handler)
+
         }
-        return .andAllSucceed(handlers.map { add(handler: $0, first: first) }, on: eventLoop)
+        return .andAllSucceed(handlers.map { addHandler($0, position: individualPosition) }, on: eventLoop)
     }
 
     /// Adds the provided channel handlers to the pipeline in the order given, taking account
@@ -917,12 +905,29 @@ extension ChannelPipeline {
     ///
     /// - parameters:
     ///     - handlers: One or more `ChannelHandler`s to be added.
-    ///     - first: If `true`, the supplied `ChannelHandler`s will be added to the front of the pipeline.
-    ///              If `false`, they will be added to the back.
+    ///     - position: The position in the `ChannelPipeline` to add `handlers`. Defaults to `.last`.
     ///
     /// - returns: A future that will be completed when all of the supplied `ChannelHandler`s were added.
-    public func addHandlers(_ handlers: ChannelHandler..., first: Bool) -> EventLoopFuture<Void> {
-        return addHandlers(handlers, first: first)
+    public func addHandlers(_ handlers: ChannelHandler...,
+                            position: ChannelPipeline.Position = .last) -> EventLoopFuture<Void> {
+        return addHandlers(handlers, position: position)
+    }
+}
+
+extension ChannelPipeline {
+    /// A `Position` within the `ChannelPipeline` used to insert handlers into the `ChannelPipeline`.
+    public enum Position {
+        /// The first `ChannelHandler` -- the front of the `ChannelPipeline`.
+        case first
+
+        /// The last `ChannelHandler` -- the back of the `ChannelPipeline`.
+        case last
+
+        /// Before the given `ChannelHandler`.
+        case before(ChannelHandler)
+
+        /// After the given `ChannelHandler`.
+        case after(ChannelHandler)
     }
 }
 

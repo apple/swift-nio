@@ -30,7 +30,7 @@ class EchoServerClientTest : XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: countingHandler)
+                channel.pipeline.addHandler(countingHandler)
             }.bind(host: "127.0.0.1", port: 0).wait())
 
         defer {
@@ -65,7 +65,7 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: WriteALotHandler())
+                channel.pipeline.addHandler(WriteALotHandler())
             }.bind(host: "127.0.0.1", port: 0).wait())
 
         defer {
@@ -75,8 +75,8 @@ class EchoServerClientTest : XCTestCase {
         let promise = group.next().makePromise(of: ByteBuffer.self)
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: "X")).flatMap { v2 in
-                    channel.pipeline.add(handler: ByteCountingHandler(numBytes: 10000, promise: promise))
+                channel.pipeline.addHandler(WriteOnConnectHandler(toWrite: "X")).flatMap { v2 in
+                    channel.pipeline.addHandler(ByteCountingHandler(numBytes: 10000, promise: promise))
                 }
             }
             .connect(to: serverChannel.localAddress!).wait())
@@ -108,7 +108,7 @@ class EchoServerClientTest : XCTestCase {
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
                 // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-                channel.pipeline.add(handler: countingHandler)
+                channel.pipeline.addHandler(countingHandler)
             }.bind(unixDomainSocketPath: udsTempDir + "/server.sock").wait())
 
         defer {
@@ -152,7 +152,7 @@ class EchoServerClientTest : XCTestCase {
 
             // Set the handlers that are appled to the accepted Channels
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: countingHandler)
+                channel.pipeline.addHandler(countingHandler)
             }.bind(unixDomainSocketPath: udsTempDir + "/server.sock").wait())
 
         defer {
@@ -194,7 +194,7 @@ class EchoServerClientTest : XCTestCase {
         }
 
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .channelInitializer { $0.pipeline.add(handler: handler) }
+            .channelInitializer { $0.pipeline.addHandler(handler) }
             .connect(to: serverChannel.localAddress!).wait())
 
         defer {
@@ -213,7 +213,7 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: EchoServer())
+                channel.pipeline.addHandler(EchoServer())
             }.bind(host: "127.0.0.1", port: 0).wait())
 
         defer {
@@ -223,7 +223,7 @@ class EchoServerClientTest : XCTestCase {
         let numBytes = 16 * 1024
         let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().makePromise())
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .channelInitializer { $0.pipeline.add(handler: countingHandler) }
+            .channelInitializer { $0.pipeline.addHandler(countingHandler) }
             .connect(to: serverChannel.localAddress!).wait())
 
         defer {
@@ -410,7 +410,7 @@ class EchoServerClientTest : XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: handler)
+                channel.pipeline.addHandler(handler)
             }.bind(host: "127.0.0.1", port: 0).wait())
 
         defer {
@@ -445,10 +445,10 @@ class EchoServerClientTest : XCTestCase {
             .childChannelInitializer { channel in
                 // When we've received all the bytes we know the connection is up. Remove the handler.
                 _ = bytesReceivedPromise.futureResult.flatMap { (_: ByteBuffer) in
-                    channel.pipeline.remove(handler: byteCountingHandler)
+                    channel.pipeline.removeHandler(byteCountingHandler)
                 }
 
-                return channel.pipeline.add(handler: byteCountingHandler)
+                return channel.pipeline.addHandler(byteCountingHandler)
             }.bind(host: "127.0.0.1", port: 0).wait())
 
         defer {
@@ -487,7 +487,7 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: EchoServer())
+                channel.pipeline.addHandler(EchoServer())
             }.bind(host: "127.0.0.1", port: 0).wait())
 
         defer {
@@ -498,8 +498,8 @@ class EchoServerClientTest : XCTestCase {
         let promise = group.next().makePromise(of: ByteBuffer.self)
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite)).flatMap {
-                    channel.pipeline.add(handler: ByteCountingHandler(numBytes: stringToWrite.utf8.count, promise: promise))
+                channel.pipeline.addHandler(WriteOnConnectHandler(toWrite: stringToWrite)).flatMap {
+                    channel.pipeline.addHandler(ByteCountingHandler(numBytes: stringToWrite.utf8.count, promise: promise))
                 }
             }
             .connect(to: serverChannel.localAddress!).wait())
@@ -521,7 +521,7 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: WriteOnConnectHandler(toWrite: stringToWrite))
+                channel.pipeline.addHandler(WriteOnConnectHandler(toWrite: stringToWrite))
             }.bind(host: "127.0.0.1", port: 0).wait())
 
         defer {
@@ -531,7 +531,7 @@ class EchoServerClientTest : XCTestCase {
         let promise = group.next().makePromise(of: ByteBuffer.self)
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: ByteCountingHandler(numBytes: stringToWrite.utf8.count, promise: promise))
+                channel.pipeline.addHandler(ByteCountingHandler(numBytes: stringToWrite.utf8.count, promise: promise))
             }
             .connect(to: serverChannel.localAddress!).wait())
 
@@ -554,7 +554,7 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: EchoAndEchoAgainAfterSomeTimeServer(time: .seconds(1), secondWriteDoneHandler: {
+                channel.pipeline.addHandler(EchoAndEchoAgainAfterSomeTimeServer(time: .seconds(1), secondWriteDoneHandler: {
                     dpGroup.leave()
                 }))
             }.bind(host: "127.0.0.1", port: 0).wait())
@@ -566,7 +566,7 @@ class EchoServerClientTest : XCTestCase {
         let str = "hi there"
         let countingHandler = ByteCountingHandler(numBytes: str.utf8.count, promise: group.next().makePromise())
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .channelInitializer { $0.pipeline.add(handler: countingHandler) }
+            .channelInitializer { $0.pipeline.addHandler(countingHandler) }
             .connect(to: serverChannel.localAddress!).wait())
 
         var buffer = clientChannel.allocator.buffer(capacity: str.utf8.count)
@@ -644,7 +644,7 @@ class EchoServerClientTest : XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.socket(SocketOptionLevel(IPPROTO_TCP), TCP_NODELAY), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: WriteWhenActiveHandler(str, dpGroup))
+                channel.pipeline.addHandler(WriteWhenActiveHandler(str, dpGroup))
             }.bind(host: "127.0.0.1", port: 0).wait())
 
         defer {
@@ -656,8 +656,8 @@ class EchoServerClientTest : XCTestCase {
             //.channelOption(ChannelOptions.autoRead, value: false)
             .channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 2))
             .channelInitializer { channel in
-                channel.pipeline.add(handler: WriteHandler()).flatMap {
-                    channel.pipeline.add(handler: countingHandler)
+                channel.pipeline.addHandler(WriteHandler()).flatMap {
+                    channel.pipeline.addHandler(countingHandler)
                 }
             }.connect(to: serverChannel.localAddress!).wait())
         defer {
@@ -708,7 +708,7 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: ErrorHandler(promise))
+                channel.pipeline.addHandler(ErrorHandler(promise))
             }.bind(host: "127.0.0.1", port: 0).wait())
 
         defer {
@@ -789,7 +789,7 @@ class EchoServerClientTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: countingHandler)
+                channel.pipeline.addHandler(countingHandler)
             }
             .bind(host: "127.0.0.1", port: 0)
             .wait())

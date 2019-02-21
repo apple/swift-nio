@@ -43,7 +43,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
             return loop.makeSucceededFuture(())
         }
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // Fire a pair of events that should be ignored.
         channel.pipeline.fireUserInboundEventTriggered(EventType.basic)
@@ -69,7 +69,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
             return continuePromise.futureResult
         }
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // Fire the handshake complete event.
         channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
@@ -105,7 +105,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
             return loop.makeSucceededFuture(())
         }
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // The data we write should not be buffered.
         try channel.writeInbound("hello")
@@ -123,7 +123,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
             continuePromise.futureResult
         }
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // Fire in the event.
         channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
@@ -155,8 +155,8 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         }
         let readCompleteHandler = ReadCompletedHandler()
 
-        try channel.pipeline.add(handler: handler).wait()
-        try channel.pipeline.add(handler: readCompleteHandler).wait()
+        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.addHandler(readCompleteHandler).wait()
 
         // Fire in the event.
         channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
@@ -182,8 +182,8 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         }
         let readCompleteHandler = ReadCompletedHandler()
 
-        try channel.pipeline.add(handler: handler).wait()
-        try channel.pipeline.add(handler: readCompleteHandler).wait()
+        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.addHandler(readCompleteHandler).wait()
 
         // Fire in the event.
         channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))

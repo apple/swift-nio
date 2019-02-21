@@ -77,8 +77,8 @@ class IdleStateHandlerTest : XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: handler).flatMap { f in
-                    channel.pipeline.add(handler: TestWriteHandler(writeToChannel, assertEventFn))
+                channel.pipeline.addHandler(handler).flatMap { f in
+                    channel.pipeline.addHandler(TestWriteHandler(writeToChannel, assertEventFn))
                 }
             }.bind(host: "127.0.0.1", port: 0).wait())
 
@@ -161,8 +161,8 @@ class IdleStateHandlerTest : XCTestCase {
         }
         let eventHandler = EventHandler()
         let channel = EmbeddedChannel()
-        XCTAssertNoThrow(try channel.pipeline.add(handler: IdleStateHandler()).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: eventHandler).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(IdleStateHandler()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(eventHandler).wait())
         
         channel.pipeline.fireChannelRegistered()
         channel.pipeline.fireChannelActive()

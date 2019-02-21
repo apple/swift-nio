@@ -147,12 +147,12 @@ public final class WebSocketUpgrader: HTTPServerProtocolUpgrader {
     public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         /// We never use the automatic error handling feature of the WebSocketFrameDecoder: we always use the separate channel
         /// handler.
-        var upgradeFuture = ctx.pipeline.add(handler: WebSocketFrameEncoder()).flatMap {
-            ctx.pipeline.add(handler: ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize, automaticErrorHandling: false)))
+        var upgradeFuture = ctx.pipeline.addHandler(WebSocketFrameEncoder()).flatMap {
+            ctx.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize, automaticErrorHandling: false)))
         }
 
         if self.automaticErrorHandling {
-            upgradeFuture = upgradeFuture.flatMap { ctx.pipeline.add(handler: WebSocketProtocolErrorHandler())}
+            upgradeFuture = upgradeFuture.flatMap { ctx.pipeline.addHandler(WebSocketProtocolErrorHandler())}
         }
 
         return upgradeFuture.flatMap {

@@ -154,7 +154,7 @@ public class SocketChannelTest : XCTestCase {
         let promise = serverChannel.eventLoop.makePromise(of: IOError.self)
 
         XCTAssertNoThrow(try serverChannel.eventLoop.submit {
-            serverChannel.pipeline.add(handler: AcceptHandler(promise)).flatMap {
+            serverChannel.pipeline.addHandler(AcceptHandler(promise)).flatMap {
                 serverChannel.register()
             }.flatMap {
                 serverChannel.bind(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 0))
@@ -236,7 +236,7 @@ public class SocketChannelTest : XCTestCase {
                                                                eventLoop: eventLoop as! SelectableEventLoop))
         let promise = channel.eventLoop.makePromise(of: Void.self)
 
-        XCTAssertNoThrow(try channel.pipeline.add(handler: ActiveVerificationHandler(promise)).flatMap {
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ActiveVerificationHandler(promise)).flatMap {
             channel.register()
         }.flatMap {
             channel.connect(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 9999))
@@ -451,7 +451,7 @@ public class SocketChannelTest : XCTestCase {
             XCTAssertFalse(closePromise.futureResult.isFulfilled)
         }
 
-        XCTAssertNoThrow(try channel.pipeline.add(handler: NotificationOrderHandler()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(NotificationOrderHandler()).wait())
 
         // We need to call submit {...} here to ensure then {...} is called while on the EventLoop already to not have
         // a ECONNRESET sneak in.
@@ -523,7 +523,7 @@ public class SocketChannelTest : XCTestCase {
 
         let handler = AddressVerificationHandler(promise: group.next().makePromise())
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .childChannelInitializer { $0.pipeline.add(handler: handler) }
+            .childChannelInitializer { $0.pipeline.addHandler(handler) }
             .bind(host: "127.0.0.1", port: 0)
             .wait())
         defer { XCTAssertNoThrow(try serverChannel.close().wait()) }
@@ -595,7 +595,7 @@ public class SocketChannelTest : XCTestCase {
                 .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
                 .serverChannelOption(ChannelOptions.backlog, value: 256)
                 .serverChannelOption(ChannelOptions.autoRead, value: false)
-                .serverChannelInitializer { channel in channel.pipeline.add(handler: ErrorHandler(serverPromise)) }
+                .serverChannelInitializer { channel in channel.pipeline.addHandler(ErrorHandler(serverPromise)) }
                 .bind(host: "127.0.0.1", port: 0)
                 .wait())
 

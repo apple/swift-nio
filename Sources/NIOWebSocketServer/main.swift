@@ -204,7 +204,7 @@ let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
 let upgrader = WebSocketUpgrader(shouldUpgrade: { (head: HTTPRequestHead) in HTTPHeaders() },
                                  upgradePipelineHandler: { (channel: Channel, _: HTTPRequestHead) in
-                                    channel.pipeline.add(handler: WebSocketTimeHandler())
+                                    channel.pipeline.addHandler(WebSocketTimeHandler())
                                  })
 
 let bootstrap = ServerBootstrap(group: group)
@@ -218,11 +218,11 @@ let bootstrap = ServerBootstrap(group: group)
         let config: HTTPUpgradeConfiguration = (
                         upgraders: [ upgrader ],
                         completionHandler: { _ in
-                            channel.pipeline.remove(handler: httpHandler, promise: nil)
+                            channel.pipeline.removeHandler(httpHandler, promise: nil)
                         }
                     )
         return channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: config).flatMap {
-            channel.pipeline.add(handler: httpHandler)
+            channel.pipeline.addHandler(httpHandler)
         }
     }
 

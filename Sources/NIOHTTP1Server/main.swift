@@ -517,7 +517,7 @@ let bootstrap = ServerBootstrap(group: group)
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer { channel in
         channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap {
-            channel.pipeline.add(handler: HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
+            channel.pipeline.addHandler(HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
         }
     }
 

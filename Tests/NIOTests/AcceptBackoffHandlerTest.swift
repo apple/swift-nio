@@ -95,7 +95,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
             return readCountHandler.readCount
         }.wait())
 
-        XCTAssertNoThrow(try serverChannel.pipeline.remove(name: acceptHandlerName).wait())
+        XCTAssertNoThrow(try serverChannel.pipeline.removeHandler(name: acceptHandlerName).wait())
 
         if read {
             // Removal should have triggered a read.
@@ -174,7 +174,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
         }, errors: [ENFILE])
 
         let inactiveVerificationHandler = InactiveVerificationHandler(promise: serverChannel.eventLoop.makePromise())
-        XCTAssertNoThrow(try serverChannel.pipeline.add(handler: inactiveVerificationHandler).wait())
+        XCTAssertNoThrow(try serverChannel.pipeline.addHandler(inactiveVerificationHandler).wait())
 
         XCTAssertEqual(0, try serverChannel.eventLoop.submit {
             serverChannel.readable()
@@ -253,8 +253,9 @@ public class AcceptBackoffHandlerTest: XCTestCase {
                                                                            group: group))
 
         XCTAssertNoThrow(try serverChannel.setOption(ChannelOptions.autoRead, value: false).wait())
-        XCTAssertNoThrow(try serverChannel.pipeline.add(handler: readCountHandler).flatMap { _ in
-            serverChannel.pipeline.add(name: self.acceptHandlerName, handler: AcceptBackoffHandler(backoffProvider: backoffProvider))
+        XCTAssertNoThrow(try serverChannel.pipeline.addHandler(readCountHandler).flatMap { _ in
+            serverChannel.pipeline.addHandler(AcceptBackoffHandler(backoffProvider: backoffProvider),
+                                              name: self.acceptHandlerName)
         }.wait())
 
         XCTAssertNoThrow(try eventLoop.submit {

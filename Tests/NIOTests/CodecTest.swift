@@ -106,7 +106,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
     func testDecoder() throws {
         let channel = EmbeddedChannel()
 
-        _ = try channel.pipeline.add(handler: ByteToMessageHandler(ByteToInt32Decoder())).wait()
+        _ = try channel.pipeline.addHandler(ByteToMessageHandler(ByteToInt32Decoder())).wait()
 
         var buffer = channel.allocator.buffer(capacity: 32)
         buffer.writeInteger(Int32(1))
@@ -137,8 +137,8 @@ public class ByteToMessageDecoderTest: XCTestCase {
             XCTAssertNoThrow(try channel.finish())
         }
         let inactivePromiser = ChannelInactivePromiser(channel: channel)
-        _ = try channel.pipeline.add(handler: ByteToMessageHandler(ByteToInt32Decoder())).wait()
-        _ = try channel.pipeline.add(handler: inactivePromiser).wait()
+        _ = try channel.pipeline.addHandler(ByteToMessageHandler(ByteToInt32Decoder())).wait()
+        _ = try channel.pipeline.addHandler(inactivePromiser).wait()
 
         var buffer = channel.allocator.buffer(capacity: 32)
         buffer.writeInteger(Int32(1))
@@ -159,7 +159,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         XCTAssertEqual(testDecoderIsNotQuadratic_mallocs, 0)
         XCTAssertEqual(testDecoderIsNotQuadratic_reallocs, 0)
-        XCTAssertNoThrow(try channel.pipeline.add(handler: ByteToMessageHandler(ForeverDecoder())).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(ForeverDecoder())).wait())
 
         let dummyAllocator = ByteBufferAllocator(hookedMalloc: testDecoderIsNotQuadratic_mallocHook,
                                                  hookedRealloc: testDecoderIsNotQuadratic_reallocHook,
@@ -186,7 +186,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         }
 
         let decoder = ByteToMessageHandler(LargeChunkDecoder())
-        _ = try channel.pipeline.add(handler: decoder).wait()
+        _ = try channel.pipeline.addHandler(decoder).wait()
 
         // We're going to send in 513 bytes. This will cause a chunk to be passed on, and will leave
         // a 512-byte empty region in a 513 byte buffer. This will not cause a shrink.
@@ -212,7 +212,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         }
 
         let decoder = ByteToMessageHandler(OnceDecoder())
-        _ = try channel.pipeline.add(handler: decoder).wait()
+        _ = try channel.pipeline.addHandler(decoder).wait()
 
         // We're going to send in 5119 bytes. This will be held.
         var buffer = channel.allocator.buffer(capacity: 5119)
@@ -266,7 +266,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         let testDecoder = TestDecoder()
 
-        XCTAssertNoThrow(try channel.pipeline.add(handler: ByteToMessageHandler(testDecoder)).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(testDecoder)).wait())
 
         var inputBuffer = channel.allocator.buffer(capacity: 4)
         /* 1 */
@@ -392,7 +392,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
         channel.pipeline.context(handlerType: ByteToMessageHandler<PairOfBytesDecoder>.self).flatMap { ctx in
-            return channel.pipeline.remove(ctx: ctx)
+            return channel.pipeline.removeHandler(ctx: ctx)
         }.whenFailure { error in
             XCTFail("unexpected error: \(error)")
         }
@@ -529,7 +529,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
             mutating func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 if let slice = buffer.readSlice(length: 16) {
                     ctx.fireChannelRead(self.wrapInboundOut(slice))
-                    ctx.pipeline.remove(ctx: ctx).whenFailure { error in
+                    ctx.pipeline.removeHandler(ctx: ctx).whenFailure { error in
                         XCTFail("unexpected error: \(error)")
                     }
                     return .continue
@@ -582,7 +582,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
             }
         }
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(Take16BytesThenCloseAndPassOnDecoder()))
-        XCTAssertNoThrow(try channel.pipeline.add(handler: DoNotForwardChannelInactiveHandler(), first: true).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(DoNotForwardChannelInactiveHandler(), position: .first).wait())
         var buffer = channel.allocator.buffer(capacity: 16)
         buffer.writeStaticString("0123456789abcdefQWER")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
@@ -605,7 +605,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
                 XCTAssertEqual(1, self.callsToDecode)
                 ctx.fireChannelRead(self.wrapInboundOut(String(decoding: buffer.readBytes(length: 1)!,
                                                                as: Unicode.UTF8.self)))
-                ctx.pipeline.remove(ctx: ctx).whenFailure { error in
+                ctx.pipeline.removeHandler(ctx: ctx).whenFailure { error in
                     XCTFail("unexpected error: \(error)")
                 }
                 return .continue
@@ -678,7 +678,7 @@ public class MessageToByteEncoderTest: XCTestCase {
     private func testEncoder(_ handler: ChannelHandler) throws {
         let channel = EmbeddedChannel()
 
-        _ = try channel.pipeline.add(handler: Int32ToByteEncoder()).wait()
+        _ = try channel.pipeline.addHandler(Int32ToByteEncoder()).wait()
 
         _ = try channel.writeAndFlush(NIOAny(Int32(5))).wait()
 

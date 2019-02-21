@@ -96,11 +96,11 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.readRecorder = ReadRecorder()
         self.readCounter = ReadCountingHandler()
         self.writeRecorder = WriteRecorder()
-        XCTAssertNoThrow(try channel.pipeline.add(handler: self.readCounter).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: self.writeRecorder).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPServerPipelineHandler()).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: self.readRecorder).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(self.readCounter).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(self.writeRecorder).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPServerPipelineHandler()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(self.readRecorder).wait())
 
         self.requestHead = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/path")
         self.requestHead.headers.add(name: "Host", value: "example.com")
@@ -460,7 +460,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         }
 
         let handler = VerifyOrderHandler()
-        XCTAssertNoThrow(try channel.pipeline.add(handler: handler).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         for f in 1...3 {
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(makeRequestHead(uri: "/req_\(f)"))))
@@ -730,8 +730,8 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         }
 
         let handler = VerifyOrderHandler()
-        XCTAssertNoThrow(try self.channel.pipeline.add(handler: HTTPServerProtocolErrorHandler()).wait())
-        XCTAssertNoThrow(try self.channel.pipeline.add(handler: handler).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(HTTPServerProtocolErrorHandler()).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(handler).wait())
 
         self.channel.pipeline.fireErrorCaught(HTTPParserError.headerOverflow)
 
@@ -790,8 +790,8 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         }
 
         let handler = VerifyOrderHandler()
-        XCTAssertNoThrow(try self.channel.pipeline.add(handler: HTTPServerProtocolErrorHandler()).wait())
-        XCTAssertNoThrow(try self.channel.pipeline.add(handler: handler).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(HTTPServerProtocolErrorHandler()).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.addHandler(handler).wait())
 
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(makeRequestHead(uri: "/one"))))
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))

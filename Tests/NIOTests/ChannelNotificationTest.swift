@@ -296,17 +296,17 @@ class ChannelNotificationTest: XCTestCase {
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .serverChannelInitializer { channel in
-                channel.pipeline.add(handler: ServerSocketChannelLifecycleVerificationHandler())
+                channel.pipeline.addHandler(ServerSocketChannelLifecycleVerificationHandler())
             }
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: AcceptedSocketChannelLifecycleVerificationHandler(acceptedChannelPromise))
+                channel.pipeline.addHandler(AcceptedSocketChannelLifecycleVerificationHandler(acceptedChannelPromise))
             }
             .bind(host: "127.0.0.1", port: 0).wait())
 
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: SocketChannelLifecycleVerificationHandler())
+                channel.pipeline.addHandler(SocketChannelLifecycleVerificationHandler())
             }
             .connect(to: serverChannel.localAddress!).wait())
         XCTAssertNoThrow(try clientChannel.close().wait())
@@ -379,7 +379,7 @@ class ChannelNotificationTest: XCTestCase {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: true)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: OrderVerificationHandler(promise))
+                channel.pipeline.addHandler(OrderVerificationHandler(promise))
             }
             .bind(host: "127.0.0.1", port: 0).wait())
 
