@@ -107,7 +107,7 @@ public class SNIHandler: ByteToMessageDecoder {
         self.waitingForUser = false
     }
 
-    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
         ctx.fireChannelRead(NIOAny(buffer))
         return .needMoreData
     }

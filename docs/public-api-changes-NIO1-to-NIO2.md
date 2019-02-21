@@ -10,6 +10,8 @@
 - `ByteToMessageDecoder`s now need to be wrapped in `ByteToMessageHandler`
   before they can be added to the pipeline.
   before: `pipeline.add(MyDecoder())`, after: `pipeline.add(ByteToMessageHandler(MyDecoder()))`
+- `ByteToMessageDecoder` now requires the implementation of `decodeLast`
+- `ByteToMessageDecoder.decodeLast` has a new parameter `seenEOF: Bool`
 - `EventLoop.makePromise`/`makeSucceededFuture`/`makeFailedFuture` instead of `new*`, also `result:`/`error:` labels dropped
 - `SocketAddress.makeAddressResolvingHost(:port:)` instead of
   `SocketAddress.newAddressResolving(host:port:)`
