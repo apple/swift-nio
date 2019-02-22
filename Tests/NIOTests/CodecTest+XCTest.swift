@@ -46,6 +46,8 @@ extension ByteToMessageDecoderTest {
                 ("testDecodeLastHasSeenEOFFalseOnHandlerRemoved", testDecodeLastHasSeenEOFFalseOnHandlerRemoved),
                 ("testDecodeLastHasSeenEOFFalseOnHandlerRemovedEvenIfNoData", testDecodeLastHasSeenEOFFalseOnHandlerRemovedEvenIfNoData),
                 ("testDecodeLastHasSeenEOFTrueOnChannelInactive", testDecodeLastHasSeenEOFTrueOnChannelInactive),
+                ("testWriteObservingByteToMessageDecoderBasic", testWriteObservingByteToMessageDecoderBasic),
+                ("testWriteObservingByteToMessageDecoderWhereWriteIsReentrantlyCalled", testWriteObservingByteToMessageDecoderWhereWriteIsReentrantlyCalled),
            ]
    }
 }

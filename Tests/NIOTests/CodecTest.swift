@@ -847,6 +847,138 @@ public class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertFalse(try channel.finish()))
         XCTAssertEqual(1, decoder.decodeLastCalls)
     }
+
+    func testWriteObservingByteToMessageDecoderBasic() {
+        class Decoder: WriteObservingByteToMessageDecoder {
+            typealias OutboundIn = Int
+            typealias InboundOut = String
+
+            var allObservedWrites: [Int] = []
+
+            func write(data: Int) {
+                self.allObservedWrites.append(data)
+            }
+
+            func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                if let string = buffer.readString(length: 1) {
+                    ctx.fireChannelRead(self.wrapInboundOut(string))
+                    return .continue
+                } else {
+                    return .needMoreData
+                }
+            }
+
+            func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                while case .continue = try self.decode(ctx: ctx, buffer: &buffer) {}
+                return .needMoreData
+            }
+        }
+
+        let decoder = Decoder()
+        let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        var buffer = channel.allocator.buffer(capacity: 3)
+        buffer.writeStaticString("abc")
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(try channel.writeOutbound(1))
+        XCTAssertNoThrow(try channel.writeOutbound(2))
+        XCTAssertNoThrow(try channel.writeOutbound(3))
+        XCTAssertEqual([1, 2, 3], decoder.allObservedWrites)
+        XCTAssertEqual("a", channel.readInbound())
+        XCTAssertEqual("b", channel.readInbound())
+        XCTAssertEqual("c", channel.readInbound())
+        XCTAssertEqual(1, channel.readOutbound())
+        XCTAssertEqual(2, channel.readOutbound())
+        XCTAssertEqual(3, channel.readOutbound())
+        XCTAssertNoThrow(XCTAssertFalse(try channel.finish()))
+    }
+
+    func testWriteObservingByteToMessageDecoderWhereWriteIsReentrantlyCalled() {
+        class Decoder: WriteObservingByteToMessageDecoder {
+            typealias OutboundIn = String
+            typealias InboundOut = String
+
+            var allObservedWrites: [String] = []
+            var decodeRun = 0
+
+            func write(data: String) {
+                self.allObservedWrites.append(data)
+            }
+
+            func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                self.decodeRun += 1
+                if let string = buffer.readString(length: 1) {
+                    ctx.fireChannelRead(self.wrapInboundOut("I: \(self.decodeRun): \(string)"))
+                    XCTAssertNoThrow(try (ctx.channel as! EmbeddedChannel).writeOutbound("O: \(self.decodeRun): \(string)"))
+                    if self.decodeRun == 1 {
+                        var buffer = ctx.channel.allocator.buffer(capacity: 1)
+                        buffer.writeStaticString("X")
+                        XCTAssertNoThrow(try (ctx.channel as! EmbeddedChannel).writeInbound(buffer))
+                    }
+                    return .continue
+                } else {
+                    return .needMoreData
+                }
+            }
+
+            func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                while case .continue = try self.decode(ctx: ctx, buffer: &buffer) {}
+                return .needMoreData
+            }
+        }
+
+        class CheckStateOfDecoderHandler: ChannelOutboundHandler {
+            typealias OutboundIn = String
+            typealias OutboundOut = String
+
+            private let decoder: Decoder
+
+            init(decoder: Decoder) {
+                self.decoder = decoder
+            }
+
+            func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                let string = self.unwrapOutboundIn(data)
+                ctx.write(self.wrapOutboundOut("\(string) @ \(decoder.decodeRun)"), promise: promise)
+            }
+        }
+
+        let decoder = Decoder()
+        let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
+        XCTAssertNoThrow(try channel.pipeline.addHandler(CheckStateOfDecoderHandler(decoder: decoder), position: .first).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        var buffer = channel.allocator.buffer(capacity: 3)
+        XCTAssertNoThrow(try channel.writeOutbound("before"))
+        buffer.writeStaticString("ab")
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        buffer.clear()
+        buffer.writeStaticString("xyz")
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(try channel.writeOutbound("after"))
+        XCTAssertEqual(["before", "O: 1: a", "O: 2: b", "O: 3: X", "O: 4: x", "O: 5: y", "O: 6: z", "after"],
+                       decoder.allObservedWrites)
+        XCTAssertEqual("I: 1: a", channel.readInbound())
+        XCTAssertEqual("I: 2: b", channel.readInbound())
+        XCTAssertEqual("I: 3: X", channel.readInbound())
+        XCTAssertEqual("I: 4: x", channel.readInbound())
+        XCTAssertEqual("I: 5: y", channel.readInbound())
+        XCTAssertEqual("I: 6: z", channel.readInbound())
+        XCTAssertNil(channel.readInbound())
+        XCTAssertEqual("before @ 0", channel.readOutbound())
+        // in the next line, it's important that it ends in '@ 1' because that means the outbound write was forwarded
+        // when the Decoder was after decode run 1, ie. before it ever saw the 'b'. It's important we forward writes
+        // as soon as possible for correctness but also to keep as few queued writes as possible.
+        XCTAssertEqual("O: 1: a @ 1", channel.readOutbound())
+        XCTAssertEqual("O: 2: b @ 2", channel.readOutbound())
+        XCTAssertEqual("O: 3: X @ 3", channel.readOutbound())
+        XCTAssertEqual("O: 4: x @ 4", channel.readOutbound())
+        XCTAssertEqual("O: 5: y @ 5", channel.readOutbound())
+        XCTAssertEqual("O: 6: z @ 6", channel.readOutbound())
+        XCTAssertEqual("after @ 6", channel.readOutbound())
+        XCTAssertNil(channel.readOutbound())
+        XCTAssertNoThrow(XCTAssertFalse(try channel.finish()))
+    }
+
 }
 
 public class MessageToByteEncoderTest: XCTestCase {
