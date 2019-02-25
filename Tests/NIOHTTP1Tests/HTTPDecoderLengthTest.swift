@@ -30,7 +30,7 @@ private class MessageEndHandler<Head: Equatable, Body: Equatable>: ChannelInboun
     var seenBody = false
     var seenHead = false
 
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         switch self.unwrapInboundIn(data) {
         case .head:
             XCTAssertFalse(self.seenHead)
@@ -88,7 +88,7 @@ class HTTPDecoderLengthTest: XCTestCase {
                 self.eofMechanism = eofMechanism
             }
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 switch self.unwrapInboundIn(data) {
                 case .head(let h):
                     self.response = h
@@ -100,7 +100,7 @@ class HTTPDecoderLengthTest: XCTestCase {
                 }
             }
 
-            func channelInactive(ctx: ChannelHandlerContext) {
+            func channelInactive(context: ChannelHandlerContext) {
                 if case .channelInactive = self.eofMechanism {
                     XCTAssert(self.receivedEnd, "Received channelInactive before response end!")
                     self.eof = true
@@ -109,14 +109,14 @@ class HTTPDecoderLengthTest: XCTestCase {
                 }
             }
 
-            func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+            func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
                 guard case .halfClosure = self.eofMechanism else {
                     XCTFail("Got half closure when not expecting it")
                     return
                 }
 
                 guard let evt = event as? ChannelEvent, case .inputClosed = evt else {
-                    ctx.fireUserInboundEventTriggered(event)
+                    context.fireUserInboundEventTriggered(event)
                     return
                 }
 

@@ -193,7 +193,7 @@ class HTTPDecoderTest: XCTestCase {
         class Receiver: ChannelInboundHandler {
             typealias InboundIn = HTTPServerRequestPart
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let part = self.unwrapInboundIn(data)
                 switch part {
                 case .head(let h):
@@ -236,12 +236,12 @@ class HTTPDecoderTest: XCTestCase {
         class Receiver: ChannelInboundHandler {
             typealias InboundIn = HTTPServerRequestPart
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let part = self.unwrapInboundIn(data)
                 switch part {
                 case .end:
                     // ignore
-                    _ = ctx.pipeline.removeHandler(name: "decoder")
+                    _ = context.pipeline.removeHandler(name: "decoder")
                 default:
                     break
                 }
@@ -263,17 +263,17 @@ class HTTPDecoderTest: XCTestCase {
             typealias InboundIn = ByteBuffer
             var called: Bool = false
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 var buffer = self.unwrapInboundIn(data)
                 XCTAssertEqual("XXXX", buffer.readString(length: buffer.readableBytes)!)
                 self.called = true
             }
 
-            func handlerAdded(ctx: ChannelHandlerContext) {
-                _ = ctx.pipeline.removeHandler(name: "decoder")
+            func handlerAdded(context: ChannelHandlerContext) {
+                _ = context.pipeline.removeHandler(name: "decoder")
             }
 
-            func handlerRemoved(ctx: ChannelHandlerContext) {
+            func handlerRemoved(context: ChannelHandlerContext) {
                 XCTAssertTrue(self.called)
             }
         }
@@ -282,12 +282,12 @@ class HTTPDecoderTest: XCTestCase {
             typealias InboundIn = HTTPServerRequestPart
             let collector = ByteCollector()
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let part = self.unwrapInboundIn(data)
                 switch part {
                 case .end:
-                    _ = ctx.pipeline.removeHandler(self).flatMap { _ in
-                        ctx.pipeline.addHandler(self.collector)
+                    _ = context.pipeline.removeHandler(self).flatMap { _ in
+                        context.pipeline.addHandler(self.collector)
                     }
                 default:
                     // ignore
@@ -315,17 +315,17 @@ class HTTPDecoderTest: XCTestCase {
             typealias InboundIn = ByteBuffer
             var called: Bool = false
             
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 var buffer = self.unwrapInboundIn(data)
                 XCTAssertEqual("XXXX", buffer.readString(length: buffer.readableBytes)!)
                 self.called = true
             }
             
-            func handlerAdded(ctx: ChannelHandlerContext) {
-                _ = ctx.pipeline.removeHandler(name: "decoder")
+            func handlerAdded(context: ChannelHandlerContext) {
+                _ = context.pipeline.removeHandler(name: "decoder")
             }
             
-            func handlerRemoved(ctx: ChannelHandlerContext) {
+            func handlerRemoved(context: ChannelHandlerContext) {
                 XCTAssert(self.called)
             }
         }
@@ -335,21 +335,21 @@ class HTTPDecoderTest: XCTestCase {
             typealias InboundOut = HTTPClientResponsePart
             typealias OutboundOut = HTTPClientRequestPart
             
-            func channelActive(ctx: ChannelHandlerContext) {
+            func channelActive(context: ChannelHandlerContext) {
                 var upgradeReq = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/")
                 upgradeReq.headers.add(name: "Connection", value: "Upgrade")
                 upgradeReq.headers.add(name: "Upgrade", value: "myprot")
                 upgradeReq.headers.add(name: "Host", value: "localhost")
-                ctx.write(wrapOutboundOut(.head(upgradeReq)), promise: nil)
-                ctx.writeAndFlush(wrapOutboundOut(.end(nil)), promise: nil)
+                context.write(wrapOutboundOut(.head(upgradeReq)), promise: nil)
+                context.writeAndFlush(wrapOutboundOut(.end(nil)), promise: nil)
             }
             
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let part = self.unwrapInboundIn(data)
                 switch part {
                 case .end:
-                    _ = ctx.pipeline.removeHandler(self).flatMap { _ in
-                        ctx.pipeline.addHandler(ByteCollector())
+                    _ = context.pipeline.removeHandler(self).flatMap { _ in
+                        context.pipeline.addHandler(ByteCollector())
                     }
                     break
                 default:

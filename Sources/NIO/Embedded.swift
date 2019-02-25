@@ -279,7 +279,7 @@ class EmbeddedChannelCore: ChannelCore {
 ///   to collect outbound data that is not `IOData` you can create a custom
 ///   `ChannelOutboundHandler`, insert it at the very beginning of the
 ///   `ChannelPipeline` and collect the outbound data there. Just don't forward
-///   it using `ctx.write`.
+///   it using `context.write`.
 /// - note: `EmbeddedChannel` is currently only compatible with
 ///   `EmbeddedEventLoop`s and cannot be used with `SelectableEventLoop`s from
 ///   for example `MultiThreadedEventLoopGroup`.

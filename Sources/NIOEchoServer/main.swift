@@ -17,23 +17,23 @@ private final class EchoHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
-        ctx.write(data, promise: nil)
+        context.write(data, promise: nil)
     }
 
     // Flush it out. This can make use of gathering writes if multiple buffers are pending
-    public func channelReadComplete(ctx: ChannelHandlerContext) {
-        ctx.flush()
+    public func channelReadComplete(context: ChannelHandlerContext) {
+        context.flush()
     }
 
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
         print("error: ", error)
 
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
-        ctx.close(promise: nil)
+        context.close(promise: nil)
     }
 }
 let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)

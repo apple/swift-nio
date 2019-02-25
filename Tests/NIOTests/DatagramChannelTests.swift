@@ -48,18 +48,18 @@ private class DatagramReadRecorder<DataType>: ChannelInboundHandler {
 
     var readWaiters: [Int: EventLoopPromise<[AddressedEnvelope<DataType>]>] = [:]
 
-    func channelRegistered(ctx: ChannelHandlerContext) {
+    func channelRegistered(context: ChannelHandlerContext) {
         XCTAssertEqual(.fresh, self.state)
         self.state = .registered
-        self.loop = ctx.eventLoop
+        self.loop = context.eventLoop
     }
 
-    func channelActive(ctx: ChannelHandlerContext) {
+    func channelActive(context: ChannelHandlerContext) {
         XCTAssertEqual(.registered, self.state)
         self.state = .active
     }
 
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         XCTAssertEqual(.active, self.state)
         let data = self.unwrapInboundIn(data)
         reads.append(data)
@@ -68,7 +68,7 @@ private class DatagramReadRecorder<DataType>: ChannelInboundHandler {
             promise.succeed(reads)
         }
 
-        ctx.fireChannelRead(self.wrapInboundOut(data))
+        context.fireChannelRead(self.wrapInboundOut(data))
     }
 
     func notifyForDatagrams(_ count: Int) -> EventLoopFuture<[AddressedEnvelope<DataType>]> {
@@ -370,11 +370,11 @@ final class DatagramChannelTests: XCTestCase {
                 self.promise = promise
             }
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 XCTFail("Should not receive data but got \(self.unwrapInboundIn(data))")
             }
 
-            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+            func errorCaught(context: ChannelHandlerContext, error: Error) {
                 if let ioError = error as? IOError {
                     self.promise.succeed(ioError)
                 }
