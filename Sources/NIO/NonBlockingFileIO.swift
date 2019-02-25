@@ -42,13 +42,13 @@ public struct NonBlockingFileIO {
         case descriptorSetToNonBlocking
     }
 
-    private let threadPool: BlockingIOThreadPool
+    private let threadPool: NIOThreadPool
 
     /// Initialize a `NonBlockingFileIO` which uses the `BlockingIOThreadPool`.
     ///
     /// - parameters:
     ///   - threadPool: The `BlockingIOThreadPool` that will be used for all the IO.
-    public init(threadPool: BlockingIOThreadPool) {
+    public init(threadPool: NIOThreadPool) {
         self.threadPool = threadPool
     }
 

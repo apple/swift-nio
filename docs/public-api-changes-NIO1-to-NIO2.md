@@ -10,6 +10,7 @@
 - `ByteToMessageDecoder`s now need to be wrapped in `ByteToMessageHandler`
   before they can be added to the pipeline.
   before: `pipeline.add(MyDecoder())`, after: `pipeline.add(ByteToMessageHandler(MyDecoder()))`
+- `BlockingIOThreadPool` has been renamed to `NIOThreadPool`
 - `ByteToMessageDecoder` now requires the implementation of `decodeLast`
 - `ByteToMessageDecoder.decodeLast` has a new parameter `seenEOF: Bool`
 - `EventLoop.makePromise`/`makeSucceededFuture`/`makeFailedFuture` instead of `new*`, also `result:`/`error:` labels dropped
