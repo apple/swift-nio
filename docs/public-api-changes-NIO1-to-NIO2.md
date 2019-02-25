@@ -48,6 +48,7 @@
 - `EventLoopPromise.succeed(result: Value)` lost its label so is now `EventLoopPromise.succeed(Value)`
 - `EventLoopPromise.fail(error: Error)` lost its label so is now `EventLoopPromise.fail(Error)`
 - renamed `HTTPProtocolUpgrader` to `HTTPServerProtocolUpgrader`
+- `ByteToMessageDecoder`s no longer automatically close the connection on error.
 - `EventLoopFuture.cascade(promise: EventLoopPromise)` had its label changed to `EventLoopFuture.cascade(to: EventLoopPromise)`
 - `EventLoopFuture.cascadeFailure(promise: EventLoopPromise)` had its label changed to `EventLoopFuture.cascade(to: EventLoopPromise)`
 - renamed `EventLoopFuture.andAll(_:eventLoop:)` to `EventLoopFuture.andAllSucceed(_:on:)`

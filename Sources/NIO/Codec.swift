@@ -22,6 +22,19 @@ public enum DecodingState {
     case needMoreData
 }
 
+/// Common errors thrown by `ByteToMessageDecoder`s.
+public enum ByteToMessageDecoderError: Error {
+    /// More data has been received by a `ByteToMessageHandler` despite the fact that an error has previously been
+    /// emitted. The associated `Error` is the error previously emitted and the `ByteBuffer` is the extra data that has
+    /// been received. The common cause for this error to be emitted is the user not having torn down the `Channel`
+    /// after previously an `Error` has been sent through the pipeline using `fireErrorCaught`.
+    case dataReceivedInErrorState(Error, ByteBuffer)
+
+    /// This error can be thrown by `ByteToMessageDecoder`s if there was unexpectedly some left-over data when the
+    /// `ByteToMessageDecoder` was removed from the pipeline or the `Channel` was closed.
+    case leftoverDataWhenDone(ByteBuffer)
+}
+
 /// `ChannelInboundHandler` which decodes bytes in a stream-like fashion from one `ByteBuffer` to
 /// another message type.
 ///
@@ -127,18 +140,6 @@ extension ByteToMessageDecoder {
 
     public func wrapInboundOut(_ value: InboundOut) -> NIOAny {
         return NIOAny(value)
-    }
-}
-
-private extension ChannelHandlerContext {
-    func withThrowingToFireErrorAndClose<T>(_ body: () throws -> T) -> T? {
-        do {
-            return try body()
-        } catch {
-            self.fireErrorCaught(error)
-            self.close(promise: nil)
-            return nil
-        }
     }
 }
 
@@ -284,11 +285,52 @@ public class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
         case active
         case leftoversNeedProcessing
         case done
+        case error(Error)
+
+        var isError: Bool {
+            switch self {
+            case .active, .leftoversNeedProcessing, .done:
+                return false
+            case .error:
+                return true
+            }
+        }
+
+        var isFinalState: Bool {
+            switch self {
+            case .active, .leftoversNeedProcessing:
+                return false
+            case .done, .error:
+                return true
+            }
+        }
+
+        var isActive: Bool {
+            switch self {
+            case .done, .error, .leftoversNeedProcessing:
+                return false
+            case .active:
+                return true
+            }
+        }
+
+        var isLeftoversNeedProcessing: Bool {
+            switch self {
+            case .done, .error, .active:
+                return false
+            case .leftoversNeedProcessing:
+                return true
+            }
+        }
     }
 
     internal private(set) var decoder: Decoder? // only `nil` if we're already decoding (ie. we're re-entered)
     private var queuedWrites = CircularBuffer<NIOAny>(initialCapacity: 1) // queues writes received whilst we're already decoding (re-entrant write)
-    private var state: State = .active
+    private var state: State = .active {
+        willSet {
+            assert(!self.state.isFinalState, "illegal state on state set: \(self.state)") // we can never leave final states
+        }
+    }
     private var removalState: RemovalState = .notBeingRemoved
     // sadly to construct a B2MDBuffer we need an empty ByteBuffer which we can only get from the allocator, so IUO.
     private var buffer: B2MDBuffer!
@@ -300,7 +342,7 @@ public class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
 
     deinit {
         assert(self.removalState == .removalCompleted, "illegal state in deinit: removalState = \(self.removalState)")
-        assert(self.state == .done, "illegal state in deinit: state = \(self.state)")
+        assert(self.state.isFinalState, "illegal state in deinit: state = \(self.state)")
     }
 }
 
@@ -353,18 +395,21 @@ extension ByteToMessageHandler {
     }
 
     private func processLeftovers(ctx: ChannelHandlerContext) {
-        guard self.state == .active else {
+        guard self.state.isActive else {
             // we are processing or have already processed the leftovers
             return
         }
 
-        ctx.withThrowingToFireErrorAndClose {
+        do {
             switch try self.decodeLoop(ctx: ctx, decodeMode: .last) {
             case .didProcess:
                 self.state = .done
             case .cannotProcessReentrantly:
                 self.state = .leftoversNeedProcessing
             }
+        } catch {
+            self.state = .error(error)
+            ctx.fireErrorCaught(error)
         }
     }
 
@@ -376,6 +421,7 @@ extension ByteToMessageHandler {
     }
 
     private func decodeLoop(ctx: ChannelHandlerContext, decodeMode: DecodeMode) throws -> B2MDBuffer.BufferProcessingResult {
+        assert(!self.state.isError)
         var allowEmptyBuffer = decodeMode == .last
         while decodeMode == .last || self.removalState == .notBeingRemoved {
             let result = try self.withNextBuffer(allowEmptyBuffer: allowEmptyBuffer) { decoder, buffer in
@@ -419,19 +465,26 @@ extension ByteToMessageHandler: ChannelInboundHandler {
         // very likely, the removal state is `.notBeingRemoved` or `.removalCompleted` here but we can't assert it
         // because the pipeline might be torn down during the formal removal process.
         self.removalState = .removalCompleted
-        self.state = .done
+        if !self.state.isFinalState {
+            self.state = .done
+        }
     }
 
     /// Calls `decode` until there is nothing left to decode.
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        self.buffer.append(buffer: self.unwrapInboundIn(data))
-        ctx.withThrowingToFireErrorAndClose {
+        let buffer = self.unwrapInboundIn(data)
+        if case .error(let error) = self.state {
+            ctx.fireErrorCaught(ByteToMessageDecoderError.dataReceivedInErrorState(error, buffer))
+            return
+        }
+        self.buffer.append(buffer: buffer)
+        do {
             switch try self.decodeLoop(ctx: ctx, decodeMode: .normal) {
             case .didProcess:
                 switch self.state {
                 case .active:
                     () // cool, all normal
-                case .done:
+                case .done, .error:
                     () // fair, all done already
                 case .leftoversNeedProcessing:
                     // seems like we received a `channelInactive` or `handlerRemoved` whilst we were processing a read
@@ -449,6 +502,9 @@ extension ByteToMessageHandler: ChannelInboundHandler {
                 // fine, will be done later
                 ()
             }
+        } catch {
+            self.state = .error(error)
+            ctx.fireErrorCaught(error)
         }
     }
 
@@ -530,8 +586,8 @@ extension ByteToMessageHandler: RemovableChannelHandler {
         self.removalState = .removalStarted
         ctx.eventLoop.execute {
             self.processLeftovers(ctx: ctx)
-            assert(self.state != .leftoversNeedProcessing)
-            assert(self.removalState == .removalStarted)
+            assert(!self.state.isLeftoversNeedProcessing, "illegal state: \(self.state)")
+            assert(self.removalState == .removalStarted, "illegal removal state: \(self.removalState)")
             self.removalState = .removalCompleted
             ctx.leavePipeline(removalToken: removalToken)
         }

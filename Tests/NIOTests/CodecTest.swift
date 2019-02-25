@@ -979,6 +979,87 @@ public class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertFalse(try channel.finish()))
     }
 
+    func testDecodeMethodsNoLongerCalledIfErrorInDecode() {
+        class Decoder: ByteToMessageDecoder {
+            typealias InboundOut = Never
+
+            struct DecodeError: Error {}
+
+            private var errorThrownAlready = false
+
+            func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                XCTAssertFalse(self.errorThrownAlready)
+                self.errorThrownAlready = true
+                throw DecodeError()
+            }
+
+            func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                XCTFail("decodeLast should never be called")
+                return .needMoreData
+            }
+        }
+
+        let decoder = Decoder()
+        let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
+
+        var buffer = channel.allocator.buffer(capacity: 1)
+        buffer.writeString("x")
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            XCTAssert(error is Decoder.DecodeError)
+        }
+        XCTAssertNil(channel.readInbound())
+
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            if case .some(ByteToMessageDecoderError.dataReceivedInErrorState(let error, let receivedBuffer)) =
+                error as? ByteToMessageDecoderError {
+                XCTAssert(error is Decoder.DecodeError)
+                XCTAssertEqual(buffer, receivedBuffer)
+            } else {
+                XCTFail("wrong error: \(error)")
+            }
+        }
+        XCTAssertNil(channel.readInbound())
+
+        XCTAssertNoThrow(XCTAssertFalse(try channel.finish()))
+    }
+
+    func testDecodeMethodsNoLongerCalledIfErrorInDecodeLast() {
+        class Decoder: ByteToMessageDecoder {
+            typealias InboundOut = Never
+
+            struct DecodeError: Error {}
+
+            private var errorThrownAlready = false
+            private var decodeCalls = 0
+
+            func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                self.decodeCalls += 1
+                XCTAssertEqual(1, self.decodeCalls)
+                return .needMoreData
+            }
+
+            func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                XCTAssertFalse(self.errorThrownAlready)
+                self.errorThrownAlready = true
+                throw DecodeError()
+            }
+        }
+
+        let decoder = Decoder()
+        let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
+
+        var buffer = channel.allocator.buffer(capacity: 1)
+        buffer.writeString("x")
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNil(channel.readInbound())
+
+        XCTAssertThrowsError(try channel.finish()) { error in
+            XCTAssert(error is Decoder.DecodeError)
+        }
+        XCTAssertNil(channel.readInbound())
+
+        XCTAssertNoThrow(try channel.writeInbound(buffer)) // this will go through because the decoder is already 'done'
+    }
 }
 
 public class MessageToByteEncoderTest: XCTestCase {
