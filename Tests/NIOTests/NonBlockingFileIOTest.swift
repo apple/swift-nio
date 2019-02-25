@@ -20,13 +20,13 @@ class NonBlockingFileIOTest: XCTestCase {
     private var eventLoop: EventLoop!
     private var allocator: ByteBufferAllocator!
     private var fileIO: NonBlockingFileIO!
-    private var threadPool: BlockingIOThreadPool!
+    private var threadPool: NIOThreadPool!
 
     override func setUp() {
         super.setUp()
         self.allocator = ByteBufferAllocator()
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        self.threadPool = BlockingIOThreadPool(numberOfThreads: 6)
+        self.threadPool = NIOThreadPool(numberOfThreads: 6)
         self.threadPool.start()
         self.fileIO = NonBlockingFileIO(threadPool: threadPool)
         self.eventLoop = self.group.next()

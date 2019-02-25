@@ -507,3 +507,6 @@ public typealias HTTPUpgradeEvents = HTTPServerUpgradeEvents
 
 @available(*, deprecated, renamed: "HTTPServerUpgradeErrors")
 public typealias HTTPUpgradeErrors = HTTPServerUpgradeErrors
+
+@available(*, deprecated, renamed: "NIOThreadPool")
+public typealias BlockingIOThreadPool = NIOThreadPool

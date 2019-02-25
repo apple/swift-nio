@@ -505,7 +505,7 @@ default:
 }
 
 let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
-let threadPool = BlockingIOThreadPool(numberOfThreads: 6)
+let threadPool = NIOThreadPool(numberOfThreads: 6)
 threadPool.start()
 
 let fileIO = NonBlockingFileIO(threadPool: threadPool)

@@ -19,18 +19,18 @@ import Foundation
 
 class BlockingIOThreadPoolTest: XCTestCase {
     func testDoubleShutdownWorks() throws {
-        let threadPool = BlockingIOThreadPool(numberOfThreads: 17)
+        let threadPool = NIOThreadPool(numberOfThreads: 17)
         threadPool.start()
         try threadPool.syncShutdownGracefully()
         try threadPool.syncShutdownGracefully()
     }
 
     func testStateCancelled() throws {
-        let threadPool = BlockingIOThreadPool(numberOfThreads: 17)
+        let threadPool = NIOThreadPool(numberOfThreads: 17)
         let group = DispatchGroup()
         group.enter()
         threadPool.submit { state in
-            XCTAssertEqual(BlockingIOThreadPool.WorkItemState.cancelled, state)
+            XCTAssertEqual(NIOThreadPool.WorkItemState.cancelled, state)
             group.leave()
         }
         group.wait()
@@ -38,12 +38,12 @@ class BlockingIOThreadPoolTest: XCTestCase {
     }
 
     func testStateActive() throws {
-        let threadPool = BlockingIOThreadPool(numberOfThreads: 17)
+        let threadPool = NIOThreadPool(numberOfThreads: 17)
         threadPool.start()
         let group = DispatchGroup()
         group.enter()
         threadPool.submit { state in
-            XCTAssertEqual(BlockingIOThreadPool.WorkItemState.active, state)
+            XCTAssertEqual(NIOThreadPool.WorkItemState.active, state)
             group.leave()
         }
         group.wait()
@@ -55,7 +55,7 @@ class BlockingIOThreadPoolTest: XCTestCase {
         let allDoneSem = DispatchSemaphore(value: 0)
 
         ({
-            let threadPool = BlockingIOThreadPool(numberOfThreads: 2)
+            let threadPool = NIOThreadPool(numberOfThreads: 2)
             threadPool.start()
             threadPool.submit { _ in
                 Foundation.Thread.sleep(forTimeInterval: 0.1)
@@ -75,7 +75,7 @@ class BlockingIOThreadPoolTest: XCTestCase {
     func testDeadLockIfCalledOutWithLockHeld() throws {
         let blockRunningSem = DispatchSemaphore(value: 0)
         let blockOneThreadSem = DispatchSemaphore(value: 0)
-        let threadPool = BlockingIOThreadPool(numberOfThreads: 1)
+        let threadPool = NIOThreadPool(numberOfThreads: 1)
         let allDone = DispatchSemaphore(value: 0)
         threadPool.start()
         // enqueue one that'll block the whole pool (1 thread only)
@@ -104,9 +104,9 @@ class BlockingIOThreadPoolTest: XCTestCase {
         let taskRunningSem = DispatchSemaphore(value: 0)
         let doneSem = DispatchSemaphore(value: 0)
         let shutdownDoneSem = DispatchSemaphore(value: 0)
-        weak var weakThreadPool: BlockingIOThreadPool? = nil
+        weak var weakThreadPool: NIOThreadPool? = nil
         ({
-            let threadPool = BlockingIOThreadPool(numberOfThreads: 1)
+            let threadPool = NIOThreadPool(numberOfThreads: 1)
             weakThreadPool = threadPool
             threadPool.start()
             threadPool.submit { state in
@@ -134,7 +134,7 @@ class BlockingIOThreadPoolTest: XCTestCase {
     func testClosureReferenceDroppedAfterSingleWorkItemExecution() throws {
         let taskRunningSem = DispatchSemaphore(value: 0)
         let doneSem = DispatchSemaphore(value: 0)
-        let threadPool = BlockingIOThreadPool(numberOfThreads: 1)
+        let threadPool = NIOThreadPool(numberOfThreads: 1)
         threadPool.start()
         weak var referencedObject: SomeClass? = nil
         ({
@@ -156,7 +156,7 @@ class BlockingIOThreadPoolTest: XCTestCase {
     func testClosureReferencesDroppedAfterTwoConsecutiveWorkItemsExecution() throws {
         let taskRunningSem = DispatchSemaphore(value: 0)
         let doneSem = DispatchSemaphore(value: 0)
-        let threadPool = BlockingIOThreadPool(numberOfThreads: 1)
+        let threadPool = NIOThreadPool(numberOfThreads: 1)
         threadPool.start()
         weak var referencedObject1: SomeClass? = nil
         weak var referencedObject2: SomeClass? = nil
