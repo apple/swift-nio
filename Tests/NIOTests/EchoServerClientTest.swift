@@ -244,13 +244,13 @@ class EchoServerClientTest : XCTestCase {
 
         private var promise: EventLoopPromise<Void>! = nil
 
-        func handlerAdded(ctx: ChannelHandlerContext) {
-            promise = ctx.channel.eventLoop.makePromise()
+        func handlerAdded(context: ChannelHandlerContext) {
+            promise = context.channel.eventLoop.makePromise()
         }
 
-        func channelActive(ctx: ChannelHandlerContext) {
+        func channelActive(context: ChannelHandlerContext) {
             promise.succeed(())
-            ctx.fireChannelActive()
+            context.fireChannelActive()
         }
 
         func assertChannelActiveFired() throws {
@@ -262,12 +262,12 @@ class EchoServerClientTest : XCTestCase {
         typealias InboundIn = ByteBuffer
         typealias OutboundOut = ByteBuffer
 
-        func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-            ctx.write(data, promise: nil)
+        func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+            context.write(data, promise: nil)
         }
 
-        func channelReadComplete(ctx: ChannelHandlerContext) {
-            ctx.flush()
+        func channelReadComplete(context: ChannelHandlerContext) {
+            context.flush()
         }
     }
 
@@ -288,17 +288,17 @@ class EchoServerClientTest : XCTestCase {
             }
         }
 
-        func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+        func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             self.numberOfReads += 1
             precondition(self.numberOfReads == 1, "\(self) is only ever allowed to read once")
-            _ = ctx.eventLoop.scheduleTask(in: self.timeAmount) {
-                ctx.writeAndFlush(data, promise: nil)
+            _ = context.eventLoop.scheduleTask(in: self.timeAmount) {
+                context.writeAndFlush(data, promise: nil)
                 self.group.leave()
             }.futureResult.recover { e in
                 XCTFail("we failed to schedule the task: \(e)")
                 self.group.leave()
             }
-            ctx.writeAndFlush(data, promise: nil)
+            context.writeAndFlush(data, promise: nil)
         }
     }
 
@@ -306,14 +306,14 @@ class EchoServerClientTest : XCTestCase {
         typealias InboundIn = ByteBuffer
         typealias OutboundOut = ByteBuffer
 
-        func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+        func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             for _ in 0..<10000 {
-                ctx.write(data, promise: nil)
+                context.write(data, promise: nil)
             }
         }
 
-        func channelReadComplete(ctx: ChannelHandlerContext) {
-            ctx.flush()
+        func channelReadComplete(context: ChannelHandlerContext) {
+            context.flush()
         }
     }
 
@@ -330,17 +330,17 @@ class EchoServerClientTest : XCTestCase {
             self.channelInactivePromise = channelInactivePromise
         }
 
-        public func channelActive(ctx: ChannelHandlerContext) {
-            ctx.close().whenFailure { error in
+        public func channelActive(context: ChannelHandlerContext) {
+            context.close().whenFailure { error in
                 XCTFail("bad, initial close failed (\(error))")
             }
         }
 
-        public func channelInactive(ctx: ChannelHandlerContext) {
+        public func channelInactive(context: ChannelHandlerContext) {
             if alreadyClosedInChannelInactive.compareAndExchange(expected: false, desired: true) {
                 XCTAssertFalse(self.channelUnregisteredPromise.futureResult.isFulfilled,
                                "channelInactive should fire before channelUnregistered")
-                ctx.close().map {
+                context.close().map {
                     XCTFail("unexpected success")
                 }.recover { err in
                     switch err {
@@ -356,11 +356,11 @@ class EchoServerClientTest : XCTestCase {
             }
         }
 
-        public func channelUnregistered(ctx: ChannelHandlerContext) {
+        public func channelUnregistered(context: ChannelHandlerContext) {
             if alreadyClosedInChannelUnregistered.compareAndExchange(expected: false, desired: true) {
                 XCTAssertTrue(self.channelInactivePromise.futureResult.isFulfilled,
                               "when channelUnregister fires, channelInactive should already have fired")
-                ctx.close().map {
+                context.close().map {
                     XCTFail("unexpected success")
                 }.recover { err in
                     switch err {
@@ -387,11 +387,11 @@ class EchoServerClientTest : XCTestCase {
             self.toWrite = toWrite
         }
 
-        func channelActive(ctx: ChannelHandlerContext) {
-            var dataToWrite = ctx.channel.allocator.buffer(capacity: toWrite.utf8.count)
+        func channelActive(context: ChannelHandlerContext) {
+            var dataToWrite = context.channel.allocator.buffer(capacity: toWrite.utf8.count)
             dataToWrite.writeString(toWrite)
-            ctx.writeAndFlush(NIOAny(dataToWrite), promise: nil)
-            ctx.fireChannelActive()
+            context.writeAndFlush(NIOAny(dataToWrite), promise: nil)
+            context.fireChannelActive()
         }
     }
 
@@ -596,16 +596,16 @@ class EchoServerClientTest : XCTestCase {
 
             private var writeFailed = false
 
-            func channelActive(ctx: ChannelHandlerContext) {
-                var buffer = ctx.channel.allocator.buffer(capacity: 4)
+            func channelActive(context: ChannelHandlerContext) {
+                var buffer = context.channel.allocator.buffer(capacity: 4)
                 buffer.writeString("test")
-                writeUntilFailed(ctx, buffer)
+                writeUntilFailed(context, buffer)
             }
 
-            private func writeUntilFailed(_ ctx: ChannelHandlerContext, _ buffer: ByteBuffer) {
-                ctx.writeAndFlush(NIOAny(buffer)).whenComplete { (_: Result<Void, Error>) in
-                    ctx.eventLoop.execute {
-                        self.writeUntilFailed(ctx, buffer)
+            private func writeUntilFailed(_ context: ChannelHandlerContext, _ buffer: ByteBuffer) {
+                context.writeAndFlush(NIOAny(buffer)).whenComplete { (_: Result<Void, Error>) in
+                    context.eventLoop.execute {
+                        self.writeUntilFailed(context, buffer)
                     }
                 }
             }
@@ -621,20 +621,20 @@ class EchoServerClientTest : XCTestCase {
                 self.dpGroup = dpGroup
             }
 
-            func channelActive(ctx: ChannelHandlerContext) {
-                ctx.fireChannelActive()
-                var buffer = ctx.channel.allocator.buffer(capacity: str.utf8.count)
+            func channelActive(context: ChannelHandlerContext) {
+                context.fireChannelActive()
+                var buffer = context.channel.allocator.buffer(capacity: str.utf8.count)
                 buffer.writeString(str)
 
                 // write it four times and then close the connect.
-                ctx.writeAndFlush(NIOAny(buffer)).flatMap {
-                    ctx.writeAndFlush(NIOAny(buffer))
+                context.writeAndFlush(NIOAny(buffer)).flatMap {
+                    context.writeAndFlush(NIOAny(buffer))
                 }.flatMap {
-                    ctx.writeAndFlush(NIOAny(buffer))
+                    context.writeAndFlush(NIOAny(buffer))
                 }.flatMap {
-                    ctx.writeAndFlush(NIOAny(buffer))
+                    context.writeAndFlush(NIOAny(buffer))
                 }.flatMap {
-                    ctx.close()
+                    context.close()
                 }.whenComplete { (_: Result<Void, Error>) in
                     self.dpGroup.leave()
                 }
@@ -687,13 +687,13 @@ class EchoServerClientTest : XCTestCase {
                 self.promise = promise
             }
 
-            public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+            public func errorCaught(context: ChannelHandlerContext, error: Error) {
                 if let err = error as? ChannelError {
                     XCTAssertNotEqual(ChannelError.eof, err)
                 }
             }
 
-            public func channelInactive(ctx: ChannelHandlerContext) {
+            public func channelInactive(context: ChannelHandlerContext) {
                 self.promise.succeed(())
             }
         }

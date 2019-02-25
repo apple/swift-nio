@@ -89,12 +89,12 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
         self.initialByteBufferCapacity = initialByteBufferCapacity
     }
 
-    public func handlerAdded(ctx: ChannelHandlerContext) {
-        pendingResponse = PartialHTTPResponse(bodyBuffer: ctx.channel.allocator.buffer(capacity: initialByteBufferCapacity))
-        pendingWritePromise = ctx.eventLoop.makePromise()
+    public func handlerAdded(context: ChannelHandlerContext) {
+        pendingResponse = PartialHTTPResponse(bodyBuffer: context.channel.allocator.buffer(capacity: initialByteBufferCapacity))
+        pendingWritePromise = context.eventLoop.makePromise()
     }
 
-    public func handlerRemoved(ctx: ChannelHandlerContext) {
+    public func handlerRemoved(context: ChannelHandlerContext) {
         pendingWritePromise?.fail(CompressionError.uncompressedWritesPending)
         if algorithm != nil {
             deinitializeEncoder()
@@ -102,21 +102,21 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
         }
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         if case .head(let requestHead) = unwrapInboundIn(data) {
             acceptQueue.append(requestHead.headers[canonicalForm: "accept-encoding"])
         }
 
-        ctx.fireChannelRead(data)
+        context.fireChannelRead(data)
     }
 
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let httpData = unwrapOutboundIn(data)
         switch httpData {
         case .head(var responseHead):
             algorithm = compressionAlgorithm()
             guard algorithm != nil else {
-                ctx.write(wrapOutboundOut(.head(responseHead)), promise: promise)
+                context.write(wrapOutboundOut(.head(responseHead)), promise: promise)
                 return
             }
             // Previous handlers in the pipeline might have already set this header even though
@@ -130,27 +130,27 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
                 pendingResponse.bufferBodyPart(body)
                 pendingWritePromise.futureResult.cascade(to: promise)
             } else {
-                ctx.write(data, promise: promise)
+                context.write(data, promise: promise)
             }
         case .end:
             // This compress is not done in flush because we need to be done with the
             // compressor now.
             guard algorithm != nil else {
-                ctx.write(data, promise: promise)
+                context.write(data, promise: promise)
                 return
             }
 
             pendingResponse.bufferResponseEnd(httpData)
             pendingWritePromise.futureResult.cascade(to: promise)
-            emitPendingWrites(ctx: ctx)
+            emitPendingWrites(context: context)
             algorithm = nil
             deinitializeEncoder()
         }
     }
 
-    public func flush(ctx: ChannelHandlerContext) {
-        emitPendingWrites(ctx: ctx)
-        ctx.flush()
+    public func flush(context: ChannelHandlerContext) {
+        emitPendingWrites(context: context)
+        context.flush()
     }
 
     /// Determines the compression algorithm to use for the next response.
@@ -216,22 +216,22 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
     /// data. Resets the pending write buffer and promise.
     ///
     /// Called either when a HTTP end message is received or our flush() method is called.
-    private func emitPendingWrites(ctx: ChannelHandlerContext) {
-        let writesToEmit = pendingResponse.flush(compressor: &stream, allocator: ctx.channel.allocator)
+    private func emitPendingWrites(context: ChannelHandlerContext) {
+        let writesToEmit = pendingResponse.flush(compressor: &stream, allocator: context.channel.allocator)
         var pendingPromise = pendingWritePromise
 
         if let writeHead = writesToEmit.0 {
-            ctx.write(wrapOutboundOut(.head(writeHead)), promise: pendingPromise)
+            context.write(wrapOutboundOut(.head(writeHead)), promise: pendingPromise)
             pendingPromise = nil
         }
 
         if let writeBody = writesToEmit.1 {
-            ctx.write(wrapOutboundOut(.body(.byteBuffer(writeBody))), promise: pendingPromise)
+            context.write(wrapOutboundOut(.body(.byteBuffer(writeBody))), promise: pendingPromise)
             pendingPromise = nil
         }
 
         if let writeEnd = writesToEmit.2 {
-            ctx.write(wrapOutboundOut(writeEnd), promise: pendingPromise)
+            context.write(wrapOutboundOut(writeEnd), promise: pendingPromise)
             pendingPromise = nil
         }
 
@@ -242,7 +242,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
         }
 
         // Reset the pending promise.
-        pendingWritePromise = ctx.eventLoop.makePromise()
+        pendingWritePromise = context.eventLoop.makePromise()
     }
 }
 /// A buffer object that allows us to keep track of how much of a HTTP response we've seen before

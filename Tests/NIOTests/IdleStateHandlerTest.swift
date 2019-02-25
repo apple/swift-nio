@@ -52,24 +52,24 @@ class IdleStateHandlerTest : XCTestCase {
                 self.assertEventFn = assertEventFn
             }
 
-            public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 self.read = true
             }
 
-            public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+            public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
                 if !self.writeToChannel {
                     XCTAssertTrue(self.read)
                 }
 
                 XCTAssertTrue(assertEventFn(event as! IdleStateHandler.IdleStateEvent))
-                ctx.close(promise: nil)
+                context.close(promise: nil)
             }
 
-            public func channelActive(ctx: ChannelHandlerContext) {
+            public func channelActive(context: ChannelHandlerContext) {
                 if writeToChannel {
-                    var buffer = ctx.channel.allocator.buffer(capacity: 4)
+                    var buffer = context.channel.allocator.buffer(capacity: 4)
                     buffer.writeStaticString("test")
-                    ctx.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+                    context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
                 }
             }
         }
@@ -111,39 +111,39 @@ class IdleStateHandlerTest : XCTestCase {
             var registered = false
             var unregistered = false
 
-            func channelActive(ctx: ChannelHandlerContext) {
+            func channelActive(context: ChannelHandlerContext) {
                 self.active = true
             }
             
-            func channelInactive(ctx: ChannelHandlerContext) {
+            func channelInactive(context: ChannelHandlerContext) {
                 self.inactive = true
             }
             
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 self.read = true
             }
             
-            func channelReadComplete(ctx: ChannelHandlerContext) {
+            func channelReadComplete(context: ChannelHandlerContext) {
                 self.readComplete = true
             }
             
-            func channelWritabilityChanged(ctx: ChannelHandlerContext) {
+            func channelWritabilityChanged(context: ChannelHandlerContext) {
                 self.writabilityChanged = true
             }
   
-            func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+            func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
                 self.eventTriggered = true
             }
             
-            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+            func errorCaught(context: ChannelHandlerContext, error: Error) {
                 self.errorCaught = true
             }
             
-            func channelRegistered(ctx: ChannelHandlerContext) {
+            func channelRegistered(context: ChannelHandlerContext) {
                 self.registered = true
             }
             
-            func channelUnregistered(ctx: ChannelHandlerContext) {
+            func channelUnregistered(context: ChannelHandlerContext) {
                 self.unregistered = true
             }
             

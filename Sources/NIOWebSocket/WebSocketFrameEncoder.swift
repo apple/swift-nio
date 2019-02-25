@@ -41,7 +41,7 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
 
     public init() { }
 
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let data = self.unwrapOutboundIn(data)
 
         var maskSize: Int
@@ -63,16 +63,16 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
         var buffer: ByteBuffer
         switch data.length {
         case 0...maxOneByteSize:
-            buffer = ctx.channel.allocator.buffer(capacity: baseLength)
+            buffer = context.channel.allocator.buffer(capacity: baseLength)
             buffer.writeInteger(data.firstByte)
             buffer.writeInteger(UInt8(data.length) | maskBitMask)
         case (maxOneByteSize + 1)...maxTwoByteSize:
-            buffer = ctx.channel.allocator.buffer(capacity: baseLength + 2)
+            buffer = context.channel.allocator.buffer(capacity: baseLength + 2)
             buffer.writeInteger(data.firstByte)
             buffer.writeInteger(UInt8(126) | maskBitMask)
             buffer.writeInteger(UInt16(data.length))
         case (maxTwoByteSize + 1)...maxNIOFrameSize:
-            buffer = ctx.channel.allocator.buffer(capacity: baseLength + 8)
+            buffer = context.channel.allocator.buffer(capacity: baseLength + 8)
             buffer.writeInteger(data.firstByte)
             buffer.writeInteger(UInt8(127) | maskBitMask)
             buffer.writeInteger(UInt64(data.length))
@@ -85,7 +85,7 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
         }
 
         // Ok, frame header away!
-        ctx.write(self.wrapOutboundOut(buffer), promise: nil)
+        context.write(self.wrapOutboundOut(buffer), promise: nil)
 
         // Next, let's mask the extension and application data and send
         // them too.
@@ -94,9 +94,9 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
         // Now we can send our byte buffers out. We attach the write promise to the last
         // of the frame data.
         if let extensionData = extensionData {
-            ctx.write(self.wrapOutboundOut(extensionData), promise: nil)
+            context.write(self.wrapOutboundOut(extensionData), promise: nil)
         }
-        ctx.write(self.wrapOutboundOut(applicationData), promise: promise)
+        context.write(self.wrapOutboundOut(applicationData), promise: promise)
     }
 
     /// Applies the websocket masking operation based on the passed byte buffers.
