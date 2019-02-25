@@ -89,6 +89,22 @@ public protocol ByteToMessageDecoder {
     mutating func shouldReclaimBytes(buffer: ByteBuffer) -> Bool
 }
 
+/// Some `ByteToMessageDecoder`s need to observe `write`s (which are outbound events). `ByteToMessageDecoder`s which
+/// implement the `WriteObservingByteToMessageDecoder` protocol will be notified about every outbound write.
+///
+/// `WriteObservingByteToMessageDecoder` may only observe a `write` and must not try to transform or block it in any
+/// way. After the `write` method returns the `write` will be forwarded to the next outbound handler.
+public protocol WriteObservingByteToMessageDecoder: ByteToMessageDecoder {
+    /// The type of `write`s.
+    associatedtype OutboundIn
+
+    /// `write` is called for every incoming `write` incoming to the corresponding `ByteToMessageHandler`.
+    ///
+    /// - parameters:
+    ///    - data: The data that was written.
+    mutating func write(data: OutboundIn)
+}
+
 extension ByteToMessageDecoder {
     public mutating func decoderRemoved(ctx: ChannelHandlerContext) {
     }
@@ -271,6 +287,7 @@ public class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     }
 
     internal private(set) var decoder: Decoder? // only `nil` if we're already decoding (ie. we're re-entered)
+    private var queuedWrites = CircularBuffer<NIOAny>(initialCapacity: 1) // queues writes received whilst we're already decoding (re-entrant write)
     private var state: State = .active
     private var removalState: RemovalState = .notBeingRemoved
     // sadly to construct a B2MDBuffer we need an empty ByteBuffer which we can only get from the allocator, so IUO.
@@ -293,6 +310,20 @@ extension ByteToMessageHandler {
         return self.buffer._testOnlyOneBuffer()
     }
 }
+
+private protocol CanDequeueWrites {
+    func dequeueWrites()
+}
+
+extension ByteToMessageHandler: CanDequeueWrites where Decoder: WriteObservingByteToMessageDecoder {
+    fileprivate func dequeueWrites() {
+        while self.queuedWrites.count > 0 {
+            // self.decoder can't be `nil`, this is only allowed to be called when we're not already on the stack
+            self.decoder!.write(data: self.unwrapOutboundIn(self.queuedWrites.removeFirst()))
+        }
+    }
+}
+
 
 // MARK: ByteToMessageHandler's Main API
 extension ByteToMessageHandler {
@@ -337,6 +368,13 @@ extension ByteToMessageHandler {
         }
     }
 
+    private func tryDecodeWrites() {
+        if self.queuedWrites.count > 0 {
+            // this must succeed because unless we implement `CanDequeueWrites`, `queuedWrites` must always be empty.
+            (self as! CanDequeueWrites).dequeueWrites()
+        }
+    }
+
     private func decodeLoop(ctx: ChannelHandlerContext, decodeMode: DecodeMode) throws -> B2MDBuffer.BufferProcessingResult {
         var allowEmptyBuffer = decodeMode == .last
         while decodeMode == .last || self.removalState == .notBeingRemoved {
@@ -350,9 +388,15 @@ extension ByteToMessageHandler {
             }
             switch result {
             case .didProcess(.continue):
+                self.tryDecodeWrites()
                 continue
             case .didProcess(.needMoreData):
-                return .didProcess(.needMoreData)
+                if self.queuedWrites.count > 0 {
+                    self.tryDecodeWrites()
+                    continue // we might have received more, so let's spin once more
+                } else {
+                    return .didProcess(.needMoreData)
+                }
             case .cannotProcessReentrantly:
                 return .cannotProcessReentrantly
             }
@@ -424,6 +468,20 @@ extension ByteToMessageHandler: ChannelInboundHandler {
             self.processLeftovers(ctx: ctx)
         }
         ctx.fireUserInboundEventTriggered(event)
+    }
+}
+
+extension ByteToMessageHandler: ChannelOutboundHandler, _ChannelOutboundHandler where Decoder: WriteObservingByteToMessageDecoder {
+    public typealias OutboundIn = Decoder.OutboundIn
+    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        if self.decoder != nil {
+            let data = self.unwrapOutboundIn(data)
+            assert(self.queuedWrites.count == 0)
+            self.decoder!.write(data: data)
+        } else {
+            self.queuedWrites.append(data)
+        }
+        ctx.write(data, promise: promise)
     }
 }
 
