@@ -127,19 +127,25 @@ final class NIOThread {
 ///
 /// `ThreadSpecificVariable` is thread-safe so it can be used with multiple threads at the same time but the value
 /// returned by `currentValue` is defined per thread.
-///
-/// - note: `ThreadSpecificVariable` has reference semantics.
-public struct ThreadSpecificVariable<T: AnyObject> {
+public final class ThreadSpecificVariable<Value: AnyObject> {
+    /* the actual type in there is `Box<(ThreadSpecificVariable<T>, T)>` but we can't use that as C functions can't capture (even types) */
+    private typealias BoxedType = Box<(AnyObject, AnyObject)>
+
     private let key: pthread_key_t
 
     /// Initialize a new `ThreadSpecificVariable` without a current value (`currentValue == nil`).
     public init() {
         var key = pthread_key_t()
         let pthreadErr = pthread_key_create(&key) { ptr in
-            Unmanaged<AnyObject>.fromOpaque((ptr as UnsafeMutableRawPointer?)!).release()
+            Unmanaged<BoxedType>.fromOpaque((ptr as UnsafeMutableRawPointer?)!).release()
         }
         precondition(pthreadErr == 0, "pthread_key_create failed, error \(pthreadErr)")
         self.key = key
+    }
+
+    deinit {
+        let pthreadErr = pthread_key_delete(self.key)
+        precondition(pthreadErr == 0, "pthread_key_delete failed, error \(pthreadErr)")
     }
 
     /// Initialize a new `ThreadSpecificVariable` with `value` for the calling thread. After calling this, the calling
@@ -147,28 +153,28 @@ public struct ThreadSpecificVariable<T: AnyObject> {
     ///
     /// - parameters:
     ///   - value: The value to set for the calling thread.
-    public init(value: T) {
+    public convenience init(value: Value) {
         self.init()
         self.currentValue = value
     }
 
     /// The value for the current thread.
-    public var currentValue: T? {
+    public var currentValue: Value? {
         /// Get the current value for the calling thread.
         get {
             guard let raw = pthread_getspecific(self.key) else {
                 return nil
             }
-            return Unmanaged<T>.fromOpaque(raw).takeUnretainedValue()
+            return (Unmanaged<BoxedType>.fromOpaque(raw).takeUnretainedValue().value.1 as! Value)
         }
 
         /// Set the current value for the calling threads. The `currentValue` for all other threads remains unchanged.
-        nonmutating set {
+        set {
             if let raw = pthread_getspecific(self.key) {
-                Unmanaged<T>.fromOpaque(raw).release()
+                Unmanaged<BoxedType>.fromOpaque(raw).release()
             }
             let pthreadErr = pthread_setspecific(self.key, newValue.map { v -> UnsafeMutableRawPointer in
-                Unmanaged.passRetained(v).toOpaque()
+                return Unmanaged.passRetained(Box((self, v))).toOpaque()
             })
             precondition(pthreadErr == 0, "pthread_setspecific failed, error \(pthreadErr)")
         }
