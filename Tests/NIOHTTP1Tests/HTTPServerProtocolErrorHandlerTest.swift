@@ -94,7 +94,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
 
             private var nextExpected: NextExpectedState = .head
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let req = self.unwrapInboundIn(data)
                 switch req {
                 case .head:
@@ -103,7 +103,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
                     let res = HTTPServerResponsePart.head(.init(version: HTTPVersion(major: 1, minor: 1),
                                                                 status: .ok,
                                                                 headers: .init([("Content-Length", "0")])))
-                    ctx.writeAndFlush(self.wrapOutboundOut(res), promise: nil)
+                    context.writeAndFlush(self.wrapOutboundOut(res), promise: nil)
                 default:
                     XCTAssertEqual(.end, self.nextExpected)
                     self.nextExpected = .none

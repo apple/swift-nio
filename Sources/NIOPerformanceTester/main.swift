@@ -90,15 +90,15 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
         self.cachedBody = body
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         if case .head(let req) = self.unwrapInboundIn(data) {
             switch req.uri {
             case "/perf-test-1":
-                var buffer = ctx.channel.allocator.buffer(capacity: self.cachedBody.count)
+                var buffer = context.channel.allocator.buffer(capacity: self.cachedBody.count)
                 buffer.writeBytes(self.cachedBody)
-                ctx.write(self.wrapOutboundOut(.head(self.cachedHead)), promise: nil)
-                ctx.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-                ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                context.write(self.wrapOutboundOut(.head(self.cachedHead)), promise: nil)
+                context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 return
             case "/perf-test-2":
                 var req = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
@@ -106,8 +106,8 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
                     req.headers.add(name: "X-ResponseHeader-\(i)", value: "foo")
                 }
                 req.headers.add(name: "content-length", value: "0")
-                ctx.write(self.wrapOutboundOut(.head(req)), promise: nil)
-                ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                context.write(self.wrapOutboundOut(.head(req)), promise: nil)
+                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 return
             default:
                 fatalError("unknown uri \(req.uri)")
@@ -159,22 +159,22 @@ final class RepeatedRequests: ChannelInboundHandler {
         return reqs
     }
 
-    func errorCaught(ctx: ChannelHandlerContext, error: Error) {
-        ctx.channel.close(promise: nil)
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        context.channel.close(promise: nil)
         self.isDonePromise.fail(error)
     }
 
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let reqPart = self.unwrapInboundIn(data)
         if case .end(nil) = reqPart {
             if self.remainingNumberOfRequests <= 0 {
-                ctx.channel.close().map { self.doneRequests }.cascade(to: self.isDonePromise)
+                context.channel.close().map { self.doneRequests }.cascade(to: self.isDonePromise)
             } else {
                 self.doneRequests += 1
                 self.remainingNumberOfRequests -= 1
 
-                ctx.write(self.wrapOutboundOut(.head(head)), promise: nil)
-                ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                context.write(self.wrapOutboundOut(.head(head)), promise: nil)
+                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
             }
         }
     }
@@ -511,8 +511,8 @@ try measureAndPrint(desc: "no-net_http1_10k_reqs_1_conn") {
             self.remainingNumberOfRequests = numberOfRequests
         }
 
-        func handlerAdded(ctx: ChannelHandlerContext) {
-            self.requestBuffer = ctx.channel.allocator.buffer(capacity: 512)
+        func handlerAdded(context: ChannelHandlerContext) {
+            self.requestBuffer = context.channel.allocator.buffer(capacity: 512)
             self.requestBuffer.writeString("""
                                              GET /perf-test-2 HTTP/1.1\r
                                              Host: example.com\r
@@ -527,16 +527,16 @@ try measureAndPrint(desc: "no-net_http1_10k_reqs_1_conn") {
                                              """)
         }
 
-        func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             var buf = self.unwrapOutboundIn(data)
             if self.expectedResponseBuffer == nil {
                 self.expectedResponseBuffer = buf
             }
             precondition(buf == self.expectedResponseBuffer, "got \(buf.readString(length: buf.readableBytes)!)")
-            let channel = ctx.channel
+            let channel = context.channel
             self.remainingNumberOfRequests -= 1
             if self.remainingNumberOfRequests > 0 {
-                ctx.eventLoop.execute {
+                context.eventLoop.execute {
                     self.kickOff(channel: channel)
                 }
             } else {

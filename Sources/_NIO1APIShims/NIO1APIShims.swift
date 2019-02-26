@@ -111,9 +111,9 @@ extension ChannelPipeline {
         return self.removeHandler(name: name)
     }
 
-    @available(*, deprecated, renamed: "removeHandler(ctx:)")
-    public func remove(ctx: ChannelHandlerContext) -> EventLoopFuture<Void> {
-        return self.removeHandler(ctx: ctx)
+    @available(*, deprecated, renamed: "removeHandler(context:)")
+    public func remove(context: ChannelHandlerContext) -> EventLoopFuture<Void> {
+        return self.removeHandler(context: context)
     }
 
     @available(*, deprecated, renamed: "removeHandler(_:promise:)")
@@ -126,9 +126,9 @@ extension ChannelPipeline {
         return self.removeHandler(name: name, promise: promise)
     }
 
-    @available(*, deprecated, renamed: "removeHandler(ctx:promise:)")
-    public func remove(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
-        return self.removeHandler(ctx: ctx, promise: promise)
+    @available(*, deprecated, renamed: "removeHandler(context:promise:)")
+    public func remove(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+        return self.removeHandler(context: context, promise: promise)
     }
 }
 
@@ -507,3 +507,6 @@ public typealias HTTPUpgradeEvents = HTTPServerUpgradeEvents
 
 @available(*, deprecated, renamed: "HTTPServerUpgradeErrors")
 public typealias HTTPUpgradeErrors = HTTPServerUpgradeErrors
+
+@available(*, deprecated, renamed: "NIOThreadPool")
+public typealias BlockingIOThreadPool = NIOThreadPool

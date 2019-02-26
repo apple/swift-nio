@@ -43,17 +43,17 @@ private final class ReadRecorder: ChannelInboundHandler {
 
     public var reads: [Event] = []
 
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         self.reads.append(.channelRead(self.unwrapInboundIn(data)))
-        ctx.fireChannelRead(data)
+        context.fireChannelRead(data)
     }
 
-    func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+    func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case let evt as ChannelEvent where evt == ChannelEvent.inputClosed:
             self.reads.append(.halfClose)
         default:
-            ctx.fireUserInboundEventTriggered(event)
+            context.fireUserInboundEventTriggered(event)
         }
     }
 }
@@ -63,10 +63,10 @@ private final class WriteRecorder: ChannelOutboundHandler {
 
     public var writes: [HTTPServerResponsePart] = []
 
-    func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         self.writes.append(self.unwrapOutboundIn(data))
 
-        ctx.write(data, promise: promise)
+        context.write(data, promise: promise)
     }
 }
 
@@ -76,9 +76,9 @@ private final class ReadCountingHandler: ChannelOutboundHandler {
 
     public var readCount = 0
 
-    func read(ctx: ChannelHandlerContext) {
+    func read(context: ChannelHandlerContext) {
         self.readCount += 1
-        ctx.read()
+        context.read()
     }
 }
 
@@ -407,7 +407,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
             }
             var state: State = .req1HeadExpected
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let req = self.unwrapInboundIn(data)
                 switch req {
                 case .head(let head):
@@ -431,11 +431,11 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                     default:
                         XCTFail("didn't expect \(head)")
                     }
-                    ctx.write(self.wrapOutboundOut(.head(HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok))), promise: nil)
+                    context.write(self.wrapOutboundOut(.head(HTTPResponseHead(version: .init(major: 1, minor: 1), status: .ok))), promise: nil)
                     if sendEnd {
-                        ctx.write(self.wrapOutboundOut(.end(nil)), promise: nil)
+                        context.write(self.wrapOutboundOut(.end(nil)), promise: nil)
                     }
-                    ctx.flush()
+                    context.flush()
                 case .end:
                     switch self.state {
                     case .req1EndExpected:
@@ -444,8 +444,8 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                         self.state = .req3HeadExpected
 
                         // this will cause `channelRead` to be recursively called and we need to make sure everything then still works
-                        try! (ctx.channel as! EmbeddedChannel).writeInbound(HTTPServerRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/req_boom")))
-                        try! (ctx.channel as! EmbeddedChannel).writeInbound(HTTPServerRequestPart.end(nil))
+                        try! (context.channel as! EmbeddedChannel).writeInbound(HTTPServerRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/req_boom")))
+                        try! (context.channel as! EmbeddedChannel).writeInbound(HTTPServerRequestPart.end(nil))
                     case .req3EndExpected:
                         self.state = .reqBoomHeadExpected
                     case .reqBoomEndExpected:
@@ -718,13 +718,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
             }
             var state: State = .errorExpected
 
-            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+            func errorCaught(context: ChannelHandlerContext, error: Error) {
                 XCTAssertEqual(HTTPParserError.headerOverflow, error as? HTTPParserError)
                 XCTAssertEqual(.errorExpected, self.state)
                 self.state = .done
             }
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 XCTFail("no requests expected")
             }
         }
@@ -757,19 +757,19 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
             }
             var state: State = .reqHeadExpected
 
-            func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+            func errorCaught(context: ChannelHandlerContext, error: Error) {
                 XCTAssertEqual(HTTPParserError.closedConnection, error as? HTTPParserError)
                 XCTAssertEqual(.errorExpected, self.state)
                 self.state = .done
             }
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 switch self.unwrapInboundIn(data) {
                 case .head:
                     // We dispatch this to the event loop so that it doesn't happen immediately but rather can be
                     // run from the driving test code whenever it wants by running the EmbeddedEventLoop.
-                    ctx.eventLoop.execute {
-                        ctx.writeAndFlush(self.wrapOutboundOut(.head(.init(version: HTTPVersion(major: 1, minor: 1),
+                    context.eventLoop.execute {
+                        context.writeAndFlush(self.wrapOutboundOut(.head(.init(version: HTTPVersion(major: 1, minor: 1),
                                                                            status: .ok))),
                                           promise: nil)
                     }
@@ -780,8 +780,8 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                 case .end:
                     // We dispatch this to the event loop so that it doesn't happen immediately but rather can be
                     // run from the driving test code whenever it wants by running the EmbeddedEventLoop.
-                    ctx.eventLoop.execute {
-                        ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                    context.eventLoop.execute {
+                        context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                     }
                     XCTAssertEqual(.reqEndExpected, self.state)
                     self.state = .errorExpected

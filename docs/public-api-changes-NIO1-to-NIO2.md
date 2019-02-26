@@ -1,5 +1,7 @@
 # Changes in the Public API from NIO 1 to NIO 2
 
+- renamed all instances of `ctx` to `context`. Your `ChannelHandler` methods now
+  need to take a `context` parameter and no longer `ctx`. Example: `func channelRead(context: ChannelHandlerContext, data: NIOAny)`
 - removed all previously deprecated functions, types and modules.
 - renamed `SniResult` to `SNIResult`
 - renamed `SniHandler` to `SNIHandler`
@@ -10,6 +12,7 @@
 - `ByteToMessageDecoder`s now need to be wrapped in `ByteToMessageHandler`
   before they can be added to the pipeline.
   before: `pipeline.add(MyDecoder())`, after: `pipeline.add(ByteToMessageHandler(MyDecoder()))`
+- `BlockingIOThreadPool` has been renamed to `NIOThreadPool`
 - `ByteToMessageDecoder` now requires the implementation of `decodeLast`
 - `ByteToMessageDecoder.decodeLast` has a new parameter `seenEOF: Bool`
 - `EventLoop.makePromise`/`makeSucceededFuture`/`makeFailedFuture` instead of `new*`, also `result:`/`error:` labels dropped
@@ -48,6 +51,7 @@
 - `EventLoopPromise.succeed(result: Value)` lost its label so is now `EventLoopPromise.succeed(Value)`
 - `EventLoopPromise.fail(error: Error)` lost its label so is now `EventLoopPromise.fail(Error)`
 - renamed `HTTPProtocolUpgrader` to `HTTPServerProtocolUpgrader`
+- `ByteToMessageDecoder`s no longer automatically close the connection on error.
 - `EventLoopFuture.cascade(promise: EventLoopPromise)` had its label changed to `EventLoopFuture.cascade(to: EventLoopPromise)`
 - `EventLoopFuture.cascadeFailure(promise: EventLoopPromise)` had its label changed to `EventLoopFuture.cascade(to: EventLoopPromise)`
 - renamed `EventLoopFuture.andAll(_:eventLoop:)` to `EventLoopFuture.andAllSucceed(_:on:)`

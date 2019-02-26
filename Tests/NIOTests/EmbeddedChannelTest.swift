@@ -108,8 +108,8 @@ class EmbeddedChannelTest: XCTestCase {
     private final class ExceptionThrowingInboundHandler : ChannelInboundHandler {
         typealias InboundIn = String
 
-        public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-            ctx.fireErrorCaught(ChannelError.operationUnsupported)
+        public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+            context.fireErrorCaught(ChannelError.operationUnsupported)
         }
 
     }
@@ -118,7 +118,7 @@ class EmbeddedChannelTest: XCTestCase {
         typealias OutboundIn = String
         typealias OutboundOut = Never
 
-        public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             promise!.fail(ChannelError.operationUnsupported)
         }
     }
@@ -127,9 +127,9 @@ class EmbeddedChannelTest: XCTestCase {
         typealias InboundIn = ByteBuffer
         public var inactiveNotifications = 0
 
-        public func channelInactive(ctx: ChannelHandlerContext) {
+        public func channelInactive(context: ChannelHandlerContext) {
             inactiveNotifications += 1
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         }
     }
 
@@ -190,5 +190,27 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertNotNil(channel.readOutbound(as: ByteBuffer.self))
         XCTAssertTrue(writeFuture.isFulfilled)
         XCTAssertNoThrow(try XCTAssertFalse(channel.finish()))
+    }
+
+    func testSetLocalAddressAfterSuccessfulBind() throws {
+        let channel = EmbeddedChannel()
+        let bindPromise = channel.eventLoop.makePromise(of: Void.self)
+        let socketAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 0)
+        channel.bind(to: socketAddress, promise: bindPromise)
+        bindPromise.futureResult.whenComplete { _ in
+            XCTAssertEqual(channel.localAddress, socketAddress)
+        }
+        try bindPromise.futureResult.wait()
+    }
+
+    func testSetRemoteAddressAfterSuccessfulConnect() throws {
+        let channel = EmbeddedChannel()
+        let connectPromise = channel.eventLoop.makePromise(of: Void.self)
+        let socketAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 0)
+        channel.connect(to: socketAddress, promise: connectPromise)
+        connectPromise.futureResult.whenComplete { _ in
+            XCTAssertEqual(channel.remoteAddress, socketAddress)
+        }
+        try connectPromise.futureResult.wait()
     }
 }

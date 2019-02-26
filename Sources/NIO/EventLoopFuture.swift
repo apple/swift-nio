@@ -1085,6 +1085,11 @@ extension EventLoopFuture {
 
         var remainingCount = futures.count
 
+        if remainingCount == 0 {
+            promise.succeed(())
+            return
+        }
+
         // loop through the futures to chain callbacks to execute on the initiating event loop and grab their index
         // in the "futures" to pass their result to the caller
         for (index, future) in futures.enumerated() {

@@ -47,7 +47,7 @@ public protocol HTTPServerProtocolUpgrader {
     /// Called when the upgrade response has been flushed. At this time it is safe to mutate the channel pipeline
     /// to add whatever channel handlers are required. Until the returned `EventLoopFuture` succeeds, all received
     /// data will be buffered.
-    func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void>
+    func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void>
 }
 
 /// A server-side channel handler that receives HTTP requests and optionally performs a HTTP-upgrade.
@@ -99,7 +99,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
         self.extraHTTPHandlers = extraHTTPHandlers
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         guard !self.seenFirstRequest else {
             // We're waiting for upgrade to complete: buffer this data.
             self.receivedMessages.append(data)
@@ -111,8 +111,8 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
         if let upgrade = self.upgrade {
             switch requestPart {
             case .head:
-                ctx.fireErrorCaught(HTTPServerUpgradeErrors.invalidHTTPOrdering)
-                notUpgrading(ctx: ctx, data: data)
+                context.fireErrorCaught(HTTPServerUpgradeErrors.invalidHTTPOrdering)
+                notUpgrading(context: context, data: data)
                 return
             case .body:
                 // TODO: In the future way may want to add some API to also allow special handling of the body during the
@@ -129,8 +129,8 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
             // by the time the body comes in we should be out of the pipeline. That means that if we don't think we're
             // upgrading, the only thing we should see is a request head. Anything else in an error.
             guard case .head(let request) = requestPart else {
-                ctx.fireErrorCaught(HTTPServerUpgradeErrors.invalidHTTPOrdering)
-                notUpgrading(ctx: ctx, data: data)
+                context.fireErrorCaught(HTTPServerUpgradeErrors.invalidHTTPOrdering)
+                notUpgrading(context: context, data: data)
                 return
             }
             
@@ -138,21 +138,21 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
             // from the channel pipeline.
             let requestedProtocols = request.headers[canonicalForm: "upgrade"]
             guard requestedProtocols.count > 0 else {
-                notUpgrading(ctx: ctx, data: data)
+                notUpgrading(context: context, data: data)
                 return
             }
             
             // Cool, this is an upgrade! Let's go.
-            if let upgrade = handleUpgrade(ctx: ctx, request: request, requestedProtocols: requestedProtocols) {
+            if let upgrade = handleUpgrade(context: context, request: request, requestedProtocols: requestedProtocols) {
                 self.upgrade = upgrade
             } else {
-                notUpgrading(ctx: ctx, data: data)
+                notUpgrading(context: context, data: data)
             }
         }
     }
 
     /// The core of the upgrade handling logic.
-    private func handleUpgrade(ctx: ChannelHandlerContext, request: HTTPRequestHead, requestedProtocols: [String]) -> (() -> Void)? {
+    private func handleUpgrade(context: ChannelHandlerContext, request: HTTPRequestHead, requestedProtocols: [String]) -> (() -> Void)? {
         let connectionHeader = Set(request.headers[canonicalForm: "connection"].map { $0.lowercased() })
         let allHeaderNames = Set(request.headers.map { $0.name.lowercased() })
 
@@ -171,7 +171,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
                 responseHeaders = try upgrader.buildUpgradeResponse(upgradeRequest: request, initialResponseHeaders: responseHeaders)
             } catch {
                 // We should fire this error so the user can log it, but keep going.
-                ctx.fireErrorCaught(error)
+                context.fireErrorCaught(error)
                 continue
             }
            
@@ -185,16 +185,16 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
                 // internal handler, then call the user code, and then finally when the user code is done we do
                 // our final cleanup steps, namely we replay the received data we buffered in the meantime and
                 // then remove ourselves from the pipeline.
-                self.removeExtraHandlers(ctx: ctx).flatMap {
-                    self.sendUpgradeResponse(ctx: ctx, upgradeRequest: request, responseHeaders: responseHeaders)
+                self.removeExtraHandlers(context: context).flatMap {
+                    self.sendUpgradeResponse(context: context, upgradeRequest: request, responseHeaders: responseHeaders)
                 }.flatMap {
-                    self.removeHandler(ctx: ctx, handler: self.httpEncoder)
+                    self.removeHandler(context: context, handler: self.httpEncoder)
                 }.map {
-                    self.upgradeCompletionHandler(ctx)
+                    self.upgradeCompletionHandler(context)
                 }.flatMap {
-                    upgrader.upgrade(ctx: ctx, upgradeRequest: request)
+                    upgrader.upgrade(context: context, upgradeRequest: request)
                 }.map {
-                    ctx.fireUserInboundEventTriggered(HTTPServerUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request))
+                    context.fireUserInboundEventTriggered(HTTPServerUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request))
                         
                     self.upgrade = nil
                         
@@ -202,12 +202,12 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
                     // we also fire readComplete.
                     let bufferedMessages = self.receivedMessages
                     self.receivedMessages = []
-                    bufferedMessages.forEach { ctx.fireChannelRead($0) }
+                    bufferedMessages.forEach { context.fireChannelRead($0) }
                     if bufferedMessages.count > 0 {
-                        ctx.fireChannelReadComplete()
+                        context.fireChannelReadComplete()
                     }
                 }.whenComplete { (_: Result<Void, Error>) in
-                    ctx.pipeline.removeHandler(ctx: ctx, promise: nil)
+                    context.pipeline.removeHandler(context: context, promise: nil)
                 }
             }
         }
@@ -216,17 +216,17 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
     }
 
     /// Sends the 101 Switching Protocols response for the pipeline.
-    private func sendUpgradeResponse(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead, responseHeaders: HTTPHeaders) -> EventLoopFuture<Void> {
+    private func sendUpgradeResponse(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead, responseHeaders: HTTPHeaders) -> EventLoopFuture<Void> {
         var response = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .switchingProtocols)
         response.headers = responseHeaders
-        return ctx.writeAndFlush(wrapOutboundOut(HTTPServerResponsePart.head(response)))
+        return context.writeAndFlush(wrapOutboundOut(HTTPServerResponsePart.head(response)))
     }
 
     /// Called when we know we're not upgrading. Passes the data on and then removes this object from the pipeline.
-    private func notUpgrading(ctx: ChannelHandlerContext, data: NIOAny) {
+    private func notUpgrading(context: ChannelHandlerContext, data: NIOAny) {
         assert(self.receivedMessages.count == 0)
-        ctx.fireChannelRead(data)
-        ctx.pipeline.removeHandler(ctx: ctx, promise: nil)
+        context.fireChannelRead(data)
+        context.pipeline.removeHandler(context: context, promise: nil)
     }
 
     /// Builds the initial mandatory HTTP headers for HTTP ugprade responses.
@@ -235,21 +235,21 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
     }
 
     /// Removes the given channel handler from the channel pipeline.
-    private func removeHandler(ctx: ChannelHandlerContext, handler: RemovableChannelHandler?) -> EventLoopFuture<Void> {
+    private func removeHandler(context: ChannelHandlerContext, handler: RemovableChannelHandler?) -> EventLoopFuture<Void> {
         if let handler = handler {
-            return ctx.pipeline.removeHandler(handler)
+            return context.pipeline.removeHandler(handler)
         } else {
-            return ctx.eventLoop.makeSucceededFuture(())
+            return context.eventLoop.makeSucceededFuture(())
         }
     }
 
     /// Removes any extra HTTP-related handlers from the channel pipeline.
-    private func removeExtraHandlers(ctx: ChannelHandlerContext) -> EventLoopFuture<Void> {
+    private func removeExtraHandlers(context: ChannelHandlerContext) -> EventLoopFuture<Void> {
         guard self.extraHTTPHandlers.count > 0 else {
-            return ctx.eventLoop.makeSucceededFuture(())
+            return context.eventLoop.makeSucceededFuture(())
         }
 
-        return .andAllSucceed(self.extraHTTPHandlers.map { ctx.pipeline.removeHandler($0) },
-                              on: ctx.eventLoop)
+        return .andAllSucceed(self.extraHTTPHandlers.map { context.pipeline.removeHandler($0) },
+                              on: context.eventLoop)
     }
 }

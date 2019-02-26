@@ -279,7 +279,7 @@ class EmbeddedChannelCore: ChannelCore {
 ///   to collect outbound data that is not `IOData` you can create a custom
 ///   `ChannelOutboundHandler`, insert it at the very beginning of the
 ///   `ChannelPipeline` and collect the outbound data there. Just don't forward
-///   it using `ctx.write`.
+///   it using `context.write`.
 /// - note: `EmbeddedChannel` is currently only compatible with
 ///   `EmbeddedEventLoop`s and cannot be used with `SelectableEventLoop`s from
 ///   for example `MultiThreadedEventLoopGroup`.
@@ -318,8 +318,8 @@ public class EmbeddedChannel: Channel {
     public var allocator: ByteBufferAllocator = ByteBufferAllocator()
     public var eventLoop: EventLoop = EmbeddedEventLoop()
 
-    public let localAddress: SocketAddress? = nil
-    public let remoteAddress: SocketAddress? = nil
+    public var localAddress: SocketAddress? = nil
+    public var remoteAddress: SocketAddress? = nil
 
     // Embedded channels never have parents.
     public let parent: Channel? = nil
@@ -395,5 +395,19 @@ public class EmbeddedChannel: Channel {
             return self.eventLoop.makeSucceededFuture(true as! Option.Value)
         }
         fatalError("option \(option) not supported")
+    }
+
+    public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        promise?.futureResult.whenSuccess {
+            self.localAddress = address
+        }
+        pipeline.bind(to: address, promise: promise)
+    }
+
+    public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        promise?.futureResult.whenSuccess {
+            self.remoteAddress = address
+        }
+        pipeline.connect(to: address, promise: promise)
     }
 }

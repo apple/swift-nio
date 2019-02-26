@@ -313,19 +313,19 @@ public class EventLoopTest : XCTestCase {
                 self.channelActivePromise = channelActivePromise
             }
 
-            func channelActive(ctx: ChannelHandlerContext) {
+            func channelActive(context: ChannelHandlerContext) {
                 self.channelActivePromise?.succeed(())
             }
 
-            func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+            func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
                 guard self.closePromise == nil else {
                     XCTFail("Attempted to create duplicate close promise")
                     return
                 }
-                XCTAssertTrue(ctx.channel.isActive)
-                self.closePromise = ctx.eventLoop.makePromise()
+                XCTAssertTrue(context.channel.isActive)
+                self.closePromise = context.eventLoop.makePromise()
                 self.closePromise!.futureResult.whenSuccess {
-                    ctx.close(mode: mode, promise: promise)
+                    context.close(mode: mode, promise: promise)
                 }
                 promiseRegisterCallback(self.closePromise!)
             }
@@ -502,7 +502,7 @@ public class EventLoopTest : XCTestCase {
             let groupIsShutdown = Atomic(value: false)
             let removed = Atomic(value: false)
 
-            public func handlerRemoved(ctx: ChannelHandlerContext) {
+            public func handlerRemoved(context: ChannelHandlerContext) {
                 XCTAssertFalse(groupIsShutdown.load())
                 XCTAssertTrue(removed.compareAndExchange(expected: false, desired: true))
             }
@@ -643,4 +643,29 @@ public class EventLoopTest : XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [expect1, expect2], timeout: 0.5), .completed)
     }
 
+    func testAndAllCompleteWithZeroFutures() {
+        let eventLoop = EmbeddedEventLoop()
+        let done = DispatchWorkItem {}
+        EventLoopFuture<Void>.andAllComplete([], on: eventLoop).whenComplete { (result: Result<Void, Error>) in
+            _ = result.mapError { error -> Error in
+                XCTFail("unexpected error \(error)")
+                return error
+            }
+            done.perform()
+        }
+        done.wait()
+    }
+
+    func testAndAllSucceedWithZeroFutures() {
+        let eventLoop = EmbeddedEventLoop()
+        let done = DispatchWorkItem {}
+        EventLoopFuture<Void>.andAllSucceed([], on: eventLoop).whenComplete { result in
+            _ = result.mapError { error -> Error in
+                XCTFail("unexpected error \(error)")
+                return error
+            }
+            done.perform()
+        }
+        done.wait()
+    }
 }
