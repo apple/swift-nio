@@ -595,6 +595,7 @@ private enum EventLoopLifecycleState {
 /// `EventLoop` implementation that uses a `Selector` to get notified once there is more I/O or tasks to process.
 /// The whole processing of I/O and tasks is done by a `NIOThread` that is tied to the `SelectableEventLoop`. This `NIOThread`
 /// is guaranteed to never change!
+@usableFromInline
 internal final class SelectableEventLoop: EventLoop {
     private let selector: NIO.Selector<NIORegistration>
     private let thread: NIOThread
@@ -620,6 +621,8 @@ internal final class SelectableEventLoop: EventLoop {
 
     private let promiseCreationStoreLock = Lock()
     private var _promiseCreationStore: [ObjectIdentifier: (file: StaticString, line: UInt)] = [:]
+
+    @usableFromInline
     internal func promiseCreationStoreAdd<T>(future: EventLoopFuture<T>, file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
         self.promiseCreationStoreLock.withLock {
@@ -898,6 +901,7 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
+    @usableFromInline
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
         self.closeGently().map {
             do {
@@ -920,6 +924,7 @@ internal final class SelectableEventLoop: EventLoop {
 }
 
 extension SelectableEventLoop: CustomStringConvertible {
+    @usableFromInline
     var description: String {
         return self.tasksLock.withLock {
             return "SelectableEventLoop { selector = \(self.selector), scheduledTasks = \(self.scheduledTasks.description) }"
