@@ -547,6 +547,8 @@ private extension ByteBuffer {
             self.writeStaticString("MKACTIVITY")
         case .UNSUBSCRIBE:
             self.writeStaticString("UNSUBSCRIBE")
+        case .SOURCE:
+            self.writeStaticString("SOURCE")
         case .RAW(let value):
             self.writeString(value)
         }

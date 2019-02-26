@@ -857,6 +857,7 @@ public enum HTTPMethod: Equatable {
     case MKCALENDAR
     case MKACTIVITY
     case UNSUBSCRIBE
+    case SOURCE
     case RAW(value: String)
 
     /// Whether requests with this verb may have a request body.
