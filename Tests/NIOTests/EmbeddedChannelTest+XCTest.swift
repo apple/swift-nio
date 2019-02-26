@@ -37,6 +37,8 @@ extension EmbeddedChannelTest {
                 ("testSendingAnythingOnEmbeddedChannel", testSendingAnythingOnEmbeddedChannel),
                 ("testActiveWhenConnectPromiseFiresAndInactiveWhenClosePromiseFires", testActiveWhenConnectPromiseFiresAndInactiveWhenClosePromiseFires),
                 ("testWriteWithoutFlushDoesNotWrite", testWriteWithoutFlushDoesNotWrite),
+                ("testSetLocalAddressAfterSuccessfulBind", testSetLocalAddressAfterSuccessfulBind),
+                ("testSetRemoteAddressAfterSuccessfulConnect", testSetRemoteAddressAfterSuccessfulConnect),
            ]
    }
 }

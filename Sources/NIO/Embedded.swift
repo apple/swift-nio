@@ -318,8 +318,8 @@ public class EmbeddedChannel: Channel {
     public var allocator: ByteBufferAllocator = ByteBufferAllocator()
     public var eventLoop: EventLoop = EmbeddedEventLoop()
 
-    public let localAddress: SocketAddress? = nil
-    public let remoteAddress: SocketAddress? = nil
+    public var localAddress: SocketAddress? = nil
+    public var remoteAddress: SocketAddress? = nil
 
     // Embedded channels never have parents.
     public let parent: Channel? = nil
@@ -395,5 +395,19 @@ public class EmbeddedChannel: Channel {
             return self.eventLoop.makeSucceededFuture(true as! Option.Value)
         }
         fatalError("option \(option) not supported")
+    }
+
+    public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        promise?.futureResult.whenSuccess {
+            self.localAddress = address
+        }
+        pipeline.bind(to: address, promise: promise)
+    }
+
+    public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        promise?.futureResult.whenSuccess {
+            self.remoteAddress = address
+        }
+        pipeline.connect(to: address, promise: promise)
     }
 }
