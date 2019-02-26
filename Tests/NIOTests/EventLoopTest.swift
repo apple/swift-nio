@@ -643,4 +643,29 @@ public class EventLoopTest : XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [expect1, expect2], timeout: 0.5), .completed)
     }
 
+    func testAndAllCompleteWithZeroFutures() {
+        let eventLoop = EmbeddedEventLoop()
+        let done = DispatchWorkItem {}
+        EventLoopFuture<Void>.andAllComplete([], on: eventLoop).whenComplete { (result: Result<Void, Error>) in
+            _ = result.mapError { error -> Error in
+                XCTFail("unexpected error \(error)")
+                return error
+            }
+            done.perform()
+        }
+        done.wait()
+    }
+
+    func testAndAllSucceedWithZeroFutures() {
+        let eventLoop = EmbeddedEventLoop()
+        let done = DispatchWorkItem {}
+        EventLoopFuture<Void>.andAllSucceed([], on: eventLoop).whenComplete { result in
+            _ = result.mapError { error -> Error in
+                XCTFail("unexpected error \(error)")
+                return error
+            }
+            done.perform()
+        }
+        done.wait()
+    }
 }
