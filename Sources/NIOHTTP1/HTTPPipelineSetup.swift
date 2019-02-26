@@ -18,17 +18,18 @@ import NIO
 ///
 /// See the documentation for `HTTPServerUpgradeHandler` for details on these
 /// properties.
-public typealias HTTPUpgradeConfiguration = (upgraders: [HTTPProtocolUpgrader], completionHandler: (ChannelHandlerContext) -> Void)
+public typealias HTTPUpgradeConfiguration = (upgraders: [HTTPServerProtocolUpgrader], completionHandler: (ChannelHandlerContext) -> Void)
 
-public extension ChannelPipeline {
+extension ChannelPipeline {
     /// Configure a `ChannelPipeline` for use as a HTTP client.
     ///
     /// - parameters:
-    ///     - first: Whether to add the HTTP client at the head of the channel pipeline,
-    ///              or at the tail.
+    ///     - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    func addHTTPClientHandlers(first: Bool = false) -> EventLoopFuture<Void> {
-        return addHandlers(HTTPRequestEncoder(), HTTPResponseDecoder(), first: first)
+    public func addHTTPClientHandlers(position: ChannelPipeline.Position = .last,
+                                      leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) -> EventLoopFuture<Void> {
+        return addHandlers(HTTPRequestEncoder(), HTTPResponseDecoder(leftOverBytesStrategy: leftOverBytesStrategy),
+                           position: position)
     }
 
     /// Configure a `ChannelPipeline` for use as a HTTP server.
@@ -44,28 +45,26 @@ public extension ChannelPipeline {
     /// features.
     ///
     /// - parameters:
-    ///     - first: Whether to add the HTTP server at the head of the channel pipeline,
-    ///         or at the tail.
+    ///     - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
     ///     - pipelining: Whether to provide assistance handling HTTP clients that pipeline
     ///         their requests. Defaults to `true`. If `false`, users will need to handle
     ///         clients that pipeline themselves.
     ///     - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
     ///         HTTP upgrade. Defaults to `nil`, which will not add the handler to the pipeline. If
-    ///         provided should be a tuple of an array of `HTTPProtocolUpgrader` and the upgrade
+    ///         provided should be a tuple of an array of `HTTPServerProtocolUpgrader` and the upgrade
     ///         completion handler. See the documentation on `HTTPServerUpgradeHandler` for more
     ///         details.
     ///     - errorHandling: Whether to provide assistance handling protocol errors (e.g.
-    ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `false` for
-    ///         backward-compatibility reasons.
+    ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    func configureHTTPServerPipeline(first: Bool = false,
-                                     withPipeliningAssistance pipelining: Bool = true,
-                                     withServerUpgrade upgrade: HTTPUpgradeConfiguration? = nil,
-                                     withErrorHandling errorHandling: Bool = false) -> EventLoopFuture<Void> {
+    public func configureHTTPServerPipeline(position: ChannelPipeline.Position = .last,
+                                            withPipeliningAssistance pipelining: Bool = true,
+                                            withServerUpgrade upgrade: HTTPUpgradeConfiguration? = nil,
+                                            withErrorHandling errorHandling: Bool = true) -> EventLoopFuture<Void> {
         let responseEncoder = HTTPResponseEncoder()
         let requestDecoder = HTTPRequestDecoder(leftOverBytesStrategy: upgrade == nil ? .dropBytes : .forwardBytes)
 
-        var handlers: [ChannelHandler] = [responseEncoder, requestDecoder]
+        var handlers: [RemovableChannelHandler] = [responseEncoder, requestDecoder]
 
         if pipelining {
             handlers.append(HTTPServerPipelineHandler())
@@ -83,7 +82,7 @@ public extension ChannelPipeline {
             handlers.append(upgrader)
         }
 
-        return self.addHandlers(handlers, first: first)
+        return self.addHandlers(handlers, position: position)
     }
 }
 

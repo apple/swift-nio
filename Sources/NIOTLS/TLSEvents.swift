@@ -21,15 +21,4 @@ public enum TLSUserEvent: Equatable {
     /// The TLS connection has been successfully and cleanly shut down.
     /// No further application data can be sent or received at this time.
     case shutdownCompleted
-
-    public static func ==(lhs: TLSUserEvent, rhs: TLSUserEvent) -> Bool {
-        switch (lhs, rhs) {
-        case (.handshakeCompleted(let p1), .handshakeCompleted(let p2)):
-            return p1 == p2
-        case (.shutdownCompleted, .shutdownCompleted):
-            return true
-        case (.handshakeCompleted, _), (.shutdownCompleted, _):
-            return false
-        }
-    }
 }

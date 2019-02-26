@@ -25,9 +25,9 @@ final class PromiseOnReadHandler: ChannelInboundHandler {
         self.promise = promise
     }
 
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        self.promise.succeed(result: self.unwrapInboundIn(data))
-        _ = ctx.pipeline.remove(ctx: ctx)
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        self.promise.succeed(self.unwrapInboundIn(data))
+        _ = context.pipeline.removeHandler(context: context)
     }
 }
 
@@ -70,16 +70,16 @@ final class MulticastTest: XCTestCase {
         return DatagramBootstrap(group: self.group)
             .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .bind(host: host, port: port)
-            .then { channel in
+            .flatMap { channel in
                 let channel = channel as! MulticastChannel
 
                 do {
                     let multicastAddress = try SocketAddress(ipAddress: multicastAddress, port: channel.localAddress!.port!)
                     return channel.joinGroup(multicastAddress, interface: interface).map { channel }
                 } catch {
-                    return channel.eventLoop.makeFailedFuture(error: error)
+                    return channel.eventLoop.makeFailedFuture(error)
                 }
-            }.then { (channel: MulticastChannel) -> EventLoopFuture<MulticastChannel> in
+            }.flatMap { (channel: MulticastChannel) -> EventLoopFuture<MulticastChannel> in
                 let provider = channel as! SocketOptionProvider
 
                 switch channel.localAddress! {
@@ -103,7 +103,7 @@ final class MulticastTest: XCTestCase {
             return provider.setIPv6MulticastIF(CUnsignedInt(multicastInterface.interfaceIndex))
         default:
             XCTFail("Cannot join channel bound to \(sender.localAddress!) to interface at \(multicastInterface.address)")
-            return sender.eventLoop.makeFailedFuture(error: MulticastInterfaceMismatchError())
+            return sender.eventLoop.makeFailedFuture(MulticastInterfaceMismatchError())
         }
     }
 
@@ -114,16 +114,16 @@ final class MulticastTest: XCTestCase {
             let multicastAddress = try SocketAddress(ipAddress: multicastAddress, port: channel.localAddress!.port!)
             return channel.leaveGroup(multicastAddress, interface: interface)
         } catch {
-            return channel.eventLoop.makeFailedFuture(error: error)
+            return channel.eventLoop.makeFailedFuture(error)
         }
     }
 
     private func assertDatagramReaches(multicastChannel: Channel, sender: Channel, multicastAddress: SocketAddress, file: StaticString = #file, line: UInt = #line) throws {
         let receivedMulticastDatagram = multicastChannel.eventLoop.makePromise(of: AddressedEnvelope<ByteBuffer>.self)
-        XCTAssertNoThrow(try multicastChannel.pipeline.add(handler: PromiseOnReadHandler(promise: receivedMulticastDatagram)).wait())
+        XCTAssertNoThrow(try multicastChannel.pipeline.addHandler(PromiseOnReadHandler(promise: receivedMulticastDatagram)).wait())
 
         var messageBuffer = sender.allocator.buffer(capacity: 24)
-        messageBuffer.write(staticString: "hello, world!")
+        messageBuffer.writeStaticString("hello, world!")
 
         XCTAssertNoThrow(
             try sender.writeAndFlush(AddressedEnvelope(remoteAddress: multicastAddress, data: messageBuffer)).wait(),
@@ -143,15 +143,15 @@ final class MulticastTest: XCTestCase {
                                             file: StaticString = #file, line: UInt = #line) throws {
         let timeoutPromise = multicastChannel.eventLoop.makePromise(of: Void.self)
         let receivedMulticastDatagram = multicastChannel.eventLoop.makePromise(of: AddressedEnvelope<ByteBuffer>.self)
-        XCTAssertNoThrow(try multicastChannel.pipeline.add(handler: PromiseOnReadHandler(promise: receivedMulticastDatagram)).wait())
+        XCTAssertNoThrow(try multicastChannel.pipeline.addHandler(PromiseOnReadHandler(promise: receivedMulticastDatagram)).wait())
 
         // If we receive a datagram, or the reader promise fails, we must fail the timeoutPromise.
         receivedMulticastDatagram.futureResult.map { (_: AddressedEnvelope<ByteBuffer>) in
-            timeoutPromise.fail(error: ReceivedDatagramError())
-        }.cascadeFailure(promise: timeoutPromise)
+            timeoutPromise.fail(ReceivedDatagramError())
+        }.cascadeFailure(to: timeoutPromise)
 
         var messageBuffer = sender.allocator.buffer(capacity: 24)
-        messageBuffer.write(staticString: "hello, world!")
+        messageBuffer.writeStaticString("hello, world!")
 
         XCTAssertNoThrow(
             try sender.writeAndFlush(AddressedEnvelope(remoteAddress: multicastAddress, data: messageBuffer)).wait(),
@@ -159,7 +159,7 @@ final class MulticastTest: XCTestCase {
             line: line
         )
 
-        _ = multicastChannel.eventLoop.scheduleTask(in: timeout) { timeoutPromise.succeed(result: ()) }
+        _ = multicastChannel.eventLoop.scheduleTask(in: timeout) { timeoutPromise.succeed(()) }
         XCTAssertNoThrow(try timeoutPromise.futureResult.wait(), file: file, line: line)
     }
 

@@ -16,54 +16,7 @@ let sysMalloc: @convention(c) (size_t) -> UnsafeMutableRawPointer? = malloc
 let sysRealloc: @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer? = realloc
 let sysFree: @convention(c) (UnsafeMutableRawPointer?) -> Void = free
 
-#if !swift(>=4.1)
-    public extension UnsafeMutableRawPointer {
-        public func copyMemory(from src: UnsafeRawPointer, byteCount: Int) {
-            self.copyBytes(from: src, count: byteCount)
-        }
-    }
-    public extension UnsafeMutableRawBufferPointer {
-        internal static func allocate(byteCount: Int, alignment: Int) -> UnsafeMutableRawBufferPointer {
-            return UnsafeMutableRawBufferPointer.allocate(count: byteCount)
-        }
-
-        internal func initializeMemory<T>(as type: T.Type, repeating repeatedValue: T) -> UnsafeMutableBufferPointer<T> {
-            let ptr = self.bindMemory(to: T.self)
-            ptr.initialize(from: repeatElement(repeatedValue, count: self.count / MemoryLayout<T>.stride))
-            return ptr
-        }
-
-        public func copyMemory(from src: UnsafeRawBufferPointer) {
-            self.copyBytes(from: src)
-        }
-
-        public func bindMemory<T>(to type: T.Type) -> UnsafeMutableBufferPointer<T> {
-            guard let base = self.baseAddress else {
-                return UnsafeMutableBufferPointer<T>(start: nil, count: 0)
-            }
-            let capacity = count / MemoryLayout<T>.stride
-            let ptr = base.bindMemory(to: T.self, capacity: capacity)
-            return UnsafeMutableBufferPointer<T>(start: ptr, count: capacity)
-        }
-    }
-    public extension UnsafeRawBufferPointer {
-        public func bindMemory<T>(to type: T.Type) -> UnsafeBufferPointer<T> {
-            guard let base = self.baseAddress else {
-                return UnsafeBufferPointer<T>(start: nil, count: 0)
-            }
-            let capacity = count / MemoryLayout<T>.stride
-            let ptr = base.bindMemory(to: T.self, capacity: capacity)
-            return UnsafeBufferPointer<T>(start: ptr, count: capacity)
-        }
-    }
-#endif
-
-extension _ByteBufferSlice: Equatable {
-    @usableFromInline
-    static func ==(_ lhs: _ByteBufferSlice, _ rhs: _ByteBufferSlice) -> Bool {
-        return lhs._begin == rhs._begin && lhs.upperBound == rhs.upperBound
-    }
-}
+extension _ByteBufferSlice: Equatable {}
 
 /// The slice of a `ByteBuffer`, it's different from `Range<UInt32>` because the lower bound is actually only
 /// 24 bits (the upper bound is still 32). Before constructing, you need to make sure the lower bound actually
@@ -170,10 +123,10 @@ public struct ByteBufferAllocator {
 /// Example:
 ///
 ///     var buf = ...
-///     buf.set(string: "Hello World", at: 0)
+///     buf.setString("Hello World", at: 0)
 ///     let helloWorld = buf.getString(at: 0, length: 11)
 ///
-///     buf.set(integer: 17 as Int, at: 11)
+///     buf.setInteger(17 as Int, at: 11)
 ///     let seventeen: Int = buf.getInteger(at: 11)
 ///
 /// If needed, `ByteBuffer` will automatically resize its storage to accommodate your `set` request.
@@ -185,14 +138,14 @@ public struct ByteBufferAllocator {
 ///
 /// For every supported type `ByteBuffer` usually contains two methods for sequential access:
 ///
-///  1. `read<type>(length: Int)` to read `length` bytes from the current `readerIndex` (and then advance the reader index by `length` bytes)
-///  2. `write(<type>: Type)` to write, advancing the `writerIndex` by the appropriate amount
+///  1. `read<Type>(length: Int)` to read `length` bytes from the current `readerIndex` (and then advance the reader index by `length` bytes)
+///  2. `write<Type>(Type)` to write, advancing the `writerIndex` by the appropriate amount
 ///
 /// Example:
 ///
 ///      var buf = ...
-///      buf.write(string: "Hello World")
-///      buf.write(integer: 17 as Int)
+///      buf.writeString("Hello World")
+///      buf.writeInteger(17 as Int)
 ///      let helloWorld = buf.readString(length: 11)
 ///      let seventeen: Int = buf.readInteger()
 ///
@@ -217,8 +170,8 @@ public struct ByteBufferAllocator {
 ///     var buf = ...
 ///     let dataBytes: [UInt8] = [0xca, 0xfe, 0xba, 0xbe]
 ///     let dataBytesLength = UInt32(dataBytes.count)
-///     buf.write(integer: dataBytesLength) /* the header */
-///     buf.write(bytes: dataBytes) /* the data */
+///     buf.writeInteger(dataBytesLength) /* the header */
+///     buf.writeBytes(dataBytes) /* the data */
 ///     let bufDataBytesOnly = buf.getSlice(at: 4, length: dataBytes.count)
 ///     /* `bufDataByteOnly` and `buf` will share their storage */
 ///
@@ -324,13 +277,7 @@ public struct ByteBuffer {
     private mutating func _copyStorageAndRebase(capacity: _Capacity, resetIndices: Bool = false) {
         let indexRebaseAmount = resetIndices ? self._readerIndex : 0
         let storageRebaseAmount = self._slice.lowerBound + indexRebaseAmount
-        let _newSlice = storageRebaseAmount ..< min(storageRebaseAmount + _toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity)
-        #if swift(>=4.2)
-        // no need for the conversion anymore
-        let newSlice = _newSlice
-        #else
-        let newSlice = Range(_newSlice)
-        #endif
+        let newSlice = storageRebaseAmount ..< min(storageRebaseAmount + _toCapacity(self._slice.count), self._slice.upperBound, storageRebaseAmount + capacity)
         self._storage = self._storage.reallocSlice(newSlice, capacity: capacity)
         self._moveReaderIndex(to: self._readerIndex - indexRebaseAmount)
         self._moveWriterIndex(to: self._writerIndex - indexRebaseAmount)
@@ -395,7 +342,7 @@ public struct ByteBuffer {
     }
 
     @inlinable
-    mutating func _set(bytes: UnsafeRawBufferPointer, at index: _Index) -> _Capacity {
+    mutating func _setBytes(_ bytes: UnsafeRawBufferPointer, at index: _Index) -> _Capacity {
         let bytesCount = bytes.count
         let newEndIndex: _Index = index + _toIndex(bytesCount)
         if !isKnownUniquelyReferenced(&self._storage) {
@@ -436,9 +383,9 @@ public struct ByteBuffer {
     }
 
     @inlinable
-    mutating func _set<Bytes: Sequence>(bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
+    mutating func _setBytes<Bytes: Sequence>(_ bytes: Bytes, at index: _Index) -> _Capacity where Bytes.Element == UInt8 {
         if let written = bytes.withContiguousStorageIfAvailable({ bytes in
-            self._set(bytes: UnsafeRawBufferPointer(bytes), at: index)
+            self._setBytes(UnsafeRawBufferPointer(bytes), at: index)
         }) {
             // fast path, we've got access to the contiguous bytes
             return written
@@ -551,6 +498,16 @@ public struct ByteBuffer {
     /// - warning: Do not escape the pointer from the closure for later use.
     @inlinable
     public func withVeryUnsafeBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
+        return try body(.init(self._slicedStorageBuffer))
+    }
+
+    /// This vends a pointer to the storage of the `ByteBuffer`. It's marked as _very unsafe_ because it might contain
+    /// uninitialised memory and it's undefined behaviour to read it. In most cases you should use `withUnsafeMutableWritableBytes`.
+    ///
+    /// - warning: Do not escape the pointer from the closure for later use.
+    @inlinable
+    public mutating func withVeryUnsafeMutableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> T) rethrows -> T {
+        self._copyStorageAndRebaseIfNeeded() // this will trigger a CoW if necessary
         return try body(.init(self._slicedStorageBuffer))
     }
 
@@ -699,14 +656,16 @@ extension ByteBuffer: CustomStringConvertible {
     ///
     /// - returns: A description of this `ByteBuffer`.
     public var description: String {
-        return  "ByteBuffer { " +
-            /*    this     */ "readerIndex: \(self.readerIndex), " +
-            /*     is      */ "writerIndex: \(self.writerIndex), " +
-            /*     to      */ "readableBytes: \(self.readableBytes), " +
-            /*    help     */ "capacity: \(self.capacity), " +
-            /*    Xcode    */ "slice: \(self._slice), " +
-            /*   indent    */ "storage: \(self._storage.bytes) (\(self._storage.capacity) bytes)" +
-            /*             */ "}"
+        return """
+        ByteBuffer { \
+        readerIndex: \(self.readerIndex), \
+        writerIndex: \(self.writerIndex), \
+        readableBytes: \(self.readableBytes), \
+        capacity: \(self.capacity), \
+        slice: \(self._slice), \
+        storage: \(self._storage.bytes) (\(self._storage.capacity) bytes)\
+        }
+        """
     }
 
     /// A `String` describing this `ByteBuffer` with some portion of the readable bytes dumped too. Example:
@@ -727,15 +686,15 @@ extension ByteBuffer {
     /// Copy the collection of `bytes` into the `ByteBuffer` at `index`.
     @discardableResult
     @inlinable
-    public mutating func set<Bytes: Sequence>(bytes: Bytes, at index: Int) -> Int where Bytes.Element == UInt8 {
-        return Int(self._set(bytes: bytes, at: _toIndex(index)))
+    public mutating func setBytes<Bytes: Sequence>(_ bytes: Bytes, at index: Int) -> Int where Bytes.Element == UInt8 {
+        return Int(self._setBytes(bytes, at: _toIndex(index)))
     }
 
     /// Copy `bytes` into the `ByteBuffer` at `index`.
     @discardableResult
     @inlinable
-    public mutating func set(bytes: UnsafeRawBufferPointer, at index: Int) -> Int {
-        return Int(self._set(bytes: bytes, at: _toIndex(index)))
+    public mutating func setBytes(_ bytes: UnsafeRawBufferPointer, at index: Int) -> Int {
+        return Int(self._setBytes(bytes, at: _toIndex(index)))
     }
 
     /// Move the reader index forward by `offset` bytes.

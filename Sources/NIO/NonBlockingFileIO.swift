@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import NIOConcurrencyHelpers
-import Dispatch
 
 /// `NonBlockingFileIO` is a helper that allows you to read files without blocking the calling thread.
 ///
@@ -43,13 +42,13 @@ public struct NonBlockingFileIO {
         case descriptorSetToNonBlocking
     }
 
-    private let threadPool: BlockingIOThreadPool
+    private let threadPool: NIOThreadPool
 
     /// Initialize a `NonBlockingFileIO` which uses the `BlockingIOThreadPool`.
     ///
     /// - parameters:
     ///   - threadPool: The `BlockingIOThreadPool` that will be used for all the IO.
-    public init(threadPool: BlockingIOThreadPool) {
+    public init(threadPool: NIOThreadPool) {
         self.threadPool = threadPool
     }
 
@@ -87,7 +86,7 @@ public struct NonBlockingFileIO {
                                     eventLoop: eventLoop,
                                     chunkHandler: chunkHandler)
         } catch {
-            return eventLoop.makeFailedFuture(error: error)
+            return eventLoop.makeFailedFuture(error)
         }
     }
 
@@ -101,17 +100,17 @@ public struct NonBlockingFileIO {
     ///
     /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` succeeds.
     ///
-    /// - note: `readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)` should be preferred as it uses `FileRegion` object instead of raw `FileHandle`s.
+    /// - note: `readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)` should be preferred as it uses `FileRegion` object instead of raw `NIOFileHandle`s.
     ///
     /// - parameters:
-    ///   - fileHandle: The `FileHandle` to read from.
+    ///   - fileHandle: The `NIOFileHandle` to read from.
     ///   - byteCount: The number of bytes to read from `fileHandle`.
     ///   - chunkSize: The size of the individual chunks to deliver.
     ///   - allocator: A `ByteBufferAllocator` used to allocate space for the chunks.
     ///   - eventLoop: The `EventLoop` to call `chunkHandler` on.
     ///   - chunkHandler: Called for every chunk read. The next chunk will be read upon successful completion of the returned `EventLoopFuture`. If the returned `EventLoopFuture` fails, the overall operation is aborted.
     /// - returns: An `EventLoopFuture` which is the result of the overall operation. If either the reading of `fileHandle` or `chunkHandler` fails, the `EventLoopFuture` will fail too. If the reading of `fileHandle` as well as `chunkHandler` always succeeded, the `EventLoopFuture` will succeed too.
-    public func readChunked(fileHandle: FileHandle,
+    public func readChunked(fileHandle: NIOFileHandle,
                             byteCount: Int,
                             chunkSize: Int = NonBlockingFileIO.defaultChunkSize,
                             allocator: ByteBufferAllocator,
@@ -124,14 +123,14 @@ public struct NonBlockingFileIO {
             if remainingReads > 1 || (remainingReads == 1 && lastReadSize > 0) {
                 let readSize = remainingReads > 1 ? chunkSize : lastReadSize
                 assert(readSize > 0)
-                return self.read(fileHandle: fileHandle, byteCount: readSize, allocator: allocator, eventLoop: eventLoop).then { buffer in
-                    chunkHandler(buffer).then { () -> EventLoopFuture<Void> in
+                return self.read(fileHandle: fileHandle, byteCount: readSize, allocator: allocator, eventLoop: eventLoop).flatMap { buffer in
+                    chunkHandler(buffer).flatMap { () -> EventLoopFuture<Void> in
                         eventLoop.assertInEventLoop()
                         return _read(remainingReads: remainingReads - 1)
                     }
                 }
             } else {
-                return eventLoop.makeSucceededFuture(result: ())
+                return eventLoop.makeSucceededFuture(())
             }
         }
 
@@ -162,7 +161,7 @@ public struct NonBlockingFileIO {
                              allocator: allocator,
                              eventLoop: eventLoop)
         } catch {
-            return eventLoop.makeFailedFuture(error: error)
+            return eventLoop.makeFailedFuture(error)
         }
     }
 
@@ -172,17 +171,17 @@ public struct NonBlockingFileIO {
     /// case the `ByteBuffer` will contain the bytes available to read.
     ///
     /// - note: Only use this function for small enough `byteCount`s as it will need to allocate enough memory to hold `byteCount` bytes.
-    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses `FileRegion` object instead of raw `FileHandle`s.
+    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses `FileRegion` object instead of raw `NIOFileHandle`s.
     ///
     /// - parameters:
-    ///   - fileHandle: The `FileHandle` to read.
+    ///   - fileHandle: The `NIOFileHandle` to read.
     ///   - byteCount: The number of bytes to read from `fileHandle`.
     ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned `ByteBuffer`.
     ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
     /// - returns: An `EventLoopFuture` which delivers a `ByteBuffer` if the read was successful or a failure on error.
-    public func read(fileHandle: FileHandle, byteCount: Int, allocator: ByteBufferAllocator, eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
+    public func read(fileHandle: NIOFileHandle, byteCount: Int, allocator: ByteBufferAllocator, eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
         guard byteCount > 0 else {
-            return eventLoop.makeSucceededFuture(result: allocator.buffer(capacity: 0))
+            return eventLoop.makeSucceededFuture(allocator.buffer(capacity: 0))
         }
 
         var buf = allocator.buffer(capacity: byteCount)
@@ -217,17 +216,17 @@ public struct NonBlockingFileIO {
     /// Write `buffer` to `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
     ///
     /// - parameters:
-    ///   - fileHandle: The `FileHandle` to write to.
+    ///   - fileHandle: The `NIOFileHandle` to write to.
     ///   - buffer: The `ByteBuffer` to write.
     ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
     /// - returns: An `EventLoopFuture` which is fulfilled if the write was successful or fails on error.
-    public func write(fileHandle: FileHandle,
+    public func write(fileHandle: NIOFileHandle,
                       buffer: ByteBuffer,
                       eventLoop: EventLoop) -> EventLoopFuture<()> {
         var byteCount = buffer.readableBytes
 
         guard byteCount > 0 else {
-            return eventLoop.makeSucceededFuture(result: ())
+            return eventLoop.makeSucceededFuture(())
         }
 
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
@@ -256,18 +255,18 @@ public struct NonBlockingFileIO {
 
     /// Open the file at `path` on a private thread pool which is separate from any `EventLoop` thread.
     ///
-    /// This function will return (a future) of the `FileHandle` associated with the file opened and a `FileRegion`
-    /// comprising of the whole file. The caller must close the returned `FileHandle` when it's no longer needed.
+    /// This function will return (a future) of the `NIOFileHandle` associated with the file opened and a `FileRegion`
+    /// comprising of the whole file. The caller must close the returned `NIOFileHandle` when it's no longer needed.
     ///
-    /// - note: The reason this returns the `FileHandle` and the `FileRegion` is that both the opening of a file as well as the querying of its size are blocking.
+    /// - note: The reason this returns the `NIOFileHandle` and the `FileRegion` is that both the opening of a file as well as the querying of its size are blocking.
     ///
     /// - parameters:
     ///     - path: The path of the file to be opened.
     ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
-    /// - returns: An `EventLoopFuture` containing the `FileHandle` and the `FileRegion` comprising the whole file.
-    public func openFile(path: String, eventLoop: EventLoop) -> EventLoopFuture<(FileHandle, FileRegion)> {
+    /// - returns: An `EventLoopFuture` containing the `NIOFileHandle` and the `FileRegion` comprising the whole file.
+    public func openFile(path: String, eventLoop: EventLoop) -> EventLoopFuture<(NIOFileHandle, FileRegion)> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
-            let fh = try FileHandle(path: path)
+            let fh = try NIOFileHandle(path: path)
             do {
                 let fr = try FileRegion(fileHandle: fh)
                 return (fh, fr)

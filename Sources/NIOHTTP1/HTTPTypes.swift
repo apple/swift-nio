@@ -263,20 +263,7 @@ public enum HTTPPart<HeadT: Equatable, BodyT: Equatable> {
     case end(HTTPHeaders?)
 }
 
-extension HTTPPart: Equatable {
-    public static func ==(lhs: HTTPPart, rhs: HTTPPart) -> Bool {
-        switch (lhs, rhs) {
-        case (.head(let h1), .head(let h2)):
-            return h1 == h2
-        case (.body(let b1), .body(let b2)):
-            return b1 == b2
-        case (.end(let h1), .end(let h2)):
-            return h1 == h2
-        case (.head, _), (.body, _), (.end, _):
-            return false
-        }
-    }
-}
+extension HTTPPart: Equatable {}
 
 /// The components of a HTTP request from the view of a HTTP client.
 public typealias HTTPClientRequestPart = HTTPPart<HTTPRequestHead, IOData>
@@ -410,7 +397,7 @@ private extension UInt8 {
     }
 }
 
-/* private but tests */ internal extension HTTPHeaders {
+extension HTTPHeaders {
     func isKeepAlive(version: HTTPVersion) -> Bool {
         switch self._storage.keepAliveState {
         case .close:
@@ -443,7 +430,7 @@ private extension UInt8 {
 /// field when needed. It also supports recomposing headers to a maximally joined
 /// or split representation, such that header fields that are able to be repeated
 /// can be represented appropriately.
-public struct HTTPHeaders: CustomStringConvertible {
+public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiteral {
 
     private final class _Storage {
         var buffer: ByteBuffer
@@ -569,6 +556,14 @@ public struct HTTPHeaders: CustomStringConvertible {
         }
     }
     
+    /// Construct a `HTTPHeaders` structure.
+    ///
+    /// - parameters
+    ///     - elements: name, value pairs provided by a dictionary literal.
+    public init(dictionaryLiteral elements: (String, String)...) {
+        self.init(elements)
+    }
+
     private func isConnectionHeader(_ header: HTTPHeaderIndex) -> Bool {
          return self.buffer.equalCaseInsensitiveASCII(view: "connection".utf8, at: header)
     }
@@ -589,14 +584,14 @@ public struct HTTPHeaders: CustomStringConvertible {
             self._storage = self._storage.copy()
         }
         let nameStart = self.buffer.writerIndex
-        let nameLength = self._storage.buffer.write(string: name)
-        self._storage.buffer.write(staticString: headerSeparator)
+        let nameLength = self._storage.buffer.writeString(name)
+        self._storage.buffer.writeStaticString(headerSeparator)
         let valueStart = self.buffer.writerIndex
-        let valueLength = self._storage.buffer.write(string: value)
+        let valueLength = self._storage.buffer.writeString(value)
         
         let nameIdx = HTTPHeaderIndex(start: nameStart, length: nameLength)
         self._storage.headers.append(HTTPHeader(name: nameIdx, value: HTTPHeaderIndex(start: valueStart, length: valueLength)))
-        self._storage.buffer.write(staticString: crlf)
+        self._storage.buffer.writeStaticString(crlf)
         
         if self.isConnectionHeader(nameIdx) {
             self._storage.keepAliveState = .unknown
@@ -727,7 +722,7 @@ public struct HTTPHeaders: CustomStringConvertible {
     }
 }
 
-internal extension ByteBuffer {
+extension ByteBuffer {
 
     /// Serializes this HTTP header block to bytes suitable for writing to the wire.
     ///
@@ -737,20 +732,21 @@ internal extension ByteBuffer {
         if headers.continuous {
             // Declare an extra variable so we not affect the readerIndex of the buffer itself.
             var buf = headers.buffer
-            self.write(buffer: &buf)
+            self.writeBuffer(&buf)
         } else {
             // slow-path....
             // TODO: This can still be improved to write as many continuous data as possible and just skip over stuff that was removed.
             for header in headers.self.headers {
                 let fieldLength = (header.value.start + header.value.length) - header.name.start
                 var header = headers.buffer.getSlice(at: header.name.start, length: fieldLength)!
-                self.write(buffer: &header)
-                self.write(staticString: crlf)
+                self.writeBuffer(&header)
+                self.writeStaticString(crlf)
             }
         }
-        self.write(staticString: crlf)
+        self.writeStaticString(crlf)
     }
 }
+
 extension HTTPHeaders: Sequence {
     public typealias Element = (name: String, value: String)
 
@@ -775,13 +771,13 @@ extension HTTPHeaders: Sequence {
     }
 }
 
-/* private but tests */ internal extension Character {
+extension Character {
     var isASCIIWhitespace: Bool {
         return self == " " || self == "\t" || self == "\r" || self == "\n" || self == "\r\n"
     }
 }
 
-/* private but tests */ internal extension String {
+extension String {
     func trimASCIIWhitespace() -> Substring {
         return self.dropFirst(0).trimWhitespace()
     }
@@ -826,81 +822,6 @@ public enum HTTPMethod: Equatable {
         case yes
         case no
         case unlikely
-    }
-
-    public static func ==(lhs: HTTPMethod, rhs: HTTPMethod) -> Bool {
-        switch (lhs, rhs){
-        case (.GET, .GET):
-            return true
-        case (.PUT, .PUT):
-            return true
-        case (.ACL, .ACL):
-            return true
-        case (.HEAD, .HEAD):
-            return true
-        case (.POST, .POST):
-            return true
-        case (.COPY, .COPY):
-            return true
-        case (.LOCK, .LOCK):
-            return true
-        case (.MOVE, .MOVE):
-            return true
-        case (.BIND, .BIND):
-            return true
-        case (.LINK, .LINK):
-            return true
-        case (.PATCH, .PATCH):
-            return true
-        case (.TRACE, .TRACE):
-            return true
-        case (.MKCOL, .MKCOL):
-            return true
-        case (.MERGE, .MERGE):
-            return true
-        case (.PURGE, .PURGE):
-            return true
-        case (.NOTIFY, .NOTIFY):
-            return true
-        case (.SEARCH, .SEARCH):
-            return true
-        case (.UNLOCK, .UNLOCK):
-            return true
-        case (.REBIND, .REBIND):
-            return true
-        case (.UNBIND, .UNBIND):
-            return true
-        case (.REPORT, .REPORT):
-            return true
-        case (.DELETE, .DELETE):
-            return true
-        case (.UNLINK, .UNLINK):
-            return true
-        case (.CONNECT, .CONNECT):
-            return true
-        case (.MSEARCH, .MSEARCH):
-            return true
-        case (.OPTIONS, .OPTIONS):
-            return true
-        case (.PROPFIND, .PROPFIND):
-            return true
-        case (.CHECKOUT, .CHECKOUT):
-            return true
-        case (.PROPPATCH, .PROPPATCH):
-            return true
-        case (.SUBSCRIBE, .SUBSCRIBE):
-            return true
-        case (.MKCALENDAR, .MKCALENDAR):
-            return true
-        case (.MKACTIVITY, .MKACTIVITY):
-            return true
-        case (.UNSUBSCRIBE, .UNSUBSCRIBE):
-            return true
-        case (.RAW(let l), .RAW(let r)):
-            return l == r
-        default:
-            return false
-        }
     }
 
     case GET
@@ -955,10 +876,6 @@ public enum HTTPMethod: Equatable {
 
 /// A structure representing a HTTP version.
 public struct HTTPVersion: Equatable {
-    public static func ==(lhs: HTTPVersion, rhs: HTTPVersion) -> Bool {
-        return lhs.major == rhs.major && lhs.minor == rhs.minor
-    }
-
     /// Create a HTTP version.
     ///
     /// - Parameter major: The major version number.

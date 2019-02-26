@@ -12,28 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// An configuration option that can be set on a `Channel` to configure different behaviour.
-public protocol ChannelOption {
-    associatedtype AssociatedValueType
-    associatedtype OptionType
-
-    /// The value of the `ChannelOption`.
-    var value: AssociatedValueType { get }
-
-    /// The type of the `ChannelOption`
-    var type: OptionType.Type { get }
-}
-
-extension ChannelOption {
-    public var type: OptionType.Type {
-        return OptionType.self
-    }
-}
-
-extension ChannelOption where AssociatedValueType == () {
-    public var value: () {
-        return ()
-    }
+/// A configuration option that can be set on a `Channel` to configure different behaviour.
+public protocol ChannelOption: Equatable {
+    /// The type of the `ChannelOption`'s value.
+    associatedtype Value
 }
 
 public typealias SocketOptionName = Int32
@@ -45,83 +27,70 @@ public typealias SocketOptionName = Int32
     public typealias SocketOptionValue = Int32
 #endif
 
-/// `SocketOption` allows to specify configuration settings that are directly applied to the underlying socket file descriptor.
+/// `SocketOption` allows users to specify configuration settings that are directly applied to the underlying socket file descriptor.
 ///
 /// Valid options are typically found in the various man pages like `man 4 tcp`.
-public enum SocketOption: ChannelOption {
-    public typealias AssociatedValueType = (SocketOptionLevel, SocketOptionName)
+public struct SocketOption: ChannelOption, Equatable {
+    public typealias Value = (SocketOptionValue)
 
-    public typealias OptionType = (SocketOptionValue)
-
-    case const(AssociatedValueType)
+    public var level: SocketOptionLevel
+    public var name: SocketOptionName
 
     /// Create a new `SocketOption`.
     ///
     /// - parameters:
-    ///       - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
-    ///       - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
+    ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
+    ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
     public init(level: SocketOptionLevel, name: SocketOptionName) {
-        self = .const((level, name))
-    }
-
-    public var value: (SocketOptionLevel, SocketOptionName) {
-        switch self {
-        case .const(let level, let name):
-            return (level, name)
-        }
+        self.level = level
+        self.name = name
     }
 }
 
 /// `AllocatorOption` allows to specify the `ByteBufferAllocator` to use.
-public enum AllocatorOption: ChannelOption {
-    public typealias AssociatedValueType = ()
-    public typealias OptionType = ByteBufferAllocator
+public struct AllocatorOption: ChannelOption {
+    public typealias Value = ByteBufferAllocator
 
-    case const(())
+    public init() {}
 }
 
-/// `RecvAllocatorOption` allows to specify the `RecvByteBufferAllocator` to use.
-public enum RecvAllocatorOption: ChannelOption {
-    public typealias AssociatedValueType = ()
-    public typealias OptionType = RecvByteBufferAllocator
+/// `RecvAllocatorOption` allows users to specify the `RecvByteBufferAllocator` to use.
+public struct RecvAllocatorOption: ChannelOption {
+    public typealias Value = RecvByteBufferAllocator
 
-    case const(())
+    public init() {}
 }
 
-/// `AutoReadOption` allows to configure if a `Channel` should automatically call `Channel.read` again once all data was read from the transport or
+/// `AutoReadOption` allows users to configure if a `Channel` should automatically call `Channel.read` again once all data was read from the transport or
 /// if the user is responsible to call `Channel.read` manually.
-public enum AutoReadOption: ChannelOption {
-    public typealias AssociatedValueType = ()
-    public typealias OptionType = Bool
+public struct AutoReadOption: ChannelOption {
+    public typealias Value = Bool
 
-    case const(())
+    public init() {}
 }
 
 /// `WriteSpinOption` allows users to configure the number of repetitions of a only partially successful write call before considering the `Channel` not writable.
 /// Setting this option to `0` means that we only issue one write call and if that call does not write all the bytes,
 /// we consider the `Channel` not writable.
-public enum WriteSpinOption: ChannelOption {
-    public typealias AssociatedValueType = ()
-    public typealias OptionType = UInt
+public struct WriteSpinOption: ChannelOption {
+    public typealias Value = UInt
 
-    case const(())
+    public init() {}
 }
 
-/// `MaxMessagesPerReadOption` allows to configure the maximum number of read calls to the underlying transport are performed before wait again until
+/// `MaxMessagesPerReadOption` allows users to configure the maximum number of read calls to the underlying transport are performed before wait again until
 /// there is more to read and be notified.
-public enum MaxMessagesPerReadOption: ChannelOption {
-    public typealias AssociatedValueType = ()
-    public typealias OptionType = UInt
+public struct MaxMessagesPerReadOption: ChannelOption {
+    public typealias Value = UInt
 
-    case const(())
+    public init() {}
 }
 
-/// `BacklogOption` allows to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
-public enum BacklogOption: ChannelOption {
-    public typealias AssociatedValueType = ()
-    public typealias OptionType = Int32
+/// `BacklogOption` allows users to configure the `backlog` value as specified in `man 2 listen`. This is only useful for `ServerSocketChannel`s.
+public struct BacklogOption: ChannelOption {
+    public typealias Value = Int32
 
-    case const(())
+    public init() {}
 }
 
 /// The watermark used to detect when `Channel.isWritable` returns `true` or `false`.
@@ -153,25 +122,23 @@ public struct WriteBufferWaterMark {
     }
 }
 
-/// `WriteBufferWaterMarkOption` allows to configure when a `Channel` should be marked as writable or not. Once the amount of bytes queued in a
+/// `WriteBufferWaterMarkOption` allows users to configure when a `Channel` should be marked as writable or not. Once the amount of bytes queued in a
 /// `Channel`s outbound buffer is larger than `WriteBufferWaterMark.high` the channel will be marked as non-writable and so
 /// `Channel.isWritable` will return `false`. Once we were able to write some data out of the outbound buffer and the amount of bytes queued
 /// falls below `WriteBufferWaterMark.low` the `Channel` will become writable again. Once this happens `Channel.writable` will return
 /// `true` again. These writability changes are also propagated through the `ChannelPipeline` and so can be intercepted via `ChannelInboundHandler.channelWritabilityChanged`.
-public enum WriteBufferWaterMarkOption: ChannelOption {
-    public typealias AssociatedValueType = ()
-    public typealias OptionType = WriteBufferWaterMark
+public struct WriteBufferWaterMarkOption: ChannelOption {
+    public typealias Value = WriteBufferWaterMark
 
-    case const(())
+    public init() {}
 }
 
-/// `ConnectTimeoutOption` allows to configure the `TimeAmount` after which a connect will fail if it was not established in the meantime. May be
+/// `ConnectTimeoutOption` allows users to configure the `TimeAmount` after which a connect will fail if it was not established in the meantime. May be
 /// `nil`, in which case the connection attempt will never time out.
-public enum ConnectTimeoutOption: ChannelOption {
-    public typealias AssociatedValueType = ()
-    public typealias OptionType = TimeAmount?
+public struct ConnectTimeoutOption: ChannelOption {
+    public typealias Value = TimeAmount?
 
-    case const(())
+    public init() {}
 }
 
 /// `AllowRemoteHalfClosureOption` allows users to configure whether the `Channel` will close itself when its remote
@@ -179,42 +146,105 @@ public enum ConnectTimeoutOption: ChannelOption {
 /// will be closed automatically if the remote peer shuts down its send stream. If set to true, the `Channel` will
 /// not be closed: instead, a `ChannelEvent.inboundClosed` user event will be sent on the `ChannelPipeline`,
 /// and no more data will be received.
-public enum AllowRemoteHalfClosureOption: ChannelOption {
-    public typealias AssociatedValueType = ()
-    public typealias OptionType = Bool
+public struct AllowRemoteHalfClosureOption: ChannelOption {
+    public typealias Value = Bool
 
-    case const(())
+    public init() {}
 }
 
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
 public struct ChannelOptions {
     /// - seealso: `SocketOption`.
-    public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> SocketOption in .const((level, name)) }
+    public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> SocketOption in
+        .init(level: level, name: name)
+    }
 
     /// - seealso: `AllocatorOption`.
-    public static let allocator = AllocatorOption.const(())
+    public static let allocator = AllocatorOption()
 
     /// - seealso: `RecvAllocatorOption`.
-    public static let recvAllocator = RecvAllocatorOption.const(())
+    public static let recvAllocator = RecvAllocatorOption()
 
     /// - seealso: `AutoReadOption`.
-    public static let autoRead = AutoReadOption.const(())
+    public static let autoRead = AutoReadOption()
 
     /// - seealso: `MaxMessagesPerReadOption`.
-    public static let maxMessagesPerRead = MaxMessagesPerReadOption.const(())
+    public static let maxMessagesPerRead = MaxMessagesPerReadOption()
 
     /// - seealso: `BacklogOption`.
-    public static let backlog = BacklogOption.const(())
+    public static let backlog = BacklogOption()
 
     /// - seealso: `WriteSpinOption`.
-    public static let writeSpin = WriteSpinOption.const(())
+    public static let writeSpin = WriteSpinOption()
 
     /// - seealso: `WriteBufferWaterMarkOption`.
-    public static let writeBufferWaterMark = WriteBufferWaterMarkOption.const(())
+    public static let writeBufferWaterMark = WriteBufferWaterMarkOption()
 
     /// - seealso: `ConnectTimeoutOption`.
-    public static let connectTimeout = ConnectTimeoutOption.const(())
+    public static let connectTimeout = ConnectTimeoutOption()
 
     /// - seealso: `AllowRemoteHalfClosureOption`.
-    public static let allowRemoteHalfClosure = AllowRemoteHalfClosureOption.const(())
+    public static let allowRemoteHalfClosure = AllowRemoteHalfClosureOption()
+}
+
+extension ChannelOptions {
+    /// A type-safe storage facility for `ChannelOption`s. You will only ever need this if you implement your own
+    /// `Channel` that needs to store `ChannelOption`s.
+    public struct Storage {
+        @usableFromInline
+        internal var _storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
+
+        /// Add `Options`, a `ChannelOption` to the `ChannelOptions.Storage`.
+        ///
+        /// - parameters:
+        ///    - key: the key for the option
+        ///    - value: the value for the option
+        @inlinable
+        public mutating func append<Option: ChannelOption>(key newKey: Option, value newValue: Option.Value) {
+            func applier(_ t: Channel) -> (Any, Any) -> EventLoopFuture<Void> {
+                return { (option, value) in
+                    return t.setOption(option as! Option, value: value as! Option.Value)
+                }
+            }
+            var hasSet = false
+            self._storage = self._storage.map { currentKeyAndValue in
+                let (currentKey, _) = currentKeyAndValue
+                if let currentKey = currentKey as? Option, currentKey == newKey {
+                    hasSet = true
+                    return (currentKey, (newValue, applier))
+                } else {
+                    return currentKeyAndValue
+                }
+            }
+            if !hasSet {
+                self._storage.append((newKey, (newValue, applier)))
+            }
+        }
+
+        /// Apply all stored `ChannelOption`s to `Channel`.
+        ///
+        /// - parameters:
+        ///    - channel: The `Channel` to apply the `ChannelOption`s to
+        /// - returns:
+        ///    - An `EventLoopFuture` that is fulfilled when all `ChannelOption`s have been applied to the `Channel`.
+        public func applyAllChannelOptions(to channel: Channel) -> EventLoopFuture<Void> {
+            let applyPromise = channel.eventLoop.makePromise(of: Void.self)
+            var it = self._storage.makeIterator()
+
+            func applyNext() {
+                guard let (key, (value, applier)) = it.next() else {
+                    // If we reached the end, everything is applied.
+                    applyPromise.succeed(())
+                    return
+                }
+
+                applier(channel)(key, value).map {
+                    applyNext()
+                }.cascadeFailure(to: applyPromise)
+            }
+            applyNext()
+
+            return applyPromise.futureResult
+        }
+    }
 }

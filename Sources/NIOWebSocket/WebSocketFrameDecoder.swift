@@ -27,7 +27,7 @@ public enum NIOWebSocketError: Error {
     case multiByteControlFrameLength
 }
 
-internal extension WebSocketErrorCode {
+extension WebSocketErrorCode {
     init(_ error: NIOWebSocketError) {
         switch error {
         case .invalidFrameLength:
@@ -39,12 +39,12 @@ internal extension WebSocketErrorCode {
     }
 }
 
-public extension ByteBuffer {
+extension ByteBuffer {
     /// Applies the WebSocket unmasking operation.
     ///
     /// - parameters:
     ///     - maskingKey: The masking key.
-    mutating func webSocketUnmask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
+    public mutating func webSocketUnmask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
         /// Shhhh: secretly unmasking and masking are the same operation!
         webSocketMask(maskingKey, indexOffset: indexOffset)
     }
@@ -57,7 +57,7 @@ public extension ByteBuffer {
     ///         This is used when masking multiple "contiguous" byte buffers, to ensure that
     ///         the masking key is applied uniformly to the collection rather than from the
     ///         start each time.
-    mutating func webSocketMask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
+    public mutating func webSocketMask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
         self.withUnsafeMutableReadableBytes {
             for (index, byte) in $0.enumerated() {
                 $0[index] = byte ^ maskingKey[(index + indexOffset) % 4]
@@ -258,19 +258,19 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
         self.automaticErrorHandling = automaticErrorHandling
     }
 
-    public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState  {
+    public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState  {
         // Even though the calling code will loop around calling us in `decode`, we can't quite
         // rely on that: sometimes we have zero-length elements to parse, and the caller doesn't
         // guarantee to call us with zero-length bytes.
         parseLoop: while self.shouldKeepParsing {
             switch parser.parseStep(&buffer) {
             case .result(let frame):
-                ctx.fireChannelRead(self.wrapInboundOut(frame))
+                context.fireChannelRead(self.wrapInboundOut(frame))
             case .continueParsing:
                 do {
                     try self.parser.validateState(maxFrameSize: self.maxFrameSize)
                 } catch {
-                    self.handleError(error, ctx: ctx)
+                    self.handleError(error, context: context)
                 }
             case .insufficientData:
                 break parseLoop
@@ -281,7 +281,7 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
         return .needMoreData
     }
 
-    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+    public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
         // EOF is not semantic in WebSocket, so ignore this.
         return .needMoreData
     }
@@ -295,7 +295,7 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
     /// A clean websocket shutdown is not really supposed to have an immediate close,
     /// but we're doing that because the remote peer has prevented us from doing
     /// further frame parsing, so we can't really wait for the next frame.
-    private func handleError(_ error: Error, ctx: ChannelHandlerContext) {
+    private func handleError(_ error: Error, context: ChannelHandlerContext) {
         guard let error = error as? NIOWebSocketError else {
             fatalError("Can only handle NIOWebSocketErrors")
         }
@@ -304,16 +304,16 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
         // If we've been asked to handle the errors here, we should.
         // TODO(cory): Remove this in 2.0, in favour of `WebSocketProtocolErrorHandler`.
         if self.automaticErrorHandling {
-            var data = ctx.channel.allocator.buffer(capacity: 2)
+            var data = context.channel.allocator.buffer(capacity: 2)
             data.write(webSocketErrorCode: WebSocketErrorCode(error))
             let frame = WebSocketFrame(fin: true,
                                        opcode: .connectionClose,
                                        data: data)
-            ctx.writeAndFlush(self.wrapInboundOut(frame)).whenComplete {
-                ctx.close(promise: nil)
+            context.writeAndFlush(self.wrapInboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
+                context.close(promise: nil)
             }
         }
 
-        ctx.fireErrorCaught(error)
+        context.fireErrorCaught(error)
     }
 }

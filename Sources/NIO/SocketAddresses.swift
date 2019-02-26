@@ -158,8 +158,8 @@ public enum SocketAddress: CustomStringConvertible {
     /// Creates a new IPv4 `SocketAddress`.
     ///
     /// - parameters:
-    ///       - addr: the `sockaddr_in` that holds the ipaddress and port.
-    ///       - host: the hostname that resolved to the ipaddress.
+    ///     - addr: the `sockaddr_in` that holds the ipaddress and port.
+    ///     - host: the hostname that resolved to the ipaddress.
     public init(_ addr: sockaddr_in, host: String) {
         self = .v4(.init(address: addr, host: host))
     }
@@ -167,8 +167,8 @@ public enum SocketAddress: CustomStringConvertible {
     /// Creates a new IPv6 `SocketAddress`.
     ///
     /// - parameters:
-    ///       - addr: the `sockaddr_in` that holds the ipaddress and port.
-    ///       - host: the hostname that resolved to the ipaddress.
+    ///     - addr: the `sockaddr_in` that holds the ipaddress and port.
+    ///     - host: the hostname that resolved to the ipaddress.
     public init(_ addr: sockaddr_in6, host: String) {
         self = .v6(.init(address: addr, host: host))
     }
@@ -176,7 +176,7 @@ public enum SocketAddress: CustomStringConvertible {
     /// Creates a new Unix Domain Socket `SocketAddress`.
     ///
     /// - parameters:
-    ///       - addr: the `sockaddr_un` that holds the socket path.
+    ///     - addr: the `sockaddr_un` that holds the socket path.
     public init(_ addr: sockaddr_un) {
         self = .unixDomainSocket(.init(address: addr))
     }
@@ -246,8 +246,8 @@ public enum SocketAddress: CustomStringConvertible {
     /// Creates a new `SocketAddress` for the given host (which will be resolved) and port.
     ///
     /// - parameters:
-    ///       - host: the hostname which should be resolved.
-    ///       - port: the port itself
+    ///     - host: the hostname which should be resolved.
+    ///     - port: the port itself
     /// - returns: the `SocketAddress` for the host / port pair.
     /// - throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
     public static func makeAddressResolvingHost(_ host: String, port: Int) throws -> SocketAddress {

@@ -17,26 +17,23 @@ private final class EchoHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
-        ctx.write(data, promise: nil)
+        context.write(data, promise: nil)
     }
 
     // Flush it out. This can make use of gathering writes if multiple buffers are pending
-    public func channelReadComplete(ctx: ChannelHandlerContext) {
-
-        // As we are not really interested getting notified on success or failure we just pass nil as promise to
-        // reduce allocations.
-        ctx.flush()
+    public func channelReadComplete(context: ChannelHandlerContext) {
+        context.flush()
     }
 
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
         print("error: ", error)
 
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
-        ctx.close(promise: nil)
+        context.close(promise: nil)
     }
 }
 let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
@@ -48,8 +45,8 @@ let bootstrap = ServerBootstrap(group: group)
     // Set the handlers that are appled to the accepted Channels
     .childChannelInitializer { channel in
         // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
-        channel.pipeline.add(handler: BackPressureHandler()).then { v in
-            channel.pipeline.add(handler: EchoHandler())
+        channel.pipeline.addHandler(BackPressureHandler()).flatMap { v in
+            channel.pipeline.addHandler(EchoHandler())
         }
     }
 
@@ -65,7 +62,7 @@ defer {
 // First argument is the program path
 let arguments = CommandLine.arguments
 let arg1 = arguments.dropFirst().first
-let arg2 = arguments.dropFirst().dropFirst().first
+let arg2 = arguments.dropFirst(2).first
 
 let defaultHost = "::1"
 let defaultPort = 9999

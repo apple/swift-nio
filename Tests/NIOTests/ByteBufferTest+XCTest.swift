@@ -127,6 +127,13 @@ extension ByteBufferTest {
                 ("testReadWithFunctionsThatReturnNumberOfReadBytesAreDiscardable", testReadWithFunctionsThatReturnNumberOfReadBytesAreDiscardable),
                 ("testWriteAndSetAndGetAndReadEncoding", testWriteAndSetAndGetAndReadEncoding),
                 ("testPossiblyLazilyBridgedString", testPossiblyLazilyBridgedString),
+                ("testWithVeryUnsafeMutableBytesWorksOnEmptyByteBuffer", testWithVeryUnsafeMutableBytesWorksOnEmptyByteBuffer),
+                ("testWithVeryUnsafeMutableBytesYieldsPointerToWholeStorage", testWithVeryUnsafeMutableBytesYieldsPointerToWholeStorage),
+                ("testWithVeryUnsafeMutableBytesYieldsPointerToWholeStorageAndCanBeWritenTo", testWithVeryUnsafeMutableBytesYieldsPointerToWholeStorageAndCanBeWritenTo),
+                ("testWithVeryUnsafeMutableBytesDoesCoW", testWithVeryUnsafeMutableBytesDoesCoW),
+                ("testWithVeryUnsafeMutableBytesDoesCoWonSlices", testWithVeryUnsafeMutableBytesDoesCoWonSlices),
+                ("testGetDispatchDataWorks", testGetDispatchDataWorks),
+                ("testGetDispatchDataReadWrite", testGetDispatchDataReadWrite),
            ]
    }
 }

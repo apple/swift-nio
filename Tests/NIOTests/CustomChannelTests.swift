@@ -34,24 +34,24 @@ private class IntChannelCore: ChannelCore {
     }
 
     func register0(promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: NotImplementedError())
+        promise?.fail(NotImplementedError())
     }
 
     func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: NotImplementedError())
+        promise?.fail(NotImplementedError())
     }
 
     func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: NotImplementedError())
+        promise?.fail(NotImplementedError())
     }
 
     func connect0(to: SocketAddress, promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: NotImplementedError())
+        promise?.fail(NotImplementedError())
     }
 
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         _ = self.unwrapData(data, as: Int.self)
-        promise?.succeed(result: ())
+        promise?.succeed(())
     }
 
     func flush0() {
@@ -63,11 +63,11 @@ private class IntChannelCore: ChannelCore {
     }
 
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: NotImplementedError())
+        promise?.fail(NotImplementedError())
     }
 
     func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: NotImplementedError())
+        promise?.fail(NotImplementedError())
     }
 
     func channelRead0(_ data: NIOAny) {

@@ -15,9 +15,6 @@
 
 source defines.sh
 
-warn "DISABLED for https://bugs.swift.org/browse/SR-9204"
-exit 0
-
 set -eu
 swift_bin=swift
 

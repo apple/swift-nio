@@ -36,17 +36,6 @@ private let sniHostNameType: UInt8 = 0
 public enum SNIResult: Equatable {
     case fallback
     case hostname(String)
-
-    public static func ==(lhs: SNIResult, rhs: SNIResult) -> Bool {
-        switch (lhs, rhs) {
-        case (.fallback, .fallback):
-            return true
-        case (.hostname(let s1), .hostname(let s2)):
-            return s1 == s2
-        case (.fallback, _), (.hostname, _):
-            return false
-        }
-    }
 }
 
 private enum InternalSNIErrors: Error {
@@ -118,13 +107,13 @@ public class SNIHandler: ByteToMessageDecoder {
         self.waitingForUser = false
     }
 
-    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        ctx.fireChannelRead(NIOAny(buffer))
+    public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+        context.fireChannelRead(NIOAny(buffer))
         return .needMoreData
     }
 
     // A note to maintainers: this method *never* returns `.continue`.
-    public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
+    public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
         // If we've asked the user to mutate the pipeline already, we're not interested in
         // this data. Keep waiting.
         if waitingForUser {
@@ -140,14 +129,14 @@ public class SNIHandler: ByteToMessageDecoder {
         } catch {
             // Some error occurred. Fall back and let the TLS stack
             // handle it.
-            sniComplete(result: .fallback, ctx: ctx)
+            sniComplete(result: .fallback, context: context)
             return .needMoreData
         }
 
         if let serverName = serverName {
-            sniComplete(result: .hostname(serverName), ctx: ctx)
+            sniComplete(result: .hostname(serverName), context: context)
         } else {
-            sniComplete(result: .fallback, ctx: ctx)
+            sniComplete(result: .fallback, context: context)
         }
         return .needMoreData
     }
@@ -429,10 +418,10 @@ public class SNIHandler: ByteToMessageDecoder {
     /// 3. When the user completes, remove ourselves from the pipeline. This will trigger the
     ///    ByteToMessageDecoder to automatically deliver the buffered bytes to the next handler
     ///    in the pipeline, which is now responsible for the work.
-    private func sniComplete(result: SNIResult, ctx: ChannelHandlerContext) {
+    private func sniComplete(result: SNIResult, context: ChannelHandlerContext) {
         waitingForUser = true
         completionHandler(result).whenSuccess {
-            ctx.pipeline.remove(ctx: ctx, promise: nil)
+            context.pipeline.removeHandler(context: context, promise: nil)
         }
     }
 }
