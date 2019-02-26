@@ -70,6 +70,11 @@ extension EmbeddedChannel {
 
         return buffer
     }
+
+    func readAllOutboundString() -> String {
+        var buffer = self.readAllOutboundBuffers()
+        return buffer.readString(length: buffer.readableBytes)!
+    }
 }
 
 private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
@@ -175,9 +180,9 @@ private class ExplodingUpgrader: HTTPServerProtocolUpgrader {
         self.requiredUpgradeHeaders = requiringHeaders
     }
 
-    public func buildUpgradeResponse(upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) throws -> HTTPHeaders {
+    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
         XCTFail("buildUpgradeResponse called")
-        throw Explosion.KABOOM
+        return channel.eventLoop.makeFailedFuture(Explosion.KABOOM)
     }
 
     public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
@@ -198,8 +203,8 @@ private class UpgraderSaysNo: HTTPServerProtocolUpgrader {
         self.supportedProtocol = `protocol`
     }
 
-    public func buildUpgradeResponse(upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) throws -> HTTPHeaders {
-        throw No.no
+    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
+        return channel.eventLoop.makeFailedFuture(No.no)
     }
 
     public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
@@ -219,10 +224,10 @@ private class SuccessfulUpgrader: HTTPServerProtocolUpgrader {
         self.onUpgradeComplete = onUpgradeComplete
     }
 
-    public func buildUpgradeResponse(upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) throws -> HTTPHeaders {
+    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
         var headers = initialResponseHeaders
         headers.add(name: "X-Upgrade-Complete", value: "true")
-        return headers
+        return channel.eventLoop.makeSucceededFuture(headers)
     }
 
     public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
@@ -242,10 +247,10 @@ private class UpgradeDelayer: HTTPServerProtocolUpgrader {
         self.supportedProtocol = `protocol`
     }
 
-    public func buildUpgradeResponse(upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) throws -> HTTPHeaders {
+    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
         var headers = initialResponseHeaders
         headers.add(name: "X-Upgrade-Complete", value: "true")
-        return headers
+        return channel.eventLoop.makeSucceededFuture(headers)
     }
 
     public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
@@ -256,6 +261,31 @@ private class UpgradeDelayer: HTTPServerProtocolUpgrader {
 
     public func unblockUpgrade() {
         self.upgradePromise!.succeed(())
+    }
+}
+
+private class UpgradeResponseDelayer: HTTPServerProtocolUpgrader {
+    let supportedProtocol: String
+    let requiredUpgradeHeaders: [String] = []
+
+    private var context: ChannelHandlerContext?
+    private let buildUpgradeResponseHandler: () -> EventLoopFuture<Void>
+
+    public init(forProtocol `protocol`: String, buildUpgradeResponseHandler: @escaping () -> EventLoopFuture<Void>) {
+        self.supportedProtocol = `protocol`
+        self.buildUpgradeResponseHandler = buildUpgradeResponseHandler
+    }
+
+    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
+        return self.buildUpgradeResponseHandler().map {
+            var headers = initialResponseHeaders
+            headers.add(name: "X-Upgrade-Complete", value: "true")
+            return headers
+        }
+    }
+
+    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+        return context.eventLoop.makeSucceededFuture(())
     }
 }
 
@@ -764,6 +794,275 @@ class HTTPUpgradeTestCase: XCTestCase {
         }.wait()
         let resultString = data.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
         XCTAssertEqual(resultString, appData)
+    }
+
+    func testDelayedUpgradeResponse() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+
+        var upgradeRequested = false
+
+        let delayedPromise = channel.eventLoop.makePromise(of: Void.self)
+        let delayedUpgrader = UpgradeResponseDelayer(forProtocol: "myproto") {
+            XCTAssertFalse(upgradeRequested)
+            upgradeRequested = true
+            return delayedPromise.futureResult
+        }
+
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: (upgraders: [delayedUpgrader], completionHandler: { context in })).wait())
+
+        // Let's send in an upgrade request.
+        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+
+        // Upgrade has been requested but not proceeded.
+        XCTAssertTrue(upgradeRequested)
+        XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
+        XCTAssertNil(channel.readOutbound(as: ByteBuffer.self))
+
+        // Ok, now we can upgrade. Upgrader should be out of the pipeline, and we should have seen the 101 response.
+        delayedPromise.succeed(())
+        XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
+        let response = channel.readAllOutboundString()
+        assertResponseIs(response: response,
+                         expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
+                         expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
+    }
+
+    func testChainsDelayedUpgradesAppropriately() throws {
+        enum No: Error {
+            case no
+        }
+
+        let channel = EmbeddedChannel()
+        defer {
+            do {
+                let complete = try channel.finish()
+                XCTAssertFalse(complete)
+            } catch No.no {
+                // ok
+            } catch {
+                XCTFail("Unexpected error: \(error)")
+            }
+        }
+
+        var upgradingProtocol = ""
+
+        let failingProtocolPromise = channel.eventLoop.makePromise(of: Void.self)
+        let failingProtocolUpgrader = UpgradeResponseDelayer(forProtocol: "failingProtocol") {
+            XCTAssertEqual(upgradingProtocol, "")
+            upgradingProtocol = "failingProtocol"
+            return failingProtocolPromise.futureResult
+        }
+
+        let myprotoPromise = channel.eventLoop.makePromise(of: Void.self)
+        let myprotoUpgrader = UpgradeResponseDelayer(forProtocol: "myproto") {
+            XCTAssertEqual(upgradingProtocol, "failingProtocol")
+            upgradingProtocol = "myproto"
+            return myprotoPromise.futureResult
+        }
+
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: (upgraders: [myprotoUpgrader, failingProtocolUpgrader], completionHandler: { context in })).wait())
+
+        // Let's send in an upgrade request.
+        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: failingProtocol, myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+
+        // Upgrade has been requested but not proceeded for the failing protocol.
+        XCTAssertEqual(upgradingProtocol, "failingProtocol")
+        XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
+        XCTAssertNil(channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+
+        // Ok, now we'll fail the promise. This will catch an error, but the upgrade won't happen: instead, the second handler will be fired.
+        failingProtocolPromise.fail(No.no)
+        XCTAssertEqual(upgradingProtocol, "myproto")
+        XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
+        XCTAssertNil(channel.readOutbound(as: ByteBuffer.self))
+        do {
+            try channel.throwIfErrorCaught()
+            XCTFail("Did not throw")
+        } catch No.no {
+            // ok
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        // Ok, now we can upgrade. Upgrader should be out of the pipeline, and we should have seen the 101 response.
+        myprotoPromise.succeed(())
+        XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
+        let response = channel.readAllOutboundString()
+        assertResponseIs(response: response,
+                         expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
+                         expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
+    }
+
+    func testDelayedUpgradeResponseDeliversFullRequest() throws {
+        enum No: Error {
+            case no
+        }
+
+        let channel = EmbeddedChannel()
+        defer {
+            do {
+                let complete = try channel.finish()
+                XCTAssertFalse(complete)
+            } catch No.no {
+                // ok
+            } catch {
+                XCTFail("Unexpected error: \(error)")
+            }
+        }
+
+        var upgradeRequested = false
+
+        let delayedPromise = channel.eventLoop.makePromise(of: Void.self)
+        let delayedUpgrader = UpgradeResponseDelayer(forProtocol: "myproto") {
+            XCTAssertFalse(upgradeRequested)
+            upgradeRequested = true
+            return delayedPromise.futureResult
+        }
+
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: (upgraders: [delayedUpgrader], completionHandler: { context in })).wait())
+
+        // Let's send in an upgrade request.
+        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+
+        // Upgrade has been requested but not proceeded.
+        XCTAssertTrue(upgradeRequested)
+        XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
+        XCTAssertNil(channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+
+        // Ok, now we fail the upgrade. This fires an error, and then delivers the original request.
+        delayedPromise.fail(No.no)
+        XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
+        XCTAssertNil(channel.readOutbound(as: ByteBuffer.self))
+
+        do {
+            try channel.throwIfErrorCaught()
+            XCTFail("Did not throw")
+        } catch No.no {
+            // ok
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        switch channel.readInbound(as: HTTPServerRequestPart.self) {
+        case .some(.head):
+            // ok
+            break
+        case let t:
+            XCTFail("Expected .head, got \(String(describing: t))")
+        }
+
+        switch channel.readInbound(as: HTTPServerRequestPart.self) {
+        case .some(.end):
+            // ok
+            break
+        case let t:
+            XCTFail("Expected .head, got \(String(describing: t))")
+        }
+
+        XCTAssertNil(channel.readInbound(as: HTTPServerRequestPart.self))
+    }
+
+    func testDelayedUpgradeResponseDeliversFullRequestAndPendingBits() throws {
+        enum No: Error {
+            case no
+        }
+
+        let channel = EmbeddedChannel()
+        defer {
+            do {
+                let complete = try channel.finish()
+                XCTAssertFalse(complete)
+            } catch No.no {
+                // ok
+            } catch {
+                XCTFail("Unexpected error: \(error)")
+            }
+        }
+
+        var upgradeRequested = false
+
+        let delayedPromise = channel.eventLoop.makePromise(of: Void.self)
+        let delayedUpgrader = UpgradeResponseDelayer(forProtocol: "myproto") {
+            XCTAssertFalse(upgradeRequested)
+            upgradeRequested = true
+            return delayedPromise.futureResult
+        }
+
+        // Here we're disabling the pipeline handler, because otherwise it makes this test case impossible to reach.
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false,
+                                                                          withServerUpgrade: (upgraders: [delayedUpgrader], completionHandler: { context in })).wait())
+
+        // Let's send in an upgrade request.
+        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+
+        // Upgrade has been requested but not proceeded.
+        XCTAssertTrue(upgradeRequested)
+        XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
+        XCTAssertNil(channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+
+        // We now need to inject an extra buffered request. To do this we grab the context for the HTTPRequestDecoder and inject some reads.
+        XCTAssertNoThrow(try channel.pipeline.context(handlerType: HTTPRequestDecoder.self).map { context in
+            let requestHead = HTTPServerRequestPart.head(.init(version: .init(major: 1, minor: 1), method: .GET, uri: "/test"))
+            context.fireChannelRead(NIOAny(requestHead))
+            context.fireChannelRead(NIOAny(HTTPServerRequestPart.end(nil)))
+        }.wait())
+
+        // Ok, now we fail the upgrade. This fires an error, and then delivers the original request and the buffered one.
+        delayedPromise.fail(No.no)
+        XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
+        XCTAssertNil(channel.readOutbound(as: ByteBuffer.self))
+
+        do {
+            try channel.throwIfErrorCaught()
+            XCTFail("Did not throw")
+        } catch No.no {
+            // ok
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        switch channel.readInbound(as: HTTPServerRequestPart.self) {
+        case .some(.head(let h)):
+            XCTAssertEqual(h.method, .OPTIONS)
+        case let t:
+            XCTFail("Expected .head, got \(String(describing: t))")
+        }
+
+        switch channel.readInbound(as: HTTPServerRequestPart.self) {
+        case .some(.end):
+            // ok
+            break
+        case let t:
+            XCTFail("Expected .head, got \(String(describing: t))")
+        }
+
+
+        switch channel.readInbound(as: HTTPServerRequestPart.self) {
+        case .some(.head(let h)):
+            XCTAssertEqual(h.method, .GET)
+        case let t:
+            XCTFail("Expected .head, got \(String(describing: t))")
+        }
+
+        switch channel.readInbound(as: HTTPServerRequestPart.self) {
+        case .some(.end):
+            // ok
+            break
+        case let t:
+            XCTFail("Expected .head, got \(String(describing: t))")
+        }
+
+        XCTAssertNil(channel.readInbound(as: HTTPServerRequestPart.self))
     }
 
     func testRemovesAllHTTPRelatedHandlersAfterUpgrade() throws {
