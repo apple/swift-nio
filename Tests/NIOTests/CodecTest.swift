@@ -1060,6 +1060,54 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
         XCTAssertNoThrow(try channel.writeInbound(buffer)) // this will go through because the decoder is already 'done'
     }
+
+    func testBasicLifecycle() {
+        class Decoder: ByteToMessageDecoder {
+            enum State {
+                case constructed
+                case added
+                case decode
+                case decodeLast
+                case removed
+            }
+            var state = State.constructed
+
+            typealias InboundOut = ()
+
+            func decoderAdded(context: ChannelHandlerContext) {
+                XCTAssertEqual(.constructed, self.state)
+                self.state = .added
+            }
+
+            func decoderRemoved(context: ChannelHandlerContext) {
+                XCTAssertEqual(.decodeLast, self.state)
+                self.state = .removed
+            }
+
+            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                XCTAssertEqual(.added, self.state)
+                XCTAssertEqual(1, buffer.readableBytes)
+                self.state = .decode
+                return .needMoreData
+            }
+
+            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                XCTAssertEqual(.decode, self.state)
+                XCTAssertEqual(1, buffer.readableBytes)
+                self.state = .decodeLast
+                return .needMoreData
+            }
+        }
+
+        let decoder = Decoder()
+        let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        var buffer = channel.allocator.buffer(capacity: 1)
+        buffer.writeString("x")
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(try channel.finish())
+        XCTAssertEqual(.removed, decoder.state)
+    }
 }
 
 public class MessageToByteEncoderTest: XCTestCase {

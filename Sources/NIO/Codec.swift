@@ -468,6 +468,9 @@ extension ByteToMessageHandler: ChannelInboundHandler {
         if !self.state.isFinalState {
             self.state = .done
         }
+        // here we can force it because we know that the decoder isn't in use because the removal is always
+        // eventLoop.execute'd
+        self.decoder!.decoderRemoved(context: context)
     }
 
     /// Calls `decode` until there is nothing left to decode.
