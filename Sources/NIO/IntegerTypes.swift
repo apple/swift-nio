@@ -17,24 +17,31 @@
 /// A 24-bit unsigned integer value type.
 @_versioned
 struct _UInt24: ExpressibleByIntegerLiteral {
+#if swift(>=4.1.50) // Swift 4.2 or better compiler in Swift 4 mode
+    @_versioned
     typealias IntegerLiteralType = UInt16
+#else
+    typealias IntegerLiteralType = UInt16
+#endif
 
     @_versioned var b12: UInt16
     @_versioned var b3: UInt8
 
-    private init(b12: UInt16, b3: UInt8) {
+    @_versioned
+    init(_b12 b12: UInt16, b3: UInt8) {
         self.b12 = b12
         self.b3 = b3
     }
 
+    @_versioned
     init(integerLiteral value: UInt16) {
-        self.init(b12: value, b3: 0)
+        self.init(_b12: value, b3: 0)
     }
 
     static let bitWidth: Int = 24
 
     static var max: _UInt24 {
-        return .init(b12: .max, b3: .max)
+        return .init(_b12: .max, b3: .max)
     }
 
     static let min: _UInt24 = 0
@@ -67,12 +74,14 @@ extension _UInt24 {
 }
 
 extension _UInt24: Equatable {
+    @_versioned
     static func ==(_ lhs: _UInt24, _ rhs: _UInt24) -> Bool {
         return lhs.b12 == rhs.b12 && lhs.b3 == rhs.b3
     }
 }
 
 extension _UInt24: CustomStringConvertible {
+    @_versioned
     var description: String {
         return Int(self).description
     }
