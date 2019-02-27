@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2019 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -189,5 +189,118 @@ class ThreadTest: XCTestCase {
         class SomeClass {}
         let tsv = ThreadSpecificVariable(value: SomeClass())
         XCTAssertNotNil(tsv.currentValue)
+    }
+
+    func testThreadSpecificDoesNotLeakWhenOutOfScopeButThreadStillRunning() throws {
+        let s = DispatchSemaphore(value: 0)
+        class SomeClass {
+            let s: DispatchSemaphore
+            init(sem: DispatchSemaphore) { self.s = sem }
+            deinit {
+                s.signal()
+            }
+        }
+        weak var weakSome: SomeClass? = nil
+        weak var weakTSV: ThreadSpecificVariable<SomeClass>? = nil
+        NIOThread.spawnAndRun { (_: NIOThread) in
+            {
+                let some = SomeClass(sem: s)
+                weakSome = some
+                let tsv = ThreadSpecificVariable<SomeClass>()
+                weakTSV = tsv
+                tsv.currentValue = some
+                XCTAssertNotNil(tsv.currentValue)
+                XCTAssertNotNil(weakTSV)
+            }()
+        }
+        s.wait()
+        assert(weakSome == nil, within: .seconds(1))
+        assert(weakTSV == nil, within: .seconds(1))
+    }
+
+    func testThreadSpecificDoesNotLeakIfThreadExitsWhilstSetOnMultipleThreads() throws {
+        let numberOfThreads = 6
+        let s = DispatchSemaphore(value: 0)
+        class SomeClass {
+            let s: DispatchSemaphore
+            init(sem: DispatchSemaphore) { self.s = sem }
+            deinit {
+                s.signal()
+            }
+        }
+        weak var weakSome: SomeClass? = nil
+        for _ in 0..<numberOfThreads {
+            NIOThread.spawnAndRun { (_: NIOThread) in
+                let some = SomeClass(sem: s)
+                weakSome = some
+                let tsv = ThreadSpecificVariable<SomeClass>()
+                tsv.currentValue = some
+                XCTAssertNotNil(tsv.currentValue)
+            }
+        }
+        for _ in 0..<numberOfThreads {
+            s.wait()
+        }
+        assert(weakSome == nil, within: .seconds(1))
+    }
+
+    func testThreadSpecificDoesNotLeakWhenOutOfScopeButSetOnMultipleThreads() throws {
+        let t1Sem = DispatchSemaphore(value: 0)
+        let t2Sem = DispatchSemaphore(value: 0)
+        class SomeClass {
+            let s: DispatchSemaphore
+            init(sem: DispatchSemaphore) { self.s = sem }
+            deinit {
+                s.signal()
+            }
+        }
+        var globalTSVs: [ThreadSpecificVariable<SomeClass>] = []
+        let globalTSVLock = Lock()
+        ({
+            let tsv = ThreadSpecificVariable<SomeClass>()
+            globalTSVLock.withLock {
+                globalTSVs.append(tsv)
+                globalTSVs.append(tsv)
+            }
+        })()
+
+        weak var weakSome1: SomeClass? = nil
+        weak var weakSome2: SomeClass? = nil
+        weak var weakTSV: ThreadSpecificVariable<SomeClass>? = nil
+        NIOThread.spawnAndRun { (_: NIOThread) in
+            {
+                let some = SomeClass(sem: t1Sem)
+                weakSome1 = some
+                var tsv: ThreadSpecificVariable<SomeClass>!
+                globalTSVLock.withLock {
+                    tsv = globalTSVs.removeFirst()
+                }
+                weakTSV = tsv
+                tsv.currentValue = some
+                XCTAssertNotNil(tsv.currentValue)
+                XCTAssertNotNil(weakTSV)
+            }()
+        }
+        NIOThread.spawnAndRun { (_: NIOThread) in
+            {
+                let some = SomeClass(sem: t2Sem)
+                weakSome2 = some
+                var tsv: ThreadSpecificVariable<SomeClass>!
+                globalTSVLock.withLock {
+                    tsv = globalTSVs.removeFirst()
+                }
+                weakTSV = tsv
+                tsv.currentValue = some
+                XCTAssertNotNil(tsv.currentValue)
+                XCTAssertNotNil(weakTSV)
+            }()
+        }
+        t2Sem.wait() /* wait on the other thread's `some` deallocation */
+        assert(weakSome1 == nil, within: .seconds(1))
+        assert(weakTSV == nil, within: .seconds(1))
+
+        t1Sem.wait() /* wait on the other thread's `some` deallocation */
+        assert(weakSome2 == nil, within: .seconds(1))
+        assert(weakTSV == nil, within: .seconds(1))
     }
 }
