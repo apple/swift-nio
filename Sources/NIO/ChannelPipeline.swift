@@ -1505,14 +1505,82 @@ extension ChannelHandlerContext {
 
 extension ChannelPipeline: CustomDebugStringConvertible {
     public var debugDescription: String {
-        var desc = "ChannelPipeline (\(ObjectIdentifier(self))):\n"
+        // This method forms output in the following format:
+        //
+        // ChannelPipeline[0x0000000000000000]:
+        //                      [I] ↓↑ [O]
+        //  <incoming handler type> ↓↑                         [<name>]
+        //                          ↓↑ <outgoing handler type> [<name>]
+        //    <duplex handler type> ↓↑ <duplex handler type>   [<name>]
+        //
+        var desc = ["ChannelPipeline[\(ObjectIdentifier(self))]:"]
+        let debugInfos = self.generateChannelHandlerDebugInfo()
+        let maxIncomingTypeNameCount = debugInfos.filter { $0.isIncoming }
+            .map { $0.typeName.count }
+            .max() ?? 0
+        let maxOutgoingTypeNameCount = debugInfos.filter { $0.isOutgoing }
+            .map { $0.typeName.count }
+            .max() ?? 0
+        
+        func whitespace(count: Int) -> String {
+            return String(repeating: " ", count: count)
+        }
+        
+        if debugInfos.isEmpty {
+            desc.append(" <no handlers>")
+        } else {
+            desc.append(whitespace(count: maxIncomingTypeNameCount - 2) + "[I] ↓↑ [O]")
+            for debugInfo in debugInfos {
+                var line = [String]()
+                line.append(" ")
+                if debugInfo.isIncoming {
+                    line.append(whitespace(count: maxIncomingTypeNameCount - debugInfo.typeName.count))
+                    line.append(debugInfo.typeName)
+                } else {
+                    line.append(whitespace(count: maxIncomingTypeNameCount))
+                }
+                line.append(" ↓↑ ")
+                if debugInfo.isOutgoing {
+                    line.append(debugInfo.typeName)
+                    line.append(whitespace(count: maxOutgoingTypeNameCount - debugInfo.typeName.count))
+                } else {
+                    line.append(whitespace(count: maxOutgoingTypeNameCount))
+                }
+                line.append(" ")
+                line.append("[\(debugInfo.name)]")
+                desc.append(line.joined())
+            }
+        }
+        
+        return desc.joined(separator: "\n")
+    }
+    
+    private struct ChannelHandlerDebugInfo {
+        var type: Any.Type
+        var name: String
+        var isIncoming: Bool
+        var isOutgoing: Bool
+        var typeName: String {
+            return "\(self.type)"
+        }
+    }
+    
+    private func generateChannelHandlerDebugInfo() -> [ChannelHandlerDebugInfo] {
+        return self.collectHandlers().map { handler in
+            return .init(type: type(of: handler.handler),
+                         name: handler.name,
+                         isIncoming: handler.handler is _ChannelInboundHandler,
+                         isOutgoing: handler.handler is _ChannelOutboundHandler)
+        }
+    }
+    
+    private func collectHandlers() -> [(name: String, handler: ChannelHandler)] {
+        var handlers = [(String, ChannelHandler)]()
         var node = self.head?.next
         while let context = node, context !== self.tail {
-            let inboundStr = context.handler is _ChannelInboundHandler ? "I" : ""
-            let outboundStr = context.handler is _ChannelOutboundHandler ? "O" : ""
-            desc += "        \(context.name) (\(type(of: context.handler))) [\(inboundStr)\(outboundStr)]\n"
+            handlers.append((context.name, context.handler))
             node = context.next
         }
-        return desc
+        return handlers
     }
 }
