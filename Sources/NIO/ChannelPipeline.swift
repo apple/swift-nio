@@ -1557,17 +1557,13 @@ extension ChannelPipeline: CustomDebugStringConvertible {
     
     private struct ChannelHandlerDebugInfo {
         let handler: ChannelHandler
-        
         let name: String
-        
         var isIncoming: Bool {
             return self.handler is _ChannelInboundHandler
         }
-        
         var isOutgoing: Bool {
             return self.handler is _ChannelOutboundHandler
         }
-        
         var typeName: String {
             return "\(type(of: self.handler))"
         }
