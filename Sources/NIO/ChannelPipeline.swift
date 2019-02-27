@@ -1514,7 +1514,7 @@ extension ChannelPipeline: CustomDebugStringConvertible {
         //    <duplex handler type> ↓↑ <duplex handler type>   [<name>]
         //
         var desc = ["ChannelPipeline[\(ObjectIdentifier(self))]:"]
-        let debugInfos = self.generateChannelHandlerDebugInfo()
+        let debugInfos = self.collectHandlerDebugInfos()
         let maxIncomingTypeNameCount = debugInfos.filter { $0.isIncoming }
             .map { $0.typeName.count }
             .max() ?? 0
@@ -1556,29 +1556,28 @@ extension ChannelPipeline: CustomDebugStringConvertible {
     }
     
     private struct ChannelHandlerDebugInfo {
-        var type: Any.Type
-        var name: String
-        var isIncoming: Bool
-        var isOutgoing: Bool
+        let handler: ChannelHandler
+        
+        let name: String
+        
+        var isIncoming: Bool {
+            return self.handler is _ChannelInboundHandler
+        }
+        
+        var isOutgoing: Bool {
+            return self.handler is _ChannelOutboundHandler
+        }
+        
         var typeName: String {
-            return "\(self.type)"
+            return "\(type(of: self.handler))"
         }
     }
     
-    private func generateChannelHandlerDebugInfo() -> [ChannelHandlerDebugInfo] {
-        return self.collectHandlers().map { handler in
-            return .init(type: type(of: handler.handler),
-                         name: handler.name,
-                         isIncoming: handler.handler is _ChannelInboundHandler,
-                         isOutgoing: handler.handler is _ChannelOutboundHandler)
-        }
-    }
-    
-    private func collectHandlers() -> [(name: String, handler: ChannelHandler)] {
-        var handlers = [(String, ChannelHandler)]()
+    private func collectHandlerDebugInfos() -> [ChannelHandlerDebugInfo] {
+        var handlers = [ChannelHandlerDebugInfo]()
         var node = self.head?.next
         while let context = node, context !== self.tail {
-            handlers.append((context.name, context.handler))
+            handlers.append(.init(handler: context.handler, name: context.name))
             node = context.next
         }
         return handlers
