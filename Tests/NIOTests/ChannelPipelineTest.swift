@@ -526,7 +526,7 @@ class ChannelPipelineTest: XCTestCase {
         let handler = IndexWritingHandler(1)
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
         XCTAssertNoThrow(try channel.close().wait())
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
 
         do {
             try channel.pipeline.addHandler(IndexWritingHandler(2), position: .after(handler)).wait()
@@ -554,7 +554,7 @@ class ChannelPipelineTest: XCTestCase {
         let handler = IndexWritingHandler(1)
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
         XCTAssertNoThrow(try channel.close().wait())
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
 
         do {
             try channel.pipeline.addHandler(IndexWritingHandler(2), position: .before(handler)).wait()
