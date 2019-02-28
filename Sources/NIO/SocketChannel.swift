@@ -800,7 +800,7 @@ extension DatagramChannel: MulticastChannel {
         /// Check if the interface supports multicast
         if let interface = interface {
             guard interface.multicastSupported else {
-                promise?.fail(MulticastError.multicastNotSupported(interface))
+                promise?.fail(ChannelError.multicastNotSupported(interface))
                 return
             }
         }
