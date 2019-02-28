@@ -72,6 +72,10 @@
 - `EventLoopFuture.reduce(_:_:eventLoop:_:` had its label signature changed to `EventLoopFuture.reduce(_:_:on:_:)`
 - `CircularBuffer` and `MarkedCircularBuffer`'s indices are now opaque
 - all `ChannelOption`s are now required to be  `Equatable`
+- `HTTPHeaderIndex` has been removed, without replacement
+- `HTTPHeader` has been removed, without replacement
+- `HTTPHeaders[canonicalForm:]` now returns `[Substring]` instead of `[String]`
+- `HTTPListHeaderIterator` has been removed, without replacement
 - rename `FileHandle` to `NIOFileHandle`
 - rename all `ChannelPipeline.add(name:handler:...)`s to `ChannelPipeline.addHandler(_:name:...)`
 - rename all `ChannelPipeline.remove(...)`s to `ChannelPipeline.removeHandler(...)`
