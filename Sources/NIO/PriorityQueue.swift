@@ -21,7 +21,7 @@ internal struct PriorityQueue<Element: Comparable> {
 
     public mutating func remove(_ key: Element) {
         assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
-        _ = self.heap.remove(value: key)
+        self.heap.remove(value: key)
         assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
     }
 
@@ -41,6 +41,7 @@ internal struct PriorityQueue<Element: Comparable> {
         return self.heap.storage.isEmpty
     }
 
+    @discardableResult
     public mutating func pop() -> Element? {
         assert(self.heap.checkHeapProperty(), "broken heap: \(self.heap.debugDescription)")
         return self.heap.removeRoot()
@@ -75,7 +76,7 @@ extension PriorityQueue: Sequence {
     }
 }
 
-internal extension PriorityQueue {
+extension PriorityQueue {
     var count: Int {
         return self.heap.count
     }
@@ -85,16 +86,4 @@ extension PriorityQueue: CustomStringConvertible {
     public var description: String {
         return "PriorityQueue(count: \(self.underestimatedCount)): \(Array(self))"
     }
-}
-
-extension PriorityQueue {
-  @available(*, deprecated, renamed: "Element")
-  public typealias T = Element
-  @available(*, deprecated, renamed: "PriorityQueue.Iterator")
-  typealias PriorityQueueIterator<T: Comparable> = PriorityQueue<T>.Iterator
-}
-
-extension PriorityQueue.Iterator {
-  @available(*, deprecated, renamed: "Element")
-  typealias T = Element
 }

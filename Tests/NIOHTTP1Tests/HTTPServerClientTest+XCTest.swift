@@ -36,7 +36,6 @@ extension HTTPServerClientTest {
                 ("testMassiveResponseFileRegion", testMassiveResponseFileRegion),
                 ("testHead", testHead),
                 ("test204", test204),
-                ("testDeprecatedPipelineConstruction", testDeprecatedPipelineConstruction),
            ]
    }
 }

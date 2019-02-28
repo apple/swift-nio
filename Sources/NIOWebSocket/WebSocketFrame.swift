@@ -161,8 +161,7 @@ public struct WebSocketFrame {
             return WebSocketOpcode(encodedWebSocketOpcode: firstByte & 0x0F)!
         }
         set {
-            // this ! isn't actually safe (won't cause problems in reality though). Filed as #617 to be fixed in NIO 2.0
-            self.firstByte = (self.firstByte & 0xF0) + UInt8(webSocketOpcode: newValue)!
+            self.firstByte = (self.firstByte & 0xF0) + UInt8(webSocketOpcode: newValue)
         }
     }
 
@@ -270,11 +269,4 @@ public struct WebSocketFrame {
     }
 }
 
-extension WebSocketFrame: Equatable {
-    public static func ==(lhs: WebSocketFrame, rhs: WebSocketFrame) -> Bool {
-        return lhs.firstByte == rhs.firstByte &&
-               lhs.maskKey == rhs.maskKey &&
-               lhs.data == rhs.data &&
-               lhs.extensionData == rhs.extensionData
-    }
-}
+extension WebSocketFrame: Equatable {}

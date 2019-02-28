@@ -22,6 +22,18 @@ SwiftNIO aims to support all of the platforms where Swift is supported. Currentl
 * Ubuntu 14.04+
 * macOS 10.12+
 
+#### Swift versions
+
+The latest released SwiftNIO version supports Swift 4.0, 4.1, and 4.2.
+
+### Compatibility
+
+SwiftNIO follows [SemVer 2.0.0](https://semver.org/#semantic-versioning-200) with a separate document declaring [SwiftNIO's Public API](docs/public-api.md).
+
+What this means for you is that you should depend on SwiftNIO with a version range that covers everything from the minimum SwiftNIO version you require up to the next major version.
+In SwiftPM that can be easily done specifying for example `from: "2.0.0"` meaning that you support SwiftNIO in every version starting from 2.0.0 up to (excluding) 3.0.0.
+SemVer and SwiftNIO's Public API guarantees should result in a working program without having to worry about testing every single version for compatibility.
+
 ### Basic Architecture
 
 The basic building blocks of SwiftNIO are the following 8 types of objects:
@@ -105,7 +117,7 @@ An [`EventLoopFuture<T>`][elf] is essentially a container for the return value o
 
 If you had to poll the future to detect when it completed that would be quite inefficient, so [`EventLoopFuture<T>`][elf] is designed to have managed callbacks. Essentially, you can hang callbacks off the future that will be executed when a result is available. The [`EventLoopFuture<T>`][elf] will even carefully arrange the scheduling to ensure that these callbacks always execute on the event loop that initially created the promise, which helps ensure that you don't need too much synchronization around [`EventLoopFuture<T>`][elf] callbacks.
 
-Another important topic for consideration is the difference between how the promise passed to `close` works as opposed to `closeFuture` on a [`Channel`][c]. For example, the promise passed into `close` will succeed after the [`Channel`][c] is closed down but before the [`ChannelPipeline`][cp] is completely cleared out. This will allow you to take action on the [`ChannelPipeline`][cp] before it is completely cleared out, if needed. If it is desired to wait for the [`Channel`][c] to close down and the [`ChannelPipeline`][cp] to be cleared out without any futher action, then the better option would be to wait for the `closeFuture` to succeed.
+Another important topic for consideration is the difference between how the promise passed to `close` works as opposed to `closeFuture` on a [`Channel`][c]. For example, the promise passed into `close` will succeed after the [`Channel`][c] is closed down but before the [`ChannelPipeline`][cp] is completely cleared out. This will allow you to take action on the [`ChannelPipeline`][cp] before it is completely cleared out, if needed. If it is desired to wait for the [`Channel`][c] to close down and the [`ChannelPipeline`][cp] to be cleared out without any further action, then the better option would be to wait for the `closeFuture` to succeed.
 
 There are several functions for applying callbacks to [`EventLoopFuture<T>`][elf], depending on how and when you want them to execute. Details of these functions is left to the API documentation.
 
@@ -203,30 +215,39 @@ First make sure you have [Docker](https://www.docker.com/community-edition) inst
 
 ## Developing SwiftNIO
 
+*Note*: This section is only relevant if you would like to develop SwiftNIO yourself. You can ignore the information here if you just want to use SwiftNIO as a SwiftPM package.
+
 For the most part, SwiftNIO development is as straightforward as any other SwiftPM project. With that said, we do have a few processes that are worth understanding before you contribute. For details, please see `CONTRIBUTING.md` in this repository.
 
 ### Prerequisites
+
+SwiftNIO's `master` branch is at the moment developing what will become SwiftNIO 2.0.0 which will be Swift 5-only. That means to develop SwiftNIO at the moment, you will need:
+
+- a recent [Swift 5.0 development snapshot](https://swift.org/download/#snapshots)
+- [patch a plist file in your Xcode](https://forums.swift.org/t/how-to-set-swift-version-5-for-recent-dev-snapshots-in-xcode-build-settings/18692/20)
 
 To be able to compile and run SwiftNIO and the integration tests, you need to
 have a few prerequisites installed on your system.
 
 #### macOS
 
-- Xcode 9 or newer
+- Xcode 10.2 beta or newer (or Xcode 10.1 with at the moment a [small patch](https://forums.swift.org/t/how-to-set-swift-version-5-for-recent-dev-snapshots-in-xcode-build-settings/18692/20) to plist file inside Xcode)
+- A recent Swift 5.0 Development Toolchain from [swift.org/download](https://swift.org/download/#swift-50-development). To get a good idea of a toolchain version that definitely works, have a look at what [our CI uses](https://github.com/apple/swift-nio/blob/master/docker/docker-compose.1804.50.yaml#L10-L11) at the moment. Downloading the version our CI uses should give you pretty good certainty that the version actually works.
 
 ### Linux
 
-- Swift 4.0 or newer
+- Swift 5 development snapshots
+- pkg-config
 - zlib and its development headers
 - netcat (for integration tests only)
 - lsof (for integration tests only)
 - shasum (for integration tests only)
 
-#### Ubuntu
+#### Ubuntu 18.04
 
 ```
 # install swift tarball from https://swift.org/downloads
-apt-get install -y zlib1g-dev netcat-openbsd lsof perl
+apt-get install -y git curl libatomic1 libicu60 libxml2 libz-dev pkg-config clang netcat-openbsd lsof perl
 ```
 
 

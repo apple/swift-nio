@@ -25,23 +25,23 @@ private final class DeadChannelCore: ChannelCore {
     }
 
     func register0(promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: ChannelError.ioOnClosedChannel)
+        promise?.fail(ChannelError.ioOnClosedChannel)
     }
 
     func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: ChannelError.ioOnClosedChannel)
+        promise?.fail(ChannelError.ioOnClosedChannel)
     }
 
     func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: ChannelError.ioOnClosedChannel)
+        promise?.fail(ChannelError.ioOnClosedChannel)
     }
 
     func connect0(to: SocketAddress, promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: ChannelError.ioOnClosedChannel)
+        promise?.fail(ChannelError.ioOnClosedChannel)
     }
 
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: ChannelError.ioOnClosedChannel)
+        promise?.fail(ChannelError.ioOnClosedChannel)
     }
 
     func flush0() {
@@ -51,11 +51,11 @@ private final class DeadChannelCore: ChannelCore {
     }
 
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: ChannelError.alreadyClosed)
+        promise?.fail(ChannelError.alreadyClosed)
     }
 
     func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
-        promise?.fail(error: ChannelError.ioOnClosedChannel)
+        promise?.fail(ChannelError.ioOnClosedChannel)
     }
 
     func channelRead0(_ data: NIOAny) {
@@ -80,7 +80,7 @@ internal final class DeadChannel: Channel {
     let pipeline: ChannelPipeline
 
     public var closeFuture: EventLoopFuture<Void> {
-        return self.eventLoop.newSucceededFuture(result: ())
+        return self.eventLoop.makeSucceededFuture(())
     }
 
     internal init(pipeline: ChannelPipeline) {
@@ -103,15 +103,15 @@ internal final class DeadChannel: Channel {
 
     let parent: Channel? = nil
 
-    func setOption<T>(option: T, value: T.OptionType) -> EventLoopFuture<Void> where T: ChannelOption {
+    func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
         return EventLoopFuture(eventLoop: self.pipeline.eventLoop, error: ChannelError.ioOnClosedChannel, file: #file, line: #line)
     }
 
-    func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T: ChannelOption {
-        return eventLoop.newFailedFuture(error: ChannelError.ioOnClosedChannel)
+    func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
+        return eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
     }
 
     let isWritable = false
     let isActive = false
-    let _unsafe: ChannelCore = DeadChannelCore()
+    let _channelCore: ChannelCore = DeadChannelCore()
 }

@@ -256,7 +256,7 @@ class BaseSocket: Selectable {
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - returns: the file descriptor of the socket that was created.
     /// - throws: An `IOError` if creation of the socket failed.
-    static func newSocket(protocolFamily: Int32, type: CInt, setNonBlocking: Bool = false) throws -> Int32 {
+    static func makeSocket(protocolFamily: Int32, type: CInt, setNonBlocking: Bool = false) throws -> Int32 {
         var sockType = type
         #if os(Linux)
         if setNonBlocking {
@@ -272,6 +272,7 @@ class BaseSocket: Selectable {
                 let ret = try Posix.fcntl(descriptor: sock, command: F_SETFL, value: O_NONBLOCK)
                 assert(ret == 0, "unexpectedly, fcntl(\(sock), F_SETFL, O_NONBLOCK) returned \(ret)")
             } catch {
+                // best effort close
                 _ = try? Posix.close(descriptor: sock)
                 throw error
             }
@@ -280,8 +281,7 @@ class BaseSocket: Selectable {
         if protocolFamily == AF_INET6 {
             var zero: Int32 = 0
             do {
-                _ = try Posix.setsockopt(socket: sock, level: Int32(IPPROTO_IPV6), optionName: IPV6_V6ONLY, optionValue: &zero, optionLen: socklen_t(MemoryLayout.size(ofValue: zero)))
-
+                try Posix.setsockopt(socket: sock, level: Int32(IPPROTO_IPV6), optionName: IPV6_V6ONLY, optionValue: &zero, optionLen: socklen_t(MemoryLayout.size(ofValue: zero)))
             } catch let e as IOError {
                 if e.errnoCode != EAFNOSUPPORT {
                     // Ignore error that may be thrown by close.
@@ -342,7 +342,7 @@ class BaseSocket: Selectable {
         return try withUnsafeFileDescriptor { fd in
             var val = value
 
-            _ = try Posix.setsockopt(
+            try Posix.setsockopt(
                 socket: fd,
                 level: level,
                 optionName: name,
@@ -365,7 +365,7 @@ class BaseSocket: Selectable {
             let storage = UnsafeMutableRawBufferPointer.allocate(byteCount: MemoryLayout<T>.stride,
                                                                  alignment: MemoryLayout<T>.alignment)
             // write zeroes into the memory as Linux's getsockopt doesn't zero them out
-            _ = storage.initializeMemory(as: UInt8.self, repeating: 0)
+            storage.initializeMemory(as: UInt8.self, repeating: 0)
             var val = storage.bindMemory(to: T.self).baseAddress!
             // initialisation will be done by getsockopt
             defer {

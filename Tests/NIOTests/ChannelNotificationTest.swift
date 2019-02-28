@@ -35,88 +35,88 @@ class ChannelNotificationTest: XCTestCase {
         private var closePromise: EventLoopPromise<Void>?
 
 
-        public func channelActive(ctx: ChannelHandlerContext) {
-            XCTAssertTrue(ctx.channel.isActive)
+        public func channelActive(context: ChannelHandlerContext) {
+            XCTAssertTrue(context.channel.isActive)
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelActive", setter: "register")
             assertFulfilled(promise: self.connectPromise, promiseName: "connectPromise", trigger: "channelActive", setter: "connect")
 
             XCTAssertNil(self.closePromise)
-            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
+            XCTAssertFalse(context.channel.closeFuture.isFulfilled)
         }
 
-        public func channelInactive(ctx: ChannelHandlerContext) {
-            XCTAssertFalse(ctx.channel.isActive)
+        public func channelInactive(context: ChannelHandlerContext) {
+            XCTAssertFalse(context.channel.isActive)
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelInactive", setter: "register")
             assertFulfilled(promise: self.connectPromise, promiseName: "connectPromise", trigger: "channelInactive", setter: "connect")
             assertFulfilled(promise: self.closePromise, promiseName: "closePromise", trigger: "channelInactive", setter: "close")
 
-            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
+            XCTAssertFalse(context.channel.closeFuture.isFulfilled)
         }
 
-        public func channelRegistered(ctx: ChannelHandlerContext) {
-            XCTAssertFalse(ctx.channel.isActive)
+        public func channelRegistered(context: ChannelHandlerContext) {
+            XCTAssertFalse(context.channel.isActive)
             XCTAssertNil(self.connectPromise)
             XCTAssertNil(self.closePromise)
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelRegistered", setter: "register")
 
-            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
+            XCTAssertFalse(context.channel.closeFuture.isFulfilled)
         }
 
-        public func channelUnregistered(ctx: ChannelHandlerContext) {
-            XCTAssertFalse(ctx.channel.isActive)
+        public func channelUnregistered(context: ChannelHandlerContext) {
+            XCTAssertFalse(context.channel.isActive)
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelInactive", setter: "register")
             assertFulfilled(promise: self.connectPromise, promiseName: "connectPromise", trigger: "channelInactive", setter: "connect")
             assertFulfilled(promise: self.closePromise, promiseName: "closePromise", trigger: "channelInactive", setter: "close")
 
-            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
+            XCTAssertFalse(context.channel.closeFuture.isFulfilled)
         }
 
-        public func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+        public func register(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
             XCTAssertNil(self.registerPromise)
             XCTAssertNil(self.connectPromise)
             XCTAssertNil(self.closePromise)
 
             promise!.futureResult.whenSuccess {
-                XCTAssertFalse(ctx.channel.isActive)
+                XCTAssertFalse(context.channel.isActive)
             }
 
             self.registerPromise = promise
-            ctx.register(promise: promise)
+            context.register(promise: promise)
         }
 
-        public func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        public func bind(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
             XCTFail("bind(...) should not be called")
-            ctx.bind(to: address, promise: promise)
+            context.bind(to: address, promise: promise)
         }
 
-        public func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        public func connect(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
             XCTAssertNotNil(self.registerPromise)
             XCTAssertNil(self.connectPromise)
             XCTAssertNil(self.closePromise)
 
             promise!.futureResult.whenSuccess {
-                XCTAssertTrue(ctx.channel.isActive)
+                XCTAssertTrue(context.channel.isActive)
             }
 
             self.connectPromise = promise
-            ctx.connect(to: address, promise: promise)
+            context.connect(to: address, promise: promise)
         }
 
-        public func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        public func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
             XCTAssertNotNil(self.registerPromise)
             XCTAssertNotNil(self.connectPromise)
             XCTAssertNil(self.closePromise)
 
             promise!.futureResult.whenSuccess {
-                XCTAssertFalse(ctx.channel.isActive)
+                XCTAssertFalse(context.channel.isActive)
             }
 
             self.closePromise = promise
-            ctx.close(mode: mode, promise: promise)
+            context.close(mode: mode, promise: promise)
         }
     }
 
@@ -131,65 +131,65 @@ class ChannelNotificationTest: XCTestCase {
             self.activeChannelPromise = activeChannelPromise
         }
 
-        public func channelActive(ctx: ChannelHandlerContext) {
-            XCTAssertTrue(ctx.channel.isActive)
+        public func channelActive(context: ChannelHandlerContext) {
+            XCTAssertTrue(context.channel.isActive)
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelActive", setter: "register")
 
-            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
+            XCTAssertFalse(context.channel.closeFuture.isFulfilled)
             XCTAssertFalse(self.activeChannelPromise.futureResult.isFulfilled)
-            self.activeChannelPromise.succeed(result: ctx.channel)
+            self.activeChannelPromise.succeed(context.channel)
         }
 
-        public func channelInactive(ctx: ChannelHandlerContext) {
-            XCTAssertFalse(ctx.channel.isActive)
+        public func channelInactive(context: ChannelHandlerContext) {
+            XCTAssertFalse(context.channel.isActive)
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelInactive", setter: "register")
 
-            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
+            XCTAssertFalse(context.channel.closeFuture.isFulfilled)
         }
 
-        public func channelRegistered(ctx: ChannelHandlerContext) {
-            XCTAssertFalse(ctx.channel.isActive)
+        public func channelRegistered(context: ChannelHandlerContext) {
+            XCTAssertFalse(context.channel.isActive)
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelRegistered", setter: "register")
 
-            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
+            XCTAssertFalse(context.channel.closeFuture.isFulfilled)
         }
 
-        public func channelUnregistered(ctx: ChannelHandlerContext) {
-            XCTAssertFalse(ctx.channel.isActive)
+        public func channelUnregistered(context: ChannelHandlerContext) {
+            XCTAssertFalse(context.channel.isActive)
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelUnregistered", setter: "register")
 
-            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
+            XCTAssertFalse(context.channel.closeFuture.isFulfilled)
         }
 
-        public func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+        public func register(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
             XCTAssertNil(self.registerPromise)
 
-            let p = promise ?? ctx.eventLoop.newPromise()
+            let p = promise ?? context.eventLoop.makePromise()
             p.futureResult.whenSuccess {
-                XCTAssertFalse(ctx.channel.isActive)
+                XCTAssertFalse(context.channel.isActive)
             }
 
             self.registerPromise = p
-            ctx.register(promise: p)
+            context.register(promise: p)
         }
 
-        public func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        public func connect(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
             XCTFail("connect(...) should not be called")
-            ctx.connect(to: address, promise: promise)
+            context.connect(to: address, promise: promise)
         }
 
-        public func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        public func bind(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
             XCTFail("bind(...) should not be called")
-            ctx.bind(to: address, promise: promise)
+            context.bind(to: address, promise: promise)
         }
 
-        public func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        public func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
             XCTFail("close(...) should not be called")
-            ctx.close(mode: mode, promise: promise)
+            context.close(mode: mode, promise: promise)
         }
     }
 
@@ -202,86 +202,86 @@ class ChannelNotificationTest: XCTestCase {
 
         private var closePromise: EventLoopPromise<Void>?
 
-        public func channelActive(ctx: ChannelHandlerContext) {
-            XCTAssertTrue(ctx.channel.isActive)
+        public func channelActive(context: ChannelHandlerContext) {
+            XCTAssertTrue(context.channel.isActive)
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelActive", setter: "register")
 
             XCTAssertNil(self.closePromise)
-            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
+            XCTAssertFalse(context.channel.closeFuture.isFulfilled)
         }
 
-        public func channelInactive(ctx: ChannelHandlerContext) {
-            XCTAssertFalse(ctx.channel.isActive)
+        public func channelInactive(context: ChannelHandlerContext) {
+            XCTAssertFalse(context.channel.isActive)
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelInactive", setter: "register")
             assertFulfilled(promise: self.closePromise, promiseName: "closePromise", trigger: "channelInactive", setter: "close")
 
-            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
+            XCTAssertFalse(context.channel.closeFuture.isFulfilled)
         }
 
-        public func channelRegistered(ctx: ChannelHandlerContext) {
-            XCTAssertFalse(ctx.channel.isActive)
+        public func channelRegistered(context: ChannelHandlerContext) {
+            XCTAssertFalse(context.channel.isActive)
             XCTAssertNil(closePromise)
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelRegistered", setter: "register")
 
-            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
+            XCTAssertFalse(context.channel.closeFuture.isFulfilled)
         }
 
-        public func channelUnregistered(ctx: ChannelHandlerContext) {
-            XCTAssertFalse(ctx.channel.isActive)
+        public func channelUnregistered(context: ChannelHandlerContext) {
+            XCTAssertFalse(context.channel.isActive)
 
             assertFulfilled(promise: self.registerPromise, promiseName: "registerPromise", trigger: "channelUnregistered", setter: "register")
             assertFulfilled(promise: self.closePromise, promiseName: "closePromise", trigger: "channelInactive", setter: "close")
 
-            XCTAssertFalse(ctx.channel.closeFuture.isFulfilled)
+            XCTAssertFalse(context.channel.closeFuture.isFulfilled)
         }
 
-        public func register(ctx: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
+        public func register(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
             XCTAssertNil(self.registerPromise)
             XCTAssertNil(self.bindPromise)
             XCTAssertNil(self.closePromise)
 
-            let p = promise ?? ctx.eventLoop.newPromise()
+            let p = promise ?? context.eventLoop.makePromise()
             p.futureResult.whenSuccess {
-                XCTAssertFalse(ctx.channel.isActive)
+                XCTAssertFalse(context.channel.isActive)
             }
 
             self.registerPromise = p
-            ctx.register(promise: p)
+            context.register(promise: p)
         }
 
-        public func connect(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        public func connect(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
             XCTFail("connect(...) should not be called")
-            ctx.connect(to: address, promise: promise)
+            context.connect(to: address, promise: promise)
         }
 
-        public func bind(ctx: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        public func bind(context: ChannelHandlerContext, to address: SocketAddress, promise: EventLoopPromise<Void>?) {
             XCTAssertNotNil(self.registerPromise)
             XCTAssertNil(self.bindPromise)
             XCTAssertNil(self.closePromise)
 
             promise?.futureResult.whenSuccess {
-                XCTAssertTrue(ctx.channel.isActive)
+                XCTAssertTrue(context.channel.isActive)
             }
 
             self.bindPromise = promise
-            ctx.bind(to: address, promise: promise)
+            context.bind(to: address, promise: promise)
         }
 
-        public func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        public func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
             XCTAssertNotNil(self.registerPromise)
             XCTAssertNotNil(self.bindPromise)
             XCTAssertNil(self.closePromise)
 
-            let p = promise ?? ctx.eventLoop.newPromise()
+            let p = promise ?? context.eventLoop.makePromise()
             p.futureResult.whenSuccess {
-                XCTAssertFalse(ctx.channel.isActive)
+                XCTAssertFalse(context.channel.isActive)
             }
 
             self.closePromise = p
-            ctx.close(mode: mode, promise: p)
+            context.close(mode: mode, promise: p)
         }
     }
 
@@ -291,22 +291,22 @@ class ChannelNotificationTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let acceptedChannelPromise: EventLoopPromise<Channel> = group.next().newPromise()
+        let acceptedChannelPromise = group.next().makePromise(of: Channel.self)
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .serverChannelInitializer { channel in
-                channel.pipeline.add(handler: ServerSocketChannelLifecycleVerificationHandler())
+                channel.pipeline.addHandler(ServerSocketChannelLifecycleVerificationHandler())
             }
             .childChannelOption(ChannelOptions.autoRead, value: false)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: AcceptedSocketChannelLifecycleVerificationHandler(acceptedChannelPromise))
+                channel.pipeline.addHandler(AcceptedSocketChannelLifecycleVerificationHandler(acceptedChannelPromise))
             }
             .bind(host: "127.0.0.1", port: 0).wait())
 
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: SocketChannelLifecycleVerificationHandler())
+                channel.pipeline.addHandler(SocketChannelLifecycleVerificationHandler())
             }
             .connect(to: serverChannel.localAddress!).wait())
         XCTAssertNoThrow(try clientChannel.close().wait())
@@ -314,7 +314,7 @@ class ChannelNotificationTest: XCTestCase {
 
         let channel = try acceptedChannelPromise.futureResult.wait()
         var buffer = channel.allocator.buffer(capacity: 8)
-        buffer.write(string: "test")
+        buffer.writeString("test")
 
 
         while (try? channel.writeAndFlush(buffer).wait()) != nil {
@@ -351,35 +351,35 @@ class ChannelNotificationTest: XCTestCase {
                 self.promise = promise
             }
 
-            public func channelActive(ctx: ChannelHandlerContext) {
+            public func channelActive(context: ChannelHandlerContext) {
                 XCTAssertEqual(.`init`, state)
                 state = .active
             }
 
-            public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 XCTAssertEqual(.active, state)
                 state = .read
             }
 
-            public func channelReadComplete(ctx: ChannelHandlerContext) {
+            public func channelReadComplete(context: ChannelHandlerContext) {
                 XCTAssertTrue(.read == state || .readComplete == state, "State should either be .read or .readComplete but was \(state)")
                 state = .readComplete
             }
 
-            public func channelInactive(ctx: ChannelHandlerContext) {
+            public func channelInactive(context: ChannelHandlerContext) {
                 XCTAssertEqual(.readComplete, state)
                 state = .inactive
 
-                promise.succeed(result: ())
+                promise.succeed(())
             }
         }
 
-        let promise: EventLoopPromise<Void> = group.next().newPromise()
+        let promise = group.next().makePromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.autoRead, value: true)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: OrderVerificationHandler(promise))
+                channel.pipeline.addHandler(OrderVerificationHandler(promise))
             }
             .bind(host: "127.0.0.1", port: 0).wait())
 
@@ -387,8 +387,8 @@ class ChannelNotificationTest: XCTestCase {
             .connect(to: serverChannel.localAddress!).wait())
 
         var buffer = clientChannel.allocator.buffer(capacity: 2)
-        buffer.write(string: "X")
-        XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).then {
+        buffer.writeString("X")
+        XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).flatMap {
             clientChannel.close()
         }.wait())
         XCTAssertNoThrow(try promise.futureResult.wait())

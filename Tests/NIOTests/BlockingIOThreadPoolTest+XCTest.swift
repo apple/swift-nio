@@ -32,6 +32,8 @@ extension BlockingIOThreadPoolTest {
                 ("testLoseLastReferenceAndShutdownWhileTaskStillRunning", testLoseLastReferenceAndShutdownWhileTaskStillRunning),
                 ("testDeadLockIfCalledOutWithLockHeld", testDeadLockIfCalledOutWithLockHeld),
                 ("testPoolDoesGetReleasedWhenStoppedAndReferencedDropped", testPoolDoesGetReleasedWhenStoppedAndReferencedDropped),
+                ("testClosureReferenceDroppedAfterSingleWorkItemExecution", testClosureReferenceDroppedAfterSingleWorkItemExecution),
+                ("testClosureReferencesDroppedAfterTwoConsecutiveWorkItemsExecution", testClosureReferencesDroppedAfterTwoConsecutiveWorkItemsExecution),
            ]
    }
 }

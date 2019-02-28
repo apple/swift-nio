@@ -22,16 +22,16 @@ import NIOConcurrencyHelpers
 /// When using NIO it is crucial not to block any of the `EventLoop`s as that
 /// leads to slow downs or stalls of arbitrary other work. Unfortunately though
 /// there are tasks that applications need to achieve for which no non-blocking
-/// APIs exist. In those cases `BlockingIOThreadPool` can be used but should be
+/// APIs exist. In those cases `NIOThreadPool` can be used but should be
 /// treated as a last resort.
 ///
 /// - note: The prime example for missing non-blocking APIs is file IO on UNIX.
 ///   The OS does not provide a usable and truly non-blocking API but with
 ///   `NonBlockingFileIO` NIO provides a high-level API for file IO that should
 ///   be preferred to running blocking file IO system calls directly on
-///   `BlockingIOThreadPool`. Under the covers `NonBlockingFileIO` will use
-///   `BlockingIOThreadPool` on all currently supported platforms though.
-public final class BlockingIOThreadPool {
+///   `NIOThreadPool`. Under the covers `NonBlockingFileIO` will use
+///   `NIOThreadPool` on all currently supported platforms though.
+public final class NIOThreadPool {
 
     /// The state of the `WorkItem`.
     public enum WorkItemState {
@@ -41,7 +41,7 @@ public final class BlockingIOThreadPool {
         case cancelled
     }
 
-    /// The work that should be done by the `BlockingIOThreadPool`.
+    /// The work that should be done by the `NIOThreadPool`.
     public typealias WorkItem = (WorkItemState) -> Void
 
     private enum State {
@@ -58,7 +58,7 @@ public final class BlockingIOThreadPool {
     private var state: State = .stopped
     private let numberOfThreads: Int
 
-    /// Gracefully shutdown this `BlockingIOThreadPool`. All tasks will be run before shutdown will take place.
+    /// Gracefully shutdown this `NIOThreadPool`. All tasks will be run before shutdown will take place.
     ///
     /// - parameters:
     ///     - queue: The `DispatchQueue` used to executed the callback
@@ -111,7 +111,7 @@ public final class BlockingIOThreadPool {
         item.map { $0(.cancelled) }
     }
 
-    /// Initialize a `BlockingIOThreadPool` thread pool with `numberOfThreads` threads.
+    /// Initialize a `NIOThreadPool` thread pool with `numberOfThreads` threads.
     ///
     /// - parameters:
     ///   - numberOfThreads: The number of threads to use for the thread pool.
@@ -126,6 +126,7 @@ public final class BlockingIOThreadPool {
         var item: WorkItem? = nil
         repeat {
             /* wait until work has become available */
+            item = nil	// ensure previous work item is not retained for duration of semaphore wait
             self.semaphore.wait()
 
             item = self.lock.withLock { () -> (WorkItem)? in
@@ -158,7 +159,7 @@ public final class BlockingIOThreadPool {
                 // This should never happen
                 fatalError("start() called while in shuttingDown")
             case .stopped:
-                self.state = .running(CircularBuffer(initialRingCapacity: 16))
+                self.state = .running(CircularBuffer(initialCapacity: 16))
             }
         }
         self.queues.enumerated().forEach { idAndQueue in
@@ -169,7 +170,7 @@ public final class BlockingIOThreadPool {
             }
         }
     }
-    
+
     deinit {
         switch self.state {
         case .stopped, .shuttingDown:
@@ -180,7 +181,7 @@ public final class BlockingIOThreadPool {
     }
 }
 
-public extension BlockingIOThreadPool {
+extension NIOThreadPool {
     /// Runs the submitted closure if the thread pool is still active, otherwise fails the promise.
     /// The closure will be run on the thread pool so can do blocking work.
     ///
@@ -188,24 +189,24 @@ public extension BlockingIOThreadPool {
     ///     - eventLoop: The `EventLoop` the returned `EventLoopFuture` will fire on.
     ///     - body: The closure which performs some blocking work to be done on the thread pool.
     /// - returns: The `EventLoopFuture` of `promise` fulfilled with the result (or error) of the passed closure.
-    func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
-        let promise: EventLoopPromise<T> = eventLoop.newPromise()
+    public func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
+        let promise = eventLoop.makePromise(of: T.self)
         self.submit { shouldRun in
-            guard case shouldRun = BlockingIOThreadPool.WorkItemState.active else {
-                promise.fail(error: ChannelError.ioOnClosedChannel)
+            guard case shouldRun = NIOThreadPool.WorkItemState.active else {
+                promise.fail(ChannelError.ioOnClosedChannel)
                 return
             }
             do {
-                try promise.succeed(result: body())
+                try promise.succeed(body())
             } catch {
-                promise.fail(error: error)
+                promise.fail(error)
             }
         }
         return promise.futureResult
     }
 }
 
-extension BlockingIOThreadPool {
+extension NIOThreadPool {
     public func shutdownGracefully(_ callback: @escaping (Error?) -> Void) {
         self.shutdownGracefully(queue: .global(), callback)
     }

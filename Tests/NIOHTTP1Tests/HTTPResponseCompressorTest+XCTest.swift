@@ -41,6 +41,7 @@ extension HTTPResponseCompressorTest {
                 ("testInfinityQValuePreventsChoice", testInfinityQValuePreventsChoice),
                 ("testNegativeInfinityQValuePreventsChoice", testNegativeInfinityQValuePreventsChoice),
                 ("testOutOfRangeQValuePreventsChoice", testOutOfRangeQValuePreventsChoice),
+                ("testOverridesContentEncodingHeader", testOverridesContentEncodingHeader),
                 ("testRemovingHandlerFailsPendingWrites", testRemovingHandlerFailsPendingWrites),
                 ("testDoesNotBufferWritesNoAlgorithm", testDoesNotBufferWritesNoAlgorithm),
                 ("testStartsWithSameUnicodeScalarsWorksOnEmptyStrings", testStartsWithSameUnicodeScalarsWorksOnEmptyStrings),

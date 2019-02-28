@@ -45,6 +45,7 @@ extension SocketChannelTest {
                 ("testPendingConnectNotificationOrder", testPendingConnectNotificationOrder),
                 ("testLocalAndRemoteAddressNotNilInChannelInactiveAndHandlerRemoved", testLocalAndRemoteAddressNotNilInChannelInactiveAndHandlerRemoved),
                 ("testSocketFlagNONBLOCKWorks", testSocketFlagNONBLOCKWorks),
+                ("testInstantTCPConnectionResetThrowsError", testInstantTCPConnectionResetThrowsError),
            ]
    }
 }

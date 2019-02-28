@@ -18,7 +18,7 @@ import NIO
 private final class ChatMessageDecoder: ChannelInboundHandler {
     public typealias InboundIn = AddressedEnvelope<ByteBuffer>
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let envelope = self.unwrapInboundIn(data)
         var buffer = envelope.data
 
@@ -37,11 +37,11 @@ private final class ChatMessageEncoder: ChannelOutboundHandler {
     public typealias OutboundIn = AddressedEnvelope<String>
     public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
 
-    func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let message = self.unwrapOutboundIn(data)
-        var buffer = ctx.channel.allocator.buffer(capacity: message.data.utf8.count)
-        buffer.write(string: message.data)
-        ctx.write(self.wrapOutboundOut(AddressedEnvelope(remoteAddress: message.remoteAddress, data: buffer)), promise: promise)
+        var buffer = context.channel.allocator.buffer(capacity: message.data.utf8.count)
+        buffer.writeString(message.data)
+        context.write(self.wrapOutboundOut(AddressedEnvelope(remoteAddress: message.remoteAddress, data: buffer)), promise: promise)
     }
 }
 
@@ -73,20 +73,20 @@ var datagramBootstrap = DatagramBootstrap(group: group)
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), value: 1)
     .channelInitializer { channel in
-        return channel.pipeline.add(handler: ChatMessageEncoder()).then {
-            channel.pipeline.add(handler: ChatMessageDecoder())
+        return channel.pipeline.addHandler(ChatMessageEncoder()).flatMap {
+            channel.pipeline.addHandler(ChatMessageDecoder())
         }
     }
 
     // We cast our channel to MulticastChannel to obtain the multicast operations.
 let datagramChannel = try datagramBootstrap
     .bind(host: "0.0.0.0", port: 7654)
-    .then { channel -> EventLoopFuture<Channel> in
+    .flatMap { channel -> EventLoopFuture<Channel> in
         let channel = channel as! MulticastChannel
         return channel.joinGroup(chatMulticastGroup, interface: targetInterface).map { channel }
-    }.then { channel -> EventLoopFuture<Channel> in
+    }.flatMap { channel -> EventLoopFuture<Channel> in
         guard let targetInterface = targetInterface else {
-            return channel.eventLoop.newSucceededFuture(result: channel)
+            return channel.eventLoop.makeSucceededFuture(channel)
         }
 
         let provider = channel as! SocketOptionProvider

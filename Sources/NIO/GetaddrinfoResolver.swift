@@ -36,8 +36,8 @@ internal class GetaddrinfoResolver: Resolver {
     ///     - aiSocktype: The sock type to use as hint when calling getaddrinfo.
     ///     - aiProtocol: the protocol to use as hint when calling getaddrinfo.
     init(loop: EventLoop, aiSocktype: CInt, aiProtocol: CInt) {
-        self.v4Future = loop.newPromise()
-        self.v6Future = loop.newPromise()
+        self.v4Future = loop.makePromise()
+        self.v6Future = loop.makePromise()
         self.aiSocktype = aiSocktype
         self.aiProtocol = aiProtocol
     }
@@ -91,7 +91,7 @@ internal class GetaddrinfoResolver: Resolver {
         hint.ai_socktype = self.aiSocktype
         hint.ai_protocol = self.aiProtocol
         guard getaddrinfo(host, String(port), &hint, &info) == 0 else {
-            self.fail(error: SocketAddressError.unknown(host: host, port: port))
+            self.fail(SocketAddressError.unknown(host: host, port: port))
             return
         }
 
@@ -100,7 +100,7 @@ internal class GetaddrinfoResolver: Resolver {
             freeaddrinfo(info)
         } else {
             /* this is odd, getaddrinfo returned NULL */
-            self.fail(error: SocketAddressError.unsupported)
+            self.fail(SocketAddressError.unsupported)
         }
     }
 
@@ -125,7 +125,7 @@ internal class GetaddrinfoResolver: Resolver {
                     v6Results.append(.init(ptr.pointee, host: host))
                 }
             default:
-                self.fail(error: SocketAddressError.unsupported)
+                self.fail(SocketAddressError.unsupported)
                 return
             }
 
@@ -136,16 +136,16 @@ internal class GetaddrinfoResolver: Resolver {
             info = nextInfo
         }
 
-        v6Future.succeed(result: v6Results)
-        v4Future.succeed(result: v4Results)
+        v6Future.succeed(v6Results)
+        v4Future.succeed(v4Results)
     }
 
     /// Record an error and fail the lookup process.
     ///
     /// - parameters:
     ///     - error: The error encountered during lookup.
-    private func fail(error: Error) {
-        self.v6Future.fail(error: error)
-        self.v4Future.fail(error: error)
+    private func fail(_ error: Error) {
+        self.v6Future.fail(error)
+        self.v4Future.fail(error)
     }
 }
