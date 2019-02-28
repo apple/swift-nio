@@ -35,7 +35,7 @@
 - `ChannelOption.OptionType` has been renamed `ChannelOption.Value`
 - the default `ChannelOption`s have been switched changed from `case FooOption { case const }` to a `struct FooOption { public init() {} }`
 - `markedElementIndex()`, `markedElement()` and `hasMark()` are now computed variables instead of functions.
-- `ByteBuffer.set(string:at:)` no longer returns an `Int?`, instead it
+- `ByteBuffer.setString(_:at:)` (used to be `set(string:at:)`) no longer returns an `Int?`, instead it
   returns `Int` and has had its return value made discardable.
 - `ByteBuffer.write(string:)` (now named `ByteBuffer.writeString(_:)`) no longer returns an `Int?`, instead it
   returns `Int` and has had its return value made discardable.
