@@ -62,7 +62,8 @@ shift $plugin_opts_ind
 filter="."
 verbose=false
 show_info=false
-while getopts "f:vi" opt; do
+debug=false
+while getopts "f:vid" opt; do
     case $opt in
         f)
             filter="$OPTARG"
@@ -72,6 +73,9 @@ while getopts "f:vi" opt; do
             ;;
         i)
             show_info=true
+            ;;
+        d)
+            debug=true
             ;;
         \?)
             usage
@@ -118,8 +122,10 @@ for f in tests_*; do
             plugins_do test_fail "$(time_diff_to_now $start)" "$out"
             suite_fail=$((suite_fail+1))
         fi
-        rm "$out"
-        rm -rf "$test_tmp"
+        if ! $debug; then
+            rm "$out"
+            rm -rf "$test_tmp"
+        fi
         plugins_do test_end
     done
     cnt_ok=$((cnt_ok + suite_ok))
@@ -128,7 +134,11 @@ for f in tests_*; do
     plugins_do test_suite_end "$(time_diff_to_now $start_suite)" "$suite_ok" "$suite_fail"
 done
 
-rm -rf "$tmp"
+if ! $debug; then
+    rm -rf "$tmp"
+else
+    echo >&2 "debug mode, not deleting '$tmp'"
+fi
 
 
 # report
