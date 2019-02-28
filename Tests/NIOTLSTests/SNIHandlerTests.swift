@@ -16,7 +16,7 @@ import XCTest
 import NIOFoundationCompat
 import NIOTLS
 
-private let libressl227HelloNoSni = """
+private let libressl227HelloNoSNI = """
 FgMBATkBAAE1AwNqcHrXsRJKtLx2HC1BXLt+kAk7SnCMk8qK
 QPmv7L3u7QAAmMwUzBPMFcAwwCzAKMAkwBTACgCjAJ8AawBq
 ADkAOP+FAMQAwwCIAIcAgcAywC7AKsAmwA/ABQCdAD0ANQDA
@@ -28,7 +28,7 @@ AAQABQASABMAAQACAAMADwAQABEAIwAAAA0AJgAkBgEGAgYD
 7+8FAQUCBQMEAQQCBAPu7u3tAwEDAgMDAgECAgID
 """
 
-private let libressl227HelloWithSni = """
+private let libressl227HelloWithSNI = """
 FgMBAU0BAAFJAwN/gCauChg0p2XhDp6z2+gRqMeyb5zfxBOW
 dtGXsknrcAAAmMwUzBPMFcAwwCzAKMAkwBTACgCjAJ8AawBq
 ADkAOP+FAMQAwwCIAIcAgcAywC7AKsAmwA/ABQCdAD0ANQDA
@@ -41,7 +41,7 @@ ABAAEQAjAAAADQAmACQGAQYCBgPv7wUBBQIFAwQBBAIEA+7u
 7e0DAQMCAwMCAQICAgM=
 """
 
-private let openssl102HelloNoSni = """
+private let openssl102HelloNoSNI = """
 FgMBAS8BAAErAwPmgeNB1uuTN/P5ZlOjLQMHjxgIotE2796Z
 ILeQHLg/ZQAArMAwwCzAKMAkwBTACgClAKMAoQCfAGsAagBp
 AGgAOQA4ADcANgCIAIcAhgCFwDLALsAqwCbAD8AFAJ0APQA1
@@ -53,7 +53,7 @@ DgANAAsADAAJAAoAIwAAAA0AIAAeBgEGAgYDBQEFAgUDBAEE
 AgQDAwEDAgMDAgECAgIDAA8AAQE=
 """
 
-private let openssl102HelloWithSni = """
+private let openssl102HelloWithSNI = """
 FgMBAUMBAAE/AwO0rkxuVnE+GcBdNP2UJwTCVSi2H2NbIngp
 eTzpoVc+kgAArMAwwCzAKMAkwBTACgClAKMAoQCfAGsAagBp
 AGgAOQA4ADcANgCIAIcAhgCFwDLALsAqwCbAD8AFAJ0APQA1
@@ -226,7 +226,7 @@ private let ludicrouslyTruncatedPacket = "FgMBAAEB"
 
 private let fuzzingInputOne = "FgMAAAQAAgo="
 
-internal extension ChannelPipeline {
+extension ChannelPipeline {
     func contains(handler: ChannelHandler) throws -> Bool {
         do {
             _ = try self.context(handler: handler).wait()
@@ -245,32 +245,32 @@ internal extension ChannelPipeline {
 }
 
 
-class SniHandlerTest: XCTestCase {
+class SNIHandlerTest: XCTestCase {
     private func bufferForBase64String(string: String) -> ByteBuffer {
         let data = Data(base64Encoded: string, options: .ignoreUnknownCharacters)!
         let allocator = ByteBufferAllocator()
         var buffer = allocator.buffer(capacity: data.count)
-        buffer.write(bytes: data)
+        buffer.writeBytes(data)
         return buffer
     }
 
     /// Drip-feeds the client hello in one byte at a time.
     /// Also asserts that the channel handler does not remove itself from
     /// the pipeline or emit its buffered data until the future fires.
-    func dripFeedHello(clientHello: String, expectedResult: SniResult) throws {
+    func dripFeedHello(clientHello: String, expectedResult: SNIResult) throws {
         var called = false
         var buffer = bufferForBase64String(string: clientHello)
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise: EventLoopPromise<Void> = loop.newPromise()
+        let continuePromise = loop.makePromise(of: Void.self)
 
-        let handler = SniHandler { result in
+        let handler = ByteToMessageHandler(SNIHandler { result in
             XCTAssertEqual(expectedResult, result)
             called = true
             return continuePromise.futureResult
-        }
+        })
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // The handler will run when the last byte of the extension data is sent.
         // We don't know when that is, so don't try to predict it. However,
@@ -292,11 +292,11 @@ class SniHandlerTest: XCTestCase {
         try channel.pipeline.assertContains(handler: handler)
 
         // Now we're going to complete the promise and run the loop. This should cause the complete
-        // ClientHello to be sent on, and the SniHandler to be removed from the pipeline.
-        continuePromise.succeed(result: ())
+        // ClientHello to be sent on, and the SNIHandler to be removed from the pipeline.
+        continuePromise.succeed(())
         loop.run()
 
-        let writtenBuffer: ByteBuffer = channel.readInbound()!
+        let writtenBuffer: ByteBuffer = channel.readInbound() ?? channel.allocator.buffer(capacity: 0)
         let writtenData = writtenBuffer.getData(at: writtenBuffer.readerIndex, length: writtenBuffer.readableBytes)
         let expectedData = Data(base64Encoded: clientHello, options: .ignoreUnknownCharacters)!
         XCTAssertEqual(writtenData, expectedData)
@@ -308,20 +308,20 @@ class SniHandlerTest: XCTestCase {
 
     /// Blasts the client hello in as a single string. This is not expected to reveal bugs
     /// that the drip feed doesn't hit: it just helps to find more gross logic bugs.
-    func blastHello(clientHello: String, expectedResult: SniResult) throws {
+    func blastHello(clientHello: String, expectedResult: SNIResult) throws {
         var called = false
         let buffer = bufferForBase64String(string: clientHello)
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise: EventLoopPromise<Void> = loop.newPromise()
+        let continuePromise = loop.makePromise(of: Void.self)
 
-        let handler = SniHandler { result in
+        let handler = ByteToMessageHandler(SNIHandler { result in
             XCTAssertEqual(expectedResult, result)
             called = true
             return continuePromise.futureResult
-        }
+        })
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // Ok, let's go.
         try channel.writeInbound(buffer)
@@ -330,12 +330,12 @@ class SniHandlerTest: XCTestCase {
         // The callback should have fired, but the handler should not have
         // sent on any data and should still be in the pipeline.
         XCTAssertTrue(called)
-        XCTAssertNil(channel.readInbound() as ByteBuffer?)
+        XCTAssertNil(channel.readInbound(as: ByteBuffer.self))
         try channel.pipeline.assertContains(handler: handler)
 
         // Now we're going to complete the promise and run the loop. This should cause the complete
-        // ClientHello to be sent on, and the SniHandler to be removed from the pipeline.
-        continuePromise.succeed(result: ())
+        // ClientHello to be sent on, and the SNIHandler to be removed from the pipeline.
+        continuePromise.succeed(())
         loop.run()
 
         let writtenBuffer: ByteBuffer? = channel.readInbound()
@@ -356,12 +356,12 @@ class SniHandlerTest: XCTestCase {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
 
-        let handler = SniHandler { result in
+        let handler = ByteToMessageHandler(SNIHandler { result in
             XCTFail("Handler was called")
-            return loop.newSucceededFuture(result: ())
-        }
+            return loop.makeSucceededFuture(())
+        })
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // Ok, let's go.
         try channel.writeInbound(buffer)
@@ -369,26 +369,26 @@ class SniHandlerTest: XCTestCase {
 
         // The callback should not have fired, the handler should still be in the pipeline,
         // and no data should have been written.
-        XCTAssertNil(channel.readInbound() as ByteBuffer?)
+        XCTAssertNil(channel.readInbound(as: ByteBuffer.self))
         try channel.pipeline.assertContains(handler: handler)
 
         XCTAssertNoThrow(try channel.finish())
     }
 
-    func testLibre227NoSniDripFeed() throws {
-        try dripFeedHello(clientHello: libressl227HelloNoSni, expectedResult: .fallback)
+    func testLibre227NoSNIDripFeed() throws {
+        try dripFeedHello(clientHello: libressl227HelloNoSNI, expectedResult: .fallback)
     }
 
-    func testLibre227WithSniDripFeed() throws {
-        try dripFeedHello(clientHello: libressl227HelloWithSni, expectedResult: .hostname("httpbin.org"))
+    func testLibre227WithSNIDripFeed() throws {
+        try dripFeedHello(clientHello: libressl227HelloWithSNI, expectedResult: .hostname("httpbin.org"))
     }
 
-    func testOpenSSL102NoSniDripFeed() throws {
-        try dripFeedHello(clientHello: openssl102HelloNoSni, expectedResult: .fallback)
+    func testOpenSSL102NoSNIDripFeed() throws {
+        try dripFeedHello(clientHello: openssl102HelloNoSNI, expectedResult: .fallback)
     }
 
-    func testOpenSSL102WithSniDripFeed() throws {
-        try dripFeedHello(clientHello: openssl102HelloWithSni, expectedResult: .hostname("httpbin.org"))
+    func testOpenSSL102WithSNIDripFeed() throws {
+        try dripFeedHello(clientHello: openssl102HelloWithSNI, expectedResult: .hostname("httpbin.org"))
     }
 
     func testCurlSecureTransportDripFeed() throws {
@@ -407,20 +407,20 @@ class SniHandlerTest: XCTestCase {
         try dripFeedHello(clientHello: firefoxWithNSS, expectedResult: .hostname("httpbin.org"))
     }
 
-    func testLibre227NoSniBlast() throws {
-        try blastHello(clientHello: libressl227HelloNoSni, expectedResult: .fallback)
+    func testLibre227NoSNIBlast() throws {
+        try blastHello(clientHello: libressl227HelloNoSNI, expectedResult: .fallback)
     }
 
-    func testLibre227WithSniBlast() throws {
-        try blastHello(clientHello: libressl227HelloWithSni, expectedResult: .hostname("httpbin.org"))
+    func testLibre227WithSNIBlast() throws {
+        try blastHello(clientHello: libressl227HelloWithSNI, expectedResult: .hostname("httpbin.org"))
     }
 
-    func testOpenSSL102NoSniBlast() throws {
-        try blastHello(clientHello: openssl102HelloNoSni, expectedResult: .fallback)
+    func testOpenSSL102NoSNIBlast() throws {
+        try blastHello(clientHello: openssl102HelloNoSNI, expectedResult: .fallback)
     }
 
-    func testOpenSSL102WithSniBlast() throws {
-        try blastHello(clientHello: openssl102HelloWithSni, expectedResult: .hostname("httpbin.org"))
+    func testOpenSSL102WithSNIBlast() throws {
+        try blastHello(clientHello: openssl102HelloWithSNI, expectedResult: .hostname("httpbin.org"))
     }
 
     func testCurlSecureTransportBlast() throws {

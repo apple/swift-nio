@@ -18,6 +18,9 @@
 ///
 /// ```swift
 ///     let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+///     defer {
+///         try! group.syncShutdownGracefully()
+///     }
 ///     let bootstrap = ServerBootstrap(group: group)
 ///         // Specify backlog and enable SO_REUSEADDR for the server itself
 ///         .serverChannelOption(ChannelOptions.backlog, value: 256)
@@ -26,8 +29,10 @@
 ///         // Set the handlers that are applied to the accepted child `Channel`s.
 ///         .childChannelInitializer { channel in
 ///             // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-///             channel.pipeline.add(handler: BackPressureHandler()).then { () in
-///                 channel.pipeline.add(handler: MyChannelHandler())
+///             channel.pipeline.addHandler(BackPressureHandler()).flatMap { () in
+///                 // make sure to instantiate your `ChannelHandlers` inside of
+///                 // the closure as it will be invoked once per connection.
+///                 channel.pipeline.addHandler(MyChannelHandler())
 ///             }
 ///         }
 ///
@@ -36,10 +41,7 @@
 ///         .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 ///         .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
 ///         .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
-///     defer {
-///         try! group.syncShutdownGracefully()
-///     }
-///     try! bootstrap.bind(host: host, port: port).wait()
+///     let channel = try! bootstrap.bind(host: host, port: port).wait()
 ///     /* the server will now be accepting connections */
 ///
 ///     try! channel.closeFuture.wait() // wait forever as we never close the Channel
@@ -57,8 +59,10 @@ public final class ServerBootstrap {
     private let childGroup: EventLoopGroup
     private var serverChannelInit: ((Channel) -> EventLoopFuture<Void>)?
     private var childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
-    private var serverChannelOptions = ChannelOptionStorage()
-    private var childChannelOptions = ChannelOptionStorage()
+    @usableFromInline
+    internal var _serverChannelOptions = ChannelOptions.Storage()
+    @usableFromInline
+    internal var _childChannelOptions = ChannelOptions.Storage()
 
     /// Create a `ServerBootstrap` for the `EventLoopGroup` `group`.
     ///
@@ -95,6 +99,12 @@ public final class ServerBootstrap {
     /// Initialize the accepted `SocketChannel`s with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
+    /// - warning: The `initializer` will be invoked once for every accepted connection. Therefore it's usually the
+    ///            right choice to instantiate stateful `ChannelHandler`s within the closure to make sure they are not
+    ///            accidentally shared across `Channel`s. There are expert use-cases where stateful handler need to be
+    ///            shared across `Channel`s in which case the user is responsible to synchronise the state access
+    ///            appropriately.
+    ///
     /// The accepted `Channel` will operate on `ByteBuffer` as inbound and `IOData` as outbound messages.
     ///
     /// - parameters:
@@ -111,8 +121,9 @@ public final class ServerBootstrap {
     /// - parameters:
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
-    public func serverChannelOption<T: ChannelOption>(_ option: T, value: T.OptionType) -> Self {
-        serverChannelOptions.put(key: option, value: value)
+    @inlinable
+    public func serverChannelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
+        self._serverChannelOptions.append(key: option, value: value)
         return self
     }
 
@@ -121,8 +132,9 @@ public final class ServerBootstrap {
     /// - parameters:
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
-    public func childChannelOption<T: ChannelOption>(_ option: T, value: T.OptionType) -> Self {
-        childChannelOptions.put(key: option, value: value)
+    @inlinable
+    public func childChannelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
+        self._childChannelOptions.append(key: option, value: value)
         return self
     }
 
@@ -133,7 +145,7 @@ public final class ServerBootstrap {
     ///     - port: The port to bind on.
     public func bind(host: String, port: Int) -> EventLoopFuture<Channel> {
         return bind0 {
-            return try SocketAddress.newAddressResolving(host: host, port: port)
+            return try SocketAddress.makeAddressResolvingHost(host, port: port)
         }
     }
 
@@ -164,7 +176,7 @@ public final class ServerBootstrap {
             return try ServerSocketChannel(descriptor: descriptor, eventLoop: eventLoop, group: childEventLoopGroup)
         }
         return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
-            let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+            let promise = eventLoop.makePromise(of: Void.self)
             serverChannel.registerAlreadyConfigured0(promise: promise)
             return promise.futureResult
         }
@@ -175,7 +187,7 @@ public final class ServerBootstrap {
         do {
             address = try makeSocketAddress()
         } catch {
-            return group.next().newFailedFuture(error: error)
+            return group.next().makeFailedFuture(error)
         }
         func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup) throws -> ServerSocketChannel {
             return try ServerSocketChannel(eventLoop: eventLoop,
@@ -193,33 +205,33 @@ public final class ServerBootstrap {
     private func bind0(makeServerChannel: (_ eventLoop: SelectableEventLoop, _ childGroup: EventLoopGroup) throws -> ServerSocketChannel, _ register: @escaping (EventLoop, ServerSocketChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
         let eventLoop = self.group.next()
         let childEventLoopGroup = self.childGroup
-        let serverChannelOptions = self.serverChannelOptions
-        let serverChannelInit = self.serverChannelInit ?? { _ in eventLoop.newSucceededFuture(result: ()) }
+        let serverChannelOptions = self._serverChannelOptions
+        let serverChannelInit = self.serverChannelInit ?? { _ in eventLoop.makeSucceededFuture(()) }
         let childChannelInit = self.childChannelInit
-        let childChannelOptions = self.childChannelOptions
+        let childChannelOptions = self._childChannelOptions
 
         let serverChannel: ServerSocketChannel
         do {
             serverChannel = try makeServerChannel(eventLoop as! SelectableEventLoop, childEventLoopGroup)
         } catch {
-            return eventLoop.newFailedFuture(error: error)
+            return eventLoop.makeFailedFuture(error)
         }
 
         return eventLoop.submit {
-            return serverChannelInit(serverChannel).then {
-                serverChannel.pipeline.add(handler: AcceptHandler(childChannelInitializer: childChannelInit,
-                                                                  childChannelOptions: childChannelOptions))
-            }.then {
-                serverChannelOptions.applyAll(channel: serverChannel)
-            }.then {
+            return serverChannelInit(serverChannel).flatMap {
+                serverChannel.pipeline.addHandler(AcceptHandler(childChannelInitializer: childChannelInit,
+                                                                childChannelOptions: childChannelOptions))
+            }.flatMap {
+                serverChannelOptions.applyAllChannelOptions(to: serverChannel)
+            }.flatMap {
                 register(eventLoop, serverChannel)
             }.map {
                 serverChannel as Channel
-            }.thenIfError { error in
+            }.flatMapError { error in
                 serverChannel.close0(error: error, mode: .all, promise: nil)
-                return eventLoop.newFailedFuture(error: error)
+                return eventLoop.makeFailedFuture(error)
             }
-        }.then {
+        }.flatMap {
             $0
         }
     }
@@ -228,47 +240,47 @@ public final class ServerBootstrap {
         public typealias InboundIn = SocketChannel
 
         private let childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
-        private let childChannelOptions: ChannelOptionStorage
+        private let childChannelOptions: ChannelOptions.Storage
 
-        init(childChannelInitializer: ((Channel) -> EventLoopFuture<Void>)?, childChannelOptions: ChannelOptionStorage) {
+        init(childChannelInitializer: ((Channel) -> EventLoopFuture<Void>)?, childChannelOptions: ChannelOptions.Storage) {
             self.childChannelInit = childChannelInitializer
             self.childChannelOptions = childChannelOptions
         }
 
-        func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+        func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
             if event is ChannelShouldQuiesceEvent {
-                ctx.channel.close(promise: nil)
+                context.channel.close(promise: nil)
             }
-            ctx.fireUserInboundEventTriggered(event)
+            context.fireUserInboundEventTriggered(event)
         }
 
-        func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+        func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             let accepted = self.unwrapInboundIn(data)
-            let ctxEventLoop = ctx.eventLoop
+            let ctxEventLoop = context.eventLoop
             let childEventLoop = accepted.eventLoop
-            let childChannelInit = self.childChannelInit ?? { (_: Channel) in childEventLoop.newSucceededFuture(result: ()) }
+            let childChannelInit = self.childChannelInit ?? { (_: Channel) in childEventLoop.makeSucceededFuture(()) }
 
             @inline(__always)
             func setupChildChannel() -> EventLoopFuture<Void> {
-                return self.childChannelOptions.applyAll(channel: accepted).then { () -> EventLoopFuture<Void> in
-                    assert(childEventLoop.inEventLoop)
+                return self.childChannelOptions.applyAllChannelOptions(to: accepted).flatMap { () -> EventLoopFuture<Void> in
+                    childEventLoop.assertInEventLoop()
                     return childChannelInit(accepted)
                 }
             }
 
             @inline(__always)
             func fireThroughPipeline(_ future: EventLoopFuture<Void>) {
-                assert(ctxEventLoop.inEventLoop)
-                future.then { (_) -> EventLoopFuture<Void> in
-                    assert(ctxEventLoop.inEventLoop)
-                    guard !ctx.pipeline.destroyed else {
-                        return ctx.eventLoop.newFailedFuture(error: ChannelError.ioOnClosedChannel)
+                ctxEventLoop.assertInEventLoop()
+                future.flatMap { (_) -> EventLoopFuture<Void> in
+                    ctxEventLoop.assertInEventLoop()
+                    guard !context.pipeline.destroyed else {
+                        return context.eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
                     }
-                    ctx.fireChannelRead(data)
-                    return ctx.eventLoop.newSucceededFuture(result: ())
+                    context.fireChannelRead(data)
+                    return context.eventLoop.makeSucceededFuture(())
                 }.whenFailure { error in
-                    assert(ctx.eventLoop.inEventLoop)
-                    self.closeAndFire(ctx: ctx, accepted: accepted, err: error)
+                    ctxEventLoop.assertInEventLoop()
+                    self.closeAndFire(context: context, accepted: accepted, err: error)
                 }
             }
 
@@ -277,17 +289,17 @@ public final class ServerBootstrap {
             } else {
                 fireThroughPipeline(childEventLoop.submit {
                     return setupChildChannel()
-                }.then { $0 }.hopTo(eventLoop: ctxEventLoop))
+                }.flatMap { $0 }.hop(to: ctxEventLoop))
             }
         }
 
-        private func closeAndFire(ctx: ChannelHandlerContext, accepted: SocketChannel, err: Error) {
+        private func closeAndFire(context: ChannelHandlerContext, accepted: SocketChannel, err: Error) {
             accepted.close(promise: nil)
-            if ctx.eventLoop.inEventLoop {
-                ctx.fireErrorCaught(err)
+            if context.eventLoop.inEventLoop {
+                context.fireErrorCaught(err)
             } else {
-                ctx.eventLoop.execute {
-                    ctx.fireErrorCaught(err)
+                context.eventLoop.execute {
+                    context.fireErrorCaught(err)
                 }
             }
         }
@@ -299,10 +311,10 @@ private extension Channel {
         // this is pretty delicate at the moment:
         // In many cases `body` must be _synchronously_ follow `register`, otherwise in our current
         // implementation, `epoll` will send us `EPOLLHUP`. To have it run synchronously, we need to invoke the
-        // `then` on the eventloop that the `register` will succeed on.
-        assert(self.eventLoop.inEventLoop)
-        return self.register().then {
-            assert(self.eventLoop.inEventLoop)
+        // `flatMap` on the eventloop that the `register` will succeed on.
+        self.eventLoop.assertInEventLoop()
+        return self.register().flatMap {
+            self.eventLoop.assertInEventLoop()
             return body(self)
         }
     }
@@ -317,15 +329,18 @@ private extension Channel {
 ///
 /// ```swift
 ///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+///     defer {
+///         try! group.syncShutdownGracefully()
+///     }
 ///     let bootstrap = ClientBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
 ///         .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 ///         .channelInitializer { channel in
-///             channel.pipeline.add(handler: MyChannelHandler())
+///             // always instantiate the handler _within_ the closure as
+///             // it may be called multiple times (for example if the hostname
+///             // resolves to both IPv4 and IPv6 addresses, cf. Happy Eyeballs).
+///             channel.pipeline.addHandler(MyChannelHandler())
 ///         }
-///     defer {
-///         try! group.syncShutdownGracefully()
-///     }
 ///     try! bootstrap.connect(host: "example.org", port: 12345).wait()
 ///     /* the Channel is now connected */
 /// ```
@@ -335,7 +350,8 @@ public final class ClientBootstrap {
 
     private let group: EventLoopGroup
     private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
-    private var channelOptions = ChannelOptionStorage()
+    @usableFromInline
+    internal var _channelOptions = ChannelOptions.Storage()
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
     private var resolver: Resolver?
 
@@ -352,6 +368,16 @@ public final class ClientBootstrap {
     ///
     /// The connected `Channel` will operate on `ByteBuffer` as inbound and `IOData` as outbound messages.
     ///
+    /// - warning: The `handler` closure may be invoked _multiple times_ so it's usually the right choice to instantiate
+    ///            `ChannelHandler`s within `handler`. The reason `handler` may be invoked multiple times is that to
+    ///            successfully set up a connection multiple connections might be setup in the process. Assuming a
+    ///            hostname that resolves to both IPv4 and IPv6 addresses, NIO will follow
+    ///            [_Happy Eyeballs_](https://en.wikipedia.org/wiki/Happy_Eyeballs) and race both an IPv4 and an IPv6
+    ///            connection. It is possible that both connections get fully established before the IPv4 connection
+    ///            will be closed again because the IPv6 connection 'won the race'. Therefore the `channelInitializer`
+    ///            might be called multiple times and it's important not to share stateful `ChannelHandler`s in more
+    ///            than one `Channel`.
+    ///
     /// - parameters:
     ///     - handler: A closure that initializes the provided `Channel`.
     public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
@@ -364,8 +390,9 @@ public final class ClientBootstrap {
     /// - parameters:
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
-    public func channelOption<T: ChannelOption>(_ option: T, value: T.OptionType) -> Self {
-        channelOptions.put(key: option, value: value)
+    @inlinable
+    public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
+        self._channelOptions.append(key: option, value: value)
         return self
     }
 
@@ -400,7 +427,7 @@ public final class ClientBootstrap {
                                                host: host,
                                                port: port,
                                                connectTimeout: self.connectTimeout) { eventLoop, protocolFamily in
-            return self.execute(eventLoop: eventLoop, protocolFamily: protocolFamily) { $0.eventLoop.newSucceededFuture(result: ()) }
+            return self.execute(eventLoop: eventLoop, protocolFamily: protocolFamily) { $0.eventLoop.makeSucceededFuture(()) }
         }
         return connector.resolveAndConnect()
     }
@@ -412,14 +439,14 @@ public final class ClientBootstrap {
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(to address: SocketAddress) -> EventLoopFuture<Channel> {
         return execute(eventLoop: group.next(), protocolFamily: address.protocolFamily) { channel in
-            let connectPromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
+            let connectPromise = channel.eventLoop.makePromise(of: Void.self)
             channel.connect(to: address, promise: connectPromise)
             let cancelTask = channel.eventLoop.scheduleTask(in: self.connectTimeout) {
-                connectPromise.fail(error: ChannelError.connectTimeout(self.connectTimeout))
+                connectPromise.fail(ChannelError.connectTimeout(self.connectTimeout))
                 channel.close(promise: nil)
             }
 
-            connectPromise.futureResult.whenComplete {
+            connectPromise.futureResult.whenComplete { (_: Result<Void, Error>) in
                 cancelTask.cancel()
             }
             return connectPromise.futureResult
@@ -436,7 +463,7 @@ public final class ClientBootstrap {
             let address = try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
             return connect(to: address)
         } catch {
-            return group.next().newFailedFuture(error: error)
+            return group.next().makeFailedFuture(error)
         }
     }
 
@@ -447,63 +474,63 @@ public final class ClientBootstrap {
     /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel` immediately.
     public func withConnectedSocket(descriptor: CInt) -> EventLoopFuture<Channel> {
         let eventLoop = group.next()
-        let channelInitializer = self.channelInitializer ?? { _ in eventLoop.newSucceededFuture(result: ()) }
+        let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
         let channel: SocketChannel
         do {
             channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, descriptor: descriptor)
         } catch {
-            return eventLoop.newFailedFuture(error: error)
+            return eventLoop.makeFailedFuture(error)
         }
 
-        return channelInitializer(channel).then {
-            self.channelOptions.applyAll(channel: channel)
-        }.then {
-            let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+        return channelInitializer(channel).flatMap {
+            self._channelOptions.applyAllChannelOptions(to: channel)
+        }.flatMap {
+            let promise = eventLoop.makePromise(of: Void.self)
             channel.registerAlreadyConfigured0(promise: promise)
             return promise.futureResult
         }.map {
             channel
-        }.thenIfError { error in
+        }.flatMapError { error in
             channel.close0(error: error, mode: .all, promise: nil)
-            return channel.eventLoop.newFailedFuture(error: error)
+            return channel.eventLoop.makeFailedFuture(error)
         }
     }
 
     private func execute(eventLoop: EventLoop,
                          protocolFamily: Int32,
                          _ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
-        let channelInitializer = self.channelInitializer ?? { _ in eventLoop.newSucceededFuture(result: ()) }
-        let channelOptions = self.channelOptions
+        let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
+        let channelOptions = self._channelOptions
 
-        let promise: EventLoopPromise<Channel> = eventLoop.newPromise()
+        let promise = eventLoop.makePromise(of: Channel.self)
         let channel: SocketChannel
         do {
             channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, protocolFamily: protocolFamily)
         } catch let err {
-            promise.fail(error: err)
+            promise.fail(err)
             return promise.futureResult
         }
 
         @inline(__always)
         func setupChannel() -> EventLoopFuture<Channel> {
-            assert(eventLoop.inEventLoop)
-            channelInitializer(channel).then {
-                channelOptions.applyAll(channel: channel)
-            }.then {
+            eventLoop.assertInEventLoop()
+            channelInitializer(channel).flatMap {
+                channelOptions.applyAllChannelOptions(to: channel)
+            }.flatMap {
                 channel.registerAndDoSynchronously(body)
             }.map {
                 channel
-            }.thenIfError { error in
+            }.flatMapError { error in
                 channel.close0(error: error, mode: .all, promise: nil)
-                return channel.eventLoop.newFailedFuture(error: error)
-            }.cascade(promise: promise)
+                return channel.eventLoop.makeFailedFuture(error)
+            }.cascade(to: promise)
             return promise.futureResult
         }
 
         if eventLoop.inEventLoop {
             return setupChannel()
         } else {
-            return eventLoop.submit(setupChannel).then { $0 }
+            return eventLoop.submit(setupChannel).flatMap { $0 }
         }
     }
 }
@@ -515,15 +542,15 @@ public final class ClientBootstrap {
 ///
 /// ```swift
 ///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+///     defer {
+///         try! group.syncShutdownGracefully()
+///     }
 ///     let bootstrap = DatagramBootstrap(group: group)
 ///         // Enable SO_REUSEADDR.
 ///         .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
 ///         .channelInitializer { channel in
-///             channel.pipeline.add(handler: MyChannelHandler())
+///             channel.pipeline.addHandler(MyChannelHandler())
 ///         }
-///     defer {
-///         try! group.syncShutdownGracefully()
-///     }
 ///     let channel = try! bootstrap.bind(host: "127.0.0.1", port: 53).wait()
 ///     /* the Channel is now ready to send/receive datagrams */
 ///
@@ -535,7 +562,8 @@ public final class DatagramBootstrap {
 
     private let group: EventLoopGroup
     private var channelInitializer: ((Channel) -> EventLoopFuture<Void>)?
-    private var channelOptions = ChannelOptionStorage()
+    @usableFromInline
+    internal var _channelOptions = ChannelOptions.Storage()
 
     /// Create a `DatagramBootstrap` on the `EventLoopGroup` `group`.
     ///
@@ -560,8 +588,9 @@ public final class DatagramBootstrap {
     /// - parameters:
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
-    public func channelOption<T: ChannelOption>(_ option: T, value: T.OptionType) -> Self {
-        channelOptions.put(key: option, value: value)
+    @inlinable
+    public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
+        self._channelOptions.append(key: option, value: value)
         return self
     }
 
@@ -574,7 +603,7 @@ public final class DatagramBootstrap {
             return try DatagramChannel(eventLoop: eventLoop, descriptor: descriptor)
         }
         return bind0(makeChannel: makeChannel) { (eventLoop, channel) in
-            let promise: EventLoopPromise<Void> = eventLoop.newPromise()
+            let promise = eventLoop.makePromise(of: Void.self)
             channel.registerAlreadyConfigured0(promise: promise)
             return promise.futureResult
         }
@@ -587,7 +616,7 @@ public final class DatagramBootstrap {
     ///     - port: The port to bind on.
     public func bind(host: String, port: Int) -> EventLoopFuture<Channel> {
         return bind0 {
-            return try SocketAddress.newAddressResolving(host: host, port: port)
+            return try SocketAddress.makeAddressResolvingHost(host, port: port)
         }
     }
 
@@ -614,14 +643,14 @@ public final class DatagramBootstrap {
         do {
             address = try makeSocketAddress()
         } catch {
-            return group.next().newFailedFuture(error: error)
+            return group.next().makeFailedFuture(error)
         }
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(eventLoop: eventLoop,
                                        protocolFamily: address.protocolFamily)
         }
         return bind0(makeChannel: makeChannel) { (eventLoop, channel) in
-            channel.register().then {
+            channel.register().flatMap {
                 channel.bind(to: address)
             }
         }
@@ -629,70 +658,24 @@ public final class DatagramBootstrap {
 
     private func bind0(makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel, _ registerAndBind: @escaping (EventLoop, DatagramChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
         let eventLoop = self.group.next()
-        let channelInitializer = self.channelInitializer ?? { _ in eventLoop.newSucceededFuture(result: ()) }
-        let channelOptions = self.channelOptions
+        let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
+        let channelOptions = self._channelOptions
 
         let channel: DatagramChannel
         do {
             channel = try makeChannel(eventLoop as! SelectableEventLoop)
         } catch {
-            return eventLoop.newFailedFuture(error: error)
+            return eventLoop.makeFailedFuture(error)
         }
 
-        return channelInitializer(channel).then {
-            channelOptions.applyAll(channel: channel)
-        }.then {
+        return channelInitializer(channel).flatMap {
+            channelOptions.applyAllChannelOptions(to: channel)
+        }.flatMap {
             registerAndBind(eventLoop, channel)
         }.map {
             channel
-        }.thenIfError { error in
-            eventLoop.newFailedFuture(error: error)
+        }.flatMapError { error in
+            eventLoop.makeFailedFuture(error)
         }
-    }
-}
-
-fileprivate struct ChannelOptionStorage {
-    private var storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))] = []
-
-    mutating func put<K: ChannelOption>(key: K,
-                             value newValue: K.OptionType) {
-        func applier(_ t: Channel) -> (Any, Any) -> EventLoopFuture<Void> {
-            return { (x, y) in
-                return t.setOption(option: x as! K, value: y as! K.OptionType)
-            }
-        }
-        var hasSet = false
-        self.storage = self.storage.map { typeAndValue in
-            let (type, value) = typeAndValue
-            if type is K {
-                hasSet = true
-                return (key, (newValue, applier))
-            } else {
-                return (type, value)
-            }
-        }
-        if !hasSet {
-            self.storage.append((key, (newValue, applier)))
-        }
-    }
-
-    func applyAll(channel: Channel) -> EventLoopFuture<Void> {
-        let applyPromise: EventLoopPromise<Void> = channel.eventLoop.newPromise()
-        var it = self.storage.makeIterator()
-
-        func applyNext() {
-            guard let (key, (value, applier)) = it.next() else {
-                // If we reached the end, everything is applied.
-                applyPromise.succeed(result: ())
-                return
-            }
-
-            applier(channel)(key, value).map {
-                applyNext()
-            }.cascadeFailure(promise: applyPromise)
-        }
-        applyNext()
-
-        return applyPromise.futureResult
     }
 }

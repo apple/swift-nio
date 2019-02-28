@@ -17,19 +17,27 @@ private final class ChatHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    private func printByte(_ byte: UInt8) {
+        #if os(Android)
+        print(Character(UnicodeScalar(byte)),  terminator:"")
+        #else
+        fputc(Int32(byte), stdout)
+        #endif
+    }
+
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var buffer = self.unwrapInboundIn(data)
         while let byte: UInt8 = buffer.readInteger() {
-            fputc(Int32(byte), stdout)
+            printByte(byte)
         }
     }
 
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
         print("error: ", error)
 
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
-        ctx.close(promise: nil)
+        context.close(promise: nil)
     }
 }
 
@@ -38,7 +46,7 @@ let bootstrap = ClientBootstrap(group: group)
     // Enable SO_REUSEADDR.
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .channelInitializer { channel in
-        channel.pipeline.add(handler: ChatHandler())
+        channel.pipeline.addHandler(ChatHandler())
     }
 defer {
     try! group.syncShutdownGracefully()
@@ -47,7 +55,7 @@ defer {
 // First argument is the program path
 let arguments = CommandLine.arguments
 let arg1 = arguments.dropFirst().first
-let arg2 = arguments.dropFirst().dropFirst().first
+let arg2 = arguments.dropFirst(2).first
 
 let defaultHost = "::1"
 let defaultPort = 9999
@@ -85,7 +93,7 @@ print("ChatClient connected to ChatServer: \(channel.remoteAddress!), happy chat
 
 while let line = readLine(strippingNewline: false) {
     var buffer = channel.allocator.buffer(capacity: line.utf8.count)
-    buffer.write(string: line)
+    buffer.writeString(line)
     try! channel.writeAndFlush(buffer).wait()
 }
 

@@ -22,7 +22,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).wait())
 
         var buffer = channel.allocator.buffer(capacity: 1024)
-        buffer.write(staticString: "GET / HTTP/1.1\r\nContent-Length: -4\r\n\r\n")
+        buffer.writeStaticString("GET / HTTP/1.1\r\nContent-Length: -4\r\n\r\n")
         do {
             try channel.writeInbound(buffer)
         } catch HTTPParserError.invalidContentLength {
@@ -34,7 +34,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.closeFuture.wait())
 
         // We expect exactly one ByteBuffer in the output.
-        guard case .some(.byteBuffer(var written)) = channel.readOutbound() else {
+        guard var written = channel.readOutbound(as: ByteBuffer.self) else {
             XCTFail("No writes")
             return
         }
@@ -94,7 +94,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
 
             private var nextExpected: NextExpectedState = .head
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let req = self.unwrapInboundIn(data)
                 switch req {
                 case .head:
@@ -103,7 +103,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
                     let res = HTTPServerResponsePart.head(.init(version: HTTPVersion(major: 1, minor: 1),
                                                                 status: .ok,
                                                                 headers: .init([("Content-Length", "0")])))
-                    ctx.writeAndFlush(self.wrapOutboundOut(res), promise: nil)
+                    context.writeAndFlush(self.wrapOutboundOut(res), promise: nil)
                 default:
                     XCTAssertEqual(.end, self.nextExpected)
                     self.nextExpected = .none
@@ -113,12 +113,12 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
 
         }
         let channel = EmbeddedChannel()
-        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).then {
-            channel.pipeline.add(handler: DelayWriteHandler())
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap {
+            channel.pipeline.addHandler(DelayWriteHandler())
         }.wait())
 
         var buffer = channel.allocator.buffer(capacity: 1024)
-        buffer.write(staticString: "GET / HTTP/1.1\r\n\r\nGET / HTTP/1.1\r\n\r\nGET / HT")
+        buffer.writeStaticString("GET / HTTP/1.1\r\n\r\nGET / HTTP/1.1\r\n\r\nGET / HT")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         XCTAssertNoThrow(try channel.close().wait())
         (channel.eventLoop as! EmbeddedEventLoop).run()
@@ -127,7 +127,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.closeFuture.wait())
 
         // We expect exactly one ByteBuffer in the output.
-        guard case .some(.byteBuffer(var written)) = channel.readOutbound() else {
+        guard var written = channel.readOutbound(as: ByteBuffer.self) else {
             XCTFail("No writes")
             return
         }

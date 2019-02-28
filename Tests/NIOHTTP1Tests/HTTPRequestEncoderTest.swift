@@ -29,11 +29,11 @@ class HTTPRequestEncoderTests: XCTestCase {
             XCTAssertEqual(.some(false), try? channel.finish())
         }
 
-        try channel.pipeline.add(handler: HTTPRequestEncoder()).wait()
+        try channel.pipeline.addHandler(HTTPRequestEncoder()).wait()
         var request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:1), method: method, uri: "/uri")
         request.headers = headers
         try channel.writeOutbound(HTTPClientRequestPart.head(request))
-        if case .some(.byteBuffer(let buffer)) = channel.readOutbound() {
+        if let buffer = channel.readOutbound(as: ByteBuffer.self) {
             return buffer
         } else {
             fatalError("Could not read ByteBuffer from channel")
@@ -78,20 +78,14 @@ class HTTPRequestEncoderTests: XCTestCase {
             XCTAssertEqual(.some(false), try? channel.finish())
         }
 
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPRequestEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
 
         // This request contains neither Transfer-Encoding: chunked or Content-Length.
         let request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:0), method: .GET, uri: "/uri")
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(request)))
-        let writtenData: IOData = channel.readOutbound()!
-
-        switch writtenData {
-        case .byteBuffer(let b):
-            let writtenResponse = b.getString(at: b.readerIndex, length: b.readableBytes)!
-            XCTAssertEqual(writtenResponse, "GET /uri HTTP/1.0\r\n\r\n")
-        case .fileRegion:
-            XCTFail("Unexpected file region")
-        }
+        let writtenData = channel.readOutbound(as: ByteBuffer.self)!
+        let writtenResponse = writtenData.getString(at: writtenData.readerIndex, length: writtenData.readableBytes)!
+        XCTAssertEqual(writtenResponse, "GET /uri HTTP/1.0\r\n\r\n")
     }
 
     func testBody() throws {
@@ -100,12 +94,12 @@ class HTTPRequestEncoderTests: XCTestCase {
             XCTAssertEqual(.some(false), try? channel.finish())
         }
 
-        try channel.pipeline.add(handler: HTTPRequestEncoder()).wait()
+        try channel.pipeline.addHandler(HTTPRequestEncoder()).wait()
         var request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:1), method: .POST, uri: "/uri")
         request.headers.add(name: "content-length", value: "4")
 
         var buf = channel.allocator.buffer(capacity: 4)
-        buf.write(staticString: "test")
+        buf.writeStaticString("test")
 
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(request)))
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.body(.byteBuffer(buf))))
@@ -116,8 +110,26 @@ class HTTPRequestEncoderTests: XCTestCase {
         assertOutboundContainsOnly(channel, "")
     }
 
+    func testCONNECT() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertEqual(.some(false), try? channel.finish())
+        }
+
+        let uri = "server.example.com:80"
+        try channel.pipeline.addHandler(HTTPRequestEncoder()).wait()
+        var request = HTTPRequestHead(version: HTTPVersion(major: 1, minor:1), method: .CONNECT, uri: uri)
+        request.headers.add(name: "Host", value: uri)
+
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(request)))
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(nil)))
+
+        assertOutboundContainsOnly(channel, "CONNECT \(uri) HTTP/1.1\r\nHost: \(uri)\r\n\r\n")
+        assertOutboundContainsOnly(channel, "")
+    }
+
     private func assertOutboundContainsOnly(_ channel: EmbeddedChannel, _ expected: String) {
-        if case .some(.byteBuffer(let buffer)) = channel.readOutbound() {
+        if let buffer = channel.readOutbound(as: ByteBuffer.self) {
             buffer.assertContainsOnly(expected)
         } else {
             fatalError("Could not read ByteBuffer from channel")

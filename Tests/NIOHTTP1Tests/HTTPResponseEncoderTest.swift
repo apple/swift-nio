@@ -29,11 +29,11 @@ class HTTPResponseEncoderTests: XCTestCase {
             XCTAssertEqual(.some(false), try? channel.finish())
         }
 
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
         var switchingResponse = HTTPResponseHead(version: HTTPVersion(major: 1, minor:1), status: status)
         switchingResponse.headers = headers
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(switchingResponse)))
-        if case .some(.byteBuffer(let buffer)) = channel.readOutbound() {
+        if let buffer = channel.readOutbound(as: ByteBuffer.self) {
             return buffer
         } else {
             fatalError("Could not read ByteBuffer from channel")
@@ -98,19 +98,16 @@ class HTTPResponseEncoderTests: XCTestCase {
             XCTAssertEqual(.some(false), try? channel.finish())
         }
 
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
 
         // This response contains neither Transfer-Encoding: chunked or Content-Length.
         let response = HTTPResponseHead(version: HTTPVersion(major: 1, minor:0), status: .ok)
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(response)))
-        let writtenData: IOData = channel.readOutbound()!
-
-        switch writtenData {
-        case .byteBuffer(let b):
-            let writtenResponse = b.getString(at: b.readerIndex, length: b.readableBytes)!
-            XCTAssertEqual(writtenResponse, "HTTP/1.0 200 OK\r\n\r\n")
-        case .fileRegion:
-            XCTFail("Unexpected file region")
+        guard let b = channel.readOutbound(as: ByteBuffer.self) else {
+            XCTFail("Could not read byte buffer")
+            return
         }
+        let writtenResponse = b.getString(at: b.readerIndex, length: b.readableBytes)!
+        XCTAssertEqual(writtenResponse, "HTTP/1.0 200 OK\r\n\r\n")
     }
 }

@@ -15,7 +15,7 @@
 import CNIOZlib
 import NIO
 
-internal extension String {
+extension String {
     /// Test if this `Collection` starts with the unicode scalars of `needle`.
     ///
     /// - note: This will be faster than `String.startsWith` as no unicode normalisations are performed.
@@ -78,7 +78,7 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
     private var algorithm: CompressionAlgorithm?
 
     // A queue of accept headers.
-    private var acceptQueue = CircularBuffer<[String]>(initialRingCapacity: 8)
+    private var acceptQueue = CircularBuffer<[String]>(initialCapacity: 8)
 
     private var pendingResponse: PartialHTTPResponse!
     private var pendingWritePromise: EventLoopPromise<Void>!
@@ -89,67 +89,68 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
         self.initialByteBufferCapacity = initialByteBufferCapacity
     }
 
-    public func handlerAdded(ctx: ChannelHandlerContext) {
-        pendingResponse = PartialHTTPResponse(bodyBuffer: ctx.channel.allocator.buffer(capacity: initialByteBufferCapacity))
-        pendingWritePromise = ctx.eventLoop.newPromise()
+    public func handlerAdded(context: ChannelHandlerContext) {
+        pendingResponse = PartialHTTPResponse(bodyBuffer: context.channel.allocator.buffer(capacity: initialByteBufferCapacity))
+        pendingWritePromise = context.eventLoop.makePromise()
     }
 
-    public func handlerRemoved(ctx: ChannelHandlerContext) {
-        pendingWritePromise?.fail(error: CompressionError.uncompressedWritesPending)
+    public func handlerRemoved(context: ChannelHandlerContext) {
+        pendingWritePromise?.fail(CompressionError.uncompressedWritesPending)
         if algorithm != nil {
             deinitializeEncoder()
             algorithm = nil
         }
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         if case .head(let requestHead) = unwrapInboundIn(data) {
             acceptQueue.append(requestHead.headers[canonicalForm: "accept-encoding"])
         }
 
-        ctx.fireChannelRead(data)
+        context.fireChannelRead(data)
     }
 
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let httpData = unwrapOutboundIn(data)
         switch httpData {
         case .head(var responseHead):
             algorithm = compressionAlgorithm()
             guard algorithm != nil else {
-                ctx.write(wrapOutboundOut(.head(responseHead)), promise: promise)
+                context.write(wrapOutboundOut(.head(responseHead)), promise: promise)
                 return
             }
-
-            responseHead.headers.add(name: "Content-Encoding", value: algorithm!.rawValue)
+            // Previous handlers in the pipeline might have already set this header even though
+            // they should not as it is compressor responsibility to decide what encoding to use
+            responseHead.headers.replaceOrAdd(name: "Content-Encoding", value: algorithm!.rawValue)
             initializeEncoder(encoding: algorithm!)
             pendingResponse.bufferResponseHead(responseHead)
-            chainPromise(promise)
+            pendingWritePromise.futureResult.cascade(to: promise)
         case .body(let body):
             if algorithm != nil {
                 pendingResponse.bufferBodyPart(body)
-                chainPromise(promise)
+                pendingWritePromise.futureResult.cascade(to: promise)
             } else {
-                ctx.write(data, promise: promise)
+                context.write(data, promise: promise)
             }
         case .end:
             // This compress is not done in flush because we need to be done with the
             // compressor now.
             guard algorithm != nil else {
-                ctx.write(data, promise: promise)
+                context.write(data, promise: promise)
                 return
             }
 
             pendingResponse.bufferResponseEnd(httpData)
-            chainPromise(promise)
-            emitPendingWrites(ctx: ctx)
+            pendingWritePromise.futureResult.cascade(to: promise)
+            emitPendingWrites(context: context)
             algorithm = nil
             deinitializeEncoder()
         }
     }
 
-    public func flush(ctx: ChannelHandlerContext) {
-        emitPendingWrites(ctx: ctx)
-        ctx.flush()
+    public func flush(context: ChannelHandlerContext) {
+        emitPendingWrites(context: context)
+        context.flush()
     }
 
     /// Determines the compression algorithm to use for the next response.
@@ -211,43 +212,37 @@ public final class HTTPResponseCompressor: ChannelDuplexHandler {
         deflateEnd(&stream)
     }
 
-    private func chainPromise(_ promise: EventLoopPromise<Void>?) {
-        if let promise = promise {
-            pendingWritePromise.futureResult.cascade(promise: promise)
-        }
-    }
-
     /// Emits all pending buffered writes to the network, optionally compressing the
     /// data. Resets the pending write buffer and promise.
     ///
     /// Called either when a HTTP end message is received or our flush() method is called.
-    private func emitPendingWrites(ctx: ChannelHandlerContext) {
-        let writesToEmit = pendingResponse.flush(compressor: &stream, allocator: ctx.channel.allocator)
+    private func emitPendingWrites(context: ChannelHandlerContext) {
+        let writesToEmit = pendingResponse.flush(compressor: &stream, allocator: context.channel.allocator)
         var pendingPromise = pendingWritePromise
 
         if let writeHead = writesToEmit.0 {
-            ctx.write(wrapOutboundOut(.head(writeHead)), promise: pendingPromise)
+            context.write(wrapOutboundOut(.head(writeHead)), promise: pendingPromise)
             pendingPromise = nil
         }
 
         if let writeBody = writesToEmit.1 {
-            ctx.write(wrapOutboundOut(.body(.byteBuffer(writeBody))), promise: pendingPromise)
+            context.write(wrapOutboundOut(.body(.byteBuffer(writeBody))), promise: pendingPromise)
             pendingPromise = nil
         }
 
         if let writeEnd = writesToEmit.2 {
-            ctx.write(wrapOutboundOut(writeEnd), promise: pendingPromise)
+            context.write(wrapOutboundOut(writeEnd), promise: pendingPromise)
             pendingPromise = nil
         }
 
         // If we still have the pending promise, we never emitted a write. Fail the promise,
         // as anything that is listening for its data somehow lost it.
         if let stillPendingPromise = pendingPromise {
-            stillPendingPromise.fail(error: CompressionError.noDataToWrite)
+            stillPendingPromise.fail(CompressionError.noDataToWrite)
         }
 
         // Reset the pending promise.
-        pendingWritePromise = ctx.eventLoop.newPromise()
+        pendingWritePromise = context.eventLoop.makePromise()
     }
 }
 /// A buffer object that allows us to keep track of how much of a HTTP response we've seen before
@@ -285,7 +280,7 @@ private struct PartialHTTPResponse {
     mutating func bufferBodyPart(_ bodyPart: IOData) {
         switch bodyPart {
         case .byteBuffer(var buffer):
-            body.write(buffer: &buffer)
+            body.writeBuffer(&buffer)
         case .fileRegion:
             fatalError("Cannot currently compress file regions")
         }
@@ -367,7 +362,7 @@ private extension z_stream {
             self.next_out = nil
         }
 
-        _ = from.readWithUnsafeMutableReadableBytes { dataPtr in
+        from.readWithUnsafeMutableReadableBytes { dataPtr in
             let typedPtr = dataPtr.baseAddress!.assumingMemoryBound(to: UInt8.self)
             let typedDataPtr = UnsafeMutableBufferPointer(start: typedPtr,
                                                           count: dataPtr.count)
@@ -388,7 +383,7 @@ private extension z_stream {
     private mutating func deflateToBuffer(buffer: inout ByteBuffer, flag: Int32) -> Int32 {
         var rc = Z_OK
 
-        _ = buffer.writeWithUnsafeMutableBytes { outputPtr in
+        buffer.writeWithUnsafeMutableBytes { outputPtr in
             let typedOutputPtr = UnsafeMutableBufferPointer(start: outputPtr.baseAddress!.assumingMemoryBound(to: UInt8.self),
                                                             count: outputPtr.count)
             self.avail_out = UInt32(typedOutputPtr.count)

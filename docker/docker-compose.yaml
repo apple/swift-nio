@@ -25,7 +25,7 @@ services:
 
   unit-tests:
     <<: *common
-    command: /bin/bash -cl "swift test"
+    command: /bin/bash -cl "swift test -Xswiftc -DNIO_CI_BUILD"
 
   integration-tests:
     <<: *common
@@ -33,7 +33,7 @@ services:
 
   test:
     <<: *common
-    command: /bin/bash -cl "swift test && ./scripts/integration_tests.sh"
+    command: /bin/bash -cl "swift test -Xswiftc -DNIO_CI_BUILD && ./scripts/integration_tests.sh"
 
   echo:
     <<: *common

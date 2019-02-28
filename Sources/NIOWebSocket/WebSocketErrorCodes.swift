@@ -123,28 +123,9 @@ public enum WebSocketErrorCode {
     }
 }
 
-extension WebSocketErrorCode: Equatable {
-    public static func ==(lhs: WebSocketErrorCode, rhs: WebSocketErrorCode) -> Bool {
-        switch (lhs, rhs) {
-        case (.normalClosure, .normalClosure),
-             (.goingAway, .goingAway),
-             (.protocolError, .protocolError),
-             (.unacceptableData, .unacceptableData),
-             (.dataInconsistentWithMessage, .dataInconsistentWithMessage),
-             (.policyViolation, .policyViolation),
-             (.messageTooLarge, .messageTooLarge),
-             (.missingExtension, .missingExtension),
-             (.unexpectedServerError, .unexpectedServerError):
-            return true
-        case (.unknown(let l), .unknown(let r)):
-            return l == r
-        default:
-            return false
-        }
-    }
-}
+extension WebSocketErrorCode: Equatable {}
 
-public extension ByteBuffer {
+extension ByteBuffer {
     /// Read a websocket error code from a byte buffer.
     ///
     /// This method increments the reader index.
@@ -171,11 +152,11 @@ public extension ByteBuffer {
     /// - parameters:
     ///     - code: The code to write into the buffer.
     public mutating func write(webSocketErrorCode code: WebSocketErrorCode) {
-        self.write(integer: UInt16(webSocketErrorCode: code))
+        self.writeInteger(UInt16(webSocketErrorCode: code))
     }
 }
 
-public extension UInt16 {
+extension UInt16 {
     /// Create a UInt16 corresponding to a given `WebSocketErrorCode`.
     ///
     /// - parameters:

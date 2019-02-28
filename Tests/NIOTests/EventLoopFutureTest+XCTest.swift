@@ -51,8 +51,8 @@ extension EventLoopFutureTest {
                 ("testReduceIntoWithMultipleEventLoops", testReduceIntoWithMultipleEventLoops),
                 ("testThenThrowingWhichDoesNotThrow", testThenThrowingWhichDoesNotThrow),
                 ("testThenThrowingWhichDoesThrow", testThenThrowingWhichDoesThrow),
-                ("testThenIfErrorThrowingWhichDoesNotThrow", testThenIfErrorThrowingWhichDoesNotThrow),
-                ("testThenIfErrorThrowingWhichDoesThrow", testThenIfErrorThrowingWhichDoesThrow),
+                ("testflatMapErrorThrowingWhichDoesNotThrow", testflatMapErrorThrowingWhichDoesNotThrow),
+                ("testflatMapErrorThrowingWhichDoesThrow", testflatMapErrorThrowingWhichDoesThrow),
                 ("testOrderOfFutureCompletion", testOrderOfFutureCompletion),
                 ("testEventLoopHoppingInThen", testEventLoopHoppingInThen),
                 ("testEventLoopHoppingInThenWithFailures", testEventLoopHoppingInThenWithFailures),
@@ -62,6 +62,11 @@ extension EventLoopFutureTest {
                 ("testLoopHoppingHelperSuccess", testLoopHoppingHelperSuccess),
                 ("testLoopHoppingHelperFailure", testLoopHoppingHelperFailure),
                 ("testLoopHoppingHelperNoHopping", testLoopHoppingHelperNoHopping),
+                ("testFlatMapResultHappyPath", testFlatMapResultHappyPath),
+                ("testFlatMapResultFailurePath", testFlatMapResultFailurePath),
+                ("testWhenAllCompleteResultsWithFailuresStillSucceed", testWhenAllCompleteResultsWithFailuresStillSucceed),
+                ("testWhenAllCompleteResults", testWhenAllCompleteResults),
+                ("testWhenAllCompleteResolvesAfterFutures", testWhenAllCompleteResolvesAfterFutures),
            ]
    }
 }

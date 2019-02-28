@@ -27,6 +27,7 @@ extension HTTPHeadersTest {
    static var allTests : [(String, (HTTPHeadersTest) -> () throws -> Void)] {
       return [
                 ("testCasePreservedButInsensitiveLookup", testCasePreservedButInsensitiveLookup),
+                ("testDictionaryLiteralAlternative", testDictionaryLiteralAlternative),
                 ("testWriteHeadersSeparately", testWriteHeadersSeparately),
                 ("testRevealHeadersSeparately", testRevealHeadersSeparately),
                 ("testSubscriptDoesntSplitHeaders", testSubscriptDoesntSplitHeaders),
@@ -37,6 +38,12 @@ extension HTTPHeadersTest {
                 ("testContains", testContains),
                 ("testKeepAliveStateStartsWithClose", testKeepAliveStateStartsWithClose),
                 ("testKeepAliveStateStartsWithKeepAlive", testKeepAliveStateStartsWithKeepAlive),
+                ("testKeepAliveStateHasKeepAlive", testKeepAliveStateHasKeepAlive),
+                ("testKeepAliveStateHasClose", testKeepAliveStateHasClose),
+                ("testResolveNonContiguousHeaders", testResolveNonContiguousHeaders),
+                ("testStringBasedHTTPListHeaderIterator", testStringBasedHTTPListHeaderIterator),
+                ("testUnsafeBufferAccess", testUnsafeBufferAccess),
+                ("testCreateFromBufferAndLocations", testCreateFromBufferAndLocations),
            ]
    }
 }

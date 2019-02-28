@@ -43,6 +43,8 @@ extension HTTPServerPipelineHandlerTest {
                 ("testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndBeforeResponseEnd", testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndBeforeResponseEnd),
                 ("testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndAfterResponseEnd", testQuiescingAfterRequestAndResponseHeadsButBeforeAnyEndsThenRequestEndAfterResponseEnd),
                 ("testQuiescingAfterHavingReceivedOneRequestButBeforeResponseWasSentWithMoreRequestsInTheBuffer", testQuiescingAfterHavingReceivedOneRequestButBeforeResponseWasSentWithMoreRequestsInTheBuffer),
+                ("testParserErrorOnly", testParserErrorOnly),
+                ("testLegitRequestFollowedByParserErrorArrivingWhilstResponseOutstanding", testLegitRequestFollowedByParserErrorArrivingWhilstResponseOutstanding),
            ]
    }
 }

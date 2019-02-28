@@ -29,8 +29,8 @@ extern "C" {
 
 /* Also update SONAME in the Makefile whenever you change these. */
 #define HTTP_PARSER_VERSION_MAJOR 2
-#define HTTP_PARSER_VERSION_MINOR 8
-#define HTTP_PARSER_VERSION_PATCH 1
+#define HTTP_PARSER_VERSION_MINOR 9
+#define HTTP_PARSER_VERSION_PATCH 0
 
 #include <stddef.h>
 #if defined(_WIN32) && !defined(__MINGW32__) && \
@@ -432,6 +432,9 @@ void c_nio_http_parser_pause(http_parser *parser, int paused);
 
 /* Checks if this is the final chunk of the body. */
 int c_nio_http_body_is_final(const http_parser *parser);
+
+/* Change the maximum header size provided at compile time. */
+void c_nio_http_parser_set_max_header_size(uint32_t size);
 
 #ifdef __cplusplus
 }

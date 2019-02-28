@@ -12,21 +12,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// A `FileHandle` is a handle to an open file.
+/// A `NIOFileHandle` is a handle to an open file.
 ///
-/// When creating a `FileHandle` it takes ownership of the underlying file descriptor. When a `FileHandle` is no longer
+/// When creating a `NIOFileHandle` it takes ownership of the underlying file descriptor. When a `NIOFileHandle` is no longer
 /// needed you must `close` it or take back ownership of the file descriptor using `takeDescriptorOwnership`.
 ///
-/// - note: One underlying file descriptor should usually be managed by one `FileHandle` only.
+/// - note: One underlying file descriptor should usually be managed by one `NIOFileHandle` only.
 ///
-/// - warning: Failing to manage the lifetime of a `FileHandle` correctly will result in undefined behaviour.
+/// - warning: Failing to manage the lifetime of a `NIOFileHandle` correctly will result in undefined behaviour.
 ///
-/// - warning: `FileHandle` objects are not thread-safe and are mutable. They also cannot be fully thread-safe as they refer to a global underlying file descriptor.
-public final class FileHandle: FileDescriptor {
+/// - warning: `NIOFileHandle` objects are not thread-safe and are mutable. They also cannot be fully thread-safe as they refer to a global underlying file descriptor.
+public final class NIOFileHandle: FileDescriptor {
     public private(set) var isOpen: Bool
     private let descriptor: CInt
 
-    /// Create a `FileHandle` taking ownership of `descriptor`. You must call `FileHandle.close` or `FileHandle.takeDescriptorOwnership` before
+    /// Create a `NIOFileHandle` taking ownership of `descriptor`. You must call `NIOFileHandle.close` or `NIOFileHandle.takeDescriptorOwnership` before
     /// this object can be safely released.
     public init(descriptor: CInt) {
         self.descriptor = descriptor
@@ -34,25 +34,25 @@ public final class FileHandle: FileDescriptor {
     }
 
     deinit {
-        assert(!self.isOpen, "leaked open FileHandle(descriptor: \(self.descriptor)). Call `close()` to close or `takeDescriptorOwnership()` to take ownership and close by some other means.")
+        assert(!self.isOpen, "leaked open NIOFileHandle(descriptor: \(self.descriptor)). Call `close()` to close or `takeDescriptorOwnership()` to take ownership and close by some other means.")
     }
 
-    /// Duplicates this `FileHandle`. This means that a new `FileHandle` object with a new underlying file descriptor
-    /// is returned. The caller takes ownership of the returned `FileHandle` and is responsible for closing it.
+    /// Duplicates this `NIOFileHandle`. This means that a new `NIOFileHandle` object with a new underlying file descriptor
+    /// is returned. The caller takes ownership of the returned `NIOFileHandle` and is responsible for closing it.
     ///
-    /// - warning: The returned `FileHandle` is not fully independent, the seek pointer is shared as documented by `dup(2)`.
+    /// - warning: The returned `NIOFileHandle` is not fully independent, the seek pointer is shared as documented by `dup(2)`.
     ///
-    /// - returns: A new `FileHandle` with a fresh underlying file descriptor but shared seek pointer.
-    public func duplicate() throws -> FileHandle {
+    /// - returns: A new `NIOFileHandle` with a fresh underlying file descriptor but shared seek pointer.
+    public func duplicate() throws -> NIOFileHandle {
         return try withUnsafeFileDescriptor { fd in
-            FileHandle(descriptor: try Posix.dup(descriptor: fd))
+            NIOFileHandle(descriptor: try Posix.dup(descriptor: fd))
         }
     }
 
     /// Take the ownership of the underlying file descriptor. This is similar to `close()` but the underlying file
     /// descriptor remains open. The caller is responsible for closing the file descriptor by some other means.
     ///
-    /// After calling this, the `FileHandle` cannot be used for anything else and all the operations will throw.
+    /// After calling this, the `NIOFileHandle` cannot be used for anything else and all the operations will throw.
     ///
     /// - returns: The underlying file descriptor, now owned by the caller.
     public func takeDescriptorOwnership() throws -> CInt {
@@ -80,11 +80,11 @@ public final class FileHandle: FileDescriptor {
     }
 }
 
-extension FileHandle {
-    /// Open a new `FileHandle`.
+extension NIOFileHandle {
+    /// Open a new `NIOFileHandle`.
     ///
     /// - parameters:
-    ///     - path: the path of the file to open. The ownership of the file descriptor is transferred to this `FileHandle` and so it will be closed once `close` is called.
+    ///     - path: the path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
     public convenience init(path: String) throws {
         let fd = try Posix.open(file: path, oFlag: O_RDONLY | O_CLOEXEC)
         self.init(descriptor: fd)
