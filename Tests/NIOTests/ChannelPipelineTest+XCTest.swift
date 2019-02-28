@@ -56,7 +56,7 @@ extension ChannelPipelineTest {
                 ("testVariousChannelRemovalAPIsGoThroughRemovableChannelHandler", testVariousChannelRemovalAPIsGoThroughRemovableChannelHandler),
                 ("testNonRemovableChannelHandlerIsNotRemovable", testNonRemovableChannelHandlerIsNotRemovable),
                 ("testAddMultipleHandlers", testAddMultipleHandlers),
-                ("testPipelineDebugDescription", testPipelineDebugDescription)
+                ("testPipelineDebugDescription", testPipelineDebugDescription),
            ]
    }
 }
