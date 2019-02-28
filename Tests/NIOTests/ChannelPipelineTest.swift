@@ -1073,6 +1073,35 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertEqual([a, b, c, d, e, f, g, h, i, j], Handler.allHandlers)
     }
+    
+    func testPipelineDebugDescription() {
+        final class HTTPRequestParser: ChannelInboundHandler {
+            typealias InboundIn = Never
+        }
+        final class HTTPResponseSerializer: ChannelOutboundHandler {
+            typealias OutboundIn = Never
+        }
+        final class HTTPHandler: ChannelDuplexHandler {
+            typealias InboundIn = Never
+            typealias OutboundIn = Never
+        }
+        let channel = EmbeddedChannel()
+        let parser = HTTPRequestParser()
+        let serializer = HTTPResponseSerializer()
+        let handler = HTTPHandler()
+        XCTAssertEqual(channel.pipeline.debugDescription, """
+        ChannelPipeline[\(ObjectIdentifier(channel.pipeline))]:
+         <no handlers>
+        """)
+        XCTAssertNoThrow(try channel.pipeline.addHandlers([parser, serializer, handler]).wait())
+        XCTAssertEqual(channel.pipeline.debugDescription, """
+        ChannelPipeline[\(ObjectIdentifier(channel.pipeline))]:
+                       [I] ↓↑ [O]
+         HTTPRequestParser ↓↑                        [handler0]
+                           ↓↑ HTTPResponseSerializer [handler1]
+               HTTPHandler ↓↑ HTTPHandler            [handler2]
+        """)
+    }
 }
 
 // this should be within `testAddMultipleHandlers` but https://bugs.swift.org/browse/SR-9956
