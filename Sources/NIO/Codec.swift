@@ -207,14 +207,17 @@ extension B2MDBuffer {
     }
 
 
-    mutating func finishProcessing(remainder buffer: ByteBuffer) -> Void {
+    mutating func finishProcessing(remainder buffer: inout ByteBuffer) -> Void {
         assert(self.state == .processingInProgress)
         self.state = .ready
+        if buffer.readableBytes == 0 && self.buffers.count == 0 {
+            // fast path, no bytes left and no other buffers, just return
+            return
+        }
         if buffer.readableBytes > 0 {
             self.buffers.prepend(buffer)
         } else {
-            var buffer = buffer
-            buffer.clear()
+            buffer.discardReadBytes()
             buffer.writeBuffers(self.buffers)
             self.buffers.removeAll(keepingCapacity: self.buffers.capacity < 16) // don't grow too much
             self.buffers.append(buffer)
@@ -369,6 +372,7 @@ extension ByteToMessageHandler: CanDequeueWrites where Decoder: WriteObservingBy
 
 // MARK: ByteToMessageHandler's Main API
 extension ByteToMessageHandler {
+    @inline(__always) // allocations otherwise (reconsider with Swift 5.1)
     private func withNextBuffer(allowEmptyBuffer: Bool, _ body: (inout Decoder, inout ByteBuffer) throws -> DecodingState) rethrows -> B2MDBuffer.BufferProcessingResult {
         switch self.buffer.startProcessing(allowEmptyBuffer: allowEmptyBuffer) {
         case .bufferAlreadyBeingProcessed:
@@ -388,7 +392,7 @@ extension ByteToMessageHandler {
                         buffer.discardReadBytes()
                     }
                 }
-                self.buffer.finishProcessing(remainder: buffer)
+                self.buffer.finishProcessing(remainder: &buffer)
             }
             return .didProcess(try body(&decoder!, &buffer))
         }
