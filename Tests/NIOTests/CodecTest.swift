@@ -319,7 +319,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
             }
         }
 
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
         XCTAssertEqual("1", readOneInboundString())
         XCTAssertEqual("2", readOneInboundString())
         XCTAssertEqual("3", readOneInboundString())
@@ -369,7 +369,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         buffer.clear()
         buffer.writeStaticString("4567890")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
         XCTAssertFalse(channel.isActive)
 
         XCTAssertEqual("1", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
@@ -438,7 +438,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertEqual("78", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
         XCTAssertEqual("90", channel.readInbound(as: ByteBuffer.self).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self) })
         XCTAssertNil(channel.readInbound())
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
 
         XCTAssertNoThrow(XCTAssertEqual("x", String(decoding: try lastPromise.futureResult.wait().readableBytesView,
                                                     as: Unicode.UTF8.self)))
@@ -592,7 +592,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
         XCTAssertEqual("0123456789abcdef", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)})
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
         XCTAssertEqual("QWER", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)})
         XCTAssertNil(channel.readInbound())
     }
@@ -632,7 +632,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
         XCTAssertEqual("0123456789abcdef", (channel.readInbound() as ByteBuffer?).map { String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)})
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
         XCTAssertNil(channel.readInbound()) // no leftovers are forwarded
     }
 
@@ -677,7 +677,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 9)
         buffer.writeStaticString("012345678")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
         XCTAssertEqual(1, handler.decoder?.callsToDecode)
         XCTAssertEqual(2, handler.decoder?.callsToDecodeLast)
         ["0", "1234#1", "5678#2"].forEach {
@@ -784,7 +784,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         let removalFuture = channel.pipeline.context(handlerType: ByteToMessageHandler<Decoder>.self).flatMap {
             channel.pipeline.removeHandler(context: $0)
         }
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
         XCTAssertNoThrow(try removalFuture.wait())
         XCTAssertEqual(1, decoder.decodeLastCalls)
     }
@@ -814,7 +814,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         let removalFuture = channel.pipeline.context(handlerType: ByteToMessageHandler<Decoder>.self).flatMap {
             channel.pipeline.removeHandler(context: $0)
         }
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
         XCTAssertNoThrow(try removalFuture.wait())
         XCTAssertEqual(1, decoder.decodeLastCalls)
     }
