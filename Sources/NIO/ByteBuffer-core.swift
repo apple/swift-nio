@@ -29,7 +29,7 @@ let sysFree: @convention(c) (UnsafeMutableRawPointer?) -> Void = free
 
         internal func initializeMemory<T>(as type: T.Type, repeating repeatedValue: T) -> UnsafeMutableBufferPointer<T> {
             let ptr = self.bindMemory(to: T.self)
-            ptr.initialize(from: repeatElement(repeatedValue, count: self.count / MemoryLayout<T>.stride))
+            _ = ptr.initialize(from: repeatElement(repeatedValue, count: self.count / MemoryLayout<T>.stride))
             return ptr
         }
 
@@ -59,6 +59,7 @@ let sysFree: @convention(c) (UnsafeMutableRawPointer?) -> Void = free
 #endif
 
 extension _ByteBufferSlice: Equatable {
+    @_versioned
     static func ==(_ lhs: _ByteBufferSlice, _ rhs: _ByteBufferSlice) -> Bool {
         return lhs._begin == rhs._begin && lhs.upperBound == rhs.upperBound
     }
@@ -237,10 +238,10 @@ public struct ByteBuffer {
     public typealias _Index = UInt32
     public typealias _Capacity = UInt32
 
-    @_versioned private(set) var _storage: _Storage
-    @_versioned private(set) var _readerIndex: _Index = 0
-    @_versioned private(set) var _writerIndex: _Index = 0
-    @_versioned private(set) var _slice: Slice
+    @_versioned var _storage: _Storage
+    @_versioned var _readerIndex: _Index = 0
+    @_versioned var _writerIndex: _Index = 0
+    @_versioned var _slice: Slice
 
     // MARK: Internal _Storage for CoW
     @_versioned final class _Storage {

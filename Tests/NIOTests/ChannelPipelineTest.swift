@@ -122,21 +122,19 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertFalse(try channel.finish())
     }
 
-    func testConnectingDoesntCallBind() throws {
+    func testConnectingDoesntCallBind() {
         let channel = EmbeddedChannel()
         var ipv4SocketAddress = sockaddr_in()
         ipv4SocketAddress.sin_port = (12345 as UInt16).bigEndian
         let sa = SocketAddress(ipv4SocketAddress, host: "foobar.com")
 
-        _ = try channel.pipeline.add(handler: NoBindAllowed()).wait()
-        _ = try channel.pipeline.add(handler: TestChannelOutboundHandler<ByteBuffer, ByteBuffer> { data in
+        XCTAssertNoThrow(try channel.pipeline.add(handler: NoBindAllowed()).wait())
+        XCTAssertNoThrow(try channel.pipeline.add(handler: TestChannelOutboundHandler<ByteBuffer, ByteBuffer> { data in
             data
-        }).wait()
+        }).wait())
 
-        _ = try channel.connect(to: sa).wait()
-        defer {
-            XCTAssertFalse(try channel.finish())
-        }
+        XCTAssertNoThrow(try channel.connect(to: sa).wait())
+        XCTAssertNoThrow(XCTAssertFalse(try channel.finish()))
     }
 
     private final class TestChannelOutboundHandler<In, Out>: ChannelOutboundHandler {

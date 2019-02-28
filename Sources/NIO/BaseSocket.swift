@@ -365,7 +365,7 @@ class BaseSocket: Selectable {
             let storage = UnsafeMutableRawBufferPointer.allocate(byteCount: MemoryLayout<T>.stride,
                                                                  alignment: MemoryLayout<T>.alignment)
             // write zeroes into the memory as Linux's getsockopt doesn't zero them out
-            storage.initializeMemory(as: UInt8.self, repeating: 0)
+            _ = storage.initializeMemory(as: UInt8.self, repeating: 0)
             var val = storage.bindMemory(to: T.self).baseAddress!
             // initialisation will be done by getsockopt
             defer {
