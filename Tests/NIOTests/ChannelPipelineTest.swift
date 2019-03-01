@@ -526,7 +526,7 @@ class ChannelPipelineTest: XCTestCase {
         let handler = IndexWritingHandler(1)
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
         XCTAssertNoThrow(try channel.close().wait())
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
 
         do {
             try channel.pipeline.addHandler(IndexWritingHandler(2), position: .after(handler)).wait()
@@ -554,7 +554,7 @@ class ChannelPipelineTest: XCTestCase {
         let handler = IndexWritingHandler(1)
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
         XCTAssertNoThrow(try channel.close().wait())
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
 
         do {
             try channel.pipeline.addHandler(IndexWritingHandler(2), position: .before(handler)).wait()
@@ -1072,6 +1072,35 @@ class ChannelPipelineTest: XCTestCase {
         channel.pipeline.fireUserInboundEventTriggered(())
 
         XCTAssertEqual([a, b, c, d, e, f, g, h, i, j], Handler.allHandlers)
+    }
+    
+    func testPipelineDebugDescription() {
+        final class HTTPRequestParser: ChannelInboundHandler {
+            typealias InboundIn = Never
+        }
+        final class HTTPResponseSerializer: ChannelOutboundHandler {
+            typealias OutboundIn = Never
+        }
+        final class HTTPHandler: ChannelDuplexHandler {
+            typealias InboundIn = Never
+            typealias OutboundIn = Never
+        }
+        let channel = EmbeddedChannel()
+        let parser = HTTPRequestParser()
+        let serializer = HTTPResponseSerializer()
+        let handler = HTTPHandler()
+        XCTAssertEqual(channel.pipeline.debugDescription, """
+        ChannelPipeline[\(ObjectIdentifier(channel.pipeline))]:
+         <no handlers>
+        """)
+        XCTAssertNoThrow(try channel.pipeline.addHandlers([parser, serializer, handler]).wait())
+        XCTAssertEqual(channel.pipeline.debugDescription, """
+        ChannelPipeline[\(ObjectIdentifier(channel.pipeline))]:
+                       [I] ↓↑ [O]
+         HTTPRequestParser ↓↑                        [handler0]
+                           ↓↑ HTTPResponseSerializer [handler1]
+               HTTPHandler ↓↑ HTTPHandler            [handler2]
+        """)
     }
 }
 
