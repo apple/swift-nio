@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+let localhostPickPort = try! SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0)
+
 import NIO
 import NIOHTTP1
 import Foundation
@@ -243,7 +245,7 @@ public func swiftMain() -> Int {
                                                              withErrorHandling: false).flatMap {
                     channel.pipeline.addHandler(SimpleHTTPServer())
                 }
-            }.bind(host: "127.0.0.1", port: 0).wait()
+            }.bind(to: localhostPickPort).wait()
 
         defer {
             try! serverChannel.close().wait()
