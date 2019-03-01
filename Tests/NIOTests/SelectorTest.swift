@@ -146,22 +146,22 @@ class SelectorTest: XCTestCase {
                 self.hasReConnectEventLoopTickFinished = hasReConnectEventLoopTickFinished
             }
 
-            func channelActive(ctx: ChannelHandlerContext) {
+            func channelActive(context: ChannelHandlerContext) {
                 // we expect these channels to be connected within the re-connect event loop tick
                 XCTAssertFalse(self.hasReConnectEventLoopTickFinished.value)
             }
 
-            func channelInactive(ctx: ChannelHandlerContext) {
+            func channelInactive(context: ChannelHandlerContext) {
                 // we expect these channels to be close a while after the re-connect event loop tick
                 XCTAssertTrue(self.hasReConnectEventLoopTickFinished.value)
                 XCTAssertTrue(self.didRead)
                 if !self.didRead {
-                    self.didReadPromise.fail(error: DidNotReadError.didNotReadGotInactive)
-                    ctx.close(promise: nil)
+                    self.didReadPromise.fail(DidNotReadError.didNotReadGotInactive)
+                    context.close(promise: nil)
                 }
             }
 
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 // we expect these channels to get data only a while after the re-connect event loop tick as it's
                 // impossible to get a read notification in the very same event loop tick that you got registered
                 XCTAssertTrue(self.hasReConnectEventLoopTickFinished.value)
@@ -171,17 +171,17 @@ class SelectorTest: XCTestCase {
                 XCTAssertEqual(1, buf.readableBytes)
                 XCTAssertEqual("H", buf.readString(length: 1)!)
                 self.didRead = true
-                self.didReadPromise.succeed(result: ())
+                self.didReadPromise.succeed(())
             }
 
-            func channelReadComplete(ctx: ChannelHandlerContext) {
+            func channelReadComplete(context: ChannelHandlerContext) {
                 // we expect these channels to get data only a while after the re-connect event loop tick as it's
                 // impossible to get a read notification in the very same event loop tick that you got registered
                 XCTAssertTrue(self.hasReConnectEventLoopTickFinished.value)
                 XCTAssertTrue(self.didRead)
                 if !self.didRead {
-                    self.didReadPromise.fail(error: DidNotReadError.didNotReadGotReadComplete)
-                    ctx.close(promise: nil)
+                    self.didReadPromise.fail(DidNotReadError.didNotReadGotReadComplete)
+                    context.close(promise: nil)
                 }
             }
         }
@@ -210,16 +210,16 @@ class SelectorTest: XCTestCase {
                 self.hasReConnectEventLoopTickFinished = hasReConnectEventLoopTickFinished
             }
 
-            func channelActive(ctx: ChannelHandlerContext) {
+            func channelActive(context: ChannelHandlerContext) {
                 // collect all the channels
-                ctx.channel.getOption(option: ChannelOptions.allowRemoteHalfClosure).whenSuccess { halfClosureAllowed in
+                context.channel.getOption(ChannelOptions.allowRemoteHalfClosure).whenSuccess { halfClosureAllowed in
                     precondition(halfClosureAllowed,
                                  "the test configuration is bogus: half-closure is dis-allowed which breaks the setup of this test")
                 }
-                self.allChannels.value.append(ctx.channel)
+                self.allChannels.value.append(context.channel)
             }
 
-            func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+            func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
                 // this is the `.readEOF` that is triggered by the `ServerHandler`'s `close` calls because our channel
                 // supports half-closure
                 guard self.allChannels.value.count == SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse else {
@@ -229,7 +229,7 @@ class SelectorTest: XCTestCase {
                 // 1. let's close half the channels
                 // 2. then re-connect (must be synchronous) the same number of channels and we'll get fd number re-use
 
-                ctx.channel.eventLoop.execute {
+                context.channel.eventLoop.execute {
                     // this will be run immediately after we processed all `Selector` events so when
                     // `self.hasReConnectEventLoopTickFinished.value` becomes true, we're out of the event loop
                     // tick that is interesting.
@@ -251,11 +251,11 @@ class SelectorTest: XCTestCase {
                 var reconnectedChannelsHaveRead: [EventLoopFuture<Void>] = []
                 for _ in everyOtherIndex {
                     var hasBeenAdded: Bool = false
-                    let p = ctx.channel.eventLoop.makePromise(of: Void.self)
+                    let p = context.channel.eventLoop.makePromise(of: Void.self)
                     reconnectedChannelsHaveRead.append(p.futureResult)
-                    let newChannel = ClientBootstrap(group: ctx.eventLoop)
+                    let newChannel = ClientBootstrap(group: context.eventLoop)
                         .channelInitializer { channel in
-                            channel.pipeline.add(handler: HappyWhenReadHandler(hasReConnectEventLoopTickFinished: self.hasReConnectEventLoopTickFinished,
+                            channel.pipeline.addHandler(HappyWhenReadHandler(hasReConnectEventLoopTickFinished: self.hasReConnectEventLoopTickFinished,
                                                                                didReadPromise: p)).map {
                                                                                 hasBeenAdded = true
                             }
@@ -285,8 +285,8 @@ class SelectorTest: XCTestCase {
                 }
 
                 // if all the new re-connected channels have read, then we're happy here.
-                EventLoopFuture<Void>.andAll(reconnectedChannelsHaveRead,
-                                             eventLoop: ctx.eventLoop).cascade(promise: self.everythingWasReadPromise)
+                EventLoopFuture.andAllSucceed(reconnectedChannelsHaveRead, on: context.eventLoop)
+                    .cascade(to: self.everythingWasReadPromise)
                 // let's also remove all the channels so this code will not be triggered again.
                 self.allChannels.value.removeAll()
             }
@@ -315,12 +315,12 @@ class SelectorTest: XCTestCase {
                 self.numberOfConnectedChannels = numberOfConnectedChannels
             }
 
-            func channelActive(ctx: ChannelHandlerContext) {
-                var buf = ctx.channel.allocator.buffer(capacity: 1)
-                buf.write(string: "H")
-                ctx.channel.writeAndFlush(buf, promise: nil)
+            func channelActive(context: ChannelHandlerContext) {
+                var buf = context.channel.allocator.buffer(capacity: 1)
+                buf.writeString("H")
+                context.channel.writeAndFlush(buf, promise: nil)
                 self.number += 1
-                self.allServerChannels.value.append(ctx.channel)
+                self.allServerChannels.value.append(context.channel)
                 if self.allServerChannels.value.count == SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse {
                     // just to be sure all of the client channels have connected
                     XCTAssertEqual(SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse, numberOfConnectedChannels.value)
@@ -337,7 +337,7 @@ class SelectorTest: XCTestCase {
         let tempDir = createTemporaryDirectory()
         let secondServerChannel = try! ServerBootstrap(group: el)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: ServerHandler(allServerChannels: allServerChannels,
+                channel.pipeline.addHandler(ServerHandler(allServerChannels: allServerChannels,
                                                             numberOfConnectedChannels: numberOfConnectedChannels))
             }
             .bind(to: SocketAddress(unixDomainSocketPath: "\(tempDir)/server-sock.uds"))
@@ -349,7 +349,7 @@ class SelectorTest: XCTestCase {
                 ClientBootstrap(group: el)
                     .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
                     .channelInitializer { channel in
-                        channel.pipeline.add(handler: CloseEveryOtherAndOpenNewOnesHandler(allChannels: allChannels,
+                        channel.pipeline.addHandler(CloseEveryOtherAndOpenNewOnesHandler(allChannels: allChannels,
                                                                                            hasReConnectEventLoopTickFinished: hasReConnectEventLoopTickFinished,
                                                                                            serverAddress: secondServerChannel.localAddress!,
                                                                                            everythingWasReadPromise: everythingWasReadPromise))

@@ -19,7 +19,7 @@ import NIOConcurrencyHelpers
 public class EventLoopTest : XCTestCase {
 
     public func testSchedule() throws {
-        let nanos = DispatchTime.now().uptimeNanoseconds
+        let nanos: NIODeadline = .now()
         let amount: TimeAmount = .seconds(1)
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -29,7 +29,7 @@ public class EventLoopTest : XCTestCase {
             true
         }.futureResult.wait()
 
-        XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= amount.nanoseconds)
+        XCTAssertTrue(NIODeadline.now() - nanos >= amount)
         XCTAssertTrue(value)
     }
 
@@ -48,7 +48,7 @@ public class EventLoopTest : XCTestCase {
         let clientBootstrap = ClientBootstrap(group: eventLoopGroup)
 
         // Now, schedule two tasks: one that takes a while, one that doesn't.
-        let nanos = DispatchTime.now().uptimeNanoseconds
+        let nanos: NIODeadline = .now()
         let longFuture = eventLoopGroup.next().scheduleTask(in: longAmount) {
             true
         }.futureResult
@@ -60,12 +60,12 @@ public class EventLoopTest : XCTestCase {
         // Ok, the short one has happened. Now we should try connecting them. This connect should happen
         // faster than the final task firing.
         _ = try assertNoThrowWithValue(clientBootstrap.connect(to: serverChannel.localAddress!).wait()) as Channel
-        XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos < longAmount.nanoseconds)
+        XCTAssertTrue(NIODeadline.now() - nanos < longAmount)
 
         // Now wait for the long-delayed task.
         XCTAssertTrue(try assertNoThrowWithValue(try longFuture.wait()))
         // Now we're ok.
-        XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= longAmount.nanoseconds)
+        XCTAssertTrue(NIODeadline.now() - nanos >= longAmount)
     }
 
     public func testScheduleCancelled() throws {
@@ -80,19 +80,19 @@ public class EventLoopTest : XCTestCase {
 
         scheduled.cancel()
 
-        let nanos = DispatchTime.now().uptimeNanoseconds
+        let nanos = NIODeadline.now()
         let amount: TimeAmount = .seconds(2)
         let value = try eventLoopGroup.next().scheduleTask(in: amount) {
             true
         }.futureResult.wait()
 
-        XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= amount.nanoseconds)
+        XCTAssertTrue(NIODeadline.now() - nanos >= amount)
         XCTAssertTrue(value)
         XCTAssertFalse(ran.load())
     }
 
     public func testScheduleRepeatedTask() throws {
-        let nanos = DispatchTime.now().uptimeNanoseconds
+        let nanos: NIODeadline = .now()
         let initialDelay: TimeAmount = .milliseconds(5)
         let delay: TimeAmount = .milliseconds(10)
         let count = 5
@@ -109,7 +109,7 @@ public class EventLoopTest : XCTestCase {
             let initialValue = counter.load()
             _ = counter.add(1)
             if initialValue == 0 {
-                XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds)
+                XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay)
             } else if initialValue == count {
                 expect.fulfill()
                 repeatedTask.cancel()
@@ -119,7 +119,7 @@ public class EventLoopTest : XCTestCase {
         waitForExpectations(timeout: 1) { error in
             XCTAssertNil(error)
             XCTAssertEqual(counter.load(), count + 1)
-            XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds + numericCast(count) * delay.nanoseconds)
+            XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay + TimeAmount.Value(count) * delay)
         }
     }
 
@@ -156,7 +156,7 @@ public class EventLoopTest : XCTestCase {
     }
 
     public func testScheduleRepeatedTaskCancelFromDifferentThread() throws {
-        let nanos = DispatchTime.now().uptimeNanoseconds
+        let nanos: NIODeadline = .now()
         let initialDelay: TimeAmount = .milliseconds(5)
         let delay: TimeAmount = .milliseconds(0) // this will actually force the race from issue #554 to happen frequently
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -191,7 +191,7 @@ public class EventLoopTest : XCTestCase {
 
         waitForExpectations(timeout: 1) { error in
             XCTAssertNil(error)
-            XCTAssertTrue(DispatchTime.now().uptimeNanoseconds - nanos >= initialDelay.nanoseconds)
+            XCTAssertTrue(NIODeadline.now() - nanos >= initialDelay)
         }
     }
 
@@ -282,7 +282,7 @@ public class EventLoopTest : XCTestCase {
 
             var buffer = clientChannel.allocator.buffer(capacity: numBytes)
             for i in 0..<numBytes {
-                buffer.write(integer: UInt8(i % 256))
+                buffer.writeInteger(UInt8(i % 256))
             }
 
             try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
@@ -313,19 +313,19 @@ public class EventLoopTest : XCTestCase {
                 self.channelActivePromise = channelActivePromise
             }
 
-            func channelActive(ctx: ChannelHandlerContext) {
-                self.channelActivePromise?.succeed(result: ())
+            func channelActive(context: ChannelHandlerContext) {
+                self.channelActivePromise?.succeed(())
             }
 
-            func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+            func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
                 guard self.closePromise == nil else {
                     XCTFail("Attempted to create duplicate close promise")
                     return
                 }
-                XCTAssertTrue(ctx.channel.isActive)
-                self.closePromise = ctx.eventLoop.makePromise()
+                XCTAssertTrue(context.channel.isActive)
+                self.closePromise = context.eventLoop.makePromise()
                 self.closePromise!.futureResult.whenSuccess {
-                    ctx.close(mode: mode, promise: promise)
+                    context.close(mode: mode, promise: promise)
                 }
                 promiseRegisterCallback(self.closePromise!)
             }
@@ -349,7 +349,7 @@ public class EventLoopTest : XCTestCase {
         let serverChannelUp = group.next().makePromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: WedgeOpenHandler(channelActivePromise: serverChannelUp) { promise in
+                channel.pipeline.addHandler(WedgeOpenHandler(channelActivePromise: serverChannelUp) { promise in
                     promiseQueue.sync { promises.append(promise) }
                 })
             }
@@ -365,12 +365,12 @@ public class EventLoopTest : XCTestCase {
         }
         let channel = try SocketChannel(eventLoop: loop, protocolFamily: AF_INET)
         try channel.eventLoop.submit {
-            channel.pipeline.add(handler: wedgeHandler).flatMap {
+            channel.pipeline.addHandler(wedgeHandler).flatMap {
                 channel.register()
             }.flatMap {
                 // connecting here to stop epoll from throwing EPOLLHUP at us
                 channel.connect(to: serverChannel.localAddress!)
-            }.cascade(promise: connectPromise)
+            }.cascade(to: connectPromise)
         }.wait()
 
         // Wait for the connect to complete.
@@ -398,7 +398,7 @@ public class EventLoopTest : XCTestCase {
 
         // Now let it close.
         promiseQueue.sync {
-            promises.forEach { $0.succeed(result: ()) }
+            promises.forEach { $0.succeed(()) }
         }
         XCTAssertNoThrow(try loopCloseFut.wait())
     }
@@ -436,7 +436,7 @@ public class EventLoopTest : XCTestCase {
             let group = MultiThreadedEventLoopGroup(pinnedCPUIds: [0])
             let eventLoop = group.next()
             let set = try eventLoop.submit {
-                NIO.Thread.current.affinity
+                NIOThread.current.affinity
             }.wait()
 
             XCTAssertEqual(LinuxCPUSet(0), set)
@@ -502,7 +502,7 @@ public class EventLoopTest : XCTestCase {
             let groupIsShutdown = Atomic(value: false)
             let removed = Atomic(value: false)
 
-            public func handlerRemoved(ctx: ChannelHandlerContext) {
+            public func handlerRemoved(context: ChannelHandlerContext) {
                 XCTAssertFalse(groupIsShutdown.load())
                 XCTAssertTrue(removed.compareAndExchange(expected: false, desired: true))
             }
@@ -515,7 +515,7 @@ public class EventLoopTest : XCTestCase {
             .bind(host: "localhost", port: 0).wait())
         let channel = try assertNoThrowWithValue(SocketChannel(eventLoop: eventLoop as! SelectableEventLoop,
                                                                protocolFamily: serverSocket.localAddress!.protocolFamily))
-        XCTAssertNoThrow(try channel.pipeline.add(handler: assertHandler).wait() as Void)
+        XCTAssertNoThrow(try channel.pipeline.addHandler(assertHandler).wait() as Void)
         XCTAssertNoThrow(try channel.eventLoop.submit {
             channel.register().flatMap {
                 channel.connect(to: serverSocket.localAddress!)
@@ -530,23 +530,23 @@ public class EventLoopTest : XCTestCase {
     }
 
     public func testScheduleMultipleTasks() throws {
-        let nanos = DispatchTime.now().uptimeNanoseconds
+        let nanos: NIODeadline = .now()
         let amount: TimeAmount = .seconds(1)
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
         }
-        var array = Array<(Int, DispatchTime)>()
+        var array = Array<(Int, NIODeadline)>()
         let scheduled1 = eventLoopGroup.next().scheduleTask(in: .milliseconds(500)) {
-            array.append((1, DispatchTime.now()))
+            array.append((1, .now()))
         }
 
         let scheduled2 = eventLoopGroup.next().scheduleTask(in: .milliseconds(100)) {
-            array.append((2, DispatchTime.now()))
+            array.append((2, .now()))
         }
 
         let scheduled3 = eventLoopGroup.next().scheduleTask(in: .milliseconds(1000)) {
-            array.append((3, DispatchTime.now()))
+            array.append((3, .now()))
         }
 
         var result = try eventLoopGroup.next().scheduleTask(in: .milliseconds(1000)) {
@@ -569,5 +569,103 @@ public class EventLoopTest : XCTestCase {
 
         XCTAssertTrue(result.isEmpty)
 
+    }
+    
+    public func testRepeatedTaskThatIsImmediatelyCancelledNotifies() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let loop = eventLoopGroup.next()
+        let promise1: EventLoopPromise<Void> = loop.makePromise()
+        let promise2: EventLoopPromise<Void> = loop.makePromise()
+        let expect1 = XCTestExpectation(description: "Initializer promise was fulfilled")
+        let expect2 = XCTestExpectation(description: "Cancellation-specific promise was fulfilled")
+        promise1.futureResult.whenSuccess { expect1.fulfill() }
+        promise2.futureResult.whenSuccess { expect2.fulfill() }
+        loop.execute {
+            let task = loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(0), notifying: promise1) { task in
+                XCTFail()
+            }
+            task.cancel(promise: promise2)
+        }
+        Thread.sleep(until: .init(timeIntervalSinceNow: 0.1))
+        let res = XCTWaiter.wait(for: [expect1, expect2], timeout: 1.0)
+        XCTAssertEqual(res, .completed)
+    }
+
+    public func testRepeatedTaskThatIsCancelledAfterRunningAtLeastTwiceNotifies() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let loop = eventLoopGroup.next()
+        let promise1: EventLoopPromise<Void> = loop.makePromise()
+        let promise2: EventLoopPromise<Void> = loop.makePromise()
+        let expectRuns = XCTestExpectation(description: "Repeated task has run")
+        expectRuns.expectedFulfillmentCount = 2
+        let task = loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(10), notifying: promise1) { task in
+            expectRuns.fulfill()
+        }
+        XCTAssertEqual(XCTWaiter.wait(for: [expectRuns], timeout: 0.05), .completed)
+        let expect1 = XCTestExpectation(description: "Initializer promise was fulfilled")
+        let expect2 = XCTestExpectation(description: "Cancellation-specific promise was fulfilled")
+        promise1.futureResult.whenSuccess { expect1.fulfill() }
+        promise2.futureResult.whenSuccess { expect2.fulfill() }
+        task.cancel(promise: promise2)
+        XCTAssertEqual(XCTWaiter.wait(for: [expect1, expect2], timeout: 1.0), .completed)
+    }
+
+    public func testRepeatedTaskThatCancelsItselfNotifiesOnlyWhenFinished() throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
+        }
+
+        let loop = eventLoopGroup.next()
+        let promise1: EventLoopPromise<Void> = loop.makePromise()
+        let promise2: EventLoopPromise<Void> = loop.makePromise()
+        let semaphore = DispatchSemaphore(value: 0)
+        loop.scheduleRepeatedTask(initialDelay: .milliseconds(0), delay: .milliseconds(0), notifying: promise1) { task -> Void in
+            task.cancel(promise: promise2)
+            semaphore.wait()
+        }
+        let expectFail1 = XCTestExpectation(description: "Initializer promise was wrongly fulfilled")
+        let expectFail2 = XCTestExpectation(description: "Cancellation-specific promise was wrongly fulfilled")
+        let expect1 = XCTestExpectation(description: "Initializer promise was fulfilled")
+        let expect2 = XCTestExpectation(description: "Cancellation-specific promise was fulfilled")
+        promise1.futureResult.whenSuccess { expectFail1.fulfill(); expect1.fulfill() }
+        promise2.futureResult.whenSuccess { expectFail2.fulfill(); expect2.fulfill() }
+        XCTAssertEqual(XCTWaiter.wait(for: [expectFail1, expectFail2], timeout: 0.5), .timedOut)
+        semaphore.signal()
+        XCTAssertEqual(XCTWaiter.wait(for: [expect1, expect2], timeout: 0.5), .completed)
+    }
+
+    func testAndAllCompleteWithZeroFutures() {
+        let eventLoop = EmbeddedEventLoop()
+        let done = DispatchWorkItem {}
+        EventLoopFuture<Void>.andAllComplete([], on: eventLoop).whenComplete { (result: Result<Void, Error>) in
+            _ = result.mapError { error -> Error in
+                XCTFail("unexpected error \(error)")
+                return error
+            }
+            done.perform()
+        }
+        done.wait()
+    }
+
+    func testAndAllSucceedWithZeroFutures() {
+        let eventLoop = EmbeddedEventLoop()
+        let done = DispatchWorkItem {}
+        EventLoopFuture<Void>.andAllSucceed([], on: eventLoop).whenComplete { result in
+            _ = result.mapError { error -> Error in
+                XCTFail("unexpected error \(error)")
+                return error
+            }
+            done.perform()
+        }
+        done.wait()
     }
 }

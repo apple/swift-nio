@@ -21,7 +21,7 @@ private final class EchoHandler: ChannelInboundHandler {
     public typealias OutboundOut = ByteBuffer
     private var numBytes = 0
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var byteBuffer = self.unwrapInboundIn(data)
         numBytes -= byteBuffer.readableBytes
 
@@ -33,26 +33,26 @@ private final class EchoHandler: ChannelInboundHandler {
             } else {
                 print("Received the line back from the server, closing channel")
             }
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         }
     }
 
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
         print("error: ", error)
 
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
-        ctx.close(promise: nil)
+        context.close(promise: nil)
     }
 
-    public func channelActive(ctx: ChannelHandlerContext) {
-        print("Client connected to \(ctx.remoteAddress!)")
+    public func channelActive(context: ChannelHandlerContext) {
+        print("Client connected to \(context.remoteAddress!)")
 
         // We are connected. It's time to send the message to the server to initialize the ping-pong sequence.
-        var buffer = ctx.channel.allocator.buffer(capacity: line.utf8.count)
-        buffer.write(string: line)
+        var buffer = context.channel.allocator.buffer(capacity: line.utf8.count)
+        buffer.writeString(line)
         self.numBytes = buffer.readableBytes
-        ctx.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+        context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
     }
 }
 
@@ -61,7 +61,7 @@ let bootstrap = ClientBootstrap(group: group)
     // Enable SO_REUSEADDR.
     .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .channelInitializer { channel in
-        channel.pipeline.add(handler: EchoHandler())
+        channel.pipeline.addHandler(EchoHandler())
     }
 defer {
     try! group.syncShutdownGracefully()
@@ -70,7 +70,7 @@ defer {
 // First argument is the program path
 let arguments = CommandLine.arguments
 let arg1 = arguments.dropFirst().first
-let arg2 = arguments.dropFirst().dropFirst().first
+let arg2 = arguments.dropFirst(2).first
 
 let defaultHost = "::1"
 let defaultPort: Int = 9999

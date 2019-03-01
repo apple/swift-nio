@@ -74,7 +74,7 @@ private extension ByteBuffer {
 
     mutating func merge<S: Sequence>(_ others: S) -> ByteBuffer where S.Element == ByteBuffer {
         for var buffer in others {
-            self.write(buffer: &buffer)
+            self.writeBuffer(&buffer)
         }
         return self
     }
@@ -199,12 +199,8 @@ class HTTPResponseCompressorTest: XCTestCase {
         clientChannel.write(NIOAny(HTTPClientRequestPart.head(requestHead)), promise: nil)
         clientChannel.write(NIOAny(HTTPClientRequestPart.end(nil)), promise: nil)
 
-        while let nextPart = channel.readOutbound() {
-            if case .byteBuffer(let b) = nextPart {
-                try clientChannel.writeInbound(b)
-            } else {
-                fatalError("We always write bytes")
-            }
+        while let b = channel.readOutbound(as: ByteBuffer.self) {
+            try clientChannel.writeInbound(b)
         }
 
         // The first inbound datum will be the response head. The rest will be byte buffers, until
@@ -241,7 +237,7 @@ class HTTPResponseCompressorTest: XCTestCase {
                                         status: .ok)
         let body = [UInt8](repeating: 60, count: bodySize)
         var bodyBuffer = channel.allocator.buffer(capacity: bodySize)
-        bodyBuffer.write(bytes: body)
+        bodyBuffer.writeBytes(body)
 
         var bodyChunks = [ByteBuffer]()
         for index in stride(from: 0, to: bodyBuffer.readableBytes, by: 2) {
@@ -279,7 +275,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         response.headers = additionalHeaders
         let body = [UInt8](repeating: 60, count: bodySize)
         var bodyBuffer = channel.allocator.buffer(capacity: bodySize)
-        bodyBuffer.write(bytes: body)
+        bodyBuffer.writeBytes(body)
 
         var bodyChunks = [ByteBuffer]()
         for index in stride(from: 0, to: bodyBuffer.readableBytes, by: 2) {
@@ -316,7 +312,7 @@ class HTTPResponseCompressorTest: XCTestCase {
                                         status: .ok)
         let body = [UInt8](repeating: 60, count: bodySize)
         var bodyBuffer = channel.allocator.buffer(capacity: bodySize)
-        bodyBuffer.write(bytes: body)
+        bodyBuffer.writeBytes(body)
 
         var bodyChunks = [ByteBuffer]()
         for index in stride(from: 0, to: bodyBuffer.readableBytes, by: 2) {
@@ -337,8 +333,8 @@ class HTTPResponseCompressorTest: XCTestCase {
 
     private func compressionChannel() throws -> EmbeddedChannel {
         let channel = EmbeddedChannel()
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.add(handler: HTTPResponseCompressor()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseCompressor()).wait())
         return channel
     }
 

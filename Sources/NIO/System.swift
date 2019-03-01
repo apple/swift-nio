@@ -60,6 +60,7 @@ private let sysOpenWithMode: @convention(c) (UnsafePointer<CChar>, CInt, mode_t)
 private let sysWrite: @convention(c) (CInt, UnsafeRawPointer?, CLong) -> CLong = write
 private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, CLong) -> CLong = read
 private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = lseek
+private let sysPoll: @convention(c) (UnsafeMutablePointer<pollfd>?, nfds_t, Int32) -> CInt = poll
 #if os(Android)
 func sysRecvFrom_wrapper(sockfd: CInt, buf: UnsafeMutableRawPointer, len: CLong, flags: CInt, src_addr: UnsafeMutablePointer<sockaddr>, addrlen: UnsafeMutablePointer<socklen_t>) -> CLong {
     return recvfrom(sockfd, buf, len, flags, src_addr, addrlen) // src_addr is 'UnsafeMutablePointer', but it need to be 'UnsafePointer'
@@ -254,6 +255,7 @@ internal enum Posix {
     }
 
     @inline(never)
+    @discardableResult
     // TODO: Allow varargs
     public static func fcntl(descriptor: CInt, command: CInt, value: CInt) throws -> CInt {
         return try wrapSyscall {
@@ -271,9 +273,12 @@ internal enum Posix {
                 _ = unsafeBitCast(Glibc.signal(SIGPIPE, SIG_IGN) as sighandler_t?, to: Int.self)
             #else
                 if fd != -1 {
-                    let ret = try? Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
-                    assert(ret == .some(0),
-                           "unexpectedly, fcntl(\(fd), F_SETFL, F_SETNOSIGPIPE) returned \(ret.debugDescription)")
+                    do {
+                        try Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
+                    } catch {
+                        _ = sysClose(fd) // don't care about failure here
+                        throw error
+                    }
                 }
             #endif
             return fd
@@ -310,9 +315,12 @@ internal enum Posix {
 
             #if !os(Linux)
                 if fd != -1 {
-                    let ret = try? Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
-                    assert(ret == .some(0),
-                           "unexpectedly, fcntl(\(fd), F_SETFL, F_SETNOSIGPIPE) returned \(ret.debugDescription)")
+                    do {
+                        try Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
+                    } catch {
+                        _ = sysClose(fd) // don't care about failure here
+                        throw error
+                    }
                 }
             #endif
             return fd
@@ -486,6 +494,13 @@ internal enum Posix {
     public static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {
         return try wrapSyscall {
             sysIfNameToIndex(name)
+        }
+    }
+
+    @inline(never)
+    public static func poll(fds: UnsafeMutablePointer<pollfd>, nfds: nfds_t, timeout: CInt) throws -> CInt {
+        return try wrapSyscall {
+            sysPoll(fds, nfds, timeout)
         }
     }
 }

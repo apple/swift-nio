@@ -61,6 +61,7 @@ for f in http_parser.c http_parser.h; do
         -e 's/\b\(http_parser_version\)/c_nio_\1/g' \
         -e 's/\b\(http_should_keep_alive\)/c_nio_\1/g' \
         -e 's/\b\(http_status_str\)/c_nio_\1/g' \
+        -e 's/\b\(http_parser_set_max_header_size\)/c_nio_\1/g' \
         "$here/c_nio_$f"
 done
 
@@ -73,6 +74,7 @@ num_non_nio=$(nm "$tmp/test.o" | grep ' T ' | grep -v c_nio | wc -l)
 
 test 0 -eq $num_non_nio || {
     echo "ERROR: $num_non_nio exported non-prefixed symbols found"
+    nm "$tmp/test.o" | grep ' T ' | grep -v c_nio
     exit 1
 }
 

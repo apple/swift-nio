@@ -17,38 +17,43 @@
 /// This object is used extensively within SwiftNIO to handle flushable buffers. It can be used to store buffered
 /// writes and mark how far through the buffer the user has flushed, and therefore how far through the buffer is
 /// safe to write.
-public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollection {
+public struct MarkedCircularBuffer<Element>: CustomStringConvertible, AppendableCollection {
     public typealias RangeType<Bound> = Range<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
+    public typealias Index = CircularBuffer<Element>.Index
 
-    private var buffer: CircularBuffer<E>
-    private var markedIndex: Int = -1 /* negative: nothing marked */
+    private var buffer: CircularBuffer<Element>
+    private var markedIndex: Index? = nil /* nil: nothing marked */
 
     /// Create a new instance.
     ///
     /// - paramaters:
-    ///     - initialRingCapacity: The initial capacity of the internal storage.
-    public init(initialRingCapacity: Int) {
-        self.buffer = CircularBuffer(initialRingCapacity: initialRingCapacity)
+    ///     - initialCapacity: The initial capacity of the internal storage.
+    public init(initialCapacity: Int) {
+        self.buffer = CircularBuffer(initialCapacity: initialCapacity)
     }
 
     // MARK: Forwarding
 
     /// Appends an entry to the buffer, expanding it if needed.
-    public mutating func append(_ value: E) {
+    public mutating func append(_ value: Element) {
         self.buffer.append(value)
     }
 
     /// Removes the first element from the buffer.
-    public mutating func removeFirst() -> E {
+    public mutating func removeFirst() -> Element {
         assert(self.buffer.count > 0)
-        if self.markedIndex != -1 {
-            self.markedIndex -= 1
+        if let markedIndex = self.markedIndex {
+            if markedIndex == self.startIndex {
+                self.markedIndex = nil
+            } else {
+                self.markedIndex = markedIndex.advanced(by: -1)
+            }
         }
         return self.buffer.removeFirst()
     }
 
     /// The first element in the buffer.
-    public var first: E? {
+    public var first: Element? {
         return self.buffer.first
     }
 
@@ -63,7 +68,7 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
     }
 
     /// Retrieves the element at the given index from the buffer, without removing it.
-    public subscript(index: Int) -> E {
+    public subscript(index: Index) -> Element {
         get {
             return self.buffer[index]
         }
@@ -73,15 +78,15 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
     }
 
     /// The valid indices into the buffer.
-    public var indices: RangeType<Int> {
+    public var indices: RangeType<Index> {
         return self.buffer.indices
     }
 
-    public var startIndex: Int { return self.buffer.startIndex }
+    public var startIndex: Index { return self.buffer.startIndex }
 
-    public var endIndex: Int { return self.buffer.endIndex }
+    public var endIndex: Index { return self.buffer.endIndex }
 
-    public func index(after i: Int) -> Int {
+    public func index(after i: Index) -> Index {
         return self.buffer.index(after: i)
     }
 
@@ -95,42 +100,31 @@ public struct MarkedCircularBuffer<E>: CustomStringConvertible, AppendableCollec
     public mutating func mark() {
         let count = self.buffer.count
         if count > 0 {
-            self.markedIndex = count - 1
+            self.markedIndex = self.endIndex.advanced(by: -1)
         } else {
-            assert(self.markedIndex == -1, "marked index is \(self.markedIndex)")
+            assert(self.markedIndex == nil, "marked index is \(self.markedIndex.debugDescription)")
         }
     }
 
     /// Returns true if the buffer is currently marked at the given index.
-    public func isMarked(index: Int) -> Bool {
-        precondition(index >= 0, "index must not be negative")
-        precondition(index < self.buffer.count, "index \(index) out of range (0..<\(self.buffer.count))")
+    public func isMarked(index: Index) -> Bool {
+        assert(index >= self.startIndex, "index must not be negative")
+        precondition(index < self.endIndex, "index \(index) out of range (0..<\(self.buffer.count))")
         return self.markedIndex == index
     }
 
     /// Returns the index of the marked element.
-    public var markedElementIndex: Int? {
-        let markedIndex = self.markedIndex
-        if markedIndex >= 0 {
-            return markedIndex
-        } else {
-            assert(markedIndex == -1, "marked index is \(markedIndex)")
-            return nil
-        }
+    public var markedElementIndex: Index? {
+        return self.markedIndex
     }
 
     /// Returns the marked element.
-    public var markedElement: E? {
+    public var markedElement: Element? {
         return self.markedElementIndex.map { self.buffer[$0] }
     }
 
     /// Returns true if the buffer has been marked at all.
     public var hasMark: Bool {
-        if self.markedIndex < 0 {
-            assert(self.markedIndex == -1, "marked index is \(self.markedIndex)")
-            return false
-        } else {
-            return true
-        }
+        return self.markedIndex != nil
     }
 }

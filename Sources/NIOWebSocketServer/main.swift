@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Dispatch
 import NIO
 import NIOHTTP1
 import NIOWebSocket
@@ -41,23 +40,23 @@ let websocketResponse = """
 </html>
 """
 
-private final class HTTPHandler: ChannelInboundHandler {
+private final class HTTPHandler: ChannelInboundHandler, RemovableChannelHandler {
     typealias InboundIn = HTTPServerRequestPart
     typealias OutboundOut = HTTPServerResponsePart
 
     private var responseBody: ByteBuffer!
 
-    func channelRegistered(ctx: ChannelHandlerContext) {
-        var buffer = ctx.channel.allocator.buffer(capacity: websocketResponse.utf8.count)
-        buffer.write(string: websocketResponse)
+    func channelRegistered(context: ChannelHandlerContext) {
+        var buffer = context.channel.allocator.buffer(capacity: websocketResponse.utf8.count)
+        buffer.writeString(websocketResponse)
         self.responseBody = buffer
     }
 
-    func channelUnregistered(ctx: ChannelHandlerContext) {
+    func channelUnregistered(context: ChannelHandlerContext) {
         self.responseBody = nil
     }
 
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let reqPart = self.unwrapInboundIn(data)
 
         // We're not interested in request bodies here: we're just serving up GET responses
@@ -68,7 +67,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
         // GETs only.
         guard case .GET = head.method else {
-            self.respond405(ctx: ctx)
+            self.respond405(context: context)
             return
         }
 
@@ -79,26 +78,26 @@ private final class HTTPHandler: ChannelInboundHandler {
         let responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1),
                                     status: .ok,
                                     headers: headers)
-        ctx.write(self.wrapOutboundOut(.head(responseHead)), promise: nil)
-        ctx.write(self.wrapOutboundOut(.body(.byteBuffer(self.responseBody))), promise: nil)
-        ctx.write(self.wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
-            ctx.close(promise: nil)
+        context.write(self.wrapOutboundOut(.head(responseHead)), promise: nil)
+        context.write(self.wrapOutboundOut(.body(.byteBuffer(self.responseBody))), promise: nil)
+        context.write(self.wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
+            context.close(promise: nil)
         }
-        ctx.flush()
+        context.flush()
     }
 
-    private func respond405(ctx: ChannelHandlerContext) {
+    private func respond405(context: ChannelHandlerContext) {
         var headers = HTTPHeaders()
         headers.add(name: "Connection", value: "close")
         headers.add(name: "Content-Length", value: "0")
         let head = HTTPResponseHead(version: .init(major: 1, minor: 1),
                                     status: .methodNotAllowed,
                                     headers: headers)
-        ctx.write(self.wrapOutboundOut(.head(head)), promise: nil)
-        ctx.write(self.wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
-            ctx.close(promise: nil)
+        context.write(self.wrapOutboundOut(.head(head)), promise: nil)
+        context.write(self.wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
+            context.close(promise: nil)
         }
-        ctx.flush()
+        context.flush()
     }
 }
 
@@ -108,18 +107,18 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
 
     private var awaitingClose: Bool = false
 
-    public func handlerAdded(ctx: ChannelHandlerContext) {
-        self.sendTime(ctx: ctx)
+    public func handlerAdded(context: ChannelHandlerContext) {
+        self.sendTime(context: context)
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let frame = self.unwrapInboundIn(data)
 
         switch frame.opcode {
         case .connectionClose:
-            self.receivedClose(ctx: ctx, frame: frame)
+            self.receivedClose(context: context, frame: frame)
         case .ping:
-            self.pong(ctx: ctx, frame: frame)
+            self.pong(context: context, frame: frame)
         case .text:
             var data = frame.unmaskedData
             let text = data.readString(length: data.readableBytes) ?? ""
@@ -129,54 +128,54 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
             break
         default:
             // Unknown frames are errors.
-            self.closeOnError(ctx: ctx)
+            self.closeOnError(context: context)
         }
     }
 
-    public func channelReadComplete(ctx: ChannelHandlerContext) {
-        ctx.flush()
+    public func channelReadComplete(context: ChannelHandlerContext) {
+        context.flush()
     }
 
-    private func sendTime(ctx: ChannelHandlerContext) {
-        guard ctx.channel.isActive else { return }
+    private func sendTime(context: ChannelHandlerContext) {
+        guard context.channel.isActive else { return }
 
         // We can't send if we sent a close message.
         guard !self.awaitingClose else { return }
 
         // We can't really check for error here, but it's also not the purpose of the
         // example so let's not worry about it.
-        let theTime = DispatchTime.now().uptimeNanoseconds
-        var buffer = ctx.channel.allocator.buffer(capacity: 12)
-        buffer.write(string: "\(theTime)")
+        let theTime = NIODeadline.now().uptimeNanoseconds
+        var buffer = context.channel.allocator.buffer(capacity: 12)
+        buffer.writeString("\(theTime)")
 
         let frame = WebSocketFrame(fin: true, opcode: .text, data: buffer)
-        ctx.writeAndFlush(self.wrapOutboundOut(frame)).map {
-            ctx.eventLoop.scheduleTask(in: .seconds(1), { self.sendTime(ctx: ctx) })
+        context.writeAndFlush(self.wrapOutboundOut(frame)).map {
+            context.eventLoop.scheduleTask(in: .seconds(1), { self.sendTime(context: context) })
         }.whenFailure { (_: Error) in
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         }
     }
 
-    private func receivedClose(ctx: ChannelHandlerContext, frame: WebSocketFrame) {
+    private func receivedClose(context: ChannelHandlerContext, frame: WebSocketFrame) {
         // Handle a received close frame. In websockets, we're just going to send the close
         // frame and then close, unless we already sent our own close frame.
         if awaitingClose {
             // Cool, we started the close and were waiting for the user. We're done.
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         } else {
             // This is an unsolicited close. We're going to send a response frame and
             // then, when we've sent it, close up shop. We should send back the close code the remote
             // peer sent us, unless they didn't send one at all.
             var data = frame.unmaskedData
-            let closeDataCode = data.readSlice(length: 2) ?? ctx.channel.allocator.buffer(capacity: 0)
+            let closeDataCode = data.readSlice(length: 2) ?? context.channel.allocator.buffer(capacity: 0)
             let closeFrame = WebSocketFrame(fin: true, opcode: .connectionClose, data: closeDataCode)
-            _ = ctx.write(self.wrapOutboundOut(closeFrame)).map { () in
-                ctx.close(promise: nil)
+            _ = context.write(self.wrapOutboundOut(closeFrame)).map { () in
+                context.close(promise: nil)
             }
         }
     }
 
-    private func pong(ctx: ChannelHandlerContext, frame: WebSocketFrame) {
+    private func pong(context: ChannelHandlerContext, frame: WebSocketFrame) {
         var frameData = frame.data
         let maskingKey = frame.maskKey
 
@@ -185,17 +184,17 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
         }
 
         let responseFrame = WebSocketFrame(fin: true, opcode: .pong, data: frameData)
-        ctx.write(self.wrapOutboundOut(responseFrame), promise: nil)
+        context.write(self.wrapOutboundOut(responseFrame), promise: nil)
     }
 
-    private func closeOnError(ctx: ChannelHandlerContext) {
+    private func closeOnError(context: ChannelHandlerContext) {
         // We have hit an error, we want to close. We do that by sending a close frame and then
         // shutting down the write side of the connection.
-        var data = ctx.channel.allocator.buffer(capacity: 2)
+        var data = context.channel.allocator.buffer(capacity: 2)
         data.write(webSocketErrorCode: .protocolError)
         let frame = WebSocketFrame(fin: true, opcode: .connectionClose, data: data)
-        ctx.write(self.wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
-            ctx.close(mode: .output, promise: nil)
+        context.write(self.wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
+            context.close(mode: .output, promise: nil)
         }
         awaitingClose = true
     }
@@ -205,7 +204,7 @@ let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
 let upgrader = WebSocketUpgrader(shouldUpgrade: { (head: HTTPRequestHead) in HTTPHeaders() },
                                  upgradePipelineHandler: { (channel: Channel, _: HTTPRequestHead) in
-                                    channel.pipeline.add(handler: WebSocketTimeHandler())
+                                    channel.pipeline.addHandler(WebSocketTimeHandler())
                                  })
 
 let bootstrap = ServerBootstrap(group: group)
@@ -217,13 +216,13 @@ let bootstrap = ServerBootstrap(group: group)
     .childChannelInitializer { channel in
         let httpHandler = HTTPHandler()
         let config: HTTPUpgradeConfiguration = (
-                        upgraders: [ upgrader ], 
-                        completionHandler: { _ in 
-                            channel.pipeline.remove(handler: httpHandler, promise: nil)
+                        upgraders: [ upgrader ],
+                        completionHandler: { _ in
+                            channel.pipeline.removeHandler(httpHandler, promise: nil)
                         }
                     )
         return channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: config).flatMap {
-            channel.pipeline.add(handler: httpHandler)
+            channel.pipeline.addHandler(httpHandler)
         }
     }
 

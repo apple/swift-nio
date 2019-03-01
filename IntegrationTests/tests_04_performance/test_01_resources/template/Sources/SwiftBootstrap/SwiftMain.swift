@@ -37,16 +37,16 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
     private func responseBody(allocator: ByteBufferAllocator) -> ByteBuffer {
         var buffer = allocator.buffer(capacity: self.bodyLength)
         for i in 0..<self.bodyLength {
-            buffer.write(integer: UInt8(i % Int(UInt8.max)))
+            buffer.writeInteger(UInt8(i % Int(UInt8.max)))
         }
         return buffer
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         if case .head(let req) = self.unwrapInboundIn(data), req.uri == "/allocation-test-1" {
-            ctx.write(self.wrapOutboundOut(.head(self.responseHead)), promise: nil)
-            ctx.write(self.wrapOutboundOut(.body(.byteBuffer(self.responseBody(allocator: ctx.channel.allocator)))), promise: nil)
-            ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+            context.write(self.wrapOutboundOut(.head(self.responseHead)), promise: nil)
+            context.write(self.wrapOutboundOut(.body(.byteBuffer(self.responseBody(allocator: context.channel.allocator)))), promise: nil)
+            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
         }
     }
 }
@@ -75,26 +75,26 @@ private final class PingHandler: ChannelInboundHandler {
         self.allDone = eventLoop.makePromise()
     }
 
-    public func channelActive(ctx: ChannelHandlerContext) {
-        self.pingBuffer = ctx.channel.allocator.buffer(capacity: 1)
-        self.pingBuffer.write(integer: PingHandler.pingCode)
+    public func channelActive(context: ChannelHandlerContext) {
+        self.pingBuffer = context.channel.allocator.buffer(capacity: 1)
+        self.pingBuffer.writeInteger(PingHandler.pingCode)
 
-        ctx.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
+        context.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var buf = self.unwrapInboundIn(data)
         if buf.readableBytes == 1 &&
             buf.readInteger(as: UInt8.self) == PongHandler.pongCode {
             if self.remainingNumberOfRequests > 0 {
                 self.remainingNumberOfRequests -= 1
-                ctx.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
+                context.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
             } else {
-                ctx.close(promise: self.allDone)
+                context.close(promise: self.allDone)
             }
         } else {
-            ctx.close(promise: nil)
-            self.allDone.fail(error: PingPongFailure(problem: "wrong buffer received: \(buf.debugDescription)"))
+            context.close(promise: nil)
+            self.allDone.fail(PingPongFailure(problem: "wrong buffer received: \(buf.debugDescription)"))
         }
     }
 
@@ -104,25 +104,45 @@ private final class PingHandler: ChannelInboundHandler {
 }
 
 private final class PongHandler: ChannelInboundHandler {
-    typealias InboundIn = ByteBuffer
+    typealias InboundIn = UInt8
     typealias OutboundOut = ByteBuffer
 
     private var pongBuffer: ByteBuffer!
     public static let pongCode: UInt8 = 0xef
 
-    public func channelActive(ctx: ChannelHandlerContext) {
-        self.pongBuffer = ctx.channel.allocator.buffer(capacity: 1)
-        self.pongBuffer.write(integer: PongHandler.pongCode)
+    public func handlerAdded(context: ChannelHandlerContext) {
+        self.pongBuffer = context.channel.allocator.buffer(capacity: 1)
+        self.pongBuffer.writeInteger(PongHandler.pongCode)
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        var buf = self.unwrapInboundIn(data)
-        if buf.readableBytes == 1 &&
-            buf.readInteger(as: UInt8.self) == PingHandler.pingCode {
-            ctx.writeAndFlush(self.wrapOutboundOut(self.pongBuffer), promise: nil)
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        let data = self.unwrapInboundIn(data)
+        if data == PingHandler.pingCode {
+            context.writeAndFlush(NIOAny(self.pongBuffer), promise: nil)
         } else {
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         }
+    }
+
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        context.close(promise: nil)
+    }
+}
+
+private final class PongDecoder: ByteToMessageDecoder {
+    typealias InboundOut = UInt8
+
+    public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
+        if let ping = buffer.readInteger(as: UInt8.self) {
+            context.fireChannelRead(self.wrapInboundOut(ping))
+            return .continue
+        } else {
+            return .needMoreData
+        }
+    }
+
+    public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+        return .needMoreData
     }
 }
 
@@ -163,20 +183,20 @@ public func swiftMain() -> Int {
             return reqs
         }
 
-        func errorCaught(ctx: ChannelHandlerContext, error: Error) {
-            ctx.channel.close(promise: nil)
-            self.isDonePromise.fail(error: error)
+        func errorCaught(context: ChannelHandlerContext, error: Error) {
+            context.channel.close(promise: nil)
+            self.isDonePromise.fail(error)
         }
 
-        func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+        func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             let respPart = self.unwrapInboundIn(data)
             if case .end(nil) = respPart {
                 if self.remainingNumberOfRequests <= 0 {
-                    ctx.channel.close().map { self.numberOfRequests - self.remainingNumberOfRequests }.cascade(promise: self.isDonePromise)
+                    context.channel.close().map { self.numberOfRequests - self.remainingNumberOfRequests }.cascade(to: self.isDonePromise)
                 } else {
                     self.remainingNumberOfRequests -= 1
-                    ctx.write(self.wrapOutboundOut(.head(RepeatedRequests.requestHead)), promise: nil)
-                    ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                    context.write(self.wrapOutboundOut(.head(RepeatedRequests.requestHead)), promise: nil)
+                    context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 }
             }
         }
@@ -219,8 +239,9 @@ public func swiftMain() -> Int {
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
             .childChannelInitializer { channel in
-                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
-                    channel.pipeline.add(handler: SimpleHTTPServer())
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true,
+                                                             withErrorHandling: false).flatMap {
+                    channel.pipeline.addHandler(SimpleHTTPServer())
                 }
             }.bind(host: "127.0.0.1", port: 0).wait()
 
@@ -234,7 +255,7 @@ public func swiftMain() -> Int {
         let clientChannel = try ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.addHTTPClientHandlers().flatMap {
-                    channel.pipeline.add(handler: repeatedRequestsHandler)
+                    channel.pipeline.addHandler(repeatedRequestsHandler)
                 }
             }
             .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
@@ -252,7 +273,9 @@ public func swiftMain() -> Int {
             .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
             .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
             .childChannelInitializer { channel in
-                channel.pipeline.add(handler: PongHandler())
+                channel.pipeline.addHandler(ByteToMessageHandler(PongDecoder())).flatMap {
+                    channel.pipeline.addHandler(PongHandler())
+                }
             }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
@@ -262,7 +285,7 @@ public func swiftMain() -> Int {
         let pingHandler = PingHandler(numberOfRequests: numberOfRequests, eventLoop: group.next())
         _ = try ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.add(handler: pingHandler)
+                channel.pipeline.addHandler(pingHandler)
             }
             .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
             .channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
@@ -309,15 +332,15 @@ public func swiftMain() -> Int {
         @inline(never)
         func doWrites(buffer: inout ByteBuffer) {
             /* these ones are zero allocations */
-            // buffer.write(bytes: foundationData) // see SR-7542
-            buffer.write(bytes: [0x41])
-            buffer.write(bytes: "A".utf8)
-            buffer.write(string: "A")
-            buffer.write(staticString: "A")
-            buffer.write(integer: 0x41, as: UInt8.self)
+            // buffer.writeBytes(foundationData) // see SR-7542
+            buffer.writeBytes([0x41])
+            buffer.writeBytes("A".utf8)
+            buffer.writeString("A")
+            buffer.writeStaticString("A")
+            buffer.writeInteger(0x41, as: UInt8.self)
 
             /* those down here should be one allocation each (on Linux) */
-            buffer.write(bytes: dispatchData) // see https://bugs.swift.org/browse/SR-9597
+            buffer.writeBytes(dispatchData) // see https://bugs.swift.org/browse/SR-9597
         }
         @inline(never)
         func doReads(buffer: inout ByteBuffer) {
@@ -352,7 +375,7 @@ public func swiftMain() -> Int {
             let f = p.futureResult.flatMap { (r: Int) -> EventLoopFuture<Int> in
                 // This call allocates a new Future, and
                 // so does flatMap(), so this is two Futures.
-                return loop.makeSucceededFuture(result: r + 1)
+                return loop.makeSucceededFuture(r + 1)
             }.flatMapThrowing { (r: Int) -> Int in
                 // flatMapThrowing allocates a new Future, and calls `flatMap`
                 // which also allocates, so this is two.
@@ -368,20 +391,20 @@ public func swiftMain() -> Int {
             }.flatMapError { (err: Error) -> EventLoopFuture<Int> in
                 // This call allocates a new Future, and so does flatMapError,
                 // so this is two Futures.
-                return loop.makeFailedFuture(error: err)
+                return loop.makeFailedFuture(err)
             }.flatMapErrorThrowing { (err: Error) -> Int in
                 // flatMapError allocates a new Future, and calls flatMapError,
                 // so this is two Futures
                 throw err
-            }.mapIfError { (err: Error) -> Int in
-                // mapIfError allocates a future, and calls flatMapError, so
+            }.recover { (err: Error) -> Int in
+                // recover allocates a future, and calls flatMapError, so
                 // this is two Futures.
                 return 1
             }
-            p.succeed(result: 0)
+            p.succeed(0)
             
             // Wait also allocates a lock.
-            try! f.wait()
+            _ = try! f.wait()
         }
         @inline(never)
         func doAnd(loop: EventLoop) {
@@ -395,13 +418,13 @@ public func swiftMain() -> Int {
             let f = p1.futureResult
                         .and(p2.futureResult)
                         .and(p3.futureResult)
-                        .and(result: 1)
-                        .and(result: 1)
+                        .and(value: 1)
+                        .and(value: 1)
 
-            p1.succeed(result: 1)
-            p2.succeed(result: 1)
-            p3.succeed(result: 1)
-            let r = try! f.wait()
+            p1.succeed(1)
+            p2.succeed(1)
+            p3.succeed(1)
+            _ = try! f.wait()
         }
         let el = EmbeddedEventLoop()
         for _ in 0..<1000  {

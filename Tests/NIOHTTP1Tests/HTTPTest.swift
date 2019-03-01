@@ -26,8 +26,8 @@ private final class TestChannelInboundHandler: ChannelInboundHandler {
         self.body = body
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        ctx.fireChannelRead(self.wrapInboundOut(self.body(self.unwrapInboundIn(data))))
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        context.fireChannelRead(self.wrapInboundOut(self.body(self.unwrapInboundIn(data))))
     }
 }
 
@@ -78,10 +78,10 @@ class HTTPTest: XCTestCase {
             defer {
                 XCTAssertNoThrow(try channel.finish())
             }
-            try channel.pipeline.add(handler: HTTPRequestDecoder()).wait()
+            try channel.pipeline.addHandler(HTTPRequestDecoder()).wait()
             var bodyData: [UInt8]? = nil
             var allBodyDatas: [[UInt8]] = []
-            try channel.pipeline.add(handler: TestChannelInboundHandler { reqPart in
+            try channel.pipeline.addHandler(TestChannelInboundHandler { reqPart in
                 switch reqPart {
                 case .head(var req):
                     XCTAssertEqual((index * 2), step)
@@ -113,7 +113,7 @@ class HTTPTest: XCTestCase {
                 bodyData = nil
             }
             channel.pipeline.flush()
-            XCTAssertNoThrow(try EventLoopFuture<Void>.andAll(writeFutures, eventLoop: channel.eventLoop).wait())
+            XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(writeFutures, on: channel.eventLoop).wait())
             XCTAssertEqual(2 * expecteds.count, step)
 
             if body != nil {
@@ -132,8 +132,8 @@ class HTTPTest: XCTestCase {
         /* send all bytes in one go */
         let bd1 = try sendAndCheckRequests(expecteds, body: body, trailers: trailers, sendStrategy: { (reqString, chan) in
             var buf = chan.allocator.buffer(capacity: 1024)
-            buf.write(string: reqString)
-            return chan.eventLoop.makeSucceededFuture(result: ()).flatMapThrowing {
+            buf.writeString(reqString)
+            return chan.eventLoop.makeSucceededFuture(()).flatMapThrowing {
                 try chan.writeInbound(buf)
             }
         })
@@ -144,12 +144,12 @@ class HTTPTest: XCTestCase {
             for c in reqString {
                 var buf = chan.allocator.buffer(capacity: 1024)
 
-                buf.write(string: "\(c)")
-                writeFutures.append(chan.eventLoop.makeSucceededFuture(result: ()).flatMapThrowing {
+                buf.writeString("\(c)")
+                writeFutures.append(chan.eventLoop.makeSucceededFuture(()).flatMapThrowing {
                     try chan.writeInbound(buf)
                 })
             }
-            return EventLoopFuture<Void>.andAll(writeFutures, eventLoop: chan.eventLoop)
+            return EventLoopFuture.andAllSucceed(writeFutures, on: chan.eventLoop)
         })
 
         XCTAssertEqual(bd1, bd2)

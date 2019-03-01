@@ -35,7 +35,7 @@ class FileRegionTest : XCTestCase {
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .childChannelInitializer { $0.pipeline.add(handler: countingHandler) }
+            .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
             .bind(host: "127.0.0.1", port: 0)
             .wait())
 
@@ -52,7 +52,7 @@ class FileRegionTest : XCTestCase {
         }
 
         try withTemporaryFile { _, filePath in
-            let handle = try FileHandle(path: filePath)
+            let handle = try NIOFileHandle(path: filePath)
             let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: bytes.count)
             defer {
                 XCTAssertNoThrow(try handle.close())
@@ -60,7 +60,7 @@ class FileRegionTest : XCTestCase {
             try content.write(toFile: filePath, atomically: false, encoding: .ascii)
             try clientChannel.writeAndFlush(NIOAny(fr)).wait()
             var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
-            buffer.write(bytes: bytes)
+            buffer.writeBytes(bytes)
             try countingHandler.assertReceived(buffer: buffer)
         }
     }
@@ -75,7 +75,7 @@ class FileRegionTest : XCTestCase {
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .childChannelInitializer { $0.pipeline.add(handler: countingHandler) }
+            .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
             .bind(host: "127.0.0.1", port: 0)
             .wait())
 
@@ -92,7 +92,7 @@ class FileRegionTest : XCTestCase {
         }
 
         try withTemporaryFile { _, filePath in
-            let handle = try FileHandle(path: filePath)
+            let handle = try NIOFileHandle(path: filePath)
             let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 0)
             defer {
                 XCTAssertNoThrow(try handle.close())
@@ -126,7 +126,7 @@ class FileRegionTest : XCTestCase {
 
         let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .childChannelInitializer { $0.pipeline.add(handler: countingHandler) }
+            .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
             .bind(host: "127.0.0.1", port: 0)
             .wait())
 
@@ -143,8 +143,8 @@ class FileRegionTest : XCTestCase {
         }
 
         try withTemporaryFile { fd, filePath in
-            let fh1 = try FileHandle(path: filePath)
-            let fh2 = try FileHandle(path: filePath)
+            let fh1 = try NIOFileHandle(path: filePath)
+            let fh2 = try NIOFileHandle(path: filePath)
             let fr1 = FileRegion(fileHandle: fh1, readerIndex: 0, endIndex: bytes.count)
             let fr2 = FileRegion(fileHandle: fh2, readerIndex: 0, endIndex: bytes.count)
             defer {
@@ -156,7 +156,7 @@ class FileRegionTest : XCTestCase {
                 () = try clientChannel.writeAndFlush(NIOAny(fr1)).flatMap {
                     let frFuture = clientChannel.write(NIOAny(fr2))
                     var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
-                    buffer.write(bytes: bytes)
+                    buffer.writeBytes(bytes)
                     let bbFuture = clientChannel.write(NIOAny(buffer))
                     clientChannel.close(promise: nil)
                     clientChannel.flush()
@@ -170,14 +170,14 @@ class FileRegionTest : XCTestCase {
             }
 
             var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
-            buffer.write(bytes: bytes)
+            buffer.writeBytes(bytes)
             try countingHandler.assertReceived(buffer: buffer)
         }
     }
 
     func testWholeFileFileRegion() throws {
         try withTemporaryFile(content: "hello") { fd, path in
-            let handle = try FileHandle(path: path)
+            let handle = try NIOFileHandle(path: path)
             let region = try FileRegion(fileHandle: handle)
             defer {
                 XCTAssertNoThrow(try handle.close())
@@ -190,7 +190,7 @@ class FileRegionTest : XCTestCase {
 
     func testWholeEmptyFileFileRegion() throws {
         try withTemporaryFile(content: "") { _, path in
-            let handle = try FileHandle(path: path)
+            let handle = try NIOFileHandle(path: path)
             let region = try FileRegion(fileHandle: handle)
             defer {
                 XCTAssertNoThrow(try handle.close())

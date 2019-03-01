@@ -50,6 +50,37 @@ class HTTPHeadersTest : XCTestCase {
         }
     }
 
+    func testDictionaryLiteralAlternative() {
+        let headers: HTTPHeaders = [ "User-Agent": "1",
+                                     "host": "2",
+                                     "X-SOMETHING": "3",
+                                     "SET-COOKIE": "foo=bar",
+                                     "Set-Cookie": "buz=cux"]
+
+        // looking up headers value is case-insensitive
+        XCTAssertEqual(["1"], headers["User-Agent"])
+        XCTAssertEqual(["1"], headers["User-agent"])
+        XCTAssertEqual(["2"], headers["Host"])
+        XCTAssertEqual(["foo=bar", "buz=cux"], headers["set-cookie"])
+
+        for (key,value) in headers {
+            switch key {
+            case "User-Agent":
+                XCTAssertEqual("1", value)
+            case "host":
+                XCTAssertEqual("2", value)
+            case "X-SOMETHING":
+                XCTAssertEqual("3", value)
+            case "SET-COOKIE":
+                XCTAssertEqual("foo=bar", value)
+            case "Set-Cookie":
+                XCTAssertEqual("buz=cux", value)
+            default:
+                XCTFail("Unexpected key: \(key)")
+            }
+        }
+    }
+
     func testWriteHeadersSeparately() {
         let originalHeaders = [ ("User-Agent", "1"),
                                 ("host", "2"),
@@ -146,7 +177,7 @@ class HTTPHeadersTest : XCTestCase {
     
     func testKeepAliveStateStartsWithClose() {
         var buffer = ByteBufferAllocator().buffer(capacity: 32)
-        buffer.write(string: "Connection: close\r\n")
+        buffer.writeString("Connection: close\r\n")
         var headers = HTTPHeaders(buffer: buffer, headers: [HTTPHeader(name: HTTPHeaderIndex(start: 0, length: 10), value: HTTPHeaderIndex(start: 12, length: 5))], keepAliveState: .close)
         
         XCTAssertEqual("close", headers["connection"].first)
@@ -164,7 +195,7 @@ class HTTPHeadersTest : XCTestCase {
     
     func testKeepAliveStateStartsWithKeepAlive() {
         var buffer = ByteBufferAllocator().buffer(capacity: 32)
-        buffer.write(string: "Connection: keep-alive\r\n")
+        buffer.writeString("Connection: keep-alive\r\n")
         var headers = HTTPHeaders(buffer: buffer, headers: [HTTPHeader(name: HTTPHeaderIndex(start: 0, length: 10), value: HTTPHeaderIndex(start: 12, length: 10))], keepAliveState: .keepAlive)
         
         XCTAssertEqual("keep-alive", headers["connection"].first)
@@ -273,14 +304,14 @@ class HTTPHeadersTest : XCTestCase {
         var locations: [HTTPHeader] = []
         for (name, value) in originalHeaders {
             let nstart = buf.writerIndex
-            buf.write(string: name)
+            buf.writeString(name)
             let nameLoc = HTTPHeaderIndex(start: nstart, length: buf.writerIndex - nstart)
-            buf.write(string: ": ")
+            buf.writeString(": ")
             
             let vstart = buf.writerIndex
-            buf.write(string: value)
+            buf.writeString(value)
             let valueLoc = HTTPHeaderIndex(start: vstart, length: buf.writerIndex - vstart)
-            buf.write(string: "\r\n")
+            buf.writeString("\r\n")
             
             locations.append(HTTPHeader(name: nameLoc, value: valueLoc))
         }

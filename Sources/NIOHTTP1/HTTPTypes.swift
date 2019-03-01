@@ -397,7 +397,7 @@ private extension UInt8 {
     }
 }
 
-/* private but tests */ internal extension HTTPHeaders {
+extension HTTPHeaders {
     func isKeepAlive(version: HTTPVersion) -> Bool {
         switch self._storage.keepAliveState {
         case .close:
@@ -430,7 +430,7 @@ private extension UInt8 {
 /// field when needed. It also supports recomposing headers to a maximally joined
 /// or split representation, such that header fields that are able to be repeated
 /// can be represented appropriately.
-public struct HTTPHeaders: CustomStringConvertible {
+public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiteral {
 
     private final class _Storage {
         var buffer: ByteBuffer
@@ -556,6 +556,14 @@ public struct HTTPHeaders: CustomStringConvertible {
         }
     }
     
+    /// Construct a `HTTPHeaders` structure.
+    ///
+    /// - parameters
+    ///     - elements: name, value pairs provided by a dictionary literal.
+    public init(dictionaryLiteral elements: (String, String)...) {
+        self.init(elements)
+    }
+
     private func isConnectionHeader(_ header: HTTPHeaderIndex) -> Bool {
          return self.buffer.equalCaseInsensitiveASCII(view: "connection".utf8, at: header)
     }
@@ -576,14 +584,14 @@ public struct HTTPHeaders: CustomStringConvertible {
             self._storage = self._storage.copy()
         }
         let nameStart = self.buffer.writerIndex
-        let nameLength = self._storage.buffer.write(string: name)
-        self._storage.buffer.write(staticString: headerSeparator)
+        let nameLength = self._storage.buffer.writeString(name)
+        self._storage.buffer.writeStaticString(headerSeparator)
         let valueStart = self.buffer.writerIndex
-        let valueLength = self._storage.buffer.write(string: value)
+        let valueLength = self._storage.buffer.writeString(value)
         
         let nameIdx = HTTPHeaderIndex(start: nameStart, length: nameLength)
         self._storage.headers.append(HTTPHeader(name: nameIdx, value: HTTPHeaderIndex(start: valueStart, length: valueLength)))
-        self._storage.buffer.write(staticString: crlf)
+        self._storage.buffer.writeStaticString(crlf)
         
         if self.isConnectionHeader(nameIdx) {
             self._storage.keepAliveState = .unknown
@@ -714,7 +722,7 @@ public struct HTTPHeaders: CustomStringConvertible {
     }
 }
 
-internal extension ByteBuffer {
+extension ByteBuffer {
 
     /// Serializes this HTTP header block to bytes suitable for writing to the wire.
     ///
@@ -724,20 +732,21 @@ internal extension ByteBuffer {
         if headers.continuous {
             // Declare an extra variable so we not affect the readerIndex of the buffer itself.
             var buf = headers.buffer
-            self.write(buffer: &buf)
+            self.writeBuffer(&buf)
         } else {
             // slow-path....
             // TODO: This can still be improved to write as many continuous data as possible and just skip over stuff that was removed.
             for header in headers.self.headers {
                 let fieldLength = (header.value.start + header.value.length) - header.name.start
                 var header = headers.buffer.getSlice(at: header.name.start, length: fieldLength)!
-                self.write(buffer: &header)
-                self.write(staticString: crlf)
+                self.writeBuffer(&header)
+                self.writeStaticString(crlf)
             }
         }
-        self.write(staticString: crlf)
+        self.writeStaticString(crlf)
     }
 }
+
 extension HTTPHeaders: Sequence {
     public typealias Element = (name: String, value: String)
 
@@ -762,13 +771,13 @@ extension HTTPHeaders: Sequence {
     }
 }
 
-/* private but tests */ internal extension Character {
+extension Character {
     var isASCIIWhitespace: Bool {
         return self == " " || self == "\t" || self == "\r" || self == "\n" || self == "\r\n"
     }
 }
 
-/* private but tests */ internal extension String {
+extension String {
     func trimASCIIWhitespace() -> Substring {
         return self.dropFirst(0).trimWhitespace()
     }
@@ -848,6 +857,7 @@ public enum HTTPMethod: Equatable {
     case MKCALENDAR
     case MKACTIVITY
     case UNSUBSCRIBE
+    case SOURCE
     case RAW(value: String)
 
     /// Whether requests with this verb may have a request body.

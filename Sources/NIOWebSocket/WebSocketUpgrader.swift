@@ -38,7 +38,7 @@ fileprivate extension HTTPHeaders {
     }
 }
 
-/// A `HTTPProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
+/// A `HTTPServerProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
 ///
 /// Users may frequently want to offer multiple websocket endpoints on the same port. For this
 /// reason, this `WebSocketUpgrader` only knows how to do the required parts of the upgrade and to
@@ -48,7 +48,7 @@ fileprivate extension HTTPHeaders {
 ///
 /// This upgrader assumes that the `HTTPServerUpgradeHandler` will appropriately mutate the pipeline to
 /// remove the HTTP `ChannelHandler`s.
-public final class WebSocketUpgrader: HTTPProtocolUpgrader {
+public final class WebSocketUpgrader: HTTPServerProtocolUpgrader {
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"
 
@@ -144,19 +144,19 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
         return extraHeaders
     }
 
-    public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         /// We never use the automatic error handling feature of the WebSocketFrameDecoder: we always use the separate channel
         /// handler.
-        var upgradeFuture = ctx.pipeline.add(handler: WebSocketFrameEncoder()).flatMap {
-            ctx.pipeline.add(handler: ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize, automaticErrorHandling: false)))
+        var upgradeFuture = context.pipeline.addHandler(WebSocketFrameEncoder()).flatMap {
+            context.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize, automaticErrorHandling: false)))
         }
 
         if self.automaticErrorHandling {
-            upgradeFuture = upgradeFuture.flatMap { ctx.pipeline.add(handler: WebSocketProtocolErrorHandler())}
+            upgradeFuture = upgradeFuture.flatMap { context.pipeline.addHandler(WebSocketProtocolErrorHandler())}
         }
 
         return upgradeFuture.flatMap {
-            self.upgradePipelineHandler(ctx.channel, upgradeRequest)
+            self.upgradePipelineHandler(context.channel, upgradeRequest)
         }
     }
 }

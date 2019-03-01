@@ -14,7 +14,6 @@
 
 import XCTest
 @testable import NIO
-import Dispatch
 import NIOConcurrencyHelpers
 
 
@@ -96,7 +95,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
             return readCountHandler.readCount
         }.wait())
 
-        XCTAssertTrue(try serverChannel.pipeline.remove(name: acceptHandlerName).wait())
+        XCTAssertNoThrow(try serverChannel.pipeline.removeHandler(name: acceptHandlerName).wait())
 
         if read {
             // Removal should have triggered a read.
@@ -160,8 +159,8 @@ public class AcceptBackoffHandlerTest: XCTestCase {
                 self.promise = promise
             }
 
-            public func channelInactive(ctx: ChannelHandlerContext) {
-                promise.succeed(result: ())
+            public func channelInactive(context: ChannelHandlerContext) {
+                promise.succeed(())
             }
 
             func waitForInactive() throws {
@@ -175,7 +174,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
         }, errors: [ENFILE])
 
         let inactiveVerificationHandler = InactiveVerificationHandler(promise: serverChannel.eventLoop.makePromise())
-        XCTAssertNoThrow(try serverChannel.pipeline.add(handler: inactiveVerificationHandler).wait())
+        XCTAssertNoThrow(try serverChannel.pipeline.addHandler(inactiveVerificationHandler).wait())
 
         XCTAssertEqual(0, try serverChannel.eventLoop.submit {
             serverChannel.readable()
@@ -214,7 +213,7 @@ public class AcceptBackoffHandlerTest: XCTestCase {
             serverChannel.read()
             let readCount = readCountHandler.readCount
             // Directly trigger a read again without going through the pipeline. This will allow us to use serverChannel.readable()
-            serverChannel._unsafe.read0()
+            serverChannel._channelCore.read0()
             serverChannel.readable()
             return readCount
         }.wait())
@@ -240,9 +239,9 @@ public class AcceptBackoffHandlerTest: XCTestCase {
 
         var readCount = 0
 
-        func read(ctx: ChannelHandlerContext) {
+        func read(context: ChannelHandlerContext) {
             readCount += 1
-            ctx.read()
+            context.read()
         }
     }
 
@@ -253,9 +252,10 @@ public class AcceptBackoffHandlerTest: XCTestCase {
                                                                            eventLoop: eventLoop,
                                                                            group: group))
 
-        XCTAssertNoThrow(try serverChannel.setOption(option: ChannelOptions.autoRead, value: false).wait())
-        XCTAssertNoThrow(try serverChannel.pipeline.add(handler: readCountHandler).flatMap { _ in
-            serverChannel.pipeline.add(name: self.acceptHandlerName, handler: AcceptBackoffHandler(backoffProvider: backoffProvider))
+        XCTAssertNoThrow(try serverChannel.setOption(ChannelOptions.autoRead, value: false).wait())
+        XCTAssertNoThrow(try serverChannel.pipeline.addHandler(readCountHandler).flatMap { _ in
+            serverChannel.pipeline.addHandler(AcceptBackoffHandler(backoffProvider: backoffProvider),
+                                              name: self.acceptHandlerName)
         }.wait())
 
         XCTAssertNoThrow(try eventLoop.submit {

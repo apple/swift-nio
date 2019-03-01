@@ -226,7 +226,7 @@ private let ludicrouslyTruncatedPacket = "FgMBAAEB"
 
 private let fuzzingInputOne = "FgMAAAQAAgo="
 
-internal extension ChannelPipeline {
+extension ChannelPipeline {
     func contains(handler: ChannelHandler) throws -> Bool {
         do {
             _ = try self.context(handler: handler).wait()
@@ -250,7 +250,7 @@ class SNIHandlerTest: XCTestCase {
         let data = Data(base64Encoded: string, options: .ignoreUnknownCharacters)!
         let allocator = ByteBufferAllocator()
         var buffer = allocator.buffer(capacity: data.count)
-        buffer.write(bytes: data)
+        buffer.writeBytes(data)
         return buffer
     }
 
@@ -270,7 +270,7 @@ class SNIHandlerTest: XCTestCase {
             return continuePromise.futureResult
         })
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // The handler will run when the last byte of the extension data is sent.
         // We don't know when that is, so don't try to predict it. However,
@@ -293,7 +293,7 @@ class SNIHandlerTest: XCTestCase {
 
         // Now we're going to complete the promise and run the loop. This should cause the complete
         // ClientHello to be sent on, and the SNIHandler to be removed from the pipeline.
-        continuePromise.succeed(result: ())
+        continuePromise.succeed(())
         loop.run()
 
         let writtenBuffer: ByteBuffer = channel.readInbound() ?? channel.allocator.buffer(capacity: 0)
@@ -321,7 +321,7 @@ class SNIHandlerTest: XCTestCase {
             return continuePromise.futureResult
         })
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // Ok, let's go.
         try channel.writeInbound(buffer)
@@ -330,12 +330,12 @@ class SNIHandlerTest: XCTestCase {
         // The callback should have fired, but the handler should not have
         // sent on any data and should still be in the pipeline.
         XCTAssertTrue(called)
-        XCTAssertNil(channel.readInbound() as ByteBuffer?)
+        XCTAssertNil(channel.readInbound(as: ByteBuffer.self))
         try channel.pipeline.assertContains(handler: handler)
 
         // Now we're going to complete the promise and run the loop. This should cause the complete
         // ClientHello to be sent on, and the SNIHandler to be removed from the pipeline.
-        continuePromise.succeed(result: ())
+        continuePromise.succeed(())
         loop.run()
 
         let writtenBuffer: ByteBuffer? = channel.readInbound()
@@ -358,10 +358,10 @@ class SNIHandlerTest: XCTestCase {
 
         let handler = ByteToMessageHandler(SNIHandler { result in
             XCTFail("Handler was called")
-            return loop.makeSucceededFuture(result: ())
+            return loop.makeSucceededFuture(())
         })
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // Ok, let's go.
         try channel.writeInbound(buffer)
@@ -369,7 +369,7 @@ class SNIHandlerTest: XCTestCase {
 
         // The callback should not have fired, the handler should still be in the pipeline,
         // and no data should have been written.
-        XCTAssertNil(channel.readInbound() as ByteBuffer?)
+        XCTAssertNil(channel.readInbound(as: ByteBuffer.self))
         try channel.pipeline.assertContains(handler: handler)
 
         XCTAssertNoThrow(try channel.finish())

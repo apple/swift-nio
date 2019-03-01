@@ -56,7 +56,7 @@ public enum ALPNResult: Equatable {
 /// down the channel. Then, finally, this channel handler will automatically remove
 /// itself from the channel pipeline, leaving the pipeline in its final
 /// configuration.
-public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler {
+public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler, RemovableChannelHandler {
     public typealias InboundIn = Any
     public typealias InboundOut = Any
 
@@ -75,24 +75,24 @@ public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler {
         self.eventBuffer = []
     }
 
-    public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+    public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         guard let tlsEvent = event as? TLSUserEvent else {
-            ctx.fireUserInboundEventTriggered(event)
+            context.fireUserInboundEventTriggered(event)
             return
         }
 
         if case .handshakeCompleted(let p) = tlsEvent {
-            handshakeCompleted(context: ctx, negotiatedProtocol: p)
+            handshakeCompleted(context: context, negotiatedProtocol: p)
         } else {
-            ctx.fireUserInboundEventTriggered(event)
+            context.fireUserInboundEventTriggered(event)
         }
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         if waitingForUser {
             eventBuffer.append(data)
         } else {
-            ctx.fireChannelRead(data)
+            context.fireChannelRead(data)
         }
     }
 
@@ -109,7 +109,7 @@ public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler {
         let switchFuture = completionHandler(result)
         switchFuture.whenComplete { (_: Result<Void, Error>) in
             self.unbuffer(context: context)
-            context.pipeline.remove(handler: self, promise: nil)
+            context.pipeline.removeHandler(self, promise: nil)
         }
     }
 

@@ -38,6 +38,19 @@ extension ByteToMessageDecoderTest {
                 ("testStructsWorkAsByteToMessageDecoders", testStructsWorkAsByteToMessageDecoders),
                 ("testReentrantChannelReadWhileWholeBufferIsBeingProcessed", testReentrantChannelReadWhileWholeBufferIsBeingProcessed),
                 ("testReentrantChannelCloseInChannelRead", testReentrantChannelCloseInChannelRead),
+                ("testHandlerRemoveInChannelRead", testHandlerRemoveInChannelRead),
+                ("testChannelCloseInChannelRead", testChannelCloseInChannelRead),
+                ("testDecodeLoopGetsInterruptedWhenRemovalIsTriggered", testDecodeLoopGetsInterruptedWhenRemovalIsTriggered),
+                ("testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelClosed", testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelClosed),
+                ("testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelHalfClosure", testDecodeLastIsInvokedOnceEvenIfNothingEverArrivedOnChannelHalfClosure),
+                ("testDecodeLastHasSeenEOFFalseOnHandlerRemoved", testDecodeLastHasSeenEOFFalseOnHandlerRemoved),
+                ("testDecodeLastHasSeenEOFFalseOnHandlerRemovedEvenIfNoData", testDecodeLastHasSeenEOFFalseOnHandlerRemovedEvenIfNoData),
+                ("testDecodeLastHasSeenEOFTrueOnChannelInactive", testDecodeLastHasSeenEOFTrueOnChannelInactive),
+                ("testWriteObservingByteToMessageDecoderBasic", testWriteObservingByteToMessageDecoderBasic),
+                ("testWriteObservingByteToMessageDecoderWhereWriteIsReentrantlyCalled", testWriteObservingByteToMessageDecoderWhereWriteIsReentrantlyCalled),
+                ("testDecodeMethodsNoLongerCalledIfErrorInDecode", testDecodeMethodsNoLongerCalledIfErrorInDecode),
+                ("testDecodeMethodsNoLongerCalledIfErrorInDecodeLast", testDecodeMethodsNoLongerCalledIfErrorInDecodeLast),
+                ("testBasicLifecycle", testBasicLifecycle),
            ]
    }
 }

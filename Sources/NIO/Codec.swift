@@ -22,6 +22,19 @@ public enum DecodingState {
     case needMoreData
 }
 
+/// Common errors thrown by `ByteToMessageDecoder`s.
+public enum ByteToMessageDecoderError: Error {
+    /// More data has been received by a `ByteToMessageHandler` despite the fact that an error has previously been
+    /// emitted. The associated `Error` is the error previously emitted and the `ByteBuffer` is the extra data that has
+    /// been received. The common cause for this error to be emitted is the user not having torn down the `Channel`
+    /// after previously an `Error` has been sent through the pipeline using `fireErrorCaught`.
+    case dataReceivedInErrorState(Error, ByteBuffer)
+
+    /// This error can be thrown by `ByteToMessageDecoder`s if there was unexpectedly some left-over data when the
+    /// `ByteToMessageDecoder` was removed from the pipeline or the `Channel` was closed.
+    case leftoverDataWhenDone(ByteBuffer)
+}
+
 /// `ChannelInboundHandler` which decodes bytes in a stream-like fashion from one `ByteBuffer` to
 /// another message type.
 ///
@@ -52,32 +65,33 @@ public protocol ByteToMessageDecoder {
     /// `ByteBuffer` has nothing to read left or `DecodingState.needMoreData` is returned.
     ///
     /// - parameters:
-    ///     - ctx: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
+    ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
     ///     - buffer: The `ByteBuffer` from which we decode.
     /// - returns: `DecodingState.continue` if we should continue calling this method or `DecodingState.needMoreData` if it should be called
     //             again once more data is present in the `ByteBuffer`.
-    mutating func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState
+    mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState
 
     /// This method is called once, when the `ChannelHandlerContext` goes inactive (i.e. when `channelInactive` is fired)
     ///
     /// - parameters:
-    ///     - ctx: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
+    ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
     ///     - buffer: The `ByteBuffer` from which we decode.
+    ///     - seenEOF: `true` if EOF has been seen. Usually if this is `false` the handler has been removed.
     /// - returns: `DecodingState.continue` if we should continue calling this method or `DecodingState.needMoreData` if it should be called
     //             again when more data is present in the `ByteBuffer`.
-    mutating func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws  -> DecodingState
+    mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws  -> DecodingState
 
     /// Called once this `ByteToMessageDecoder` is removed from the `ChannelPipeline`.
     ///
     /// - parameters:
-    ///     - ctx: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
-    mutating func decoderRemoved(ctx: ChannelHandlerContext)
+    ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
+    mutating func decoderRemoved(context: ChannelHandlerContext)
 
     /// Called when this `ByteToMessageDecoder` is added to the `ChannelPipeline`.
     ///
     /// - parameters:
-    ///     - ctx: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
-    mutating func decoderAdded(ctx: ChannelHandlerContext)
+    ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
+    mutating func decoderAdded(context: ChannelHandlerContext)
 
     /// Determine if the read bytes in the given `ByteBuffer` should be reclaimed and their associated memory freed.
     /// Be aware that reclaiming memory may involve memory copies and so is not free.
@@ -88,11 +102,27 @@ public protocol ByteToMessageDecoder {
     mutating func shouldReclaimBytes(buffer: ByteBuffer) -> Bool
 }
 
+/// Some `ByteToMessageDecoder`s need to observe `write`s (which are outbound events). `ByteToMessageDecoder`s which
+/// implement the `WriteObservingByteToMessageDecoder` protocol will be notified about every outbound write.
+///
+/// `WriteObservingByteToMessageDecoder` may only observe a `write` and must not try to transform or block it in any
+/// way. After the `write` method returns the `write` will be forwarded to the next outbound handler.
+public protocol WriteObservingByteToMessageDecoder: ByteToMessageDecoder {
+    /// The type of `write`s.
+    associatedtype OutboundIn
+
+    /// `write` is called for every incoming `write` incoming to the corresponding `ByteToMessageHandler`.
+    ///
+    /// - parameters:
+    ///    - data: The data that was written.
+    mutating func write(data: OutboundIn)
+}
+
 extension ByteToMessageDecoder {
-    public mutating func decoderRemoved(ctx: ChannelHandlerContext) {
+    public mutating func decoderRemoved(context: ChannelHandlerContext) {
     }
 
-    public mutating func decoderAdded(ctx: ChannelHandlerContext) {
+    public mutating func decoderAdded(context: ChannelHandlerContext) {
     }
 
     /// Default implementation to detect once bytes should be reclaimed.
@@ -108,24 +138,8 @@ extension ByteToMessageDecoder {
         return buffer.capacity > 1024 && (buffer.capacity - buffer.readerIndex) >= buffer.readerIndex
     }
 
-    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        return .needMoreData
-    }
-
     public func wrapInboundOut(_ value: InboundOut) -> NIOAny {
         return NIOAny(value)
-    }
-}
-
-private extension ChannelHandlerContext {
-    func withThrowingToFireErrorAndClose<T>(_ body: () throws -> T) -> T? {
-        do {
-            return try body()
-        } catch {
-            self.fireErrorCaught(error)
-            self.close(promise: nil)
-            return nil
-        }
     }
 }
 
@@ -155,22 +169,28 @@ private struct B2MDBuffer {
     }
 
     private var state: State = .ready
-    private var buffers: CircularBuffer<ByteBuffer> = CircularBuffer(initialRingCapacity: 4)
+    private var buffers: CircularBuffer<ByteBuffer> = CircularBuffer(initialCapacity: 4)
+    private let emptyByteBuffer: ByteBuffer
+
+    init(emptyByteBuffer: ByteBuffer) {
+        assert(emptyByteBuffer.readableBytes == 0)
+        self.emptyByteBuffer = emptyByteBuffer
+    }
 }
 
 // MARK: B2MDBuffer Main API
 extension B2MDBuffer {
     /// Start processing some bytes if possible, if we receive a returned buffer (through `.available(ByteBuffer)`)
     /// we _must_ indicate the processing has finished by calling `finishProcessing`.
-    mutating func startProcessing() -> BufferAvailability {
+    mutating func startProcessing(allowEmptyBuffer: Bool) -> BufferAvailability {
         switch self.state {
         case .processingInProgress:
             return .bufferAlreadyBeingProcessed
         case .ready where self.buffers.count > 0:
             var buffer = self.buffers.removeFirst()
             buffer.writeBuffers(self.buffers)
-            self.buffers.removeAll(keepingCapacity: true)
-            if buffer.readableBytes > 0 {
+            self.buffers.removeAll(keepingCapacity: self.buffers.capacity < 16) // don't grow too much
+            if buffer.readableBytes > 0 || allowEmptyBuffer {
                 self.state = .processingInProgress
                 return .available(buffer)
             } else {
@@ -178,21 +198,28 @@ extension B2MDBuffer {
             }
         case .ready:
             assert(self.buffers.count == 0)
+            if allowEmptyBuffer {
+                self.state = .processingInProgress
+                return .available(self.emptyByteBuffer)
+            }
             return .nothingAvailable
         }
     }
 
 
-    mutating func finishProcessing(remainder buffer: ByteBuffer) -> Void {
+    mutating func finishProcessing(remainder buffer: inout ByteBuffer) -> Void {
         assert(self.state == .processingInProgress)
         self.state = .ready
+        if buffer.readableBytes == 0 && self.buffers.count == 0 {
+            // fast path, no bytes left and no other buffers, just return
+            return
+        }
         if buffer.readableBytes > 0 {
             self.buffers.prepend(buffer)
         } else {
-            var buffer = buffer
-            buffer.clear()
+            buffer.discardReadBytes()
             buffer.writeBuffers(self.buffers)
-            self.buffers.removeAll(keepingCapacity: true)
+            self.buffers.removeAll(keepingCapacity: self.buffers.capacity < 16) // don't grow too much
             self.buffers.append(buffer)
         }
     }
@@ -210,28 +237,29 @@ private extension ByteBuffer {
         guard buffers.count > 0 else {
             return
         }
-        var allReadableBytes: Int = 0
+        var requiredCapacity: Int = self.writerIndex
         for buffer in buffers {
-            allReadableBytes += buffer.readableBytes
+            requiredCapacity += buffer.readableBytes
         }
-        self.reserveCapacity(self.writerIndex + allReadableBytes)
+        self.reserveCapacity(requiredCapacity)
         for var buffer in buffers {
-            self.write(buffer: &buffer)
+            self.writeBuffer(&buffer)
         }
     }
 }
 
 private extension B2MDBuffer {
     func _testOnlyOneBuffer() -> ByteBuffer? {
-        if buffers.count == 0 {
+        switch self.buffers.count {
+        case 0:
             return nil
-        } else if buffers.count == 1 {
+        case 1:
             return self.buffers.first
-        } else {
+        default:
             let firstIndex = self.buffers.startIndex
             var firstBuffer = self.buffers[firstIndex]
             for var buffer in self.buffers[self.buffers.index(after: firstIndex)...] {
-                firstBuffer.write(buffer: &buffer)
+                firstBuffer.writeBuffer(&buffer)
             }
             return firstBuffer
         }
@@ -250,22 +278,74 @@ public class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
         case last
     }
 
+    private enum RemovalState {
+        case notBeingRemoved
+        case removalStarted
+        case removalCompleted
+    }
+
     private enum State {
         case active
         case leftoversNeedProcessing
         case done
+        case error(Error)
+
+        var isError: Bool {
+            switch self {
+            case .active, .leftoversNeedProcessing, .done:
+                return false
+            case .error:
+                return true
+            }
+        }
+
+        var isFinalState: Bool {
+            switch self {
+            case .active, .leftoversNeedProcessing:
+                return false
+            case .done, .error:
+                return true
+            }
+        }
+
+        var isActive: Bool {
+            switch self {
+            case .done, .error, .leftoversNeedProcessing:
+                return false
+            case .active:
+                return true
+            }
+        }
+
+        var isLeftoversNeedProcessing: Bool {
+            switch self {
+            case .done, .error, .active:
+                return false
+            case .leftoversNeedProcessing:
+                return true
+            }
+        }
     }
 
     internal private(set) var decoder: Decoder? // only `nil` if we're already decoding (ie. we're re-entered)
-    private var state: State = .active
-    private var buffer: B2MDBuffer = B2MDBuffer()
+    private var queuedWrites = CircularBuffer<NIOAny>(initialCapacity: 1) // queues writes received whilst we're already decoding (re-entrant write)
+    private var state: State = .active {
+        willSet {
+            assert(!self.state.isFinalState, "illegal state on state set: \(self.state)") // we can never leave final states
+        }
+    }
+    private var removalState: RemovalState = .notBeingRemoved
+    // sadly to construct a B2MDBuffer we need an empty ByteBuffer which we can only get from the allocator, so IUO.
+    private var buffer: B2MDBuffer!
+    private var seenEOF: Bool = false
 
     public init(_ decoder: Decoder) {
         self.decoder = decoder
     }
 
     deinit {
-        assert(self.state == .done)
+        assert(self.removalState == .removalCompleted, "illegal state in deinit: removalState = \(self.removalState)")
+        assert(self.state.isFinalState, "illegal state in deinit: state = \(self.state)")
     }
 }
 
@@ -276,10 +356,25 @@ extension ByteToMessageHandler {
     }
 }
 
+private protocol CanDequeueWrites {
+    func dequeueWrites()
+}
+
+extension ByteToMessageHandler: CanDequeueWrites where Decoder: WriteObservingByteToMessageDecoder {
+    fileprivate func dequeueWrites() {
+        while self.queuedWrites.count > 0 {
+            // self.decoder can't be `nil`, this is only allowed to be called when we're not already on the stack
+            self.decoder!.write(data: self.unwrapOutboundIn(self.queuedWrites.removeFirst()))
+        }
+    }
+}
+
+
 // MARK: ByteToMessageHandler's Main API
 extension ByteToMessageHandler {
-    private func withNextBuffer(_ body: (inout Decoder, inout ByteBuffer) throws -> DecodingState) rethrows -> B2MDBuffer.BufferProcessingResult {
-        switch self.buffer.startProcessing() {
+    @inline(__always) // allocations otherwise (reconsider with Swift 5.1)
+    private func withNextBuffer(allowEmptyBuffer: Bool, _ body: (inout Decoder, inout ByteBuffer) throws -> DecodingState) rethrows -> B2MDBuffer.BufferProcessingResult {
+        switch self.buffer.startProcessing(allowEmptyBuffer: allowEmptyBuffer) {
         case .bufferAlreadyBeingProcessed:
             return .cannotProcessReentrantly
         case .nothingAvailable:
@@ -297,79 +392,113 @@ extension ByteToMessageHandler {
                         buffer.discardReadBytes()
                     }
                 }
-                self.buffer.finishProcessing(remainder: buffer)
+                self.buffer.finishProcessing(remainder: &buffer)
             }
             return .didProcess(try body(&decoder!, &buffer))
         }
     }
 
-    private func processLeftovers(ctx: ChannelHandlerContext) {
-        guard self.state == .active else {
+    private func processLeftovers(context: ChannelHandlerContext) {
+        guard self.state.isActive else {
             // we are processing or have already processed the leftovers
             return
         }
 
-        ctx.withThrowingToFireErrorAndClose {
-            switch try self.decodeLoop(ctx: ctx, decodeMode: .last) {
+        do {
+            switch try self.decodeLoop(context: context, decodeMode: .last) {
             case .didProcess:
                 self.state = .done
             case .cannotProcessReentrantly:
                 self.state = .leftoversNeedProcessing
             }
+        } catch {
+            self.state = .error(error)
+            context.fireErrorCaught(error)
         }
     }
 
-    private func decodeLoop(ctx: ChannelHandlerContext, decodeMode: DecodeMode) throws -> B2MDBuffer.BufferProcessingResult {
-        while true {
-            let result = try self.withNextBuffer { decoder, buffer in
+    private func tryDecodeWrites() {
+        if self.queuedWrites.count > 0 {
+            // this must succeed because unless we implement `CanDequeueWrites`, `queuedWrites` must always be empty.
+            (self as! CanDequeueWrites).dequeueWrites()
+        }
+    }
+
+    private func decodeLoop(context: ChannelHandlerContext, decodeMode: DecodeMode) throws -> B2MDBuffer.BufferProcessingResult {
+        assert(!self.state.isError)
+        var allowEmptyBuffer = decodeMode == .last
+        while decodeMode == .last || self.removalState == .notBeingRemoved {
+            let result = try self.withNextBuffer(allowEmptyBuffer: allowEmptyBuffer) { decoder, buffer in
                 if decodeMode == .normal {
-                    return try decoder.decode(ctx: ctx, buffer: &buffer)
+                    return try decoder.decode(context: context, buffer: &buffer)
                 } else {
-                    return try decoder.decodeLast(ctx: ctx, buffer: &buffer)
+                    allowEmptyBuffer = false
+                    return try decoder.decodeLast(context: context, buffer: &buffer, seenEOF: self.seenEOF)
                 }
             }
             switch result {
             case .didProcess(.continue):
+                self.tryDecodeWrites()
                 continue
             case .didProcess(.needMoreData):
-                return .didProcess(.needMoreData)
+                if self.queuedWrites.count > 0 {
+                    self.tryDecodeWrites()
+                    continue // we might have received more, so let's spin once more
+                } else {
+                    return .didProcess(.needMoreData)
+                }
             case .cannotProcessReentrantly:
                 return .cannotProcessReentrantly
             }
         }
+        return .didProcess(.continue)
     }
 }
 
 // MARK: ByteToMessageHandler: ChannelInboundHandler
 extension ByteToMessageHandler: ChannelInboundHandler {
 
-    public func handlerAdded(ctx: ChannelHandlerContext) {
+    public func handlerAdded(context: ChannelHandlerContext) {
+        self.buffer = B2MDBuffer(emptyByteBuffer: context.channel.allocator.buffer(capacity: 0))
         // here we can force it because we know that the decoder isn't in use if we're just adding this handler
-        self.decoder!.decoderAdded(ctx: ctx)
+        self.decoder!.decoderAdded(context: context)
     }
 
 
-    public func handlerRemoved(ctx: ChannelHandlerContext) {
-        self.processLeftovers(ctx: ctx)
+    public func handlerRemoved(context: ChannelHandlerContext) {
+        // very likely, the removal state is `.notBeingRemoved` or `.removalCompleted` here but we can't assert it
+        // because the pipeline might be torn down during the formal removal process.
+        self.removalState = .removalCompleted
+        if !self.state.isFinalState {
+            self.state = .done
+        }
+        // here we can force it because we know that the decoder isn't in use because the removal is always
+        // eventLoop.execute'd
+        self.decoder!.decoderRemoved(context: context)
     }
 
     /// Calls `decode` until there is nothing left to decode.
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
-        self.buffer.append(buffer: self.unwrapInboundIn(data))
-        ctx.withThrowingToFireErrorAndClose {
-            switch try self.decodeLoop(ctx: ctx, decodeMode: .normal) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        let buffer = self.unwrapInboundIn(data)
+        if case .error(let error) = self.state {
+            context.fireErrorCaught(ByteToMessageDecoderError.dataReceivedInErrorState(error, buffer))
+            return
+        }
+        self.buffer.append(buffer: buffer)
+        do {
+            switch try self.decodeLoop(context: context, decodeMode: .normal) {
             case .didProcess:
                 switch self.state {
                 case .active:
                     () // cool, all normal
-                case .done:
+                case .done, .error:
                     () // fair, all done already
                 case .leftoversNeedProcessing:
                     // seems like we received a `channelInactive` or `handlerRemoved` whilst we were processing a read
                     defer {
                         self.state = .done
                     }
-                    switch try self.decodeLoop(ctx: ctx, decodeMode: .last) {
+                    switch try self.decodeLoop(context: context, decodeMode: .last) {
                     case .didProcess:
                         () // expected and cool
                     case .cannotProcessReentrantly:
@@ -380,14 +509,42 @@ extension ByteToMessageHandler: ChannelInboundHandler {
                 // fine, will be done later
                 ()
             }
+        } catch {
+            self.state = .error(error)
+            context.fireErrorCaught(error)
         }
     }
 
     /// Call `decodeLast` before forward the event through the pipeline.
-    public func channelInactive(ctx: ChannelHandlerContext) {
-        self.processLeftovers(ctx: ctx)
+    public func channelInactive(context: ChannelHandlerContext) {
+        self.seenEOF = true
 
-        ctx.fireChannelInactive()
+        self.processLeftovers(context: context)
+
+        context.fireChannelInactive()
+    }
+
+    public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+        if event as? ChannelEvent == .some(.inputClosed) {
+            self.seenEOF = true
+
+            self.processLeftovers(context: context)
+        }
+        context.fireUserInboundEventTriggered(event)
+    }
+}
+
+extension ByteToMessageHandler: ChannelOutboundHandler, _ChannelOutboundHandler where Decoder: WriteObservingByteToMessageDecoder {
+    public typealias OutboundIn = Decoder.OutboundIn
+    public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        if self.decoder != nil {
+            let data = self.unwrapOutboundIn(data)
+            assert(self.queuedWrites.count == 0)
+            self.decoder!.write(data: data)
+        } else {
+            self.queuedWrites.append(data)
+        }
+        context.write(data, promise: promise)
     }
 }
 
@@ -397,35 +554,49 @@ public protocol MessageToByteEncoder: ChannelOutboundHandler where OutboundOut =
     /// Called once there is data to encode. The used `ByteBuffer` is allocated by `allocateOutBuffer`.
     ///
     /// - parameters:
-    ///     - ctx: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
+    ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
     ///     - data: The data to encode into a `ByteBuffer`.
     ///     - out: The `ByteBuffer` into which we want to encode.
-    func encode(ctx: ChannelHandlerContext, data: OutboundIn, out: inout ByteBuffer) throws
+    func encode(context: ChannelHandlerContext, data: OutboundIn, out: inout ByteBuffer) throws
 
     /// Returns a `ByteBuffer` to be used by `encode`.
     /// - parameters:
-    ///     - ctx: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
+    ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
     ///     - data: The data to encode into a `ByteBuffer` by `encode`.
     /// - return: A `ByteBuffer` to use.
-    func allocateOutBuffer(ctx: ChannelHandlerContext, data: OutboundIn) throws -> ByteBuffer
+    func allocateOutBuffer(context: ChannelHandlerContext, data: OutboundIn) throws -> ByteBuffer
 }
 
 extension MessageToByteEncoder {
 
     /// Encodes the data into a `ByteBuffer` and writes it.
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         do {
             let data = self.unwrapOutboundIn(data)
-            var buffer: ByteBuffer = try allocateOutBuffer(ctx: ctx, data: data)
-            try encode(ctx: ctx, data: data, out: &buffer)
-            ctx.write(self.wrapOutboundOut(buffer), promise: promise)
+            var buffer: ByteBuffer = try allocateOutBuffer(context: context, data: data)
+            try encode(context: context, data: data, out: &buffer)
+            context.write(self.wrapOutboundOut(buffer), promise: promise)
         } catch let err {
-            promise?.fail(error: err)
+            promise?.fail(err)
         }
     }
 
     /// Default implementation which just allocates a `ByteBuffer` with capacity of `256`.
-    public func allocateOutBuffer(ctx: ChannelHandlerContext, data: OutboundIn) throws -> ByteBuffer {
-        return ctx.channel.allocator.buffer(capacity: 256)
+    public func allocateOutBuffer(context: ChannelHandlerContext, data: OutboundIn) throws -> ByteBuffer {
+        return context.channel.allocator.buffer(capacity: 256)
+    }
+}
+
+extension ByteToMessageHandler: RemovableChannelHandler {
+    public func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
+        precondition(self.removalState == .notBeingRemoved)
+        self.removalState = .removalStarted
+        context.eventLoop.execute {
+            self.processLeftovers(context: context)
+            assert(!self.state.isLeftoversNeedProcessing, "illegal state: \(self.state)")
+            assert(self.removalState == .removalStarted, "illegal removal state: \(self.removalState)")
+            self.removalState = .removalCompleted
+            context.leavePipeline(removalToken: removalToken)
+        }
     }
 }

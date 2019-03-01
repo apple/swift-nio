@@ -44,9 +44,9 @@ import CNIOLinux
 
     extension LinuxCPUSet: Equatable {}
 
-    /// Linux specific extension to `Thread`.
-    internal extension Thread {
-        /// Specify the thread-affinity of the `Thread` itself.
+    /// Linux specific extension to `NIOThread`.
+    extension NIOThread {
+        /// Specify the thread-affinity of the `NIOThread` itself.
         var affinity: LinuxCPUSet {
             get {
                 var cpuset = cpu_set_t()
@@ -81,10 +81,10 @@ import CNIOLinux
 
     extension MultiThreadedEventLoopGroup {
 
-        /// Create a new `MultiThreadedEventLoopGroup` that create as many `Thread`s as `pinnedCPUIds`. Each `Thread` will be pinned to the CPU with the id.
+        /// Create a new `MultiThreadedEventLoopGroup` that create as many `NIOThread`s as `pinnedCPUIds`. Each `NIOThread` will be pinned to the CPU with the id.
         ///
         /// - arguments:
-        ///     - pinnedCPUIds: The CPU ids to apply to the `Thread`s.
+        ///     - pinnedCPUIds: The CPU ids to apply to the `NIOThread`s.
         convenience init(pinnedCPUIds: [Int]) {
             let initializers: [ThreadInitializer]  = pinnedCPUIds.map { id in
                 // This will also take care of validation of the provided id.

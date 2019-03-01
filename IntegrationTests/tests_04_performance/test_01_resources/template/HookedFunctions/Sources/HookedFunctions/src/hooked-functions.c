@@ -153,9 +153,36 @@ void *replacement_calloc(size_t count, size_t size) {
     return ptr;
 }
 
+void *replacement_reallocf(void *ptr, size_t size) {
+    void *new_ptr = replacement_realloc(ptr, size);
+    if (!new_ptr) {
+        replacement_free(new_ptr);
+    }
+    return new_ptr;
+}
+
+void *replacement_valloc(size_t size) {
+    // not aligning correctly (should be PAGE_SIZE) but good enough
+    return replacement_malloc(size);
+}
+
+int replacement_posix_memalign(void **memptr, size_t alignment, size_t size) {
+    // not aligning correctly (should be `alignment`) but good enough
+    void *ptr = replacement_malloc(size);
+    if (ptr && memptr) {
+        *memptr = ptr;
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
 #if __APPLE__
 DYLD_INTERPOSE(replacement_free, free)
 DYLD_INTERPOSE(replacement_malloc, malloc)
 DYLD_INTERPOSE(replacement_realloc, realloc)
 DYLD_INTERPOSE(replacement_calloc, calloc)
+DYLD_INTERPOSE(replacement_reallocf, reallocf)
+DYLD_INTERPOSE(replacement_valloc, valloc)
+DYLD_INTERPOSE(replacement_posix_memalign, posix_memalign)
 #endif
