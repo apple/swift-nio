@@ -28,7 +28,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         } catch HTTPParserError.invalidContentLength {
             // This error is expected
         }
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
 
         // The channel should be closed at this stage.
         XCTAssertNoThrow(try channel.closeFuture.wait())
@@ -121,7 +121,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         buffer.writeStaticString("GET / HTTP/1.1\r\n\r\nGET / HTTP/1.1\r\n\r\nGET / HT")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         XCTAssertNoThrow(try channel.close().wait())
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
 
         // The channel should be closed at this stage.
         XCTAssertNoThrow(try channel.closeFuture.wait())

@@ -50,6 +50,7 @@ extension ByteToMessageDecoderTest {
                 ("testWriteObservingByteToMessageDecoderWhereWriteIsReentrantlyCalled", testWriteObservingByteToMessageDecoderWhereWriteIsReentrantlyCalled),
                 ("testDecodeMethodsNoLongerCalledIfErrorInDecode", testDecodeMethodsNoLongerCalledIfErrorInDecode),
                 ("testDecodeMethodsNoLongerCalledIfErrorInDecodeLast", testDecodeMethodsNoLongerCalledIfErrorInDecodeLast),
+                ("testBasicLifecycle", testBasicLifecycle),
            ]
    }
 }

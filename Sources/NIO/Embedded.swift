@@ -309,14 +309,18 @@ public class EmbeddedChannel: Channel {
 
     public func finish() throws -> Bool {
         try close().wait()
-        (self.eventLoop as! EmbeddedEventLoop).run()
+        self.embeddedEventLoop.run()
         try throwIfErrorCaught()
         return !channelcore.outboundBuffer.isEmpty || !channelcore.inboundBuffer.isEmpty || !channelcore.pendingOutboundBuffer.isEmpty
     }
 
     private var _pipeline: ChannelPipeline!
     public var allocator: ByteBufferAllocator = ByteBufferAllocator()
-    public var eventLoop: EventLoop = EmbeddedEventLoop()
+    public var eventLoop: EventLoop {
+        return self.embeddedEventLoop
+    }
+
+    public var embeddedEventLoop: EmbeddedEventLoop = EmbeddedEventLoop()
 
     public var localAddress: SocketAddress? = nil
     public var remoteAddress: SocketAddress? = nil
@@ -373,7 +377,7 @@ public class EmbeddedChannel: Channel {
     ///     - handler: The `ChannelHandler` to add to the `ChannelPipeline` before register or `nil` if none should be added.
     ///     - loop: The `EmbeddedEventLoop` to use.
     public init(handler: ChannelHandler? = nil, loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
-        self.eventLoop = loop
+        self.embeddedEventLoop = loop
         self._pipeline = ChannelPipeline(channel: self)
 
         if let handler = handler {
