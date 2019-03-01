@@ -76,7 +76,7 @@ extension StaticString: Collection {
 }
 
 extension ChannelPipeline {
-    @available(*, deprecated, message: "please use ByteToMessageHandler(myByteToMessageDecoder)")
+    @available(*, deprecated, message: "please use addHandler(ByteToMessageHandler(myByteToMessageDecoder))")
     public func add<Decoder: ByteToMessageDecoder>(handler decoder: Decoder) -> EventLoopFuture<Void> {
         return self.addHandler(ByteToMessageHandler(decoder))
     }
@@ -416,7 +416,7 @@ extension ByteBuffer {
         return self.writeString(string)
     }
 
-    @available(*, deprecated, renamed: "setString(at:)")
+    @available(*, deprecated, renamed: "setString(_:at:)")
     public mutating func set(string: String, at index: Int) -> Int {
         return self.setString(string, at: index)
     }
@@ -471,7 +471,7 @@ extension ByteBuffer {
         return try self.writeString(string, encoding: encoding)
     }
 
-    @available(*, deprecated, renamed: "setString(at:encoding:at:)")
+    @available(*, deprecated, renamed: "setString(_:encoding:at:)")
     public mutating func set(string: String, encoding: String.Encoding, at index: Int) throws -> Int {
         return try self.setString(string, encoding: encoding, at: index)
     }

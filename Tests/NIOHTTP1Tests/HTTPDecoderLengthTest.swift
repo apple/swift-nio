@@ -54,7 +54,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
     override func setUp() {
         self.channel = EmbeddedChannel()
-        self.loop = (channel.eventLoop as! EmbeddedEventLoop)
+        self.loop = channel.embeddedEventLoop
     }
 
     override func tearDown() {
@@ -412,7 +412,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Must spin the loop.
         XCTAssertFalse(channel.isActive)
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
     }
 
     func testResponseWithTEAndContentLengthErrors() throws {
@@ -436,7 +436,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Must spin the loop.
         XCTAssertFalse(channel.isActive)
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
     }
 
     private func assertRequestWithInvalidCLErrors(contentLengthField: String) throws {
@@ -456,7 +456,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Must spin the loop.
         XCTAssertFalse(channel.isActive)
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
     }
 
     func testRequestWithMultipleDifferentContentLengthsFails() throws {
@@ -489,7 +489,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Must spin the loop.
         XCTAssertFalse(channel.isActive)
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
     }
 
     func testRequestWithMultipleIdenticalContentLengthFieldsErrors() throws {
@@ -508,7 +508,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Must spin the loop.
         XCTAssertFalse(channel.isActive)
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
     }
 
     func testRequestWithoutExplicitLengthIsZeroLength() throws {
