@@ -24,17 +24,18 @@
 /// - warning: `NIOFileHandle` objects are not thread-safe and are mutable. They also cannot be fully thread-safe as they refer to a global underlying file descriptor.
 public final class NIOFileHandle: FileDescriptor {
     public private(set) var isOpen: Bool
-    private let descriptor: CInt
+    @usableFromInline
+    internal let _descriptor: CInt
 
     /// Create a `NIOFileHandle` taking ownership of `descriptor`. You must call `NIOFileHandle.close` or `NIOFileHandle.takeDescriptorOwnership` before
     /// this object can be safely released.
     public init(descriptor: CInt) {
-        self.descriptor = descriptor
+        self._descriptor = descriptor
         self.isOpen = true
     }
 
     deinit {
-        assert(!self.isOpen, "leaked open NIOFileHandle(descriptor: \(self.descriptor)). Call `close()` to close or `takeDescriptorOwnership()` to take ownership and close by some other means.")
+        assert(!self.isOpen, "leaked open NIOFileHandle(descriptor: \(self._descriptor)). Call `close()` to close or `takeDescriptorOwnership()` to take ownership and close by some other means.")
     }
 
     /// Duplicates this `NIOFileHandle`. This means that a new `NIOFileHandle` object with a new underlying file descriptor
@@ -61,7 +62,7 @@ public final class NIOFileHandle: FileDescriptor {
         }
 
         self.isOpen = false
-        return self.descriptor
+        return self._descriptor
     }
 
     public func close() throws {
@@ -72,11 +73,12 @@ public final class NIOFileHandle: FileDescriptor {
         self.isOpen = false
     }
 
+    @inline(__always)
     public func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T {
         guard self.isOpen else {
             throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
         }
-        return try body(self.descriptor)
+        return try body(self._descriptor)
     }
 }
 

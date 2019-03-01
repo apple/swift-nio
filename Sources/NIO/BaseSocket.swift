@@ -211,6 +211,7 @@ class BaseSocket: Selectable {
         return descriptor >= 0
     }
 
+    @inline(__always)
     func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T {
         guard self.isOpen else {
             throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
@@ -339,7 +340,7 @@ class BaseSocket: Selectable {
             // most socket options settings so for the time being we'll just ignore this. Let's revisit for NIO 2.0.
             return
         }
-        return try withUnsafeFileDescriptor { fd in
+        return try self.withUnsafeFileDescriptor { fd in
             var val = value
 
             try Posix.setsockopt(

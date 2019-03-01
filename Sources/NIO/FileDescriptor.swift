@@ -23,6 +23,7 @@ public protocol FileDescriptor {
     /// - parameters:
     ///     - body: The closure to execute if the `FileDescriptor` is still open.
     /// - throws: If either the `FileDescriptor` was closed before or the closure throws by itself.
+    @inline(__always)
     func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T
 
     /// `true` if this `FileDescriptor` is open (which means it was not closed yet).
