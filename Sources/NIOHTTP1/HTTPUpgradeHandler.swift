@@ -41,8 +41,8 @@ public protocol HTTPServerProtocolUpgrader {
 
     /// Builds the upgrade response headers. Should return any headers that need to be supplied to the client
     /// in the 101 Switching Protocols response. If upgrade cannot proceed for any reason, this function should
-    /// throw.
-    func buildUpgradeResponse(upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) throws -> HTTPHeaders
+    /// fail the future.
+    func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders>
 
     /// Called when the upgrade response has been flushed. At this time it is safe to mutate the channel pipeline
     /// to add whatever channel handlers are required. Until the returned `EventLoopFuture` succeeds, all received
@@ -74,8 +74,8 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
     private var seenFirstRequest = false
 
     /// The closure that should be invoked when the end of the upgrade request is received if any.
-    private var upgrade: (() -> Void)?
-    private var receivedMessages: [NIOAny] = []
+    private var upgradeState: UpgradeState = .idle
+    private var receivedMessages: CircularBuffer<NIOAny> = CircularBuffer()
 
     /// Create a `HTTPServerUpgradeHandler`.
     ///
@@ -108,74 +108,99 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
 
         let requestPart = unwrapInboundIn(data)
 
-        if let upgrade = self.upgrade {
-            switch requestPart {
-            case .head:
-                context.fireErrorCaught(HTTPServerUpgradeErrors.invalidHTTPOrdering)
-                notUpgrading(context: context, data: data)
-                return
-            case .body:
-                // TODO: In the future way may want to add some API to also allow special handling of the body during the
-                //       upgrade. For now just ignore it.
-                break
-            case .end:
+        switch self.upgradeState {
+        case .idle:
+            self.firstRequestHeadReceived(context: context, requestPart: requestPart)
+        case .awaitingUpgrader:
+            if case .end = requestPart {
+                // This is the end of the first request. Swallow it, we're buffering the rest.
                 self.seenFirstRequest = true
-
-                // The request is complete now trigger the upgrade.
+            }
+        case .upgraderReady(let upgrade):
+            if case .end = requestPart {
+                // This is the end of the first request, and we can upgrade. Time to kick it off.
+                self.seenFirstRequest = true
                 upgrade()
             }
-        } else {
-            // We should decide if we're going to upgrade based on the first request header: if we aren't upgrading,
-            // by the time the body comes in we should be out of the pipeline. That means that if we don't think we're
-            // upgrading, the only thing we should see is a request head. Anything else in an error.
-            guard case .head(let request) = requestPart else {
-                context.fireErrorCaught(HTTPServerUpgradeErrors.invalidHTTPOrdering)
-                notUpgrading(context: context, data: data)
-                return
-            }
-            
-            // Ok, we have a HTTP request. Check if it's an upgrade. If it's not, we want to pass it on and remove ourselves
-            // from the channel pipeline.
-            let requestedProtocols = request.headers[canonicalForm: "upgrade"]
-            guard requestedProtocols.count > 0 else {
-                notUpgrading(context: context, data: data)
-                return
-            }
-            
-            // Cool, this is an upgrade! Let's go.
-            if let upgrade = handleUpgrade(context: context, request: request, requestedProtocols: requestedProtocols) {
-                self.upgrade = upgrade
+        case .upgradeFailed:
+            // We were re-entrantly called while delivering the request head. We can just pass this through.
+            context.fireChannelRead(data)
+        case .upgradeComplete:
+            preconditionFailure("Upgrade has completed but we have not seen a whole request and still got re-entrantly called.")
+        case .upgrading:
+            preconditionFailure("We think we saw .end before and began upgrading, but somehow we have not set seenFirstRequest")
+        }
+    }
+
+    private func firstRequestHeadReceived(context: ChannelHandlerContext, requestPart: HTTPServerRequestPart) {
+        // We should decide if we're going to upgrade based on the first request header: if we aren't upgrading,
+        // by the time the body comes in we should be out of the pipeline. That means that if we don't think we're
+        // upgrading, the only thing we should see is a request head. Anything else in an error.
+        guard case .head(let request) = requestPart else {
+            context.fireErrorCaught(HTTPServerUpgradeErrors.invalidHTTPOrdering)
+            self.notUpgrading(context: context, data: requestPart)
+            return
+        }
+
+        // Ok, we have a HTTP request. Check if it's an upgrade. If it's not, we want to pass it on and remove ourselves
+        // from the channel pipeline.
+        let requestedProtocols = request.headers[canonicalForm: "upgrade"]
+        guard requestedProtocols.count > 0 else {
+            self.notUpgrading(context: context, data: requestPart)
+            return
+        }
+
+        // Cool, this is an upgrade request.
+        // We'll attempt to upgrade. This may take a while, so while we're waiting more data can come in.
+        self.upgradeState = .awaitingUpgrader
+
+        self.handleUpgrade(context: context, request: request, requestedProtocols: requestedProtocols).whenSuccess { callback in
+            if let callback = callback {
+                self.gotUpgrader(upgrader: callback)
             } else {
-                notUpgrading(context: context, data: data)
+                self.notUpgrading(context: context, data: requestPart)
             }
         }
     }
 
     /// The core of the upgrade handling logic.
-    private func handleUpgrade(context: ChannelHandlerContext, request: HTTPRequestHead, requestedProtocols: [String]) -> (() -> Void)? {
+    ///
+    /// - returns: An `EventLoopFuture` that will contain a callback to invoke if upgrade is requested, or nil if upgrade has failed. Never returns a failed future.
+    private func handleUpgrade(context: ChannelHandlerContext, request: HTTPRequestHead, requestedProtocols: [String]) -> EventLoopFuture<(() -> Void)?> {
         let connectionHeader = Set(request.headers[canonicalForm: "connection"].map { $0.lowercased() })
         let allHeaderNames = Set(request.headers.map { $0.name.lowercased() })
 
-        for proto in requestedProtocols {
-            guard let upgrader = upgraders[proto.lowercased()] else {
-                continue
-            }
+        // We now set off a chain of Futures to try to find a protocol upgrade. While this is blocking, we need to buffer inbound data.
+        let protocolIterator = requestedProtocols.makeIterator()
+        return self.handleUpgradeForProtocol(context: context, protocolIterator: protocolIterator, request: request, allHeaderNames: allHeaderNames, connectionHeader: connectionHeader)
+    }
 
-            let requiredHeaders = Set(upgrader.requiredUpgradeHeaders.map { $0.lowercased() })
-            guard requiredHeaders.isSubset(of: allHeaderNames) && requiredHeaders.isSubset(of: connectionHeader) else {
-                continue
-            }
+    /// Attempt to upgrade a single protocol.
+    ///
+    /// Will recurse through `protocolIterator` if upgrade fails.
+    private func handleUpgradeForProtocol(context: ChannelHandlerContext, protocolIterator: Array<String>.Iterator, request: HTTPRequestHead, allHeaderNames: Set<String>, connectionHeader: Set<String>) -> EventLoopFuture<(() -> Void)?> {
+        // We want a local copy of the protocol iterator. We'll pass it to the next invocation of the function.
+        var protocolIterator = protocolIterator
+        guard let proto = protocolIterator.next() else {
+            // We're done! No suitable protocol for upgrade.
+            return context.eventLoop.makeSucceededFuture(nil)
+        }
 
-            var responseHeaders = buildUpgradeHeaders(protocol: proto)
-            do {
-                responseHeaders = try upgrader.buildUpgradeResponse(upgradeRequest: request, initialResponseHeaders: responseHeaders)
-            } catch {
-                // We should fire this error so the user can log it, but keep going.
-                context.fireErrorCaught(error)
-                continue
-            }
-           
+        guard let upgrader = upgraders[proto.lowercased()] else {
+            return self.handleUpgradeForProtocol(context: context, protocolIterator: protocolIterator, request: request, allHeaderNames: allHeaderNames, connectionHeader: connectionHeader)
+        }
+
+        let requiredHeaders = Set(upgrader.requiredUpgradeHeaders.map { $0.lowercased() })
+        guard requiredHeaders.isSubset(of: allHeaderNames) && requiredHeaders.isSubset(of: connectionHeader) else {
+            return self.handleUpgradeForProtocol(context: context, protocolIterator: protocolIterator, request: request, allHeaderNames: allHeaderNames, connectionHeader: connectionHeader)
+        }
+
+        let responseHeaders = self.buildUpgradeHeaders(protocol: proto)
+        return upgrader.buildUpgradeResponse(channel: context.channel, upgradeRequest: request, initialResponseHeaders: responseHeaders).map { finalResponseHeaders in
             return {
+                // Ok, we're upgrading.
+                self.upgradeState = .upgrading
+
                 // Before we finish the upgrade we have to remove the HTTPDecoder and any other non-Encoder HTTP
                 // handlers from the pipeline, to prevent them parsing any more data. We'll buffer the data until
                 // that completes.
@@ -186,7 +211,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
                 // our final cleanup steps, namely we replay the received data we buffered in the meantime and
                 // then remove ourselves from the pipeline.
                 self.removeExtraHandlers(context: context).flatMap {
-                    self.sendUpgradeResponse(context: context, upgradeRequest: request, responseHeaders: responseHeaders)
+                    self.sendUpgradeResponse(context: context, upgradeRequest: request, responseHeaders: finalResponseHeaders)
                 }.flatMap {
                     self.removeHandler(context: context, handler: self.httpEncoder)
                 }.map {
@@ -195,24 +220,42 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
                     upgrader.upgrade(context: context, upgradeRequest: request)
                 }.map {
                     context.fireUserInboundEventTriggered(HTTPServerUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request))
-                        
-                    self.upgrade = nil
-                        
+
+                    self.upgradeState = .upgradeComplete
+
                     // We unbuffer any buffered data here and, if we sent any,
                     // we also fire readComplete.
-                    let bufferedMessages = self.receivedMessages
-                    self.receivedMessages = []
-                    bufferedMessages.forEach { context.fireChannelRead($0) }
-                    if bufferedMessages.count > 0 {
+                    let fireReadComplete = self.receivedMessages.count > 0
+                    while self.receivedMessages.count > 0 {
+                        let bufferedPart = self.receivedMessages.removeFirst()
+                        context.fireChannelRead(bufferedPart)
+                    }
+                    if fireReadComplete {
                         context.fireChannelReadComplete()
                     }
                 }.whenComplete { (_: Result<Void, Error>) in
                     context.pipeline.removeHandler(context: context, promise: nil)
                 }
             }
+        }.flatMapError { error in
+            // No upgrade here. We want to fire the error down the pipeline, and then try another loop iteration.
+            context.fireErrorCaught(error)
+            return self.handleUpgradeForProtocol(context: context, protocolIterator: protocolIterator, request: request, allHeaderNames: allHeaderNames, connectionHeader: connectionHeader)
         }
+    }
 
-        return nil
+    private func gotUpgrader(upgrader: @escaping (() -> Void)) {
+        switch self.upgradeState {
+        case .awaitingUpgrader:
+            self.upgradeState = .upgraderReady(upgrader)
+            if self.seenFirstRequest {
+                // Ok, we're good to go, we can upgrade. Otherwise we're waiting for .end, which
+                // will trigger the upgrade.
+                upgrader()
+            }
+        case .idle, .upgradeComplete, .upgraderReady, .upgradeFailed, .upgrading:
+            preconditionFailure("Unexpected upgrader state: \(self.upgradeState)")
+        }
     }
 
     /// Sends the 101 Switching Protocols response for the pipeline.
@@ -223,9 +266,31 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
     }
 
     /// Called when we know we're not upgrading. Passes the data on and then removes this object from the pipeline.
-    private func notUpgrading(context: ChannelHandlerContext, data: NIOAny) {
-        assert(self.receivedMessages.count == 0)
-        context.fireChannelRead(data)
+    private func notUpgrading(context: ChannelHandlerContext, data: HTTPServerRequestPart) {
+        self.upgradeState = .upgradeFailed
+
+        if !self.seenFirstRequest {
+            // We haven't seen the first request .end. That means we're not buffering anything, and we can
+            // just deliver data.
+            assert(self.receivedMessages.count == 0)
+            context.fireChannelRead(self.wrapInboundOut(data))
+        } else {
+            // This is trickier. We've seen the first request .end, so we now need to deliver the .head we
+            // got passed, as well as the .end we swallowed, and any buffered parts. While we're doing this
+            // we may be re-entrantly called, which will cause us to buffer new parts. To make that safe, we
+            // must ensure we aren't holding the buffer mutably, so no for loop for us.
+            context.fireChannelRead(self.wrapInboundOut(data))
+            context.fireChannelRead(self.wrapInboundOut(.end(nil)))
+
+            while self.receivedMessages.count > 0 {
+                let bufferedPart = self.receivedMessages.removeFirst()
+                context.fireChannelRead(bufferedPart)
+            }
+        }
+
+        context.fireChannelReadComplete()
+
+        // Ok, we've delivered all the parts. We can now remove ourselves, which should happen synchronously.
         context.pipeline.removeHandler(context: context, promise: nil)
     }
 
@@ -251,5 +316,28 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
 
         return .andAllSucceed(self.extraHTTPHandlers.map { context.pipeline.removeHandler($0) },
                               on: context.eventLoop)
+    }
+}
+
+extension HTTPServerUpgradeHandler {
+    /// The state of the upgrade handler.
+    private enum UpgradeState {
+        /// Awaiting some activity.
+        case idle
+
+        /// The request head has been received. We're currently running the future chain awaiting an upgrader.
+        case awaitingUpgrader
+
+        /// We have an upgrader, which means we can begin upgrade.
+        case upgraderReady(() -> Void)
+
+        /// The upgrade is in process.
+        case upgrading
+
+        /// The upgrade has failed, and we are being removed from the pipeline.
+        case upgradeFailed
+
+        /// The upgrade has succeeded, and we are being removed from the pipeline.
+        case upgradeComplete
     }
 }

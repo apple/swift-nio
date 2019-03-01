@@ -29,6 +29,7 @@ extension EndToEndTests {
                 ("testBasicUpgradeDance", testBasicUpgradeDance),
                 ("testUpgradeWithProtocolName", testUpgradeWithProtocolName),
                 ("testCanRejectUpgrade", testCanRejectUpgrade),
+                ("testCanDelayAcceptingUpgrade", testCanDelayAcceptingUpgrade),
                 ("testRequiresVersion13", testRequiresVersion13),
                 ("testRequiresVersionHeader", testRequiresVersionHeader),
                 ("testRequiresKeyHeader", testRequiresKeyHeader),

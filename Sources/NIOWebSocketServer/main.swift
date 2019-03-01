@@ -202,7 +202,7 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
 
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
-let upgrader = WebSocketUpgrader(shouldUpgrade: { (head: HTTPRequestHead) in HTTPHeaders() },
+let upgrader = WebSocketUpgrader(shouldUpgrade: { (channel: Channel, head: HTTPRequestHead) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
                                  upgradePipelineHandler: { (channel: Channel, _: HTTPRequestHead) in
                                     channel.pipeline.addHandler(WebSocketTimeHandler())
                                  })
