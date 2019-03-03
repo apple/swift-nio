@@ -41,10 +41,8 @@ var targets: [PackageDescription.Target] = [
             dependencies: ["NIO", "NIOHTTP1", "NIOConcurrencyHelpers"]),
     .target(name: "CNIOHTTPParser"),
     .target(name: "CNIOZlib",
-            dependencies: [],
-            linkerSettings: [
-                .linkedLibrary("z")
-            ]),
+            dependencies: ["CZlib"]),
+    .target(name: "CZlib"),
     .target(name: "NIOTLS", dependencies: ["NIO"]),
     .target(name: "NIOChatServer",
             dependencies: ["NIO", "NIOConcurrencyHelpers"]),
