@@ -88,6 +88,7 @@ let package = Package(
         .library(name: "NIOConcurrencyHelpers", targets: ["NIOConcurrencyHelpers"]),
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
+        .library(name: "CZlib", type: .static, targets: ["CZlib"]),
     ],
     dependencies: [
     ],
