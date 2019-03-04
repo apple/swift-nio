@@ -2,6 +2,7 @@
 
 - renamed all instances of `ctx` to `context`. Your `ChannelHandler` methods now
   need to take a `context` parameter and no longer `ctx`. Example: `func channelRead(context: ChannelHandlerContext, data: NIOAny)`
+- `HTTPResponseCompressor` moved to [`swift-nio-extras`](https://github.com/apple/swift-nio-extras).
 - removed all previously deprecated functions, types and modules.
 - renamed `SniResult` to `SNIResult`
 - renamed `SniHandler` to `SNIHandler`
@@ -20,6 +21,7 @@
   `SocketAddress.newAddressResolving(host:port:)`
 - changed all ports to `Int` (from `UInt16`)
 - changed `HTTPVersion`'s `major` and `minor` properties to `Int` (from `UInt16`)
+- `NIOWebSocketUpgradeError` is now a `struct` rather than an `enum`
 - renamed the generic parameter name to `Bytes` where we're talking about a
   generic collection of bytes
 - Moved error `ChannelLifecycleError.inappropriateOperationForState` to `ChannelError.inappropriateOperationForState`.
@@ -35,7 +37,7 @@
 - `ChannelOption.OptionType` has been renamed `ChannelOption.Value`
 - the default `ChannelOption`s have been switched changed from `case FooOption { case const }` to a `struct FooOption { public init() {} }`
 - `markedElementIndex()`, `markedElement()` and `hasMark()` are now computed variables instead of functions.
-- `ByteBuffer.set(string:at:)` no longer returns an `Int?`, instead it
+- `ByteBuffer.setString(_:at:)` (used to be `set(string:at:)`) no longer returns an `Int?`, instead it
   returns `Int` and has had its return value made discardable.
 - `ByteBuffer.write(string:)` (now named `ByteBuffer.writeString(_:)`) no longer returns an `Int?`, instead it
   returns `Int` and has had its return value made discardable.
@@ -70,3 +72,5 @@
 - change `ChannelPipeline.addHandler[s](_:first:)` to  `ChannelPipeline.addHandler(_:postion:)` where `position` can be `.first`, `.last`, `.before(ChannelHandler)`, and `.after(ChannelHandler)`
 - change  `ChannelPipeline.addHandler(_:before:)` to  `ChannelPipeline.addHandler(_:postion:)` where `position` can be `.first`, `.last`, `.before(ChannelHandler)`, and `.after(ChannelHandler)`
 - change  `ChannelPipeline.addHandler(_:after:)` to  `ChannelPipeline.addHandler(_:postion:)` where `position` can be `.first`, `.last`, `.before(ChannelHandler)`, and `.after(ChannelHandler)`
+- Change `HTTPServerProtocolUpgrader` `protocol` to require `buildUpgradeResponse` to take a `channel` and return an `EventLoopFuture<HTTPHeaders>`.
+

@@ -22,7 +22,7 @@ class HTTPDecoderTest: XCTestCase {
 
     override func setUp() {
         self.channel = EmbeddedChannel()
-        self.loop = (channel.eventLoop as! EmbeddedEventLoop)
+        self.loop = channel.embeddedEventLoop
     }
 
     override func tearDown() {
@@ -382,7 +382,7 @@ class HTTPDecoderTest: XCTestCase {
         buffer.writeStaticString("\r\nGET / HTTP/1.1\r\nHost: example.com\r\n\r\n")
         try channel.writeInbound(buffer)
 
-        let message: HTTPServerRequestPart? = self.channel.readInbound()
+        let message: HTTPServerRequestPart? = try self.channel.readInbound()
         guard case .some(.head(let head)) = message else {
             XCTFail("Invalid message: \(String(describing: message))")
             return
@@ -393,7 +393,7 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertEqual(head.version, .init(major: 1, minor: 1))
         XCTAssertEqual(head.headers, HTTPHeaders([("Host", "example.com")]))
 
-        let secondMessage: HTTPServerRequestPart? = self.channel.readInbound()
+        let secondMessage: HTTPServerRequestPart? = try self.channel.readInbound()
         guard case .some(.end(.none)) = secondMessage else {
             XCTFail("Invalid second message: \(String(describing: secondMessage))")
             return
@@ -411,7 +411,7 @@ class HTTPDecoderTest: XCTestCase {
         buffer.writeStaticString("SOURCE / HTTP/1.1\r\nHost: example.com\r\n\r\n")
         try channel.writeInbound(buffer)
 
-        let message: HTTPServerRequestPart? = self.channel.readInbound()
+        let message: HTTPServerRequestPart? = try self.channel.readInbound()
         guard case .some(.head(let head)) = message else {
             XCTFail("Invalid message: \(String(describing: message))")
             return
@@ -422,7 +422,7 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertEqual(head.version, .init(major: 1, minor: 1))
         XCTAssertEqual(head.headers, HTTPHeaders([("Host", "example.com")]))
 
-        let secondMessage: HTTPServerRequestPart? = self.channel.readInbound()
+        let secondMessage: HTTPServerRequestPart? = try self.channel.readInbound()
         guard case .some(.end(.none)) = secondMessage else {
             XCTFail("Invalid second message: \(String(describing: secondMessage))")
             return
@@ -442,7 +442,7 @@ class HTTPDecoderTest: XCTestCase {
         buffer.writeStaticString("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n")
         try channel.writeInbound(buffer)
 
-        let message: HTTPServerRequestPart? = self.channel.readInbound()
+        let message: HTTPServerRequestPart? = try self.channel.readInbound()
         guard case .some(.head(let head)) = message else {
             XCTFail("Invalid message: \(String(describing: message))")
             return
@@ -453,7 +453,7 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertEqual(head.version, .init(major: 1, minor: 1))
         XCTAssertEqual(head.headers, HTTPHeaders([("Host", "example.com")]))
 
-        let secondMessage: HTTPServerRequestPart? = self.channel.readInbound()
+        let secondMessage: HTTPServerRequestPart? = try self.channel.readInbound()
         guard case .some(.end(.none)) = secondMessage else {
             XCTFail("Invalid second message: \(String(describing: secondMessage))")
             return

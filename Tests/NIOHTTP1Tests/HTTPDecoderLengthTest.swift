@@ -54,7 +54,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
     override func setUp() {
         self.channel = EmbeddedChannel()
-        self.loop = (channel.eventLoop as! EmbeddedEventLoop)
+        self.loop = channel.embeddedEventLoop
     }
 
     override func tearDown() {
@@ -133,7 +133,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Prime the decoder with a GET and consume it.
         XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: version, method: .GET, uri: "/"))))
-        XCTAssertNotNil(channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
 
         // We now want to send a HTTP/1.1 response. This response has no content-length, no transfer-encoding,
         // is not a response to a HEAD request, is not a 2XX response to CONNECT, and is not 1XX, 204, or 304.
@@ -198,7 +198,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1),
                                                                                            method: requestMethod,
                                                                                            uri: "/"))))
-        XCTAssertNotNil(channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
 
         // We now want to send a HTTP/1.1 response. This response may contain some length framing fields that RFC 7230 says MUST
         // be ignored.
@@ -337,7 +337,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1),
                                                                                            method: .GET,
                                                                                            uri: "/"))))
-        XCTAssertNotNil(channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
 
         // Send a 200 with the appropriate Transfer Encoding header. We should see the request,
         // but no body or end.
@@ -412,7 +412,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Must spin the loop.
         XCTAssertFalse(channel.isActive)
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
     }
 
     func testResponseWithTEAndContentLengthErrors() throws {
@@ -436,7 +436,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Must spin the loop.
         XCTAssertFalse(channel.isActive)
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
     }
 
     private func assertRequestWithInvalidCLErrors(contentLengthField: String) throws {
@@ -456,7 +456,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Must spin the loop.
         XCTAssertFalse(channel.isActive)
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
     }
 
     func testRequestWithMultipleDifferentContentLengthsFails() throws {
@@ -489,7 +489,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Must spin the loop.
         XCTAssertFalse(channel.isActive)
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
     }
 
     func testRequestWithMultipleIdenticalContentLengthFieldsErrors() throws {
@@ -508,7 +508,7 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Must spin the loop.
         XCTAssertFalse(channel.isActive)
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
     }
 
     func testRequestWithoutExplicitLengthIsZeroLength() throws {

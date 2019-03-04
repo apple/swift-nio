@@ -23,9 +23,9 @@ class EmbeddedChannelTest: XCTestCase {
         
         XCTAssertTrue(try channel.writeOutbound(buf))
         XCTAssertTrue(try channel.finish())
-        XCTAssertEqual(buf, channel.readOutbound())
-        XCTAssertNil(channel.readOutbound())
-        XCTAssertNil(channel.readInbound())
+        XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readOutbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
     }
 
     func testWriteInboundByteBuffer() throws {
@@ -35,9 +35,9 @@ class EmbeddedChannelTest: XCTestCase {
 
         XCTAssertTrue(try channel.writeInbound(buf))
         XCTAssertTrue(try channel.finish())
-        XCTAssertEqual(buf, channel.readInbound())
-        XCTAssertNil(channel.readInbound())
-        XCTAssertNil(channel.readOutbound())
+        XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
     }
 
     func testWriteInboundByteBufferReThrow() throws {
@@ -184,10 +184,10 @@ class EmbeddedChannelTest: XCTestCase {
         var buf = ByteBufferAllocator().buffer(capacity: 1)
         buf.writeBytes([1])
         let writeFuture = channel.write(buf)
-        XCTAssertNil(channel.readOutbound())
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertFalse(writeFuture.isFulfilled)
         channel.flush()
-        XCTAssertNotNil(channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
         XCTAssertTrue(writeFuture.isFulfilled)
         XCTAssertNoThrow(try XCTAssertFalse(channel.finish()))
     }
