@@ -281,14 +281,14 @@ class SNIHandlerTest: XCTestCase {
             try channel.writeInbound(writeableData)
             loop.run()
 
-            XCTAssertNil(channel.readInbound())
+            XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
             try channel.pipeline.assertContains(handler: handler)
         }
 
         // The callback should now have fired, but the handler should still not have
         // sent on any data and should still be in the pipeline.
         XCTAssertTrue(called)
-        XCTAssertNil(channel.readInbound())
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
         try channel.pipeline.assertContains(handler: handler)
 
         // Now we're going to complete the promise and run the loop. This should cause the complete
@@ -296,7 +296,7 @@ class SNIHandlerTest: XCTestCase {
         continuePromise.succeed(())
         loop.run()
 
-        let writtenBuffer: ByteBuffer = channel.readInbound() ?? channel.allocator.buffer(capacity: 0)
+        let writtenBuffer: ByteBuffer = try channel.readInbound() ?? channel.allocator.buffer(capacity: 0)
         let writtenData = writtenBuffer.getData(at: writtenBuffer.readerIndex, length: writtenBuffer.readableBytes)
         let expectedData = Data(base64Encoded: clientHello, options: .ignoreUnknownCharacters)!
         XCTAssertEqual(writtenData, expectedData)
@@ -330,7 +330,7 @@ class SNIHandlerTest: XCTestCase {
         // The callback should have fired, but the handler should not have
         // sent on any data and should still be in the pipeline.
         XCTAssertTrue(called)
-        XCTAssertNil(channel.readInbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound(as: ByteBuffer.self)))
         try channel.pipeline.assertContains(handler: handler)
 
         // Now we're going to complete the promise and run the loop. This should cause the complete
@@ -338,7 +338,7 @@ class SNIHandlerTest: XCTestCase {
         continuePromise.succeed(())
         loop.run()
 
-        let writtenBuffer: ByteBuffer? = channel.readInbound()
+        let writtenBuffer: ByteBuffer? = try channel.readInbound()
         if let writtenBuffer = writtenBuffer {
             let writtenData = writtenBuffer.getData(at: writtenBuffer.readerIndex, length: writtenBuffer.readableBytes)
             let expectedData = Data(base64Encoded: clientHello, options: .ignoreUnknownCharacters)!
@@ -369,7 +369,7 @@ class SNIHandlerTest: XCTestCase {
 
         // The callback should not have fired, the handler should still be in the pipeline,
         // and no data should have been written.
-        XCTAssertNil(channel.readInbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound(as: ByteBuffer.self)))
         try channel.pipeline.assertContains(handler: handler)
 
         XCTAssertNoThrow(try channel.finish())

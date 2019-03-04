@@ -199,7 +199,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         clientChannel.write(NIOAny(HTTPClientRequestPart.head(requestHead)), promise: nil)
         clientChannel.write(NIOAny(HTTPClientRequestPart.end(nil)), promise: nil)
 
-        while let b = channel.readOutbound(as: ByteBuffer.self) {
+        while let b = try channel.readOutbound(as: ByteBuffer.self) {
             try clientChannel.writeInbound(b)
         }
 
@@ -207,7 +207,7 @@ class HTTPResponseCompressorTest: XCTestCase {
         // the last, which is the end.
         var head: HTTPResponseHead? = nil
         var dataChunks = [ByteBuffer]()
-        loop: while let responsePart: HTTPClientResponsePart = clientChannel.readInbound() {
+        loop: while let responsePart: HTTPClientResponsePart = try clientChannel.readInbound() {
             switch responsePart {
             case .head(let h):
                 precondition(head == nil)

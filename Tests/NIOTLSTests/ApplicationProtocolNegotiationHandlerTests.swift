@@ -109,7 +109,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         // The data we write should not be buffered.
         try channel.writeInbound("hello")
-        XCTAssertEqual(channel.readInbound()!, "hello")
+        XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "hello"))
 
         XCTAssertFalse(try channel.finish())
     }
@@ -132,15 +132,15 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.writeInbound("writes")
         try channel.writeInbound("are")
         try channel.writeInbound("buffered")
-        XCTAssertNil(channel.readInbound())
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
         // Complete the pipeline swap.
         continuePromise.succeed(())
 
         // Now everything should have been unbuffered.
-        XCTAssertEqual(channel.readInbound()!, "writes")
-        XCTAssertEqual(channel.readInbound()!, "are")
-        XCTAssertEqual(channel.readInbound()!, "buffered")
+        XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "writes"))
+        XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "are"))
+        XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "buffered"))
 
         XCTAssertFalse(try channel.finish())
     }
@@ -196,7 +196,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         // Now satisfy the future, which forces data unbuffering. This should fire readComplete.
         continuePromise.succeed(())
-        XCTAssertEqual(channel.readInbound()!, "a write")
+        XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "a write"))
 
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 2)
 
