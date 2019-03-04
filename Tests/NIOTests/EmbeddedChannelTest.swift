@@ -64,6 +64,32 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertFalse(try channel.finish())
     }
 
+    func testReadOutboundWrongTypeThrows() throws {
+        let channel = EmbeddedChannel()
+        XCTAssertTrue(try channel.writeOutbound("hello"))
+        do {
+            _ = try channel.readOutbound(as: Int.self)
+            XCTFail()
+        } catch let error as EmbeddedChannel.WrongTypeError {
+            XCTAssertFalse(error.expected == error.actual)
+        } catch {
+            XCTFail()
+        }
+    }
+
+    func testReadInboundWrongTypeThrows() throws {
+        let channel = EmbeddedChannel()
+        XCTAssertTrue(try channel.writeInbound("hello"))
+        do {
+            _ = try channel.readInbound(as: Int.self)
+            XCTFail()
+        } catch let error as EmbeddedChannel.WrongTypeError {
+            XCTAssertFalse(error.expected == error.actual)
+        } catch {
+            XCTFail()
+        }
+    }
+
     func testCloseMultipleTimesThrows() throws {
         let channel = EmbeddedChannel()
         XCTAssertFalse(try channel.finish())
