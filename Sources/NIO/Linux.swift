@@ -23,7 +23,7 @@ internal enum TimerFd {
 
     @inline(never)
     public static func timerfd_settime(fd: Int32, flags: Int32, newValue: UnsafePointer<itimerspec>, oldValue: UnsafeMutablePointer<itimerspec>?) throws  {
-        _ = try wrapSyscall {
+        try wrapSyscall {
             CNIOLinux.timerfd_settime(fd, flags, newValue, oldValue)
         }
     }
@@ -65,16 +65,29 @@ internal enum EventFd {
 
 internal enum Epoll {
     public typealias epoll_event = CNIOLinux.epoll_event
-    public static let EPOLL_CTL_ADD = CNIOLinux.EPOLL_CTL_ADD
-    public static let EPOLL_CTL_MOD = CNIOLinux.EPOLL_CTL_MOD
-    public static let EPOLL_CTL_DEL = CNIOLinux.EPOLL_CTL_DEL
-    public static let EPOLLIN = CNIOLinux.EPOLLIN
-    public static let EPOLLOUT = CNIOLinux.EPOLLOUT
-    public static let EPOLLERR = CNIOLinux.EPOLLERR
-    public static let EPOLLRDHUP = CNIOLinux.EPOLLRDHUP
-    public static let EPOLLHUP = CNIOLinux.EPOLLHUP
-    public static let EPOLLET = CNIOLinux.EPOLLET
-    public static let ENOENT = CNIOLinux.ENOENT
+
+    public static let EPOLL_CTL_ADD: CInt = numericCast(CNIOLinux.EPOLL_CTL_ADD)
+    public static let EPOLL_CTL_MOD: CInt = numericCast(CNIOLinux.EPOLL_CTL_MOD)
+    public static let EPOLL_CTL_DEL: CInt = numericCast(CNIOLinux.EPOLL_CTL_DEL)
+
+    #if os(Android)
+    public static let EPOLLIN: CUnsignedInt = numericCast(CNIOLinux.EPOLLIN)
+    public static let EPOLLOUT: CUnsignedInt = numericCast(CNIOLinux.EPOLLOUT)
+    public static let EPOLLERR: CUnsignedInt = numericCast(CNIOLinux.EPOLLERR)
+    public static let EPOLLRDHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLRDHUP)
+    public static let EPOLLHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLHUP)
+    public static let EPOLLET: CUnsignedInt = numericCast(CNIOLinux.EPOLLET)
+    #else
+    public static let EPOLLIN: CUnsignedInt = numericCast(CNIOLinux.EPOLLIN.rawValue)
+    public static let EPOLLOUT: CUnsignedInt = numericCast(CNIOLinux.EPOLLOUT.rawValue)
+    public static let EPOLLERR: CUnsignedInt = numericCast(CNIOLinux.EPOLLERR.rawValue)
+    public static let EPOLLRDHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLRDHUP.rawValue)
+    public static let EPOLLHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLHUP.rawValue)
+    public static let EPOLLET: CUnsignedInt = numericCast(CNIOLinux.EPOLLET.rawValue)
+    #endif
+
+    public static let ENOENT: CUnsignedInt = numericCast(CNIOLinux.ENOENT)
+
 
     @inline(never)
     public static func epoll_create(size: Int32) throws -> Int32 {
@@ -84,6 +97,7 @@ internal enum Epoll {
     }
 
     @inline(never)
+    @discardableResult
     public static func epoll_ctl(epfd: Int32, op: Int32, fd: Int32, event: UnsafeMutablePointer<epoll_event>) throws -> Int32 {
         return try wrapSyscall {
             CNIOLinux.epoll_ctl(epfd, op, fd, event)
@@ -99,9 +113,13 @@ internal enum Epoll {
 }
 
 internal enum Linux {
-    static let SOCK_CLOEXEC = Int32(bitPattern: Glibc.SOCK_CLOEXEC.rawValue)
-    static let SOCK_NONBLOCK = Int32(bitPattern: Glibc.SOCK_NONBLOCK.rawValue)
-
+#if os(Android)
+    static let SOCK_CLOEXEC = Glibc.SOCK_CLOEXEC
+    static let SOCK_NONBLOCK = Glibc.SOCK_NONBLOCK
+#else
+    static let SOCK_CLOEXEC = CInt(bitPattern: Glibc.SOCK_CLOEXEC.rawValue)
+    static let SOCK_NONBLOCK = CInt(bitPattern: Glibc.SOCK_NONBLOCK.rawValue)
+#endif
     @inline(never)
     public static func accept4(descriptor: CInt, addr: UnsafeMutablePointer<sockaddr>, len: UnsafeMutablePointer<socklen_t>, flags: Int32) throws -> CInt? {
         let result: IOResult<CInt> = try wrapSyscallMayBlock {

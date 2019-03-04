@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
+import CNIOLinux
+
 public enum SocketAddressError: Error {
     /// The host is unknown (could not be resolved).
     case unknown(host: String, port: Int)
@@ -84,14 +86,16 @@ public enum SocketAddress: CustomStringConvertible {
             host = addr.host.isEmpty ? nil : addr.host
             type = "IPv4"
             var mutAddr = addr.address.sin_addr
-            addressString = descriptionForAddress(family: AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            addressString = try! descriptionForAddress(family: AF_INET, bytes: &mutAddr, length: Int(INET_ADDRSTRLEN))
 
             port = "\(self.port!)"
         case .v6(let addr):
             host = addr.host.isEmpty ? nil : addr.host
             type = "IPv6"
             var mutAddr = addr.address.sin6_addr
-            addressString = descriptionForAddress(family: AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
+            // this uses inet_ntop which is documented to only fail if family is not AF_INET or AF_INET6 (or ENOSPC)
+            addressString = try! descriptionForAddress(family: AF_INET6, bytes: &mutAddr, length: Int(INET6_ADDRSTRLEN))
     
             port = "\(self.port!)"
         case .unixDomainSocket(let addr):
@@ -122,12 +126,14 @@ public enum SocketAddress: CustomStringConvertible {
     }
 
     /// Get the port associated with the address, if defined.
-    public var port: UInt16? {
+    public var port: Int? {
         switch self {
         case .v4(let addr):
-            return UInt16(bigEndian: addr.address.sin_port)
+            // looks odd but we need to first convert the endianness as `in_port_t` and then make the result an `Int`.
+            return Int(in_port_t(bigEndian: addr.address.sin_port))
         case .v6(let addr):
-            return UInt16(bigEndian: addr.address.sin6_port)
+            // looks odd but we need to first convert the endianness as `in_port_t` and then make the result an `Int`.
+            return Int(in_port_t(bigEndian: addr.address.sin6_port))
         case .unixDomainSocket:
             return nil
         }
@@ -152,8 +158,8 @@ public enum SocketAddress: CustomStringConvertible {
     /// Creates a new IPv4 `SocketAddress`.
     ///
     /// - parameters:
-    ///       - addr: the `sockaddr_in` that holds the ipaddress and port.
-    ///       - host: the hostname that resolved to the ipaddress.
+    ///     - addr: the `sockaddr_in` that holds the ipaddress and port.
+    ///     - host: the hostname that resolved to the ipaddress.
     public init(_ addr: sockaddr_in, host: String) {
         self = .v4(.init(address: addr, host: host))
     }
@@ -161,8 +167,8 @@ public enum SocketAddress: CustomStringConvertible {
     /// Creates a new IPv6 `SocketAddress`.
     ///
     /// - parameters:
-    ///       - addr: the `sockaddr_in` that holds the ipaddress and port.
-    ///       - host: the hostname that resolved to the ipaddress.
+    ///     - addr: the `sockaddr_in` that holds the ipaddress and port.
+    ///     - host: the hostname that resolved to the ipaddress.
     public init(_ addr: sockaddr_in6, host: String) {
         self = .v6(.init(address: addr, host: host))
     }
@@ -170,7 +176,7 @@ public enum SocketAddress: CustomStringConvertible {
     /// Creates a new Unix Domain Socket `SocketAddress`.
     ///
     /// - parameters:
-    ///       - addr: the `sockaddr_un` that holds the socket path.
+    ///     - addr: the `sockaddr_un` that holds the socket path.
     public init(_ addr: sockaddr_un) {
         self = .unixDomainSocket(.init(address: addr))
     }
@@ -186,7 +192,11 @@ public enum SocketAddress: CustomStringConvertible {
             throw SocketAddressError.unixDomainSocketPathTooLong
         }
 
+#if os(Android) // in Android first byte must be zero to use abstract namespace
+        let pathBytes = [0] + Array(unixDomainSocketPath.utf8) + [0]
+#else
         let pathBytes = unixDomainSocketPath.utf8 + [0]
+#endif
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
@@ -208,7 +218,7 @@ public enum SocketAddress: CustomStringConvertible {
     ///     - port: The target port.
     /// - returns: the `SocketAddress` corresponding to this string and port combination.
     /// - throws: may throw `SocketAddressError.failedToParseIPString` if the IP address cannot be parsed.
-    public init(ipAddress: String, port: UInt16) throws {
+    public init(ipAddress: String, port: Int) throws {
         var ipv4Addr = in_addr()
         var ipv6Addr = in6_addr()
 
@@ -216,13 +226,13 @@ public enum SocketAddress: CustomStringConvertible {
             if inet_pton(AF_INET, $0, &ipv4Addr) == 1 {
                 var addr = sockaddr_in()
                 addr.sin_family = sa_family_t(AF_INET)
-                addr.sin_port = port.bigEndian
+                addr.sin_port = in_port_t(port).bigEndian
                 addr.sin_addr = ipv4Addr
                 return .v4(.init(address: addr, host: ""))
             } else if inet_pton(AF_INET6, $0, &ipv6Addr) == 1 {
                 var addr = sockaddr_in6()
                 addr.sin6_family = sa_family_t(AF_INET6)
-                addr.sin6_port = port.bigEndian
+                addr.sin6_port = in_port_t(port).bigEndian
                 addr.sin6_flowinfo = 0
                 addr.sin6_addr = ipv6Addr
                 addr.sin6_scope_id = 0
@@ -236,11 +246,11 @@ public enum SocketAddress: CustomStringConvertible {
     /// Creates a new `SocketAddress` for the given host (which will be resolved) and port.
     ///
     /// - parameters:
-    ///       - host: the hostname which should be resolved.
-    ///       - port: the port itself
+    ///     - host: the hostname which should be resolved.
+    ///     - port: the port itself
     /// - returns: the `SocketAddress` for the host / port pair.
     /// - throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
-    public static func newAddressResolving(host: String, port: Int) throws -> SocketAddress {
+    public static func makeAddressResolvingHost(_ host: String, port: Int) throws -> SocketAddress {
         var info: UnsafeMutablePointer<addrinfo>?
 
         /* FIXME: this is blocking! */
@@ -304,6 +314,32 @@ extension SocketAddress: Equatable {
             return memcmp(&sunpath1, &sunpath2, MemoryLayout.size(ofValue: sunpath1)) == 0
         case (.v4, _), (.v6, _), (.unixDomainSocket, _):
             return false
+        }
+    }
+}
+
+
+extension SocketAddress {
+    /// Whether this `SocketAddress` corresponds to a multicast address.
+    public var isMulticast: Bool {
+        switch self {
+        case .unixDomainSocket:
+            // No multicast on unix sockets.
+            return false
+        case .v4(let v4Addr):
+            // For IPv4 a multicast address is in the range 224.0.0.0/4.
+            // The easy way to check if this is the case is to just mask off
+            // the address.
+            let v4WireAddress = v4Addr.address.sin_addr.s_addr
+            let mask = in_addr_t(0xF000_0000 as UInt32).bigEndian
+            let subnet = in_addr_t(0xE000_0000 as UInt32).bigEndian
+            return v4WireAddress & mask == subnet
+        case .v6(let v6Addr):
+            // For IPv6 a multicast address is in the range ff00::/8.
+            // Here we don't need a bitmask, as all the top bits are set,
+            // so we can just ask for equality on the top byte.
+            var v6WireAddress = v6Addr.address.sin6_addr
+            return withUnsafeBytes(of: &v6WireAddress) { $0[0] == 0xff }
         }
     }
 }

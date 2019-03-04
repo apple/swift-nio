@@ -12,27 +12,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Dispatch
 import XCTest
-
 @testable import NIO
 
-func withPipe(_ body: (NIO.FileHandle, NIO.FileHandle) -> [NIO.FileHandle]) throws {
+func withPipe(_ body: (NIO.NIOFileHandle, NIO.NIOFileHandle) -> [NIO.NIOFileHandle]) throws {
     var fds: [Int32] = [-1, -1]
     fds.withUnsafeMutableBufferPointer { ptr in
         XCTAssertEqual(0, pipe(ptr.baseAddress!))
     }
-    let readFH = FileHandle(descriptor: fds[0])
-    let writeFH = FileHandle(descriptor: fds[1])
+    let readFH = NIOFileHandle(descriptor: fds[0])
+    let writeFH = NIOFileHandle(descriptor: fds[1])
     let toClose = body(readFH, writeFH)
     try toClose.forEach { fh in
         XCTAssertNoThrow(try fh.close())
     }
 }
 
-func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.FileHandle, String) throws -> T) rethrows -> T {
+func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.NIOFileHandle, String) throws -> T) rethrows -> T {
     let (fd, path) = openTemporaryFile()
-    let fileHandle = FileHandle(descriptor: fd)
+    let fileHandle = NIOFileHandle(descriptor: fd)
     defer {
         XCTAssertNoThrow(try fileHandle.close())
         XCTAssertEqual(0, unlink(path))
@@ -57,9 +55,24 @@ func withTemporaryFile<T>(content: String? = nil, _ body: (NIO.FileHandle, Strin
     }
     return try body(fileHandle, path)
 }
-
+var temporaryDirectory: String {
+    get {
+#if os(Android)
+        return "/data/local/tmp"
+#elseif os(Linux)
+        return "/tmp"
+#else
+        if #available(OSX 10.12, *) {
+            return FileManager.default.temporaryDirectory.path
+        } else {
+            return "/tmp"
+        }
+#endif
+    }
+}
 func createTemporaryDirectory() -> String {
-    let template = "/tmp/.NIOTests-temp-dir_XXXXXX"
+    let template = "\(temporaryDirectory)/.NIOTests-temp-dir_XXXXXX"
+
     var templateBytes = template.utf8 + [0]
     let templateBytesCount = templateBytes.count
     templateBytes.withUnsafeMutableBufferPointer { ptr in
@@ -69,11 +82,11 @@ func createTemporaryDirectory() -> String {
         }
     }
     templateBytes.removeLast()
-    return String(decoding: templateBytes, as: UTF8.self)
+    return String(decoding: templateBytes, as: Unicode.UTF8.self)
 }
 
 func openTemporaryFile() -> (CInt, String) {
-    let template = "/tmp/niotestXXXXXXX"
+    let template = "\(temporaryDirectory)/niotestXXXXXXX"
     var templateBytes = template.utf8 + [0]
     let templateBytesCount = templateBytes.count
     let fd = templateBytes.withUnsafeMutableBufferPointer { ptr in
@@ -82,10 +95,10 @@ func openTemporaryFile() -> (CInt, String) {
         }
     }
     templateBytes.removeLast()
-    return (fd, String(decoding: templateBytes, as: UTF8.self))
+    return (fd, String(decoding: templateBytes, as: Unicode.UTF8.self))
 }
 
-internal extension Channel {
+extension Channel {
     func syncCloseAcceptingAlreadyClosed() throws {
         do {
             try self.close().wait()
@@ -97,7 +110,7 @@ internal extension Channel {
     }
 }
 
-final class ByteCountingHandler : ChannelInboundHandler {
+final class ByteCountingHandler : ChannelInboundHandler, RemovableChannelHandler {
     typealias InboundIn = ByteBuffer
 
     private let numBytes: Int
@@ -109,19 +122,19 @@ final class ByteCountingHandler : ChannelInboundHandler {
         self.promise = promise
     }
 
-    func handlerAdded(ctx: ChannelHandlerContext) {
-        buffer = ctx.channel.allocator.buffer(capacity: numBytes)
+    func handlerAdded(context: ChannelHandlerContext) {
+        buffer = context.channel.allocator.buffer(capacity: numBytes)
         if self.numBytes == 0 {
-            self.promise.succeed(result: buffer)
+            self.promise.succeed(buffer)
         }
     }
 
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var currentBuffer = self.unwrapInboundIn(data)
-        buffer.write(buffer: &currentBuffer)
+        buffer.writeBuffer(&currentBuffer)
 
         if buffer.readableBytes == numBytes {
-            promise.succeed(result: buffer)
+            promise.succeed(buffer)
         }
     }
 
@@ -149,20 +162,20 @@ final class NonAcceptingServerSocket: ServerSocket {
     }
 }
 
-func assertSetGetOptionOnOpenAndClosed<T: ChannelOption>(channel: Channel, option: T, value: T.OptionType) throws {
-    _ = try channel.setOption(option: option, value: value).wait()
-    _ = try channel.getOption(option: option).wait()
+func assertSetGetOptionOnOpenAndClosed<Option: ChannelOption>(channel: Channel, option: Option, value: Option.Value) throws {
+    _ = try channel.setOption(option, value: value).wait()
+    _ = try channel.getOption(option).wait()
     try channel.close().wait()
     try channel.closeFuture.wait()
 
     do {
-        _ = try channel.setOption(option: option, value: value).wait()
+        _ = try channel.setOption(option, value: value).wait()
     } catch let err as ChannelError where err == .ioOnClosedChannel {
         // expected
     }
 
     do {
-        _ = try channel.getOption(option: option).wait()
+        _ = try channel.getOption(option).wait()
     } catch let err as ChannelError where err == .ioOnClosedChannel {
         // expected
     }
@@ -209,12 +222,12 @@ func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyRece
 
 func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #file, line: UInt = #line) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
-    let endTime = DispatchTime.now().uptimeNanoseconds + UInt64(time.nanoseconds)
+    let endTime = NIODeadline.now() + time
 
     repeat {
         if condition() { return }
         usleep(UInt32(testInterval.nanoseconds / 1000))
-    } while (DispatchTime.now().uptimeNanoseconds < endTime)
+    } while (NIODeadline.now() < endTime)
 
     if !condition() {
         XCTFail(message)
@@ -223,7 +236,7 @@ func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testI
 
 func getBoolSocketOption<IntType: SignedInteger>(channel: Channel, level: IntType, name: SocketOptionName,
                                                  file: StaticString = #file, line: UInt = #line) throws -> Bool {
-    return try assertNoThrowWithValue(channel.getOption(option: ChannelOptions.socket(SocketOptionLevel(level),
+    return try assertNoThrowWithValue(channel.getOption(ChannelOptions.socket(SocketOptionLevel(level),
                                                                                       name)),
                                       file: file,
                                       line: line).wait() != 0

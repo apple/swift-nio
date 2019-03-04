@@ -50,11 +50,6 @@ private extension SocketAddress {
 }
 
 class PendingDatagramWritesManagerTests: XCTestCase {
-    private enum FakeWriteResult {
-        case ok(IOResult<Int>)
-        case error(Error)
-    }
-
     private func withPendingDatagramWritesManager(_ body: (PendingDatagramWritesManager) throws -> Void) rethrows {
         try withExtendedLifetime(NSObject()) { o in
             var iovecs: [IOVector] = Array(repeating: iovec(), count: Socket.writevLimitIOVectors + 1)
@@ -107,7 +102,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                            promises: [EventLoopPromise<Void>],
                                            expectedSingleWritabilities: [(Int, SocketAddress)]?,
                                            expectedVectorWritabilities: [[(Int, SocketAddress)]]?,
-                                           returns: [FakeWriteResult],
+                                           returns: [Result<IOResult<Int>, Error>],
                                            promiseStates: [[Bool]],
                                            file: StaticString = #file,
                                            line: UInt = #line) throws -> OverallWriteResult {
@@ -131,9 +126,9 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                         XCTAssertEqual(expected[singleState].1.expectedSize, len, "in single write \(singleState) (overall \(everythingState)), \(expected[singleState].1.expectedSize) socklen expected but \(len) received", file: file, line: line)
 
                         switch returns[everythingState] {
-                        case .ok(let r):
+                        case .success(let r):
                             return r
-                        case .error(let e):
+                        case .failure(let e):
                             throw e
                         }
                     } else {
@@ -153,7 +148,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                     if expected.count > multiState {
                         XCTAssertGreaterThan(returns.count, everythingState)
                         XCTAssertEqual(ptrs.map { $0.msg_hdr.msg_iovlen }, Array(repeating: 1, count: ptrs.count), "mustn't write more than one iovec element per datagram", file: file, line: line)
-                        XCTAssertEqual(expected[multiState].map { $0.0 }, ptrs.map { $0.msg_hdr.msg_iov.pointee.iov_len },
+                        XCTAssertEqual(expected[multiState].map { numericCast($0.0) }, ptrs.map { $0.msg_hdr.msg_iov.pointee.iov_len },
                                        "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState]) byte counts expected but \(ptrs.map { $0.msg_hdr.msg_iov.pointee.iov_len }) actual",
                                        file: file, line: line)
                         XCTAssertEqual(expected[multiState].map { $0.0 }, ptrs.map { Int($0.msg_len) },
@@ -165,9 +160,9 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                             file:file, line: line)
 
                         switch returns[everythingState] {
-                        case .ok(let r):
+                        case .success(let r):
                             return r
-                        case .error(let e):
+                        case .failure(let e):
                             throw e
                         }
                     } else {
@@ -231,7 +226,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
 
         try withPendingDatagramWritesManager { pwm in
             buffer.clear()
-            let ps: [EventLoopPromise<Void>] = (0..<2).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<2).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
 
             XCTAssertFalse(pwm.isEmpty)
@@ -248,7 +243,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        promises: ps,
                                                        expectedSingleWritabilities: [(0, address)],
                                                        expectedVectorWritabilities: nil,
-                                                       returns: [.ok(.processed(0))],
+                                                       returns: [.success(.processed(0))],
                                                        promiseStates: [[true, false]])
 
             XCTAssertFalse(pwm.isEmpty)
@@ -269,7 +264,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    promises: ps,
                                                    expectedSingleWritabilities: [(0, address)],
                                                    expectedVectorWritabilities: nil,
-                                                   returns: [.ok(.processed(0))],
+                                                   returns: [.success(.processed(0))],
                                                    promiseStates: [[true, true]])
             XCTAssertEqual(.writtenCompletely, result)
         }
@@ -283,10 +278,10 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let secondAddress = try SocketAddress(ipAddress: "127.0.0.2", port: 65535)
         var buffer = alloc.buffer(capacity: 12)
         let emptyBuffer = buffer
-        _ = buffer.write(string: "1234")
+        _ = buffer.writeString("1234")
 
         try withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: firstAddress, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: secondAddress, data: buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -296,7 +291,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        promises: ps,
                                                        expectedSingleWritabilities: nil,
                                                        expectedVectorWritabilities: [[(4, firstAddress), (4, secondAddress)]],
-                                                       returns: [.ok(.processed(2))],
+                                                       returns: [.success(.processed(2))],
                                                        promiseStates: [[true, true, false]])
             XCTAssertEqual(.writtenCompletely, result)
 
@@ -306,7 +301,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    promises: ps,
                                                    expectedSingleWritabilities: [(0, firstAddress)],
                                                    expectedVectorWritabilities: nil,
-                                                   returns: [.ok(.processed(0))],
+                                                   returns: [.success(.processed(0))],
                                                    promiseStates: [[true, true, true]])
             XCTAssertEqual(.writtenCompletely, result)
         }
@@ -319,10 +314,10 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let firstAddress = try SocketAddress(ipAddress: "fe80::1", port: 65535)
         let secondAddress = try SocketAddress(ipAddress: "fe80::2", port: 65535)
         var buffer = alloc.buffer(capacity: 12)
-        _ = buffer.write(string: "1234")
+        buffer.writeString("1234")
 
         try withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0..<4).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<4).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: firstAddress, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: secondAddress, data: buffer), promise: ps[1])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: firstAddress, data: buffer), promise: ps[2])
@@ -336,7 +331,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                             [(4, firstAddress), (4, secondAddress), (4, firstAddress), (4, secondAddress)],
                                                             [(4, secondAddress), (4, firstAddress), (4, secondAddress)]
                                                        ],
-                                                       returns: [.ok(.processed(1)), .ok(.wouldBlock(0))],
+                                                       returns: [.success(.processed(1)), .success(.wouldBlock(0))],
                                                        promiseStates: [[true, false, false, false], [true, false, false, false]])
 
             XCTAssertEqual(.couldNotWriteEverything, result)
@@ -346,7 +341,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    expectedVectorWritabilities: [
                                                         [(4, secondAddress), (4, firstAddress), (4, secondAddress)],
                                                    ],
-                                                   returns: [.ok(.processed(2)), .ok(.wouldBlock(0))],
+                                                   returns: [.success(.processed(2)), .success(.wouldBlock(0))],
                                                    promiseStates: [[true, true, true, false], [true, true, true, false]]
 
             )
@@ -356,7 +351,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    promises: ps,
                                                    expectedSingleWritabilities: [(4, secondAddress)],
                                                    expectedVectorWritabilities: nil,
-                                                   returns: [.ok(.processed(4))],
+                                                   returns: [.success(.processed(4))],
                                                    promiseStates: [[true, true, true, true]])
             XCTAssertEqual(.writtenCompletely, result)
         }
@@ -368,10 +363,10 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
         var buffer = alloc.buffer(capacity: 12)
-        buffer.write(bytes: Array<UInt8>(repeating: 0xff, count: 12))
+        buffer.writeBytes(Array<UInt8>(repeating: 0xff, count: 12))
 
         try withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0...pwm.writeSpinCount+1).map { (_: UInt) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0...pwm.writeSpinCount+1).map { (_: UInt) in el.makePromise() }
             ps.forEach { _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: $0) }
             let maxVectorWritabilities = ps.map { (_: EventLoopPromise<Void>) in (buffer.readableBytes, address) }
             let actualVectorWritabilities = maxVectorWritabilities.indices.dropLast().map { Array(maxVectorWritabilities[$0...]) }
@@ -386,7 +381,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        promises: ps,
                                                        expectedSingleWritabilities: nil,
                                                        expectedVectorWritabilities: Array(actualVectorWritabilities),
-                                                       returns: Array(repeating: .ok(.processed(1)), count: ps.count - 1),
+                                                       returns: Array(repeating: .success(.processed(1)), count: ps.count - 1),
                                                        promiseStates: actualPromiseStates)
             XCTAssertEqual(.couldNotWriteEverything, result)
 
@@ -395,7 +390,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    promises: ps,
                                                    expectedSingleWritabilities: [(12, address)],
                                                    expectedVectorWritabilities: nil,
-                                                   returns: [.ok(.processed(12))],
+                                                   returns: [.success(.processed(12))],
                                                    promiseStates: [Array(repeating: true, count: ps.count - 1) + [true]])
             XCTAssertEqual(.writtenCompletely, result)
         }
@@ -407,10 +402,10 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
         var buffer = alloc.buffer(capacity: 12)
-        _ = buffer.write(string: "1234")
+        buffer.writeString("1234")
 
         try withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -420,13 +415,13 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        promises: ps,
                                                        expectedSingleWritabilities: nil,
                                                        expectedVectorWritabilities: [[(4, address), (4, address)]],
-                                                       returns: [.ok(.wouldBlock(0))],
+                                                       returns: [.success(.wouldBlock(0))],
                                                        promiseStates: [[false, false, false], [false, false, false]])
             XCTAssertEqual(.couldNotWriteEverything, result)
 
             pwm.failAll(error: ChannelError.operationUnsupported, close: true)
 
-            XCTAssertTrue(ps.map { $0.futureResult.isFulfilled }.reduce(true) { $0 && $1 })
+            XCTAssertTrue(ps.map { $0.futureResult.isFulfilled }.allSatisfy { $0 })
         }
     }
 
@@ -445,7 +440,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
 
         try withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             /* add 1.5x the writev limit */
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[1])
@@ -456,7 +451,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        promises: ps,
                                                        expectedSingleWritabilities: [(halfTheWriteVLimit, address)],
                                                        expectedVectorWritabilities: [[(halfTheWriteVLimit, address), (halfTheWriteVLimit, address)]],
-                                                       returns: [.ok(.processed(2)), .ok(.processed(1))],
+                                                       returns: [.success(.processed(2)), .success(.processed(1))],
                                                        promiseStates: [[true, true, false], [true, true, true]])
             XCTAssertEqual(.writtenCompletely, result)
         }
@@ -464,20 +459,24 @@ class PendingDatagramWritesManagerTests: XCTestCase {
 
     /// Test that with a massive buffers (bigger than writev size), we fall back to linear processing.
     func testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk() throws {
+        if MemoryLayout<Int>.size == MemoryLayout<Int32>.size  { // skip this test on 32bit system
+            return
+        }
+
         let el = EmbeddedEventLoop()
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
         let alloc = ByteBufferAllocator(hookedMalloc: { _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
                                         hookedRealloc: { _, _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
                                         hookedFree: { _ in },
                                         hookedMemcpy: { _, _, _ in })
-        /* each buffer is half the writev limit */
+
         let biggerThanWriteV = Socket.writevLimitBytes + 23
         var buffer = alloc.buffer(capacity: biggerThanWriteV)
         buffer.moveReaderIndex(to: 0)
         buffer.moveWriterIndex(to: biggerThanWriteV)
 
         try withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             /* add 1.5x the writev limit */
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
             buffer.moveReaderIndex(to: 100)
@@ -492,9 +491,9 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                                                      (Socket.writevLimitBytes - 77, address)],
                                                        expectedVectorWritabilities: [[(Socket.writevLimitBytes - 77, address)]],
                                                        returns: [
-                                                            .error(IOError(errnoCode: EMSGSIZE, reason: "")),
-                                                            .ok(.processed(1)),
-                                                            .ok(.processed(1))],
+                                                            .failure(IOError(errnoCode: EMSGSIZE, reason: "")),
+                                                            .success(.processed(1)),
+                                                            .success(.processed(1))],
                                                        promiseStates: [[true, false, false], [true, true, false], [true, true, true]])
 
             XCTAssertEqual(.writtenCompletely, result)
@@ -520,7 +519,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
 
         try withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: emptyBuffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: emptyBuffer), promise: ps[1])
             pwm.markFlushCheckpoint()
@@ -530,7 +529,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        promises: ps,
                                                        expectedSingleWritabilities: nil,
                                                        expectedVectorWritabilities: [[(0, address), (0, address)]],
-                                                       returns: [.ok(.processed(2))],
+                                                       returns: [.success(.processed(2))],
                                                        promiseStates: [[true, true, false]])
             XCTAssertEqual(.writtenCompletely, result)
 
@@ -540,7 +539,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    promises: ps,
                                                    expectedSingleWritabilities: [(0, address)],
                                                    expectedVectorWritabilities: nil,
-                                                   returns: [.ok(.processed(0))],
+                                                   returns: [.success(.processed(0))],
                                                    promiseStates: [[true, true, true]])
             XCTAssertEqual(.writtenCompletely, result)
         }
@@ -551,16 +550,16 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
         var buffer = alloc.buffer(capacity: 12)
-        buffer.write(string: "1234")
+        buffer.writeString("1234")
 
         try withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[2])
 
-            ps[0].futureResult.whenComplete {
+            ps[0].futureResult.whenComplete { (_: Result<Void, Error>) in
                 pwm.failAll(error: ChannelError.inputClosed, close: true)
             }
 
@@ -568,7 +567,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        promises: ps,
                                                        expectedSingleWritabilities: nil,
                                                        expectedVectorWritabilities: [[(4, address), (4, address)]],
-                                                       returns: [.ok(.processed(1))],
+                                                       returns: [.success(.processed(1))],
                                                        promiseStates: [[true, true, true]])
             XCTAssertEqual(.writtenCompletely, result)
             XCTAssertNoThrow(try ps[0].futureResult.wait())
@@ -582,10 +581,10 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let alloc = ByteBufferAllocator()
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
         var buffer = alloc.buffer(capacity: 12)
-        buffer.write(string: "1234")
+        buffer.writeString("1234")
 
         try withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0...Socket.writevLimitIOVectors).map { (_: Int) in el.newPromise() }
+            let ps: [EventLoopPromise<Void>] = (0...Socket.writevLimitIOVectors).map { (_: Int) in el.makePromise() }
             ps.forEach { p in
                 _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: p)
             }
@@ -595,7 +594,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                        promises: ps,
                                                        expectedSingleWritabilities: [(4, address)],
                                                        expectedVectorWritabilities: [Array(repeating: (4, address), count: Socket.writevLimitIOVectors)],
-                                                       returns: [.ok(.processed(Socket.writevLimitIOVectors)), .ok(.wouldBlock(0))],
+                                                       returns: [.success(.processed(Socket.writevLimitIOVectors)), .success(.wouldBlock(0))],
                                                        promiseStates: [Array(repeating: true, count: Socket.writevLimitIOVectors) + [false],
                                                                        Array(repeating: true, count: Socket.writevLimitIOVectors) + [false]])
             XCTAssertEqual(.couldNotWriteEverything, result)
@@ -603,7 +602,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    promises: ps,
                                                    expectedSingleWritabilities: [(4, address)],
                                                    expectedVectorWritabilities: nil,
-                                                   returns: [.ok(.processed(4))],
+                                                   returns: [.success(.processed(4))],
                                                    promiseStates: [Array(repeating: true, count: Socket.writevLimitIOVectors + 1)])
             XCTAssertEqual(.writtenCompletely, result)
         }

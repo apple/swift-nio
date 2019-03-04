@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 // The base64 unicode table.
-private let base64Table: [UnicodeScalar] = [
+private let base64Table: [Unicode.Scalar] = [
     "A", "B", "C", "D", "E", "F", "G", "H",
     "I", "J", "K", "L", "M", "N", "O", "P",
     "Q", "R", "S", "T", "U", "V", "W", "X",
@@ -24,7 +24,7 @@ private let base64Table: [UnicodeScalar] = [
     "4", "5", "6", "7", "8", "9", "+", "/",
 ]
 
-internal extension String {
+extension String {
     /// Base64 encode an array of UInt8 to a string, without the use of Foundation.
     ///
     /// This function performs the world's most naive Base64 encoding: no attempts to use a larger
@@ -50,12 +50,12 @@ internal extension String {
         self = outputString
     }
 
-    private static func encode(firstByte: UInt8) -> UnicodeScalar {
+    private static func encode(firstByte: UInt8) -> Unicode.Scalar {
         let index = firstByte >> 2
         return base64Table[Int(index)]
     }
 
-    private static func encode(firstByte: UInt8, secondByte: UInt8?) -> UnicodeScalar {
+    private static func encode(firstByte: UInt8, secondByte: UInt8?) -> Unicode.Scalar {
         var index = (firstByte & 0b00000011) << 4
         if let secondByte = secondByte {
             index += (secondByte & 0b11110000) >> 4
@@ -63,7 +63,7 @@ internal extension String {
         return base64Table[Int(index)]
     }
 
-    private static func encode(secondByte: UInt8?, thirdByte: UInt8?) -> UnicodeScalar {
+    private static func encode(secondByte: UInt8?, thirdByte: UInt8?) -> Unicode.Scalar {
         guard let secondByte = secondByte else {
             // No second byte means we are just emitting padding.
             return "="
@@ -75,7 +75,7 @@ internal extension String {
         return base64Table[Int(index)]
     }
 
-    private static func encode(thirdByte: UInt8?) -> UnicodeScalar {
+    private static func encode(thirdByte: UInt8?) -> Unicode.Scalar {
         guard let thirdByte = thirdByte else {
             // No third byte means just padding.
             return "="

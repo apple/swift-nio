@@ -29,7 +29,7 @@ public enum NIOWebSocketUpgradeError: Error {
 }
 
 fileprivate extension HTTPHeaders {
-    fileprivate func nonListHeader(_ name: String) throws -> String {
+    func nonListHeader(_ name: String) throws -> String {
         let fields = self[canonicalForm: name]
         guard fields.count == 1 else {
             throw NIOWebSocketUpgradeError.invalidUpgradeHeader
@@ -38,7 +38,7 @@ fileprivate extension HTTPHeaders {
     }
 }
 
-/// A `HTTPProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
+/// A `HTTPServerProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
 ///
 /// Users may frequently want to offer multiple websocket endpoints on the same port. For this
 /// reason, this `WebSocketUpgrader` only knows how to do the required parts of the upgrade and to
@@ -48,7 +48,7 @@ fileprivate extension HTTPHeaders {
 ///
 /// This upgrader assumes that the `HTTPServerUpgradeHandler` will appropriately mutate the pipeline to
 /// remove the HTTP `ChannelHandler`s.
-public final class WebSocketUpgrader: HTTPProtocolUpgrader {
+public final class WebSocketUpgrader: HTTPServerProtocolUpgrader {
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"
 
@@ -57,7 +57,7 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
     /// which NIO requires. We check for these manually.
     public let requiredUpgradeHeaders: [String] = []
 
-    private let shouldUpgrade: (HTTPRequestHead) -> HTTPHeaders?
+    private let shouldUpgrade: (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>
     private let upgradePipelineHandler: (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
     private let maxFrameSize: Int
     private let automaticErrorHandling: Bool
@@ -72,13 +72,13 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
     ///         upgraded. This callback is responsible for creating a `HTTPHeaders` object with
     ///         any headers that it needs on the response *except for* the `Upgrade`, `Connection`,
     ///         and `Sec-WebSocket-Accept` headers, which this upgrader will handle. Should return
-    ///         `nil` if the upgrade should be refused.
+    ///         an `EventLoopFuture` containing `nil` if the upgrade should be refused.
     ///     - upgradePipelineHandler: A function that will be called once the upgrade response is
     ///         flushed, and that is expected to mutate the `Channel` appropriately to handle the
     ///         websocket protocol. This only needs to add the user handlers: the
     ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
     ///         pipeline automatically.
-    public convenience init(automaticErrorHandling: Bool = true, shouldUpgrade: @escaping (HTTPRequestHead) -> HTTPHeaders?,
+    public convenience init(automaticErrorHandling: Bool = true, shouldUpgrade: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
                 upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>) {
         self.init(maxFrameSize: 1 << 14, automaticErrorHandling: automaticErrorHandling,
                   shouldUpgrade: shouldUpgrade, upgradePipelineHandler: upgradePipelineHandler)
@@ -99,13 +99,13 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
     ///         upgraded. This callback is responsible for creating a `HTTPHeaders` object with
     ///         any headers that it needs on the response *except for* the `Upgrade`, `Connection`,
     ///         and `Sec-WebSocket-Accept` headers, which this upgrader will handle. Should return
-    ///         `nil` if the upgrade should be refused.
+    ///         an `EventLoopFuture` containing `nil` if the upgrade should be refused.
     ///     - upgradePipelineHandler: A function that will be called once the upgrade response is
     ///         flushed, and that is expected to mutate the `Channel` appropriately to handle the
     ///         websocket protocol. This only needs to add the user handlers: the
     ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
     ///         pipeline automatically.
-    public init(maxFrameSize: Int, automaticErrorHandling: Bool = true, shouldUpgrade: @escaping (HTTPRequestHead) -> HTTPHeaders?,
+    public init(maxFrameSize: Int, automaticErrorHandling: Bool = true, shouldUpgrade: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
                 upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>) {
         precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
         self.shouldUpgrade = shouldUpgrade
@@ -114,49 +114,61 @@ public final class WebSocketUpgrader: HTTPProtocolUpgrader {
         self.automaticErrorHandling = automaticErrorHandling
     }
 
-    public func buildUpgradeResponse(upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) throws -> HTTPHeaders {
-        let key = try upgradeRequest.headers.nonListHeader("Sec-WebSocket-Key")
-        let version = try upgradeRequest.headers.nonListHeader("Sec-WebSocket-Version")
+    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
+        let key: String
+        let version: String
+
+        do {
+            key = try upgradeRequest.headers.nonListHeader("Sec-WebSocket-Key")
+            version = try upgradeRequest.headers.nonListHeader("Sec-WebSocket-Version")
+        } catch {
+            return channel.eventLoop.makeFailedFuture(error)
+        }
 
         // The version must be 13.
         guard version == "13" else {
-            throw NIOWebSocketUpgradeError.invalidUpgradeHeader
+            return channel.eventLoop.makeFailedFuture(NIOWebSocketUpgradeError.invalidUpgradeHeader)
         }
 
-        guard var extraHeaders = self.shouldUpgrade(upgradeRequest) else {
-            throw NIOWebSocketUpgradeError.unsupportedWebSocketTarget
+        return self.shouldUpgrade(channel, upgradeRequest).flatMapThrowing { extraHeaders in
+            guard let extraHeaders = extraHeaders else {
+                throw NIOWebSocketUpgradeError.unsupportedWebSocketTarget
+            }
+            return extraHeaders
+        }.map { (extraHeaders: HTTPHeaders) in
+            var extraHeaders = extraHeaders
+
+            // Cool, we're good to go! Let's do our upgrade. We do this by concatenating the magic
+            // GUID to the base64-encoded key and taking a SHA1 hash of the result.
+            let acceptValue: String
+            do {
+                var hasher = SHA1()
+                hasher.update(string: key)
+                hasher.update(string: magicWebSocketGUID)
+                acceptValue = String(base64Encoding: hasher.finish())
+            }
+
+            extraHeaders.replaceOrAdd(name: "Upgrade", value: "websocket")
+            extraHeaders.add(name: "Sec-WebSocket-Accept", value: acceptValue)
+            extraHeaders.replaceOrAdd(name: "Connection", value: "upgrade")
+
+            return extraHeaders
         }
-
-        // Cool, we're good to go! Let's do our upgrade. We do this by concatenating the magic
-        // GUID to the base64-encoded key and taking a SHA1 hash of the result.
-        let acceptValue: String
-        do {
-            var hasher = SHA1()
-            hasher.update(string: key)
-            hasher.update(string: magicWebSocketGUID)
-            acceptValue = String(base64Encoding: hasher.finish())
-        }
-
-        extraHeaders.replaceOrAdd(name: "Upgrade", value: "websocket")
-        extraHeaders.add(name: "Sec-WebSocket-Accept", value: acceptValue)
-        extraHeaders.replaceOrAdd(name: "Connection", value: "upgrade")
-
-        return extraHeaders
     }
 
-    public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         /// We never use the automatic error handling feature of the WebSocketFrameDecoder: we always use the separate channel
         /// handler.
-        var upgradeFuture = ctx.pipeline.add(handler: WebSocketFrameEncoder()).then {
-            ctx.pipeline.add(handler: WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize, automaticErrorHandling: false))
+        var upgradeFuture = context.pipeline.addHandler(WebSocketFrameEncoder()).flatMap {
+            context.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize, automaticErrorHandling: false)))
         }
 
         if self.automaticErrorHandling {
-            upgradeFuture = upgradeFuture.then { ctx.pipeline.add(handler: WebSocketProtocolErrorHandler())}
+            upgradeFuture = upgradeFuture.flatMap { context.pipeline.addHandler(WebSocketProtocolErrorHandler())}
         }
 
-        return upgradeFuture.then {
-            self.upgradePipelineHandler(ctx.channel, upgradeRequest)
+        return upgradeFuture.flatMap {
+            self.upgradePipelineHandler(context.channel, upgradeRequest)
         }
     }
 }

@@ -16,7 +16,7 @@
 ///
 /// A `ByteBufferView` is useful whenever a `Collection where Element == UInt8` representing a portion of a
 /// `ByteBuffer` is needed.
-public struct ByteBufferView: ContiguousCollection, RandomAccessCollection {
+public struct ByteBufferView: RandomAccessCollection {
     public typealias Element = UInt8
     public typealias Index = Int
     public typealias SubSequence = ByteBufferView
@@ -53,7 +53,7 @@ public struct ByteBufferView: ContiguousCollection, RandomAccessCollection {
         guard position >= self.range.lowerBound && position < self.range.upperBound else {
             preconditionFailure("index \(position) out of range")
         }
-        return self.buffer.getInteger(at: position)!
+        return self.buffer.getInteger(at: position)! // range check above
     }
 
     public subscript(range: Range<Index>) -> ByteBufferView {
@@ -61,7 +61,7 @@ public struct ByteBufferView: ContiguousCollection, RandomAccessCollection {
     }
 }
 
-public extension ByteBuffer {
+extension ByteBuffer {
     /// A view into the readable bytes of the `ByteBuffer`.
     public var readableBytesView: ByteBufferView {
         return ByteBufferView(buffer: self, range: self.readerIndex ..< self.readerIndex + self.readableBytes)

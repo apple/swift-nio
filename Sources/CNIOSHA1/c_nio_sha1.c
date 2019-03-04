@@ -4,6 +4,7 @@
     - removed the _KERNEL include guards
     - defined the __min_size macro inline
     - included sys/types.h in c_nio_sha1.h
+    - included sys/endian.h on Android
 */
 /*	$KAME: sha1.c,v 1.5 2000/11/08 06:13:08 itojun Exp $	*/
 /*-
@@ -51,7 +52,7 @@
 #include <sys/time.h>
 #include <strings.h>
 
-#include "include/c_nio_sha1.h"
+#include "include/CNIOSHA1.h"
 
 /* sanity check */
 #if BYTE_ORDER != BIG_ENDIAN

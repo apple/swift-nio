@@ -46,10 +46,16 @@ public func measure(_ fn: () throws -> Int) rethrows -> [TimeInterval] {
     return measurements
 }
 
+let limitSet = CommandLine.arguments.dropFirst()
+
 public func measureAndPrint(desc: String, fn: () throws -> Int) rethrows -> Void {
-    print("measuring\(warning): \(desc): ", terminator: "")
-    let measurements = try measure(fn)
-    print(measurements.reduce("") { $0 + "\($1), " })
+    if limitSet.count == 0 || limitSet.contains(desc) {
+        print("measuring\(warning): \(desc): ", terminator: "")
+        let measurements = try measure(fn)
+        print(measurements.reduce("") { $0 + "\($1), " })
+    } else {
+        print("skipping '\(desc)', limit set = \(limitSet)")
+    }
 }
 
 // MARK: Utilities
@@ -84,15 +90,15 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
         self.cachedBody = body
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         if case .head(let req) = self.unwrapInboundIn(data) {
             switch req.uri {
             case "/perf-test-1":
-                var buffer = ctx.channel.allocator.buffer(capacity: self.cachedBody.count)
-                buffer.write(bytes: self.cachedBody)
-                ctx.write(self.wrapOutboundOut(.head(self.cachedHead)), promise: nil)
-                ctx.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-                ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                var buffer = context.channel.allocator.buffer(capacity: self.cachedBody.count)
+                buffer.writeBytes(self.cachedBody)
+                context.write(self.wrapOutboundOut(.head(self.cachedHead)), promise: nil)
+                context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 return
             case "/perf-test-2":
                 var req = HTTPResponseHead(version: HTTPVersion(major: 1, minor: 1), status: .ok)
@@ -100,8 +106,8 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
                     req.headers.add(name: "X-ResponseHeader-\(i)", value: "foo")
                 }
                 req.headers.add(name: "content-length", value: "0")
-                ctx.write(self.wrapOutboundOut(.head(req)), promise: nil)
-                ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                context.write(self.wrapOutboundOut(.head(req)), promise: nil)
+                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
                 return
             default:
                 fatalError("unknown uri \(req.uri)")
@@ -120,8 +126,8 @@ let serverChannel = try ServerBootstrap(group: group)
     .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
     .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
     .childChannelInitializer { channel in
-        channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).then {
-            channel.pipeline.add(handler: SimpleHTTPServer())
+        channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
+            channel.pipeline.addHandler(SimpleHTTPServer())
         }
     }.bind(host: "127.0.0.1", port: 0).wait()
 
@@ -144,7 +150,7 @@ final class RepeatedRequests: ChannelInboundHandler {
     init(numberOfRequests: Int, eventLoop: EventLoop) {
         self.remainingNumberOfRequests = numberOfRequests
         self.numberOfRequests = numberOfRequests
-        self.isDonePromise = eventLoop.newPromise()
+        self.isDonePromise = eventLoop.makePromise()
     }
 
     func wait() throws -> Int {
@@ -153,28 +159,133 @@ final class RepeatedRequests: ChannelInboundHandler {
         return reqs
     }
 
-    func errorCaught(ctx: ChannelHandlerContext, error: Error) {
-        ctx.channel.close(promise: nil)
-        self.isDonePromise.fail(error: error)
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        context.channel.close(promise: nil)
+        self.isDonePromise.fail(error)
     }
 
-    func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let reqPart = self.unwrapInboundIn(data)
         if case .end(nil) = reqPart {
             if self.remainingNumberOfRequests <= 0 {
-                ctx.channel.close().map { self.doneRequests }.cascade(promise: self.isDonePromise)
+                context.channel.close().map { self.doneRequests }.cascade(to: self.isDonePromise)
             } else {
                 self.doneRequests += 1
                 self.remainingNumberOfRequests -= 1
 
-                ctx.write(self.wrapOutboundOut(.head(head)), promise: nil)
-                ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                context.write(self.wrapOutboundOut(.head(head)), promise: nil)
+                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
             }
         }
     }
 }
 
+private func someString(size: Int) -> String {
+    var s = "A"
+    for f in 1..<size {
+        s += String("\(f)".first!)
+    }
+    return s
+}
+
 // MARK: Performance Tests
+
+measureAndPrint(desc: "write_http_headers") {
+    var headers: [(String, String)] = []
+    for i in 1..<10 {
+        headers.append(("\(i)", "\(i)"))
+    }
+
+    var val = 0
+    for _ in 0..<100_000 {
+        let headers = HTTPHeaders(headers)
+        val += headers.underestimatedCount
+    }
+    return val
+}
+
+measureAndPrint(desc: "bytebuffer_write_12MB_short_string_literals") {
+    let bufferSize = 12 * 1024 * 1024
+    var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
+
+    for _ in 0 ..< 5 {
+        buffer.clear()
+        for _ in 0 ..< (bufferSize / 4) {
+            buffer.writeString("abcd")
+        }
+    }
+
+    let readableBytes = buffer.readableBytes
+    precondition(readableBytes == bufferSize)
+    return readableBytes
+}
+
+measureAndPrint(desc: "bytebuffer_write_12MB_short_calculated_strings") {
+    let bufferSize = 12 * 1024 * 1024
+    var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
+    let s = someString(size: 4)
+
+    for _ in 0 ..< 5 {
+        buffer.clear()
+        for _ in  0 ..< (bufferSize / 4) {
+            buffer.writeString(s)
+        }
+    }
+
+    let readableBytes = buffer.readableBytes
+    precondition(readableBytes == bufferSize)
+    return readableBytes
+}
+
+measureAndPrint(desc: "bytebuffer_write_12MB_medium_string_literals") {
+    let bufferSize = 12 * 1024 * 1024
+    var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
+
+    for _ in 0 ..< 10 {
+        buffer.clear()
+        for _ in  0 ..< (bufferSize / 24) {
+            buffer.writeString("012345678901234567890123")
+        }
+    }
+
+    let readableBytes = buffer.readableBytes
+    precondition(readableBytes == bufferSize)
+    return readableBytes
+}
+
+measureAndPrint(desc: "bytebuffer_write_12MB_medium_calculated_strings") {
+    let bufferSize = 12 * 1024 * 1024
+    var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
+    let s = someString(size: 24)
+
+    for _ in 0 ..< 10 {
+        buffer.clear()
+        for _ in 0 ..< (bufferSize / 24) {
+            buffer.writeString(s)
+        }
+    }
+
+    let readableBytes = buffer.readableBytes
+    precondition(readableBytes == bufferSize)
+    return readableBytes
+}
+
+measureAndPrint(desc: "bytebuffer_write_12MB_large_calculated_strings") {
+    let bufferSize = 12 * 1024 * 1024
+    var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
+    let s = someString(size: 1024 * 1024)
+
+    for _ in 0 ..< 10 {
+        buffer.clear()
+        for _ in 0 ..< 12 {
+            buffer.writeString(s)
+        }
+    }
+
+    let readableBytes = buffer.readableBytes
+    precondition(readableBytes == bufferSize)
+    return readableBytes
+}
 
 measureAndPrint(desc: "bytebuffer_lots_of_rw") {
     let dispatchData = ("A" as StaticString).withUTF8Buffer { ptr in
@@ -186,13 +297,13 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
     func doWrites(buffer: inout ByteBuffer) {
         /* all of those should be 0 allocations */
 
-        // buffer.write(bytes: foundationData) // see SR-7542
-        buffer.write(bytes: [0x41])
-        buffer.write(bytes: dispatchData)
-        buffer.write(bytes: "A".utf8)
-        buffer.write(string: "A")
-        buffer.write(staticString: "A")
-        buffer.write(integer: 0x41, as: UInt8.self)
+        // buffer.writeBytes(foundationData) // see SR-7542
+        buffer.writeBytes([0x41])
+        buffer.writeBytes(dispatchData)
+        buffer.writeBytes("A".utf8)
+        buffer.writeString("A")
+        buffer.writeStaticString("A")
+        buffer.writeInteger(0x41, as: UInt8.self)
     }
     @inline(never)
     func doReads(buffer: inout ByteBuffer) {
@@ -220,132 +331,132 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
 }
 
 func writeExampleHTTPResponseAsString(buffer: inout ByteBuffer) {
-    buffer.write(string: "HTTP/1.1 200 OK")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Connection")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "close")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Proxy-Connection")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "close")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Via")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "HTTP/1.1 localhost (IBM-PROXY-WTE)")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Date")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "Tue, 08 May 2018 13:42:56 GMT")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Server")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "Apache/2.2.15 (Red Hat)")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Strict-Transport-Security")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "max-age=15768000; includeSubDomains")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Last-Modified")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "Tue, 08 May 2018 13:39:13 GMT")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "ETag")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "357031-1809-56bb1e96a6240")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Accept-Ranges")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "bytes")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Content-Length")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "6153")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "Content-Type")
-    buffer.write(string: ":")
-    buffer.write(string: " ")
-    buffer.write(string: "text/html; charset=UTF-8")
-    buffer.write(string: "\r\n")
-    buffer.write(string: "\r\n")
+    buffer.writeString("HTTP/1.1 200 OK")
+    buffer.writeString("\r\n")
+    buffer.writeString("Connection")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("close")
+    buffer.writeString("\r\n")
+    buffer.writeString("Proxy-Connection")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("close")
+    buffer.writeString("\r\n")
+    buffer.writeString("Via")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("HTTP/1.1 localhost (IBM-PROXY-WTE)")
+    buffer.writeString("\r\n")
+    buffer.writeString("Date")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("Tue, 08 May 2018 13:42:56 GMT")
+    buffer.writeString("\r\n")
+    buffer.writeString("Server")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("Apache/2.2.15 (Red Hat)")
+    buffer.writeString("\r\n")
+    buffer.writeString("Strict-Transport-Security")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("max-age=15768000; includeSubDomains")
+    buffer.writeString("\r\n")
+    buffer.writeString("Last-Modified")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("Tue, 08 May 2018 13:39:13 GMT")
+    buffer.writeString("\r\n")
+    buffer.writeString("ETag")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("357031-1809-56bb1e96a6240")
+    buffer.writeString("\r\n")
+    buffer.writeString("Accept-Ranges")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("bytes")
+    buffer.writeString("\r\n")
+    buffer.writeString("Content-Length")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("6153")
+    buffer.writeString("\r\n")
+    buffer.writeString("Content-Type")
+    buffer.writeString(":")
+    buffer.writeString(" ")
+    buffer.writeString("text/html; charset=UTF-8")
+    buffer.writeString("\r\n")
+    buffer.writeString("\r\n")
 }
 
 func writeExampleHTTPResponseAsStaticString(buffer: inout ByteBuffer) {
-    buffer.write(staticString: "HTTP/1.1 200 OK")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Connection")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "close")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Proxy-Connection")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "close")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Via")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "HTTP/1.1 localhost (IBM-PROXY-WTE)")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Date")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "Tue, 08 May 2018 13:42:56 GMT")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Server")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "Apache/2.2.15 (Red Hat)")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Strict-Transport-Security")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "max-age=15768000; includeSubDomains")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Last-Modified")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "Tue, 08 May 2018 13:39:13 GMT")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "ETag")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "357031-1809-56bb1e96a6240")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Accept-Ranges")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "bytes")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Content-Length")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "6153")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "Content-Type")
-    buffer.write(staticString: ":")
-    buffer.write(staticString: " ")
-    buffer.write(staticString: "text/html; charset=UTF-8")
-    buffer.write(staticString: "\r\n")
-    buffer.write(staticString: "\r\n")
+    buffer.writeStaticString("HTTP/1.1 200 OK")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Connection")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("close")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Proxy-Connection")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("close")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Via")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("HTTP/1.1 localhost (IBM-PROXY-WTE)")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Date")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("Tue, 08 May 2018 13:42:56 GMT")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Server")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("Apache/2.2.15 (Red Hat)")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Strict-Transport-Security")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("max-age=15768000; includeSubDomains")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Last-Modified")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("Tue, 08 May 2018 13:39:13 GMT")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("ETag")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("357031-1809-56bb1e96a6240")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Accept-Ranges")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("bytes")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Content-Length")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("6153")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("Content-Type")
+    buffer.writeStaticString(":")
+    buffer.writeStaticString(" ")
+    buffer.writeStaticString("text/html; charset=UTF-8")
+    buffer.writeStaticString("\r\n")
+    buffer.writeStaticString("\r\n")
 }
 
 measureAndPrint(desc: "bytebuffer_write_http_response_ascii_only_as_string") {
     var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
     for _ in 0..<20_000 {
         writeExampleHTTPResponseAsString(buffer: &buffer)
-        buffer.write(string: htmlASCIIOnly)
+        buffer.writeString(htmlASCIIOnly)
         buffer.clear()
     }
     return buffer.readableBytes
@@ -355,7 +466,7 @@ measureAndPrint(desc: "bytebuffer_write_http_response_ascii_only_as_staticstring
     var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
     for _ in 0..<20_000 {
         writeExampleHTTPResponseAsStaticString(buffer: &buffer)
-        buffer.write(staticString: htmlASCIIOnlyStaticString)
+        buffer.writeStaticString(htmlASCIIOnlyStaticString)
         buffer.clear()
     }
     return buffer.readableBytes
@@ -365,7 +476,7 @@ measureAndPrint(desc: "bytebuffer_write_http_response_some_nonascii_as_string") 
     var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
     for _ in 0..<20_000 {
         writeExampleHTTPResponseAsString(buffer: &buffer)
-        buffer.write(string: htmlMostlyASCII)
+        buffer.writeString(htmlMostlyASCII)
         buffer.clear()
     }
     return buffer.readableBytes
@@ -375,7 +486,7 @@ measureAndPrint(desc: "bytebuffer_write_http_response_some_nonascii_as_staticstr
     var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
     for _ in 0..<20_000 {
         writeExampleHTTPResponseAsStaticString(buffer: &buffer)
-        buffer.write(staticString: htmlMostlyASCIIStaticString)
+        buffer.writeStaticString(htmlMostlyASCIIStaticString)
         buffer.clear()
     }
     return buffer.readableBytes
@@ -400,9 +511,9 @@ try measureAndPrint(desc: "no-net_http1_10k_reqs_1_conn") {
             self.remainingNumberOfRequests = numberOfRequests
         }
 
-        func handlerAdded(ctx: ChannelHandlerContext) {
-            self.requestBuffer = ctx.channel.allocator.buffer(capacity: 512)
-            self.requestBuffer.write(string: """
+        func handlerAdded(context: ChannelHandlerContext) {
+            self.requestBuffer = context.channel.allocator.buffer(capacity: 512)
+            self.requestBuffer.writeString("""
                                              GET /perf-test-2 HTTP/1.1\r
                                              Host: example.com\r
                                              X-Some-Header-1: foo\r
@@ -416,16 +527,16 @@ try measureAndPrint(desc: "no-net_http1_10k_reqs_1_conn") {
                                              """)
         }
 
-        func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             var buf = self.unwrapOutboundIn(data)
             if self.expectedResponseBuffer == nil {
                 self.expectedResponseBuffer = buf
             }
             precondition(buf == self.expectedResponseBuffer, "got \(buf.readString(length: buf.readableBytes)!)")
-            let channel = ctx.channel
+            let channel = context.channel
             self.remainingNumberOfRequests -= 1
             if self.remainingNumberOfRequests > 0 {
-                ctx.eventLoop.execute {
+                context.eventLoop.execute {
                     self.kickOff(channel: channel)
                 }
             } else {
@@ -447,10 +558,10 @@ try measureAndPrint(desc: "no-net_http1_10k_reqs_1_conn") {
         done = true
     }
     try channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true,
-                                                     withErrorHandling: true).then {
-        channel.pipeline.add(handler: SimpleHTTPServer())
-    }.then {
-        channel.pipeline.add(handler: measuringHandler, first: true)
+                                                     withErrorHandling: true).flatMap {
+        channel.pipeline.addHandler(SimpleHTTPServer())
+    }.flatMap {
+        channel.pipeline.addHandler(measuringHandler, position: .first)
     }.wait()
 
     measuringHandler.kickOff(channel: channel)
@@ -469,8 +580,8 @@ measureAndPrint(desc: "http1_10k_reqs_1_conn") {
     let clientChannel = try! ClientBootstrap(group: group)
         .channelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
         .channelInitializer { channel in
-            channel.pipeline.addHTTPClientHandlers().then {
-                channel.pipeline.add(handler: repeatedRequestsHandler)
+            channel.pipeline.addHTTPClientHandlers().flatMap {
+                channel.pipeline.addHandler(repeatedRequestsHandler)
             }
         }
         .connect(to: serverChannel.localAddress!)
@@ -490,8 +601,8 @@ measureAndPrint(desc: "http1_10k_reqs_100_conns") {
 
         let clientChannel = try! ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers().then {
-                    channel.pipeline.add(handler: repeatedRequestsHandler)
+                channel.pipeline.addHTTPClientHandlers().flatMap {
+                    channel.pipeline.addHandler(repeatedRequestsHandler)
                 }
             }
             .connect(to: serverChannel.localAddress!)

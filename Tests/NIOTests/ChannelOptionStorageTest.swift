@@ -18,30 +18,30 @@ import XCTest
 
 class ChannelOptionStorageTest: XCTestCase {
     func testWeStartWithNoOptions() throws {
-        let cos = ChannelOptionStorage()
+        let cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        XCTAssertNoThrow(try cos.applyAll(channel: optionsCollector).wait())
+        XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(0, optionsCollector.allOptions.count)
     }
 
     func testSetTwoOptionsOfDifferentType() throws {
-        var cos = ChannelOptionStorage()
+        var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        cos.put(key: ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-        cos.put(key: ChannelOptions.backlog, value: 2)
-        XCTAssertNoThrow(try cos.applyAll(channel: optionsCollector).wait())
+        cos.append(key: ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+        cos.append(key: ChannelOptions.backlog, value: 2)
+        XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(2, optionsCollector.allOptions.count)
     }
 
     func testSetTwoOptionsOfSameType() throws {
         let options: [(SocketOption, SocketOptionValue)] = [(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), 1),
                                                             (ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEPORT), 2)]
-        var cos = ChannelOptionStorage()
+        var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
         for kv in options {
-            cos.put(key: kv.0, value: kv.1)
+            cos.append(key: kv.0, value: kv.1)
         }
-        XCTAssertNoThrow(try cos.applyAll(channel: optionsCollector).wait())
+        XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(2, optionsCollector.allOptions.count)
         XCTAssertEqual(options.map { $0.0 },
                        (optionsCollector.allOptions as! [(SocketOption, SocketOptionValue)]).map { $0.0 })
@@ -50,11 +50,11 @@ class ChannelOptionStorageTest: XCTestCase {
     }
 
     func testSetOneOptionTwice() throws {
-        var cos = ChannelOptionStorage()
+        var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        cos.put(key: ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-        cos.put(key: ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 2)
-        XCTAssertNoThrow(try cos.applyAll(channel: optionsCollector).wait())
+        cos.append(key: ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+        cos.append(key: ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 2)
+        XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(1, optionsCollector.allOptions.count)
         XCTAssertEqual([ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR)],
                        (optionsCollector.allOptions as! [(SocketOption, SocketOptionValue)]).map { $0.0 })
@@ -78,12 +78,12 @@ class OptionsCollectingChannel: Channel {
 
     var parent: Channel? { fatalError() }
 
-    func setOption<T>(option: T, value: T.OptionType) -> EventLoopFuture<Void> where T : ChannelOption {
+    func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
         self.allOptions.append((option, value))
-        return self.eventLoop.newSucceededFuture(result: ())
+        return self.eventLoop.makeSucceededFuture(())
     }
 
-    func getOption<T>(option: T) -> EventLoopFuture<T.OptionType> where T : ChannelOption {
+    func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
         fatalError()
     }
 
@@ -91,7 +91,7 @@ class OptionsCollectingChannel: Channel {
 
     var isActive: Bool { fatalError() }
 
-    var _unsafe: ChannelCore { fatalError() }
+    var _channelCore: ChannelCore { fatalError() }
 
     var eventLoop: EventLoop {
         return EmbeddedEventLoop()

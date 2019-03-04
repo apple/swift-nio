@@ -22,7 +22,7 @@ extension ChannelPipeline {
         try self.assertDoesNotContain(handlerType: HTTPServerUpgradeHandler.self)
     }
 
-    func assertDoesNotContain<T>(handlerType: T.Type) throws {
+    func assertDoesNotContain<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
         do {
             _ = try self.context(handlerType: handlerType).wait()
             XCTFail("Found handler")
@@ -35,7 +35,7 @@ extension ChannelPipeline {
         try self.assertContains(handlerType: HTTPServerUpgradeHandler.self)
     }
 
-    func assertContains<T>(handlerType: T.Type) throws {
+    func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
         do {
             _ = try self.context(handlerType: handlerType).wait()
         } catch ChannelPipelineError.notFound {
@@ -62,30 +62,35 @@ extension ChannelPipeline {
 }
 
 extension EmbeddedChannel {
-    func readAllOutboundBuffers() -> ByteBuffer {
+    func readAllOutboundBuffers() throws -> ByteBuffer {
         var buffer = self.allocator.buffer(capacity: 100)
-        while case .some(.byteBuffer(var writtenData)) = self.readOutbound() {
-            buffer.write(buffer: &writtenData)
+        while var writtenData = try self.readOutbound(as: ByteBuffer.self) {
+            buffer.writeBuffer(&writtenData)
         }
 
         return buffer
+    }
+
+    func readAllOutboundString() throws -> String {
+        var buffer = try self.readAllOutboundBuffers()
+        return buffer.readString(length: buffer.readableBytes)!
     }
 }
 
 private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
                                               pipelining: Bool,
-                                              upgraders: [HTTPProtocolUpgrader],
+                                              upgraders: [HTTPServerProtocolUpgrader],
                                               extraHandlers: [ChannelHandler],
                                               _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) throws -> (Channel, EventLoopFuture<Channel>) {
-    let p: EventLoopPromise<Channel> = group.next().newPromise()
+    let p = group.next().makePromise(of: Channel.self)
     let c = try ServerBootstrap(group: group)
         .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
         .childChannelInitializer { channel in
-            p.succeed(result: channel)
+            p.succeed(channel)
             let upgradeConfig = (upgraders: upgraders, completionHandler: upgradeCompletionHandler)
-            return channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: pipelining, withServerUpgrade: upgradeConfig).then {
-                let futureResults = extraHandlers.map { channel.pipeline.add(handler: $0) }
-                return EventLoopFuture<Void>.andAll(futureResults, eventLoop: channel.eventLoop)
+            return channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: pipelining, withServerUpgrade: upgradeConfig).flatMap {
+                let futureResults = extraHandlers.map { channel.pipeline.addHandler($0) }
+                return EventLoopFuture.andAllSucceed(futureResults, on: channel.eventLoop)
             }
         }.bind(host: "127.0.0.1", port: 0).wait()
     return (c, p.futureResult)
@@ -101,7 +106,7 @@ private class SingleHTTPResponseAccumulator: ChannelInboundHandler {
         self.allDoneBlock = completion
     }
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let buffer = self.unwrapInboundIn(data)
         self.receiveds.append(buffer)
         if let finalBytes = buffer.getBytes(at: buffer.writerIndex - 4, length: 4), finalBytes == [0x0D, 0x0A, 0x0D, 0x0A] {
@@ -113,7 +118,7 @@ private class SingleHTTPResponseAccumulator: ChannelInboundHandler {
 private class ExplodingHandler: ChannelInboundHandler {
     typealias InboundIn = Any
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         XCTFail("Received unexpected read")
     }
 }
@@ -125,7 +130,7 @@ private func connectedClientChannel(group: EventLoopGroup, serverAddress: Socket
 }
 
 private func setUpTestWithAutoremoval(pipelining: Bool = false,
-                                      upgraders: [HTTPProtocolUpgrader],
+                                      upgraders: [HTTPServerProtocolUpgrader],
                                       extraHandlers: [ChannelHandler],
                                       _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) throws -> (EventLoopGroup, Channel, Channel, Channel) {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -151,7 +156,7 @@ internal func assertResponseIs(response: String, expectedResponseLine: String, e
 
     // For each header, find it in the actual response headers and remove it.
     for expectedHeader in expectedResponseHeaders {
-        guard let index = lines.index(of: expectedHeader) else {
+        guard let index = lines.firstIndex(of: expectedHeader) else {
             XCTFail("Could not find header \"\(expectedHeader)\"")
             return
         }
@@ -162,7 +167,7 @@ internal func assertResponseIs(response: String, expectedResponseLine: String, e
     XCTAssertEqual(lines.count, 0)
 }
 
-private class ExplodingUpgrader: HTTPProtocolUpgrader {
+private class ExplodingUpgrader: HTTPServerProtocolUpgrader {
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String]
 
@@ -175,18 +180,18 @@ private class ExplodingUpgrader: HTTPProtocolUpgrader {
         self.requiredUpgradeHeaders = requiringHeaders
     }
 
-    public func buildUpgradeResponse(upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) throws -> HTTPHeaders {
+    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
         XCTFail("buildUpgradeResponse called")
-        throw Explosion.KABOOM
+        return channel.eventLoop.makeFailedFuture(Explosion.KABOOM)
     }
 
-    public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         XCTFail("upgrade called")
-        return ctx.eventLoop.newSucceededFuture(result: ())
+        return context.eventLoop.makeSucceededFuture(())
     }
 }
 
-private class UpgraderSaysNo: HTTPProtocolUpgrader {
+private class UpgraderSaysNo: HTTPServerProtocolUpgrader {
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String] = []
 
@@ -198,17 +203,17 @@ private class UpgraderSaysNo: HTTPProtocolUpgrader {
         self.supportedProtocol = `protocol`
     }
 
-    public func buildUpgradeResponse(upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) throws -> HTTPHeaders {
-        throw No.no
+    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
+        return channel.eventLoop.makeFailedFuture(No.no)
     }
 
-    public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         XCTFail("upgrade called")
-        return ctx.eventLoop.newSucceededFuture(result: ())
+        return context.eventLoop.makeSucceededFuture(())
     }
 }
 
-private class SuccessfulUpgrader: HTTPProtocolUpgrader {
+private class SuccessfulUpgrader: HTTPServerProtocolUpgrader {
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String]
     private let onUpgradeComplete: (HTTPRequestHead) -> ()
@@ -219,43 +224,68 @@ private class SuccessfulUpgrader: HTTPProtocolUpgrader {
         self.onUpgradeComplete = onUpgradeComplete
     }
 
-    public func buildUpgradeResponse(upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) throws -> HTTPHeaders {
+    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
         var headers = initialResponseHeaders
         headers.add(name: "X-Upgrade-Complete", value: "true")
-        return headers
+        return channel.eventLoop.makeSucceededFuture(headers)
     }
 
-    public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         self.onUpgradeComplete(upgradeRequest)
-        return ctx.eventLoop.newSucceededFuture(result: ())
+        return context.eventLoop.makeSucceededFuture(())
     }
 }
 
-private class UpgradeDelayer: HTTPProtocolUpgrader {
+private class UpgradeDelayer: HTTPServerProtocolUpgrader {
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String] = []
 
     private var upgradePromise: EventLoopPromise<Void>?
-    private var ctx: ChannelHandlerContext?
+    private var context: ChannelHandlerContext?
 
     public init(forProtocol `protocol`: String) {
         self.supportedProtocol = `protocol`
     }
 
-    public func buildUpgradeResponse(upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) throws -> HTTPHeaders {
+    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
         var headers = initialResponseHeaders
         headers.add(name: "X-Upgrade-Complete", value: "true")
-        return headers
+        return channel.eventLoop.makeSucceededFuture(headers)
     }
 
-    public func upgrade(ctx: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
-        self.upgradePromise = ctx.eventLoop.newPromise()
-        self.ctx = ctx
+    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+        self.upgradePromise = context.eventLoop.makePromise()
+        self.context = context
         return self.upgradePromise!.futureResult
     }
 
     public func unblockUpgrade() {
-        self.upgradePromise!.succeed(result: ())
+        self.upgradePromise!.succeed(())
+    }
+}
+
+private class UpgradeResponseDelayer: HTTPServerProtocolUpgrader {
+    let supportedProtocol: String
+    let requiredUpgradeHeaders: [String] = []
+
+    private var context: ChannelHandlerContext?
+    private let buildUpgradeResponseHandler: () -> EventLoopFuture<Void>
+
+    public init(forProtocol `protocol`: String, buildUpgradeResponseHandler: @escaping () -> EventLoopFuture<Void>) {
+        self.supportedProtocol = `protocol`
+        self.buildUpgradeResponseHandler = buildUpgradeResponseHandler
+    }
+
+    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
+        return self.buildUpgradeResponseHandler().map {
+            var headers = initialResponseHeaders
+            headers.add(name: "X-Upgrade-Complete", value: "true")
+            return headers
+        }
+    }
+
+    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+        return context.eventLoop.makeSucceededFuture(())
     }
 }
 
@@ -263,9 +293,9 @@ private class UserEventSaver<EventType>: ChannelInboundHandler {
     public typealias InboundIn = Any
     public var events: [EventType] = []
 
-    public func userInboundEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+    public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         events.append(event as! EventType)
-        ctx.fireUserInboundEventTriggered(event)
+        context.fireUserInboundEventTriggered(event)
     }
 }
 
@@ -274,9 +304,9 @@ private class ErrorSaver: ChannelInboundHandler {
     public typealias InboundOut = Any
     public var errors: [Error] = []
 
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
         errors.append(error)
-        ctx.fireErrorCaught(error)
+        context.fireErrorCaught(error)
     }
 }
 
@@ -284,7 +314,7 @@ private class DataRecorder<T>: ChannelInboundHandler {
     public typealias InboundIn = T
     private var data: [T] = []
 
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let datum = self.unwrapInboundIn(data)
         self.data.append(datum)
     }
@@ -298,7 +328,7 @@ private class DataRecorder<T>: ChannelInboundHandler {
 private extension ByteBuffer {
     static func forString(_ string: String) -> ByteBuffer {
         var buf = ByteBufferAllocator().buffer(capacity: string.utf8.count)
-        buf.write(string: string)
+        buf.writeString(string)
         return buf
     }
 }
@@ -354,19 +384,19 @@ class HTTPUpgradeTestCase: XCTestCase {
         }
         let data = HTTPServerRequestPart.body(ByteBuffer.forString("hello"))
 
-        XCTAssertNoThrow(try channel.pipeline.add(handler: handler).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         do {
             try channel.writeInbound(data)
             XCTFail("Writing of bad data did not error")
-        } catch HTTPUpgradeErrors.invalidHTTPOrdering {
+        } catch HTTPServerUpgradeErrors.invalidHTTPOrdering {
             // Nothing to see here.
         }
 
         // The handler removed itself from the pipeline and passed the unexpected
         // data on.
         try channel.pipeline.assertDoesNotContainUpgrader()
-        let receivedData: HTTPServerRequestPart = channel.readInbound()!
+        let receivedData: HTTPServerRequestPart = try channel.readInbound()!
         XCTAssertEqual(data, receivedData)
     }
 
@@ -382,27 +412,27 @@ class HTTPUpgradeTestCase: XCTestCase {
         }
 
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: []) { (ctx) in
+                                                                                    extraHandlers: []) { (context) in
             // This is called before the upgrader gets called.
             XCTAssertNil(upgradeRequest)
             upgradeHandlerCbFired = true
 
             // We're closing the connection now.
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().makePromise(of: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
@@ -487,27 +517,27 @@ class HTTPUpgradeTestCase: XCTestCase {
         }
 
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [explodingUpgrader, successfulUpgrader],
-                                                                                    extraHandlers: []) { ctx in
+                                                                                    extraHandlers: []) { context in
             // This is called before the upgrader gets called.
             XCTAssertNil(upgradeRequest)
             upgradeHandlerCbFired = true
 
             // We're closing the connection now.
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().makePromise(of: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto, exploder\r\nKafkaesque: yup\r\nConnection: upgrade, kafkaesque\r\n\r\n"
@@ -528,30 +558,30 @@ class HTTPUpgradeTestCase: XCTestCase {
     func testUpgradeFiresUserEvent() throws {
         // The user event is fired last, so we don't see it until both other callbacks
         // have fired.
-        let eventSaver = UserEventSaver<HTTPUpgradeEvents>()
+        let eventSaver = UserEventSaver<HTTPServerUpgradeEvents>()
 
         let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: []) { req in
             XCTAssertEqual(eventSaver.events.count, 0)
         }
 
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: [eventSaver]) { ctx in
+                                                                                    extraHandlers: [eventSaver]) { context in
             XCTAssertEqual(eventSaver.events.count, 0)
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().makePromise(of: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade,kafkaesque\r\n\r\n"
@@ -562,7 +592,7 @@ class HTTPUpgradeTestCase: XCTestCase {
 
         // At this time we should have received one user event. We schedule this onto the
         // event loop to guarantee thread safety.
-        XCTAssertNoThrow(try connectedServer.eventLoop.scheduleTask(in: .nanoseconds(0)) {
+        XCTAssertNoThrow(try connectedServer.eventLoop.scheduleTask(deadline: .now()) {
             XCTAssertEqual(eventSaver.events.count, 1)
             if case .upgradeComplete(let proto, let req) = eventSaver.events[0] {
                 XCTAssertEqual(proto, "myproto")
@@ -592,27 +622,27 @@ class HTTPUpgradeTestCase: XCTestCase {
         let errorCatcher = ErrorSaver()
 
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [explodingUpgrader, successfulUpgrader],
-                                                                                    extraHandlers: [errorCatcher]) { ctx in
+                                                                                    extraHandlers: [errorCatcher]) { context in
             // This is called before the upgrader gets called.
             XCTAssertNil(upgradeRequest)
             upgradeHandlerCbFired = true
 
             // We're closing the connection now.
-            ctx.close(promise: nil)
+            context.close(promise: nil)
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().makePromise(of: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: noproto,myproto\r\nKafkaesque: yup\r\nConnection: upgrade, kafkaesque\r\n\r\n"
@@ -643,22 +673,22 @@ class HTTPUpgradeTestCase: XCTestCase {
     func testUpgradeIsCaseInsensitive() throws {
         let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: ["WeIrDcAsE"]) { req in }
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: []) { ctx in
-            ctx.close(promise: nil)
+                                                                                    extraHandlers: []) { context in
+            context.close(promise: nil)
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().makePromise(of: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nWeirdcase: yup\r\nConnection: upgrade,weirdcase\r\n\r\n"
@@ -677,22 +707,22 @@ class HTTPUpgradeTestCase: XCTestCase {
 
         let upgrader = UpgradeDelayer(forProtocol: "myproto")
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: []) { ctx in
+                                                                                    extraHandlers: []) { context in
             g.leave()
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().makePromise(of: Void.self)
         let clientHandler = SingleHTTPResponseAccumulator { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\n"
@@ -720,22 +750,22 @@ class HTTPUpgradeTestCase: XCTestCase {
         let upgrader = UpgradeDelayer(forProtocol: "myproto")
         let dataRecorder = DataRecorder<ByteBuffer>()
 
-        let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader], extraHandlers: [dataRecorder]) { ctx in
+        let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader], extraHandlers: [dataRecorder]) { context in
             g.leave()
         }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().makePromise(of: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
 
         // This request is safe to upgrade, but is immediately followed by non-HTTP data that will probably
         // blow up the HTTP parser.
@@ -766,11 +796,280 @@ class HTTPUpgradeTestCase: XCTestCase {
         XCTAssertEqual(resultString, appData)
     }
 
+    func testDelayedUpgradeResponse() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+
+        var upgradeRequested = false
+
+        let delayedPromise = channel.eventLoop.makePromise(of: Void.self)
+        let delayedUpgrader = UpgradeResponseDelayer(forProtocol: "myproto") {
+            XCTAssertFalse(upgradeRequested)
+            upgradeRequested = true
+            return delayedPromise.futureResult
+        }
+
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: (upgraders: [delayedUpgrader], completionHandler: { context in })).wait())
+
+        // Let's send in an upgrade request.
+        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+
+        // Upgrade has been requested but not proceeded.
+        XCTAssertTrue(upgradeRequested)
+        XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
+        XCTAssertNoThrow(try XCTAssertNil(channel.readOutbound(as: ByteBuffer.self)))
+
+        // Ok, now we can upgrade. Upgrader should be out of the pipeline, and we should have seen the 101 response.
+        delayedPromise.succeed(())
+        XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
+        XCTAssertNoThrow(assertResponseIs(response: try channel.readAllOutboundString(),
+                                          expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
+                                          expectedResponseHeaders: ["X-Upgrade-Complete: true",
+                                                                    "upgrade: myproto",
+                                                                    "connection: upgrade"]))
+    }
+
+    func testChainsDelayedUpgradesAppropriately() throws {
+        enum No: Error {
+            case no
+        }
+
+        let channel = EmbeddedChannel()
+        defer {
+            do {
+                let complete = try channel.finish()
+                XCTAssertFalse(complete)
+            } catch No.no {
+                // ok
+            } catch {
+                XCTFail("Unexpected error: \(error)")
+            }
+        }
+
+        var upgradingProtocol = ""
+
+        let failingProtocolPromise = channel.eventLoop.makePromise(of: Void.self)
+        let failingProtocolUpgrader = UpgradeResponseDelayer(forProtocol: "failingProtocol") {
+            XCTAssertEqual(upgradingProtocol, "")
+            upgradingProtocol = "failingProtocol"
+            return failingProtocolPromise.futureResult
+        }
+
+        let myprotoPromise = channel.eventLoop.makePromise(of: Void.self)
+        let myprotoUpgrader = UpgradeResponseDelayer(forProtocol: "myproto") {
+            XCTAssertEqual(upgradingProtocol, "failingProtocol")
+            upgradingProtocol = "myproto"
+            return myprotoPromise.futureResult
+        }
+
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: (upgraders: [myprotoUpgrader, failingProtocolUpgrader], completionHandler: { context in })).wait())
+
+        // Let's send in an upgrade request.
+        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: failingProtocol, myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+
+        // Upgrade has been requested but not proceeded for the failing protocol.
+        XCTAssertEqual(upgradingProtocol, "failingProtocol")
+        XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+
+        // Ok, now we'll fail the promise. This will catch an error, but the upgrade won't happen: instead, the second handler will be fired.
+        failingProtocolPromise.fail(No.no)
+        XCTAssertEqual(upgradingProtocol, "myproto")
+        XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
+        do {
+            try channel.throwIfErrorCaught()
+            XCTFail("Did not throw")
+        } catch No.no {
+            // ok
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        // Ok, now we can upgrade. Upgrader should be out of the pipeline, and we should have seen the 101 response.
+        myprotoPromise.succeed(())
+        XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
+        assertResponseIs(response: try channel.readAllOutboundString(),
+                         expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
+                         expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
+    }
+
+    func testDelayedUpgradeResponseDeliversFullRequest() throws {
+        enum No: Error {
+            case no
+        }
+
+        let channel = EmbeddedChannel()
+        defer {
+            do {
+                let complete = try channel.finish()
+                XCTAssertFalse(complete)
+            } catch No.no {
+                // ok
+            } catch {
+                XCTFail("Unexpected error: \(error)")
+            }
+        }
+
+        var upgradeRequested = false
+
+        let delayedPromise = channel.eventLoop.makePromise(of: Void.self)
+        let delayedUpgrader = UpgradeResponseDelayer(forProtocol: "myproto") {
+            XCTAssertFalse(upgradeRequested)
+            upgradeRequested = true
+            return delayedPromise.futureResult
+        }
+
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: (upgraders: [delayedUpgrader], completionHandler: { context in })).wait())
+
+        // Let's send in an upgrade request.
+        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+
+        // Upgrade has been requested but not proceeded.
+        XCTAssertTrue(upgradeRequested)
+        XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+
+        // Ok, now we fail the upgrade. This fires an error, and then delivers the original request.
+        delayedPromise.fail(No.no)
+        XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
+
+        do {
+            try channel.throwIfErrorCaught()
+            XCTFail("Did not throw")
+        } catch No.no {
+            // ok
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        switch try channel.readInbound(as: HTTPServerRequestPart.self) {
+        case .some(.head):
+            // ok
+            break
+        case let t:
+            XCTFail("Expected .head, got \(String(describing: t))")
+        }
+
+        switch try channel.readInbound(as: HTTPServerRequestPart.self) {
+        case .some(.end):
+            // ok
+            break
+        case let t:
+            XCTFail("Expected .head, got \(String(describing: t))")
+        }
+
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound(as: HTTPServerRequestPart.self)))
+    }
+
+    func testDelayedUpgradeResponseDeliversFullRequestAndPendingBits() throws {
+        enum No: Error {
+            case no
+        }
+
+        let channel = EmbeddedChannel()
+        defer {
+            do {
+                let complete = try channel.finish()
+                XCTAssertFalse(complete)
+            } catch No.no {
+                // ok
+            } catch {
+                XCTFail("Unexpected error: \(error)")
+            }
+        }
+
+        var upgradeRequested = false
+
+        let delayedPromise = channel.eventLoop.makePromise(of: Void.self)
+        let delayedUpgrader = UpgradeResponseDelayer(forProtocol: "myproto") {
+            XCTAssertFalse(upgradeRequested)
+            upgradeRequested = true
+            return delayedPromise.futureResult
+        }
+
+        // Here we're disabling the pipeline handler, because otherwise it makes this test case impossible to reach.
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false,
+                                                                          withServerUpgrade: (upgraders: [delayedUpgrader], completionHandler: { context in })).wait())
+
+        // Let's send in an upgrade request.
+        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
+        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
+
+        // Upgrade has been requested but not proceeded.
+        XCTAssertTrue(upgradeRequested)
+        XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
+        XCTAssertNoThrow(try channel.throwIfErrorCaught())
+
+        // We now need to inject an extra buffered request. To do this we grab the context for the HTTPRequestDecoder and inject some reads.
+        XCTAssertNoThrow(try channel.pipeline.context(handlerType: HTTPRequestDecoder.self).map { context in
+            let requestHead = HTTPServerRequestPart.head(.init(version: .init(major: 1, minor: 1), method: .GET, uri: "/test"))
+            context.fireChannelRead(NIOAny(requestHead))
+            context.fireChannelRead(NIOAny(HTTPServerRequestPart.end(nil)))
+        }.wait())
+
+        // Ok, now we fail the upgrade. This fires an error, and then delivers the original request and the buffered one.
+        delayedPromise.fail(No.no)
+        XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
+
+        do {
+            try channel.throwIfErrorCaught()
+            XCTFail("Did not throw")
+        } catch No.no {
+            // ok
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        switch try channel.readInbound(as: HTTPServerRequestPart.self) {
+        case .some(.head(let h)):
+            XCTAssertEqual(h.method, .OPTIONS)
+        case let t:
+            XCTFail("Expected .head, got \(String(describing: t))")
+        }
+
+        switch try channel.readInbound(as: HTTPServerRequestPart.self) {
+        case .some(.end):
+            // ok
+            break
+        case let t:
+            XCTFail("Expected .head, got \(String(describing: t))")
+        }
+
+
+        switch try channel.readInbound(as: HTTPServerRequestPart.self) {
+        case .some(.head(let h)):
+            XCTAssertEqual(h.method, .GET)
+        case let t:
+            XCTFail("Expected .head, got \(String(describing: t))")
+        }
+
+        switch try channel.readInbound(as: HTTPServerRequestPart.self) {
+        case .some(.end):
+            // ok
+            break
+        case let t:
+            XCTFail("Expected .head, got \(String(describing: t))")
+        }
+
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound(as: HTTPServerRequestPart.self)))
+    }
+
     func testRemovesAllHTTPRelatedHandlersAfterUpgrade() throws {
         let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: []) { req in }
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(pipelining: true,
                                                                                     upgraders: [upgrader],
-                                                                                    extraHandlers: []) { ctx in }
+                                                                                    extraHandlers: []) { context in }
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -793,28 +1092,6 @@ class HTTPUpgradeTestCase: XCTestCase {
         XCTAssertNoThrow(try connectedServer.pipeline.assertDoesNotContain(handlerType: HTTPServerPipelineHandler.self))
     }
 
-    @available(*, deprecated, message: "Tests deprecated function addHTTPServerHandlers")
-    func testBasicUpgradePipelineMutation() throws {
-        let channel = EmbeddedChannel()
-        defer {
-            XCTAssertFalse(try channel.finish())
-        }
-        let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: []) { req in }
-        XCTAssertNoThrow(try channel.pipeline.addHTTPServerHandlersWithUpgrader(upgraders: [upgrader]) { ctx in }.wait())
-        try channel.pipeline.assertContainsUpgrader()
-        try channel.pipeline.assertContains(handlerType: HTTPRequestDecoder.self)
-        try channel.pipeline.assertContains(handlerType: HTTPResponseEncoder.self)
-
-        let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\n"
-        XCTAssertNoThrow(try channel.writeInbound(ByteBuffer.forString(request)))
-
-        var buffer = channel.readAllOutboundBuffers()
-        XCTAssertEqual(buffer.readString(length: 34), "HTTP/1.1 101 Switching Protocols\r\n")
-        try channel.pipeline.assertDoesNotContainUpgrader()
-        try channel.pipeline.assertDoesNotContain(handlerType: HTTPRequestDecoder.self)
-        try channel.pipeline.assertDoesNotContain(handlerType: HTTPResponseEncoder.self)
-    }
-    
     func testUpgradeWithUpgradePayloadInlineWithRequestWorks() throws {
         enum ReceivedTheWrongThingError: Error { case error }
         var upgradeRequest: HTTPRequestHead? = nil
@@ -847,12 +1124,12 @@ class HTTPUpgradeTestCase: XCTestCase {
                 self.allDonePromise = allDonePromise
             }
             
-            func handlerAdded(ctx: ChannelHandlerContext) {
+            func handlerAdded(context: ChannelHandlerContext) {
                 XCTAssertEqual(.fresh, self.state)
                 self.state = .added
             }
             
-            func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let buf = self.unwrapInboundIn(data)
                 XCTAssertEqual(1, buf.readableBytes)
                 let stringRead = buf.getString(at: 0, length: buf.readableBytes)
@@ -861,30 +1138,30 @@ class HTTPUpgradeTestCase: XCTestCase {
                     XCTAssertEqual("A", stringRead)
                     self.state = .inlineDataRead
                     if stringRead == .some("A") {
-                        self.firstByteDonePromise.succeed(result: ())
+                        self.firstByteDonePromise.succeed(())
                     } else {
-                        self.firstByteDonePromise.fail(error: ReceivedTheWrongThingError.error)
+                        self.firstByteDonePromise.fail(ReceivedTheWrongThingError.error)
                     }
                 case .inlineDataRead:
                     XCTAssertEqual("B", stringRead)
                     self.state = .extraDataRead
-                    ctx.channel.close(promise: nil)
+                    context.channel.close(promise: nil)
                     if stringRead == .some("B") {
-                        self.secondByteDonePromise.succeed(result: ())
+                        self.secondByteDonePromise.succeed(())
                     } else {
-                        self.secondByteDonePromise.fail(error: ReceivedTheWrongThingError.error)
+                        self.secondByteDonePromise.fail(ReceivedTheWrongThingError.error)
                     }
                 default:
                     XCTFail("channel read in wrong state \(self.state)")
                 }
             }
             
-            func close(ctx: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+            func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
                 XCTAssertEqual(.extraDataRead, self.state)
                 self.state = .closed
-                ctx.close(mode: mode, promise: promise)
+                context.close(mode: mode, promise: promise)
                 
-                self.allDonePromise.succeed(result: ())
+                self.allDonePromise.succeed(())
             }
         }
         
@@ -898,16 +1175,16 @@ class HTTPUpgradeTestCase: XCTestCase {
         defer {
             XCTAssertNoThrow(try promiseGroup.syncShutdownGracefully())
         }
-        let firstByteDonePromise: EventLoopPromise<Void> = promiseGroup.next().newPromise()
-        let secondByteDonePromise: EventLoopPromise<Void> = promiseGroup.next().newPromise()
-        let allDonePromise: EventLoopPromise<Void> = promiseGroup.next().newPromise()
+        let firstByteDonePromise = promiseGroup.next().makePromise(of: Void.self)
+        let secondByteDonePromise = promiseGroup.next().makePromise(of: Void.self)
+        let allDonePromise = promiseGroup.next().makePromise(of: Void.self)
         let (group, server, client, connectedServer) = try setUpTestWithAutoremoval(upgraders: [upgrader],
-                                                                                    extraHandlers: []) { (ctx) in
+                                                                                    extraHandlers: []) { (context) in
                                                                                         // This is called before the upgrader gets called.
                                                                                         XCTAssertNil(upgradeRequest)
                                                                                         upgradeHandlerCbFired = true
                                                                                         
-                                                                                        _ = ctx.channel.pipeline.add(handler: CheckWeReadInlineAndExtraData(firstByteDonePromise: firstByteDonePromise,
+                                                                                        _ = context.channel.pipeline.addHandler(CheckWeReadInlineAndExtraData(firstByteDonePromise: firstByteDonePromise,
                                                                                                                                                             secondByteDonePromise: secondByteDonePromise,
                                                                                                                                                             allDonePromise: allDonePromise))
         }
@@ -915,15 +1192,15 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
         
-        let completePromise: EventLoopPromise<Void> = group.next().newPromise()
+        let completePromise = group.next().makePromise(of: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
             let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(separator: "")
             assertResponseIs(response: resultString,
                              expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                              expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
-            completePromise.succeed(result: ())
+            completePromise.succeed(())
         }
-        XCTAssertNoThrow(try client.pipeline.add(handler: clientHandler).wait())
+        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
         
         // This request is safe to upgrade.
         var request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"

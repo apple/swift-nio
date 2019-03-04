@@ -37,7 +37,6 @@ extension EventLoopTest {
                 ("testScheduleRepeatedTaskToNotRetainEventLoop", testScheduleRepeatedTaskToNotRetainEventLoop),
                 ("testEventLoopGroupMakeIterator", testEventLoopGroupMakeIterator),
                 ("testEventLoopMakeIterator", testEventLoopMakeIterator),
-                ("testDummyEventLoopGroupMakeIterator", testDummyEventLoopGroupMakeIterator),
                 ("testMultipleShutdown", testMultipleShutdown),
                 ("testShuttingDownFailsRegistration", testShuttingDownFailsRegistration),
                 ("testEventLoopThreads", testEventLoopThreads),
@@ -47,6 +46,11 @@ extension EventLoopTest {
                 ("testShutdownWhileScheduledTasksNotReady", testShutdownWhileScheduledTasksNotReady),
                 ("testCloseFutureNotifiedBeforeUnblock", testCloseFutureNotifiedBeforeUnblock),
                 ("testScheduleMultipleTasks", testScheduleMultipleTasks),
+                ("testRepeatedTaskThatIsImmediatelyCancelledNotifies", testRepeatedTaskThatIsImmediatelyCancelledNotifies),
+                ("testRepeatedTaskThatIsCancelledAfterRunningAtLeastTwiceNotifies", testRepeatedTaskThatIsCancelledAfterRunningAtLeastTwiceNotifies),
+                ("testRepeatedTaskThatCancelsItselfNotifiesOnlyWhenFinished", testRepeatedTaskThatCancelsItselfNotifiesOnlyWhenFinished),
+                ("testAndAllCompleteWithZeroFutures", testAndAllCompleteWithZeroFutures),
+                ("testAndAllSucceedWithZeroFutures", testAndAllSucceedWithZeroFutures),
            ]
    }
 }
