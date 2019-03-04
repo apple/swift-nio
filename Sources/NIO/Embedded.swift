@@ -328,12 +328,17 @@ public class EmbeddedChannel: Channel {
     // Embedded channels never have parents.
     public let parent: Channel? = nil
 
+    public struct WrongTypeError: Error {
+        public let expected: Any.Type
+        public let actual: Any.Type
+    }
+
     public func readOutbound<T>(as type: T.Type = T.self) throws -> T? {
-        return readFromBuffer(buffer: &channelcore.outboundBuffer)
+        return try readFromBuffer(buffer: &channelcore.outboundBuffer)
     }
 
     public func readInbound<T>(as type: T.Type = T.self) throws -> T? {
-        return readFromBuffer(buffer: &channelcore.inboundBuffer)
+        return try readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
 
     /// Writes `data` into the `EmbeddedChannel`'s pipeline. This will result in a `channelRead` and a
@@ -362,11 +367,15 @@ public class EmbeddedChannel: Channel {
         }
     }
 
-    private func readFromBuffer<T>(buffer: inout [NIOAny]) -> T? {
+    private func readFromBuffer<T>(buffer: inout [NIOAny]) throws -> T? {
         if buffer.isEmpty {
             return nil
         }
-        return buffer.removeFirst().tryAs(type: T.self)
+        let elem = buffer.removeFirst()
+        guard let t = elem.tryAs(type: T.self) else {
+            throw WrongTypeError(expected: T.self, actual: type(of: elem))
+        }
+        return t
     }
 
     /// Create a new instance.
