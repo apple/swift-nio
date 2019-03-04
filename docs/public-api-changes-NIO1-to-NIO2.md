@@ -2,6 +2,7 @@
 
 - renamed all instances of `ctx` to `context`. Your `ChannelHandler` methods now
   need to take a `context` parameter and no longer `ctx`. Example: `func channelRead(context: ChannelHandlerContext, data: NIOAny)`
+- `HTTPResponseCompressor` moved to [`swift-nio-extras`](https://github.com/apple/swift-nio-extras).
 - removed all previously deprecated functions, types and modules.
 - renamed `SniResult` to `SNIResult`
 - renamed `SniHandler` to `SNIHandler`

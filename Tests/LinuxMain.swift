@@ -60,7 +60,6 @@ import XCTest
          testCase(HTTPDecoderTest.allTests),
          testCase(HTTPHeadersTest.allTests),
          testCase(HTTPRequestEncoderTests.allTests),
-         testCase(HTTPResponseCompressorTest.allTests),
          testCase(HTTPResponseEncoderTests.allTests),
          testCase(HTTPServerClientTest.allTests),
          testCase(HTTPServerPipelineHandlerTest.allTests),
