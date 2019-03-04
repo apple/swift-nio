@@ -71,7 +71,8 @@ class EmbeddedChannelTest: XCTestCase {
             _ = try channel.readOutbound(as: Int.self)
             XCTFail()
         } catch let error as EmbeddedChannel.WrongTypeError {
-            XCTAssertFalse(error.expected == error.actual)
+            let expectedError = EmbeddedChannel.WrongTypeError(expected: Int.self, actual: String.self)
+            XCTAssertEqual(error, expectedError)
         } catch {
             XCTFail()
         }
@@ -84,7 +85,8 @@ class EmbeddedChannelTest: XCTestCase {
             _ = try channel.readInbound(as: Int.self)
             XCTFail()
         } catch let error as EmbeddedChannel.WrongTypeError {
-            XCTAssertFalse(error.expected == error.actual)
+            let expectedError = EmbeddedChannel.WrongTypeError(expected: Int.self, actual: String.self)
+            XCTAssertEqual(error, expectedError)
         } catch {
             XCTFail()
         }

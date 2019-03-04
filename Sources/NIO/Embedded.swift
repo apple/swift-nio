@@ -328,9 +328,13 @@ public class EmbeddedChannel: Channel {
     // Embedded channels never have parents.
     public let parent: Channel? = nil
 
-    public struct WrongTypeError: Error {
+    public struct WrongTypeError: Error, Equatable {
         public let expected: Any.Type
         public let actual: Any.Type
+
+        public static func == (lhs: WrongTypeError, rhs: WrongTypeError) -> Bool {
+            return lhs.expected == rhs.expected && lhs.actual == rhs.actual
+        }
     }
 
     public func readOutbound<T>(as type: T.Type = T.self) throws -> T? {
@@ -373,7 +377,7 @@ public class EmbeddedChannel: Channel {
         }
         let elem = buffer.removeFirst()
         guard let t = elem.tryAs(type: T.self) else {
-            throw WrongTypeError(expected: T.self, actual: type(of: elem))
+            throw WrongTypeError(expected: T.self, actual: type(of: elem.forceAs(type: Any.self)))
         }
         return t
     }
