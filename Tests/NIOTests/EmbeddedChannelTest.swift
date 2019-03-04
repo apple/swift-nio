@@ -213,4 +213,15 @@ class EmbeddedChannelTest: XCTestCase {
         }
         try connectPromise.futureResult.wait()
     }
+
+    func testUnprocessedOutboundUserEventFailsOnEmbeddedChannel() {
+        let channel = EmbeddedChannel()
+        XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
+            if let error = error as? ChannelError {
+                XCTAssertEqual(ChannelError.operationUnsupported, error)
+            } else {
+                XCTFail("unexpected error: \(error)")
+            }
+        }
+    }
 }
