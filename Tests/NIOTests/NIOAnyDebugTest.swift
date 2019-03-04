@@ -25,7 +25,7 @@ class NIOAnyDebugTest: XCTestCase {
         XCTAssertTrue(wrappedInNIOAnyBlock(bb).contains("NIOAny { ByteBuffer { readerIndex: 0, writerIndex: 18, readableBytes: 18, capacity: 32, slice: _ByteBufferSlice { 0..<32 }, storage: "))
         XCTAssertTrue(wrappedInNIOAnyBlock(bb).hasSuffix(" }"))
         
-        let fileHandle = FileHandle(descriptor: 1)
+        let fileHandle = NIOFileHandle(descriptor: 1)
         let fileRegion = FileRegion(fileHandle: fileHandle, readerIndex: 1, endIndex: 5)
         XCTAssertEqual(wrappedInNIOAnyBlock(fileRegion), wrappedInNIOAnyBlock("""
         FileRegion { \
@@ -58,7 +58,7 @@ class NIOAnyDebugTest: XCTestCase {
 private extension ByteBufferAllocator {
     func byteBuffer(string: String) -> ByteBuffer {
         var buffer = self.buffer(capacity: string.count)
-        buffer.write(string: string)
+        buffer.writeString(string)
         return buffer
     }
 }
