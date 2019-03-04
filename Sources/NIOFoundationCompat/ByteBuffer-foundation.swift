@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIO
-import struct Foundation.Data
+import Foundation
 
 
 /// Errors that may be thrown by ByteBuffer methods that call into Foundation.
@@ -153,3 +153,5 @@ extension ByteBuffer {
         return self.setBytes(data, at: index)
     }
 }
+
+extension ByteBufferView: ContiguousBytes {}
