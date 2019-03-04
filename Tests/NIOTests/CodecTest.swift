@@ -1152,44 +1152,38 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
 public class MessageToByteEncoderTest: XCTestCase {
 
-    private final class Int32ToByteEncoder : MessageToByteEncoder {
+    private struct Int32ToByteEncoder: MessageToByteEncoder {
         typealias OutboundIn = Int32
-        typealias OutboundOut = ByteBuffer
 
-        public func encode(context: ChannelHandlerContext, data value: Int32, out: inout ByteBuffer) throws {
-            XCTAssertEqual(MemoryLayout<Int32>.size, out.writableBytes)
+        public func encode(data value: Int32, out: inout ByteBuffer) throws {
             out.writeInteger(value)
-        }
-
-        public func allocateOutBuffer(context: ChannelHandlerContext, data: Int32) throws -> ByteBuffer {
-            return context.channel.allocator.buffer(capacity: MemoryLayout<Int32>.size)
         }
     }
 
-    private final class Int32ToByteEncoderWithDefaultImpl : MessageToByteEncoder {
+    private final class Int32ToByteEncoderWithDefaultImpl: MessageToByteEncoder {
         typealias OutboundIn = Int32
-        typealias OutboundOut = ByteBuffer
 
-        public func encode(context: ChannelHandlerContext, data value: Int32, out: inout ByteBuffer) throws {
+        public func encode(data value: Int32, out: inout ByteBuffer) throws {
             XCTAssertEqual(MemoryLayout<Int32>.size, 256)
             out.writeInteger(value)
         }
     }
 
     func testEncoderOverrideAllocateOutBuffer() throws {
-        try testEncoder(Int32ToByteEncoder())
+        try testEncoder(MessageToByteHandler(Int32ToByteEncoder()))
     }
 
     func testEncoder() throws {
-        try testEncoder(Int32ToByteEncoderWithDefaultImpl())
+        try testEncoder(MessageToByteHandler(Int32ToByteEncoderWithDefaultImpl()))
     }
 
-    private func testEncoder(_ handler: ChannelHandler) throws {
+    private func testEncoder(_ handler: ChannelHandler, file: StaticString = #file, line: UInt = #line) throws {
         let channel = EmbeddedChannel()
 
-        _ = try channel.pipeline.addHandler(Int32ToByteEncoder()).wait()
+        XCTAssertNoThrow(try channel.pipeline.addHandler(MessageToByteHandler(Int32ToByteEncoder())).wait(),
+                         file: file, line: line)
 
-        _ = try channel.writeAndFlush(NIOAny(Int32(5))).wait()
+        XCTAssertNoThrow(try channel.writeAndFlush(NIOAny(Int32(5))).wait(), file: file, line: line)
 
         if var buffer = try channel.readOutbound(as: ByteBuffer.self) {
             XCTAssertEqual(Int32(5), buffer.readInteger())
