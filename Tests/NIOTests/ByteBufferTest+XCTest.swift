@@ -135,6 +135,7 @@ extension ByteBufferTest {
                 ("testGetDispatchDataWorks", testGetDispatchDataWorks),
                 ("testGetDispatchDataReadWrite", testGetDispatchDataReadWrite),
                 ("testVariousContiguousStorageAccessors", testVariousContiguousStorageAccessors),
+                ("testGetBytesThatAreNotReadable", testGetBytesThatAreNotReadable),
            ]
    }
 }

@@ -136,6 +136,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
         channel.pipeline.fireChannelRead(NIOAny(buffer))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
+        buffer.moveWriterIndex(to: writerIndex)
         channel.pipeline.fireChannelRead(NIOAny(buffer.getSlice(at: writerIndex - 1, length: 1)!))
 
         var buffer2 = channel.allocator.buffer(capacity: 32)
@@ -265,7 +266,6 @@ public class ByteToMessageDecoderTest: XCTestCase {
 
             func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 self.numberOfDecodeCalls += 1
-                print("\(numberOfDecodeCalls): \(String(decoding: buffer.readableBytesView, as: UTF8.self))")
                 var reentrantWriteBuffer = context.channel.allocator.buffer(capacity: 1)
                 if self.numberOfDecodeCalls == 2 {
                     // this is the first time, let's fireChannelRead

@@ -470,7 +470,12 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     ///     - idx: The index into the underlying storage.
     /// - returns: The value.
     private func string(idx: HTTPHeaderIndex) -> String {
-        return self.buffer.getString(at: idx.start, length: idx.length)!
+        var hackBuffer = self.buffer
+        hackBuffer.moveReaderIndex(to: 0)
+        hackBuffer.moveWriterIndex(to: hackBuffer.capacity)
+        return hackBuffer.getString(at: idx.start, length: idx.length)!
+
+//        return self.buffer.getString(at: idx.start, length: idx.length)!
     }
 
     /// Return all names.

@@ -31,34 +31,27 @@ extension ByteBuffer {
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if there aren't enough bytes readable.
     @inlinable
     public mutating func readInteger<T: FixedWidthInteger>(endianness: Endianness = .big, as: T.Type = T.self) -> T? {
-        guard self.readableBytes >= MemoryLayout<T>.size else {
-            return nil
+        return self.getInteger(at: self.readerIndex, endianness: endianness, as: T.self).map {
+            self._moveReaderIndex(forwardBy: MemoryLayout<T>.size)
+            return $0
         }
-
-        let value: T = self.getInteger(at: self.readerIndex, endianness: endianness)! /* must work as we have enough bytes */
-        self._moveReaderIndex(forwardBy: MemoryLayout<T>.size)
-        return value
     }
 
     /// Get the integer at `index` from this `ByteBuffer`. Does not move the reader index.
+    /// The selected bytes must be readable or else `nil` will be returned.
     ///
-    /// - note: Please consider using `readInteger` which is a safer alternative that automatically maintains the
-    ///         `readerIndex` and won't allow you to read uninitialized memory.
-    /// - warning: This method allows the user to read any of the bytes in the `ByteBuffer`'s storage, including
-    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
-    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
-    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
-    ///           safe to read.
     /// - parameters:
     ///     - index: The starting index of the bytes for the integer into the `ByteBuffer`.
     ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
     ///     - as: the desired `FixedWidthInteger` type (optional parameter)
-    /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if the bytes of interest aren't contained in the `ByteBuffer`.
+    /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if the bytes of interest are not
+    ///            readable.
     @inlinable
-    public func getInteger<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big, as: T.Type = T.self) -> T? {
-        precondition(index >= 0, "index must not be negative")
-        return self.withVeryUnsafeBytes { ptr in
-            guard index <= ptr.count - MemoryLayout<T>.size else {
+    public func getInteger<T: FixedWidthInteger>(at index0: Int, endianness: Endianness = Endianness.big, as: T.Type = T.self) -> T? {
+        precondition(index0 >= 0, "index must not be negative")
+        let index = index0 - self.readerIndex
+        return self.withUnsafeReadableBytes { ptr in
+            guard index >= 0 && index <= ptr.count - MemoryLayout<T>.size else {
                 return nil
             }
             var value: T = 0

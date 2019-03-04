@@ -25,6 +25,8 @@ class ByteBufferTest: XCTestCase {
         var buffer = allocator.buffer(capacity: 32)
 
         XCTAssertEqual(MemoryLayout<T>.size, buffer.setInteger(v, at: index))
+        buffer.moveWriterIndex(to: index + MemoryLayout<T>.size)
+        buffer.moveReaderIndex(to: index)
         XCTAssertEqual(v, buffer.getInteger(at: index))
     }
 
@@ -41,13 +43,14 @@ class ByteBufferTest: XCTestCase {
     override func setUp() {
         super.setUp()
 
-        buf = allocator.buffer(capacity: 1024)
-        buf = buf.getSlice(at: 256, length: 512)
-        buf.clear()
+        self.buf = allocator.buffer(capacity: 1024)
+        self.buf.writeBytes(Array(repeating: UInt8(0xff), count: 1024))
+        self.buf = self.buf.getSlice(at: 256, length: 512)
+        self.buf.clear()
     }
 
     override func tearDown() {
-        buf = nil
+        self.buf = nil
 
         super.tearDown()
     }
@@ -59,8 +62,8 @@ class ByteBufferTest: XCTestCase {
 
     func testEqualsComparesReadBuffersOnly() throws {
         // Only cares about the read buffer
-        buf.writeInteger(Int8.max)
-        buf.writeString("oh hi")
+        self.buf.writeInteger(Int8.max)
+        self.buf.writeString("oh hi")
         let actual: Int8 = buf.readInteger()! // Just getting rid of it from the read buffer
         XCTAssertEqual(Int8.max, actual)
 
@@ -343,6 +346,8 @@ class ByteBufferTest: XCTestCase {
 
         XCTAssertEqual(3, buffer.setBytes(data, at: 0))
         XCTAssertEqual(0, buffer.readableBytes)
+        buffer.moveReaderIndex(to: 0)
+        buffer.moveWriterIndex(to: 3)
         XCTAssertEqual(data, buffer.getData(at: 0, length: 3))
     }
 
@@ -577,13 +582,15 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testSlicesThatAreOutOfBands() throws {
-        let goodSlice = buf.getSlice(at: 0, length: buf.capacity)
+        self.buf.moveReaderIndex(to: 0)
+        self.buf.moveWriterIndex(to: self.buf.capacity)
+        let goodSlice = self.buf.getSlice(at: 0, length: self.buf.capacity)
         XCTAssertNotNil(goodSlice)
 
-        let badSlice1 = buf.getSlice(at: 0, length: buf.capacity+1)
+        let badSlice1 = self.buf.getSlice(at: 0, length: self.buf.capacity+1)
         XCTAssertNil(badSlice1)
 
-        let badSlice2 = buf.getSlice(at: buf.capacity-1, length: 2)
+        let badSlice2 = self.buf.getSlice(at: self.buf.capacity-1, length: 2)
         XCTAssertNil(badSlice2)
     }
 
@@ -680,50 +687,54 @@ class ByteBufferTest: XCTestCase {
 
     func testReadDataNotEnoughAvailable() throws {
         /* write some bytes */
-        buf.writeBytes(Data([0, 1, 2, 3]))
+        self.buf.writeBytes(Data([0, 1, 2, 3]))
 
         /* make more available in the buffer that should not be readable */
-        buf.setBytes(Data([4, 5, 6, 7]), at: 4)
+        self.buf.setBytes(Data([4, 5, 6, 7]), at: 4)
 
         let actualNil = buf.readData(length: 5)
         XCTAssertNil(actualNil)
 
+        self.buf.moveReaderIndex(to: 0)
+        self.buf.moveWriterIndex(to: 5)
         let actualGoodDirect = buf.getData(at: 0, length: 5)
         XCTAssertEqual(Data([0, 1, 2, 3, 4]), actualGoodDirect)
 
-        let actualGood = buf.readData(length: 4)
+        let actualGood = self.buf.readData(length: 4)
         XCTAssertEqual(Data([0, 1, 2, 3]), actualGood)
     }
 
     func testReadSliceNotEnoughAvailable() throws {
         /* write some bytes */
-        buf.writeBytes(Data([0, 1, 2, 3]))
+        self.buf.writeBytes(Data([0, 1, 2, 3]))
 
         /* make more available in the buffer that should not be readable */
-        buf.setBytes(Data([4, 5, 6, 7]), at: 4)
+        self.buf.setBytes(Data([4, 5, 6, 7]), at: 4)
 
-        let actualNil = buf.readSlice(length: 5)
+        let actualNil = self.buf.readSlice(length: 5)
         XCTAssertNil(actualNil)
 
-
-        let actualGoodDirect = buf.getSlice(at: 0, length: 5)
+        self.buf.moveWriterIndex(forwardBy: 1)
+        let actualGoodDirect = self.buf.getSlice(at: 0, length: 5)
         XCTAssertEqual(Data([0, 1, 2, 3, 4]), actualGoodDirect?.getData(at: 0, length: 5))
 
-        var actualGood = buf.readSlice(length: 4)
+        var actualGood = self.buf.readSlice(length: 4)
         XCTAssertEqual(Data([0, 1, 2, 3]), actualGood?.readData(length: 4))
     }
 
     func testSetBuffer() throws {
-        var src = allocator.buffer(capacity: 4)
+        var src = self.allocator.buffer(capacity: 4)
         src.writeBytes(Data([0, 1, 2, 3]))
 
-        buf.set(buffer: src, at: 1)
+        self.buf.set(buffer: src, at: 1)
 
         /* Should bit increase the writerIndex of the src buffer */
         XCTAssertEqual(4, src.readableBytes)
-        XCTAssertEqual(0, buf.readableBytes)
+        XCTAssertEqual(0, self.buf.readableBytes)
 
-        XCTAssertEqual(Data([0, 1, 2, 3]), buf.getData(at: 1, length: 4))
+        self.buf.moveWriterIndex(to: 5)
+        self.buf.moveReaderIndex(to: 1)
+        XCTAssertEqual(Data([0, 1, 2, 3]), self.buf.getData(at: 1, length: 4))
     }
 
     func testWriteBuffer() throws {
@@ -794,37 +805,43 @@ class ByteBufferTest: XCTestCase {
 
     func testSetABunchOfCollections() throws {
         let overallData = "0123456789abcdef".data(using: .utf8)!
-        _ = buf.setBytes("0123".utf8, at: 0)
-        "4567".withCString { ptr in
+        self.buf.setBytes("0123".utf8, at: 0)
+        _ = "4567".withCString { ptr in
             ptr.withMemoryRebound(to: UInt8.self, capacity: 4) { ptr in
-                _ = buf.setBytes(UnsafeBufferPointer<UInt8>(start: ptr, count: 4), at: 4)
+                self.buf.setBytes(UnsafeBufferPointer<UInt8>(start: ptr, count: 4), at: 4)
             }
         }
-        _ = buf.setBytes(Array("89ab".utf8), at: 8)
-        _ = buf.setBytes("cdef".data(using: .utf8)!, at: 12)
-        let actual = buf.getData(at: 0, length: 16)
+        self.buf.setBytes(Array("89ab".utf8), at: 8)
+        self.buf.setBytes("cdef".data(using: .utf8)!, at: 12)
+        self.buf.moveReaderIndex(to: 0)
+        self.buf.moveWriterIndex(to: 16)
+        let actual = self.buf.getData(at: 0, length: 16)
         XCTAssertEqual(overallData, actual)
     }
 
     func testTryStringTooLong() throws {
-        let capacity = buf.capacity
-        for i in 0..<buf.capacity {
-            buf.setString("x", at: i)
+        let capacity = self.buf.capacity
+        for i in 0..<self.buf.capacity {
+            self.buf.setString("x", at: i)
         }
-        XCTAssertEqual(capacity, buf.capacity, "buffer capacity needlessly changed from \(capacity) to \(buf.capacity)")
-        XCTAssertNil(buf.getString(at: 0, length: capacity+1))
+        XCTAssertEqual(capacity, self.buf.capacity,
+                       "buffer capacity needlessly changed from \(capacity) to \(self.buf.capacity)")
+        XCTAssertNil(self.buf.getString(at: 0, length: capacity+1))
     }
 
     func testSetGetBytesAllFine() throws {
-        buf.setBytes([1, 2, 3, 4], at: 0)
-        XCTAssertEqual([1, 2, 3, 4], buf.getBytes(at: 0, length: 4) ?? [])
+        self.buf.moveReaderIndex(to: 0)
+        self.buf.setBytes([1, 2, 3, 4], at: 0)
+        self.buf.moveWriterIndex(to: 4)
+        XCTAssertEqual([1, 2, 3, 4], self.buf.getBytes(at: 0, length: 4) ?? [])
 
-        let capacity = buf.capacity
-        for i in 0..<buf.capacity {
-            buf.setBytes([0xFF], at: i)
+        let capacity = self.buf.capacity
+        for i in 0..<self.buf.capacity {
+            self.buf.setBytes([0xFF], at: i)
         }
+        self.buf.moveWriterIndex(to: self.buf.capacity)
         XCTAssertEqual(capacity, buf.capacity, "buffer capacity needlessly changed from \(capacity) to \(buf.capacity)")
-        XCTAssertEqual(Array(repeating: 0xFF, count: capacity), buf.getBytes(at: 0, length: capacity)!)
+        XCTAssertEqual(Array(repeating: 0xFF, count: capacity), self.buf.getBytes(at: 0, length: capacity))
 
     }
 
@@ -1037,6 +1054,8 @@ class ByteBufferTest: XCTestCase {
         XCTAssertLessThan(buf.capacity, 200)
 
         buf.setInteger(17, at: 201)
+        buf.moveWriterIndex(to: 201 + MemoryLayout<Int>.size)
+        buf.moveReaderIndex(to: 201)
         let i: Int = buf.getInteger(at: 201)!
         XCTAssertEqual(17, i)
         XCTAssertGreaterThanOrEqual(buf.capacity, 200 + MemoryLayout.size(ofValue: i))
@@ -1055,6 +1074,8 @@ class ByteBufferTest: XCTestCase {
         XCTAssertLessThan(buf.capacity, 200)
 
         buf.setString("HW", at: 201)
+        buf.moveWriterIndex(to: 201 + 2)
+        buf.moveReaderIndex(to: 201)
         let s = buf.getString(at: 201, length: 2)!
         XCTAssertEqual("HW", s)
         XCTAssertGreaterThanOrEqual(buf.capacity, 202)
@@ -1094,11 +1115,12 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testWritableBytesAccountsForSlicing() throws {
-        let buf = ByteBufferAllocator().buffer(capacity: 32)
+        var buf = ByteBufferAllocator().buffer(capacity: 32)
         XCTAssertEqual(buf.capacity, 32)
         XCTAssertEqual(buf.writableBytes, 32)
-
-        let newBuf = buf.getSlice(at: buf.writerIndex, length: 8)!
+        let oldWriterIndex = buf.writerIndex
+        buf.writeStaticString("01234567")
+        let newBuf = buf.getSlice(at: oldWriterIndex, length: 8)!
         XCTAssertEqual(newBuf.capacity, 8)
         XCTAssertEqual(newBuf.writableBytes, 0)
     }
@@ -1193,9 +1215,11 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(3, buf.readInteger()! as UInt8)
         buf.setBytes(WrongCollection(), at: 0)
         XCTAssertEqual(0, buf.readableBytes)
-        XCTAssertEqual(1, buf.getInteger(at: 0)! as UInt8)
-        XCTAssertEqual(2, buf.getInteger(at: 1)! as UInt8)
-        XCTAssertEqual(3, buf.getInteger(at: 2)! as UInt8)
+        buf.moveWriterIndex(to: 3)
+        buf.moveReaderIndex(to: 0)
+        XCTAssertEqual(1, buf.getInteger(at: 0, as: UInt8.self))
+        XCTAssertEqual(2, buf.getInteger(at: 1, as: UInt8.self))
+        XCTAssertEqual(3, buf.getInteger(at: 2, as: UInt8.self))
     }
 
     func testUnderestimatingSequenceWorks() throws {
@@ -1230,9 +1254,10 @@ class ByteBufferTest: XCTestCase {
         buf = self.allocator.buffer(capacity: 4)
         buf.setBytes(UnderestimatingSequence(), at: 0)
         XCTAssertEqual(0, buf.readableBytes)
+        buf.moveWriterIndex(to: 256)
+        buf.moveReaderIndex(to: 0)
         for i in 0..<256 {
-            let actual = Int(buf.getInteger(at: i)! as UInt8)
-            XCTAssertEqual(i, actual)
+            XCTAssertEqual(i, buf.getInteger(at: i, as: UInt8.self).map(Int.init))
         }
     }
 
@@ -1247,6 +1272,8 @@ class ByteBufferTest: XCTestCase {
         self.buf.writeInteger(-1, endianness: .big, as: Int64.self)
         XCTAssertEqual(-1, self.buf.readInteger(endianness: .big, as: Int64.self))
         self.buf.setInteger(0xdeadbeef, at: 0, endianness: .little, as: UInt64.self)
+        self.buf.moveWriterIndex(to: 8)
+        self.buf.moveReaderIndex(to: 0)
         XCTAssertEqual(0xdeadbeef, self.buf.getInteger(at: 0, endianness: .little, as: UInt64.self))
     }
 
@@ -1364,6 +1391,8 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(0, buffer.writerIndex)
         // As we fully consumed the buffer we should only have adjusted the indices but not triggered a copy as result of CoW sematics.
         // So we should still be able to also read the old data.
+        buffer.moveWriterIndex(to: 1)
+        buffer.moveReaderIndex(to: 0)
         XCTAssertEqual(0xaa, buffer.getInteger(at: 0, as: UInt8.self))
         XCTAssertEqual(0, buffer2.readableBytes)
     }
@@ -1622,6 +1651,8 @@ class ByteBufferTest: XCTestCase {
         }
         buf.moveWriterIndex(forwardBy: 8)
         XCTAssertEqual("abcdefgh", buf.readString(length: buf.readableBytes))
+        buf.moveWriterIndex(to: 1)
+        buf.moveReaderIndex(to: 0)
         XCTAssertEqual("X", buf.getString(at: 0, length: 1))
     }
 
@@ -1708,6 +1739,89 @@ class ByteBufferTest: XCTestCase {
             String(decoding: bytes, as: Unicode.UTF8.self)
         }
         XCTAssertEqual("", r2)
+    }
+
+    func testGetBytesThatAreNotReadable() {
+        var buf = self.allocator.buffer(capacity: 256)
+
+        // 1) Nothing available
+        // no `get*` should work
+        XCTAssertNil(buf.getInteger(at: 0, as: UInt8.self))
+        XCTAssertNil(buf.getInteger(at: 0, as: UInt16.self))
+        XCTAssertNil(buf.getInteger(at: 0, as: UInt32.self))
+        XCTAssertNil(buf.getInteger(at: 0, as: UInt64.self))
+        XCTAssertNil(buf.getString(at: 0, length: 1))
+        XCTAssertNil(buf.getSlice(at: 0, length: 1))
+        XCTAssertNil(buf.getData(at: 0, length: 1))
+        XCTAssertNil(buf.getDispatchData(at: 0, length: 1))
+        XCTAssertNil(buf.getBytes(at: 0, length: 1))
+        XCTAssertNil(buf.getString(at: 0, length: 1, encoding: .utf8))
+
+        // but some `get*` should be able to produce empties
+        XCTAssertEqual("", buf.getString(at: 0, length: 0))
+        XCTAssertEqual(0, buf.getSlice(at: 0, length: 0)?.capacity)
+        XCTAssertEqual(Data(), buf.getData(at: 0, length: 0))
+        XCTAssertEqual(0, buf.getDispatchData(at: 0, length: 0)?.count)
+        XCTAssertEqual([], buf.getBytes(at: 0, length: 0))
+        XCTAssertEqual("", buf.getString(at: 0, length: 0, encoding: .utf8))
+
+        // 2) One byte available at the beginning
+        buf.writeInteger(0x41, as: UInt8.self)
+
+        // for most `get*`s, we can make them just not work
+        XCTAssertNil(buf.getInteger(at: 0, as: UInt16.self))
+        XCTAssertNil(buf.getInteger(at: 0, as: UInt32.self))
+        XCTAssertNil(buf.getInteger(at: 0, as: UInt64.self))
+        XCTAssertNil(buf.getString(at: 0, length: 2))
+        XCTAssertNil(buf.getSlice(at: 0, length: 2))
+        XCTAssertNil(buf.getData(at: 0, length: 2))
+        XCTAssertNil(buf.getDispatchData(at: 0, length: 2))
+        XCTAssertNil(buf.getBytes(at: 0, length: 2))
+        XCTAssertNil(buf.getString(at: 0, length: 2, encoding: .utf8))
+
+        XCTAssertNil(buf.getInteger(at: 1, as: UInt8.self))
+        XCTAssertNil(buf.getInteger(at: 1, as: UInt16.self))
+        XCTAssertNil(buf.getInteger(at: 1, as: UInt32.self))
+        XCTAssertNil(buf.getInteger(at: 1, as: UInt64.self))
+        XCTAssertNil(buf.getString(at: 1, length: 1))
+        XCTAssertNil(buf.getSlice(at: 1, length: 1))
+        XCTAssertNil(buf.getData(at: 1, length: 1))
+        XCTAssertNil(buf.getDispatchData(at: 1, length: 1))
+        XCTAssertNil(buf.getBytes(at: 1, length: 1))
+        XCTAssertNil(buf.getString(at: 1, length: 1, encoding: .utf8))
+
+        // on the other hand, we should be able to take that one byte out
+        XCTAssertEqual(0x41, buf.getInteger(at: 0, as: UInt8.self))
+        XCTAssertEqual("A", buf.getString(at: 0, length: 1))
+        XCTAssertEqual(1, buf.getSlice(at: 0, length: 1)?.capacity)
+        XCTAssertEqual(Data("A".utf8), buf.getData(at: 0, length: 1))
+        XCTAssertEqual(1, buf.getDispatchData(at: 0, length: 1)?.count)
+        XCTAssertEqual(["A".utf8.first!], buf.getBytes(at: 0, length: 1))
+        XCTAssertEqual("A", buf.getString(at: 0, length: 1, encoding: .utf8))
+
+        // 3) Now let's have 4 bytes towards the end
+
+        // we can make pretty much all `get*`s fail
+        buf.setInteger(0x41414141, at: 251, as: UInt32.self)
+        buf.moveWriterIndex(to: 255)
+        buf.moveReaderIndex(to: 251)
+        XCTAssertNil(buf.getInteger(at: 251, as: UInt64.self))
+        XCTAssertNil(buf.getString(at: 251, length: 5))
+        XCTAssertNil(buf.getSlice(at: 251, length: 5))
+        XCTAssertNil(buf.getData(at: 251, length: 5))
+        XCTAssertNil(buf.getDispatchData(at: 251, length: 5))
+        XCTAssertNil(buf.getBytes(at: 251, length: 5))
+        XCTAssertNil(buf.getString(at: 251, length: 5, encoding: .utf8))
+
+        XCTAssertEqual(0x41, buf.getInteger(at: 254, as: UInt8.self))
+        XCTAssertEqual(0x4141, buf.getInteger(at: 253, as: UInt16.self))
+        XCTAssertEqual(0x41414141, buf.getInteger(at: 251, as: UInt32.self))
+        XCTAssertEqual("AAAA", buf.getString(at: 251, length: 4))
+        XCTAssertEqual(4, buf.getSlice(at: 251, length: 4)?.capacity)
+        XCTAssertEqual(Data("AAAA".utf8), buf.getData(at: 251, length: 4))
+        XCTAssertEqual(4, buf.getDispatchData(at: 251, length: 4)?.count)
+        XCTAssertEqual(Array(repeating: "A".utf8.first!, count: 4), buf.getBytes(at: 251, length: 4))
+        XCTAssertEqual("AAAA", buf.getString(at: 251, length: 4, encoding: .utf8))
     }
 }
 
