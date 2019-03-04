@@ -59,6 +59,13 @@ public struct ByteBufferView: RandomAccessCollection {
     public subscript(range: Range<Index>) -> ByteBufferView {
         return ByteBufferView(buffer: self.buffer, range: range)
     }
+
+    @inlinable
+    public func withContiguousStorageIfAvailable<R>(_ body: (UnsafeBufferPointer<UInt8>) throws -> R) rethrows -> R? {
+        return try self.withUnsafeBytes { bytes in
+            return try body(bytes.bindMemory(to: UInt8.self))
+        }
+    }
 }
 
 extension ByteBuffer {

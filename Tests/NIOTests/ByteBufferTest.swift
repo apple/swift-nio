@@ -1684,6 +1684,31 @@ class ByteBufferTest: XCTestCase {
         XCTAssertNil(self.buf.readDispatchData(length: 1))
         XCTAssertEqual(0, self.buf.readDispatchData(length: 0)?.count ?? 12)
     }
+
+    func testVariousContiguousStorageAccessors() {
+        self.buf.clear()
+        self.buf.writeStaticString("abc0123456789efg")
+        self.buf.moveReaderIndex(to: 3)
+        self.buf.moveWriterIndex(to: 13)
+
+        func inspectContiguousBytes<Bytes: ContiguousBytes>(bytes: Bytes, expectedString: String) {
+            bytes.withUnsafeBytes { bytes in
+                XCTAssertEqual(expectedString, String(decoding: bytes, as: Unicode.UTF8.self))
+            }
+        }
+        inspectContiguousBytes(bytes: self.buf.readableBytesView, expectedString: "0123456789")
+        let r1 = self.buf.readableBytesView.withContiguousStorageIfAvailable { bytes -> String in
+            String(decoding: bytes, as: Unicode.UTF8.self)
+        }
+        XCTAssertEqual("0123456789", r1)
+
+        self.buf.clear()
+        inspectContiguousBytes(bytes: self.buf.readableBytesView, expectedString: "")
+        let r2 = self.buf.readableBytesView.withContiguousStorageIfAvailable { bytes -> String in
+            String(decoding: bytes, as: Unicode.UTF8.self)
+        }
+        XCTAssertEqual("", r2)
+    }
 }
 
 private enum AllocationExpectationState: Int {
