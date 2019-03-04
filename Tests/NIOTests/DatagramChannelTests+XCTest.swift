@@ -42,6 +42,7 @@ extension DatagramChannelTests {
                 ("testSetGetOptionClosedDatagramChannel", testSetGetOptionClosedDatagramChannel),
                 ("testWritesAreAccountedCorrectly", testWritesAreAccountedCorrectly),
                 ("testSettingTwoDistinctChannelOptionsWorksForDatagramChannel", testSettingTwoDistinctChannelOptionsWorksForDatagramChannel),
+                ("testUnprocessedOutboundUserEventFailsOnDatagramChannel", testUnprocessedOutboundUserEventFailsOnDatagramChannel),
            ]
    }
 }

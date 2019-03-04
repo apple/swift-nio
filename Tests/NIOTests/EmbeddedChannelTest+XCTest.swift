@@ -39,6 +39,7 @@ extension EmbeddedChannelTest {
                 ("testWriteWithoutFlushDoesNotWrite", testWriteWithoutFlushDoesNotWrite),
                 ("testSetLocalAddressAfterSuccessfulBind", testSetLocalAddressAfterSuccessfulBind),
                 ("testSetRemoteAddressAfterSuccessfulConnect", testSetRemoteAddressAfterSuccessfulConnect),
+                ("testUnprocessedOutboundUserEventFailsOnEmbeddedChannel", testUnprocessedOutboundUserEventFailsOnEmbeddedChannel),
            ]
    }
 }

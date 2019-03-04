@@ -814,7 +814,7 @@ class BaseSocketChannel<T: BaseSocket>: SelectableChannel, ChannelCore {
     }
 
     public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
-        promise?.succeed(())
+        promise?.fail(ChannelError.operationUnsupported)
     }
 
     // Methods invoked from the EventLoop itself
