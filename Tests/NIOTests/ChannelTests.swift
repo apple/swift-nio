@@ -1991,7 +1991,13 @@ public class ChannelTests: XCTestCase {
             }
         }
         withChannel { channel in
-            XCTAssertNoThrow(try channel.triggerUserOutboundEvent("foo").wait())
+            XCTAssertThrowsError(try channel.triggerUserOutboundEvent("foo").wait()) { error in
+                if let error = error as? ChannelError {
+                    XCTAssertEqual(ChannelError.operationUnsupported, error)
+                } else {
+                    XCTFail("wrong error: \(error)")
+                }
+            }
         }
         withChannel { channel in
             XCTAssertFalse(channel.isActive)
@@ -2647,6 +2653,23 @@ public class ChannelTests: XCTestCase {
         XCTAssertTrue(try getBoolSocketOption(channel: accepted3, level: SOL_SOCKET, name: SO_KEEPALIVE))
 
         XCTAssertTrue(try getBoolSocketOption(channel: accepted3, level: IPPROTO_TCP, name: TCP_NODELAY))
+    }
+
+    func testUnprocessedOutboundUserEventFailsOnServerSocketChannel() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let channel = try ServerSocketChannel(eventLoop: group.next() as! SelectableEventLoop,
+                                              group: group,
+                                              protocolFamily: AF_INET)
+        XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
+            if let error = error as? ChannelError {
+                XCTAssertEqual(ChannelError.operationUnsupported, error)
+            } else {
+                XCTFail("unexpected error: \(error)")
+            }
+        }
     }
 }
 

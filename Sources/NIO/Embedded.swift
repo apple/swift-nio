@@ -239,7 +239,7 @@ class EmbeddedChannelCore: ChannelCore {
     }
 
     public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
-        promise?.succeed(())
+        promise?.fail(ChannelError.operationUnsupported)
     }
 
     func channelRead0(_ data: NIOAny) {
@@ -328,11 +328,11 @@ public class EmbeddedChannel: Channel {
     // Embedded channels never have parents.
     public let parent: Channel? = nil
 
-    public func readOutbound<T>(as type: T.Type = T.self) -> T? {
+    public func readOutbound<T>(as type: T.Type = T.self) throws -> T? {
         return readFromBuffer(buffer: &channelcore.outboundBuffer)
     }
 
-    public func readInbound<T>(as type: T.Type = T.self) -> T? {
+    public func readInbound<T>(as type: T.Type = T.self) throws -> T? {
         return readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
 

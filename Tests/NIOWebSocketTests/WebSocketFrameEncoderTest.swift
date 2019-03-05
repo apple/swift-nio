@@ -17,17 +17,17 @@ import NIO
 import NIOWebSocket
 
 extension EmbeddedChannel {
-    func readAllOutboundBuffers() -> ByteBuffer {
+    func readAllOutboundBuffers() throws -> ByteBuffer {
         var buffer = self.allocator.buffer(capacity: 100)
-        while var writtenData = self.readOutbound(as: ByteBuffer.self) {
+        while var writtenData = try self.readOutbound(as: ByteBuffer.self) {
             buffer.writeBuffer(&writtenData)
         }
 
         return buffer
     }
 
-    func readAllOutboundBytes() -> [UInt8] {
-        var buffer = self.readAllOutboundBuffers()
+    func readAllOutboundBytes() throws -> [UInt8] {
+        var buffer = try self.readAllOutboundBuffers()
         return buffer.readBytes(length: buffer.readableBytes)!
     }
 }
@@ -50,8 +50,7 @@ public class WebSocketFrameEncoderTest: XCTestCase {
 
     private func assertFrameEncodes(frame: WebSocketFrame, expectedBytes: [UInt8]) {
         self.channel.writeAndFlush(frame, promise: nil)
-        let writtenBytes = self.channel.readAllOutboundBytes()
-        XCTAssertEqual(writtenBytes, expectedBytes)
+        XCTAssertNoThrow(XCTAssertEqual(expectedBytes, try self.channel.readAllOutboundBytes()))
     }
 
     func testBasicFrameEncoding() throws {
@@ -77,9 +76,8 @@ public class WebSocketFrameEncoderTest: XCTestCase {
         let frame = WebSocketFrame(fin: true, opcode: .binary, data: self.buffer)
         self.channel.writeAndFlush(frame, promise: nil)
 
-        let writtenBytes = self.channel.readAllOutboundBytes()
         let expectedBytes: [UInt8] = [0x82, 0x7F, 0, 0, 0, 0, 0, 1, 0, 0]
-        XCTAssertEqual(writtenBytes[..<10], expectedBytes[...])
+        XCTAssertNoThrow(XCTAssertEqual(expectedBytes[...], try self.channel.readAllOutboundBytes()[..<10]))
     }
 
     func testEncodesEachReservedBitProperly() throws {

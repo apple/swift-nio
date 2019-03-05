@@ -614,4 +614,37 @@ public class SocketChannelTest : XCTestCase {
             XCTAssertEqual(result.errnoCode, EINVAL)
         #endif
     }
+
+    func testUnprocessedOutboundUserEventFailsOnServerSocketChannel() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let channel = try ServerSocketChannel(eventLoop: group.next() as! SelectableEventLoop,
+                                              group: group,
+                                              protocolFamily: AF_INET)
+        XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
+            if let error = error as? ChannelError {
+                XCTAssertEqual(ChannelError.operationUnsupported, error)
+            } else {
+                XCTFail("unexpected error: \(error)")
+            }
+        }
+    }
+
+    func testUnprocessedOutboundUserEventFailsOnSocketChannel() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let channel = try SocketChannel(eventLoop: group.next() as! SelectableEventLoop,
+                                        protocolFamily: AF_INET)
+        XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
+            if let error = error as? ChannelError {
+                XCTAssertEqual(ChannelError.operationUnsupported, error)
+            } else {
+                XCTFail("unexpected error: \(error)")
+            }
+        }
+    }
 }
