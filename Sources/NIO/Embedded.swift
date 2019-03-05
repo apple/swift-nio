@@ -239,7 +239,7 @@ class EmbeddedChannelCore: ChannelCore {
     }
 
     public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
-        promise?.succeed(())
+        promise?.fail(ChannelError.operationUnsupported)
     }
 
     func channelRead0(_ data: NIOAny) {

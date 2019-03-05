@@ -457,4 +457,20 @@ final class DatagramChannelTests: XCTestCase {
         XCTAssertTrue(try getBoolSocketOption(channel: channel, level: SOL_SOCKET, name: SO_TIMESTAMP))
         XCTAssertFalse(try getBoolSocketOption(channel: channel, level: SOL_SOCKET, name: SO_KEEPALIVE))
     }
+
+    func testUnprocessedOutboundUserEventFailsOnDatagramChannel() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let channel = try DatagramChannel(eventLoop: group.next() as! SelectableEventLoop,
+                                          protocolFamily: AF_INET)
+        XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
+            if let error = error as? ChannelError {
+                XCTAssertEqual(ChannelError.operationUnsupported, error)
+            } else {
+                XCTFail("unexpected error: \(error)")
+            }
+        }
+    }
 }

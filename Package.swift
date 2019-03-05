@@ -32,7 +32,7 @@ var targets: [PackageDescription.Target] = [
     .target(name: "NIOConcurrencyHelpers",
             dependencies: ["CNIOAtomics"]),
     .target(name: "NIOHTTP1",
-            dependencies: ["NIO", "NIOConcurrencyHelpers", "CNIOHTTPParser", "CNIOZlib"]),
+            dependencies: ["NIO", "NIOConcurrencyHelpers", "CNIOHTTPParser"]),
     .target(name: "NIOEchoServer",
             dependencies: ["NIO", "NIOConcurrencyHelpers"]),
     .target(name: "NIOEchoClient",
@@ -40,11 +40,6 @@ var targets: [PackageDescription.Target] = [
     .target(name: "NIOHTTP1Server",
             dependencies: ["NIO", "NIOHTTP1", "NIOConcurrencyHelpers"]),
     .target(name: "CNIOHTTPParser"),
-    .target(name: "CNIOZlib",
-            dependencies: [],
-            linkerSettings: [
-                .linkedLibrary("z")
-            ]),
     .target(name: "NIOTLS", dependencies: ["NIO"]),
     .target(name: "NIOChatServer",
             dependencies: ["NIO", "NIOConcurrencyHelpers"]),

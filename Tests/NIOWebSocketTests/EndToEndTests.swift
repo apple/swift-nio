@@ -185,7 +185,7 @@ class EndToEndTests: XCTestCase {
         do {
             try server.writeInbound(buffer)
             XCTFail("Did not throw")
-        } catch NIOWebSocketUpgradeError.unsupportedWebSocketTarget {
+        } catch let error as NIOWebSocketUpgradeError where error == .unsupportedWebSocketTarget {
             // ok
         } catch {
             XCTFail("Unexpected error hit: \(error)")
@@ -256,7 +256,7 @@ class EndToEndTests: XCTestCase {
         do {
             try server.writeInbound(buffer)
             XCTFail("Did not throw")
-        } catch NIOWebSocketUpgradeError.invalidUpgradeHeader {
+        } catch let error as NIOWebSocketUpgradeError where error == .invalidUpgradeHeader {
             // ok
         } catch {
             XCTFail("Unexpected error hit: \(error)")
@@ -284,7 +284,7 @@ class EndToEndTests: XCTestCase {
         do {
             try server.writeInbound(buffer)
             XCTFail("Did not throw")
-        } catch NIOWebSocketUpgradeError.invalidUpgradeHeader {
+        } catch let error as NIOWebSocketUpgradeError where error == .invalidUpgradeHeader {
             // ok
         } catch {
             XCTFail("Unexpected error hit: \(error)")
@@ -312,7 +312,7 @@ class EndToEndTests: XCTestCase {
         do {
             try server.writeInbound(buffer)
             XCTFail("Did not throw")
-        } catch NIOWebSocketUpgradeError.invalidUpgradeHeader {
+        } catch let error as NIOWebSocketUpgradeError where error == .invalidUpgradeHeader {
             // ok
         } catch {
             XCTFail("Unexpected error hit: \(error)")

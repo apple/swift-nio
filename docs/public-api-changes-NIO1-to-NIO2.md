@@ -2,6 +2,7 @@
 
 - renamed all instances of `ctx` to `context`. Your `ChannelHandler` methods now
   need to take a `context` parameter and no longer `ctx`. Example: `func channelRead(context: ChannelHandlerContext, data: NIOAny)`
+- `HTTPResponseCompressor` moved to [`swift-nio-extras`](https://github.com/apple/swift-nio-extras).
 - removed all previously deprecated functions, types and modules.
 - renamed `SniResult` to `SNIResult`
 - renamed `SniHandler` to `SNIHandler`
@@ -12,14 +13,21 @@
 - `ByteToMessageDecoder`s now need to be wrapped in `ByteToMessageHandler`
   before they can be added to the pipeline.
   before: `pipeline.add(MyDecoder())`, after: `pipeline.add(ByteToMessageHandler(MyDecoder()))`
+- `MessageToByteEncoder`s now need to be wrapped in `MessageToByteHandler`
+  before they can be added to the pipeline.
+  before: `pipeline.add(MyEncoder())`, after: `pipeline.add(MessageToByteHandler(MyEncoder()))`
 - `BlockingIOThreadPool` has been renamed to `NIOThreadPool`
 - `ByteToMessageDecoder` now requires the implementation of `decodeLast`
+- `MessageToByteEncoder` now requires the implementation of `encode`
+- `MessageToByteEncoder.allocateOutBuffer` was removed without replacement
+- `MessageToByteEncoder.encode` no longer gets access to the `ChannelHandlerContext`
 - `ByteToMessageDecoder.decodeLast` has a new parameter `seenEOF: Bool`
 - `EventLoop.makePromise`/`makeSucceededFuture`/`makeFailedFuture` instead of `new*`, also `result:`/`error:` labels dropped
 - `SocketAddress.makeAddressResolvingHost(:port:)` instead of
   `SocketAddress.newAddressResolving(host:port:)`
 - changed all ports to `Int` (from `UInt16`)
 - changed `HTTPVersion`'s `major` and `minor` properties to `Int` (from `UInt16`)
+- `NIOWebSocketUpgradeError` is now a `struct` rather than an `enum`
 - renamed the generic parameter name to `Bytes` where we're talking about a
   generic collection of bytes
 - Moved error `ChannelLifecycleError.inappropriateOperationForState` to `ChannelError.inappropriateOperationForState`.
