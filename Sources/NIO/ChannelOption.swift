@@ -93,6 +93,36 @@ public struct BacklogOption: ChannelOption {
     public init() {}
 }
 
+/// `DatagramVectorReadMessageCountOption` allows users to configure the number of messages to attempt to read in a single syscall on a
+/// datagram `Channel`.
+///
+/// Some datagram `Channel`s have extremely high datagram throughput. This can occur when the single datagram socket is encapsulating
+/// many logical "connections" (e.g. with QUIC) or when the datagram socket is simply serving an enormous number of consumers (e.g.
+/// with a public-facing DNS server). In this case the overhead of one syscall per datagram is profoundly limiting. Using this
+/// `ChannelOption` allows the `Channel` to read multiple datagrams at once.
+///
+/// Note that simply increasing this number will not necessarily bring performance gains and may in fact cause data loss. Any increase
+/// to this should be matched by increasing the size of the buffers allocated by the `Channel` `RecvByteBufferAllocator` (as set by
+/// `ChannelOption.recvAllocator`) proportionally. For example, to receive 10 messages at a time, set the size of the buffers allocated
+/// by the `RecvByteBufferAllocator` to at least 10x the size of the maximum datagram size you wish to receive.
+///
+/// Naturally, this option is only valid on datagram channels.
+///
+/// This option only works on the following platforms:
+///
+/// - Linux
+/// - FreeBSD
+/// - Android
+///
+/// On all other platforms, setting it has no effect.
+///
+/// Set this option to 0 to disable vector reads and to use serial reads instead.
+public struct DatagramVectorReadMessageCountOption: ChannelOption {
+    public typealias Value = Int
+
+    public init() { }
+}
+
 /// The watermark used to detect when `Channel.isWritable` returns `true` or `false`.
 public struct WriteBufferWaterMark {
     /// The low mark setting for a `Channel`.
@@ -185,6 +215,9 @@ public struct ChannelOptions {
 
     /// - seealso: `AllowRemoteHalfClosureOption`.
     public static let allowRemoteHalfClosure = AllowRemoteHalfClosureOption()
+
+    /// - seealso: `DatagramVectorReadMessageCountOption`
+    public static let datagramVectorReadMessageCount = DatagramVectorReadMessageCountOption()
 }
 
 extension ChannelOptions {
