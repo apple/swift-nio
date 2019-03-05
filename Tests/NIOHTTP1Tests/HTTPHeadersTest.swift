@@ -326,4 +326,23 @@ class HTTPHeadersTest : XCTestCase {
         XCTAssertEqual(["3", "4"], headers["X-Something"])
         XCTAssertEqual(["foo=bar", "buz=cux"], headers["set-cookie"])
     }
+    
+    func testRandomAccess() {
+        let originalHeaders = [ ("X-first", "one"),
+                                ("X-second", "two")]
+        let headers = HTTPHeaders(originalHeaders)
+        
+        XCTAssertEqual(headers[headers.startIndex].name, originalHeaders.first?.0)
+        XCTAssertEqual(headers[headers.startIndex].value, originalHeaders.first?.1)
+        XCTAssertEqual(headers[headers.index(before: headers.endIndex)].name, originalHeaders.last?.0)
+        XCTAssertEqual(headers[headers.index(before: headers.endIndex)].value, originalHeaders.last?.1)
+        
+        let beforeLast = headers[headers.index(before: headers.endIndex)]
+        XCTAssertEqual(beforeLast.name, originalHeaders[originalHeaders.endIndex - 1].0)
+        XCTAssertEqual(beforeLast.value, originalHeaders[originalHeaders.endIndex - 1].1)
+        
+        let afterFirst = headers[headers.index(after: headers.startIndex)]
+        XCTAssertEqual(afterFirst.name, originalHeaders[originalHeaders.startIndex + 1].0)
+        XCTAssertEqual(afterFirst.value, originalHeaders[originalHeaders.startIndex + 1].1)
+    }
 }

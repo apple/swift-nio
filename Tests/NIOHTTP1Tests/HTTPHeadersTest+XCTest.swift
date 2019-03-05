@@ -44,6 +44,7 @@ extension HTTPHeadersTest {
                 ("testStringBasedHTTPListHeaderIterator", testStringBasedHTTPListHeaderIterator),
                 ("testUnsafeBufferAccess", testUnsafeBufferAccess),
                 ("testCreateFromBufferAndLocations", testCreateFromBufferAndLocations),
+                ("testRandomAccess", testRandomAccess),
            ]
    }
 }
