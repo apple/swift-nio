@@ -253,3 +253,9 @@ public struct NIOAny {
         }
     }
 }
+
+extension NIOAny: CustomStringConvertible {
+    public var description: String {
+        return "NIOAny { \(self.asAny()) }"
+    }
+}

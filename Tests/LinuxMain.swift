@@ -73,6 +73,7 @@ import XCTest
          testCase(MarkedCircularBufferTests.allTests),
          testCase(MessageToByteEncoderTest.allTests),
          testCase(MulticastTest.allTests),
+         testCase(NIOAnyDebugTest.allTests),
          testCase(NIOConcurrencyHelpersTests.allTests),
          testCase(NonBlockingFileIOTest.allTests),
          testCase(PendingDatagramWritesManagerTests.allTests),

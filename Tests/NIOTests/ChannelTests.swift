@@ -1324,29 +1324,6 @@ public class ChannelTests: XCTestCase {
         }
     }
 
-    func testRejectsInvalidData() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            XCTAssertNoThrow(try group.syncShutdownGracefully())
-        }
-
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .bind(host: "127.0.0.1", port: 0).wait())
-
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!).wait())
-
-        do {
-            try clientChannel.writeAndFlush(NIOAny(5)).wait()
-            XCTFail("Did not throw")
-        } catch ChannelError.writeDataUnsupported {
-            // All good
-        } catch {
-            XCTFail("Got \(error)")
-        }
-    }
-
     func testWeDontCrashIfChannelReleasesBeforePipeline() throws {
         final class StuffHandler: ChannelInboundHandler {
             typealias InboundIn = Never
