@@ -64,7 +64,7 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertFalse(try channel.finish())
     }
 
-    func testReadOutboundWrongTypeThrows() throws {
+    func testReadOutboundWrongTypeThrows() {
         let channel = EmbeddedChannel()
         XCTAssertTrue(try channel.writeOutbound("hello"))
         do {
@@ -78,7 +78,7 @@ class EmbeddedChannelTest: XCTestCase {
         }
     }
 
-    func testReadInboundWrongTypeThrows() throws {
+    func testReadInboundWrongTypeThrows() {
         let channel = EmbeddedChannel()
         XCTAssertTrue(try channel.writeInbound("hello"))
         do {
@@ -90,6 +90,78 @@ class EmbeddedChannelTest: XCTestCase {
         } catch {
             XCTFail()
         }
+    }
+
+    func testWrongTypesWithFastpathTypes() {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(XCTAssertFalse(try channel.finish()))
+        }
+
+        let buffer = channel.allocator.buffer(capacity: 0)
+        let ioData = IOData.byteBuffer(buffer)
+        let fileHandle = NIOFileHandle(descriptor: -1)
+        let fileRegion = FileRegion(fileHandle: fileHandle, readerIndex: 0, endIndex: 0)
+        defer {
+            XCTAssertNoThrow(_ = try fileHandle.takeDescriptorOwnership())
+        }
+
+        XCTAssertTrue(try channel.writeOutbound(buffer))
+        XCTAssertTrue(try channel.writeOutbound(ioData))
+        XCTAssertTrue(try channel.writeOutbound(fileHandle))
+        XCTAssertTrue(try channel.writeOutbound(fileRegion))
+        XCTAssertTrue(try channel.writeOutbound(
+            AddressedEnvelope<ByteBuffer>(remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
+                                          data: buffer)))
+        XCTAssertTrue(try channel.writeOutbound(buffer))
+        XCTAssertTrue(try channel.writeOutbound(ioData))
+        XCTAssertTrue(try channel.writeOutbound(fileRegion))
+
+
+        XCTAssertTrue(try channel.writeInbound(buffer))
+        XCTAssertTrue(try channel.writeInbound(ioData))
+        XCTAssertTrue(try channel.writeInbound(fileHandle))
+        XCTAssertTrue(try channel.writeInbound(fileRegion))
+        XCTAssertTrue(try channel.writeInbound(
+            AddressedEnvelope<ByteBuffer>(remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
+                                          data: buffer)))
+        XCTAssertTrue(try channel.writeInbound(buffer))
+        XCTAssertTrue(try channel.writeInbound(ioData))
+        XCTAssertTrue(try channel.writeInbound(fileRegion))
+
+        func check<Expected, Actual>(expected: Expected.Type,
+                                     actual: Actual.Type,
+                                     file: StaticString = #file,
+                                     line: UInt = #line) {
+            do {
+                _ = try channel.readOutbound(as: Expected.self)
+                XCTFail("this should have failed", file: file, line: line)
+            } catch let error as EmbeddedChannel.WrongTypeError {
+                let expectedError = EmbeddedChannel.WrongTypeError(expected: Expected.self, actual: Actual.self)
+                XCTAssertEqual(error, expectedError, file: file, line: line)
+            } catch {
+                XCTFail("unexpected error: \(error)", file: file, line: line)
+            }
+
+            do {
+                _ = try channel.readInbound(as: Expected.self)
+                XCTFail("this should have failed", file: file, line: line)
+            } catch let error as EmbeddedChannel.WrongTypeError {
+                let expectedError = EmbeddedChannel.WrongTypeError(expected: Expected.self, actual: Actual.self)
+                XCTAssertEqual(error, expectedError, file: file, line: line)
+            } catch {
+                XCTFail("unexpected error: \(error)", file: file, line: line)
+            }
+        }
+
+        check(expected: Never.self, actual: IOData.self)
+        check(expected: Never.self, actual: IOData.self)
+        check(expected: Never.self, actual: NIOFileHandle.self)
+        check(expected: Never.self, actual: IOData.self)
+        check(expected: Never.self, actual: AddressedEnvelope<ByteBuffer>.self)
+        check(expected: NIOFileHandle.self, actual: IOData.self)
+        check(expected: NIOFileHandle.self, actual: IOData.self)
+        check(expected: ByteBuffer.self, actual: IOData.self)
     }
 
     func testCloseMultipleTimesThrows() throws {
