@@ -97,6 +97,6 @@ extension FileRegion: Equatable {
 
 extension FileRegion: CustomStringConvertible {
     public var description: String {
-        return "FileRegion(handle: \(self.fileHandle), readerIndex: \(self.readerIndex), endIndex: \(self.endIndex))"
+        return "FileRegion { handle: \(self.fileHandle), readerIndex: \(self.readerIndex), endIndex: \(self.endIndex) }"
     }
 }

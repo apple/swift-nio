@@ -90,3 +90,9 @@ extension NIOFileHandle {
         self.init(descriptor: fd)
     }
 }
+
+extension NIOFileHandle: CustomStringConvertible {
+    public var description: String {
+        return "FileHandle { descriptor: \(self.descriptor), isOpen: \(self.isOpen) }"
+    }
+}
