@@ -91,11 +91,20 @@ private struct HTTPParserState {
         case .url:
             assert(self.currentURI == nil)
             let (index, length) = consumeSlice()
-            self.currentURI = .byteBuffer(self.cumulationBuffer!.getSlice(at: index, length: length)!)
+
+            var hackBuffer = self.cumulationBuffer!
+            hackBuffer.moveReaderIndex(to: 0)
+            hackBuffer.moveWriterIndex(to: hackBuffer.capacity)
+            self.currentURI = .byteBuffer(hackBuffer.getSlice(at: index, length: length)!)
+
+            //self.currentURI = .byteBuffer(self.cumulationBuffer!.getSlice(at: index, length: length)!)
         case .status:
             assert(self.currentStatus == nil)
             let (index, length) = consumeSlice()
-            self.currentStatus = self.cumulationBuffer!.getString(at: index, length: length)!
+            var hackBuffer = self.cumulationBuffer!
+            hackBuffer.moveReaderIndex(to: 0)
+            hackBuffer.moveWriterIndex(to: hackBuffer.capacity)
+            self.currentStatus = hackBuffer.getString(at: index, length: length)!
         case .body:
             assert(self.currentNameIndex == nil, "non-empty currentNameIndex on .body (\(self.currentNameIndex!))")
             assert(self.slice == nil, "non-empty slice on .body (\(self.slice!))")
@@ -500,7 +509,19 @@ public class HTTPDecoder<HTTPMessageT>: ChannelInboundHandler, AnyHTTPDecoder {
 
             // Update readerIndex of the cumulationBuffer itself as we will refetch it in the next loop run if needed.
             self.cumulationBuffer?.moveReaderIndex(forwardBy: result)
-            
+            // ^^^^ THIS IS WRONG. The problem here is that we're discarding bytes that are still referenced through
+            // self.state.slice. I'm not fixing it because https://github.com/apple/swift-nio/pull/814 will fix this
+            // for real. If you want to find the workarounds for this, search for `hackBuffer`.
+            //
+            // If you would like to see this fail, put either this
+            //
+            //     self.cumulationBuffer?.setBytes(Array(repeating: 0x41, count: result), at: self.cumulationBUffer.readerIndex! - result)
+            //
+            // or that
+            //
+            //     if let slice = self.state.slice {
+            //         precondition(slice.readerIndex >= self.cumulationBuffer!.readerIndex)
+            //     }
             self.firePendingInOut(context: context)
         }
 
@@ -596,6 +617,7 @@ public class HTTPDecoder<HTTPMessageT>: ChannelInboundHandler, AnyHTTPDecoder {
             fn()
         }
 
+        self.cumulationBuffer!.setBytes(Array(repeating: 0x42, count: self.cumulationBuffer!.readerIndex), at: 0)
         self.cumulationBuffer!.moveReaderIndex(to: self.cumulationBuffer!.writerIndex)
     }
 

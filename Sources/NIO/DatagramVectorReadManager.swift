@@ -113,7 +113,10 @@ struct DatagramVectorReadManager {
             assert(messagesProcessed == 0)
             return .none
         case .processed(let messagesProcessed):
-            return self.buildMessages(messageCount: messagesProcessed, sliceSize: messageSize, buffer: &buffer)
+            buffer.moveWriterIndex(to: messageSize * messagesProcessed)
+            return self.buildMessages(messageCount: messagesProcessed,
+                                      sliceSize: messageSize,
+                                      buffer: &buffer)
         }
     }
 

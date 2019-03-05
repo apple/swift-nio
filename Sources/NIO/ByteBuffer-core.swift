@@ -562,20 +562,17 @@ public struct ByteBuffer {
     /// will correspond to index `0` in the returned `ByteBuffer`.
     /// The `readerIndex` of the returned `ByteBuffer` will be `0`, the `writerIndex` will be `length`.
     ///
-    /// - note: Please consider using `readSlice` which is a safer alternative that automatically maintains the
-    ///         `readerIndex` and won't allow you to slice off uninitialized memory.
-    /// - warning: This method allows the user to slice out any of the bytes in the `ByteBuffer`'s storage, including
-    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
-    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
-    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
-    ///           safe to read.
+    /// The selected bytes must be readable or else `nil` will be returned.
+    ///
     /// - parameters:
     ///     - index: The index the requested slice starts at.
     ///     - length: The length of the requested slice.
+    /// - returns: A `ByteBuffer` containing the selected bytes as readable bytes or `nil` if the selected bytes were
+    ///            not readable in the initial `ByteBuffer`.
     public func getSlice(at index: Int, length: Int) -> ByteBuffer? {
         precondition(index >= 0, "index must not be negative")
         precondition(length >= 0, "length must not be negative")
-        guard index <= self.capacity - length else {
+        guard index >= self.readerIndex && index <= self.writerIndex - length else {
             return nil
         }
         let index = _toIndex(index)
