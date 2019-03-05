@@ -427,9 +427,10 @@ extension ByteToMessageHandler {
     private func decodeLoop(context: ChannelHandlerContext, decodeMode: DecodeMode) throws -> B2MDBuffer.BufferProcessingResult {
         assert(!self.state.isError)
         var allowEmptyBuffer = decodeMode == .last
-        while decodeMode == .last || self.removalState == .notBeingRemoved {
+        while (self.state.isActive && self.removalState == .notBeingRemoved) || decodeMode == .last {
             let result = try self.withNextBuffer(allowEmptyBuffer: allowEmptyBuffer) { decoder, buffer in
                 if decodeMode == .normal {
+                    assert(self.state.isActive, "illegal state for normal decode: \(self.state)")
                     return try decoder.decode(context: context, buffer: &buffer)
                 } else {
                     allowEmptyBuffer = false
