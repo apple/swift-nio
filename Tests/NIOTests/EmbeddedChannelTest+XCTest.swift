@@ -30,6 +30,8 @@ extension EmbeddedChannelTest {
                 ("testWriteInboundByteBuffer", testWriteInboundByteBuffer),
                 ("testWriteInboundByteBufferReThrow", testWriteInboundByteBufferReThrow),
                 ("testWriteOutboundByteBufferReThrow", testWriteOutboundByteBufferReThrow),
+                ("testReadOutboundWrongTypeThrows", testReadOutboundWrongTypeThrows),
+                ("testReadInboundWrongTypeThrows", testReadInboundWrongTypeThrows),
                 ("testCloseMultipleTimesThrows", testCloseMultipleTimesThrows),
                 ("testCloseOnInactiveIsOk", testCloseOnInactiveIsOk),
                 ("testEmbeddedLifecycle", testEmbeddedLifecycle),
