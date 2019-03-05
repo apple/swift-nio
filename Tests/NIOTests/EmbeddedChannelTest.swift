@@ -168,7 +168,7 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssert(pipelineEventLoop === (channel._channelCore as! EmbeddedChannelCore).eventLoop)
         XCTAssertFalse(try channel.finish())
     }
-    
+
     func testSendingAnythingOnEmbeddedChannel() throws {
         let channel = EmbeddedChannel()
         let buffer = ByteBufferAllocator().buffer(capacity: 5)

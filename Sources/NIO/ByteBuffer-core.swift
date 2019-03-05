@@ -49,6 +49,13 @@ extension _ByteBufferSlice {
     }
 }
 
+extension _ByteBufferSlice: CustomStringConvertible {
+    @usableFromInline
+    var description: String {
+        return "_ByteBufferSlice { \(self.lowerBound)..<\(self.upperBound) }"
+    }
+}
+
 /// The preferred allocator for `ByteBuffer` values. The allocation strategy is opaque but is currently libc's
 /// `malloc`, `realloc` and `free`.
 ///
@@ -663,7 +670,7 @@ extension ByteBuffer: CustomStringConvertible {
         readableBytes: \(self.readableBytes), \
         capacity: \(self.capacity), \
         slice: \(self._slice), \
-        storage: \(self._storage.bytes) (\(self._storage.capacity) bytes)\
+        storage: \(self._storage.bytes) (\(self._storage.capacity) bytes) \
         }
         """
     }
