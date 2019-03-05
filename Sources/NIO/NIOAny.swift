@@ -179,10 +179,13 @@ public struct NIOAny {
     /// returns: The wrapped `T` or `nil` if the wrapped message is not a `T`.
     @inlinable
     func tryAsOther<T>(type: T.Type = T.self) -> T? {
-        if case .other(let any) = self._storage {
-            return any as? T
-        } else {
-            return nil
+        switch self._storage {
+        case .bufferEnvelope(let v):
+            return v as? T
+        case .ioData(let v):
+            return v as? T
+        case .other(let v):
+            return v as? T
         }
     }
 
