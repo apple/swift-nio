@@ -296,10 +296,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             return
         }
 
-        guard let data = data.tryAsIOData() else {
-            promise?.fail(ChannelError.writeDataUnsupported)
-            return
-        }
+        let data = data.forceAsIOData()
 
         if !self.pendingWrites.add(data: data, promise: promise) {
             pipeline.fireChannelWritabilityChanged0()
@@ -719,10 +716,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
     /// Buffer a write in preparation for a flush.
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        guard let data = data.tryAsByteEnvelope() else {
-            promise?.fail(ChannelError.writeDataUnsupported)
-            return
-        }
+        let data = data.forceAsByteEnvelope()
 
         if !self.pendingWrites.add(envelope: data, promise: promise) {
             assert(self.isActive)

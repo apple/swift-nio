@@ -548,43 +548,18 @@ extension ByteToMessageHandler: ChannelOutboundHandler, _ChannelOutboundHandler 
     }
 }
 
-/// `ChannelOutboundHandler` which allows users to encode custom messages to a `ByteBuffer` easily.
-public protocol MessageToByteEncoder: ChannelOutboundHandler where OutboundOut == ByteBuffer {
+/// A protocol for straightforward encoders which encode custom messages to `ByteBuffer`s.
+/// To add a `MessageToByteEncoder` to a `ChannelPipeline`, use
+/// `channel.pipeline.addHandler(MessageToByteHandler(myEncoder)`.
+public protocol MessageToByteEncoder {
+    associatedtype OutboundIn
 
-    /// Called once there is data to encode. The used `ByteBuffer` is allocated by `allocateOutBuffer`.
+    /// Called once there is data to encode.
     ///
     /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
     ///     - data: The data to encode into a `ByteBuffer`.
     ///     - out: The `ByteBuffer` into which we want to encode.
-    func encode(context: ChannelHandlerContext, data: OutboundIn, out: inout ByteBuffer) throws
-
-    /// Returns a `ByteBuffer` to be used by `encode`.
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
-    ///     - data: The data to encode into a `ByteBuffer` by `encode`.
-    /// - return: A `ByteBuffer` to use.
-    func allocateOutBuffer(context: ChannelHandlerContext, data: OutboundIn) throws -> ByteBuffer
-}
-
-extension MessageToByteEncoder {
-
-    /// Encodes the data into a `ByteBuffer` and writes it.
-    public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        do {
-            let data = self.unwrapOutboundIn(data)
-            var buffer: ByteBuffer = try allocateOutBuffer(context: context, data: data)
-            try encode(context: context, data: data, out: &buffer)
-            context.write(self.wrapOutboundOut(buffer), promise: promise)
-        } catch let err {
-            promise?.fail(err)
-        }
-    }
-
-    /// Default implementation which just allocates a `ByteBuffer` with capacity of `256`.
-    public func allocateOutBuffer(context: ChannelHandlerContext, data: OutboundIn) throws -> ByteBuffer {
-        return context.channel.allocator.buffer(capacity: 256)
-    }
+    func encode(data: OutboundIn, out: inout ByteBuffer) throws
 }
 
 extension ByteToMessageHandler: RemovableChannelHandler {
@@ -597,6 +572,77 @@ extension ByteToMessageHandler: RemovableChannelHandler {
             assert(self.removalState == .removalStarted, "illegal removal state: \(self.removalState)")
             self.removalState = .removalCompleted
             context.leavePipeline(removalToken: removalToken)
+        }
+    }
+}
+
+/// A handler which turns a given `MessageToByteEncoder` into a `ChannelOutboundHandler` that can then be added to a
+/// `ChannelPipeline`.
+public final class MessageToByteHandler<Encoder: MessageToByteEncoder>: ChannelOutboundHandler {
+    public typealias OutboundOut = ByteBuffer
+    public typealias OutboundIn = Encoder.OutboundIn
+
+    private enum State {
+        case notInChannelYet
+        case operational
+        case error(Error)
+        case done
+
+        var readyToBeAddedToChannel: Bool {
+            switch self {
+            case .notInChannelYet:
+                return true
+            case .operational, .error, .done:
+                return false
+            }
+        }
+    }
+
+    private var state: State = .notInChannelYet
+    private let encoder: Encoder
+    private var buffer: ByteBuffer? = nil
+
+    public init(_ encoder: Encoder) {
+        self.encoder = encoder
+    }
+}
+
+extension MessageToByteHandler {
+    public func handlerAdded(context: ChannelHandlerContext) {
+        precondition(self.state.readyToBeAddedToChannel,
+                     "illegal state when adding to Channel: \(self.state)")
+        self.state = .operational
+        self.buffer = context.channel.allocator.buffer(capacity: 256)
+    }
+
+    public func handlerRemoved(context: ChannelHandlerContext) {
+        self.state = .done
+        self.buffer = nil
+    }
+
+    public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        switch self.state {
+        case .notInChannelYet:
+            preconditionFailure("MessageToByteHandler.write called before it was added to a Channel")
+        case .error(let error):
+            context.fireErrorCaught(error)
+            return
+        case .done:
+            // let's just ignore this
+            return
+        case .operational:
+            // there's actually some work to do here
+            break
+        }
+        let data = self.unwrapOutboundIn(data)
+
+        do {
+            self.buffer!.clear()
+            try self.encoder.encode(data: data, out: &self.buffer!)
+            context.write(self.wrapOutboundOut(self.buffer!), promise: promise)
+        } catch {
+            self.state = .error(error)
+            context.fireErrorCaught(error)
         }
     }
 }

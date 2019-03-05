@@ -747,27 +747,35 @@ extension ByteBuffer {
     }
 }
 
-extension HTTPHeaders: Sequence {
+extension HTTPHeaders: RandomAccessCollection {
     public typealias Element = (name: String, value: String)
-
-    /// An iterator of HTTP header fields.
-    ///
-    /// This iterator will return each value for a given header name separately. That
-    /// means that `name` is not guaranteed to be unique in a given block of headers.
-    public struct Iterator: IteratorProtocol {
-        private var headerParts: Array<(String, String)>.Iterator
-
-        fileprivate init(headerParts: Array<(String, String)>.Iterator) {
-            self.headerParts = headerParts
-        }
-
-        public mutating func next() -> Element? {
-            return headerParts.next()
+    
+    public struct Index: Comparable {
+        fileprivate let base: Array<HTTPHeaders>.Index
+        public static func < (lhs: Index, rhs: Index) -> Bool {
+            return lhs.base < rhs.base
         }
     }
-
-    public func makeIterator() -> Iterator {
-        return Iterator(headerParts: headers.map { (self.string(idx: $0.name), self.string(idx: $0.value)) }.makeIterator())
+    
+    public subscript(position: Index) -> (name: String, value: String) {
+        let header = self.headers[position.base]
+        return (name: self.string(idx: header.name), value: self.string(idx: header.value))
+    }
+    
+    public var startIndex: Index {
+        return Index(base: self.headers.startIndex)
+    }
+    
+    public var endIndex: Index {
+        return Index(base: self.headers.endIndex)
+    }
+    
+    public func index(before i: Index) -> Index {
+        return Index(base: self.headers.index(before: i.base))
+    }
+    
+    public func index(after i: Index) -> Index {
+        return Index(base: self.headers.index(after: i.base))
     }
 }
 
