@@ -51,10 +51,13 @@ extension EmbeddedChannel {
     }
 }
 
-private func interactInMemory(_ first: EmbeddedChannel, _ second: EmbeddedChannel) throws {
+private func interactInMemory(_ first: EmbeddedChannel,
+                              _ second: EmbeddedChannel,
+                              eventLoop: EmbeddedEventLoop) throws {
     var operated: Bool
 
     repeat {
+        eventLoop.run()
         operated = false
 
         if let data = try first.readOutbound(as: ByteBuffer.self) {
@@ -137,7 +140,10 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
-        XCTAssertNoThrow(try interactInMemory(client, server))
+
+        XCTAssertNoThrow(try interactInMemory(client, server, eventLoop: loop))
+
+        loop.run()
 
         XCTAssertNoThrow(assertResponseIs(response: try client.readAllInboundBuffers().allAsString(),
                                           expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
@@ -156,7 +162,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="], protocolName: "WebSocket")
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
-        XCTAssertNoThrow(try interactInMemory(client, server))
+        XCTAssertNoThrow(try interactInMemory(client, server, eventLoop: loop))
 
         XCTAssertNoThrow(assertResponseIs(response: try client.readAllInboundBuffers().allAsString(),
                                           expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
@@ -220,7 +226,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
-        XCTAssertNoThrow(try interactInMemory(client, server))
+        XCTAssertNoThrow(try interactInMemory(client, server, eventLoop: loop))
 
         XCTAssertNotNil(acceptPromise)
 
@@ -230,8 +236,9 @@ class EndToEndTests: XCTestCase {
 
         // Satisfy the promise. This will cause the upgrade to complete.
         acceptPromise?.succeed(HTTPHeaders())
+        loop.run()
         XCTAssertTrue(upgradeComplete)
-        XCTAssertNoThrow(try interactInMemory(client, server))
+        XCTAssertNoThrow(try interactInMemory(client, server, eventLoop: loop))
 
         XCTAssertNoThrow(assertResponseIs(response: try client.readAllInboundBuffers().allAsString(),
                                           expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
@@ -338,7 +345,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
-        XCTAssertNoThrow(try interactInMemory(client, server))
+        XCTAssertNoThrow(try interactInMemory(client, server, eventLoop: loop))
 
         XCTAssertNoThrow(assertResponseIs(response: try client.readAllInboundBuffers().allAsString(),
                                           expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
@@ -368,7 +375,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(path: "/third", extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
-        XCTAssertNoThrow(try interactInMemory(client, server))
+        XCTAssertNoThrow(try interactInMemory(client, server, eventLoop: loop))
 
         XCTAssertNoThrow(assertResponseIs(response: try client.readAllInboundBuffers().allAsString(),
                                           expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
@@ -391,7 +398,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
-        XCTAssertNoThrow(try interactInMemory(client, server))
+        XCTAssertNoThrow(try interactInMemory(client, server, eventLoop: loop))
 
         XCTAssertNoThrow(assertResponseIs(response: try client.readAllInboundBuffers().allAsString(),
                                           expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
@@ -409,7 +416,7 @@ class EndToEndTests: XCTestCase {
 
         let pingFrame = WebSocketFrame(fin: true, opcode: .ping, data: client.allocator.buffer(capacity: 0))
         XCTAssertNoThrow(try client.writeAndFlush(pingFrame).wait())
-        XCTAssertNoThrow(try interactInMemory(client, server))
+        XCTAssertNoThrow(try interactInMemory(client, server, eventLoop: loop))
 
         XCTAssertEqual(recorder.frames, [dataFrame, pingFrame])
     }
@@ -428,7 +435,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
-        XCTAssertNoThrow(try interactInMemory(client, server))
+        XCTAssertNoThrow(try interactInMemory(client, server, eventLoop: loop))
 
         XCTAssertNoThrow(assertResponseIs(response: try client.readAllInboundBuffers().allAsString(),
                                           expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
@@ -454,7 +461,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
-        XCTAssertNoThrow(try interactInMemory(client, server))
+        XCTAssertNoThrow(try interactInMemory(client, server, eventLoop: loop))
 
         XCTAssertNoThrow(assertResponseIs(response: try client.readAllInboundBuffers().allAsString(),
                                           expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
@@ -466,7 +473,7 @@ class EndToEndTests: XCTestCase {
         XCTAssertNoThrow(try client.writeAndFlush(data).wait())
 
         do {
-            try interactInMemory(client, server)
+            try interactInMemory(client, server, eventLoop: loop)
             XCTFail("Did not throw")
         } catch NIOWebSocketError.multiByteControlFrameLength {
             // ok
@@ -498,7 +505,7 @@ class EndToEndTests: XCTestCase {
 
         let upgradeRequest = self.upgradeRequest(extraHeaders: ["Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "AQIDBAUGBwgJCgsMDQ4PEC=="])
         XCTAssertNoThrow(try client.writeString(upgradeRequest).wait())
-        XCTAssertNoThrow(try interactInMemory(client, server))
+        XCTAssertNoThrow(try interactInMemory(client, server, eventLoop: loop))
 
         XCTAssertNoThrow(assertResponseIs(response: try client.readAllInboundBuffers().allAsString(),
                                           expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
@@ -510,7 +517,7 @@ class EndToEndTests: XCTestCase {
         XCTAssertNoThrow(try client.writeAndFlush(data).wait())
 
         do {
-            try interactInMemory(client, server)
+            try interactInMemory(client, server, eventLoop: loop)
             XCTFail("Did not throw")
         } catch NIOWebSocketError.multiByteControlFrameLength {
             // ok
