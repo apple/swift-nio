@@ -98,7 +98,7 @@ public struct NIOAny {
         if let v = tryAsByteBuffer() {
             return v
         } else {
-            fatalError("tried to decode as type \(ByteBuffer.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType)")
+            fatalError("tried to decode as type \(ByteBuffer.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType) with contents \(self._storage)")
         }
     }
 
@@ -122,7 +122,7 @@ public struct NIOAny {
         if let v = tryAsIOData() {
             return v
         } else {
-            fatalError("tried to decode as type \(IOData.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType)")
+            fatalError("tried to decode as type \(IOData.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType) with contents \(self._storage)")
         }
     }
 
@@ -146,7 +146,7 @@ public struct NIOAny {
         if let v = tryAsFileRegion() {
             return v
         } else {
-            fatalError("tried to decode as type \(FileRegion.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType)")
+            fatalError("tried to decode as type \(FileRegion.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType) with contents \(self._storage)")
         }
     }
 
@@ -170,7 +170,7 @@ public struct NIOAny {
         if let e = tryAsByteEnvelope() {
             return e
         } else {
-            fatalError("tried to decode as type \(AddressedEnvelope<ByteBuffer>.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType)")
+            fatalError("tried to decode as type \(AddressedEnvelope<ByteBuffer>.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType) with contents \(self._storage)")
         }
     }
 
@@ -197,7 +197,7 @@ public struct NIOAny {
         if let v = tryAsOther(type: type) {
             return v
         } else {
-            fatalError("tried to decode as type \(T.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType)")
+            fatalError("tried to decode as type \(T.self) but found \(Mirror(reflecting: Mirror(reflecting: self._storage).children.first!.value).subjectType) with contents \(self._storage)")
         }
     }
 
