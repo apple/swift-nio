@@ -26,10 +26,11 @@ extension ChannelPipeline {
     /// - parameters:
     ///     - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
     /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
-    public func addHTTPClientHandlers(position: ChannelPipeline.Position = .last,
+    public func addHTTPClientHandlers(position: Position = .last,
                                       leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) -> EventLoopFuture<Void> {
-        return addHandlers(HTTPRequestEncoder(), HTTPResponseDecoder(leftOverBytesStrategy: leftOverBytesStrategy),
-                           position: position)
+        return self.addHandlers(HTTPRequestEncoder(),
+                                ByteToMessageHandler(HTTPResponseDecoder(leftOverBytesStrategy: leftOverBytesStrategy)),
+                                position: position)
     }
 
     /// Configure a `ChannelPipeline` for use as a HTTP server.
@@ -64,7 +65,7 @@ extension ChannelPipeline {
         let responseEncoder = HTTPResponseEncoder()
         let requestDecoder = HTTPRequestDecoder(leftOverBytesStrategy: upgrade == nil ? .dropBytes : .forwardBytes)
 
-        var handlers: [RemovableChannelHandler] = [responseEncoder, requestDecoder]
+        var handlers: [RemovableChannelHandler] = [responseEncoder, ByteToMessageHandler(requestDecoder)]
 
         if pipelining {
             handlers.append(HTTPServerPipelineHandler())

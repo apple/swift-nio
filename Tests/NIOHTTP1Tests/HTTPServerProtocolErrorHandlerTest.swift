@@ -18,8 +18,19 @@ import NIOHTTP1
 
 class HTTPServerProtocolErrorHandlerTest: XCTestCase {
     func testHandlesBasicErrors() throws {
+        class CloseOnHTTPErrorHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+
+            func errorCaught(context: ChannelHandlerContext, error: Error) {
+                if let error = error as? HTTPParserError {
+                    context.fireErrorCaught(error)
+                    context.close(promise: nil)
+                }
+            }
+        }
         let channel = EmbeddedChannel()
         XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(CloseOnHTTPErrorHandler()).wait())
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("GET / HTTP/1.1\r\nContent-Length: -4\r\n\r\n")
