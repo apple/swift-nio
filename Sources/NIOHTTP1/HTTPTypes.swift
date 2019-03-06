@@ -49,7 +49,7 @@ public struct HTTPListHeaderIterator: Sequence, IteratorProtocol {
         for (idx, currentHeader) in headers.headers.enumerated().dropFirst(current + 1) {
             let view = headers.buffer.viewBytes(at: currentHeader.name.start,
                                                 length: currentHeader.name.length)
-            if view.compareCaseInsensitiveASCIIBytes(to: headerName) {
+            if view!.compareCaseInsensitiveASCIIBytes(to: headerName) {
                 return idx
             }
         }
@@ -68,7 +68,7 @@ public struct HTTPListHeaderIterator: Sequence, IteratorProtocol {
             self.currentHeaderIndex = index
             self.singleValueViewIterator = headers.buffer
                 .viewBytes(at: headers.headers[currentHeaderIndex].value.start,
-                           length: headers.headers[currentHeaderIndex].value.length)
+                           length: headers.headers[currentHeaderIndex].value.length)!
                 .split(separator: comma)
                 .makeIterator()
             return self.next()

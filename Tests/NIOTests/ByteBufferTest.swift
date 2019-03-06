@@ -1435,33 +1435,33 @@ class ByteBufferTest: XCTestCase {
     func testBytesView() throws {
         self.buf.clear()
         self.buf.writeString("hello world 012345678")
-
-        XCTAssertEqual(String(decoding: self.buf.viewBytes(at: self.buf.readerIndex,
-                                                           length: self.buf.writerIndex - self.buf.readerIndex),
-                              as: Unicode.UTF8.self),
+        XCTAssertEqual(self.buf.viewBytes(at: self.buf.readerIndex,
+                                          length: self.buf.writerIndex - self.buf.readerIndex).map { (view: ByteBufferView) -> String in
+                                            String(decoding: view, as: Unicode.UTF8.self)
+                                          },
                        self.buf.getString(at: self.buf.readerIndex, length: self.buf.readableBytes))
-        XCTAssertEqual(Array(self.buf.viewBytes(at: 0, length: 0)), [])
+        XCTAssertEqual(self.buf.viewBytes(at: 0, length: 0).map { Array($0) }, [])
         XCTAssertEqual(Array("hello world 012345678".utf8),
-                       Array(self.buf.viewBytes(at: 0, length: self.buf.readableBytes)))
+                       self.buf.viewBytes(at: 0, length: self.buf.readableBytes).map(Array.init))
     }
 
     func testViewsStartIndexIsStable() throws {
         self.buf.writeString("hello")
-        let view = self.buf.viewBytes(at: 1, length: 3)
-        XCTAssertEqual(1, view.startIndex)
-        XCTAssertEqual(3, view.count)
-        XCTAssertEqual(4, view.endIndex)
-        XCTAssertEqual("ell", String(decoding: view, as: Unicode.UTF8.self))
+        let view: ByteBufferView? = self.buf.viewBytes(at: 1, length: 3)
+        XCTAssertEqual(1, view?.startIndex)
+        XCTAssertEqual(3, view?.count)
+        XCTAssertEqual(4, view?.endIndex)
+        XCTAssertEqual("ell", view.map { String(decoding: $0, as: Unicode.UTF8.self) })
     }
 
     func testSlicesOfByteBufferViewsAreByteBufferViews() throws {
         self.buf.writeString("hello")
-        let view: ByteBufferView = self.buf.viewBytes(at: 1, length: 3)
-        XCTAssertEqual("ell", String(decoding: view, as: Unicode.UTF8.self))
-        let viewSlice: ByteBufferView = view[view.startIndex + 1 ..< view.endIndex]
-        XCTAssertEqual("ll", String(decoding: viewSlice, as: Unicode.UTF8.self))
-        XCTAssertEqual("l", String(decoding: viewSlice.dropFirst(), as: Unicode.UTF8.self))
-        XCTAssertEqual("", String(decoding: viewSlice.dropFirst().dropLast(), as: Unicode.UTF8.self))
+        let view: ByteBufferView? = self.buf.viewBytes(at: 1, length: 3)
+        XCTAssertEqual("ell", view.map { String(decoding: $0, as: Unicode.UTF8.self) })
+        let viewSlice: ByteBufferView? = view.map { $0[$0.startIndex + 1 ..< $0.endIndex] }
+        XCTAssertEqual("ll", viewSlice.map { String(decoding: $0, as: Unicode.UTF8.self) })
+        XCTAssertEqual("l", viewSlice.map { String(decoding: $0.dropFirst(), as: Unicode.UTF8.self) })
+        XCTAssertEqual("", viewSlice.map { String(decoding: $0.dropFirst().dropLast(), as: Unicode.UTF8.self) })
     }
     
     func testReadableBufferViewRangeEqualCapacity() throws {
@@ -1756,6 +1756,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertNil(buf.getDispatchData(at: 0, length: 1))
         XCTAssertNil(buf.getBytes(at: 0, length: 1))
         XCTAssertNil(buf.getString(at: 0, length: 1, encoding: .utf8))
+        XCTAssertNil(buf.viewBytes(at: 0, length: 1))
 
         // but some `get*` should be able to produce empties
         XCTAssertEqual("", buf.getString(at: 0, length: 0))
@@ -1764,6 +1765,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(0, buf.getDispatchData(at: 0, length: 0)?.count)
         XCTAssertEqual([], buf.getBytes(at: 0, length: 0))
         XCTAssertEqual("", buf.getString(at: 0, length: 0, encoding: .utf8))
+        XCTAssertEqual("", buf.viewBytes(at: 0, length: 0).map { String(decoding: $0, as: Unicode.UTF8.self) })
 
         // 2) One byte available at the beginning
         buf.writeInteger(0x41, as: UInt8.self)
@@ -1778,6 +1780,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertNil(buf.getDispatchData(at: 0, length: 2))
         XCTAssertNil(buf.getBytes(at: 0, length: 2))
         XCTAssertNil(buf.getString(at: 0, length: 2, encoding: .utf8))
+        XCTAssertNil(buf.viewBytes(at: 0, length: 2))
 
         XCTAssertNil(buf.getInteger(at: 1, as: UInt8.self))
         XCTAssertNil(buf.getInteger(at: 1, as: UInt16.self))
@@ -1789,6 +1792,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertNil(buf.getDispatchData(at: 1, length: 1))
         XCTAssertNil(buf.getBytes(at: 1, length: 1))
         XCTAssertNil(buf.getString(at: 1, length: 1, encoding: .utf8))
+        XCTAssertNil(buf.viewBytes(at: 1, length: 1))
 
         // on the other hand, we should be able to take that one byte out
         XCTAssertEqual(0x41, buf.getInteger(at: 0, as: UInt8.self))
@@ -1798,6 +1802,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(1, buf.getDispatchData(at: 0, length: 1)?.count)
         XCTAssertEqual(["A".utf8.first!], buf.getBytes(at: 0, length: 1))
         XCTAssertEqual("A", buf.getString(at: 0, length: 1, encoding: .utf8))
+        XCTAssertEqual("A", buf.viewBytes(at: 0, length: 1).map { String(decoding: $0, as: Unicode.UTF8.self) })
 
         // 3) Now let's have 4 bytes towards the end
 
@@ -1812,6 +1817,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertNil(buf.getDispatchData(at: 251, length: 5))
         XCTAssertNil(buf.getBytes(at: 251, length: 5))
         XCTAssertNil(buf.getString(at: 251, length: 5, encoding: .utf8))
+        XCTAssertNil(buf.viewBytes(at: 251, length: 5))
 
         XCTAssertEqual(0x41, buf.getInteger(at: 254, as: UInt8.self))
         XCTAssertEqual(0x4141, buf.getInteger(at: 253, as: UInt16.self))
@@ -1822,6 +1828,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(4, buf.getDispatchData(at: 251, length: 4)?.count)
         XCTAssertEqual(Array(repeating: "A".utf8.first!, count: 4), buf.getBytes(at: 251, length: 4))
         XCTAssertEqual("AAAA", buf.getString(at: 251, length: 4, encoding: .utf8))
+        XCTAssertEqual("AAAA", buf.viewBytes(at: 251, length: 4).map { String(decoding: $0, as: Unicode.UTF8.self) })
     }
 }
 
