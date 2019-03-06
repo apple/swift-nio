@@ -314,6 +314,13 @@ extension HTTPVersion {
     }
 }
 
+extension HTTPHeaders {
+    @available(*, deprecated, message: "don't pass ByteBufferAllocator anymore")
+    public init(_ headers: [(String, String)] = [], allocator: ByteBufferAllocator) {
+        self.init(headers)
+    }
+}
+
 @available(*, deprecated, renamed: "ChannelError")
 public enum ChannelLifecycleError {
     @available(*, deprecated, message: "ChannelLifecycleError values are now available on ChannelError")
