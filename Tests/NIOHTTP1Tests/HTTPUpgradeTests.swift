@@ -22,10 +22,12 @@ extension ChannelPipeline {
         try self.assertDoesNotContain(handlerType: HTTPServerUpgradeHandler.self)
     }
 
-    func assertDoesNotContain<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
+    func assertDoesNotContain<Handler: ChannelHandler>(handlerType: Handler.Type,
+                                                       file: StaticString = #file,
+                                                       line: UInt = #line) throws {
         do {
-            _ = try self.context(handlerType: handlerType).wait()
-            XCTFail("Found handler")
+            let context = try self.context(handlerType: handlerType).wait()
+            XCTFail("Found handler: \(context.handler)", file: file, line: line)
         } catch ChannelPipelineError.notFound {
             // Nothing to see here
         }
@@ -62,17 +64,17 @@ extension ChannelPipeline {
 }
 
 extension EmbeddedChannel {
-    func readAllOutboundBuffers() -> ByteBuffer {
+    func readAllOutboundBuffers() throws -> ByteBuffer {
         var buffer = self.allocator.buffer(capacity: 100)
-        while var writtenData = self.readOutbound(as: ByteBuffer.self) {
+        while var writtenData = try self.readOutbound(as: ByteBuffer.self) {
             buffer.writeBuffer(&writtenData)
         }
 
         return buffer
     }
 
-    func readAllOutboundString() -> String {
-        var buffer = self.readAllOutboundBuffers()
+    func readAllOutboundString() throws -> String {
+        var buffer = try self.readAllOutboundBuffers()
         return buffer.readString(length: buffer.readableBytes)!
     }
 }
@@ -396,7 +398,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         // The handler removed itself from the pipeline and passed the unexpected
         // data on.
         try channel.pipeline.assertDoesNotContainUpgrader()
-        let receivedData: HTTPServerRequestPart = channel.readInbound()!
+        let receivedData: HTTPServerRequestPart = try channel.readInbound()!
         XCTAssertEqual(data, receivedData)
     }
 
@@ -820,15 +822,17 @@ class HTTPUpgradeTestCase: XCTestCase {
         // Upgrade has been requested but not proceeded.
         XCTAssertTrue(upgradeRequested)
         XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
-        XCTAssertNil(channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(try XCTAssertNil(channel.readOutbound(as: ByteBuffer.self)))
 
         // Ok, now we can upgrade. Upgrader should be out of the pipeline, and we should have seen the 101 response.
         delayedPromise.succeed(())
+        channel.embeddedEventLoop.run()
         XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
-        let response = channel.readAllOutboundString()
-        assertResponseIs(response: response,
-                         expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                         expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
+        XCTAssertNoThrow(assertResponseIs(response: try channel.readAllOutboundString(),
+                                          expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
+                                          expectedResponseHeaders: ["X-Upgrade-Complete: true",
+                                                                    "upgrade: myproto",
+                                                                    "connection: upgrade"]))
     }
 
     func testChainsDelayedUpgradesAppropriately() throws {
@@ -873,14 +877,14 @@ class HTTPUpgradeTestCase: XCTestCase {
         // Upgrade has been requested but not proceeded for the failing protocol.
         XCTAssertEqual(upgradingProtocol, "failingProtocol")
         XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
-        XCTAssertNil(channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
 
         // Ok, now we'll fail the promise. This will catch an error, but the upgrade won't happen: instead, the second handler will be fired.
         failingProtocolPromise.fail(No.no)
         XCTAssertEqual(upgradingProtocol, "myproto")
         XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
-        XCTAssertNil(channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
         do {
             try channel.throwIfErrorCaught()
             XCTFail("Did not throw")
@@ -892,9 +896,9 @@ class HTTPUpgradeTestCase: XCTestCase {
 
         // Ok, now we can upgrade. Upgrader should be out of the pipeline, and we should have seen the 101 response.
         myprotoPromise.succeed(())
+        channel.embeddedEventLoop.run()
         XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
-        let response = channel.readAllOutboundString()
-        assertResponseIs(response: response,
+        assertResponseIs(response: try channel.readAllOutboundString(),
                          expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                          expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"])
     }
@@ -934,13 +938,13 @@ class HTTPUpgradeTestCase: XCTestCase {
         // Upgrade has been requested but not proceeded.
         XCTAssertTrue(upgradeRequested)
         XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
-        XCTAssertNil(channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
 
         // Ok, now we fail the upgrade. This fires an error, and then delivers the original request.
         delayedPromise.fail(No.no)
         XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
-        XCTAssertNil(channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
 
         do {
             try channel.throwIfErrorCaught()
@@ -951,7 +955,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTFail("Unexpected error: \(error)")
         }
 
-        switch channel.readInbound(as: HTTPServerRequestPart.self) {
+        switch try channel.readInbound(as: HTTPServerRequestPart.self) {
         case .some(.head):
             // ok
             break
@@ -959,7 +963,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTFail("Expected .head, got \(String(describing: t))")
         }
 
-        switch channel.readInbound(as: HTTPServerRequestPart.self) {
+        switch try channel.readInbound(as: HTTPServerRequestPart.self) {
         case .some(.end):
             // ok
             break
@@ -967,7 +971,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTFail("Expected .head, got \(String(describing: t))")
         }
 
-        XCTAssertNil(channel.readInbound(as: HTTPServerRequestPart.self))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound(as: HTTPServerRequestPart.self)))
     }
 
     func testDelayedUpgradeResponseDeliversFullRequestAndPendingBits() throws {
@@ -1007,11 +1011,11 @@ class HTTPUpgradeTestCase: XCTestCase {
         // Upgrade has been requested but not proceeded.
         XCTAssertTrue(upgradeRequested)
         XCTAssertNoThrow(try channel.pipeline.assertContainsUpgrader())
-        XCTAssertNil(channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
 
         // We now need to inject an extra buffered request. To do this we grab the context for the HTTPRequestDecoder and inject some reads.
-        XCTAssertNoThrow(try channel.pipeline.context(handlerType: HTTPRequestDecoder.self).map { context in
+        XCTAssertNoThrow(try channel.pipeline.context(handlerType: ByteToMessageHandler<HTTPRequestDecoder>.self).map { context in
             let requestHead = HTTPServerRequestPart.head(.init(version: .init(major: 1, minor: 1), method: .GET, uri: "/test"))
             context.fireChannelRead(NIOAny(requestHead))
             context.fireChannelRead(NIOAny(HTTPServerRequestPart.end(nil)))
@@ -1020,7 +1024,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         // Ok, now we fail the upgrade. This fires an error, and then delivers the original request and the buffered one.
         delayedPromise.fail(No.no)
         XCTAssertNoThrow(try channel.pipeline.assertDoesNotContainUpgrader())
-        XCTAssertNil(channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
 
         do {
             try channel.throwIfErrorCaught()
@@ -1031,14 +1035,14 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTFail("Unexpected error: \(error)")
         }
 
-        switch channel.readInbound(as: HTTPServerRequestPart.self) {
+        switch try channel.readInbound(as: HTTPServerRequestPart.self) {
         case .some(.head(let h)):
             XCTAssertEqual(h.method, .OPTIONS)
         case let t:
             XCTFail("Expected .head, got \(String(describing: t))")
         }
 
-        switch channel.readInbound(as: HTTPServerRequestPart.self) {
+        switch try channel.readInbound(as: HTTPServerRequestPart.self) {
         case .some(.end):
             // ok
             break
@@ -1047,14 +1051,14 @@ class HTTPUpgradeTestCase: XCTestCase {
         }
 
 
-        switch channel.readInbound(as: HTTPServerRequestPart.self) {
+        switch try channel.readInbound(as: HTTPServerRequestPart.self) {
         case .some(.head(let h)):
             XCTAssertEqual(h.method, .GET)
         case let t:
             XCTFail("Expected .head, got \(String(describing: t))")
         }
 
-        switch channel.readInbound(as: HTTPServerRequestPart.self) {
+        switch try channel.readInbound(as: HTTPServerRequestPart.self) {
         case .some(.end):
             // ok
             break
@@ -1062,7 +1066,7 @@ class HTTPUpgradeTestCase: XCTestCase {
             XCTFail("Expected .head, got \(String(describing: t))")
         }
 
-        XCTAssertNil(channel.readInbound(as: HTTPServerRequestPart.self))
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound(as: HTTPServerRequestPart.self)))
     }
 
     func testRemovesAllHTTPRelatedHandlersAfterUpgrade() throws {
@@ -1075,7 +1079,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         }
 
         // First, validate the pipeline is right.
-        XCTAssertNoThrow(try connectedServer.pipeline.assertContains(handlerType: HTTPRequestDecoder.self))
+        XCTAssertNoThrow(try connectedServer.pipeline.assertContains(handlerType: ByteToMessageHandler<HTTPRequestDecoder>.self))
         XCTAssertNoThrow(try connectedServer.pipeline.assertContains(handlerType: HTTPResponseEncoder.self))
         XCTAssertNoThrow(try connectedServer.pipeline.assertContains(handlerType: HTTPServerPipelineHandler.self))
 
@@ -1087,7 +1091,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         XCTAssertNoThrow(try connectedServer.pipeline.waitForUpgraderToBeRemoved())
 
         // At this time we should validate that none of the HTTP handlers in the pipeline exist.
-        XCTAssertNoThrow(try connectedServer.pipeline.assertDoesNotContain(handlerType: HTTPRequestDecoder.self))
+        XCTAssertNoThrow(try connectedServer.pipeline.assertDoesNotContain(handlerType: ByteToMessageHandler<HTTPRequestDecoder>.self))
         XCTAssertNoThrow(try connectedServer.pipeline.assertDoesNotContain(handlerType: HTTPResponseEncoder.self))
         XCTAssertNoThrow(try connectedServer.pipeline.assertDoesNotContain(handlerType: HTTPServerPipelineHandler.self))
     }
@@ -1130,9 +1134,9 @@ class HTTPUpgradeTestCase: XCTestCase {
             }
             
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let buf = self.unwrapInboundIn(data)
+                var buf = self.unwrapInboundIn(data)
                 XCTAssertEqual(1, buf.readableBytes)
-                let stringRead = buf.getString(at: 0, length: buf.readableBytes)
+                let stringRead = buf.readString(length: buf.readableBytes)
                 switch self.state {
                 case .added:
                     XCTAssertEqual("A", stringRead)

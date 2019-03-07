@@ -134,6 +134,8 @@ extension ByteBufferTest {
                 ("testWithVeryUnsafeMutableBytesDoesCoWonSlices", testWithVeryUnsafeMutableBytesDoesCoWonSlices),
                 ("testGetDispatchDataWorks", testGetDispatchDataWorks),
                 ("testGetDispatchDataReadWrite", testGetDispatchDataReadWrite),
+                ("testVariousContiguousStorageAccessors", testVariousContiguousStorageAccessors),
+                ("testGetBytesThatAreNotReadable", testGetBytesThatAreNotReadable),
            ]
    }
 }

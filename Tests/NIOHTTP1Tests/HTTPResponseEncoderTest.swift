@@ -33,10 +33,17 @@ class HTTPResponseEncoderTests: XCTestCase {
         var switchingResponse = HTTPResponseHead(version: HTTPVersion(major: 1, minor:1), status: status)
         switchingResponse.headers = headers
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(switchingResponse)))
-        if let buffer = channel.readOutbound(as: ByteBuffer.self) {
-            return buffer
-        } else {
-            fatalError("Could not read ByteBuffer from channel")
+        do {
+            if let buffer = try channel.readOutbound(as: ByteBuffer.self) {
+                return buffer
+            } else {
+                fatalError("Could not read ByteBuffer from channel")
+            }
+        } catch {
+            XCTFail("unexpected error: \(error)")
+            var buf = channel.allocator.buffer(capacity: 16)
+            buf.writeString("unexpected error: \(error)")
+            return buf
         }
     }
 
@@ -103,7 +110,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         // This response contains neither Transfer-Encoding: chunked or Content-Length.
         let response = HTTPResponseHead(version: HTTPVersion(major: 1, minor:0), status: .ok)
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(response)))
-        guard let b = channel.readOutbound(as: ByteBuffer.self) else {
+        guard let b = try channel.readOutbound(as: ByteBuffer.self) else {
             XCTFail("Could not read byte buffer")
             return
         }

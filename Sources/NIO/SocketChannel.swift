@@ -296,10 +296,7 @@ final class SocketChannel: BaseSocketChannel<Socket> {
             return
         }
 
-        guard let data = data.tryAsIOData() else {
-            promise?.fail(ChannelError.writeDataUnsupported)
-            return
-        }
+        let data = data.forceAsIOData()
 
         if !self.pendingWrites.add(data: data, promise: promise) {
             pipeline.fireChannelWritabilityChanged0()
@@ -494,6 +491,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     // Guard against re-entrance of flushNow() method.
     private let pendingWrites: PendingDatagramWritesManager
 
+    /// Support for vector reads, if enabled.
+    private var vectorReadManager: DatagramVectorReadManager?
+
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool {
         return pendingWrites.isWritable
@@ -513,6 +513,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         } catch {
             try? socket.close()
             throw error
+        }
+    }
+
+    deinit {
+        if var vectorReadManager = self.vectorReadManager {
+            vectorReadManager.deallocate()
         }
     }
 
@@ -556,6 +562,13 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             pendingWrites.writeSpinCount = value as! UInt
         case _ as WriteBufferWaterMarkOption:
             pendingWrites.waterMark = value as! WriteBufferWaterMark
+        case _ as DatagramVectorReadMessageCountOption:
+            // We only support vector reads on these OSes. Let us know if there's another OS with this syscall!
+            #if os(Linux) || os(FreeBSD) || os(Android)
+            self.vectorReadManager.updateMessageCount(value as! Int)
+            #else
+            break
+            #endif
         default:
             try super.setOption0(option, value: value)
         }
@@ -573,6 +586,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             return pendingWrites.writeSpinCount as! Option.Value
         case _ as WriteBufferWaterMarkOption:
             return pendingWrites.waterMark as! Option.Value
+        case _ as DatagramVectorReadMessageCountOption:
+            return (self.vectorReadManager?.messageCount ?? 0) as! Option.Value
         default:
             return try super.getOption0(option)
         }
@@ -593,6 +608,14 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func readFromSocket() throws -> ReadResult {
+        if self.vectorReadManager != nil {
+            return try self.vectorReadFromSocket()
+        } else {
+            return try self.singleReadFromSocket()
+        }
+    }
+
+    private func singleReadFromSocket() throws -> ReadResult {
         var rawAddress = sockaddr_storage()
         var rawAddressLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
         var buffer = self.recvAllocator.buffer(allocator: self.allocator)
@@ -629,6 +652,52 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         return readResult
     }
 
+    private func vectorReadFromSocket() throws -> ReadResult {
+        #if os(Linux) || os(FreeBSD) || os(Android)
+        var buffer = self.recvAllocator.buffer(allocator: self.allocator)
+        var readResult = ReadResult.none
+
+        readLoop: for i in 1...self.maxMessagesPerRead {
+            guard self.isOpen else {
+                throw ChannelError.eof
+            }
+            guard let vectorReadManager = self.vectorReadManager else {
+                // The vector read manager went away. This happens if users unset the vector read manager
+                // during channelRead. It's unlikely, but we tolerate it by aborting the read early.
+                break readLoop
+            }
+            buffer.clear()
+
+            // This force-unwrap is safe, as we checked whether this is nil in the caller.
+            let result = try vectorReadManager.readFromSocket(socket: self.socket, buffer: &buffer)
+            switch result {
+            case .some(let results, let totalRead):
+                assert(self.isOpen)
+                assert(self.isActive)
+
+                let mayGrow = recvAllocator.record(actualReadBytes: totalRead)
+                readPending = false
+
+                var messageIterator = results.makeIterator()
+                while self.isActive, let message = messageIterator.next() {
+                    pipeline.fireChannelRead(NIOAny(message))
+                }
+
+                if mayGrow && i < maxMessagesPerRead {
+                    buffer = recvAllocator.buffer(allocator: allocator)
+                }
+                readResult = .some
+            case .none:
+                break readLoop
+            }
+        }
+
+        return readResult
+        #else
+        fatalError("Cannot perform vector reads on this operating system")
+        #endif
+    }
+
     override func shouldCloseOnReadError(_ err: Error) -> Bool {
         guard let err = err as? IOError else { return true }
 
@@ -647,10 +716,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
     /// Buffer a write in preparation for a flush.
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        guard let data = data.tryAsByteEnvelope() else {
-            promise?.fail(ChannelError.writeDataUnsupported)
-            return
-        }
+        let data = data.forceAsByteEnvelope()
 
         if !self.pendingWrites.add(envelope: data, promise: promise) {
             assert(self.isActive)

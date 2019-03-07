@@ -78,7 +78,7 @@ class HTTPTest: XCTestCase {
             defer {
                 XCTAssertNoThrow(try channel.finish())
             }
-            try channel.pipeline.addHandler(HTTPRequestDecoder()).wait()
+            try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder())).wait()
             var bodyData: [UInt8]? = nil
             var allBodyDatas: [[UInt8]] = []
             try channel.pipeline.addHandler(TestChannelInboundHandler { reqPart in

@@ -81,6 +81,11 @@ extension ChannelPipeline {
         return self.addHandler(ByteToMessageHandler(decoder))
     }
 
+    @available(*, deprecated, message: "please use addHandler(MessageToByteHandler(myMessageToByteEncoder))")
+    public func add<Encoder: MessageToByteEncoder>(handler encoder: Encoder) -> EventLoopFuture<Void> {
+        return self.addHandler(MessageToByteHandler(encoder))
+    }
+
     @available(*, deprecated, renamed: "addHandler(_:position:)")
     public func add(handler: ChannelHandler, first: Bool = false) -> EventLoopFuture<Void> {
         return self.addHandler(handler, position: first ? .first : .last)
@@ -306,6 +311,13 @@ extension HTTPVersion {
     @available(*, deprecated, message: "type of minor is now Int")
     public var minorLegacy: UInt16 {
         return UInt16(self.minor)
+    }
+}
+
+extension HTTPHeaders {
+    @available(*, deprecated, message: "don't pass ByteBufferAllocator anymore")
+    public init(_ headers: [(String, String)] = [], allocator: ByteBufferAllocator) {
+        self.init(headers)
     }
 }
 

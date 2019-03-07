@@ -19,13 +19,23 @@ import NIOHTTP1
 private let magicWebSocketGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 /// Errors that can be thrown by `NIOWebSocket` during protocol upgrade.
-public enum NIOWebSocketUpgradeError: Error {
+public struct NIOWebSocketUpgradeError: Error, Equatable {
+    private enum ActualError {
+        case invalidUpgradeHeader
+        case unsupportedWebSocketTarget
+    }
+
+    private let actualError: ActualError
+
+    private init(actualError: ActualError) {
+        self.actualError = actualError
+    }
     /// A HTTP header on the upgrade request was invalid.
-    case invalidUpgradeHeader
+    public static let invalidUpgradeHeader = NIOWebSocketUpgradeError(actualError: .invalidUpgradeHeader)
 
     /// The HTTP request targets a websocket pipeline that does not support
     /// it in some way.
-    case unsupportedWebSocketTarget
+    public static let unsupportedWebSocketTarget = NIOWebSocketUpgradeError(actualError: .unsupportedWebSocketTarget)
 }
 
 fileprivate extension HTTPHeaders {
@@ -34,7 +44,7 @@ fileprivate extension HTTPHeaders {
         guard fields.count == 1 else {
             throw NIOWebSocketUpgradeError.invalidUpgradeHeader
         }
-        return fields.first!
+        return String(fields.first!)
     }
 }
 
