@@ -70,7 +70,7 @@ final class SocketOptionProviderTest: XCTestCase {
         // Only run The setup if the Loopback supports multicast
         if v4LoopbackAddress.isMulticast {
             self.ipv4DatagramChannel = try? assertNoThrowWithValue(
-                DatagramBootstrap(group: group).bind(host: "127.0.0.12", port: 0).flatMap { channel in
+                DatagramBootstrap(group: group).bind(host: "127.0.0.1", port: 0).flatMap { channel in
                     return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "224.0.2.66", port: 0), interface: v4LoopbackInterface).map { channel }
                     }.wait()
             )
