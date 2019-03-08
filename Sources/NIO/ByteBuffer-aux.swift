@@ -19,26 +19,21 @@ extension ByteBuffer {
     // MARK: Bytes ([UInt8]) APIs
 
     /// Get `length` bytes starting at `index` and return the result as `[UInt8]`. This will not change the reader index.
+    /// The selected bytes must be readable or else `nil` will be returned.
     ///
-    /// - note: Please consider using `readBytes` which is a safer alternative that automatically maintains the
-    ///         `readerIndex` and won't allow you to read uninitialized memory.
-    /// - warning: This method allows the user to read any of the bytes in the `ByteBuffer`'s storage, including
-    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
-    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
-    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
-    ///           safe to read.
     /// - parameters:
     ///     - index: The starting index of the bytes of interest into the `ByteBuffer`.
     ///     - length: The number of bytes of interest.
-    /// - returns: A `[UInt8]` value containing the bytes of interest or `nil` if the `ByteBuffer` doesn't contain those bytes.
-    public func getBytes(at index: Int, length: Int) -> [UInt8]? {
-        precondition(index >= 0, "index must not be negative")
+    /// - returns: A `[UInt8]` value containing the bytes of interest or `nil` if the bytes `ByteBuffer` are not readable.
+    public func getBytes(at index0: Int, length: Int) -> [UInt8]? {
+        precondition(index0 >= 0, "index must not be negative")
         precondition(length >= 0, "length must not be negative")
-        guard index <= self.capacity - length else {
+        let index = index0 - self.readerIndex
+        guard index >= 0 && index <= self.readableBytes - length else {
             return nil
         }
 
-        return self.withVeryUnsafeBytes { ptr in
+        return self.withUnsafeReadableBytes { ptr in
             // this is not technically correct because we shouldn't just bind
             // the memory to `UInt8` but it's not a real issue either and we
             // need to work around https://bugs.swift.org/browse/SR-9604
@@ -53,14 +48,10 @@ extension ByteBuffer {
     ///     - length: The number of bytes to be read from this `ByteBuffer`.
     /// - returns: A `[UInt8]` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
     public mutating func readBytes(length: Int) -> [UInt8]? {
-        precondition(length >= 0, "length must not be negative")
-        guard self.readableBytes >= length else {
-            return nil
-        }
-        defer {
+        return self.getBytes(at: self.readerIndex, length: length).map {
             self._moveReaderIndex(forwardBy: length)
+            return $0
         }
-        return self.getBytes(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
     }
 
     // MARK: StaticString APIs
@@ -135,23 +126,19 @@ extension ByteBuffer {
     }
 
     /// Get the string at `index` from this `ByteBuffer` decoding using the UTF-8 encoding. Does not move the reader index.
+    /// The selected bytes must be readable or else `nil` will be returned.
     ///
-    /// - note: Please consider using `readString` which is a safer alternative that automatically maintains the
-    ///         `readerIndex` and won't allow you to read uninitialized memory.
-    /// - warning: This method allows the user to read any of the bytes in the `ByteBuffer`'s storage, including
-    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
-    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
-    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
-    ///           safe to read.
     /// - parameters:
     ///     - index: The starting index into `ByteBuffer` containing the string of interest.
     ///     - length: The number of bytes making up the string.
-    /// - returns: A `String` value deserialized from this `ByteBuffer` or `nil` if the requested bytes aren't contained in this `ByteBuffer`.
-    public func getString(at index: Int, length: Int) -> String? {
-        precondition(index >= 0, "index must not be negative")
+    /// - returns: A `String` value containing the UTF-8 decoded selected bytes from this `ByteBuffer` or `nil` if
+    ///            the requested bytes are not readable.
+    public func getString(at index0: Int, length: Int) -> String? {
+        precondition(index0 >= 0, "index must not be negative")
         precondition(length >= 0, "length must not be negative")
-        return withVeryUnsafeBytes { pointer in
-            guard index <= pointer.count - length else {
+        let index = index0 - self.readerIndex
+        return self.withUnsafeReadableBytes { pointer in
+            guard index >= 0 && index <= pointer.count - length else {
                 return nil
             }
             return String(decoding: UnsafeRawBufferPointer(rebasing: pointer[index..<(index+length)]), as: Unicode.UTF8.self)
@@ -164,14 +151,10 @@ extension ByteBuffer {
     ///     - length: The number of bytes making up the string.
     /// - returns: A `String` value deserialized from this `ByteBuffer` or `nil` if there aren't at least `length` bytes readable.
     public mutating func readString(length: Int) -> String? {
-        precondition(length >= 0, "length must not be negative")
-        guard self.readableBytes >= length else {
-            return nil
-        }
-        defer {
+        return self.getString(at: self.readerIndex, length: length).map {
             self._moveReaderIndex(forwardBy: length)
+            return $0
         }
-        return self.getString(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
     }
 
     // MARK: DispatchData APIs
@@ -206,23 +189,19 @@ extension ByteBuffer {
     }
 
     /// Get the bytes at `index` from this `ByteBuffer` as a `DispatchData`. Does not move the reader index.
+    /// The selected bytes must be readable or else `nil` will be returned.
     ///
-    /// - note: Please consider using `readDispatchData` which is a safer alternative that automatically maintains the
-    ///         `readerIndex` and won't allow you to read uninitialized memory.
-    /// - warning: This method allows the user to read any of the bytes in the `ByteBuffer`'s storage, including
-    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
-    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
-    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
-    ///           safe to read.
     /// - parameters:
     ///     - index: The starting index into `ByteBuffer` containing the string of interest.
     ///     - length: The number of bytes.
-    /// - returns: A `DispatchData` value deserialized from this `ByteBuffer` or `nil` if the requested bytes aren't contained in this `ByteBuffer`.
-    public func getDispatchData(at index: Int, length: Int) -> DispatchData? {
-        precondition(index >= 0, "index must not be negative")
+    /// - returns: A `DispatchData` value deserialized from this `ByteBuffer` or `nil` if the requested bytes
+    ///            are not readable.
+    public func getDispatchData(at index0: Int, length: Int) -> DispatchData? {
+        precondition(index0 >= 0, "index must not be negative")
         precondition(length >= 0, "length must not be negative")
-        return self.withVeryUnsafeBytes { pointer in
-            guard index <= pointer.count - length else {
+        let index = index0 - self.readerIndex
+        return self.withUnsafeReadableBytes { pointer in
+            guard index >= 0 && index <= pointer.count - length else {
                 return nil
             }
             return DispatchData(bytes: UnsafeRawBufferPointer(rebasing: pointer[index..<(index+length)]))
@@ -235,14 +214,10 @@ extension ByteBuffer {
     ///     - length: The number of bytes.
     /// - returns: A `DispatchData` value containing the bytes from this `ByteBuffer` or `nil` if there aren't at least `length` bytes readable.
     public mutating func readDispatchData(length: Int) -> DispatchData? {
-        precondition(length >= 0, "length must not be negative")
-        guard self.readableBytes >= length else {
-            return nil
-        }
-        defer {
+        return self.getDispatchData(at: self.readerIndex, length: length).map {
             self._moveReaderIndex(forwardBy: length)
+            return $0
         }
-        return self.getDispatchData(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
     }
 
 
@@ -371,7 +346,7 @@ extension ByteBuffer {
     ///
     /// - returns: A `ByteBuffer` sharing storage containing the readable bytes only.
     public func slice() -> ByteBuffer {
-        return getSlice(at: self.readerIndex, length: self.readableBytes)! // must work, bytes definitely in the buffer
+        return self.getSlice(at: self.readerIndex, length: self.readableBytes)! // must work, bytes definitely in the buffer
     }
 
     /// Slice `length` bytes off this `ByteBuffer` and move the reader index forward by `length`.
@@ -387,13 +362,9 @@ extension ByteBuffer {
     ///     - length: The number of bytes to slice off.
     /// - returns: A `ByteBuffer` sharing storage containing `length` bytes or `nil` if the not enough bytes were readable.
     public mutating func readSlice(length: Int) -> ByteBuffer? {
-        precondition(length >= 0, "length must not be negative")
-        guard self.readableBytes >= length else {
-            return nil
+        return self.getSlice(at: self.readerIndex, length: length).map {
+            self._moveReaderIndex(forwardBy: length)
+            return $0
         }
-
-        let buffer = self.getSlice(at: readerIndex, length: length)! /* must work, enough readable bytes */
-        self._moveReaderIndex(forwardBy: length)
-        return buffer
     }
 }

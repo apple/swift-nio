@@ -46,6 +46,8 @@ extension SocketChannelTest {
                 ("testLocalAndRemoteAddressNotNilInChannelInactiveAndHandlerRemoved", testLocalAndRemoteAddressNotNilInChannelInactiveAndHandlerRemoved),
                 ("testSocketFlagNONBLOCKWorks", testSocketFlagNONBLOCKWorks),
                 ("testInstantTCPConnectionResetThrowsError", testInstantTCPConnectionResetThrowsError),
+                ("testUnprocessedOutboundUserEventFailsOnServerSocketChannel", testUnprocessedOutboundUserEventFailsOnServerSocketChannel),
+                ("testUnprocessedOutboundUserEventFailsOnSocketChannel", testUnprocessedOutboundUserEventFailsOnSocketChannel),
            ]
    }
 }

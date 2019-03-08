@@ -51,6 +51,8 @@ extension ByteToMessageDecoderTest {
                 ("testDecodeMethodsNoLongerCalledIfErrorInDecode", testDecodeMethodsNoLongerCalledIfErrorInDecode),
                 ("testDecodeMethodsNoLongerCalledIfErrorInDecodeLast", testDecodeMethodsNoLongerCalledIfErrorInDecodeLast),
                 ("testBasicLifecycle", testBasicLifecycle),
+                ("testDecodeLoopStopsOnChannelInactive", testDecodeLoopStopsOnChannelInactive),
+                ("testDecodeLoopStopsOnInboundHalfClosure", testDecodeLoopStopsOnInboundHalfClosure),
            ]
    }
 }

@@ -1324,29 +1324,6 @@ public class ChannelTests: XCTestCase {
         }
     }
 
-    func testRejectsInvalidData() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            XCTAssertNoThrow(try group.syncShutdownGracefully())
-        }
-
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .bind(host: "127.0.0.1", port: 0).wait())
-
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!).wait())
-
-        do {
-            try clientChannel.writeAndFlush(NIOAny(5)).wait()
-            XCTFail("Did not throw")
-        } catch ChannelError.writeDataUnsupported {
-            // All good
-        } catch {
-            XCTFail("Got \(error)")
-        }
-    }
-
     func testWeDontCrashIfChannelReleasesBeforePipeline() throws {
         final class StuffHandler: ChannelInboundHandler {
             typealias InboundIn = Never
@@ -2014,7 +1991,13 @@ public class ChannelTests: XCTestCase {
             }
         }
         withChannel { channel in
-            XCTAssertNoThrow(try channel.triggerUserOutboundEvent("foo").wait())
+            XCTAssertThrowsError(try channel.triggerUserOutboundEvent("foo").wait()) { error in
+                if let error = error as? ChannelError {
+                    XCTAssertEqual(ChannelError.operationUnsupported, error)
+                } else {
+                    XCTFail("wrong error: \(error)")
+                }
+            }
         }
         withChannel { channel in
             XCTAssertFalse(channel.isActive)
@@ -2670,6 +2653,23 @@ public class ChannelTests: XCTestCase {
         XCTAssertTrue(try getBoolSocketOption(channel: accepted3, level: SOL_SOCKET, name: SO_KEEPALIVE))
 
         XCTAssertTrue(try getBoolSocketOption(channel: accepted3, level: IPPROTO_TCP, name: TCP_NODELAY))
+    }
+
+    func testUnprocessedOutboundUserEventFailsOnServerSocketChannel() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let channel = try ServerSocketChannel(eventLoop: group.next() as! SelectableEventLoop,
+                                              group: group,
+                                              protocolFamily: AF_INET)
+        XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
+            if let error = error as? ChannelError {
+                XCTAssertEqual(ChannelError.operationUnsupported, error)
+            } else {
+                XCTFail("unexpected error: \(error)")
+            }
+        }
     }
 }
 

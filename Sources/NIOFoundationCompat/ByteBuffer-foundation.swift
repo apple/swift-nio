@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIO
-import struct Foundation.Data
+import Foundation
 
 
 /// Errors that may be thrown by ByteBuffer methods that call into Foundation.
@@ -52,31 +52,27 @@ extension ByteBuffer {
         guard self.readableBytes >= length else {
             return nil
         }
-        let data = self.getData(at: self.readerIndex, length: length)! /* must work, enough readable bytes */
-        self.moveReaderIndex(forwardBy: length)
-        return data
+        return self.getData(at: self.readerIndex, length: length).map {
+            self.moveReaderIndex(forwardBy: length)
+            return $0
+        }
     }
 
     /// Return `length` bytes starting at `index` and return the result as `Data`. This will not change the reader index.
+    /// The selected bytes must be readable or else `nil` will be returned.
     ///
-    /// - note: Please consider using `readData` which is a safer alternative that automatically maintains the
-    ///         `readerIndex` and won't allow you to read uninitialized memory.
-    /// - warning: This method allows the user to read any of the bytes in the `ByteBuffer`'s storage, including
-    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
-    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
-    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
-    ///           safe to read.
     /// - parameters:
     ///     - index: The starting index of the bytes of interest into the `ByteBuffer`
     ///     - length: The number of bytes of interest
-    /// - returns: A `Data` value containing the bytes of interest or `nil` if the `ByteBuffer` doesn't contain those bytes.
-    public func getData(at index: Int, length: Int) -> Data? {
+    /// - returns: A `Data` value containing the bytes of interest or `nil` if the selected bytes are not readable.
+    public func getData(at index0: Int, length: Int) -> Data? {
         precondition(length >= 0, "length must not be negative")
-        precondition(index >= 0, "index must not be negative")
-        guard index <= self.capacity - length else {
+        precondition(index0 >= 0, "index must not be negative")
+        let index = index0 - self.readerIndex
+        guard index >= 0 && index <= self.readableBytes - length else {
             return nil
         }
-        return self.withVeryUnsafeBytesWithStorageManagement { ptr, storageRef in
+        return self.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
             _ = storageRef.retain()
             return Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: ptr.baseAddress!.advanced(by: index)),
                         count: Int(length),
@@ -85,20 +81,14 @@ extension ByteBuffer {
     }
 
     /// Get a `String` decoding `length` bytes starting at `index` with `encoding`. This will not change the reader index.
+    /// The selected bytes must be readable or else `nil` will be returned.
     ///
-    /// - note: Please consider using `readString` which is a safer alternative that automatically maintains the
-    ///         `readerIndex` and won't allow you to read uninitialized memory.
-    /// - warning: This method allows the user to read any of the bytes in the `ByteBuffer`'s storage, including
-    ///           _uninitialized_ ones. To use this API in a safe way the user needs to make sure all the requested
-    ///           bytes have been written before and are therefore initialized. Note that bytes between (including)
-    ///           `readerIndex` and (excluding) `writerIndex` are always initialized by contract and therefore must be
-    ///           safe to read.
     /// - parameters:
     ///     - index: The starting index of the bytes of interest into the `ByteBuffer`.
     ///     - length: The number of bytes of interest.
     ///     - encoding: The `String` encoding to be used.
-    /// - returns: A `String` value containing the bytes of interest or `nil` if the `ByteBuffer` doesn't contain those bytes,
-    ///     or if those bytes cannot be decoded with the given encoding.
+    /// - returns: A `String` value containing the bytes of interest or `nil` if the selected bytes are not readable or
+    ///            cannot be decoded with the given encoding.
     public func getString(at index: Int, length: Int, encoding: String.Encoding) -> String? {
         guard let data = self.getData(at: index, length: length) else {
             return nil
@@ -153,3 +143,5 @@ extension ByteBuffer {
         return self.setBytes(data, at: index)
     }
 }
+
+extension ByteBufferView: ContiguousBytes {}

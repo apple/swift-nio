@@ -18,8 +18,19 @@ import NIOHTTP1
 
 class HTTPServerProtocolErrorHandlerTest: XCTestCase {
     func testHandlesBasicErrors() throws {
+        class CloseOnHTTPErrorHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+
+            func errorCaught(context: ChannelHandlerContext, error: Error) {
+                if let error = error as? HTTPParserError {
+                    context.fireErrorCaught(error)
+                    context.close(promise: nil)
+                }
+            }
+        }
         let channel = EmbeddedChannel()
         XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(CloseOnHTTPErrorHandler()).wait())
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("GET / HTTP/1.1\r\nContent-Length: -4\r\n\r\n")
@@ -28,18 +39,18 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         } catch HTTPParserError.invalidContentLength {
             // This error is expected
         }
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
 
         // The channel should be closed at this stage.
         XCTAssertNoThrow(try channel.closeFuture.wait())
 
         // We expect exactly one ByteBuffer in the output.
-        guard var written = channel.readOutbound(as: ByteBuffer.self) else {
+        guard var written = try channel.readOutbound(as: ByteBuffer.self) else {
             XCTFail("No writes")
             return
         }
 
-        XCTAssertNil(channel.readOutbound())
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
 
         // Check the response.
         assertResponseIs(response: written.readString(length: written.readableBytes)!,
@@ -76,7 +87,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.writeAndFlush(res).wait())
         // now we have started a response but it's not complete yet, let's inject a parser error
         channel.pipeline.fireErrorCaught(HTTPParserError.invalidEOFState)
-        var allOutbound = channel.readAllOutboundBuffers()
+        var allOutbound = try channel.readAllOutboundBuffers()
         let allOutboundString = allOutbound.readString(length: allOutbound.readableBytes)
         // there should be no HTTP/1.1 400 or anything in here
         XCTAssertEqual("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n", allOutboundString)
@@ -121,18 +132,18 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         buffer.writeStaticString("GET / HTTP/1.1\r\n\r\nGET / HTTP/1.1\r\n\r\nGET / HT")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         XCTAssertNoThrow(try channel.close().wait())
-        (channel.eventLoop as! EmbeddedEventLoop).run()
+        channel.embeddedEventLoop.run()
 
         // The channel should be closed at this stage.
         XCTAssertNoThrow(try channel.closeFuture.wait())
 
         // We expect exactly one ByteBuffer in the output.
-        guard var written = channel.readOutbound(as: ByteBuffer.self) else {
+        guard var written = try channel.readOutbound(as: ByteBuffer.self) else {
             XCTFail("No writes")
             return
         }
 
-        XCTAssertNil(channel.readOutbound())
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
 
         // Check the response.
         assertResponseIs(response: written.readString(length: written.readableBytes)!,

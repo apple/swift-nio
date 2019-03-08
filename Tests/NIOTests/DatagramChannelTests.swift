@@ -27,6 +27,20 @@ private extension Channel {
             return self.eventLoop.makeSucceededFuture([] as [AddressedEnvelope<ByteBuffer>])
         }.wait()
     }
+
+    func readCompleteCount() throws -> Int {
+        return try self.pipeline.context(name: "ByteReadRecorder").map { context in
+            return (context.handler as! DatagramReadRecorder<ByteBuffer>).readCompleteCount
+        }.wait()
+    }
+
+    func configureForRecvMmsg(messageCount: Int) throws {
+        let totalBufferSize = messageCount * 2048
+
+        try self.setOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: totalBufferSize)).flatMap {
+            self.setOption(ChannelOptions.datagramVectorReadMessageCount, value: messageCount)
+        }.wait()
+    }
 }
 
 /// A class that records datagrams received and forwards them on.
@@ -47,6 +61,7 @@ private class DatagramReadRecorder<DataType>: ChannelInboundHandler {
     var state: State = .fresh
 
     var readWaiters: [Int: EventLoopPromise<[AddressedEnvelope<DataType>]>] = [:]
+    var readCompleteCount = 0
 
     func channelRegistered(context: ChannelHandlerContext) {
         XCTAssertEqual(.fresh, self.state)
@@ -69,6 +84,11 @@ private class DatagramReadRecorder<DataType>: ChannelInboundHandler {
         }
 
         context.fireChannelRead(self.wrapInboundOut(data))
+    }
+
+    func channelReadComplete(context: ChannelHandlerContext) {
+        self.readCompleteCount += 1
+        context.fireChannelReadComplete()
     }
 
     func notifyForDatagrams(_ count: Int) -> EventLoopFuture<[AddressedEnvelope<DataType>]> {
@@ -420,6 +440,84 @@ final class DatagramChannelTests: XCTestCase {
         XCTAssertEqual(error, ioError.errnoCode)
     }
 
+    public func testRecvMmsgFailsWithECONNREFUSED() throws {
+        try assertRecvMmsgFails(error: ECONNREFUSED, active: true)
+    }
+
+    public func testRecvMmsgFailsWithENOMEM() throws {
+        try assertRecvMmsgFails(error: ENOMEM, active: true)
+    }
+
+    public func testRecvMmsgFailsWithEFAULT() throws {
+        try assertRecvMmsgFails(error: EFAULT, active: false)
+    }
+
+    private func assertRecvMmsgFails(error: Int32, active: Bool) throws {
+        // Only run this test on platforms that support recvmmsg: the others won't even
+        // try.
+        #if os(Linux) || os(FreeBSD) || os(Android)
+        final class RecvMmsgHandler: ChannelInboundHandler {
+            typealias InboundIn = AddressedEnvelope<ByteBuffer>
+            typealias InboundOut = AddressedEnvelope<ByteBuffer>
+
+            private let promise: EventLoopPromise<IOError>
+
+            init(_ promise: EventLoopPromise<IOError>) {
+                self.promise = promise
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                XCTFail("Should not receive data but got \(self.unwrapInboundIn(data))")
+            }
+
+            func errorCaught(context: ChannelHandlerContext, error: Error) {
+                if let ioError = error as? IOError {
+                    self.promise.succeed(ioError)
+                }
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        class NonRecvMmsgSocket : Socket {
+            private var error: Int32?
+
+            init(error: Int32) throws {
+                self.error = error
+                try super.init(protocolFamily: AF_INET, type: Posix.SOCK_DGRAM)
+            }
+
+            override func recvmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
+                if let err = self.error {
+                    self.error = nil
+                    throw IOError(errnoCode: err, function: "recvfrom")
+                }
+                return IOResult.wouldBlock(0)
+            }
+        }
+        let socket = try NonRecvMmsgSocket(error: error)
+        let channel = try DatagramChannel(socket: socket, eventLoop: group.next() as! SelectableEventLoop)
+        let promise = channel.eventLoop.makePromise(of: IOError.self)
+        XCTAssertNoThrow(try channel.register().wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(RecvMmsgHandler(promise)).wait())
+        XCTAssertNoThrow(try channel.configureForRecvMmsg(messageCount: 10))
+        XCTAssertNoThrow(try channel.bind(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())
+
+        XCTAssertEqual(active, try channel.eventLoop.submit {
+            channel.readable()
+            return channel.isActive
+        }.wait())
+
+        if active {
+            XCTAssertNoThrow(try channel.close().wait())
+        }
+        let ioError = try promise.futureResult.wait()
+        XCTAssertEqual(error, ioError.errnoCode)
+        #endif
+    }
+
     public func testSetGetOptionClosedDatagramChannel() throws {
         try assertSetGetOptionOnOpenAndClosed(channel: firstChannel, option: ChannelOptions.maxMessagesPerRead, value: 1)
     }
@@ -456,5 +554,113 @@ final class DatagramChannelTests: XCTestCase {
         XCTAssertTrue(try getBoolSocketOption(channel: channel, level: SOL_SOCKET, name: SO_REUSEADDR))
         XCTAssertTrue(try getBoolSocketOption(channel: channel, level: SOL_SOCKET, name: SO_TIMESTAMP))
         XCTAssertFalse(try getBoolSocketOption(channel: channel, level: SOL_SOCKET, name: SO_KEEPALIVE))
+    }
+
+    func testUnprocessedOutboundUserEventFailsOnDatagramChannel() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let channel = try DatagramChannel(eventLoop: group.next() as! SelectableEventLoop,
+                                          protocolFamily: AF_INET)
+        XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
+            if let error = error as? ChannelError {
+                XCTAssertEqual(ChannelError.operationUnsupported, error)
+            } else {
+                XCTFail("unexpected error: \(error)")
+            }
+        }
+    }
+
+    func testBasicMultipleReads() throws {
+        XCTAssertNoThrow(try self.secondChannel.configureForRecvMmsg(messageCount: 10))
+
+        // This test should exercise recvmmsg.
+        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
+        buffer.writeStaticString("hello, world!")
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+
+        // We write this in three times.
+        self.firstChannel.write(NIOAny(writeData), promise: nil)
+        self.firstChannel.write(NIOAny(writeData), promise: nil)
+        self.firstChannel.write(NIOAny(writeData), promise: nil)
+        self.firstChannel.flush()
+
+        let reads = try self.secondChannel.waitForDatagrams(count: 3)
+        XCTAssertEqual(reads.count, 3)
+
+        for (idx, read) in reads.enumerated() {
+            XCTAssertEqual(read.data, buffer, "index: \(idx)")
+            XCTAssertEqual(read.remoteAddress, self.firstChannel.localAddress!, "index: \(idx)")
+        }
+    }
+
+    func testMmsgWillTruncateWithoutChangeToAllocator() throws {
+        // This test validates that setting a small allocator will lead to datagram truncation.
+        // Right now we don't error on truncation, so this test looks for short receives.
+        // Setting the recv allocator to 30 bytes forces 3 bytes per message.
+        // Sadly, this test only truncates for the platforms with recvmmsg support: the rest don't truncate as 30 bytes is sufficient.
+        XCTAssertNoThrow(try self.secondChannel.configureForRecvMmsg(messageCount: 10))
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 30)).wait())
+
+        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
+        buffer.writeStaticString("hello, world!")
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+
+        // We write this in three times.
+        self.firstChannel.write(NIOAny(writeData), promise: nil)
+        self.firstChannel.write(NIOAny(writeData), promise: nil)
+        self.firstChannel.write(NIOAny(writeData), promise: nil)
+        self.firstChannel.flush()
+
+        let reads = try self.secondChannel.waitForDatagrams(count: 3)
+        XCTAssertEqual(reads.count, 3)
+
+        for (idx, read) in reads.enumerated() {
+            #if os(Linux) || os(FreeBSD) || os(Android)
+            XCTAssertEqual(read.data.readableBytes, 3, "index: \(idx)")
+            #else
+            XCTAssertEqual(read.data.readableBytes, 13, "index: \(idx)")
+            #endif
+            XCTAssertEqual(read.remoteAddress, self.firstChannel.localAddress!, "index: \(idx)")
+        }
+    }
+
+    func testRecvMmsgForMultipleCycles() throws {
+        // The goal of this test is to provide more datagrams than can be received in a single invocation of
+        // recvmmsg, and to confirm that they all make it through.
+        // This test is allowed to run on systems without recvmmsg: it just exercises the serial read path.
+        XCTAssertNoThrow(try self.secondChannel.configureForRecvMmsg(messageCount: 10))
+
+        // We now turn off autoread.
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.autoRead, value: false).wait())
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.maxMessagesPerRead, value: 3).wait())
+
+        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
+        buffer.writeStaticString("data")
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+
+        // Ok, now we're good. Let's queue up a bunch of datagrams. We've configured to receive 10 at a time, so we'll send 30.
+        for _ in 0..<29 {
+            self.firstChannel.write(NIOAny(writeData), promise: nil)
+        }
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+
+        // Now we read. Rather than issue many read() calls, we'll turn autoread back on.
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.autoRead, value: true).wait())
+
+        // Wait for all 30 datagrams to come through. There should be no loss here, as this is small datagrams on loopback.
+        let reads = try self.secondChannel.waitForDatagrams(count: 30)
+        XCTAssertEqual(reads.count, 30)
+
+        // Now we want to count the number of readCompletes. On any platform without recvmmsg, we should have seen 10 or more
+        // (as max messages per read is 3). On platforms with recvmmsg, we would expect to see
+        // substantially fewer than 10, and potentially as low as 1.
+        #if os(Linux) || os(FreeBSD) || os(Android)
+        XCTAssertLessThan(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 10)
+        XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 1)
+        #else
+        XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 10)
+        #endif
     }
 }

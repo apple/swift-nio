@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+let localhostPickPort = try! SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0)
+
 import NIO
 import NIOHTTP1
 import Foundation
@@ -104,25 +106,45 @@ private final class PingHandler: ChannelInboundHandler {
 }
 
 private final class PongHandler: ChannelInboundHandler {
-    typealias InboundIn = ByteBuffer
+    typealias InboundIn = UInt8
     typealias OutboundOut = ByteBuffer
 
     private var pongBuffer: ByteBuffer!
     public static let pongCode: UInt8 = 0xef
 
-    public func channelActive(context: ChannelHandlerContext) {
+    public func handlerAdded(context: ChannelHandlerContext) {
         self.pongBuffer = context.channel.allocator.buffer(capacity: 1)
         self.pongBuffer.writeInteger(PongHandler.pongCode)
     }
 
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        var buf = self.unwrapInboundIn(data)
-        if buf.readableBytes == 1 &&
-            buf.readInteger(as: UInt8.self) == PingHandler.pingCode {
-            context.writeAndFlush(self.wrapOutboundOut(self.pongBuffer), promise: nil)
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        let data = self.unwrapInboundIn(data)
+        if data == PingHandler.pingCode {
+            context.writeAndFlush(NIOAny(self.pongBuffer), promise: nil)
         } else {
             context.close(promise: nil)
         }
+    }
+
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        context.close(promise: nil)
+    }
+}
+
+private final class PongDecoder: ByteToMessageDecoder {
+    typealias InboundOut = UInt8
+
+    public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
+        if let ping = buffer.readInteger(as: UInt8.self) {
+            context.fireChannelRead(self.wrapInboundOut(ping))
+            return .continue
+        } else {
+            return .needMoreData
+        }
+    }
+
+    public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+        return .needMoreData
     }
 }
 
@@ -223,7 +245,7 @@ public func swiftMain() -> Int {
                                                              withErrorHandling: false).flatMap {
                     channel.pipeline.addHandler(SimpleHTTPServer())
                 }
-            }.bind(host: "127.0.0.1", port: 0).wait()
+            }.bind(to: localhostPickPort).wait()
 
         defer {
             try! serverChannel.close().wait()
@@ -253,7 +275,9 @@ public func swiftMain() -> Int {
             .childChannelOption(ChannelOptions.socket(IPPROTO_TCP, TCP_NODELAY), value: 1)
             .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
             .childChannelInitializer { channel in
-                channel.pipeline.addHandler(PongHandler())
+                channel.pipeline.addHandler(ByteToMessageHandler(PongDecoder())).flatMap {
+                    channel.pipeline.addHandler(PongHandler())
+                }
             }.bind(host: "127.0.0.1", port: 0).wait()
 
         defer {
