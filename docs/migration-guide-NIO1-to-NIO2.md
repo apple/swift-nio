@@ -22,7 +22,7 @@ At this moment, NIO 2 is still in development so if you want to depend on the NI
 The already [converged](https://forums.swift.org/t/swiftnio-2-repository-convergence-plan/21387) repositories:
 
 - `swift-nio`: `.package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0-convergence.1")`
-- `swift-nio-extras`: `.package(url: "https://github.com/apple/swift-nio.git", from: "1.0.0-convergence.1")`
+- `swift-nio-extras`: `.package(url: "https://github.com/apple/swift-nio-extras.git", from: "1.0.0-convergence.1")`
 
 Still under active development (might break public API anytime):
 
