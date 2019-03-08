@@ -173,7 +173,7 @@ public final class RepeatedTask {
 /// Usually returned by an `EventLoopGroup`'s `makeIterator()` method.
 ///
 ///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-///     group.makeIterator()?.forEach { loop in
+///     group.makeIterator().forEach { loop in
 ///         // Do something with each loop
 ///     }
 ///
