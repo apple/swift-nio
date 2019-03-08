@@ -364,4 +364,71 @@ class SelectorTest: XCTestCase {
         XCTAssertNoThrow(try everythingWasReadPromise.futureResult.wait())
         XCTAssertNoThrow(try FileManager.default.removeItem(at: URL(fileURLWithPath: tempDir)))
     }
+
+    func testTimerFDIsLevelTriggered() throws {
+        // this is a regression test for https://github.com/apple/swift-nio/issues/872
+        let delayToUseInMicroSeconds: Int64 = 100_000 // needs to be much greater than time it takes to EL.execute
+
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        class FakeSocket: Socket {
+            private let hasBeenClosedPromise: EventLoopPromise<Void>
+            init(hasBeenClosedPromise: EventLoopPromise<Void>, descriptor: CInt) {
+                self.hasBeenClosedPromise = hasBeenClosedPromise
+                super.init(descriptor: descriptor)
+            }
+            override func close() throws {
+                self.hasBeenClosedPromise.succeed(result: ())
+                try super.close()
+            }
+        }
+        var socketFDs: [CInt] = [-1, -1]
+        #if os(macOS)
+        let err = socketpair(PF_LOCAL, SOCK_STREAM, 0, &socketFDs)
+        #else
+        let err = socketpair(PF_LOCAL, CInt(SOCK_STREAM.rawValue), 0, &socketFDs)
+        #endif
+        XCTAssertEqual(0, err)
+
+        let numberFires = Atomic<Int>(value: 0)
+        let el = group.next() as! SelectableEventLoop
+        let channelHasBeenClosedPromise = el.newPromise(of: Void.self)
+        let channel = try SocketChannel(socket: FakeSocket(hasBeenClosedPromise: channelHasBeenClosedPromise,
+                                                           descriptor: socketFDs[0]), eventLoop: el)
+        let sched = el.scheduleRepeatedTask(initialDelay: .microseconds(TimeAmount.Value(delayToUseInMicroSeconds)),
+                                            delay: .microseconds(TimeAmount.Value(delayToUseInMicroSeconds))) { (_: RepeatedTask) in
+            _ = numberFires.add(1)
+        }
+        XCTAssertNoThrow(try el.submit {
+            // EL tick 1: this is used to
+            //   - actually arm the timer (timerfd_settime)
+            //   - set the channel restration up
+            if numberFires.load() > 0 {
+                print("WARNING: This test hit a race and this result doesn't mean it actually worked." +
+                      " This should really only ever happen in very bizarre conditions.")
+            }
+            channel.interestedEvent = [.readEOF, .reset]
+            func workaroundSR9815() {
+                channel.registerAlreadyConfigured0(promise: nil)
+            }
+            workaroundSR9815()
+        }.wait())
+        usleep(10_000) // this makes this repro very stable
+        el.execute {
+            // EL tick 2: this is used to
+            //   - close one end of the socketpair so that in EL tick 3, we'll see a EPOLLHUP
+            //   - sleep `delayToUseInMicroSeconds + 10` so in EL tick 3, we'll also see timerfd fire
+            close(socketFDs[1])
+            usleep(.init(delayToUseInMicroSeconds))
+        }
+
+        // EL tick 3: happens in the background here. We will likely lose the timer signal because of the
+        // `deregistrationsHappened` workaround in `Selector.swift` and we expect to pick it up again when we enter
+        // `epoll_wait`/`kevent` next. This however only works if the timer event is level triggered.
+        assert(numberFires.load() > 5, within: .seconds(1), "timer only fired \(numberFires.load()) times")
+        sched.cancel()
+        XCTAssertNoThrow(try channelHasBeenClosedPromise.futureResult.wait())
+    }
 }

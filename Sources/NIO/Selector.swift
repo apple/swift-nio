@@ -300,7 +300,7 @@ final class Selector<R: Registration> {
         try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: eventfd, event: &ev)
 
         var timerev = Epoll.epoll_event()
-        timerev.events = Epoll.EPOLLIN | Epoll.EPOLLERR | Epoll.EPOLLRDHUP | Epoll.EPOLLET
+        timerev.events = Epoll.EPOLLIN | Epoll.EPOLLERR | Epoll.EPOLLRDHUP
         timerev.data.fd = timerfd
         try Epoll.epoll_ctl(epfd: self.fd, op: Epoll.EPOLL_CTL_ADD, fd: timerfd, event: &timerev)
 #else
@@ -488,7 +488,7 @@ final class Selector<R: Registration> {
         case .now:
             ready = Int(try Epoll.epoll_wait(epfd: self.fd, events: events, maxevents: Int32(eventsCapacity), timeout: 0))
         case .blockUntilTimeout(let timeAmount):
-            // Only call timerfd_settime if we not already scheduled one that will cover it.
+            // Only call timerfd_settime if we're not already scheduled one that will cover it.
             // This guards against calling timerfd_settime if not needed as this is generally speaking
             // expensive.
             let next = DispatchTime.now().uptimeNanoseconds + UInt64(timeAmount.nanoseconds)
