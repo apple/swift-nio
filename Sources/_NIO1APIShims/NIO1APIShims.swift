@@ -152,6 +152,14 @@ extension EventLoop {
     public func newFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
         return self.makeFailedFuture(error)
     }
+
+    @available(*, deprecated, renamed: "scheduleRepeatedAsyncTask")
+    public func scheduleRepeatedTask(initialDelay: TimeAmount,
+                                     delay: TimeAmount,
+                                     notifying promise: EventLoopPromise<Void>? = nil,
+                                     _ task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask {
+        return self.scheduleRepeatedAsyncTask(initialDelay: initialDelay, delay: delay, task)
+    }
 }
 
 extension EventLoopFuture {

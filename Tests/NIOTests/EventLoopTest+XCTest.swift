@@ -35,6 +35,7 @@ extension EventLoopTest {
                 ("testScheduleRepeatedTaskCancelFromDifferentThread", testScheduleRepeatedTaskCancelFromDifferentThread),
                 ("testScheduleRepeatedTaskToNotRetainRepeatedTask", testScheduleRepeatedTaskToNotRetainRepeatedTask),
                 ("testScheduleRepeatedTaskToNotRetainEventLoop", testScheduleRepeatedTaskToNotRetainEventLoop),
+                ("testScheduledRepeatedAsyncTask", testScheduledRepeatedAsyncTask),
                 ("testEventLoopGroupMakeIterator", testEventLoopGroupMakeIterator),
                 ("testEventLoopMakeIterator", testEventLoopMakeIterator),
                 ("testMultipleShutdown", testMultipleShutdown),
