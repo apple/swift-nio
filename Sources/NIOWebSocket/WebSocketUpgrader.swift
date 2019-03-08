@@ -170,7 +170,7 @@ public final class WebSocketUpgrader: HTTPServerProtocolUpgrader {
         /// We never use the automatic error handling feature of the WebSocketFrameDecoder: we always use the separate channel
         /// handler.
         var upgradeFuture = context.pipeline.addHandler(WebSocketFrameEncoder()).flatMap {
-            context.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize, automaticErrorHandling: false)))
+            context.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize)))
         }
 
         if self.automaticErrorHandling {

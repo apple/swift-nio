@@ -17,7 +17,7 @@ import PackageDescription
 
 var targets: [PackageDescription.Target] = [
     .target(name: "_NIO1APIShims",
-            dependencies: ["NIO", "NIOHTTP1", "NIOTLS", "NIOFoundationCompat"]),
+            dependencies: ["NIO", "NIOHTTP1", "NIOTLS", "NIOFoundationCompat", "NIOWebSocket"]),
     .target(name: "NIO",
             dependencies: ["CNIOLinux",
                            "CNIODarwin",

@@ -77,6 +77,7 @@
 - `HTTPHeader` has been removed, without replacement
 - `HTTPHeaders[canonicalForm:]` now returns `[Substring]` instead of `[String]`
 - `HTTPListHeaderIterator` has been removed, without replacement
+- `WebSocketFrameDecoder`'s `automaticErrorHandling:` parameter has been deprecated. Remove if `false`, add `WebSocketProtocolErrorHandler` to your pipeline instead if `true`
 - rename `FileHandle` to `NIOFileHandle`
 - rename all `ChannelPipeline.add(name:handler:...)`s to `ChannelPipeline.addHandler(_:name:...)`
 - rename all `ChannelPipeline.remove(...)`s to `ChannelPipeline.removeHandler(...)`
@@ -84,4 +85,4 @@
 - change  `ChannelPipeline.addHandler(_:before:)` to  `ChannelPipeline.addHandler(_:postion:)` where `position` can be `.first`, `.last`, `.before(ChannelHandler)`, and `.after(ChannelHandler)`
 - change  `ChannelPipeline.addHandler(_:after:)` to  `ChannelPipeline.addHandler(_:postion:)` where `position` can be `.first`, `.last`, `.before(ChannelHandler)`, and `.after(ChannelHandler)`
 - Change `HTTPServerProtocolUpgrader` `protocol` to require `buildUpgradeResponse` to take a `channel` and return an `EventLoopFuture<HTTPHeaders>`.
-
+- `EmbeddedChannel.writeInbound/Outbound` are now `throwing`

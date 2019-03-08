@@ -18,6 +18,7 @@ import NIO
 import NIOFoundationCompat
 import NIOHTTP1
 import NIOTLS
+import NIOWebSocket
 
 #if !NIO_CI_BUILD
 #warning("""
@@ -530,3 +531,10 @@ public typealias HTTPUpgradeErrors = HTTPServerUpgradeErrors
 
 @available(*, deprecated, renamed: "NIOThreadPool")
 public typealias BlockingIOThreadPool = NIOThreadPool
+
+extension WebSocketFrameDecoder {
+    @available(*, deprecated, message: "automaticErrorHandling deprecated, use WebSocketProtocolErrorHandler instead")
+    public convenience init(maxFrameSize: Int = 1 << 14, automaticErrorHandling: Bool) {
+        self.init(maxFrameSize: maxFrameSize)
+    }
+}
