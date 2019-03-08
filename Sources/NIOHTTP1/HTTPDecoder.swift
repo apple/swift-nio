@@ -15,6 +15,13 @@
 import NIO
 import CNIOHTTPParser
 
+private extension UnsafeMutablePointer where Pointee == http_parser {
+    /// Returns the `KeepAliveState` for the current message that is parsed.
+    var keepAliveState: KeepAliveState {
+        return c_nio_http_should_keep_alive(self) == 0 ? .close : .keepAlive
+    }
+}
+
 private enum HTTPDecodingState {
     case beforeRequest
     case beforeURL
@@ -98,7 +105,8 @@ private class BetterHTTPParser {
                                                                 versionMinor: Int(opaque!.pointee.http_minor),
                                                                 statusCode: Int(opaque!.pointee.status_code),
                                                                 isUpgrade: opaque!.pointee.upgrade != 0,
-                                                                method: http_method(rawValue: opaque!.pointee.method)) {
+                                                                method: http_method(rawValue: opaque!.pointee.method),
+                                                                keepAliveState: opaque!.keepAliveState) {
             case .normal:
                 return 0
             case .skipBody:
@@ -237,7 +245,8 @@ private class BetterHTTPParser {
                                                        versionMinor: Int,
                                                        statusCode: Int,
                                                        isUpgrade: Bool,
-                                                       method: http_method) -> MessageContinuation {
+                                                       method: http_method,
+                                                       keepAliveState: KeepAliveState) -> MessageContinuation {
         switch self.decodingState {
         case .headerValue:
             self.finish { delegate, bytes in
@@ -256,7 +265,8 @@ private class BetterHTTPParser {
                                                   versionMinor: versionMinor,
                                                   isUpgrade: isUpgrade,
                                                   method: method,
-                                                  statusCode: statusCode)
+                                                  statusCode: statusCode,
+                                                  keepAliveState: keepAliveState)
         guard success else {
             return .error(HPE_INVALID_VERSION)
         }
@@ -372,7 +382,8 @@ private protocol HTTPDecoderDelegate {
                                 versionMinor: Int,
                                 isUpgrade: Bool,
                                 method: http_method,
-                                statusCode: Int) -> Bool
+                                statusCode: Int,
+                                keepAliveState: KeepAliveState) -> Bool
     mutating func didFinishMessage()
 }
 
@@ -501,7 +512,12 @@ public class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelegate {
         self.url = String(decoding: bytes, as: Unicode.UTF8.self)
     }
 
-    func didFinishHead(versionMajor: Int, versionMinor: Int, isUpgrade: Bool, method: http_method, statusCode: Int) -> Bool {
+    func didFinishHead(versionMajor: Int,
+                       versionMinor: Int,
+                       isUpgrade: Bool,
+                       method: http_method,
+                       statusCode: Int,
+                       keepAliveState: KeepAliveState) -> Bool {
         let message: NIOAny
 
         guard versionMajor == 1 else {
@@ -515,12 +531,14 @@ public class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelegate {
             let reqHead = HTTPRequestHead(version: .init(major: versionMajor, minor: versionMinor),
                                           method: HTTPMethod.from(httpParserMethod: method),
                                           rawURI: .string(self.url!),
-                                          headers: HTTPHeaders(self.headers))
+                                          headers: HTTPHeaders(self.headers,
+                                                               keepAliveState: keepAliveState))
             message = NIOAny(HTTPServerRequestPart.head(reqHead))
         case .response:
             let resHead: HTTPResponseHead = HTTPResponseHead(version: .init(major: versionMajor, minor: versionMinor),
                                                              status: .init(statusCode: statusCode),
-                                                             headers: HTTPHeaders(self.headers))
+                                                             headers: HTTPHeaders(self.headers,
+                                                                                  keepAliveState: keepAliveState))
             message = NIOAny(HTTPClientResponsePart.head(resHead))
         }
         self.url = nil

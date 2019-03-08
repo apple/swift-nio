@@ -44,7 +44,7 @@ fileprivate extension HTTPHeaders {
         guard fields.count == 1 else {
             throw NIOWebSocketUpgradeError.invalidUpgradeHeader
         }
-        return fields.first!
+        return String(fields.first!)
     }
 }
 

@@ -144,7 +144,7 @@ public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHa
 
         // Ok, we have a HTTP request. Check if it's an upgrade. If it's not, we want to pass it on and remove ourselves
         // from the channel pipeline.
-        let requestedProtocols = request.headers[canonicalForm: "upgrade"]
+        let requestedProtocols = request.headers[canonicalForm: "upgrade"].map(String.init)
         guard requestedProtocols.count > 0 else {
             self.notUpgrading(context: context, data: requestPart)
             return
