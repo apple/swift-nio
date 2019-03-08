@@ -20,23 +20,16 @@ import NIOHTTP1
 import NIOTLS
 import NIOWebSocket
 
-#if !NIO_CI_BUILD
-#warning("""
-         If you are a user: Please ignore this warning, it's the SwiftNIO team's fault.
-
-         If you are developer of a package depending on NIO:
-            You're using NIO 2's 'NIO1 API Shims' module.
-            Please note that _NIO1APIShimsHelpers is a transitional module that is untested and
-            is not part of the public API. Before NIO 2.0.0 gets released it's still very useful
-            to `import _NIO1APIShimsHelpers` because it will make it easier for you to keep up
-            with NIO2 API changes until the API will stabilise and we will start tagging versions.
-
-            Sorry for causing you extra work but we believe the public API changes we're introducing
-            will eventually help us all becoming a better ecosystem.
-
-            💜 the SwiftNIO team.
-        """)
-#endif
+// This is NIO 2's 'NIO1 API Shims' module.
+//
+// Please note that _NIO1APIShimsHelpers is a transitional module that is untested and
+// is not part of the public API. Before NIO 2.0.0 gets released it's still very useful
+// to `import _NIO1APIShimsHelpers` because it will make it easier for you to keep up
+// with NIO2 API changes until the API will stabilise and we will start tagging versions.
+//
+// Please do not depend on this module in tagged versions.
+//
+//   💜 the SwiftNIO team.
 
 @available(*, deprecated, message: "ContiguousCollection does not exist in NIO2")
 public protocol ContiguousCollection: Collection {
