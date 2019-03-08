@@ -239,7 +239,7 @@ class EmbeddedChannelCore: ChannelCore {
     }
 
     public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
-        promise?.succeed(())
+        promise?.fail(ChannelError.operationUnsupported)
     }
 
     func channelRead0(_ data: NIOAny) {
@@ -309,14 +309,18 @@ public class EmbeddedChannel: Channel {
 
     public func finish() throws -> Bool {
         try close().wait()
-        (self.eventLoop as! EmbeddedEventLoop).run()
+        self.embeddedEventLoop.run()
         try throwIfErrorCaught()
         return !channelcore.outboundBuffer.isEmpty || !channelcore.inboundBuffer.isEmpty || !channelcore.pendingOutboundBuffer.isEmpty
     }
 
     private var _pipeline: ChannelPipeline!
     public var allocator: ByteBufferAllocator = ByteBufferAllocator()
-    public var eventLoop: EventLoop = EmbeddedEventLoop()
+    public var eventLoop: EventLoop {
+        return self.embeddedEventLoop
+    }
+
+    public var embeddedEventLoop: EmbeddedEventLoop = EmbeddedEventLoop()
 
     public var localAddress: SocketAddress? = nil
     public var remoteAddress: SocketAddress? = nil
@@ -324,12 +328,21 @@ public class EmbeddedChannel: Channel {
     // Embedded channels never have parents.
     public let parent: Channel? = nil
 
-    public func readOutbound<T>(as type: T.Type = T.self) -> T? {
-        return readFromBuffer(buffer: &channelcore.outboundBuffer)
+    public struct WrongTypeError: Error, Equatable {
+        public let expected: Any.Type
+        public let actual: Any.Type
+
+        public static func == (lhs: WrongTypeError, rhs: WrongTypeError) -> Bool {
+            return lhs.expected == rhs.expected && lhs.actual == rhs.actual
+        }
     }
 
-    public func readInbound<T>(as type: T.Type = T.self) -> T? {
-        return readFromBuffer(buffer: &channelcore.inboundBuffer)
+    public func readOutbound<T>(as type: T.Type = T.self) throws -> T? {
+        return try readFromBuffer(buffer: &channelcore.outboundBuffer)
+    }
+
+    public func readInbound<T>(as type: T.Type = T.self) throws -> T? {
+        return try readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
 
     /// Writes `data` into the `EmbeddedChannel`'s pipeline. This will result in a `channelRead` and a
@@ -358,11 +371,15 @@ public class EmbeddedChannel: Channel {
         }
     }
 
-    private func readFromBuffer<T>(buffer: inout [NIOAny]) -> T? {
+    private func readFromBuffer<T>(buffer: inout [NIOAny]) throws -> T? {
         if buffer.isEmpty {
             return nil
         }
-        return (buffer.removeFirst().forceAs(type: T.self))
+        let elem = buffer.removeFirst()
+        guard let t = elem.tryAs(type: T.self) else {
+            throw WrongTypeError(expected: T.self, actual: type(of: elem.forceAs(type: Any.self)))
+        }
+        return t
     }
 
     /// Create a new instance.
@@ -373,7 +390,7 @@ public class EmbeddedChannel: Channel {
     ///     - handler: The `ChannelHandler` to add to the `ChannelPipeline` before register or `nil` if none should be added.
     ///     - loop: The `EmbeddedEventLoop` to use.
     public init(handler: ChannelHandler? = nil, loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
-        self.eventLoop = loop
+        self.embeddedEventLoop = loop
         self._pipeline = ChannelPipeline(channel: self)
 
         if let handler = handler {

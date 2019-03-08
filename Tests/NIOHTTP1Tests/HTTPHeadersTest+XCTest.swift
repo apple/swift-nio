@@ -40,10 +40,13 @@ extension HTTPHeadersTest {
                 ("testKeepAliveStateStartsWithKeepAlive", testKeepAliveStateStartsWithKeepAlive),
                 ("testKeepAliveStateHasKeepAlive", testKeepAliveStateHasKeepAlive),
                 ("testKeepAliveStateHasClose", testKeepAliveStateHasClose),
-                ("testResolveNonContiguousHeaders", testResolveNonContiguousHeaders),
-                ("testStringBasedHTTPListHeaderIterator", testStringBasedHTTPListHeaderIterator),
-                ("testUnsafeBufferAccess", testUnsafeBufferAccess),
-                ("testCreateFromBufferAndLocations", testCreateFromBufferAndLocations),
+                ("testRandomAccess", testRandomAccess),
+                ("testCanBeSeededWithKeepAliveState", testCanBeSeededWithKeepAliveState),
+                ("testSeedDominatesActualValue", testSeedDominatesActualValue),
+                ("testSeedDominatesEvenAfterMutation", testSeedDominatesEvenAfterMutation),
+                ("testSeedGetsUpdatedToDefaultOnConnectionHeaderModification", testSeedGetsUpdatedToDefaultOnConnectionHeaderModification),
+                ("testSeedGetsUpdatedToWhateverTheHeaderSaysIfPresent", testSeedGetsUpdatedToWhateverTheHeaderSaysIfPresent),
+                ("testWeDefaultToCloseIfDoesNotMakeSense", testWeDefaultToCloseIfDoesNotMakeSense),
            ]
    }
 }

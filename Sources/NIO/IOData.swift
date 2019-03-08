@@ -48,3 +48,14 @@ extension IOData {
         }
     }
 }
+
+extension IOData: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .byteBuffer(let byteBuffer):
+            return "IOData { \(byteBuffer) }"
+        case .fileRegion(let fileRegion):
+            return "IOData { \(fileRegion) }"
+        }
+    }
+}

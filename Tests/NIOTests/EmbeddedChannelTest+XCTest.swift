@@ -30,6 +30,9 @@ extension EmbeddedChannelTest {
                 ("testWriteInboundByteBuffer", testWriteInboundByteBuffer),
                 ("testWriteInboundByteBufferReThrow", testWriteInboundByteBufferReThrow),
                 ("testWriteOutboundByteBufferReThrow", testWriteOutboundByteBufferReThrow),
+                ("testReadOutboundWrongTypeThrows", testReadOutboundWrongTypeThrows),
+                ("testReadInboundWrongTypeThrows", testReadInboundWrongTypeThrows),
+                ("testWrongTypesWithFastpathTypes", testWrongTypesWithFastpathTypes),
                 ("testCloseMultipleTimesThrows", testCloseMultipleTimesThrows),
                 ("testCloseOnInactiveIsOk", testCloseOnInactiveIsOk),
                 ("testEmbeddedLifecycle", testEmbeddedLifecycle),
@@ -39,6 +42,7 @@ extension EmbeddedChannelTest {
                 ("testWriteWithoutFlushDoesNotWrite", testWriteWithoutFlushDoesNotWrite),
                 ("testSetLocalAddressAfterSuccessfulBind", testSetLocalAddressAfterSuccessfulBind),
                 ("testSetRemoteAddressAfterSuccessfulConnect", testSetRemoteAddressAfterSuccessfulConnect),
+                ("testUnprocessedOutboundUserEventFailsOnEmbeddedChannel", testUnprocessedOutboundUserEventFailsOnEmbeddedChannel),
            ]
    }
 }
