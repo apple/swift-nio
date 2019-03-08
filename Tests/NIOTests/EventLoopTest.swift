@@ -226,6 +226,90 @@ public class EventLoopTest : XCTestCase {
         assert(weakEventLoop == nil, within: .seconds(1))
     }
 
+    func testScheduledRepeatedAsyncTask() {
+        let eventLoop = EmbeddedEventLoop()
+        var counter = 0
+        let repeatedTask = eventLoop.scheduleRepeatedAsyncTask(initialDelay: .milliseconds(10),
+                                                               delay: .milliseconds(10)) { (_: RepeatedTask) in
+            counter += 1
+            let p = eventLoop.makePromise(of: Void.self)
+            eventLoop.scheduleTask(in: .milliseconds(10)) {
+                p.succeed(())
+            }
+            return p.futureResult
+        }
+        for _ in 0..<10 {
+            // just running shouldn't do anything
+            eventLoop.run()
+        }
+        // t == 0: nothing
+        XCTAssertEqual(0, counter)
+
+        // t == 5: nothing
+        eventLoop.advanceTime(by: .milliseconds(5))
+        eventLoop.run()
+        XCTAssertEqual(0, counter)
+
+        // t == 10: once
+        eventLoop.advanceTime(by: .milliseconds(5))
+        eventLoop.run()
+        XCTAssertEqual(1, counter)
+
+        // t == 15: still once
+        eventLoop.advanceTime(by: .milliseconds(5))
+        eventLoop.run()
+        XCTAssertEqual(1, counter)
+
+        // t == 20: still once (because the task takes 10ms to execute)
+        eventLoop.advanceTime(by: .milliseconds(5))
+        eventLoop.run()
+        XCTAssertEqual(1, counter)
+
+        // t == 25: still once (because the task takes 10ms to execute)
+        eventLoop.advanceTime(by: .milliseconds(5))
+        eventLoop.run()
+        XCTAssertEqual(1, counter)
+
+        // t == 30: twice
+        eventLoop.advanceTime(by: .milliseconds(5))
+        eventLoop.run()
+        XCTAssertEqual(2, counter)
+
+        // t == 40: twice
+        eventLoop.advanceTime(by: .milliseconds(10))
+        eventLoop.run()
+        XCTAssertEqual(2, counter)
+
+        // t == 50: three times
+        eventLoop.advanceTime(by: .milliseconds(10))
+        eventLoop.run()
+        XCTAssertEqual(3, counter)
+
+        // t == 60: three times
+        eventLoop.advanceTime(by: .milliseconds(10))
+        eventLoop.run()
+        XCTAssertEqual(3, counter)
+
+        // t == 89: four times
+        eventLoop.advanceTime(by: .milliseconds(29))
+        eventLoop.run()
+        XCTAssertEqual(4, counter)
+
+        // t == 90: five times
+        eventLoop.advanceTime(by: .milliseconds(1))
+        eventLoop.run()
+        XCTAssertEqual(5, counter)
+
+        repeatedTask.cancel()
+
+        eventLoop.run()
+        XCTAssertEqual(5, counter)
+
+        eventLoop.advanceTime(by: .hours(10))
+        eventLoop.run()
+        XCTAssertEqual(5, counter)
+    }
+
     public func testEventLoopGroupMakeIterator() throws {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         defer {

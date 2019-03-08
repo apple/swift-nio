@@ -462,7 +462,8 @@ extension EventLoop {
         // Do nothing
     }
 
-    /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each task.
+    /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each
+    /// task.
     ///
     /// - parameters:
     ///     - initialDelay: The delay after which the first task is executed.
@@ -480,10 +481,16 @@ extension EventLoop {
                 return self.makeFailedFuture(error)
             }
         }
-        return self.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, notifying: promise, futureTask)
+        return self.scheduleRepeatedAsyncTask(initialDelay: initialDelay, delay: delay, notifying: promise, futureTask)
     }
 
-    /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each task.
+    /// Schedule a repeated asynchronous task to be executed by the `EventLoop` with a fixed delay between the end and
+    /// start of each task.
+    ///
+    /// - note: The delay is measured from the completion of one run's returned future to the start of the execution of
+    ///         the next run. For example: If you schedule a task once per second but your task takes two seconds to
+    ///         complete, the time interval between two subsequent runs will actually be three seconds (2s run time plus
+    ///         the 1s delay.)
     ///
     /// - parameters:
     ///     - initialDelay: The delay after which the first task is executed.
@@ -492,7 +499,10 @@ extension EventLoop {
     ///     - task: The closure that will be executed.
     /// - return: `RepeatedTask`
     @discardableResult
-    public func scheduleRepeatedTask(initialDelay: TimeAmount, delay: TimeAmount, notifying promise: EventLoopPromise<Void>? = nil, _ task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask {
+    public func scheduleRepeatedAsyncTask(initialDelay: TimeAmount,
+                                          delay: TimeAmount,
+                                          notifying promise: EventLoopPromise<Void>? = nil,
+                                          _ task: @escaping (RepeatedTask) -> EventLoopFuture<Void>) -> RepeatedTask {
         let repeated = RepeatedTask(interval: delay, eventLoop: self, cancellationPromise: promise, task: task)
         repeated.begin(in: initialDelay)
         return repeated
