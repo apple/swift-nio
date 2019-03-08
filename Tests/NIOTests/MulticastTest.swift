@@ -40,7 +40,7 @@ final class MulticastTest: XCTestCase {
     }
 
     override func tearDown() {
-        try? self.group.syncShutdownGracefully()
+        XCTAssertNoThrow(try self.group.syncShutdownGracefully())
     }
 
     struct NoSuchInterfaceError: Error { }
@@ -165,14 +165,40 @@ final class MulticastTest: XCTestCase {
 
     func testCanJoinBasicMulticastGroupIPv4() throws {
         let multicastInterface = try assertNoThrowWithValue(self.interfaceForAddress(address: "127.0.0.1"))
+        guard multicastInterface.multicastSupported else {
+            // alas, we don't support multicast, let's skip but test the right error is thrown
+
+            XCTAssertThrowsError(try self.bindMulticastChannel(host: "0.0.0.0",
+                                                               port: 0,
+                                                               multicastAddress: "224.0.2.66",
+                                                               interface: multicastInterface).wait()) { error in
+                if case .some(.multicastNotSupported(let actualInterface)) = error as? ChannelError {
+                    XCTAssertEqual(multicastInterface, actualInterface)
+                } else {
+                    XCTFail("unexpected error: \(error)")
+                }
+            }
+            return
+        }
 
         // We avoid the risk of interference due to our all-addresses bind by only joining this multicast
         // group on the loopback.
-        let listenerChannel = try assertNoThrowWithValue(self.bindMulticastChannel(host: "0.0.0.0",
+        let listenerChannel: Channel
+        do {
+            listenerChannel = try assertNoThrowWithValue(self.bindMulticastChannel(host: "0.0.0.0",
                                                                                    port: 0,
                                                                                    multicastAddress: "224.0.2.66",
                                                                                    interface: multicastInterface).wait())
-        
+            // no error, that's great
+        } catch {
+            if case .some(.multicastNotSupported(_)) = error as? ChannelError {
+                XCTFail("network interface (\(multicastInterface)) claims we support multicast but: \(error)")
+            } else {
+                XCTFail("unexpected error: \(error)")
+            }
+            return
+        }
+
         defer {
             XCTAssertNoThrow(try listenerChannel.close().wait())
         }
@@ -200,13 +226,38 @@ final class MulticastTest: XCTestCase {
         }
 
         let multicastInterface = try assertNoThrowWithValue(self.interfaceForAddress(address: "::1"))
+        guard multicastInterface.multicastSupported else {
+            // alas, we don't support multicast, let's skip but test the right error is thrown
 
-        // We avoid the risk of interference due to our all-addresses bind by only joining this multicast
-        // group on the loopback.
-        let listenerChannel = try assertNoThrowWithValue(self.bindMulticastChannel(host: "::1",
+            XCTAssertThrowsError(try self.bindMulticastChannel(host: "::1",
+                                                               port: 0,
+                                                               multicastAddress: "ff12::beeb",
+                                                               interface: multicastInterface).wait()) { error in
+                if case .some(.multicastNotSupported(let actualInterface)) = error as? ChannelError {
+                    XCTAssertEqual(multicastInterface, actualInterface)
+                } else {
+                    XCTFail("unexpected error: \(error)")
+                }
+            }
+            return
+        }
+
+        let listenerChannel: Channel
+        do {
+            // We avoid the risk of interference due to our all-addresses bind by only joining this multicast
+            // group on the loopback.
+            listenerChannel = try assertNoThrowWithValue(self.bindMulticastChannel(host: "::1",
                                                                                    port: 0,
                                                                                    multicastAddress: "ff12::beeb",
                                                                                    interface: multicastInterface).wait())
+        } catch {
+            if case .some(.multicastNotSupported(_)) = error as? ChannelError {
+                XCTFail("network interface (\(multicastInterface)) claims we support multicast but: \(error)")
+            } else {
+                XCTFail("unexpected error: \(error)")
+            }
+            return
+        }
         defer {
             XCTAssertNoThrow(try listenerChannel.close().wait())
         }
@@ -229,6 +280,10 @@ final class MulticastTest: XCTestCase {
 
     func testCanLeaveAnIPv4MulticastGroup() throws {
         let multicastInterface = try assertNoThrowWithValue(self.interfaceForAddress(address: "127.0.0.1"))
+        guard multicastInterface.multicastSupported else {
+            // alas, we don't support multicast, let's skip
+            return
+        }
 
         // We avoid the risk of interference due to our all-addresses bind by only joining this multicast
         // group on the loopback.
@@ -268,6 +323,10 @@ final class MulticastTest: XCTestCase {
         }
 
         let multicastInterface = try assertNoThrowWithValue(self.interfaceForAddress(address: "::1"))
+        guard multicastInterface.multicastSupported else {
+            // alas, we don't support multicast, let's skip
+            return
+        }
 
         // We avoid the risk of interference due to our all-addresses bind by only joining this multicast
         // group on the loopback.
