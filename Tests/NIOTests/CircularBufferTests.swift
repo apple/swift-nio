@@ -373,8 +373,8 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(3, ring.removeFirst())
         ring.append(5)
 
-        XCTAssertEqual(3, ring.headIdx)
-        XCTAssertEqual(1, ring.tailIdx)
+        XCTAssertEqual(3, ring.headIdx.backingIndex)
+        XCTAssertEqual(1, ring.tailIdx.backingIndex)
         XCTAssertEqual(2, ring.count)
         XCTAssertEqual(4, ring.removeFirst())
         XCTAssertEqual(5, ring.removeFirst())
@@ -454,7 +454,6 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(0, ring.count)
         XCTAssertTrue(ring.isEmpty)
     }
-
 
     func testPrependExpandBuffer() {
         var ring = CircularBuffer<Int>(initialCapacity: 3)
@@ -637,5 +636,59 @@ class CircularBufferTests: XCTestCase {
         assert(dummy6 == nil, within: .seconds(1))
         assert(dummy7 == nil, within: .seconds(1))
         assert(dummy8 == nil, within: .seconds(1))
+    }
+    
+    func testIntIndexing() {
+        var ring = CircularBuffer<Int>()
+        for i in 0 ..< 5 {
+            ring.append(i)
+            XCTAssertEqual(ring[offset: i], i)
+        }
+        
+        XCTAssertEqual(ring[ring.startIndex], ring[offset :0])
+        XCTAssertEqual(ring[ring.index(before: ring.endIndex)], ring[offset: 4])
+        
+        ring[offset: 1] = 10
+        XCTAssertEqual(ring[ring.index(after: ring.startIndex)], 10)
+    }
+    
+    func testIndexDistance() {
+        let index1 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 0, backingCount: 4)
+        let index2 = CircularBuffer<Int>.Index(backingIndex: 1, backingIndexOfHead: 0, backingCount: 4)
+        XCTAssertEqual(index1.distance(to: index2), 1)
+        
+        let index3 = CircularBuffer<Int>.Index(backingIndex: 2, backingIndexOfHead: 1, backingCount: 4)
+        let index4 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 1, backingCount: 4)
+        XCTAssertEqual(index3.distance(to: index4), 2)
+        
+        let index5 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 1, backingCount: 4)
+        let index6 = CircularBuffer<Int>.Index(backingIndex: 2, backingIndexOfHead: 1, backingCount: 4)
+        XCTAssertEqual(index5.distance(to: index6), -2)
+        
+        let index7 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 3, backingCount: 4)
+        let index8 = CircularBuffer<Int>.Index(backingIndex: 2, backingIndexOfHead: 3, backingCount: 4)
+        XCTAssertEqual(index7.distance(to: index8), 2)
+    }
+    
+    func testIndexAdvancing() {
+        let index1 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 0, backingCount: 4)
+        let index2 = index1.advanced(by: 1)
+        XCTAssertEqual(index2.backingIndex, 1)
+        XCTAssertEqual(index2.isIndexGEQHeadIndex, true)
+        
+        let index3 = CircularBuffer<Int>.Index(backingIndex: 3, backingIndexOfHead: 2, backingCount: 4)
+        let index4 = index3.advanced(by: 1)
+        XCTAssertEqual(index4.backingIndex, 0)
+        XCTAssertEqual(index4.isIndexGEQHeadIndex, false)
+        
+        let index5 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 1, backingCount: 4)
+        let index6 = index5.advanced(by: -1)
+        XCTAssertEqual(index6.backingIndex, 3)
+        XCTAssertEqual(index6.isIndexGEQHeadIndex, true)
+        
+        let index7 = CircularBuffer<Int>.Index(backingIndex: 2, backingIndexOfHead: 1, backingCount: 4)
+        let index8 = index7.advanced(by: -1)
+        XCTAssertEqual(index8.backingIndex, 1)
+        XCTAssertEqual(index8.isIndexGEQHeadIndex, true)
     }
 }

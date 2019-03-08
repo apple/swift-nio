@@ -62,6 +62,9 @@ extension CircularBufferTests {
                 ("testDoesNotExpandCapacityNeedlesslyWhenAppending", testDoesNotExpandCapacityNeedlesslyWhenAppending),
                 ("testExpandRemoveAllKeepingAndNotKeepingCapacityAndExpandAgain", testExpandRemoveAllKeepingAndNotKeepingCapacityAndExpandAgain),
                 ("testRemoveAllNilsOutTheContents", testRemoveAllNilsOutTheContents),
+                ("testIntIndexing", testIntIndexing),
+                ("testIndexDistance", testIndexDistance),
+                ("testIndexAdvancing", testIndexAdvancing),
            ]
    }
 }
