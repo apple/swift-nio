@@ -26,6 +26,9 @@ class NIOAnyDebugTest: XCTestCase {
         XCTAssertTrue(wrappedInNIOAnyBlock(bb).hasSuffix(" }"))
         
         let fileHandle = NIOFileHandle(descriptor: 1)
+        defer {
+            XCTAssertNoThrow(_ = try fileHandle.takeDescriptorOwnership())
+        }
         let fileRegion = FileRegion(fileHandle: fileHandle, readerIndex: 1, endIndex: 5)
         XCTAssertEqual(wrappedInNIOAnyBlock(fileRegion), wrappedInNIOAnyBlock("""
         FileRegion { \
@@ -37,7 +40,6 @@ class NIOAnyDebugTest: XCTestCase {
         readerIndex: \(fileRegion.readerIndex), \
         endIndex: \(fileRegion.endIndex) }
         """))
-        try fileHandle.close()
         
         let socketAddress = try SocketAddress(unixDomainSocketPath: "socketAdress")
         let envelopeByteBuffer = ByteBufferAllocator().byteBuffer(string: "envelope buffer")

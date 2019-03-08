@@ -62,6 +62,9 @@ public final class NIONetworkInterface {
     /// instead.
     public let pointToPointDestinationAddress: SocketAddress?
 
+    /// If the Interface supports Multicast
+    public let multicastSupported: Bool
+
     /// The index of the interface, as provided by `if_nametoindex`.
     public let interfaceIndex: Int
 
@@ -92,6 +95,12 @@ public final class NIONetworkInterface {
         } else {
             self.broadcastAddress = nil
             self.pointToPointDestinationAddress = nil
+        }
+
+        if (caddr.ifa_flags & UInt32(IFF_MULTICAST)) != 0 {
+            self.multicastSupported = true
+        } else {
+            self.multicastSupported = false
         }
 
         do {

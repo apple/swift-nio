@@ -63,26 +63,34 @@ final class SocketOptionProviderTest: XCTestCase {
         // joins/leaves that may eventually lead to an ENOMEM and a spurious test failure. As joining/leaving groups on loopback
         // interfaces does not require IGMP joins/leaves, forcing these joins onto the loopback interface saves us from this
         // risk.
-        let v4LoopbackAddress = try! SocketAddress(ipAddress: "127.0.0.1", port: 0)
-        let v6LoopbackAddress = try! SocketAddress(ipAddress: "::1", port: 0)
-        let v4LoopbackInterface = try! System.enumerateInterfaces().filter { $0.address == v4LoopbackAddress }.first!
+        let v4LoopbackAddress = try! assertNoThrowWithValue(SocketAddress(ipAddress: "127.0.0.1", port: 0))
+        let v6LoopbackAddress = try! assertNoThrowWithValue(SocketAddress(ipAddress: "::1", port: 0))
+        let v4LoopbackInterface = try! assertNoThrowWithValue(System.enumerateInterfaces().filter {
+            $0.address == v4LoopbackAddress
+        }.first)!
 
-        self.ipv4DatagramChannel = try? assertNoThrowWithValue(
-            DatagramBootstrap(group: group).bind(host: "127.0.0.1", port: 0).flatMap { channel in
-                return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "224.0.2.66", port: 0), interface: v4LoopbackInterface).map { channel }
+        // Only run the setup if the loopback interface supports multicast
+        if v4LoopbackAddress.isMulticast {
+            self.ipv4DatagramChannel = try? assertNoThrowWithValue(
+                DatagramBootstrap(group: group).bind(host: "127.0.0.1", port: 0).flatMap { channel in
+                    return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "224.0.2.66", port: 0), interface: v4LoopbackInterface).map { channel }
+                }.wait()
+            )
+        }
+
+        // Only run the setup if the loopback interface supports multicast
+        if v6LoopbackAddress.isMulticast {
+            // The IPv6 setup is allowed to fail, some hosts don't have IPv6.
+            let v6LoopbackInterface = try? assertNoThrowWithValue(System.enumerateInterfaces().filter { $0.address == v6LoopbackAddress }.first)
+            self.ipv6DatagramChannel = try? DatagramBootstrap(group: group).bind(host: "::1", port: 0).flatMap { channel in
+                return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "ff12::beeb", port: 0), interface: v6LoopbackInterface).map { channel }
             }.wait()
-        )
-
-        // The IPv6 setup is allowed to fail, some hosts don't have IPv6.
-       let v6LoopbackInterface = try! System.enumerateInterfaces().filter { $0.address == v6LoopbackAddress }.first
-        self.ipv6DatagramChannel = try? DatagramBootstrap(group: group).bind(host: "::1", port: 0).flatMap { channel in
-            return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "ff12::beeb", port: 0), interface: v6LoopbackInterface).map { channel }
-        }.wait()
+        }
     }
 
     override func tearDown() {
         XCTAssertNoThrow(try ipv6DatagramChannel?.close().wait())
-        XCTAssertNoThrow(try ipv4DatagramChannel.close().wait())
+        XCTAssertNoThrow(try ipv4DatagramChannel?.close().wait())
         XCTAssertNoThrow(try clientChannel.close().wait())
         XCTAssertNoThrow(try serverChannel.close().wait())
         XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -159,15 +167,18 @@ final class SocketOptionProviderTest: XCTestCase {
     }
 
     func testSoIpMulticastIf() throws {
-        let channel = self.ipv4DatagramChannel!
+        guard let channel = self.ipv4DatagramChannel else {
+            // no multicast support
+            return
+        }
         let provider = try assertNoThrowWithValue(self.ipv4MulticastProvider())
 
         let address: in_addr
-        switch channel.localAddress! {
-        case .v4(let addr):
+        switch channel.localAddress {
+        case .some(.v4(let addr)):
             address = addr.address.sin_addr
         default:
-            XCTFail("Local address must be IPv4!")
+            XCTFail("Local address must be IPv4, but is \(channel.localAddress.debugDescription)")
             return
         }
 
@@ -179,6 +190,10 @@ final class SocketOptionProviderTest: XCTestCase {
     }
 
     func testIpMulticastTtl() throws {
+        guard self.ipv4DatagramChannel != nil else {
+            // alas, no multicast, let's skip.
+            return
+        }
         let provider = try assertNoThrowWithValue(self.ipv4MulticastProvider())
         XCTAssertNoThrow(try provider.setIPMulticastTTL(6).flatMap {
             provider.getIPMulticastTTL()
@@ -188,6 +203,10 @@ final class SocketOptionProviderTest: XCTestCase {
     }
 
     func testIpMulticastLoop() throws {
+        guard self.ipv4DatagramChannel != nil else {
+            // alas, no multicast, let's skip.
+            return
+        }
         let provider = try assertNoThrowWithValue(self.ipv4MulticastProvider())
         XCTAssertNoThrow(try provider.setIPMulticastLoop(1).flatMap {
             provider.getIPMulticastLoop()
@@ -199,6 +218,10 @@ final class SocketOptionProviderTest: XCTestCase {
     func testIpv6MulticastIf() throws {
         guard let provider = try assertNoThrowWithValue(self.ipv6MulticastProvider()) else {
             // Skip on systems without IPv6.
+            return
+        }
+        guard self.ipv6DatagramChannel != nil else {
+            // alas, no multicast, let's skip.
             return
         }
 
@@ -221,6 +244,10 @@ final class SocketOptionProviderTest: XCTestCase {
             // Skip on systems without IPv6.
             return
         }
+        guard self.ipv6DatagramChannel != nil else {
+            // alas, no multicast, let's skip.
+            return
+        }
 
         XCTAssertNoThrow(try provider.setIPv6MulticastHops(6).flatMap {
             provider.getIPv6MulticastHops()
@@ -232,6 +259,10 @@ final class SocketOptionProviderTest: XCTestCase {
     func testIPv6MulticastLoop() throws {
         guard let provider = try assertNoThrowWithValue(self.ipv6MulticastProvider()) else {
             // Skip on systems without IPv6.
+            return
+        }
+        guard self.ipv6DatagramChannel != nil else {
+            // alas, no multicast, let's skip.
             return
         }
 

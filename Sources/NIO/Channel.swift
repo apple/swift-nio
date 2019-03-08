@@ -337,6 +337,9 @@ public enum ChannelError: Error {
     /// address.
     case illegalMulticastAddress(SocketAddress)
 
+    /// Multicast is not supported on Interface
+    case multicastNotSupported(NIONetworkInterface)
+
     /// An operation that was inappropriate given the current `Channel` state was attempted.
     case inappropriateOperationForState
 
