@@ -17,7 +17,18 @@ Update the NIO packages you use to include the following.
 ---
 **NOTE**
 
-At this moment, NIO 2 is still in development so if you want to depend on the NIO 2 family packages before we tagged any versions, it's `.branch("master")` for all packages.
+At this moment, NIO 2 is still in development so if you want to depend on the NIO 2 family packages before we tagged any versions. At this moment, the correct dependencies are:
+
+The already [converged](https://forums.swift.org/t/swiftnio-2-repository-convergence-plan/21387) repositories:
+
+- `swift-nio`: `.package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0-convergence.1")`
+- `swift-nio-extras`: `.package(url: "https://github.com/apple/swift-nio.git", from: "1.0.0-convergence.1")`
+
+Still under active development (might break public API anytime):
+
+- `swift-nio-ssl`: `.package(url: "https://github.com/apple/swift-nio-ssl.git", .branch("master"))`
+- `swift-nio-http2`: `.package(url: "https://github.com/apple/swift-nio-http2.git", .branch("master"))`
+- `swift-nio-transport-services`: `.package(url: "https://github.com/apple/swift-nio-transport-services.git", .branch("master"))`
 
 ---
 
