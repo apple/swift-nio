@@ -47,6 +47,7 @@ extension WebSocketFrameDecoderTest {
                 ("testDecoderRejectsFragmentedControlFramesWithSeparateErrorHandling", testDecoderRejectsFragmentedControlFramesWithSeparateErrorHandling),
                 ("testDecoderRejectsMultibyteControlFrameLengthsWithSeparateErrorHandling", testDecoderRejectsMultibyteControlFrameLengthsWithSeparateErrorHandling),
                 ("testIgnoresFurtherDataAfterRejectedFrameWithSeparateErrorHandling", testIgnoresFurtherDataAfterRejectedFrameWithSeparateErrorHandling),
+                ("testErrorHandlerDoesNotSwallowRandomErrors", testErrorHandlerDoesNotSwallowRandomErrors),
            ]
    }
 }
