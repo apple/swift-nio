@@ -47,17 +47,14 @@ extension ByteBuffer {
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if the bytes of interest are not
     ///            readable.
     @inlinable
-    public func getInteger<T: FixedWidthInteger>(at index0: Int, endianness: Endianness = Endianness.big, as: T.Type = T.self) -> T? {
-        precondition(index0 >= 0, "index must not be negative")
-        let index = index0 - self.readerIndex
+    public func getInteger<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big, as: T.Type = T.self) -> T? {
+        guard let range = self.rangeWithinReadableBytes(index: index, length: MemoryLayout<T>.size) else {
+            return nil
+        }
         return self.withUnsafeReadableBytes { ptr in
-            guard index >= 0 && index <= ptr.count - MemoryLayout<T>.size else {
-                return nil
-            }
             var value: T = 0
             withUnsafeMutableBytes(of: &value) { valuePtr in
-                valuePtr.copyMemory(from: UnsafeRawBufferPointer(start: ptr.baseAddress!.advanced(by: index),
-                                                                 count: MemoryLayout<T>.size))
+                valuePtr.copyMemory(from: UnsafeRawBufferPointer(rebasing: ptr[range]))
             }
             return _toEndianness(value: value, endianness: endianness)
         }

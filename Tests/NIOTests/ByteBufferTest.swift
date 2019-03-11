@@ -944,19 +944,28 @@ class ByteBufferTest: XCTestCase {
             XCTAssertNil(body(Int.max - 1, 2), file: file, line: line)
             XCTAssertNil(body(1, Int.max), file: file, line: line)
             XCTAssertNil(body(2, Int.max - 1), file: file, line: line)
+            XCTAssertNil(body(Int.max, Int.max), file: file, line: line)
+            XCTAssertNil(body(Int.min, Int.min), file: file, line: line)
+            XCTAssertNil(body(Int.max, Int.min), file: file, line: line)
+            XCTAssertNil(body(Int.min, Int.max), file: file, line: line)
         }
 
         func testIndexOrLengthFunc<T>(_ body: (Int) -> T?, file: StaticString = #file, line: UInt = #line) {
             XCTAssertNil(body(Int.max))
             XCTAssertNil(body(Int.max - 1))
+            XCTAssertNil(body(Int.min))
         }
 
-        testIndexOrLengthFunc({ x in buf.getInteger(at: x) as UInt16? })
-        testIndexOrLengthFunc({ buf.readSlice(length: $0) })
         testIndexOrLengthFunc({ buf.readBytes(length: $0) })
         testIndexOrLengthFunc({ buf.readData(length: $0) })
+        testIndexOrLengthFunc({ buf.readSlice(length: $0) })
+        testIndexOrLengthFunc({ buf.readString(length: $0) })
         testIndexOrLengthFunc({ buf.readDispatchData(length: $0) })
 
+        testIndexOrLengthFunc({ buf.getInteger(at: $0, as: UInt8.self) })
+        testIndexOrLengthFunc({ buf.getInteger(at: $0, as: UInt16.self) })
+        testIndexOrLengthFunc({ buf.getInteger(at: $0, as: UInt32.self) })
+        testIndexOrLengthFunc({ buf.getInteger(at: $0, as: UInt64.self) })
         testIndexAndLengthFunc(buf.getBytes)
         testIndexAndLengthFunc(buf.getData)
         testIndexAndLengthFunc(buf.getSlice)
