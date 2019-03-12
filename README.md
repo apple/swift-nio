@@ -24,7 +24,13 @@ SwiftNIO aims to support all of the platforms where Swift is supported. Currentl
 
 #### Swift versions
 
-The latest released SwiftNIO version supports Swift 4.0, 4.1, and 4.2.
+#### SwiftNIO 1 (the stable, released version)
+
+The latest released SwiftNIO 1 version supports Swift 4.0, 4.1, 4.2, and 5.0.
+
+#### SwiftNIO 2 (the in development version)
+
+SwiftNIO 2 will support Swift 5.0.
 
 ### Compatibility
 
@@ -223,22 +229,17 @@ For the most part, SwiftNIO development is as straightforward as any other Swift
 
 SwiftNIO's `master` branch is at the moment developing what will become SwiftNIO 2.0.0 which will be Swift 5-only. That means to develop SwiftNIO at the moment, you will need:
 
-- a recent [Swift 5.0 development snapshot](https://swift.org/download/#snapshots)
-- [patch a plist file in your Xcode](https://forums.swift.org/t/how-to-set-swift-version-5-for-recent-dev-snapshots-in-xcode-build-settings/18692/20)
-
 To be able to compile and run SwiftNIO and the integration tests, you need to
 have a few prerequisites installed on your system.
 
 #### macOS
 
-- Xcode 10.2 beta or newer (or Xcode 10.1 with at the moment a [small patch](https://forums.swift.org/t/how-to-set-swift-version-5-for-recent-dev-snapshots-in-xcode-build-settings/18692/20) to plist file inside Xcode)
-- A recent Swift 5.0 Development Toolchain from [swift.org/download](https://swift.org/download/#swift-50-development). To get a good idea of a toolchain version that definitely works, have a look at what [our CI uses](https://github.com/apple/swift-nio/blob/master/docker/docker-compose.1804.50.yaml#L10-L11) at the moment. Downloading the version our CI uses should give you pretty good certainty that the version actually works.
+- Xcode 10.2 beta 4 or newer
 
 ### Linux
 
-- Swift 5 development snapshots
+- a recent Swift 5.0 Development Toolchain from [swift.org/download](https://swift.org/download/#swift-50-development). To get a good idea of a toolchain version that definitely works, have a look at what [our CI uses](https://github.com/apple/swift-nio/blob/master/docker/docker-compose.1804.50.yaml#L10-L11) at the moment. Downloading the version our CI uses should give you pretty good certainty that the version actually works.
 - pkg-config
-- zlib and its development headers
 - netcat (for integration tests only)
 - lsof (for integration tests only)
 - shasum (for integration tests only)
