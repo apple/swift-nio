@@ -119,7 +119,7 @@ public struct ByteBufferAllocator {
 ///  - `String`/`StaticString`
 ///  - Swift's various (unsigned) integer types
 ///  - `Foundation`'s `Data`
-///  - `[UInt8]` and generally any `Collection` (& `ContiguousCollection`) of `UInt8`
+///  - `[UInt8]` and generally any `Collection` of `UInt8`
 ///
 /// ### Random Access
 /// For every supported type `ByteBuffer` usually contains two methods for random access:
@@ -145,7 +145,8 @@ public struct ByteBufferAllocator {
 ///
 /// For every supported type `ByteBuffer` usually contains two methods for sequential access:
 ///
-///  1. `read<Type>(length: Int)` to read `length` bytes from the current `readerIndex` (and then advance the reader index by `length` bytes)
+///  1. `read<Type>(length: Int)` to read `length` bytes from the current `readerIndex` (and then advance the reader
+///     index by `length` bytes)
 ///  2. `write<Type>(Type)` to write, advancing the `writerIndex` by the appropriate amount
 ///
 /// Example:
@@ -182,11 +183,9 @@ public struct ByteBufferAllocator {
 ///     let bufDataBytesOnly = buf.getSlice(at: 4, length: dataBytes.count)
 ///     /* `bufDataByteOnly` and `buf` will share their storage */
 ///
-/// ### Important usage notes
-/// Each method that is prefixed with `get` is considered "unsafe" as it allows the user to read uninitialized memory if the `index` or `index + length` points outside of the previous written
-/// range of the `ByteBuffer`. Because of this it's strongly advised to prefer the usage of methods that start with the `read` prefix and only use the `get` prefixed methods if there is a strong reason
-/// for doing so. In any case, if you use the `get` prefixed methods you are responsible for ensuring that you do not reach into uninitialized memory by taking the `readableBytes` and `readerIndex` into
-/// account, and ensuring that you have previously written into the area covered by the `index` itself.
+/// ### Notes
+/// All `ByteBuffer` methods that don't contain the word 'unsafe' will only allow you to access the 'readable bytes'.
+///
 public struct ByteBuffer {
     @usableFromInline typealias Slice = _ByteBufferSlice
     @usableFromInline typealias Allocator = ByteBufferAllocator
