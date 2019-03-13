@@ -23,10 +23,10 @@ The already [converged](https://forums.swift.org/t/swiftnio-2-repository-converg
 
 - `swift-nio`: `.package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0-convergence.1")`
 - `swift-nio-extras`: `.package(url: "https://github.com/apple/swift-nio-extras.git", from: "1.0.0-convergence.1")`
+- `swift-nio-ssl`: `.package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.0.0-convergence.1")`
 
 Still under active development (might break public API anytime):
 
-- `swift-nio-ssl`: `.package(url: "https://github.com/apple/swift-nio-ssl.git", .branch("master"))`
 - `swift-nio-http2`: `.package(url: "https://github.com/apple/swift-nio-http2.git", .branch("master"))`
 - `swift-nio-transport-services`: `.package(url: "https://github.com/apple/swift-nio-transport-services.git", .branch("master"))`
 
