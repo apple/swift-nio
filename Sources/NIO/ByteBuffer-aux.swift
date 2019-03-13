@@ -25,11 +25,8 @@ extension ByteBuffer {
     ///     - index: The starting index of the bytes of interest into the `ByteBuffer`.
     ///     - length: The number of bytes of interest.
     /// - returns: A `[UInt8]` value containing the bytes of interest or `nil` if the bytes `ByteBuffer` are not readable.
-    public func getBytes(at index0: Int, length: Int) -> [UInt8]? {
-        precondition(index0 >= 0, "index must not be negative")
-        precondition(length >= 0, "length must not be negative")
-        let index = index0 - self.readerIndex
-        guard index >= 0 && index <= self.readableBytes - length else {
+    public func getBytes(at index: Int, length: Int) -> [UInt8]? {
+        guard let range = self.rangeWithinReadableBytes(index: index, length: length) else {
             return nil
         }
 
@@ -37,7 +34,7 @@ extension ByteBuffer {
             // this is not technically correct because we shouldn't just bind
             // the memory to `UInt8` but it's not a real issue either and we
             // need to work around https://bugs.swift.org/browse/SR-9604
-            Array<UInt8>(UnsafeRawBufferPointer(rebasing: ptr[index..<(index+length)]).bindMemory(to: UInt8.self))
+            Array<UInt8>(UnsafeRawBufferPointer(rebasing: ptr[range]).bindMemory(to: UInt8.self))
         }
     }
 
@@ -133,15 +130,13 @@ extension ByteBuffer {
     ///     - length: The number of bytes making up the string.
     /// - returns: A `String` value containing the UTF-8 decoded selected bytes from this `ByteBuffer` or `nil` if
     ///            the requested bytes are not readable.
-    public func getString(at index0: Int, length: Int) -> String? {
-        precondition(index0 >= 0, "index must not be negative")
-        precondition(length >= 0, "length must not be negative")
-        let index = index0 - self.readerIndex
+    public func getString(at index: Int, length: Int) -> String? {
+        guard let range = self.rangeWithinReadableBytes(index: index, length: length) else {
+            return nil
+        }
         return self.withUnsafeReadableBytes { pointer in
-            guard index >= 0 && index <= pointer.count - length else {
-                return nil
-            }
-            return String(decoding: UnsafeRawBufferPointer(rebasing: pointer[index..<(index+length)]), as: Unicode.UTF8.self)
+            assert(range.lowerBound >= 0 && (range.upperBound - range.lowerBound) <= pointer.count)
+            return String(decoding: UnsafeRawBufferPointer(rebasing: pointer[range]), as: Unicode.UTF8.self)
         }
     }
 
@@ -196,15 +191,12 @@ extension ByteBuffer {
     ///     - length: The number of bytes.
     /// - returns: A `DispatchData` value deserialized from this `ByteBuffer` or `nil` if the requested bytes
     ///            are not readable.
-    public func getDispatchData(at index0: Int, length: Int) -> DispatchData? {
-        precondition(index0 >= 0, "index must not be negative")
-        precondition(length >= 0, "length must not be negative")
-        let index = index0 - self.readerIndex
+    public func getDispatchData(at index: Int, length: Int) -> DispatchData? {
+        guard let range = self.rangeWithinReadableBytes(index: index, length: length) else {
+            return nil
+        }
         return self.withUnsafeReadableBytes { pointer in
-            guard index >= 0 && index <= pointer.count - length else {
-                return nil
-            }
-            return DispatchData(bytes: UnsafeRawBufferPointer(rebasing: pointer[index..<(index+length)]))
+            return DispatchData(bytes: UnsafeRawBufferPointer(rebasing: pointer[range]))
         }
     }
 
