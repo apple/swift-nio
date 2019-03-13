@@ -1,0 +1,12 @@
+{
+  "warnings": [
+    {
+      "file": "/code/Sources/NIOFoundationCompat/ByteBuffer-foundation.swift",
+      "line": 34,
+      "symbol": "Data.withUnsafeBytes(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    }
+  ],
+  "source_directory": "/code"
+}
