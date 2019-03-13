@@ -478,4 +478,42 @@ class HTTPDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.finish())
     }
 
+    func testIllegalHeaderNamesCauseError() {
+        func writeToFreshRequestDecoderChannel(_ string: String) throws {
+            let channel = EmbeddedChannel(handler: ByteToMessageHandler(HTTPRequestDecoder()))
+            var buffer = channel.allocator.buffer(capacity: 256)
+            buffer.writeString(string)
+            try channel.writeInbound(buffer)
+        }
+
+        // non-ASCII character in header name
+        XCTAssertThrowsError(try writeToFreshRequestDecoderChannel("GET / HTTP/1.1\r\nföo: bar\r\n\r\n")) { error in
+            XCTAssertEqual(HTTPParserError.invalidHeaderToken, error as? HTTPParserError)
+        }
+
+        // empty header name
+        XCTAssertThrowsError(try writeToFreshRequestDecoderChannel("GET / HTTP/1.1\r\n: bar\r\n\r\n")) { error in
+            XCTAssertEqual(HTTPParserError.invalidHeaderToken, error as? HTTPParserError)
+        }
+
+        // just a space as header name
+        XCTAssertThrowsError(try writeToFreshRequestDecoderChannel("GET / HTTP/1.1\r\n : bar\r\n\r\n")) { error in
+            XCTAssertEqual(HTTPParserError.invalidHeaderToken, error as? HTTPParserError)
+        }
+    }
+
+    func testNonASCIIWorksAsHeaderValue() {
+        func writeToFreshRequestDecoderChannel(_ string: String) throws -> HTTPServerRequestPart? {
+            let channel = EmbeddedChannel(handler: ByteToMessageHandler(HTTPRequestDecoder()))
+            var buffer = channel.allocator.buffer(capacity: 256)
+            buffer.writeString(string)
+            try channel.writeInbound(buffer)
+            return try channel.readInbound(as: HTTPServerRequestPart.self)
+        }
+
+        var expectedHead = HTTPRequestHead(version: .init(major: 1, minor: 1), method: .GET, uri: "/")
+        expectedHead.headers.add(name: "foo", value: "bär")
+        XCTAssertNoThrow(XCTAssertEqual(.head(expectedHead),
+                                        try writeToFreshRequestDecoderChannel("GET / HTTP/1.1\r\nfoo: bär\r\n\r\n")))
+    }
 }
