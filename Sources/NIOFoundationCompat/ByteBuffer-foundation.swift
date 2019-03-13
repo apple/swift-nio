@@ -48,10 +48,6 @@ extension ByteBuffer {
     ///     - length: The number of bytes to be read from this `ByteBuffer`.
     /// - returns: A `Data` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
     public mutating func readData(length: Int) -> Data? {
-        precondition(length >= 0, "length must not be negative")
-        guard self.readableBytes >= length else {
-            return nil
-        }
         return self.getData(at: self.readerIndex, length: length).map {
             self.moveReaderIndex(forwardBy: length)
             return $0
@@ -66,10 +62,8 @@ extension ByteBuffer {
     ///     - length: The number of bytes of interest
     /// - returns: A `Data` value containing the bytes of interest or `nil` if the selected bytes are not readable.
     public func getData(at index0: Int, length: Int) -> Data? {
-        precondition(length >= 0, "length must not be negative")
-        precondition(index0 >= 0, "index must not be negative")
         let index = index0 - self.readerIndex
-        guard index >= 0 && index <= self.readableBytes - length else {
+        guard index >= 0 && length >= 0 && index <= self.readableBytes - length else {
             return nil
         }
         return self.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in

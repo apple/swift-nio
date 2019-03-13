@@ -569,9 +569,7 @@ public struct ByteBuffer {
     /// - returns: A `ByteBuffer` containing the selected bytes as readable bytes or `nil` if the selected bytes were
     ///            not readable in the initial `ByteBuffer`.
     public func getSlice(at index: Int, length: Int) -> ByteBuffer? {
-        precondition(index >= 0, "index must not be negative")
-        precondition(length >= 0, "length must not be negative")
-        guard index >= self.readerIndex && index <= self.writerIndex - length else {
+        guard index >= 0 && length >= 0 && index >= self.readerIndex && index <= self.writerIndex - length else {
             return nil
         }
         let index = _toIndex(index)
@@ -773,5 +771,16 @@ extension ByteBuffer: Equatable {
                 return memcmp(lPtr.baseAddress!, rPtr.baseAddress!, lPtr.count) == 0
             }
         }
+    }
+}
+
+extension ByteBuffer {
+    @inlinable
+    func rangeWithinReadableBytes(index: Int, length: Int) -> Range<Int>? {
+        let indexFromReaderIndex = index - self.readerIndex
+        guard indexFromReaderIndex >= 0 && length >= 0 && indexFromReaderIndex <= self.readableBytes - length else {
+            return nil
+        }
+        return indexFromReaderIndex ..< (indexFromReaderIndex+length)
     }
 }
