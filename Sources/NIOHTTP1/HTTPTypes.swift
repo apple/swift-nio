@@ -39,17 +39,17 @@ internal enum KeepAliveState {
 public struct HTTPRequestHead: Equatable {
     private final class _Storage {
         var method: HTTPMethod
-        var rawURI: URI
+        var uri: String
         var version: HTTPVersion
 
-        init(method: HTTPMethod, rawURI: URI, version: HTTPVersion) {
+        init(method: HTTPMethod, uri: String, version: HTTPVersion) {
             self.method = method
-            self.rawURI = rawURI
+            self.uri = uri
             self.version = version
         }
 
         func copy() -> _Storage {
-            return .init(method: self.method, rawURI: self.rawURI, version: self.version)
+            return .init(method: self.method, uri: self.uri, version: self.version)
         }
     }
 
@@ -72,26 +72,16 @@ public struct HTTPRequestHead: Equatable {
         }
     }
 
-    // Internal representation of the URI.
-    private var rawURI: URI {
+    // This request's URI.
+    public var uri: String {
         get {
-            return self._storage.rawURI
+            return self._storage.uri
         }
         set {
             if !isKnownUniquelyReferenced(&self._storage) {
                 self._storage = self._storage.copy()
             }
-            self._storage.rawURI = newValue
-        }
-    }
-
-    /// The URI used on this request.
-    public var uri: String {
-        get {
-            return String(uri: rawURI)
-        }
-        set {
-            rawURI = .string(newValue)
+            self._storage.uri = newValue
         }
     }
 
@@ -110,43 +100,27 @@ public struct HTTPRequestHead: Equatable {
 
     /// Create a `HTTPRequestHead`
     ///
-    /// - Parameter version: The version for this HTTP request.
-    /// - Parameter method: The HTTP method for this request.
-    /// - Parameter uri: The URI used on this request.
-    public init(version: HTTPVersion, method: HTTPMethod, uri: String) {
-        self.init(version: version, method: method, rawURI: .string(uri), headers: HTTPHeaders())
+    /// - parameters:
+    ///     - version: The version for this HTTP request.
+    ///     - method: The HTTP method for this request.
+    ///     - uri: The URI used on this request.
+    ///     - headers: This request's HTTP headers.
+    public init(version: HTTPVersion, method: HTTPMethod, uri: String, headers: HTTPHeaders) {
+        self._storage = .init(method: method, uri: uri, version: version)
+        self.headers = headers
     }
 
     /// Create a `HTTPRequestHead`
     ///
     /// - Parameter version: The version for this HTTP request.
     /// - Parameter method: The HTTP method for this request.
-    /// - Parameter rawURI: The URI used on this request.
-    /// - Parameter headers: The headers for this HTTP request.
-    init(version: HTTPVersion, method: HTTPMethod, rawURI: URI, headers: HTTPHeaders) {
-        self.headers = headers
-        self._storage = _Storage(method: method, rawURI: rawURI, version: version)
+    /// - Parameter uri: The URI used on this request.
+    public init(version: HTTPVersion, method: HTTPMethod, uri: String) {
+        self.init(version: version, method: method, uri: uri, headers: HTTPHeaders())
     }
 
     public static func ==(lhs: HTTPRequestHead, rhs: HTTPRequestHead) -> Bool {
         return lhs.method == rhs.method && lhs.uri == rhs.uri && lhs.version == rhs.version && lhs.headers == rhs.headers
-    }
-}
-
-/// Internal representation of a URI
-enum URI {
-    case string(String)
-    case byteBuffer(ByteBuffer)
-}
-
-private extension String {
-    init(uri: URI) {
-        switch uri {
-        case .string(let string):
-            self = string
-        case .byteBuffer(let buffer):
-            self = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes)! // bytes definitely in buffer
-        }
     }
 }
 
