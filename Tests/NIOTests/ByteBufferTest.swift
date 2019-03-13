@@ -1830,6 +1830,21 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("AAAA", buf.getString(at: 251, length: 4, encoding: .utf8))
         XCTAssertEqual("AAAA", buf.viewBytes(at: 251, length: 4).map { String(decoding: $0, as: Unicode.UTF8.self) })
     }
+
+    func testByteBufferViewAsDataProtocol() {
+        func checkEquals<D: DataProtocol>(expected: String, actual: D) {
+            var actualBytesAsArray: [UInt8] = []
+            for region in actual.regions {
+                actualBytesAsArray += Array(region)
+            }
+            XCTAssertEqual(expected, String(decoding: actualBytesAsArray, as: Unicode.UTF8.self))
+        }
+        var buf = self.allocator.buffer(capacity: 32)
+        buf.writeStaticString("0123abcd4567")
+        buf.moveReaderIndex(forwardBy: 4)
+        buf.moveWriterIndex(to: buf.writerIndex - 4)
+        checkEquals(expected: "abcd", actual: buf.readableBytesView)
+    }
 }
 
 private enum AllocationExpectationState: Int {
