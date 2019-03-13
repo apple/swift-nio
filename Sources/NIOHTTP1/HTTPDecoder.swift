@@ -530,7 +530,7 @@ public class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelegate {
         case .request:
             let reqHead = HTTPRequestHead(version: .init(major: versionMajor, minor: versionMinor),
                                           method: HTTPMethod.from(httpParserMethod: method),
-                                          rawURI: .string(self.url!),
+                                          uri: self.url!,
                                           headers: HTTPHeaders(self.headers,
                                                                keepAliveState: keepAliveState))
             message = NIOAny(HTTPServerRequestPart.head(reqHead))
