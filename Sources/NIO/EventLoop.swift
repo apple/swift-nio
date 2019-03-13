@@ -532,20 +532,6 @@ extension EventLoop {
     }
 }
 
-// to be removed before 2.0
-extension EventLoop {
-    @available(*, deprecated, renamed: "makeFailedFuture(_:)")
-    public func makeFailedFuture<T>(error: Error) -> EventLoopFuture<T> {
-        return self.makeFailedFuture(error)
-    }
-
-    @available(*, deprecated, renamed: "makeSucceededFuture(_:)")
-    public func makeSucceededFuture<Success>(result: Success) -> EventLoopFuture<Success> {
-        return self.makeSucceededFuture(result)
-    }
-
-}
-
 /// Internal representation of a `Registration` to an `Selector`.
 ///
 /// Whenever a `Selectable` is registered to a `Selector` a `Registration` is created internally that is also provided within the
