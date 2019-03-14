@@ -461,6 +461,9 @@ extension ByteToMessageHandler {
 extension ByteToMessageHandler: ChannelInboundHandler {
 
     public func handlerAdded(context: ChannelHandlerContext) {
+        guard self.removalState == .notBeingRemoved else {
+            preconditionFailure("\(self) got readded to a ChannelPipeline but ByteToMessageHandler is single-use")
+        }
         self.buffer = B2MDBuffer(emptyByteBuffer: context.channel.allocator.buffer(capacity: 0))
         // here we can force it because we know that the decoder isn't in use if we're just adding this handler
         self.selfAsCanDequeueWrites = self as? CanDequeueWrites // we need to cache this as it allocates.
