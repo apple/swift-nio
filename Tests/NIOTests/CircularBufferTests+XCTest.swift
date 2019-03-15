@@ -65,6 +65,13 @@ extension CircularBufferTests {
                 ("testIntIndexing", testIntIndexing),
                 ("testIndexDistance", testIndexDistance),
                 ("testIndexAdvancing", testIndexAdvancing),
+                ("testPopFirst", testPopFirst),
+                ("testSlicing", testSlicing),
+                ("testRemoveInMiddle", testRemoveInMiddle),
+                ("testLotsOfPrepending", testLotsOfPrepending),
+                ("testLotsOfInsertAtStart", testLotsOfInsertAtStart),
+                ("testLotsOfInsertAtEnd", testLotsOfInsertAtEnd),
+                ("testPopLast", testPopLast),
            ]
    }
 }
