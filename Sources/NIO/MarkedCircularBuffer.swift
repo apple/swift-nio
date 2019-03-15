@@ -17,10 +17,7 @@
 /// This object is used extensively within SwiftNIO to handle flushable buffers. It can be used to store buffered
 /// writes and mark how far through the buffer the user has flushed, and therefore how far through the buffer is
 /// safe to write.
-public struct MarkedCircularBuffer<Element>: CustomStringConvertible, AppendableCollection {
-    public typealias RangeType<Bound> = Range<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
-    public typealias Index = CircularBuffer<Element>.Index
-
+public struct MarkedCircularBuffer<Element>: CustomStringConvertible {
     private var buffer: CircularBuffer<Element>
     private var markedIndexOffset: Int? = nil /* nil: nothing marked */
 
@@ -41,17 +38,19 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible, Appendable
 
     /// Removes the first element from the buffer.
     public mutating func removeFirst() -> Element {
+        return self.popFirst()!
+    }
+
+    public mutating func popFirst() -> Element? {
         assert(self.buffer.count > 0)
-        if let markedIndex = self.markedIndexOffset {
-            if self.startIndex.advanced(by: markedIndex) == self.startIndex {
-                self.markedIndexOffset = nil
+        if let markedIndexOffset = self.markedIndexOffset {
+            if markedIndexOffset > 0 {
+                self.markedIndexOffset = markedIndexOffset - 1
             } else {
-                if let markedIndexOffset = self.markedIndexOffset {
-                    self.markedIndexOffset = markedIndexOffset - 1
-                }
+                self.markedIndexOffset = nil
             }
         }
-        return self.buffer.removeFirst()
+        return self.buffer.popFirst()
     }
 
     /// The first element in the buffer.
@@ -67,29 +66,6 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible, Appendable
     /// The number of elements in the buffer.
     public var count: Int {
         return self.buffer.count
-    }
-
-    /// Retrieves the element at the given index from the buffer, without removing it.
-    public subscript(index: Index) -> Element {
-        get {
-            return self.buffer[index]
-        }
-        set {
-            self.buffer[index] = newValue
-        }
-    }
-
-    /// The valid indices into the buffer.
-    public var indices: RangeType<Index> {
-        return self.buffer.indices
-    }
-
-    public var startIndex: Index { return self.buffer.startIndex }
-
-    public var endIndex: Index { return self.buffer.endIndex }
-
-    public func index(after i: Index) -> Index {
-        return self.buffer.index(after: i)
     }
 
     public var description: String {
@@ -113,7 +89,7 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible, Appendable
         assert(index >= self.startIndex, "index must not be negative")
         precondition(index < self.endIndex, "index \(index) out of range (0..<\(self.buffer.count))")
         if let markedIndexOffset = self.markedIndexOffset {
-            return self.startIndex.advanced(by: markedIndexOffset) == index
+            return self.index(self.startIndex, offsetBy: markedIndexOffset) == index
         } else {
             return false
         }
@@ -123,7 +99,7 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible, Appendable
     public var markedElementIndex: Index? {
         if let markedIndexOffset = self.markedIndexOffset {
             assert(markedIndexOffset >= 0)
-            return self.startIndex.advanced(by: markedIndexOffset)
+            return self.index(self.startIndex, offsetBy: markedIndexOffset)
         } else {
             return nil
         }
@@ -138,4 +114,49 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible, Appendable
     public var hasMark: Bool {
         return self.markedIndexOffset != nil
     }
+}
+
+extension MarkedCircularBuffer: Collection, MutableCollection {
+    public typealias RangeType<Bound> = Range<Bound> where Bound: Strideable, Bound.Stride: SignedInteger
+    public typealias Index = CircularBuffer<Element>.Index
+    public typealias SubSequence = CircularBuffer<Element>
+
+    public func index(after i: Index) -> Index {
+        return self.buffer.index(after: i)
+    }
+
+    public var startIndex: Index { return self.buffer.startIndex }
+
+    public var endIndex: Index { return self.buffer.endIndex }
+
+    /// Retrieves the element at the given index from the buffer, without removing it.
+    public subscript(index: Index) -> Element {
+        get {
+            return self.buffer[index]
+        }
+        set {
+            self.buffer[index] = newValue
+        }
+    }
+
+    public subscript(bounds: Range<Index>) -> SubSequence {
+        get {
+            return self.buffer[bounds]
+        }
+    }
+}
+
+extension MarkedCircularBuffer: RandomAccessCollection {
+    public func index(_ i: Index, offsetBy distance: Int) -> Index {
+        return self.buffer.index(i, offsetBy: distance)
+    }
+
+    public func distance(from start: Index, to end: Index) -> Int {
+        return self.buffer.distance(from: start, to: end)
+    }
+
+    public func index(before i: Index) -> Index {
+        return self.buffer.index(before: i)
+    }
+
 }

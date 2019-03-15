@@ -260,7 +260,7 @@ extension MarkedCircularBuffer {
     public typealias E = Element
 
     func _makeIndex(value: Int) -> Index {
-        return self.startIndex.advanced(by: value)
+        return self.index(self.startIndex, offsetBy: value)
     }
 
     @available(*, deprecated, renamed: "init(initialCapacity:)")
@@ -377,7 +377,7 @@ extension SocketAddress {
 
 extension CircularBuffer {
     func _makeIndex(value: Int) -> Index {
-        return self.startIndex.advanced(by: value)
+        return self.index(self.startIndex, offsetBy: value)
     }
 
     @available(*, deprecated, renamed: "Element")
