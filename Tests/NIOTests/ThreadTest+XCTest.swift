@@ -36,6 +36,9 @@ extension ThreadTest {
                 ("testThreadSpecificDoesNotLeakIfReplacedWithNewValue", testThreadSpecificDoesNotLeakIfReplacedWithNewValue),
                 ("testSharingThreadSpecificVariableWorks", testSharingThreadSpecificVariableWorks),
                 ("testThreadSpecificInitWithValueWorks", testThreadSpecificInitWithValueWorks),
+                ("testThreadSpecificDoesNotLeakWhenOutOfScopeButThreadStillRunning", testThreadSpecificDoesNotLeakWhenOutOfScopeButThreadStillRunning),
+                ("testThreadSpecificDoesNotLeakIfThreadExitsWhilstSetOnMultipleThreads", testThreadSpecificDoesNotLeakIfThreadExitsWhilstSetOnMultipleThreads),
+                ("testThreadSpecificDoesNotLeakWhenOutOfScopeButSetOnMultipleThreads", testThreadSpecificDoesNotLeakWhenOutOfScopeButSetOnMultipleThreads),
            ]
    }
 }

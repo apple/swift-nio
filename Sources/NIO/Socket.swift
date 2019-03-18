@@ -13,15 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 /// The container used for writing multiple buffers via `writev`.
-public typealias IOVector = iovec
+typealias IOVector = iovec
 
 // TODO: scattering support
 /* final but tests */ class Socket: BaseSocket {
 
     /// The maximum number of bytes to write per `writev` call.
-    static var writevLimitBytes: Int {
-        return Int(Int32.max)
-    }
+    static var writevLimitBytes = Int(Int32.max)
 
     /// The maximum number of `IOVector`s to write per `writev` call.
     static let writevLimitIOVectors: Int = Posix.UIO_MAXIOV
@@ -34,7 +32,7 @@ public typealias IOVector = iovec
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if creation of the socket failed.
     init(protocolFamily: CInt, type: CInt, setNonBlocking: Bool = false) throws {
-        let sock = try BaseSocket.newSocket(protocolFamily: protocolFamily, type: type, setNonBlocking: setNonBlocking)
+        let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: type, setNonBlocking: setNonBlocking)
         super.init(descriptor: sock)
     }
 
@@ -71,11 +69,11 @@ public typealias IOVector = iovec
     func connect(to address: SocketAddress) throws -> Bool {
         switch address {
         case .v4(let addr):
-            return try connectSocket(addr: addr.address)
+            return try self.connectSocket(addr: addr.address)
         case .v6(let addr):
-            return try connectSocket(addr: addr.address)
+            return try self.connectSocket(addr: addr.address)
         case .unixDomainSocket(let addr):
-            return try connectSocket(addr: addr.address)
+            return try self.connectSocket(addr: addr.address)
         }
     }
 

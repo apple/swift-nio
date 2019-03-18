@@ -52,7 +52,6 @@ extension ChannelTests {
                 ("testCloseOutput", testCloseOutput),
                 ("testCloseInput", testCloseInput),
                 ("testHalfClosure", testHalfClosure),
-                ("testRejectsInvalidData", testRejectsInvalidData),
                 ("testWeDontCrashIfChannelReleasesBeforePipeline", testWeDontCrashIfChannelReleasesBeforePipeline),
                 ("testAskForLocalAndRemoteAddressesAfterChannelIsClosed", testAskForLocalAndRemoteAddressesAfterChannelIsClosed),
                 ("testReceiveAddressAfterAccept", testReceiveAddressAfterAccept),
@@ -75,6 +74,9 @@ extension ChannelTests {
                 ("testFailedRegistrationOfAcceptedSocket", testFailedRegistrationOfAcceptedSocket),
                 ("testFailedRegistrationOfServerSocket", testFailedRegistrationOfServerSocket),
                 ("testTryingToBindOnPortThatIsAlreadyBoundFailsButDoesNotCrash", testTryingToBindOnPortThatIsAlreadyBoundFailsButDoesNotCrash),
+                ("testCloseInReadTriggeredByDrainingTheReceiveBufferBecauseOfWriteError", testCloseInReadTriggeredByDrainingTheReceiveBufferBecauseOfWriteError),
+                ("testApplyingTwoDistinctSocketOptionsOfSameTypeWorks", testApplyingTwoDistinctSocketOptionsOfSameTypeWorks),
+                ("testUnprocessedOutboundUserEventFailsOnServerSocketChannel", testUnprocessedOutboundUserEventFailsOnServerSocketChannel),
            ]
    }
 }

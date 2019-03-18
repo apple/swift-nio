@@ -18,6 +18,8 @@
 //  Created by Cory Benfield on 27/02/2018.
 //
 
+import CNIOLinux
+
 private extension ifaddrs {
     var dstaddr: UnsafeMutablePointer<sockaddr>? {
         #if os(Linux)
@@ -60,6 +62,12 @@ public final class NIONetworkInterface {
     /// instead.
     public let pointToPointDestinationAddress: SocketAddress?
 
+    /// If the Interface supports Multicast
+    public let multicastSupported: Bool
+
+    /// The index of the interface, as provided by `if_nametoindex`.
+    public let interfaceIndex: Int
+
     /// Create a brand new network interface.
     ///
     /// This constructor will fail if NIO does not understand the format of the underlying
@@ -88,6 +96,18 @@ public final class NIONetworkInterface {
             self.broadcastAddress = nil
             self.pointToPointDestinationAddress = nil
         }
+
+        if (caddr.ifa_flags & UInt32(IFF_MULTICAST)) != 0 {
+            self.multicastSupported = true
+        } else {
+            self.multicastSupported = false
+        }
+
+        do {
+            self.interfaceIndex = Int(try Posix.if_nametoindex(caddr.ifa_name))
+        } catch {
+            return nil
+        }
     }
 }
 
@@ -105,6 +125,7 @@ extension NIONetworkInterface: Equatable {
                lhs.address == rhs.address &&
                lhs.netmask == rhs.netmask &&
                lhs.broadcastAddress == rhs.broadcastAddress &&
-               lhs.pointToPointDestinationAddress == rhs.pointToPointDestinationAddress
+               lhs.pointToPointDestinationAddress == rhs.pointToPointDestinationAddress &&
+               lhs.interfaceIndex == rhs.interfaceIndex
     }
 }

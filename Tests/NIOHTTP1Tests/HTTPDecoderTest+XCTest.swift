@@ -36,9 +36,13 @@ extension HTTPDecoderTest {
                 ("testToleratesHTTP13Response", testToleratesHTTP13Response),
                 ("testCorrectlyMaintainIndicesWhenDiscardReadBytes", testCorrectlyMaintainIndicesWhenDiscardReadBytes),
                 ("testDropExtraBytes", testDropExtraBytes),
-                ("testDontDropExtraBytes", testDontDropExtraBytes),
+                ("testDontDropExtraBytesRequest", testDontDropExtraBytesRequest),
+                ("testDontDropExtraBytesResponse", testDontDropExtraBytesResponse),
                 ("testExtraCRLF", testExtraCRLF),
                 ("testSOURCEDoesntExplodeUs", testSOURCEDoesntExplodeUs),
+                ("testExtraCarriageReturnBetweenSubsequentRequests", testExtraCarriageReturnBetweenSubsequentRequests),
+                ("testIllegalHeaderNamesCauseError", testIllegalHeaderNamesCauseError),
+                ("testNonASCIIWorksAsHeaderValue", testNonASCIIWorksAsHeaderValue),
            ]
    }
 }

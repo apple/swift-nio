@@ -18,15 +18,6 @@ import Darwin
 import Glibc
 #endif
 
-#if !swift(>=4.1)
-    public extension UnsafeMutablePointer {
-        public func deallocate() {
-            /* this is a bit dodgy as we always pass 1 but it's okay as Swift 4.0 would also always deallocate the whole chunk */
-            self.deallocate(capacity: 1)
-        }
-    }
-#endif
-
 /// A threading lock based on `libpthread` instead of `libdispatch`.
 ///
 /// This object provides a lock on top of a single `pthread_mutex_t`. This kind
@@ -75,7 +66,7 @@ extension Lock {
     ///
     /// - Parameter body: The block to execute while holding the lock.
     /// - Returns: The value returned by the block.
-    @_inlineable
+    @inlinable
     public func withLock<T>(_ body: () throws -> T) rethrows -> T {
         self.lock()
         defer {
@@ -85,7 +76,7 @@ extension Lock {
     }
 
     // specialise Void return (for performance)
-    @_inlineable
+    @inlinable
     public func withLockVoid(_ body: () throws -> Void) rethrows -> Void {
         try self.withLock(body)
     }

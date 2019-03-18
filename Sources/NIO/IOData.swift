@@ -22,18 +22,7 @@ public enum IOData {
 }
 
 /// `IOData` objects are comparable just like the values they wrap.
-extension IOData: Equatable {
-    public static func ==(lhs: IOData, rhs: IOData) -> Bool {
-        switch (lhs, rhs) {
-        case (.byteBuffer(let lhs), .byteBuffer(let rhs)):
-            return lhs == rhs
-        case (.fileRegion(let lhs), .fileRegion(let rhs)):
-            return lhs == rhs
-        case (.byteBuffer, _), (.fileRegion, _):
-            return false
-        }
-    }
-}
+extension IOData: Equatable {}
 
 /// `IOData` provide a number of readable bytes.
 extension IOData {
@@ -56,6 +45,17 @@ extension IOData {
         case .fileRegion(var fileRegion):
             fileRegion.moveReaderIndex(forwardBy: forwardBy)
             self = .fileRegion(fileRegion)
+        }
+    }
+}
+
+extension IOData: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .byteBuffer(let byteBuffer):
+            return "IOData { \(byteBuffer) }"
+        case .fileRegion(let fileRegion):
+            return "IOData { \(fileRegion) }"
         }
     }
 }

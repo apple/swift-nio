@@ -27,6 +27,7 @@ extension HTTPHeadersTest {
    static var allTests : [(String, (HTTPHeadersTest) -> () throws -> Void)] {
       return [
                 ("testCasePreservedButInsensitiveLookup", testCasePreservedButInsensitiveLookup),
+                ("testDictionaryLiteralAlternative", testDictionaryLiteralAlternative),
                 ("testWriteHeadersSeparately", testWriteHeadersSeparately),
                 ("testRevealHeadersSeparately", testRevealHeadersSeparately),
                 ("testSubscriptDoesntSplitHeaders", testSubscriptDoesntSplitHeaders),
@@ -37,6 +38,15 @@ extension HTTPHeadersTest {
                 ("testContains", testContains),
                 ("testKeepAliveStateStartsWithClose", testKeepAliveStateStartsWithClose),
                 ("testKeepAliveStateStartsWithKeepAlive", testKeepAliveStateStartsWithKeepAlive),
+                ("testKeepAliveStateHasKeepAlive", testKeepAliveStateHasKeepAlive),
+                ("testKeepAliveStateHasClose", testKeepAliveStateHasClose),
+                ("testRandomAccess", testRandomAccess),
+                ("testCanBeSeededWithKeepAliveState", testCanBeSeededWithKeepAliveState),
+                ("testSeedDominatesActualValue", testSeedDominatesActualValue),
+                ("testSeedDominatesEvenAfterMutation", testSeedDominatesEvenAfterMutation),
+                ("testSeedGetsUpdatedToDefaultOnConnectionHeaderModification", testSeedGetsUpdatedToDefaultOnConnectionHeaderModification),
+                ("testSeedGetsUpdatedToWhateverTheHeaderSaysIfPresent", testSeedGetsUpdatedToWhateverTheHeaderSaysIfPresent),
+                ("testWeDefaultToCloseIfDoesNotMakeSense", testWeDefaultToCloseIfDoesNotMakeSense),
            ]
    }
 }

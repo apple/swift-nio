@@ -24,7 +24,7 @@ private class ReadCompletedHandler: ChannelInboundHandler {
         readCompleteCount = 0
     }
 
-    public func channelReadComplete(ctx: ChannelHandlerContext) {
+    public func channelReadComplete(context: ChannelHandlerContext) {
         readCompleteCount += 1
     }
 }
@@ -40,10 +40,10 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             XCTFail("Negotiation fired")
-            return loop.newSucceededFuture(result: ())
+            return loop.makeSucceededFuture(())
         }
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // Fire a pair of events that should be ignored.
         channel.pipeline.fireUserInboundEventTriggered(EventType.basic)
@@ -58,7 +58,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
     private func negotiateTest(event: TLSUserEvent, expectedResult: ALPNResult) throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise: EventLoopPromise<Void> = loop.newPromise()
+        let continuePromise = loop.makePromise(of: Void.self)
 
         let expectedResult: ALPNResult = .negotiated("h2")
         var called = false
@@ -69,7 +69,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
             return continuePromise.futureResult
         }
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // Fire the handshake complete event.
         channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
@@ -80,7 +80,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.pipeline.assertContains(handler: handler)
 
         // Now we fire the future.
-        continuePromise.succeed(result: ())
+        continuePromise.succeed(())
 
         // Now the handler should have removed itself from the pipeline.
         try channel.pipeline.assertDoesNotContain(handler: handler)
@@ -102,14 +102,14 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             XCTFail("Should not be called")
-            return loop.newSucceededFuture(result: ())
+            return loop.makeSucceededFuture(())
         }
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // The data we write should not be buffered.
         try channel.writeInbound("hello")
-        XCTAssertEqual(channel.readInbound()!, "hello")
+        XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "hello"))
 
         XCTAssertFalse(try channel.finish())
     }
@@ -117,13 +117,13 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
     func testBufferingWhileWaitingForFuture() throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise: EventLoopPromise<Void> = loop.newPromise()
+        let continuePromise = loop.makePromise(of: Void.self)
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             continuePromise.futureResult
         }
 
-        try channel.pipeline.add(handler: handler).wait()
+        try channel.pipeline.addHandler(handler).wait()
 
         // Fire in the event.
         channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
@@ -132,15 +132,15 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.writeInbound("writes")
         try channel.writeInbound("are")
         try channel.writeInbound("buffered")
-        XCTAssertNil(channel.readInbound())
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
         // Complete the pipeline swap.
-        continuePromise.succeed(result: ())
+        continuePromise.succeed(())
 
         // Now everything should have been unbuffered.
-        XCTAssertEqual(channel.readInbound()!, "writes")
-        XCTAssertEqual(channel.readInbound()!, "are")
-        XCTAssertEqual(channel.readInbound()!, "buffered")
+        XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "writes"))
+        XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "are"))
+        XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "buffered"))
 
         XCTAssertFalse(try channel.finish())
     }
@@ -148,15 +148,15 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
     func testNothingBufferedDoesNotFireReadCompleted() throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise: EventLoopPromise<Void> = loop.newPromise()
+        let continuePromise = loop.makePromise(of: Void.self)
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             continuePromise.futureResult
         }
         let readCompleteHandler = ReadCompletedHandler()
 
-        try channel.pipeline.add(handler: handler).wait()
-        try channel.pipeline.add(handler: readCompleteHandler).wait()
+        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.addHandler(readCompleteHandler).wait()
 
         // Fire in the event.
         channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
@@ -166,7 +166,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         // Now satisfy the future, which forces data unbuffering. As we haven't buffered any data,
         // readComplete should not be fired.
-        continuePromise.succeed(result: ())
+        continuePromise.succeed(())
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 0)
 
         XCTAssertFalse(try channel.finish())
@@ -175,15 +175,15 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
     func testUnbufferingFiresReadCompleted() throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise: EventLoopPromise<Void> = loop.newPromise()
+        let continuePromise = loop.makePromise(of: Void.self)
 
         let handler = ApplicationProtocolNegotiationHandler { result in
             continuePromise.futureResult
         }
         let readCompleteHandler = ReadCompletedHandler()
 
-        try channel.pipeline.add(handler: handler).wait()
-        try channel.pipeline.add(handler: readCompleteHandler).wait()
+        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.addHandler(readCompleteHandler).wait()
 
         // Fire in the event.
         channel.pipeline.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: "h2"))
@@ -195,8 +195,8 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 1)
 
         // Now satisfy the future, which forces data unbuffering. This should fire readComplete.
-        continuePromise.succeed(result: ())
-        XCTAssertEqual(channel.readInbound()!, "a write")
+        continuePromise.succeed(())
+        XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "a write"))
 
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 2)
 

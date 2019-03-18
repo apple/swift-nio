@@ -26,3 +26,9 @@ public struct AddressedEnvelope<DataType> {
         self.data = data
     }
 }
+
+extension AddressedEnvelope: CustomStringConvertible {
+    public var description: String {
+        return "AddressedEnvelope { remoteAddress: \(self.remoteAddress), data: \(self.data) }"
+    }
+}

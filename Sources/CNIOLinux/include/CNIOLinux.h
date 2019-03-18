@@ -14,6 +14,8 @@
 #ifndef C_NIO_LINUX_H
 #define C_NIO_LINUX_H
 
+#include "ifaddrs-android.h"
+
 #ifdef __linux__
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
@@ -22,7 +24,7 @@
 #include <sys/socket.h>
 #include <sched.h>
 #include <errno.h>
-
+#include <pthread.h>
 
 // Some explanation is required here.
 //

@@ -27,7 +27,7 @@
 
 private extension Array where Element == EventLoopFuture<Channel> {
     mutating func remove(element: Element) {
-        guard let channelIndex = index(where: { $0 === element }) else {
+        guard let channelIndex = self.firstIndex(where: { $0 === element }) else {
             return
         }
 
@@ -46,7 +46,7 @@ public struct SingleConnectionFailure {
 
 /// A representation of all the errors that happened during an attempt to connect
 /// to a given host and port.
-public struct NIOConnectionError {
+public struct NIOConnectionError: Error {
     /// The hostname SwiftNIO was trying to connect to.
     public let host: String
 
@@ -288,7 +288,7 @@ internal class HappyEyeballsConnector {
         self.channelBuilderCallback = channelBuilderCallback
 
         self.state = .idle
-        self.resolutionPromise = self.loop.newPromise()
+        self.resolutionPromise = self.loop.makePromise()
         self.error = NIOConnectionError(host: host, port: port)
 
         precondition(resolutionDelay.nanoseconds > 0, "Resolution delay must be greater than zero, got \(resolutionDelay).")
@@ -507,7 +507,7 @@ internal class HappyEyeballsConnector {
     /// Cleans up internal state and fails the connection promise.
     private func timedOut() {
         cleanUp()
-        self.resolutionPromise.fail(error: ChannelError.connectTimeout(self.connectTimeout))
+        self.resolutionPromise.fail(ChannelError.connectTimeout(self.connectTimeout))
     }
 
     /// Called when we've attempted to connect to all our resolved targets,
@@ -518,7 +518,7 @@ internal class HappyEyeballsConnector {
     private func failed() {
         precondition(pendingConnections.count == 0, "failed with pending connections")
         cleanUp()
-        self.resolutionPromise.fail(error: ChannelError.connectFailed(self.error))
+        self.resolutionPromise.fail(self.error)
     }
 
     /// Called to connect to a given target.
@@ -547,13 +547,13 @@ internal class HappyEyeballsConnector {
                         channel.close(promise: nil)
                     } else {
                         self.processInput(.connectSuccess)
-                        self.resolutionPromise.succeed(result: channel)
+                        self.resolutionPromise.succeed(channel)
                     }
                 }.whenFailure { err in
                     // The connection attempt failed. If we're in the complete state then there's nothing
                     // to do. Otherwise, notify the state machine of the failure.
                     if case .complete = self.state {
-                        assert(self.pendingConnections.index { $0 === channelFuture } == nil, "failed but was still in pending connections")
+                        assert(self.pendingConnections.firstIndex { $0 === channelFuture } == nil, "failed but was still in pending connections")
                     } else {
                         self.error.connectionErrors.append(SingleConnectionFailure(target: target, error: err))
                         self.pendingConnections.remove(element: channelFuture)
@@ -604,9 +604,9 @@ internal class HappyEyeballsConnector {
     private func whenALookupComplete(future: EventLoopFuture<[SocketAddress]>) {
         future.map { results in
             self.targets.aResultsAvailable(results)
-        }.mapIfError { err in
+        }.recover { err in
             self.error.dnsAError = err
-        }.whenComplete {
+        }.whenComplete { (_: Result<Void, Error>) in
             self.dnsResolutions += 1
             self.processInput(.resolverACompleted)
         }
@@ -616,9 +616,9 @@ internal class HappyEyeballsConnector {
     private func whenAAAALookupComplete(future: EventLoopFuture<[SocketAddress]>) {
         future.map { results in
             self.targets.aaaaResultsAvailable(results)
-        }.mapIfError { err in
+        }.recover { err in
             self.error.dnsAAAAError = err
-        }.whenComplete {
+        }.whenComplete { (_: Result<Void, Error>) in
             // It's possible that we were waiting to time out here, so if we were we should
             // cancel that.
             self.resolutionTask?.cancel()

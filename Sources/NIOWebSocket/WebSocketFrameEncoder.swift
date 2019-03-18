@@ -16,7 +16,13 @@ import NIO
 
 private let maxOneByteSize = 125
 private let maxTwoByteSize = Int(UInt16.max)
+#if arch(arm) || arch(i386)
+// on 32-bit platforms we can't put a whole UInt32 in an Int
+private let maxNIOFrameSize = Int(UInt32.max / 2)
+#else
+// on 64-bit platforms this works just fine
 private let maxNIOFrameSize = Int(UInt32.max)
+#endif
 
 /// An inbound `ChannelHandler` that serializes structured websocket frames into a byte stream
 /// for sending on the network.
@@ -35,7 +41,7 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
 
     public init() { }
 
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let data = self.unwrapOutboundIn(data)
 
         var maskSize: Int
@@ -57,29 +63,29 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
         var buffer: ByteBuffer
         switch data.length {
         case 0...maxOneByteSize:
-            buffer = ctx.channel.allocator.buffer(capacity: baseLength)
-            buffer.write(integer: data.firstByte)
-            buffer.write(integer: UInt8(data.length) | maskBitMask)
+            buffer = context.channel.allocator.buffer(capacity: baseLength)
+            buffer.writeInteger(data.firstByte)
+            buffer.writeInteger(UInt8(data.length) | maskBitMask)
         case (maxOneByteSize + 1)...maxTwoByteSize:
-            buffer = ctx.channel.allocator.buffer(capacity: baseLength + 2)
-            buffer.write(integer: data.firstByte)
-            buffer.write(integer: UInt8(126) | maskBitMask)
-            buffer.write(integer: UInt16(data.length))
+            buffer = context.channel.allocator.buffer(capacity: baseLength + 2)
+            buffer.writeInteger(data.firstByte)
+            buffer.writeInteger(UInt8(126) | maskBitMask)
+            buffer.writeInteger(UInt16(data.length))
         case (maxTwoByteSize + 1)...maxNIOFrameSize:
-            buffer = ctx.channel.allocator.buffer(capacity: baseLength + 8)
-            buffer.write(integer: data.firstByte)
-            buffer.write(integer: UInt8(127) | maskBitMask)
-            buffer.write(integer: UInt64(data.length))
+            buffer = context.channel.allocator.buffer(capacity: baseLength + 8)
+            buffer.writeInteger(data.firstByte)
+            buffer.writeInteger(UInt8(127) | maskBitMask)
+            buffer.writeInteger(UInt64(data.length))
         default:
             fatalError("NIO cannot serialize frames longer than \(maxNIOFrameSize)")
         }
 
         if let maskKey = data.maskKey {
-            buffer.write(bytes: maskKey)
+            buffer.writeBytes(maskKey)
         }
 
         // Ok, frame header away!
-        ctx.write(self.wrapOutboundOut(buffer), promise: nil)
+        context.write(self.wrapOutboundOut(buffer), promise: nil)
 
         // Next, let's mask the extension and application data and send
         // them too.
@@ -88,9 +94,9 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
         // Now we can send our byte buffers out. We attach the write promise to the last
         // of the frame data.
         if let extensionData = extensionData {
-            ctx.write(self.wrapOutboundOut(extensionData), promise: nil)
+            context.write(self.wrapOutboundOut(extensionData), promise: nil)
         }
-        ctx.write(self.wrapOutboundOut(applicationData), promise: promise)
+        context.write(self.wrapOutboundOut(applicationData), promise: promise)
     }
 
     /// Applies the websocket masking operation based on the passed byte buffers.

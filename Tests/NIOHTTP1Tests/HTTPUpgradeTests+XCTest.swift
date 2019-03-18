@@ -39,8 +39,11 @@ extension HTTPUpgradeTestCase {
                 ("testUpgradeIsCaseInsensitive", testUpgradeIsCaseInsensitive),
                 ("testDelayedUpgradeBehaviour", testDelayedUpgradeBehaviour),
                 ("testBuffersInboundDataDuringDelayedUpgrade", testBuffersInboundDataDuringDelayedUpgrade),
+                ("testDelayedUpgradeResponse", testDelayedUpgradeResponse),
+                ("testChainsDelayedUpgradesAppropriately", testChainsDelayedUpgradesAppropriately),
+                ("testDelayedUpgradeResponseDeliversFullRequest", testDelayedUpgradeResponseDeliversFullRequest),
+                ("testDelayedUpgradeResponseDeliversFullRequestAndPendingBits", testDelayedUpgradeResponseDeliversFullRequestAndPendingBits),
                 ("testRemovesAllHTTPRelatedHandlersAfterUpgrade", testRemovesAllHTTPRelatedHandlersAfterUpgrade),
-                ("testBasicUpgradePipelineMutation", testBasicUpgradePipelineMutation),
                 ("testUpgradeWithUpgradePayloadInlineWithRequestWorks", testUpgradeWithUpgradePayloadInlineWithRequestWorks),
            ]
    }

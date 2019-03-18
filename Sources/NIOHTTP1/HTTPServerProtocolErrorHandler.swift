@@ -21,7 +21,7 @@ import NIO
 /// servers want. This handler does not suppress the parser errors: it allows them to
 /// continue to pass through the pipeline so that other handlers (e.g. logging ones) can
 /// deal with the error.
-public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler {
+public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler, RemovableChannelHandler {
     public typealias InboundIn = HTTPServerRequestPart
     public typealias InboundOut = HTTPServerRequestPart
     public typealias OutboundIn = HTTPServerResponsePart
@@ -29,9 +29,11 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler {
 
     private var hasUnterminatedResponse: Bool = false
 
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+    public init() {}
+
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
         guard error is HTTPParserError else {
-            ctx.fireErrorCaught(error)
+            context.fireErrorCaught(error)
             return
         }
 
@@ -45,15 +47,15 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler {
         if !self.hasUnterminatedResponse {
             let headers = HTTPHeaders([("Connection", "close"), ("Content-Length", "0")])
             let head = HTTPResponseHead(version: .init(major: 1, minor: 1), status: .badRequest, headers: headers)
-            ctx.write(self.wrapOutboundOut(.head(head)), promise: nil)
-            ctx.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+            context.write(self.wrapOutboundOut(.head(head)), promise: nil)
+            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
         }
 
         // Now pass the error on in case someone else wants to see it.
-        ctx.fireErrorCaught(error)
+        context.fireErrorCaught(error)
     }
 
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+    public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let res = self.unwrapOutboundIn(data)
         switch res {
         case .head:
@@ -65,6 +67,6 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler {
             precondition(self.hasUnterminatedResponse)
             self.hasUnterminatedResponse = false
         }
-        ctx.write(data, promise: promise)
+        context.write(data, promise: promise)
     }
 }

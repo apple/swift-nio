@@ -50,6 +50,37 @@ class HTTPHeadersTest : XCTestCase {
         }
     }
 
+    func testDictionaryLiteralAlternative() {
+        let headers: HTTPHeaders = [ "User-Agent": "1",
+                                     "host": "2",
+                                     "X-SOMETHING": "3",
+                                     "SET-COOKIE": "foo=bar",
+                                     "Set-Cookie": "buz=cux"]
+
+        // looking up headers value is case-insensitive
+        XCTAssertEqual(["1"], headers["User-Agent"])
+        XCTAssertEqual(["1"], headers["User-agent"])
+        XCTAssertEqual(["2"], headers["Host"])
+        XCTAssertEqual(["foo=bar", "buz=cux"], headers["set-cookie"])
+
+        for (key,value) in headers {
+            switch key {
+            case "User-Agent":
+                XCTAssertEqual("1", value)
+            case "host":
+                XCTAssertEqual("2", value)
+            case "X-SOMETHING":
+                XCTAssertEqual("3", value)
+            case "SET-COOKIE":
+                XCTAssertEqual("foo=bar", value)
+            case "Set-Cookie":
+                XCTAssertEqual("buz=cux", value)
+            default:
+                XCTFail("Unexpected key: \(key)")
+            }
+        }
+    }
+
     func testWriteHeadersSeparately() {
         let originalHeaders = [ ("User-Agent", "1"),
                                 ("host", "2"),
@@ -145,38 +176,151 @@ class HTTPHeadersTest : XCTestCase {
     }
     
     func testKeepAliveStateStartsWithClose() {
-        var buffer = ByteBufferAllocator().buffer(capacity: 32)
-        buffer.write(string: "Connection: close\r\n")
-        var headers = HTTPHeaders(buffer: buffer, headers: [HTTPHeader(name: HTTPHeaderIndex(start: 0, length: 10), value: HTTPHeaderIndex(start: 12, length: 5))], keepAliveState: .close)
-        
+        var headers = HTTPHeaders([("Connection", "close")])
+
         XCTAssertEqual("close", headers["connection"].first)
         XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
-        
+
         headers.replaceOrAdd(name: "connection", value: "keep-alive")
-        
+
         XCTAssertEqual("keep-alive", headers["connection"].first)
         XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
-        
+
         headers.remove(name: "connection")
         XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
         XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 0)))
     }
-    
+
     func testKeepAliveStateStartsWithKeepAlive() {
-        var buffer = ByteBufferAllocator().buffer(capacity: 32)
-        buffer.write(string: "Connection: keep-alive\r\n")
-        var headers = HTTPHeaders(buffer: buffer, headers: [HTTPHeader(name: HTTPHeaderIndex(start: 0, length: 10), value: HTTPHeaderIndex(start: 12, length: 10))], keepAliveState: .keepAlive)
-        
+        var headers = HTTPHeaders([("Connection", "keep-alive")])
+
         XCTAssertEqual("keep-alive", headers["connection"].first)
         XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
-        
+
         headers.replaceOrAdd(name: "connection", value: "close")
-        
+
         XCTAssertEqual("close", headers["connection"].first)
         XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
-        
+
         headers.remove(name: "connection")
         XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
         XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 0)))
+    }
+
+    func testKeepAliveStateHasKeepAlive() {
+        let headers = HTTPHeaders([("Connection", "other, keEP-alive"),
+                                   ("Content-Type", "text/html"),
+                                   ("Connection", "server, x-options")])
+        
+        XCTAssertTrue(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
+    }
+
+    func testKeepAliveStateHasClose() {
+        let headers = HTTPHeaders([("Connection", "x-options,  other"),
+                                   ("Content-Type", "text/html"),
+                                   ("Connection", "server,     clOse")])
+        
+        XCTAssertFalse(headers.isKeepAlive(version: HTTPVersion(major: 1, minor: 1)))
+    }
+        
+    func testRandomAccess() {
+        let originalHeaders = [ ("X-first", "one"),
+                                ("X-second", "two")]
+        let headers = HTTPHeaders(originalHeaders)
+        
+        XCTAssertEqual(headers[headers.startIndex].name, originalHeaders.first?.0)
+        XCTAssertEqual(headers[headers.startIndex].value, originalHeaders.first?.1)
+        XCTAssertEqual(headers[headers.index(before: headers.endIndex)].name, originalHeaders.last?.0)
+        XCTAssertEqual(headers[headers.index(before: headers.endIndex)].value, originalHeaders.last?.1)
+        
+        let beforeLast = headers[headers.index(before: headers.endIndex)]
+        XCTAssertEqual(beforeLast.name, originalHeaders[originalHeaders.endIndex - 1].0)
+        XCTAssertEqual(beforeLast.value, originalHeaders[originalHeaders.endIndex - 1].1)
+        
+        let afterFirst = headers[headers.index(after: headers.startIndex)]
+        XCTAssertEqual(afterFirst.name, originalHeaders[originalHeaders.startIndex + 1].0)
+        XCTAssertEqual(afterFirst.value, originalHeaders[originalHeaders.startIndex + 1].1)
+    }
+
+    func testCanBeSeededWithKeepAliveState() {
+        // we may later on decide that this test doesn't make sense but for now we want to keep the seeding behaviour.
+        let headersSeededWithClose = HTTPHeaders([], keepAliveState: .close)
+        XCTAssertEqual(false, headersSeededWithClose.isKeepAlive(version: .init(major: 0, minor: 0)))
+
+        let headersSeededWithKeepAlive = HTTPHeaders([], keepAliveState: .keepAlive)
+        XCTAssertEqual(true, headersSeededWithKeepAlive.isKeepAlive(version: .init(major: 0, minor: 0)))
+    }
+
+    func testSeedDominatesActualValue() {
+        // we may later on decide that this test doesn't make sense but for now we want to keep the seeding behaviour
+        let headersSeededWithClose = HTTPHeaders([], keepAliveState: .close)
+        XCTAssertEqual(false, headersSeededWithClose.isKeepAlive(version: .init(major: 1, minor: 1)))
+
+        let headersSeededWithKeepAlive = HTTPHeaders([], keepAliveState: .keepAlive)
+        XCTAssertEqual(true, headersSeededWithKeepAlive.isKeepAlive(version: .init(major: 1, minor: 0)))
+    }
+
+    func testSeedDominatesEvenAfterMutation() {
+        // we may later on decide that this test doesn't make sense but for now we want to keep the seeding behaviour
+        var headersSeededWithClose = HTTPHeaders([], keepAliveState: .close)
+        headersSeededWithClose.add(name: "foo", value: "bar")
+        headersSeededWithClose.add(name: "bar", value: "qux")
+        headersSeededWithClose.remove(name: "bar")
+        XCTAssertEqual(false, headersSeededWithClose.isKeepAlive(version: .init(major: 1, minor: 1)))
+
+        var headersSeededWithKeepAlive = HTTPHeaders([], keepAliveState: .keepAlive)
+        headersSeededWithKeepAlive.add(name: "foo", value: "bar")
+        headersSeededWithKeepAlive.add(name: "bar", value: "qux")
+        headersSeededWithKeepAlive.remove(name: "bar")
+        XCTAssertEqual(true, headersSeededWithKeepAlive.isKeepAlive(version: .init(major: 1, minor: 0)))
+    }
+
+    func testSeedGetsUpdatedToDefaultOnConnectionHeaderModification() {
+        var headersSeededWithClose = HTTPHeaders([], keepAliveState: .close)
+        headersSeededWithClose.add(name: "connection", value: "bar")
+        XCTAssertEqual(true, headersSeededWithClose.isKeepAlive(version: .init(major: 1, minor: 1)))
+        XCTAssertEqual(false, headersSeededWithClose.isKeepAlive(version: .init(major: 1, minor: 0)))
+
+        var headersSeededWithKeepAlive = HTTPHeaders([], keepAliveState: .keepAlive)
+        headersSeededWithKeepAlive.add(name: "connection", value: "bar")
+        XCTAssertEqual(true, headersSeededWithKeepAlive.isKeepAlive(version: .init(major: 1, minor: 1)))
+        XCTAssertEqual(false, headersSeededWithKeepAlive.isKeepAlive(version: .init(major: 1, minor: 0)))
+    }
+
+    func testSeedGetsUpdatedToWhateverTheHeaderSaysIfPresent() {
+        var headersSeededWithClose = HTTPHeaders([], keepAliveState: .close)
+        headersSeededWithClose.add(name: "connection", value: "bar,keep-alive,true")
+        XCTAssertEqual(true, headersSeededWithClose.isKeepAlive(version: .init(major: 1, minor: 1)))
+        XCTAssertEqual(true, headersSeededWithClose.isKeepAlive(version: .init(major: 1, minor: 0)))
+
+        var headersSeededWithKeepAlive = HTTPHeaders([], keepAliveState: .keepAlive)
+        headersSeededWithKeepAlive.add(name: "connection", value: "bar,close,true")
+        XCTAssertEqual(false, headersSeededWithKeepAlive.isKeepAlive(version: .init(major: 1, minor: 1)))
+        XCTAssertEqual(false, headersSeededWithKeepAlive.isKeepAlive(version: .init(major: 1, minor: 0)))
+    }
+
+    func testWeDefaultToCloseIfDoesNotMakeSense() {
+        var nonSenseInOneHeaderCK = HTTPHeaders([])
+        nonSenseInOneHeaderCK.add(name: "connection", value: "close,keep-alive")
+        XCTAssertEqual(false, nonSenseInOneHeaderCK.isKeepAlive(version: .init(major: 1, minor: 1)))
+        XCTAssertEqual(false, nonSenseInOneHeaderCK.isKeepAlive(version: .init(major: 1, minor: 0)))
+
+        var nonSenseInMultipleHeadersCK = HTTPHeaders([])
+        nonSenseInMultipleHeadersCK.add(name: "connection", value: "close")
+        nonSenseInMultipleHeadersCK.add(name: "connection", value: "keep-alive")
+        XCTAssertEqual(false, nonSenseInMultipleHeadersCK.isKeepAlive(version: .init(major: 1, minor: 1)))
+        XCTAssertEqual(false, nonSenseInMultipleHeadersCK.isKeepAlive(version: .init(major: 1, minor: 0)))
+
+        var nonSenseInOneHeaderKC = HTTPHeaders([])
+        nonSenseInOneHeaderKC.add(name: "connection", value: "keep-alive,close")
+        XCTAssertEqual(false, nonSenseInOneHeaderKC.isKeepAlive(version: .init(major: 1, minor: 1)))
+        XCTAssertEqual(false, nonSenseInOneHeaderKC.isKeepAlive(version: .init(major: 1, minor: 0)))
+
+        var nonSenseInMultipleHeadersKC = HTTPHeaders([])
+        nonSenseInMultipleHeadersKC.add(name: "connection", value: "keep-alive")
+        nonSenseInMultipleHeadersKC.add(name: "connection", value: "close")
+        XCTAssertEqual(false, nonSenseInMultipleHeadersKC.isKeepAlive(version: .init(major: 1, minor: 1)))
+        XCTAssertEqual(false, nonSenseInMultipleHeadersKC.isKeepAlive(version: .init(major: 1, minor: 0)))
+
     }
 }

@@ -13,15 +13,15 @@
 //===----------------------------------------------------------------------===//
 
 /// An operation code for a websocket frame.
-public enum WebSocketOpcode {
-    case continuation
-    case text
-    case binary
-    case unknownNonControl(UInt8)
-    case connectionClose
-    case ping
-    case pong
-    case unknownControl(UInt8)
+public struct WebSocketOpcode {
+    fileprivate let networkRepresentation: UInt8
+
+    public static let continuation = WebSocketOpcode(rawValue: 0x0)
+    public static let text = WebSocketOpcode(rawValue: 0x1)
+    public static let binary = WebSocketOpcode(rawValue: 0x2)
+    public static let connectionClose = WebSocketOpcode(rawValue: 0x8)
+    public static let ping = WebSocketOpcode(rawValue: 0x9)
+    public static let pong = WebSocketOpcode(rawValue: 0xA)
 
     /// Create an opcode from the encoded representation.
     ///
@@ -33,87 +33,75 @@ public enum WebSocketOpcode {
             return nil
         }
 
-        switch encoded {
-        case 0x0:
-            self = .continuation
-        case 0x1:
-            self = .text
-        case 0x2:
-            self = .binary
-        case 0x8:
-            self = .connectionClose
-        case 0x9:
-            self = .ping
-        case 0xA:
-            self = .pong
-        case let oc where (oc & 0x8) != 0:
-            self = .unknownControl(oc)
-        default:
-            self = .unknownNonControl(encoded)
-        }
+        self.networkRepresentation = encoded
+    }
+
+    /// Create an opcode directly with no validation.
+    ///
+    /// Used only to create the static lets on this structure.
+    private init(rawValue: UInt8) {
+        self.networkRepresentation = rawValue
     }
 
     /// Whether the opcode is in the control range: that is, if the
     /// high bit of the opcode nibble is `1`.
     public var isControlOpcode: Bool {
+        return self.networkRepresentation & 0x8 == 0x8
+    }
+}
+
+extension WebSocketOpcode: Equatable { }
+
+extension WebSocketOpcode: Hashable { }
+
+extension WebSocketOpcode: CaseIterable {
+    public static var allCases = (0..<0x10).map { WebSocketOpcode(rawValue: $0) }
+}
+
+extension WebSocketOpcode: CustomStringConvertible {
+    public var description: String {
         switch self {
-        case .connectionClose,
-             .ping,
-             .pong,
-             .unknownControl:
-            return true
-        default:
-            return false
+        case .continuation:
+            return "WebSocketOpcode.continuation"
+        case .text:
+            return "WebSocketOpcode.text"
+        case .binary:
+            return "WebSocketOpcode.binary"
+        case .connectionClose:
+            return "WebSocketOpcode.connectionClose"
+        case .ping:
+            return "WebSocketOpcode.ping"
+        case .pong:
+            return "WebSocketOpcode.pong"
+        case let x where x.isControlOpcode:
+            return "WebSocketOpcode.unknownControl(\(x.networkRepresentation))"
+        case let x:
+            return "WebSocketOpcode.unknownNonControl(\(x.networkRepresentation))"
         }
     }
 }
 
-extension WebSocketOpcode: Equatable {
-    public static func ==(lhs: WebSocketOpcode, rhs: WebSocketOpcode) -> Bool {
-        switch (lhs, rhs) {
-        case (.continuation, .continuation),
-             (.text, .text),
-             (.binary, .binary),
-             (.connectionClose, .connectionClose),
-             (.ping, .ping),
-             (.pong, .pong):
-            return true
-        case (.unknownControl(let i), .unknownControl(let j)),
-             (.unknownNonControl(let i), .unknownNonControl(let j)):
-            return i == j
-        default:
-            return false
-        }
-    }
-}
-
-public extension UInt8 {
+extension UInt8 {
     /// Create a UInt8 corresponding to a given `WebSocketOpcode`.
     ///
     /// This places the opcode in the four least-significant bits, in
-    /// a form suitable for sending on the wire. Will fail if the opcode
-    /// is not actually a valid websocket opcode
+    /// a form suitable for sending on the wire.
     ///
     /// - parameters:
     ///     - opcode: The `WebSocketOpcode`.
-    public init?(webSocketOpcode opcode: WebSocketOpcode) {
-        switch opcode {
-        case .continuation:
-            self = 0x0
-        case .text:
-            self = 0x1
-        case .binary:
-            self = 0x2
-        case .connectionClose:
-            self = 0x8
-        case .ping:
-            self = 0x9
-        case .pong:
-            self = 0xA
-        case .unknownControl(let i),
-             .unknownNonControl(let i):
-            guard i < 0x10 else { return nil }
-            self = i
-        }
+    public init(webSocketOpcode opcode: WebSocketOpcode) {
+        precondition(opcode.networkRepresentation < 0x10)
+        self = opcode.networkRepresentation
+    }
+}
+
+extension Int {
+    /// Create a UInt8 corresponding to the integer value for a given `WebSocketOpcode`.
+    ///
+    /// - parameters:
+    ///     - opcode: The `WebSocketOpcode`.
+    public init(webSocketOpcode opcode: WebSocketOpcode) {
+        precondition(opcode.networkRepresentation < 0x10)
+        self = Int(opcode.networkRepresentation)
     }
 }

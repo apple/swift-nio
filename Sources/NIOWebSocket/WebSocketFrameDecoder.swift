@@ -27,8 +27,8 @@ public enum NIOWebSocketError: Error {
     case multiByteControlFrameLength
 }
 
-internal extension WebSocketErrorCode {
-    internal init(_ error: NIOWebSocketError) {
+extension WebSocketErrorCode {
+    init(_ error: NIOWebSocketError) {
         switch error {
         case .invalidFrameLength:
             self = .messageTooLarge
@@ -39,7 +39,7 @@ internal extension WebSocketErrorCode {
     }
 }
 
-public extension ByteBuffer {
+extension ByteBuffer {
     /// Applies the WebSocket unmasking operation.
     ///
     /// - parameters:
@@ -224,19 +224,12 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = WebSocketFrame
     public typealias OutboundOut = WebSocketFrame
-    public var cumulationBuffer: ByteBuffer? = nil
 
     /// The maximum frame size the decoder is willing to tolerate from the remote peer.
     /* private but tests */ let maxFrameSize: Int
 
     /// Our parser state.
     private var parser = WSParser()
-
-    /// Whether we should continue to parse.
-    private var shouldKeepParsing = true
-
-    /// Whether this `ChannelHandler` should be performing automatic error handling.
-    private let automaticErrorHandling: Bool
 
     /// Construct a new `WebSocketFrameDecoder`
     ///
@@ -253,68 +246,31 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
     ///     - automaticErrorHandling: Whether this `ChannelHandler` should automatically handle
     ///         protocol errors in frame serialization, or whether it should allow the pipeline
     ///         to handle them.
-    public init(maxFrameSize: Int = 1 << 14, automaticErrorHandling: Bool = true) {
+    public init(maxFrameSize: Int = 1 << 14) {
         precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
         self.maxFrameSize = maxFrameSize
-        self.automaticErrorHandling = automaticErrorHandling
     }
 
-    public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState  {
+    public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState  {
         // Even though the calling code will loop around calling us in `decode`, we can't quite
         // rely on that: sometimes we have zero-length elements to parse, and the caller doesn't
         // guarantee to call us with zero-length bytes.
-        parseLoop: while self.shouldKeepParsing {
+        while true {
             switch parser.parseStep(&buffer) {
             case .result(let frame):
-                ctx.fireChannelRead(self.wrapInboundOut(frame))
+                context.fireChannelRead(self.wrapInboundOut(frame))
+                return .continue
             case .continueParsing:
-                do {
-                    try self.parser.validateState(maxFrameSize: self.maxFrameSize)
-                } catch {
-                    self.handleError(error, ctx: ctx)
-                }
+                try self.parser.validateState(maxFrameSize: self.maxFrameSize)
+                // loop again, might be 'waiting' for 0 bytes
             case .insufficientData:
-                break parseLoop
+                return .needMoreData
             }
         }
-
-        // We parse eagerly, so once we get here we definitionally need more data.
-        return .needMoreData
     }
 
-    public func decodeLast(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+    public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
         // EOF is not semantic in WebSocket, so ignore this.
         return .needMoreData
-    }
-
-
-
-    /// We hit a decoding error, we're going to tear things down now. To do this we're
-    /// basically going to send an error frame and then close the connection. Once we're
-    /// in this state we do no further parsing.
-    ///
-    /// A clean websocket shutdown is not really supposed to have an immediate close,
-    /// but we're doing that because the remote peer has prevented us from doing
-    /// further frame parsing, so we can't really wait for the next frame.
-    private func handleError(_ error: Error, ctx: ChannelHandlerContext) {
-        guard let error = error as? NIOWebSocketError else {
-            fatalError("Can only handle NIOWebSocketErrors")
-        }
-        self.shouldKeepParsing = false
-
-        // If we've been asked to handle the errors here, we should.
-        // TODO(cory): Remove this in 2.0, in favour of `WebSocketProtocolErrorHandler`.
-        if self.automaticErrorHandling {
-            var data = ctx.channel.allocator.buffer(capacity: 2)
-            data.write(webSocketErrorCode: WebSocketErrorCode(error))
-            let frame = WebSocketFrame(fin: true,
-                                       opcode: .connectionClose,
-                                       data: data)
-            ctx.writeAndFlush(self.wrapOutboundOut(frame)).whenComplete {
-                ctx.close(promise: nil)
-            }
-        }
-
-        ctx.fireErrorCaught(error)
     }
 }

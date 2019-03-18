@@ -48,7 +48,7 @@ fileprivate extension Error {
     /// Returns whether the error is "recoverable" from the perspective of datagram sending.
     ///
     /// - returns: `true` if the error is recoverable, `false` otherwise.
-    fileprivate var isRecoverable: Bool {
+    var isRecoverable: Bool {
         switch self {
         case let e as IOError where e.errnoCode == EMSGSIZE,
              let e as IOError where e.errnoCode == EHOSTUNREACH:
@@ -92,12 +92,12 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
         }
 
         let toWriteForThisBuffer = p.data.readableBytes
-        toWrite += toWriteForThisBuffer
+        toWrite += numericCast(toWriteForThisBuffer)
 
         p.data.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
             storageRefs[c] = storageRef.retain()
             let addressLen = p.copySocketAddress(addresses.baseAddress! + c)
-            iovecs[c] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: toWriteForThisBuffer)
+            iovecs[c] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
 
             var msg = msghdr(msg_name: addresses.baseAddress! + c,
                              msg_namelen: addressLen,
@@ -130,9 +130,9 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
 private struct PendingDatagramWritesState {
     fileprivate typealias DatagramWritePromiseFiller = (EventLoopPromise<Void>, Error?)
 
-    private var pendingWrites = MarkedCircularBuffer<PendingDatagramWrite>(initialRingCapacity: 16)
+    private var pendingWrites = MarkedCircularBuffer<PendingDatagramWrite>(initialCapacity: 16)
     private var chunks: Int = 0
-    public private(set) var bytes: Int = 0
+    public private(set) var bytes: Int64 = 0
 
     public var nextWrite: PendingDatagramWrite? {
         return self.pendingWrites.first
@@ -141,7 +141,7 @@ private struct PendingDatagramWritesState {
     /// Subtract `bytes` from the number of outstanding bytes to write.
     private mutating func subtractOutstanding(bytes: Int) {
         assert(self.bytes >= bytes, "allegedly written more bytes (\(bytes)) than outstanding (\(self.bytes))")
-        self.bytes -= bytes
+        self.bytes -= numericCast(bytes)
     }
 
     /// Indicates that the first outstanding write was written.
@@ -165,7 +165,7 @@ private struct PendingDatagramWritesState {
         if self.pendingWrites.isEmpty {
             assert(self.chunks == 0)
             assert(self.bytes == 0)
-            assert(!self.pendingWrites.hasMark())
+            assert(!self.pendingWrites.hasMark)
             return true
         } else {
             assert(self.chunks > 0 && self.bytes >= 0)
@@ -177,7 +177,7 @@ private struct PendingDatagramWritesState {
     public mutating func append(_ chunk: PendingDatagramWrite) {
         self.pendingWrites.append(chunk)
         self.chunks += 1
-        self.bytes += chunk.data.readableBytes
+        self.bytes += numericCast(chunk.data.readableBytes)
     }
 
     /// Mark the flush checkpoint.
@@ -212,7 +212,7 @@ private struct PendingDatagramWritesState {
         // When we've hit an error we treat it like fully writing the first datagram. We aren't going to try to
         // send it again.
         let promiseFiller = self.wroteFirst(error: error)
-        let result: OneWriteOperationResult = self.pendingWrites.hasMark() ? .writtenPartially : .writtenCompletely
+        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
 
         return (promiseFiller, result)
     }
@@ -239,7 +239,7 @@ private struct PendingDatagramWritesState {
 
             switch (promiseFiller, thisWriteFiller) {
             case (.some(let all), .some(let this)):
-                all.0.futureResult.cascade(promise: this.0)
+                all.0.futureResult.cascade(to: this.0)
             case (.none, .some(let this)):
                 promiseFiller = this
             case (.some, .none),
@@ -249,7 +249,7 @@ private struct PendingDatagramWritesState {
         }
 
         // If we no longer have a mark, we wrote everything.
-        let result: OneWriteOperationResult = self.pendingWrites.hasMark() ? .writtenPartially : .writtenCompletely
+        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
         return (promiseFiller, result)
     }
 
@@ -260,17 +260,17 @@ private struct PendingDatagramWritesState {
     /// - returns: All the promises that must be fired, and a `WriteResult` that indicates if we could write
     ///     everything or not.
     private mutating func didScalarWrite(written: Int) -> (DatagramWritePromiseFiller?, OneWriteOperationResult) {
-        precondition(written <= self.pendingWrites[0].data.readableBytes,
-                     "Appeared to write more bytes (\(written)) than the datagram contained (\(self.pendingWrites[0].data.readableBytes))")
+        precondition(written <= self.pendingWrites.first!.data.readableBytes,
+                     "Appeared to write more bytes (\(written)) than the datagram contained (\(self.pendingWrites.first!.data.readableBytes))")
         let writeFiller = self.wroteFirst()
         // If we no longer have a mark, we wrote everything.
-        let result: OneWriteOperationResult = self.pendingWrites.hasMark() ? .writtenPartially : .writtenCompletely
+        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
         return (writeFiller, result)
     }
 
     /// Is there a pending flush?
     public var isFlushPending: Bool {
-        return self.pendingWrites.hasMark()
+        return self.pendingWrites.hasMark
     }
 
     /// Fail all the outstanding writes.
@@ -285,20 +285,21 @@ private struct PendingDatagramWritesState {
         while !self.pendingWrites.isEmpty {
             let w = self.pendingWrites.removeFirst()
             self.chunks -= 1
-            self.bytes -= w.data.readableBytes
+            self.bytes -= numericCast(w.data.readableBytes)
             w.promise.map { promises.append($0) }
         }
 
-        promises.forEach { $0.fail(error: error) }
+        promises.forEach { $0.fail(error) }
     }
 
     /// Returns the best mechanism to write pending data at the current point in time.
     var currentBestWriteMechanism: WriteMechanism {
-        switch self.pendingWrites.markedElementIndex() {
-        case .some(let e) where e > 0:
+        switch self.pendingWrites.markedElementIndex {
+        case .some(let e) where self.pendingWrites.distance(from: self.pendingWrites.startIndex, to: e) > 0:
             return .vectorBufferWrite
         case .some(let e):
-            assert(e == 0)  // The compiler can't prove this, but it must be so.
+            // The compiler can't prove this, but it must be so.
+            assert(self.pendingWrites.distance(from: e, to: self.pendingWrites.startIndex)  == 0)
             return .scalarBufferWrite
         default:
             return .nothingToBeWritten
@@ -310,19 +311,20 @@ private struct PendingDatagramWritesState {
 extension PendingDatagramWritesState {
     struct FlushedDatagramWriteSequence: Sequence, IteratorProtocol {
         private let pendingWrites: PendingDatagramWritesState
-        private var index: Int
-        private let markedIndex: Int
+        private var index: CircularBuffer<PendingDatagramWrite>.Index
+        private let markedIndex: CircularBuffer<PendingDatagramWrite>.Index?
 
         init(_ pendingWrites: PendingDatagramWritesState) {
             self.pendingWrites = pendingWrites
             self.index = pendingWrites.pendingWrites.startIndex
-            self.markedIndex = pendingWrites.pendingWrites.markedElementIndex() ?? -1
+            self.markedIndex = pendingWrites.pendingWrites.markedElementIndex
         }
 
         mutating func next() -> PendingDatagramWrite? {
-            while self.index <= self.markedIndex {
+            while let markedIndex = self.markedIndex, self.pendingWrites.pendingWrites.distance(from: self.index,
+                                                                                                to: markedIndex) >= 0 {
                 let element = self.pendingWrites.pendingWrites[index]
-                index += 1
+                index = self.pendingWrites.pendingWrites.index(after: index)
                 return element
             }
 
@@ -528,9 +530,9 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     private func fulfillPromise(_ promise: PendingDatagramWritesState.DatagramWritePromiseFiller?) {
         if let promise = promise, let error = promise.1 {
-            promise.0.fail(error: error)
+            promise.0.fail(error)
         } else if let promise = promise {
-            promise.0.succeed(result: ())
+            promise.0.succeed(())
         }
     }
 

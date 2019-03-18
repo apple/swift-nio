@@ -22,11 +22,11 @@
 /// One important note, depending your `ChannelPipeline` setup it may not be possible to use a `FileRegion` as a `ChannelHandler` may
 /// need access to the bytes (in a `ByteBuffer`) to transform these.
 ///
-/// - note: It is important to manually manage the lifetime of the `FileHandle` used to create a `FileRegion`.
+/// - note: It is important to manually manage the lifetime of the `NIOFileHandle` used to create a `FileRegion`.
 public struct FileRegion {
 
-    /// The `FileHandle` that is used by this `FileRegion`.
-    public let fileHandle: FileHandle
+    /// The `NIOFileHandle` that is used by this `FileRegion`.
+    public let fileHandle: NIOFileHandle
 
     private let _endIndex: UInt64
     private var _readerIndex: _UInt56
@@ -46,13 +46,13 @@ public struct FileRegion {
         return Int(self._endIndex)
     }
 
-    /// Create a new `FileRegion` from an open `FileHandle`.
+    /// Create a new `FileRegion` from an open `NIOFileHandle`.
     ///
     /// - parameters:
-    ///     - fileHandle: the `FileHandle` to use.
+    ///     - fileHandle: the `NIOFileHandle` to use.
     ///     - readerIndex: the index (offset) on which the reading will start.
     ///     - endIndex: the index which represent the end of the readable portion.
-    public init(fileHandle: FileHandle, readerIndex: Int, endIndex: Int) {
+    public init(fileHandle: NIOFileHandle, readerIndex: Int, endIndex: Int) {
         precondition(readerIndex <= endIndex, "readerIndex(\(readerIndex) must be <= endIndex(\(endIndex).")
 
         self.fileHandle = fileHandle
@@ -77,8 +77,8 @@ extension FileRegion {
     /// Create a new `FileRegion` forming a complete file.
     ///
     /// - parameters:
-    ///     - fileHandle: An open `FileHandle` to the file.
-    public init(fileHandle: FileHandle) throws {
+    ///     - fileHandle: An open `NIOFileHandle` to the file.
+    public init(fileHandle: NIOFileHandle) throws {
         let eof = try fileHandle.withUnsafeFileDescriptor { (fd: CInt) throws -> off_t in
             let eof = try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_END)
             try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
@@ -97,6 +97,6 @@ extension FileRegion: Equatable {
 
 extension FileRegion: CustomStringConvertible {
     public var description: String {
-        return "FileRegion(handle: \(self.fileHandle), readerIndex: \(self.readerIndex), endIndex: \(self.endIndex))"
+        return "FileRegion { handle: \(self.fileHandle), readerIndex: \(self.readerIndex), endIndex: \(self.endIndex) }"
     }
 }

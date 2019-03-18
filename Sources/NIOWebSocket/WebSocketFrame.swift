@@ -66,7 +66,8 @@ extension WebSocketMaskingKey: ExpressibleByArrayLiteral {
     public typealias ArrayLiteralElement = UInt8
 
     public init(arrayLiteral elements: UInt8...) {
-        self.init(elements)!
+        precondition(elements.count == 4, "WebSocketMaskingKeys must be exactly 4 bytes long")
+        self.init(elements)! // length precondition above
     }
 }
 
@@ -155,10 +156,12 @@ public struct WebSocketFrame {
     /// The opcode for this frame.
     public var opcode: WebSocketOpcode {
         get {
+            // this is a public initialiser which only fails if the opcode is invalid. But all opcodes in 0...0xF
+            // space are valid so this can never fail.
             return WebSocketOpcode(encodedWebSocketOpcode: firstByte & 0x0F)!
         }
         set {
-            self.firstByte = (self.firstByte & 0xF0) + UInt8(webSocketOpcode: newValue)!
+            self.firstByte = (self.firstByte & 0xF0) + UInt8(webSocketOpcode: newValue)
         }
     }
 
@@ -266,11 +269,4 @@ public struct WebSocketFrame {
     }
 }
 
-extension WebSocketFrame: Equatable {
-    public static func ==(lhs: WebSocketFrame, rhs: WebSocketFrame) -> Bool {
-        return lhs.firstByte == rhs.firstByte &&
-               lhs.maskKey == rhs.maskKey &&
-               lhs.data == rhs.data &&
-               lhs.extensionData == rhs.extensionData
-    }
-}
+extension WebSocketFrame: Equatable {}
