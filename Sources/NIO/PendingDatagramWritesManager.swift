@@ -295,10 +295,11 @@ private struct PendingDatagramWritesState {
     /// Returns the best mechanism to write pending data at the current point in time.
     var currentBestWriteMechanism: WriteMechanism {
         switch self.pendingWrites.markedElementIndex {
-        case .some(let e) where self.pendingWrites.startIndex.distance(to: e) > 0:
+        case .some(let e) where self.pendingWrites.distance(from: self.pendingWrites.startIndex, to: e) > 0:
             return .vectorBufferWrite
         case .some(let e):
-            assert(e.distance(to: self.pendingWrites.startIndex) == 0)  // The compiler can't prove this, but it must be so.
+            // The compiler can't prove this, but it must be so.
+            assert(self.pendingWrites.distance(from: e, to: self.pendingWrites.startIndex)  == 0)
             return .scalarBufferWrite
         default:
             return .nothingToBeWritten
@@ -320,9 +321,10 @@ extension PendingDatagramWritesState {
         }
 
         mutating func next() -> PendingDatagramWrite? {
-            while let markedIndex = self.markedIndex, self.index.distance(to: markedIndex) >= 0 {
+            while let markedIndex = self.markedIndex, self.pendingWrites.pendingWrites.distance(from: self.index,
+                                                                                                to: markedIndex) >= 0 {
                 let element = self.pendingWrites.pendingWrites[index]
-                index = index.advanced(by: 1)
+                index = self.pendingWrites.pendingWrites.index(after: index)
                 return element
             }
 

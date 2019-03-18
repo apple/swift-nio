@@ -19,7 +19,9 @@ class CircularBufferTests: XCTestCase {
     func testTrivial() {
         var ring = CircularBuffer<Int>(initialCapacity: 8)
         ring.append(1)
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertEqual(1, ring.removeFirst())
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
     }
 
     func testAddRemoveInALoop() {
@@ -43,10 +45,12 @@ class CircularBufferTests: XCTestCase {
         for f in 1..<1000 {
             ring.append(f)
             XCTAssertEqual(f, ring.count)
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         }
         for f in 1..<1000 {
             XCTAssertEqual(f, ring.removeFirst())
             XCTAssertEqual(999 - f, ring.count)
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         }
         XCTAssertTrue(ring.isEmpty)
     }
@@ -55,10 +59,12 @@ class CircularBufferTests: XCTestCase {
         var ring = CircularBuffer<Int>(initialCapacity: 4)
         for idx in 0..<7 {
             ring.prepend(idx)
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         }
 
         XCTAssertEqual(7, ring.count)
-        _ = ring.remove(at: ring.startIndex.advanced(by: 1))
+        _ = ring.remove(at: ring.index(ring.startIndex, offsetBy: 1))
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertEqual(6, ring.count)
         XCTAssertEqual(0, ring.last)
     }
@@ -69,7 +75,7 @@ class CircularBufferTests: XCTestCase {
             ring.prepend(idx)
         }
 
-        let last = ring.remove(at: ring.endIndex.advanced(by: -1))
+        let last = ring.remove(at: ring.index(ring.endIndex, offsetBy: -1))
         XCTAssertEqual(0, last)
         XCTAssertEqual(1, ring.last)
     }
@@ -79,7 +85,8 @@ class CircularBufferTests: XCTestCase {
         ring.prepend(99)
         ring.prepend(98)
         XCTAssertEqual(2, ring.count)
-        XCTAssertEqual(99, ring.remove(at: ring.endIndex.advanced(by: -1)))
+        XCTAssertEqual(99, ring.remove(at: ring.index(ring.endIndex, offsetBy: -1)))
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertFalse(ring.isEmpty)
         XCTAssertEqual(1, ring.count)
         XCTAssertEqual(98, ring.last)
@@ -97,85 +104,131 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(5, ring.first)
     }
 
+    func collectAllIndices<Element>(ring: CircularBuffer<Element>) -> [CircularBuffer<Element>.Index] {
+        return Array(ring.indices)
+    }
+
+    func collectAllIndices<Element>(ring: CircularBuffer<Element>, range: Range<CircularBuffer<Element>.Index>) -> [CircularBuffer<Element>.Index] {
+        var index: CircularBuffer<Element>.Index = range.lowerBound
+        var allIndices: [CircularBuffer<Element>.Index] = []
+        while index != range.upperBound {
+            allIndices.append(index)
+            index = ring.index(after: index)
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
+        }
+        return allIndices
+    }
+
     func testHarderExpansion() {
         var ring = CircularBuffer<Int>(initialCapacity: 3)
-        XCTAssertEqual(ring.indices, ring.startIndex ..< ring.startIndex)
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.startIndex))
 
         ring.append(1)
         XCTAssertEqual(ring.count, 1)
         XCTAssertEqual(ring[ring.startIndex], 1)
-        XCTAssertEqual(ring.indices, ring.startIndex ..< ring.startIndex.advanced(by: 1))
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 1)))
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         ring.append(2)
         XCTAssertEqual(ring.count, 2)
         XCTAssertEqual(ring[ring.startIndex], 1)
-        XCTAssertEqual(ring[ring.startIndex.advanced(by: 1)], 2)
-        XCTAssertEqual(ring.indices, ring.startIndex ..< ring.startIndex.advanced(by: 2))
+        XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 1)], 2)
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 2)))
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         ring.append(3)
         XCTAssertEqual(ring.count, 3)
         XCTAssertEqual(ring[ring.startIndex], 1)
-        XCTAssertEqual(ring[ring.startIndex.advanced(by: 1)], 2)
-        XCTAssertEqual(ring[ring.startIndex.advanced(by: 2)], 3)
-        XCTAssertEqual(ring.indices, ring.startIndex ..< ring.startIndex.advanced(by: 3))
-
+        XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 1)], 2)
+        XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 2)], 3)
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 3)))
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         XCTAssertEqual(1, ring.removeFirst())
         XCTAssertEqual(ring.count, 2)
         XCTAssertEqual(ring[ring.startIndex], 2)
-        XCTAssertEqual(ring[ring.startIndex.advanced(by: 1)], 3)
-        XCTAssertEqual(ring.indices, ring.startIndex ..< ring.startIndex.advanced(by: 2))
+        XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 1)], 3)
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 2)))
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         XCTAssertEqual(2, ring.removeFirst())
         XCTAssertEqual(ring.count, 1)
         XCTAssertEqual(ring[ring.startIndex], 3)
-        XCTAssertEqual(ring.indices, ring.startIndex ..< ring.startIndex.advanced(by: 1))
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 1)))
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         ring.append(5)
         XCTAssertEqual(ring.count, 2)
         XCTAssertEqual(ring[ring.startIndex], 3)
-        XCTAssertEqual(ring[ring.startIndex.advanced(by: 1)], 5)
-        XCTAssertEqual(ring.indices, ring.startIndex ..< ring.startIndex.advanced(by: 2))
+        XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 1)], 5)
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 2)))
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         ring.append(6)
         XCTAssertEqual(ring.count, 3)
         XCTAssertEqual(ring[ring.startIndex], 3)
-        XCTAssertEqual(ring[ring.startIndex.advanced(by: 1)], 5)
-        XCTAssertEqual(ring[ring.startIndex.advanced(by: 2)], 6)
-        XCTAssertEqual(ring.indices, ring.startIndex ..< ring.startIndex.advanced(by: 3))
+        XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 1)], 5)
+        XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 2)], 6)
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 3)))
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         ring.append(7)
         XCTAssertEqual(ring.count, 4)
         XCTAssertEqual(ring[ring.startIndex], 3)
-        XCTAssertEqual(ring[ring.startIndex.advanced(by: 1)], 5)
-        XCTAssertEqual(ring[ring.startIndex.advanced(by: 2)], 6)
-        XCTAssertEqual(ring[ring.startIndex.advanced(by: 3)], 7)
-        XCTAssertEqual(ring.indices, ring.startIndex ..< ring.startIndex.advanced(by: 4))
+        XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 1)], 5)
+        XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 2)], 6)
+        XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 3)], 7)
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 4)))
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
     }
 
     func testCollection() {
         var ring = CircularBuffer<Int>(initialCapacity: 4)
-        XCTAssertEqual(ring.indices, ring.startIndex ..< ring.startIndex)
-        XCTAssertEqual(0, ring.startIndex.distance(to: ring.endIndex))
-        XCTAssertEqual(0, ring.endIndex.distance(to: ring.startIndex))
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.startIndex))
+        XCTAssertEqual(0, ring.distance(from: ring.startIndex, to: ring.endIndex))
+        XCTAssertEqual(0, ring.distance(from: ring.startIndex, to: ring.startIndex))
 
         for idx in 0..<5 {
             ring.append(idx)
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         }
 
         XCTAssertFalse(ring.isEmpty)
         XCTAssertEqual(5, ring.count)
 
-        XCTAssertEqual(ring.indices, ring.startIndex ..< ring.startIndex.advanced(by: 5))
+        XCTAssertEqual(self.collectAllIndices(ring: ring),
+                       self.collectAllIndices(ring: ring, range: ring.startIndex ..< ring.index(ring.startIndex,
+                                                                                                offsetBy: 5)))
         XCTAssertEqual(ring.startIndex, ring.startIndex)
-        XCTAssertEqual(ring.endIndex, ring.startIndex.advanced(by: 5))
+        XCTAssertEqual(ring.endIndex, ring.index(ring.startIndex, offsetBy: 5))
 
-        XCTAssertEqual(ring.index(after: ring.startIndex.advanced(by: 1)), ring.startIndex.advanced(by: 2))
-        XCTAssertEqual(ring.index(before: ring.startIndex.advanced(by: 3)), ring.startIndex.advanced(by: 2))
+        XCTAssertEqual(ring.index(after: ring.index(ring.startIndex, offsetBy: 1)),
+                       ring.index(ring.startIndex, offsetBy: 2))
+        XCTAssertEqual(ring.index(before: ring.index(ring.startIndex, offsetBy: 3)),
+                       ring.index(ring.startIndex, offsetBy: 2))
         
         let actualValues = [Int](ring)
         let expectedValues = [0, 1, 2, 3, 4]
         XCTAssertEqual(expectedValues, actualValues)
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
     }
 
     func testReplaceSubrange5ElementsWith1() {
@@ -184,12 +237,14 @@ class CircularBufferTests: XCTestCase {
             ring.prepend(idx)
         }
         XCTAssertEqual(50, ring.count)
-        ring.replaceSubrange(ring.startIndex.advanced(by: 20) ..< ring.startIndex.advanced(by: 25), with: [99])
+        ring.replaceSubrange(ring.index(ring.startIndex, offsetBy: 20) ..< ring.index(ring.startIndex, offsetBy: 25),
+                             with: [99])
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         XCTAssertEqual(ring.count, 46)
-        XCTAssertEqual(ring[ring.startIndex.advanced(by: 19)], 30)
-        XCTAssertEqual(ring[ring.startIndex.advanced(by: 20)], 99)
-        XCTAssertEqual(ring[ring.startIndex.advanced(by: 21)], 24)
+        XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 19)], 30)
+        XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 20)], 99)
+        XCTAssertEqual(ring[ring.index(ring.startIndex, offsetBy: 21)], 24)
     }
 
     func testReplaceSubrangeAllElementsWithFewerElements() {
@@ -200,6 +255,7 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(50, ring.count)
 
         ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: [3,4])
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertEqual(2, ring.count)
         XCTAssertEqual(3, ring.first)
         XCTAssertEqual(4, ring.last)
@@ -213,6 +269,7 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(50, ring.count)
 
         ring.replaceSubrange(ring.startIndex ..< ring.startIndex, with: [])
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertEqual(50, ring.count)
     }
 
@@ -224,6 +281,7 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(5, ring.count)
 
         ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: [10,11,12,13,14,15,16,17,18,19])
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertEqual(10, ring.count)
         XCTAssertEqual(10, ring.first)
         XCTAssertEqual(19, ring.last)
@@ -247,6 +305,7 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(4, replacement.last)
 
         ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: replacement)
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertEqual(5, ring.count)
         XCTAssertEqual(0, ring.first)
         XCTAssertEqual(4, ring.last)
@@ -262,6 +321,7 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(0, ring.last)
 
         ring.replaceSubrange(ring.startIndex..<ring.endIndex, with: [])
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertTrue(ring.isEmpty)
     }
 
@@ -270,6 +330,7 @@ class CircularBufferTests: XCTestCase {
         XCTAssertTrue(ring.isEmpty)
         for idx in 0..<4 {
             ring.append(idx)
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         }
         XCTAssertEqual(4, ring.count)
         XCTAssertFalse(ring.isEmpty)
@@ -281,7 +342,7 @@ class CircularBufferTests: XCTestCase {
             ring.append(idx)
         }
         for idx in 0..<5 {
-            XCTAssertEqual(idx, ring[ring.startIndex.advanced(by: idx)])
+            XCTAssertEqual(idx, ring[ring.index(ring.startIndex, offsetBy: idx)])
         }
     }
 
@@ -292,23 +353,23 @@ class CircularBufferTests: XCTestCase {
         }
         /* the underlying buffer should now be filled from 0 to max */
         for idx in 0..<4 {
-            XCTAssertEqual(idx, ring[ring.startIndex.advanced(by: idx)])
+            XCTAssertEqual(idx, ring[ring.index(ring.startIndex, offsetBy: idx)])
         }
         XCTAssertEqual(0, ring.removeFirst())
         /* now the first element is gone, ie. the ring starts at index 1 now */
         for idx in 0..<3 {
-            XCTAssertEqual(idx + 1, ring[ring.startIndex.advanced(by: idx)])
+            XCTAssertEqual(idx + 1, ring[ring.index(ring.startIndex, offsetBy: idx)])
         }
         ring.append(4)
         XCTAssertEqual(1, ring.first!)
         /* now the last element should be at ring position 0 */
         for idx in 0..<4 {
-            XCTAssertEqual(idx + 1, ring[ring.startIndex.advanced(by: idx)])
+            XCTAssertEqual(idx + 1, ring[ring.index(ring.startIndex, offsetBy: idx)])
         }
         /* and now we'll make it expand */
         ring.append(5)
         for idx in 0..<5 {
-            XCTAssertEqual(idx + 1, ring[ring.startIndex.advanced(by: idx)])
+            XCTAssertEqual(idx + 1, ring[ring.index(ring.startIndex, offsetBy: idx)])
         }
     }
 
@@ -318,7 +379,7 @@ class CircularBufferTests: XCTestCase {
             ring.append(idx)
         }
         for idx in 0..<4 {
-            XCTAssertEqual(idx, ring[ring.startIndex.advanced(by: idx)])
+            XCTAssertEqual(idx, ring[ring.index(ring.startIndex, offsetBy: idx)])
         }
         for idx in 0..<4 {
             XCTAssertEqual(idx, ring.removeFirst())
@@ -336,9 +397,11 @@ class CircularBufferTests: XCTestCase {
         for (idx, element) in ring.enumerated() {
             XCTAssertEqual(idx, element)
             changes.append((idx, element * 2))
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         }
         for change in changes {
-            ring[ring.startIndex.advanced(by: change.0)] = change.1
+            ring[ring.index(ring.startIndex, offsetBy: change.0)] = change.1
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         }
         for (idx, element) in ring.enumerated() {
             XCTAssertEqual(idx * 2, element)
@@ -351,9 +414,10 @@ class CircularBufferTests: XCTestCase {
             ring.append(idx)
         }
 
-        let slice = ring[ring.startIndex.advanced(by: 25) ..< ring.startIndex.advanced(by: 30)]
+        let slice = ring[ring.index(ring.startIndex, offsetBy: 25) ..< ring.index(ring.startIndex, offsetBy: 30)]
         for (idx, element) in slice.enumerated() {
-            XCTAssertEqual(ring.startIndex.advanced(by: idx + 25), ring.startIndex.advanced(by: element))
+            XCTAssertEqual(ring.index(ring.startIndex, offsetBy: idx + 25),
+                           ring.index(ring.startIndex, offsetBy: element))
         }
     }
 
@@ -364,20 +428,25 @@ class CircularBufferTests: XCTestCase {
         ring.append(2)
         XCTAssertEqual(2, ring.count)
         XCTAssertEqual(1, ring.removeFirst())
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         ring.append(3)
         XCTAssertEqual(2, ring.count)
         XCTAssertEqual(2, ring.removeFirst())
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         ring.append(4)
 
         XCTAssertEqual(2, ring.count)
         XCTAssertEqual(3, ring.removeFirst())
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         ring.append(5)
 
-        XCTAssertEqual(3, ring.headIdx)
-        XCTAssertEqual(1, ring.tailIdx)
+        XCTAssertEqual(3, ring.headBackingIndex)
+        XCTAssertEqual(1, ring.tailBackingIndex)
         XCTAssertEqual(2, ring.count)
         XCTAssertEqual(4, ring.removeFirst())
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertEqual(5, ring.removeFirst())
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertEqual(0, ring.count)
         XCTAssertTrue(ring.isEmpty)
     }
@@ -388,6 +457,7 @@ class CircularBufferTests: XCTestCase {
         ring.append(1)
         XCTAssertEqual(1, ring.first)
         XCTAssertEqual(1, ring.removeFirst())
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertNil(ring.first)
     }
 
@@ -397,6 +467,7 @@ class CircularBufferTests: XCTestCase {
         ring.prepend(1)
         XCTAssertEqual(1, ring.last)
         XCTAssertEqual(1, ring.removeLast())
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertNil(ring.last)
         XCTAssertEqual(0, ring.count)
         XCTAssertTrue(ring.isEmpty)
@@ -409,6 +480,7 @@ class CircularBufferTests: XCTestCase {
         ring.prepend(0)
         XCTAssertEqual(1, ring.last)
         XCTAssertEqual(1, ring.removeLast())
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertEqual(0, ring.last)
     }
 
@@ -447,14 +519,15 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(2, ring.first)
 
         XCTAssertEqual(1, ring.removeLast())
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertEqual(2, ring.removeFirst())
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
         XCTAssertNil(ring.last)
         XCTAssertNil(ring.first)
         XCTAssertEqual(0, ring.count)
         XCTAssertTrue(ring.isEmpty)
     }
-
 
     func testPrependExpandBuffer() {
         var ring = CircularBuffer<Int>(initialCapacity: 3)
@@ -464,6 +537,7 @@ class CircularBufferTests: XCTestCase {
         }
         for f in 1..<1000 {
             XCTAssertEqual(f, ring.removeLast())
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         }
         XCTAssertTrue(ring.isEmpty)
         XCTAssertEqual(0, ring.count)
@@ -478,6 +552,7 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(ring.capacity, 4)
         XCTAssertEqual(ring.count, 2)
         ring.removeAll(keepingCapacity: true)
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertEqual(ring.capacity, 4)
         XCTAssertEqual(ring.count, 0)
     }
@@ -491,6 +566,7 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(ring.capacity, 4)
         XCTAssertEqual(ring.count, 2)
         ring.removeAll(keepingCapacity: false)
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         // 1 is the smallest capacity we have
         XCTAssertEqual(ring.capacity, 1)
         XCTAssertEqual(ring.count, 0)
@@ -501,6 +577,7 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(ring.capacity, 4)
         XCTAssertEqual(ring.count, 2)
         ring.removeAll() // default should not keep capacity
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertEqual(ring.capacity, 1)
         XCTAssertEqual(ring.count, 0)
     }
@@ -512,7 +589,8 @@ class CircularBufferTests: XCTestCase {
 
         // Now we want to replace the last subrange with two elements. This should
         // force an increase in size.
-        ring.replaceSubrange(ring.startIndex ..< ring.startIndex.advanced(by: 1), with: [3, 4])
+        ring.replaceSubrange(ring.startIndex ..< ring.index(ring.startIndex, offsetBy: 1), with: [3, 4])
+        XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
         XCTAssertEqual(ring.capacity, 4)
     }
 
@@ -559,15 +637,21 @@ class CircularBufferTests: XCTestCase {
             var ring = CircularBuffer<Int>(initialCapacity: 4)
 
             (0..<16).forEach { ring.append($0) }
-            (0..<4).forEach { _ in ring.removeFirst() }
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
+            (0..<4).forEach { _ in _ = ring.removeFirst() }
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
             (16..<20).forEach { ring.append($0) }
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
             XCTAssertEqual(Array(4..<20), Array(ring))
 
             ring.removeAll(keepingCapacity: shouldKeepCapacity)
 
             (0..<8).forEach { ring.append($0) }
-            (0..<4).forEach { _ in ring.removeFirst() }
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
+            (0..<4).forEach { _ in _ = ring.removeFirst() }
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
             (8..<64).forEach { ring.append($0) }
+            XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
             XCTAssertEqual(Array(4..<64), Array(ring))
         }
@@ -598,7 +682,7 @@ class CircularBufferTests: XCTestCase {
             XCTAssertNotNil(dummy1)
             XCTAssertNotNil(dummy2)
 
-            ring.removeFirst()
+            _ = ring.removeFirst()
 
             for _ in 2..<8 {
                 ring.append(Dummy())
@@ -637,5 +721,182 @@ class CircularBufferTests: XCTestCase {
         assert(dummy6 == nil, within: .seconds(1))
         assert(dummy7 == nil, within: .seconds(1))
         assert(dummy8 == nil, within: .seconds(1))
+    }
+    
+    func testIntIndexing() {
+        var ring = CircularBuffer<Int>()
+        for i in 0 ..< 5 {
+            ring.append(i)
+            XCTAssertEqual(ring[offset: i], i)
+        }
+        
+        XCTAssertEqual(ring[ring.startIndex], ring[offset :0])
+        XCTAssertEqual(ring[ring.index(before: ring.endIndex)], ring[offset: 4])
+        
+        ring[offset: 1] = 10
+        XCTAssertEqual(ring[ring.index(after: ring.startIndex)], 10)
+    }
+    
+    func testIndexDistance() {
+        var bufferOfBackingSize4 = CircularBuffer<Int>(initialCapacity: 4)
+        XCTAssertEqual(3, bufferOfBackingSize4.indexBeforeHeadIdx())
+        
+        let index1 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 0)
+        let index2 = CircularBuffer<Int>.Index(backingIndex: 1, backingIndexOfHead: 0)
+        XCTAssertEqual(bufferOfBackingSize4.distance(from: index1, to: index2), 1)
+        
+        bufferOfBackingSize4.append(1)
+        XCTAssertEqual(1, bufferOfBackingSize4.removeFirst())
+        XCTAssertEqual(1, bufferOfBackingSize4.headBackingIndex)
+        let index3 = CircularBuffer<Int>.Index(backingIndex: 2, backingIndexOfHead: 1)
+        let index4 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 1)
+        XCTAssertEqual(bufferOfBackingSize4.distance(from: index3, to: index4), 2)
+        
+        let index5 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 1)
+        let index6 = CircularBuffer<Int>.Index(backingIndex: 2, backingIndexOfHead: 1)
+        XCTAssertEqual(bufferOfBackingSize4.distance(from: index5, to: index6), -2)
+
+        bufferOfBackingSize4.append(2)
+        bufferOfBackingSize4.append(3)
+        XCTAssertEqual(2, bufferOfBackingSize4.removeFirst())
+        XCTAssertEqual(3, bufferOfBackingSize4.removeFirst())
+        XCTAssertEqual(3, bufferOfBackingSize4.headBackingIndex)
+        let index7 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 3)
+        let index8 = CircularBuffer<Int>.Index(backingIndex: 2, backingIndexOfHead: 3)
+        XCTAssertEqual(bufferOfBackingSize4.distance(from: index7, to: index8), 2)
+    }
+    
+    func testIndexAdvancing() {
+        var bufferOfBackingSize4 = CircularBuffer<Int>(initialCapacity: 4)
+        XCTAssertEqual(3, bufferOfBackingSize4.indexBeforeHeadIdx())
+
+        let index1 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 0)
+        let index2 = bufferOfBackingSize4.index(after: index1)
+        XCTAssertEqual(index2.backingIndex, 1)
+        XCTAssertEqual(index2.isIndexGEQHeadIndex, true)
+        
+        bufferOfBackingSize4.append(1)
+        bufferOfBackingSize4.append(2)
+        XCTAssertEqual(1, bufferOfBackingSize4.removeFirst())
+        XCTAssertEqual(2, bufferOfBackingSize4.removeFirst())
+        XCTAssertEqual(2, bufferOfBackingSize4.headBackingIndex)
+
+        let index3 = CircularBuffer<Int>.Index(backingIndex: 3, backingIndexOfHead: 2)
+        let index4 = bufferOfBackingSize4.index(after: index3)
+        XCTAssertEqual(index4.backingIndex, 0)
+        XCTAssertEqual(index4.isIndexGEQHeadIndex, false)
+
+        bufferOfBackingSize4.prepend(3)
+        XCTAssertEqual(1, bufferOfBackingSize4.headBackingIndex)
+        let index5 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 1)
+        let index6 = bufferOfBackingSize4.index(before: index5)
+        XCTAssertEqual(index6.backingIndex, 3)
+        XCTAssertEqual(index6.isIndexGEQHeadIndex, true)
+        
+        let index7 = CircularBuffer<Int>.Index(backingIndex: 2, backingIndexOfHead: 1)
+        let index8 = bufferOfBackingSize4.index(before: index7)
+        XCTAssertEqual(index8.backingIndex, 1)
+        XCTAssertEqual(index8.isIndexGEQHeadIndex, true)
+    }
+
+    func testPopFirst() {
+        var buf = CircularBuffer([1, 2, 3])
+        if let element = buf.popFirst() {
+            XCTAssertEqual(1, element)
+        } else {
+            XCTFail("popFirst didn't find first element")
+        }
+        
+        if let element = buf.popFirst() {
+            XCTAssertEqual(2, element)
+        } else {
+            XCTFail("popFirst didn't find second element")
+        }
+
+        if let element = buf.popFirst() {
+            XCTAssertEqual(3, element)
+        } else {
+            XCTFail("popFirst didn't find third element")
+        }
+        
+        XCTAssertNil(buf.popFirst())
+        XCTAssertTrue(buf.testOnly_verifyInvariantsForNonSlices())
+    }
+    
+    func testSlicing() {
+        var buf = CircularBuffer<Int>()
+        for i in -4..<124 {
+            buf.append(i)
+        }
+        XCTAssertEqual(-4, buf.removeFirst())
+        XCTAssertEqual(-3, buf.removeFirst())
+        XCTAssertEqual(-2, buf.removeFirst())
+        XCTAssertEqual(-1, buf.removeFirst())
+        buf.append(124)
+        buf.append(125)
+        buf.append(126)
+        buf.append(127)
+        
+        let buf2: CircularBuffer<Int> = buf[buf.index(buf.startIndex, offsetBy: 100) ..< buf.endIndex]
+        XCTAssertEqual(Array(100..<128), Array(buf2))
+        XCTAssertEqual(Array(100..<128), Array(buf[buf2.startIndex ..< buf2.endIndex]))
+    }
+
+    func testRemoveInMiddle() {
+        var buf = CircularBuffer<Int>(initialCapacity: 8)
+        for i in 0..<7 {
+            buf.append(i)
+        }
+        XCTAssertEqual(0, buf.removeFirst())
+        XCTAssertTrue(buf.testOnly_verifyInvariantsForNonSlices())
+        buf.append(7)
+        XCTAssertEqual(2, buf.remove(at: buf.index(buf.startIndex, offsetBy: 1)))
+        XCTAssertTrue(buf.testOnly_verifyInvariantsForNonSlices())
+        XCTAssertEqual([1, 3, 4, 5, 6, 7], Array(buf))
+        buf.removeAll(keepingCapacity: true)
+        XCTAssertTrue(buf.testOnly_verifyInvariantsForNonSlices())
+        XCTAssertEqual([], Array(buf))
+    }
+
+    func testLotsOfPrepending() {
+        var buf = CircularBuffer<Int>(initialCapacity: 8)
+
+        for i in (0..<128).reversed() {
+            buf.prepend(i)
+        }
+        XCTAssertEqual(Array(0..<128), Array(buf))
+    }
+
+    func testLotsOfInsertAtStart() {
+        var buf = CircularBuffer<Int>(initialCapacity: 8)
+
+        for i in (0..<128).reversed() {
+            buf.insert(i, at: buf.startIndex)
+        }
+        XCTAssertEqual(Array(0..<128), Array(buf))
+    }
+
+    func testLotsOfInsertAtEnd() {
+        var buf = CircularBuffer<Int>(initialCapacity: 8)
+
+        for i in (0..<128) {
+            buf.insert(i, at: buf.endIndex)
+        }
+        XCTAssertEqual(Array(0..<128), Array(buf))
+    }
+
+    func testPopLast() {
+        var buf = CircularBuffer<Int>(initialCapacity: 4)
+        buf.append(1)
+        XCTAssertEqual(1, buf.popLast())
+        XCTAssertNil(buf.popLast())
+
+        buf.append(1)
+        buf.append(2)
+        buf.append(3)
+        XCTAssertEqual(3, buf.popLast())
+        XCTAssertEqual(2, buf.popLast())
+        XCTAssertEqual(1, buf.popLast())
+        XCTAssertNil(buf.popLast())
     }
 }
