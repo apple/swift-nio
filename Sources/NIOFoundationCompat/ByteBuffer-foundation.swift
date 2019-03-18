@@ -139,3 +139,11 @@ extension ByteBuffer {
 }
 
 extension ByteBufferView: ContiguousBytes {}
+
+extension ByteBufferView: DataProtocol {
+    public typealias Regions = CollectionOfOne<ByteBufferView>
+
+    public var regions: CollectionOfOne<ByteBufferView> {
+        return .init(self)
+    }
+}
