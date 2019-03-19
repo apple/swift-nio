@@ -1250,6 +1250,60 @@ public class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertEqual(1, decoder.decodeLastCalls)
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
     }
+
+    func testWeForwardReadEOFAndChannelInactive() {
+        class Decoder: ByteToMessageDecoder {
+            typealias InboundOut = Never
+
+            var decodeLastCalls = 0
+
+            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                XCTFail("should not have been called")
+                return .needMoreData
+            }
+
+            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                self.decodeLastCalls += 1
+                XCTAssertEqual(self.decodeLastCalls, 1)
+                XCTAssertTrue(seenEOF)
+                XCTAssertEqual(0, buffer.readableBytes)
+                return .needMoreData
+            }
+        }
+
+        class CheckThingsAreOkayHandler: ChannelInboundHandler {
+            typealias InboundIn = Never
+
+            var readEOFEvents = 0
+            var channelInactiveEvents = 0
+
+            func channelInactive(context: ChannelHandlerContext) {
+                self.channelInactiveEvents += 1
+                XCTAssertEqual(1, self.channelInactiveEvents)
+            }
+
+            func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+                if let event = event as? ChannelEvent, event == .inputClosed {
+                    self.readEOFEvents += 1
+                    XCTAssertEqual(1, self.readEOFEvents)
+                }
+            }
+        }
+
+        let decoder = Decoder()
+        let checker = CheckThingsAreOkayHandler()
+        let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
+        XCTAssertNoThrow(try channel.pipeline.addHandler(checker).wait())
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
+        channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+        XCTAssertEqual(1, decoder.decodeLastCalls)
+        XCTAssertEqual(0, checker.channelInactiveEvents)
+        XCTAssertEqual(1, checker.readEOFEvents)
+        XCTAssertNoThrow(try channel.pipeline.close().wait())
+        XCTAssertEqual(1, decoder.decodeLastCalls)
+        XCTAssertEqual(1, checker.channelInactiveEvents)
+        XCTAssertEqual(1, checker.readEOFEvents)
+    }
 }
 
 public class MessageToByteEncoderTest: XCTestCase {
