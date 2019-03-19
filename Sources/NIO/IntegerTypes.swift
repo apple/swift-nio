@@ -23,26 +23,29 @@ struct _UInt24: ExpressibleByIntegerLiteral {
     @usableFromInline var b12: UInt16
     @usableFromInline var b3: UInt8
 
-    private init(b12: UInt16, b3: UInt8) {
+    @inlinable
+    init(_b12 b12: UInt16, b3: UInt8) {
         self.b12 = b12
         self.b3 = b3
     }
 
-    @usableFromInline
+    @inlinable
     init(integerLiteral value: UInt16) {
-        self.init(b12: value, b3: 0)
+        self.init(_b12: value, b3: 0)
     }
 
     static let bitWidth: Int = 24
 
+    @inlinable
     static var max: _UInt24 {
-        return .init(b12: .max, b3: .max)
+        return .init(_b12: .max, b3: .max)
     }
 
     static let min: _UInt24 = 0
 }
 
 extension UInt32 {
+    @inlinable
     init(_ value: _UInt24) {
         var newValue: UInt32 = 0
         newValue  = UInt32(value.b12)
@@ -52,6 +55,7 @@ extension UInt32 {
 }
 
 extension Int {
+    @inlinable
     init(_ value: _UInt24) {
         var newValue: Int = 0
         newValue  = Int(value.b12)
@@ -61,6 +65,7 @@ extension Int {
 }
 
 extension _UInt24 {
+    @inlinable
     init(_ value: UInt32) {
         assert(value & 0xff_00_00_00 == 0, "value \(value) too large for _UInt24")
         self.b12 = UInt16(truncatingIfNeeded: value & 0xff_ff)
