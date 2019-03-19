@@ -87,4 +87,3 @@
 - Change `HTTPServerProtocolUpgrader` `protocol` to require `buildUpgradeResponse` to take a `channel` and return an `EventLoopFuture<HTTPHeaders>`.
 - `EmbeddedChannel.writeInbound/Outbound` are now `throwing`
 - `HTTPMethod.hasRequestBody` and the `HTTPMethod.HasBody` type have been removed from the public API
-- `CircularBuffer.Index` is no longer `Strideable`
