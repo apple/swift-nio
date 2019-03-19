@@ -988,7 +988,7 @@ typealias ThreadInitializer = (NIOThread) -> Void
 ///            tests. In those cases it's important to shut the `MultiThreadedEventLoopGroup` down at the end of the
 ///            test. A good place to start a `MultiThreadedEventLoopGroup` is the `setUp` method of your `XCTestCase`
 ///            subclass, a good place to shut it down is the `tearDown` method.
-final public class MultiThreadedEventLoopGroup: EventLoopGroup {
+public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
 
@@ -1148,11 +1148,11 @@ extension ScheduledTask: CustomStringConvertible {
 }
 
 extension ScheduledTask: Comparable {
-    public static func < (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
+    static func < (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs.readyTime < rhs.readyTime
     }
 
-    public static func == (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
+    static func == (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs === rhs
     }
 }

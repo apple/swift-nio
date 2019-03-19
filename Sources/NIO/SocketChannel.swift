@@ -829,7 +829,7 @@ extension DatagramChannel: MulticastChannel {
         }
     }
 
-    public func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
+    func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
             self.performGroupOperation0(group, interface: interface, promise: promise, operation: .join)
         } else {
@@ -839,7 +839,7 @@ extension DatagramChannel: MulticastChannel {
         }
     }
 
-    public func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
+    func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
             self.performGroupOperation0(group, interface: interface, promise: promise, operation: .leave)
         } else {
