@@ -95,6 +95,7 @@ extension ByteBuffer {
 
 extension FixedWidthInteger {
     /// Returns the next power of two.
+    @inlinable
     func nextPowerOf2() -> Self {
         guard self != 0 else {
             return 1

@@ -59,7 +59,7 @@ extension PriorityQueue: Equatable {
 }
 
 extension PriorityQueue: Sequence {
-    public struct Iterator: IteratorProtocol {
+    struct Iterator: IteratorProtocol {
 
         private var queue: PriorityQueue<Element>
         fileprivate init(queue: PriorityQueue<Element>) {
@@ -71,7 +71,7 @@ extension PriorityQueue: Sequence {
         }
     }
 
-    public func makeIterator() -> Iterator {
+    func makeIterator() -> Iterator {
         return Iterator(queue: self)
     }
 }
@@ -83,7 +83,7 @@ extension PriorityQueue {
 }
 
 extension PriorityQueue: CustomStringConvertible {
-    public var description: String {
+    var description: String {
         return "PriorityQueue(count: \(self.underestimatedCount)): \(Array(self))"
     }
 }

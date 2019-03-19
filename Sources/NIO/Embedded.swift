@@ -25,10 +25,10 @@ private final class EmbeddedScheduledTask {
 }
 
 extension EmbeddedScheduledTask: Comparable {
-    public static func < (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
+    static func < (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
         return lhs.readyTime < rhs.readyTime
     }
-    public static func == (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
+    static func == (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
         return lhs === rhs
     }
 }
