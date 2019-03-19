@@ -183,7 +183,7 @@ internal struct Heap<T: Comparable> {
 }
 
 extension Heap: CustomDebugStringConvertible {
-    public var debugDescription: String {
+    var debugDescription: String {
         guard self.storage.count > 0 else {
             return "<empty heap>"
         }
