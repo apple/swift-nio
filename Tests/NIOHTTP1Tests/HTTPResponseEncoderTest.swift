@@ -26,7 +26,7 @@ class HTTPResponseEncoderTests: XCTestCase {
     private func sendResponse(withStatus status: HTTPResponseStatus, andHeaders headers: HTTPHeaders) -> ByteBuffer {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertEqual(.some(false), try? channel.finish())
+            XCTAssertEqual(true, try? channel.finish().isClean)
         }
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
@@ -102,7 +102,7 @@ class HTTPResponseEncoderTests: XCTestCase {
     func testNoChunkedEncodingForHTTP10() throws {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertEqual(.some(false), try? channel.finish())
+            XCTAssertEqual(true, try? channel.finish().isClean)
         }
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())

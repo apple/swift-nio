@@ -132,7 +132,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         // Prime the decoder with a GET and consume it.
-        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: version, method: .GET, uri: "/"))))
+        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: version, method: .GET, uri: "/"))).isFull)
         XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
 
         // We now want to send a HTTP/1.1 response. This response has no content-length, no transfer-encoding,
@@ -166,7 +166,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertTrue(handler.receivedEnd)
         XCTAssertTrue(handler.eof)
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testHTTP11SemanticEOFOnChannelInactive() throws {
@@ -197,7 +197,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         // Prime the decoder with a request and consume it.
         XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1),
                                                                                            method: requestMethod,
-                                                                                           uri: "/"))))
+                                                                                           uri: "/"))).isFull)
         XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
 
         // We now want to send a HTTP/1.1 response. This response may contain some length framing fields that RFC 7230 says MUST
@@ -222,7 +222,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertFalse(handler.seenBody)
         XCTAssert(handler.seenEnd)
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testIgnoresTransferEncodingFieldOnCONNECTResponses() throws {
@@ -305,7 +305,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertFalse(handler.seenBody)
         XCTAssert(handler.seenEnd)
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testMultipleTEWithChunkedLastHasNoBodyOnRequest() throws {
@@ -336,7 +336,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         // Prime the decoder with a request and consume it.
         XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1),
                                                                                            method: .GET,
-                                                                                           uri: "/"))))
+                                                                                           uri: "/"))).isFull)
         XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
 
         // Send a 200 with the appropriate Transfer Encoding header. We should see the request,
@@ -362,7 +362,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssert(handler.seenBody)
         XCTAssert(handler.seenEnd)
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithChannelInactive() throws {
@@ -422,7 +422,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         // Prime the decoder with a request.
         XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .init(major: 1, minor: 1),
                                                                                            method: .GET,
-                                                                                           uri: "/"))))
+                                                                                           uri: "/"))).isFull)
 
         // Send a 200 OK with the invalid headers.
         do {
@@ -524,6 +524,6 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertFalse(handler.seenBody)
         XCTAssert(handler.seenEnd)
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 }

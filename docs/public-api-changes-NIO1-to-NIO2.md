@@ -86,4 +86,5 @@
 - change  `ChannelPipeline.addHandler(_:after:)` to  `ChannelPipeline.addHandler(_:postion:)` where `position` can be `.first`, `.last`, `.before(ChannelHandler)`, and `.after(ChannelHandler)`
 - Change `HTTPServerProtocolUpgrader` `protocol` to require `buildUpgradeResponse` to take a `channel` and return an `EventLoopFuture<HTTPHeaders>`.
 - `EmbeddedChannel.writeInbound/Outbound` are now `throwing`
+- `EmbeddedChannel.finish/writeInbound/writeOutbound` now return an `enum` representation of their effects rather than mystery bools.
 - `HTTPMethod.hasRequestBody` and the `HTTPMethod.HasBody` type have been removed from the public API
