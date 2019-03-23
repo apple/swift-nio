@@ -21,8 +21,8 @@ class EmbeddedChannelTest: XCTestCase {
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.writeString("hello")
         
-        XCTAssertTrue(try channel.writeOutbound(buf))
-        XCTAssertTrue(try channel.finish())
+        XCTAssertTrue(try channel.writeOutbound(buf).isFull)
+        XCTAssertTrue(try channel.finish().hasLeftOvers)
         XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readOutbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
@@ -33,8 +33,8 @@ class EmbeddedChannelTest: XCTestCase {
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.writeString("hello")
 
-        XCTAssertTrue(try channel.writeInbound(buf))
-        XCTAssertTrue(try channel.finish())
+        XCTAssertTrue(try channel.writeInbound(buf).isFull)
+        XCTAssertTrue(try channel.finish().hasLeftOvers)
         XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
@@ -49,7 +49,7 @@ class EmbeddedChannelTest: XCTestCase {
         } catch let err {
             XCTAssertEqual(ChannelError.operationUnsupported, err as! ChannelError)
         }
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testWriteOutboundByteBufferReThrow() throws {
@@ -61,12 +61,12 @@ class EmbeddedChannelTest: XCTestCase {
         } catch let err {
             XCTAssertEqual(ChannelError.operationUnsupported, err as! ChannelError)
         }
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testReadOutboundWrongTypeThrows() {
         let channel = EmbeddedChannel()
-        XCTAssertTrue(try channel.writeOutbound("hello"))
+        XCTAssertTrue(try channel.writeOutbound("hello").isFull)
         do {
             _ = try channel.readOutbound(as: Int.self)
             XCTFail()
@@ -80,7 +80,7 @@ class EmbeddedChannelTest: XCTestCase {
 
     func testReadInboundWrongTypeThrows() {
         let channel = EmbeddedChannel()
-        XCTAssertTrue(try channel.writeInbound("hello"))
+        XCTAssertTrue(try channel.writeInbound("hello").isFull)
         do {
             _ = try channel.readInbound(as: Int.self)
             XCTFail()
@@ -95,7 +95,7 @@ class EmbeddedChannelTest: XCTestCase {
     func testWrongTypesWithFastpathTypes() {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertNoThrow(XCTAssertFalse(try channel.finish()))
+            XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
         }
 
         let buffer = channel.allocator.buffer(capacity: 0)
@@ -106,28 +106,28 @@ class EmbeddedChannelTest: XCTestCase {
             XCTAssertNoThrow(_ = try fileHandle.takeDescriptorOwnership())
         }
 
-        XCTAssertTrue(try channel.writeOutbound(buffer))
-        XCTAssertTrue(try channel.writeOutbound(ioData))
-        XCTAssertTrue(try channel.writeOutbound(fileHandle))
-        XCTAssertTrue(try channel.writeOutbound(fileRegion))
+        XCTAssertTrue(try channel.writeOutbound(buffer).isFull)
+        XCTAssertTrue(try channel.writeOutbound(ioData).isFull)
+        XCTAssertTrue(try channel.writeOutbound(fileHandle).isFull)
+        XCTAssertTrue(try channel.writeOutbound(fileRegion).isFull)
         XCTAssertTrue(try channel.writeOutbound(
             AddressedEnvelope<ByteBuffer>(remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
-                                          data: buffer)))
-        XCTAssertTrue(try channel.writeOutbound(buffer))
-        XCTAssertTrue(try channel.writeOutbound(ioData))
-        XCTAssertTrue(try channel.writeOutbound(fileRegion))
+                                          data: buffer)).isFull)
+        XCTAssertTrue(try channel.writeOutbound(buffer).isFull)
+        XCTAssertTrue(try channel.writeOutbound(ioData).isFull)
+        XCTAssertTrue(try channel.writeOutbound(fileRegion).isFull)
 
 
-        XCTAssertTrue(try channel.writeInbound(buffer))
-        XCTAssertTrue(try channel.writeInbound(ioData))
-        XCTAssertTrue(try channel.writeInbound(fileHandle))
-        XCTAssertTrue(try channel.writeInbound(fileRegion))
+        XCTAssertTrue(try channel.writeInbound(buffer).isFull)
+        XCTAssertTrue(try channel.writeInbound(ioData).isFull)
+        XCTAssertTrue(try channel.writeInbound(fileHandle).isFull)
+        XCTAssertTrue(try channel.writeInbound(fileRegion).isFull)
         XCTAssertTrue(try channel.writeInbound(
             AddressedEnvelope<ByteBuffer>(remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
-                                          data: buffer)))
-        XCTAssertTrue(try channel.writeInbound(buffer))
-        XCTAssertTrue(try channel.writeInbound(ioData))
-        XCTAssertTrue(try channel.writeInbound(fileRegion))
+                                          data: buffer)).isFull)
+        XCTAssertTrue(try channel.writeInbound(buffer).isFull)
+        XCTAssertTrue(try channel.writeInbound(ioData).isFull)
+        XCTAssertTrue(try channel.writeInbound(fileRegion).isFull)
 
         func check<Expected, Actual>(expected: Expected.Type,
                                      actual: Actual.Type,
@@ -166,7 +166,7 @@ class EmbeddedChannelTest: XCTestCase {
 
     func testCloseMultipleTimesThrows() throws {
         let channel = EmbeddedChannel()
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
 
         // Close a second time. This must fail.
         do {
@@ -181,7 +181,7 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
         let inactiveHandler = CloseInChannelInactiveHandler()
         _ = try channel.pipeline.addHandler(inactiveHandler).wait()
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
 
         // channelInactive should fire only once.
         XCTAssertEqual(inactiveHandler.inactiveNotifications, 1)
@@ -200,7 +200,7 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertEqual(handler.currentState, .active)
         XCTAssertTrue(channel.isActive)
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
         XCTAssertEqual(handler.currentState, .unregistered)
         XCTAssertFalse(channel.isActive)
     }
@@ -238,7 +238,7 @@ class EmbeddedChannelTest: XCTestCase {
         let pipelineEventLoop = channel.pipeline.eventLoop
         XCTAssert(pipelineEventLoop === channel.eventLoop)
         XCTAssert(pipelineEventLoop === (channel._channelCore as! EmbeddedChannelCore).eventLoop)
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testSendingAnythingOnEmbeddedChannel() throws {
@@ -289,7 +289,7 @@ class EmbeddedChannelTest: XCTestCase {
         channel.flush()
         XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
         XCTAssertTrue(writeFuture.isFulfilled)
-        XCTAssertNoThrow(try XCTAssertFalse(channel.finish()))
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
     }
 
     func testSetLocalAddressAfterSuccessfulBind() throws {

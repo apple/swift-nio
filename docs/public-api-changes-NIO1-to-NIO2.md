@@ -71,7 +71,7 @@
 - renamed `EventLoopFuture.hopTo(eventLoop:)` to `EventLoopFuture.hop(to:)`
 - `EventLoopFuture.reduce(into:_:eventLoop:_:)` had its label signature changed to `EventLoopFuture.reduce(into:_:on:_:)`
 - `EventLoopFuture.reduce(_:_:eventLoop:_:` had its label signature changed to `EventLoopFuture.reduce(_:_:on:_:)`
-- `CircularBuffer` and `MarkedCircularBuffer`'s indices are now opaque
+- `CircularBuffer` and `MarkedCircularBuffer`'s indices are now opaque and no longer `Strideable`, use `CircularBuffer.index(...)` for index calculations
 - all `ChannelOption`s are now required to be  `Equatable`
 - `HTTPHeaderIndex` has been removed, without replacement
 - `HTTPHeader` has been removed, without replacement
@@ -86,4 +86,5 @@
 - change  `ChannelPipeline.addHandler(_:after:)` to  `ChannelPipeline.addHandler(_:postion:)` where `position` can be `.first`, `.last`, `.before(ChannelHandler)`, and `.after(ChannelHandler)`
 - Change `HTTPServerProtocolUpgrader` `protocol` to require `buildUpgradeResponse` to take a `channel` and return an `EventLoopFuture<HTTPHeaders>`.
 - `EmbeddedChannel.writeInbound/Outbound` are now `throwing`
+- `EmbeddedChannel.finish/writeInbound/writeOutbound` now return an `enum` representation of their effects rather than mystery bools.
 - `HTTPMethod.hasRequestBody` and the `HTTPMethod.HasBody` type have been removed from the public API

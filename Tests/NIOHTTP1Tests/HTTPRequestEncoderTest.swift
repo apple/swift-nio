@@ -26,7 +26,7 @@ class HTTPRequestEncoderTests: XCTestCase {
     private func sendRequest(withMethod method: HTTPMethod, andHeaders headers: HTTPHeaders) throws -> ByteBuffer {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertEqual(.some(false), try? channel.finish())
+            XCTAssertEqual(true, try? channel.finish().isClean)
         }
 
         try channel.pipeline.addHandler(HTTPRequestEncoder()).wait()
@@ -75,7 +75,7 @@ class HTTPRequestEncoderTests: XCTestCase {
     func testNoChunkedEncodingForHTTP10() throws {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertEqual(.some(false), try? channel.finish())
+            XCTAssertEqual(true, try? channel.finish().isClean)
         }
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
@@ -91,7 +91,7 @@ class HTTPRequestEncoderTests: XCTestCase {
     func testBody() throws {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertEqual(.some(false), try? channel.finish())
+            XCTAssertEqual(true, try? channel.finish().isClean)
         }
 
         try channel.pipeline.addHandler(HTTPRequestEncoder()).wait()
@@ -113,7 +113,7 @@ class HTTPRequestEncoderTests: XCTestCase {
     func testCONNECT() throws {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertEqual(.some(false), try? channel.finish())
+            XCTAssertEqual(true, try? channel.finish().isClean)
         }
 
         let uri = "server.example.com:80"

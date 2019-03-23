@@ -43,7 +43,7 @@ private final class IndexWritingHandler: ChannelDuplexHandler {
 
 private extension EmbeddedChannel {
     func assertReadIndexOrder(_ order: [UInt8]) {
-        XCTAssertTrue(try self.writeInbound(self.allocator.buffer(capacity: 32)))
+        XCTAssertTrue(try self.writeInbound(self.allocator.buffer(capacity: 32)).isFull)
         do {
             var outBuffer: ByteBuffer = try self.readInbound()!
             XCTAssertEqual(outBuffer.readBytes(length: outBuffer.readableBytes)!, order)
@@ -53,7 +53,7 @@ private extension EmbeddedChannel {
     }
 
     func assertWriteIndexOrder(_ order: [UInt8]) {
-        XCTAssertTrue(try self.writeOutbound(self.allocator.buffer(capacity: 32)))
+        XCTAssertTrue(try self.writeOutbound(self.allocator.buffer(capacity: 32)).isFull)
         do {
             guard var outBuffer2 = try self.readOutbound(as: ByteBuffer.self) else {
                 XCTFail("Could not read byte buffer")
@@ -127,13 +127,13 @@ class ChannelPipelineTest: XCTestCase {
         }
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testConnectingDoesntCallBind() throws {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertFalse(try channel.finish())
+            XCTAssertTrue(try channel.finish().isClean)
         }
         var ipv4SocketAddress = sockaddr_in()
         ipv4SocketAddress.sin_port = (12345 as in_port_t).bigEndian
@@ -197,14 +197,14 @@ class ChannelPipelineTest: XCTestCase {
         }.wait()
 
         XCTAssertNoThrow(XCTAssertEqual(Optional<Int>.some(1), try channel.readInbound()))
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testEmptyPipelineWorks() throws {
         let channel = EmbeddedChannel()
-        XCTAssertTrue(try assertNoThrowWithValue(channel.writeInbound(2)))
+        XCTAssertTrue(try assertNoThrowWithValue(channel.writeInbound(2)).isFull)
         XCTAssertNoThrow(XCTAssertEqual(Optional<Int>.some(2), try channel.readInbound()))
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testWriteAfterClose() throws {
@@ -334,7 +334,7 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testChannelInfrastructureIsNotLeaked() throws {
@@ -388,7 +388,7 @@ class ChannelPipelineTest: XCTestCase {
             XCTAssertNil(weakHandlerContext1)
             XCTAssertNotNil(weakHandlerContext2)
 
-            XCTAssertFalse(try channel.finish())
+            XCTAssertTrue(try channel.finish().isClean)
 
             XCTAssertNil(weakHandler1)
             XCTAssertNil(weakHandler2)
@@ -444,13 +444,13 @@ class ChannelPipelineTest: XCTestCase {
         buffer.writeStaticString("hello, world")
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(countHandler).wait())
-        XCTAssertFalse(try channel.writeInbound(buffer))
+        XCTAssertTrue(try channel.writeInbound(buffer).isEmpty)
         XCTAssertEqual(countHandler.intReadCount, 0)
 
         try channel.pipeline.addHandlers(TransformByteBufferToStringHandler(),
                                          TransformStringToIntHandler(),
                                          position: .first).wait()
-        XCTAssertFalse(try channel.writeInbound(buffer))
+        XCTAssertTrue(try channel.writeInbound(buffer).isEmpty)
         XCTAssertEqual(countHandler.intReadCount, 1)
     }
 
@@ -637,7 +637,7 @@ class ChannelPipelineTest: XCTestCase {
         let channel = EmbeddedChannel()
 
         defer {
-            XCTAssertFalse(try channel.finish())
+            XCTAssertTrue(try channel.finish().isClean)
         }
 
         do {
@@ -673,7 +673,7 @@ class ChannelPipelineTest: XCTestCase {
         let channel = EmbeddedChannel()
 
         defer {
-            XCTAssertFalse(try channel.finish())
+            XCTAssertTrue(try channel.finish().isClean)
         }
 
         do {
@@ -746,7 +746,7 @@ class ChannelPipelineTest: XCTestCase {
         let channel = EmbeddedChannel()
         defer {
             // This will definitely throw.
-            XCTAssertFalse(try channel.finish())
+            XCTAssertTrue(try channel.finish().isClean)
         }
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(NoOpHandler()).wait())
@@ -818,7 +818,7 @@ class ChannelPipelineTest: XCTestCase {
         let channel = EmbeddedChannel()
         defer {
             // This will definitely throw.
-            XCTAssertFalse(try channel.finish())
+            XCTAssertTrue(try channel.finish().isClean)
         }
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(NoOpHandler(), name: "TestHandler").wait())
@@ -889,7 +889,7 @@ class ChannelPipelineTest: XCTestCase {
         let channel = EmbeddedChannel()
         defer {
             // This will definitely throw.
-            XCTAssertFalse(try channel.finish())
+            XCTAssertTrue(try channel.finish().isClean)
         }
 
         let handler = NoOpHandler()
@@ -978,7 +978,7 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try removalTokenPromise.futureResult.map { removalToken in
             // we know that the removal process has been started, so let's tear down the pipeline
             func workaroundSR9815withAUselessFunction() {
-                XCTAssertNoThrow(XCTAssertFalse(try channel.finish()))
+                XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
             }
             workaroundSR9815withAUselessFunction()
         }.wait())

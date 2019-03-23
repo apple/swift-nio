@@ -289,6 +289,39 @@ class EmbeddedChannelCore: ChannelCore {
 ///     unsynchronized fashion. `EmbeddedEventLoop`s notes also apply as
 ///     `EmbeddedChannel` uses an `EmbeddedEventLoop` as its `EventLoop`.
 public class EmbeddedChannel: Channel {
+    public enum LeftOverState {
+        case clean
+        case leftOvers(inbound: [NIOAny], outbound: [NIOAny], pendingOutbound: [NIOAny])
+
+        public var isClean: Bool {
+            if case .clean = self {
+                return true
+            } else {
+                return false
+            }
+        }
+
+        public var hasLeftOvers: Bool {
+            return !self.isClean
+        }
+    }
+
+    public enum BufferState {
+        case empty
+        case full([NIOAny])
+
+        public var isEmpty: Bool {
+            if case .empty = self {
+                return true
+            } else {
+                return false
+            }
+        }
+
+        public var isFull: Bool {
+            return !self.isEmpty
+        }
+    }
 
     public var isActive: Bool { return channelcore.isActive }
     public var closeFuture: EventLoopFuture<Void> { return channelcore.closePromise.futureResult }
@@ -307,11 +340,27 @@ public class EmbeddedChannel: Channel {
         return true
     }
 
-    public func finish() throws -> Bool {
+    /// Synchronously closes the `EmbeddedChannel`.
+    ///
+    /// This method will throw if the `Channel` hit any unconsumed errors or if the `close` fails. Errors in the
+    /// `EmbeddedChannel` can be consumed using `throwIfErrorCaught`.
+    ///
+    /// - returns: The `LeftOverState` of the `EmbeddedChannel`. If all the inbound and outbound events have been
+    //             consumed (using `readInbound` / `readOutbound`) and there are no pending outbound events (unflushed
+    //             writes) this will be `.clean`. If there are any unconsumed inbound, outbound, or pending outbound
+    //             events, the `EmbeddedChannel` will returns those as `.leftOvers(inbound:outbound:pendingOutbound:)`.
+    public func finish() throws -> LeftOverState {
         try close().wait()
         self.embeddedEventLoop.run()
         try throwIfErrorCaught()
-        return !channelcore.outboundBuffer.isEmpty || !channelcore.inboundBuffer.isEmpty || !channelcore.pendingOutboundBuffer.isEmpty
+        let c = self.channelcore
+        if c.outboundBuffer.isEmpty && c.inboundBuffer.isEmpty && c.pendingOutboundBuffer.isEmpty {
+            return .clean
+        } else {
+            return .leftOvers(inbound: c.inboundBuffer,
+                              outbound: c.outboundBuffer,
+                              pendingOutbound: c.pendingOutboundBuffer.map { $0.0 })
+        }
     }
 
     private var _pipeline: ChannelPipeline!
@@ -345,23 +394,35 @@ public class EmbeddedChannel: Channel {
         return try readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
 
-    /// Writes `data` into the `EmbeddedChannel`'s pipeline. This will result in a `channelRead` and a
-    /// `channelReadComplete` event for the first `ChannelHandler`.
+    /// Sends an inbound `channelRead` event followed by a `channelReadComplete` event through the `ChannelPipeline`.
+    ///
+    /// The immediate effect being that the first `ChannelInboundHandler` will get its `channelRead` method called
+    /// with the data you provide.
     ///
     /// - parameters:
     ///    - data: The data to fire through the pipeline.
-    /// - returns: If the `inboundBuffer` now contains items. The `inboundBuffer` will be empty until some item
-    ///            travels the `ChannelPipeline` all the way and hits the tail channel handler.
-    @discardableResult public func writeInbound<T>(_ data: T) throws -> Bool {
+    /// - returns: The state of the inbound buffer which contains all the events that travelled the `ChannelPipeline`
+    //             all the way.
+    @discardableResult public func writeInbound<T>(_ data: T) throws -> BufferState {
         pipeline.fireChannelRead(NIOAny(data))
         pipeline.fireChannelReadComplete()
         try throwIfErrorCaught()
-        return !channelcore.inboundBuffer.isEmpty
+        return self.channelcore.inboundBuffer.isEmpty ? .empty : .full(self.channelcore.inboundBuffer)
     }
 
-    @discardableResult public func writeOutbound<T>(_ data: T) throws -> Bool {
+    /// Sends an outbound `writeAndFlush` event through the `ChannelPipeline`.
+    ///
+    /// The immediate effect being that the first `ChannelOutboundHandler` will get its `write` method called
+    /// with the data you provide. Note that the first `ChannelOutboundHandler` in the pipeline is the _last_ handler
+    /// because outbound events travel the pipeline from back to front.
+    ///
+    /// - parameters:
+    ///    - data: The data to fire through the pipeline.
+    /// - returns: The state of the outbound buffer which contains all the events that travelled the `ChannelPipeline`
+    //             all the way.
+    @discardableResult public func writeOutbound<T>(_ data: T) throws -> BufferState {
         try writeAndFlush(NIOAny(data)).wait()
-        return !channelcore.outboundBuffer.isEmpty
+        return self.channelcore.outboundBuffer.isEmpty ? .empty : .full(self.channelcore.outboundBuffer)
     }
 
     public func throwIfErrorCaught() throws {
