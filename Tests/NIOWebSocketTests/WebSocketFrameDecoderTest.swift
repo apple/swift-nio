@@ -56,7 +56,7 @@ private final class SynchronousCloser: ChannelInboundHandler {
     }
 }
 
-public class WebSocketFrameDecoderTest: XCTestCase {
+public final class WebSocketFrameDecoderTest: XCTestCase {
     public var decoderChannel: EmbeddedChannel!
     public var encoderChannel: EmbeddedChannel!
     public var buffer: ByteBuffer!

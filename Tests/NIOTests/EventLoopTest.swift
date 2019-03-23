@@ -16,7 +16,7 @@ import XCTest
 import Dispatch
 import NIOConcurrencyHelpers
 
-public class EventLoopTest : XCTestCase {
+public final class EventLoopTest : XCTestCase {
 
     public func testSchedule() throws {
         let nanos: NIODeadline = .now()

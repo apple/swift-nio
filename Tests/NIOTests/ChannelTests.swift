@@ -69,7 +69,7 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
     }
 }
 
-public class ChannelTests: XCTestCase {
+public final class ChannelTests: XCTestCase {
     func testBasicLifecycle() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
