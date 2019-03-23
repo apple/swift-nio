@@ -21,7 +21,6 @@ import Dispatch
 /// will be notified once the execution is complete.
 public struct Scheduled<T> {
     private let promise: EventLoopPromise<T>
-    private let cancellationTask: () -> Void
 
     public init(promise: EventLoopPromise<T>, cancellationTask: @escaping () -> Void) {
         self.promise = promise
@@ -33,7 +32,6 @@ public struct Scheduled<T> {
                 cancellationTask()
             }
         }
-        self.cancellationTask = cancellationTask
     }
 
     /// Try to cancel the execution of the scheduled task.

@@ -311,4 +311,30 @@ public class EmbeddedEventLoopTest: XCTestCase {
         // Now the final value should be 6.
         XCTAssertEqual(orderingCounter, 6)
     }
+
+    func testCancelledScheduledTasksDoNotHoldOnToRunClosure() {
+        let eventLoop = EmbeddedEventLoop()
+        defer {
+            XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
+        }
+
+        class Thing {}
+
+        weak var weakThing: Thing? = nil
+
+        func make() -> Scheduled<Never> {
+            let aThing = Thing()
+            weakThing = aThing
+            return eventLoop.scheduleTask(in: .hours(1)) {
+                preconditionFailure("this should definitely not run: \(aThing)")
+            }
+        }
+
+        let scheduled = make()
+        scheduled.cancel()
+        assert(weakThing == nil, within: .seconds(1))
+        XCTAssertThrowsError(try scheduled.futureResult.wait()) { error in
+            XCTAssertEqual(EventLoopError.cancelled, error as? EventLoopError)
+        }
+    }
 }
