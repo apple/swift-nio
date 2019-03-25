@@ -26,7 +26,7 @@ private extension Array {
     }
 }
 
-public class SocketChannelTest : XCTestCase {
+public final class SocketChannelTest : XCTestCase {
     /// Validate that channel options are applied asynchronously.
     public func testAsyncSetOption() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)

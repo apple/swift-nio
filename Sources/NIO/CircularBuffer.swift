@@ -55,6 +55,13 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
         return (index + by) & self.mask
     }
 
+    /// An opaque `CircularBuffer` index.
+    ///
+    /// You may get indices offset from other indices by using `CircularBuffer.index(:offsetBy:)`,
+    /// `CircularBuffer.index(before:)`, or `CircularBuffer.index(after:)`.
+    ///
+    /// - note: Every index is invalidated as soon as you perform a length-changing operating on the `CircularBuffer`
+    ///         but remains valid when you replace one item by another using the subscript.
     public struct Index: Comparable {
         @usableFromInline var _backingIndex: UInt32
         @usableFromInline var _backingCheck: _UInt24 = .max

@@ -430,7 +430,7 @@ extension HTTPDecoder: WriteObservingByteToMessageDecoder where In == HTTPClient
 /// either the form of `HTTPClientResponsePart` or `HTTPServerRequestPart`: that is,
 /// it produces messages that correspond to the semantic units of HTTP produced by
 /// the remote peer.
-public class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelegate {
+public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelegate {
     public typealias InboundOut = In
 
     // things we build incrementally

@@ -53,7 +53,7 @@ internal struct PriorityQueue<Element: Comparable> {
 }
 
 extension PriorityQueue: Equatable {
-    public static func ==(lhs: PriorityQueue, rhs: PriorityQueue) -> Bool {
+    internal static func ==(lhs: PriorityQueue, rhs: PriorityQueue) -> Bool {
         return lhs.count == rhs.count && lhs.elementsEqual(rhs)
     }
 }

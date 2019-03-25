@@ -17,7 +17,7 @@ import XCTest
 
 private class EmbeddedTestError: Error { }
 
-public class EmbeddedEventLoopTest: XCTestCase {
+public final class EmbeddedEventLoopTest: XCTestCase {
     func testExecuteDoesNotImmediatelyRunTasks() throws {
         var callbackRan = false
         let loop = EmbeddedEventLoop()
