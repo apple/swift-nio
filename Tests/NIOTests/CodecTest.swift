@@ -50,7 +50,7 @@ private final class ChannelInactivePromiser: ChannelInboundHandler {
     }
 }
 
-public class ByteToMessageDecoderTest: XCTestCase {
+public final class ByteToMessageDecoderTest: XCTestCase {
     private final class ByteToInt32Decoder : ByteToMessageDecoder {
         typealias InboundIn = ByteBuffer
         typealias InboundOut = Int32
@@ -1306,7 +1306,7 @@ public class ByteToMessageDecoderTest: XCTestCase {
     }
 }
 
-public class MessageToByteEncoderTest: XCTestCase {
+public final class MessageToByteEncoderTest: XCTestCase {
 
     private struct Int32ToByteEncoder: MessageToByteEncoder {
         typealias OutboundIn = Int32

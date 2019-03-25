@@ -17,7 +17,7 @@ import XCTest
 import NIOConcurrencyHelpers
 
 
-public class AcceptBackoffHandlerTest: XCTestCase {
+public final class AcceptBackoffHandlerTest: XCTestCase {
 
     private let acceptHandlerName = "AcceptBackoffHandler"
 

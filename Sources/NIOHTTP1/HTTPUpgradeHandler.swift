@@ -59,7 +59,7 @@ public protocol HTTPServerProtocolUpgrader {
 /// sufficiently difficult to ensure that the upgrade happens at a safe time while dealing with pipelined
 /// requests that we choose to punt on it entirely and not allow it. As it happens this is mostly fine:
 /// the odds of someone needing to upgrade midway through the lifetime of a connection are very low.
-public class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHandler {
+public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableChannelHandler {
     public typealias InboundIn = HTTPServerRequestPart
     public typealias InboundOut = HTTPServerRequestPart
     public typealias OutboundOut = HTTPServerResponsePart
