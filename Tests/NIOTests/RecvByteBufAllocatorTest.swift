@@ -15,7 +15,7 @@
 import XCTest
 import NIO
 
-public class AdaptiveRecvByteBufferAllocatorTest : XCTestCase {
+public final class AdaptiveRecvByteBufferAllocatorTest : XCTestCase {
     private let allocator = ByteBufferAllocator()
     private var adaptive = AdaptiveRecvByteBufferAllocator(minimum: 64, initial: 1024, maximum: 16 * 1024)
     private var fixed = FixedSizeRecvByteBufferAllocator(capacity: 1024)

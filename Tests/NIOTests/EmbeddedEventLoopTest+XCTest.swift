@@ -40,6 +40,7 @@ extension EmbeddedEventLoopTest {
                 ("testScheduledTasksFuturesFire", testScheduledTasksFuturesFire),
                 ("testScheduledTasksFuturesError", testScheduledTasksFuturesError),
                 ("testTaskOrdering", testTaskOrdering),
+                ("testCancelledScheduledTasksDoNotHoldOnToRunClosure", testCancelledScheduledTasksDoNotHoldOnToRunClosure),
            ]
    }
 }
