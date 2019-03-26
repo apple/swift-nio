@@ -12,22 +12,7 @@ For macOS, download Xcode 10, beta 3 or better and you're good to go. On Linux, 
 
 ## Step 2: Update your NIO dependencies
 
-Update the NIO packages you use to include the following.
-
----
-**NOTE**
-
-At this moment, NIO 2 is still in development so if you want to depend on the NIO 2 family packages before we tagged any versions. At this moment, the correct dependencies are:
-
-The already [converged](https://forums.swift.org/t/swiftnio-2-repository-convergence-plan/21387) repositories:
-
-- `swift-nio`: `.package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0-convergence.1")`
-- `swift-nio-extras`: `.package(url: "https://github.com/apple/swift-nio-extras.git", from: "1.0.0-convergence.1")`
-- `swift-nio-ssl`: `.package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.0.0-convergence.1")`
-- `swift-nio-http2`: `.package(url: "https://github.com/apple/swift-nio-http2.git", from: "1.0.0-convergence.1")`
-- `swift-nio-transport-services`: `.package(url: "https://github.com/apple/swift-nio-transport-services.git", from: "1.0.0-convergence.1")`
-
----
+Update the NIO packages you use to include the following versions.
 
 - `swift-nio`: `.package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0")`
 - `swift-nio-ssl`: `.package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.0.0")`
