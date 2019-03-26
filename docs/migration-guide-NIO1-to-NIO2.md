@@ -16,7 +16,7 @@ Update the NIO packages you use to include the following versions.
 
 - `swift-nio`: `.package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0")`
 - `swift-nio-ssl`: `.package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.0.0")`
-- `swift-nio-extras`: `.package(url: "https://github.com/apple/swift-nio.git", from: "1.0.0")`
+- `swift-nio-extras`: `.package(url: "https://github.com/apple/swift-nio-extras.git", from: "1.0.0")`
 - `swift-nio-http2`: `.package(url: "https://github.com/apple/swift-nio-http2.git", from: "1.0.0")`
 - `swift-nio-transport-services`: `.package(url: "https://github.com/apple/swift-nio-transport-services.git", from: "1.0.0")`
 
