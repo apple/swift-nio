@@ -741,19 +741,19 @@ class CircularBufferTests: XCTestCase {
         var bufferOfBackingSize4 = CircularBuffer<Int>(initialCapacity: 4)
         XCTAssertEqual(3, bufferOfBackingSize4.indexBeforeHeadIdx())
         
-        let index1 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 0)
-        let index2 = CircularBuffer<Int>.Index(backingIndex: 1, backingIndexOfHead: 0)
+        let index1 = CircularBuffer<Int>.Index(backingIndex: 0, backingCount: 4, backingIndexOfHead: 0)
+        let index2 = CircularBuffer<Int>.Index(backingIndex: 1, backingCount: 4, backingIndexOfHead: 0)
         XCTAssertEqual(bufferOfBackingSize4.distance(from: index1, to: index2), 1)
         
         bufferOfBackingSize4.append(1)
         XCTAssertEqual(1, bufferOfBackingSize4.removeFirst())
         XCTAssertEqual(1, bufferOfBackingSize4.headBackingIndex)
-        let index3 = CircularBuffer<Int>.Index(backingIndex: 2, backingIndexOfHead: 1)
-        let index4 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 1)
+        let index3 = CircularBuffer<Int>.Index(backingIndex: 2, backingCount: 4, backingIndexOfHead: 1)
+        let index4 = CircularBuffer<Int>.Index(backingIndex: 0, backingCount: 4, backingIndexOfHead: 1)
         XCTAssertEqual(bufferOfBackingSize4.distance(from: index3, to: index4), 2)
         
-        let index5 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 1)
-        let index6 = CircularBuffer<Int>.Index(backingIndex: 2, backingIndexOfHead: 1)
+        let index5 = CircularBuffer<Int>.Index(backingIndex: 0, backingCount: 4, backingIndexOfHead: 1)
+        let index6 = CircularBuffer<Int>.Index(backingIndex: 2, backingCount: 4, backingIndexOfHead: 1)
         XCTAssertEqual(bufferOfBackingSize4.distance(from: index5, to: index6), -2)
 
         bufferOfBackingSize4.append(2)
@@ -761,8 +761,8 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(2, bufferOfBackingSize4.removeFirst())
         XCTAssertEqual(3, bufferOfBackingSize4.removeFirst())
         XCTAssertEqual(3, bufferOfBackingSize4.headBackingIndex)
-        let index7 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 3)
-        let index8 = CircularBuffer<Int>.Index(backingIndex: 2, backingIndexOfHead: 3)
+        let index7 = CircularBuffer<Int>.Index(backingIndex: 0, backingCount: 4, backingIndexOfHead: 3)
+        let index8 = CircularBuffer<Int>.Index(backingIndex: 2, backingCount: 4, backingIndexOfHead: 3)
         XCTAssertEqual(bufferOfBackingSize4.distance(from: index7, to: index8), 2)
     }
     
@@ -770,7 +770,7 @@ class CircularBufferTests: XCTestCase {
         var bufferOfBackingSize4 = CircularBuffer<Int>(initialCapacity: 4)
         XCTAssertEqual(3, bufferOfBackingSize4.indexBeforeHeadIdx())
 
-        let index1 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 0)
+        let index1 = CircularBuffer<Int>.Index(backingIndex: 0, backingCount: 4, backingIndexOfHead: 0)
         let index2 = bufferOfBackingSize4.index(after: index1)
         XCTAssertEqual(index2.backingIndex, 1)
         XCTAssertEqual(index2.isIndexGEQHeadIndex, true)
@@ -781,19 +781,19 @@ class CircularBufferTests: XCTestCase {
         XCTAssertEqual(2, bufferOfBackingSize4.removeFirst())
         XCTAssertEqual(2, bufferOfBackingSize4.headBackingIndex)
 
-        let index3 = CircularBuffer<Int>.Index(backingIndex: 3, backingIndexOfHead: 2)
+        let index3 = CircularBuffer<Int>.Index(backingIndex: 3, backingCount: 4, backingIndexOfHead: 2)
         let index4 = bufferOfBackingSize4.index(after: index3)
         XCTAssertEqual(index4.backingIndex, 0)
         XCTAssertEqual(index4.isIndexGEQHeadIndex, false)
 
         bufferOfBackingSize4.prepend(3)
         XCTAssertEqual(1, bufferOfBackingSize4.headBackingIndex)
-        let index5 = CircularBuffer<Int>.Index(backingIndex: 0, backingIndexOfHead: 1)
+        let index5 = CircularBuffer<Int>.Index(backingIndex: 0, backingCount: 4, backingIndexOfHead: 1)
         let index6 = bufferOfBackingSize4.index(before: index5)
         XCTAssertEqual(index6.backingIndex, 3)
         XCTAssertEqual(index6.isIndexGEQHeadIndex, true)
         
-        let index7 = CircularBuffer<Int>.Index(backingIndex: 2, backingIndexOfHead: 1)
+        let index7 = CircularBuffer<Int>.Index(backingIndex: 2, backingCount: 4, backingIndexOfHead: 1)
         let index8 = bufferOfBackingSize4.index(before: index7)
         XCTAssertEqual(index8.backingIndex, 1)
         XCTAssertEqual(index8.isIndexGEQHeadIndex, true)

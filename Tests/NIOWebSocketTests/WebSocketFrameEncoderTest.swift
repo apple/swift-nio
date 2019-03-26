@@ -32,7 +32,7 @@ extension EmbeddedChannel {
     }
 }
 
-public class WebSocketFrameEncoderTest: XCTestCase {
+public final class WebSocketFrameEncoderTest: XCTestCase {
     public var channel: EmbeddedChannel!
     public var buffer: ByteBuffer!
 

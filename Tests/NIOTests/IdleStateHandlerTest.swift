@@ -175,7 +175,7 @@ class IdleStateHandlerTest : XCTestCase {
         channel.pipeline.fireChannelInactive()
         channel.pipeline.fireChannelUnregistered()
         
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
         eventHandler.assertAllEventsReceived()
     }
 }

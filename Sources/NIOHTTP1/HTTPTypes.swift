@@ -526,7 +526,7 @@ extension HTTPHeaders: Equatable {
 }
 
 public enum HTTPMethod: Equatable {
-    public enum HasBody {
+    internal enum HasBody {
         case yes
         case no
         case unlikely
@@ -569,7 +569,7 @@ public enum HTTPMethod: Equatable {
     case RAW(value: String)
 
     /// Whether requests with this verb may have a request body.
-    public var hasRequestBody: HasBody {
+    internal var hasRequestBody: HasBody {
         switch self {
         case .HEAD, .DELETE, .TRACE:
             return .no

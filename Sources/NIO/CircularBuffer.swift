@@ -55,8 +55,16 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
         return (index + by) & self.mask
     }
 
+    /// An opaque `CircularBuffer` index.
+    ///
+    /// You may get indices offset from other indices by using `CircularBuffer.index(:offsetBy:)`,
+    /// `CircularBuffer.index(before:)`, or `CircularBuffer.index(after:)`.
+    ///
+    /// - note: Every index is invalidated as soon as you perform a length-changing operating on the `CircularBuffer`
+    ///         but remains valid when you replace one item by another using the subscript.
     public struct Index: Comparable {
         @usableFromInline var _backingIndex: UInt32
+        @usableFromInline var _backingCheck: _UInt24 = .max
         @usableFromInline var isIndexGEQHeadIndex: Bool
 
         @inlinable
@@ -65,9 +73,14 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
         }
 
         @inlinable
-        internal init(backingIndex: Int, backingIndexOfHead: Int) {
+        internal init(backingIndex: Int, backingCount: Int, backingIndexOfHead: Int) {
             self.isIndexGEQHeadIndex = backingIndex >= backingIndexOfHead
             self._backingIndex = UInt32(backingIndex)
+            debugOnly {
+                // if we can, we store the check for the backing here
+                self._backingCheck = backingCount < Int(_UInt24.max) ? _UInt24(UInt32(backingCount)) : .max
+            }
+            assert(MemoryLayout.size(ofValue: self) == MemoryLayout<Int>.size)
         }
         
         @inlinable
@@ -82,6 +95,11 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
                 return lhs.backingIndex < rhs.backingIndex
             }
         }
+
+        @usableFromInline
+        internal func isValidIndex(for ring: CircularBuffer<Element>) -> Bool {
+            return self._backingCheck == _UInt24.max || Int(self._backingCheck) == ring.count
+         }
     }
 }
 
@@ -125,9 +143,15 @@ extension CircularBuffer: Collection, MutableCollection {
     @inlinable
     public subscript(position: Index) -> Element {
         get {
+            assert(position.isValidIndex(for: self),
+                   "illegal index used, index was for CircularBuffer with count \(position._backingCheck), " +
+                   "but actual count is \(self.count)")
             return self._buffer[position.backingIndex]!
         }
         set {
+            assert(position.isValidIndex(for: self),
+                   "illegal index used, index was for CircularBuffer with count \(position._backingCheck), " +
+                   "but actual count is \(self.count)")
             self._buffer[position.backingIndex] = newValue
         }
     }
@@ -137,7 +161,9 @@ extension CircularBuffer: Collection, MutableCollection {
     /// If the `CircularBuffer` is empty, `startIndex` is equal to `endIndex`.
     @inlinable
     public var startIndex: Index {
-        return .init(backingIndex: self.headBackingIndex, backingIndexOfHead: self.headBackingIndex)
+        return .init(backingIndex: self.headBackingIndex,
+                     backingCount: self.count,
+                     backingIndexOfHead: self.headBackingIndex)
     }
 
     /// The `CircularBuffer`'s "past the end" position---that is, the position one
@@ -151,7 +177,9 @@ extension CircularBuffer: Collection, MutableCollection {
     /// If the `CircularBuffer` is empty, `endIndex` is equal to `startIndex`.
     @inlinable
     public var endIndex: Index {
-        return .init(backingIndex: self.tailBackingIndex, backingIndexOfHead: self.headBackingIndex)
+        return .init(backingIndex: self.tailBackingIndex,
+                     backingCount: self.count,
+                     backingIndexOfHead: self.headBackingIndex)
     }
 
     /// Returns the distance between two indices.
@@ -193,6 +221,7 @@ extension CircularBuffer: RandomAccessCollection {
     @inlinable
     public func index(_ i: Index, offsetBy distance: Int) -> Index {
         return .init(backingIndex: (i.backingIndex + distance) & self.mask,
+                     backingCount: self.count,
                      backingIndexOfHead: self.headBackingIndex)
     }
 
@@ -509,7 +538,14 @@ extension CircularBuffer: RangeReplaceableCollection {
     /// *O(m)* where _m_ is the combined length of the collection and _newElements_
     @inlinable
     public mutating func replaceSubrange<C: Collection>(_ subrange: Range<Index>, with newElements: C) where Element == C.Element {
-        precondition(subrange.lowerBound >= self.startIndex && subrange.upperBound <= self.endIndex, "Subrange out of bounds")
+        precondition(subrange.lowerBound >= self.startIndex && subrange.upperBound <= self.endIndex,
+                     "Subrange out of bounds")
+        assert(subrange.lowerBound.isValidIndex(for: self),
+               "illegal index used, index was for CircularBuffer with count \(subrange.lowerBound._backingCheck), " +
+               "but actual count is \(self.count)")
+        assert(subrange.upperBound.isValidIndex(for: self),
+               "illegal index used, index was for CircularBuffer with count \(subrange.upperBound._backingCheck), " +
+               "but actual count is \(self.count)")
 
         let subrangeCount = self.distance(from: subrange.lowerBound, to: subrange.upperBound)
 
@@ -574,6 +610,9 @@ extension CircularBuffer: RangeReplaceableCollection {
     @discardableResult
     @inlinable
     public mutating func remove(at position: Index) -> Element {
+        assert(position.isValidIndex(for: self),
+               "illegal index used, index was for CircularBuffer with count \(position._backingCheck), " +
+               "but actual count is \(self.count)")
         defer {
             assert(self.verifyInvariants())
         }

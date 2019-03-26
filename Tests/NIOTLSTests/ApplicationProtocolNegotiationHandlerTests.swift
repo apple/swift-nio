@@ -52,7 +52,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         // The channel handler should still be in the pipeline.
         try channel.pipeline.assertContains(handler: handler)
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     private func negotiateTest(event: TLSUserEvent, expectedResult: ALPNResult) throws {
@@ -85,7 +85,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         // Now the handler should have removed itself from the pipeline.
         try channel.pipeline.assertDoesNotContain(handler: handler)
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testCallbackReflectsNotificationResult() throws {
@@ -111,7 +111,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         try channel.writeInbound("hello")
         XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "hello"))
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testBufferingWhileWaitingForFuture() throws {
@@ -142,7 +142,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "are"))
         XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "buffered"))
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testNothingBufferedDoesNotFireReadCompleted() throws {
@@ -169,7 +169,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         continuePromise.succeed(())
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 0)
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testUnbufferingFiresReadCompleted() throws {
@@ -200,6 +200,6 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 2)
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 }
