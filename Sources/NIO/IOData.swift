@@ -17,7 +17,13 @@
 /// Many `ChannelHandler`s receive or emit bytes and in most cases this can be either a `ByteBuffer` or a `FileRegion`
 /// from disk. To still form a well-typed `ChannelPipeline` such handlers should receive and emit value of type `IOData`.
 public enum IOData {
+    /// A `ByteBuffer`.
     case byteBuffer(ByteBuffer)
+
+    /// A `FileRegion`.
+    ///
+    /// Sending a `FileRegion` through the `ChannelPipeline` using `write` can be useful because some `Channel`s can
+    /// use `sendfile` to send a `FileRegion` more efficiently.
     case fileRegion(FileRegion)
 }
 
