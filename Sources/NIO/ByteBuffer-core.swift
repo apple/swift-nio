@@ -124,8 +124,8 @@ public struct ByteBufferAllocator {
 /// ### Random Access
 /// For every supported type `ByteBuffer` usually contains two methods for random access:
 ///
-///  1. `get<type>(at: Int, length: Int)` where `<type>` is for example `String`, `Data`, `Bytes` (for `[UInt8]`)
-///  2. `set(<type>: Type, at: Int)`
+///  1. `get<Type>(at: Int, length: Int)` where `<type>` is for example `String`, `Data`, `Bytes` (for `[UInt8]`)
+///  2. `set<Type>(at: Int)`
 ///
 /// Example:
 ///
