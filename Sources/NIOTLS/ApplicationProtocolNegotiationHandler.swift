@@ -56,7 +56,7 @@ public enum ALPNResult: Equatable {
 /// down the channel. Then, finally, this channel handler will automatically remove
 /// itself from the channel pipeline, leaving the pipeline in its final
 /// configuration.
-public class ApplicationProtocolNegotiationHandler: ChannelInboundHandler, RemovableChannelHandler {
+public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler, RemovableChannelHandler {
     public typealias InboundIn = Any
     public typealias InboundOut = Any
 

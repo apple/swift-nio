@@ -233,7 +233,7 @@ private func buildEyeballer(host: String,
     return (eyeballer: eyeballer, resolver: resolver, loop: loop)
 }
 
-public class HappyEyeballsTest : XCTestCase {
+public final class HappyEyeballsTest : XCTestCase {
     func testIPv4OnlyResolution() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
         let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in

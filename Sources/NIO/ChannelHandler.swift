@@ -311,7 +311,7 @@ extension _ChannelInboundHandler {
 
 /// A `RemovableChannelHandler` is a `ChannelHandler` that can be dynamically removed from a `ChannelPipeline` whilst
 /// the `Channel` is operating normally.
-/// A `RemovableChannelHandler` is required to remove itself from the `ChannelPipline` (using
+/// A `RemovableChannelHandler` is required to remove itself from the `ChannelPipeline` (using
 /// `ChannelHandlerContext.removeHandler`) as soon as possible.
 ///
 /// - note: When a `Channel` gets torn down, every `ChannelHandler` in the `Channel`'s `ChannelPipeline` will be

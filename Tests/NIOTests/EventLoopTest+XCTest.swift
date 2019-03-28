@@ -52,6 +52,7 @@ extension EventLoopTest {
                 ("testRepeatedTaskThatCancelsItselfNotifiesOnlyWhenFinished", testRepeatedTaskThatCancelsItselfNotifiesOnlyWhenFinished),
                 ("testAndAllCompleteWithZeroFutures", testAndAllCompleteWithZeroFutures),
                 ("testAndAllSucceedWithZeroFutures", testAndAllSucceedWithZeroFutures),
+                ("testCancelledScheduledTasksDoNotHoldOnToRunClosure", testCancelledScheduledTasksDoNotHoldOnToRunClosure),
            ]
    }
 }

@@ -106,7 +106,9 @@ private struct PendingStreamWritesState {
     public private(set) var bytes: Int64 = 0
 
     public var flushedChunks: Int {
-        return self.pendingWrites.markedElementIndex.map { self.pendingWrites.startIndex.distance(to: $0) + 1 } ?? 0
+        return self.pendingWrites.markedElementIndex.map {
+            self.pendingWrites.distance(from: self.pendingWrites.startIndex, to: $0) + 1
+        } ?? 0
     }
 
     /// Subtract `bytes` from the number of outstanding bytes to write.
@@ -162,7 +164,7 @@ private struct PendingStreamWritesState {
 
     /// Get the outstanding write at `index`.
     public subscript(index: Int) -> PendingStreamWrite {
-        return self.pendingWrites[self.pendingWrites.startIndex.advanced(by: index)]
+        return self.pendingWrites[self.pendingWrites.index(self.pendingWrites.startIndex, offsetBy: index)]
     }
 
     /// Mark the flush checkpoint.
@@ -253,7 +255,8 @@ private struct PendingStreamWritesState {
             }
         default:
             let startIndex = self.pendingWrites.startIndex
-            switch (self.pendingWrites[startIndex].data, self.pendingWrites[startIndex.advanced(by: 1)].data) {
+            switch (self.pendingWrites[startIndex].data,
+                    self.pendingWrites[self.pendingWrites.index(after: startIndex)].data) {
             case (.byteBuffer, .byteBuffer):
                 return .vectorBufferWrite
             case (.byteBuffer, .fileRegion):

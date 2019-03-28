@@ -29,8 +29,8 @@ extension EmbeddedChannel {
 
     func finishAcceptingAlreadyClosed() throws {
         do {
-            let res = try self.finish()
-            XCTAssertFalse(res)
+            let result = try self.finish().isClean
+            XCTAssertTrue(result)
         } catch ChannelError.alreadyClosed {
             // ok
         }

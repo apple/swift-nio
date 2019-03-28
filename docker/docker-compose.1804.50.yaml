@@ -8,8 +8,6 @@ services:
       args:
         ubuntu_version: "18.04"
         swift_version: "5.0"
-        swift_flavour: "DEVELOPMENT-SNAPSHOT-2019-03-06-a"
-        swift_builds_suffix: "branch"
         skip_ruby_from_ppa: "true"
 
   unit-tests:

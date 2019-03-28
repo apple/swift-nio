@@ -15,7 +15,7 @@
 import XCTest
 @testable import NIO
 
-public class IntegerTypesTest: XCTestCase {
+public final class IntegerTypesTest: XCTestCase {
     func testNextPowerOfOfTwoZero() {
         XCTAssertEqual(1, (0 as UInt).nextPowerOf2())
         XCTAssertEqual(1, (0 as UInt16).nextPowerOf2())

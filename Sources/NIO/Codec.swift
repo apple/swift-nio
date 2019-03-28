@@ -35,8 +35,16 @@ public enum ByteToMessageDecoderError: Error {
     case leftoverDataWhenDone(ByteBuffer)
 }
 
-/// `ChannelInboundHandler` which decodes bytes in a stream-like fashion from one `ByteBuffer` to
-/// another message type.
+/// `ByteToMessageDecoder`s decode bytes in a stream-like fashion from `ByteBuffer` to another message type.
+///
+/// To add a `ByteToMessageDecoder` to the `ChannelPipeline` use
+///
+///     channel.pipeline.addHandler(ByteToMessageHandler(MyByteToMessageDecoder()))
+///
+/// `ByteToMessageHandler` will turn your `ByteToMessageDecoder` into a `ChannelInboundHandler`. `ByteToMessageHandler`
+/// also solves a couple of tricky issues for you, most importantly, in a `ByteToMessageDecoder` you do _not_ need to
+/// worry about re-entrancy. You own the passed-in `ByteBuffer` for the duration of the `decode`/`decodeLast` call an
+/// can modify it at will.
 ///
 /// If a custom frame decoder is required, then one needs to be careful when implementing
 /// one with `ByteToMessageDecoder`. Ensure there are enough bytes in the buffer for a
@@ -49,16 +57,22 @@ public enum ByteToMessageDecoderError: Error {
 /// is not always the case. Use `buffer.getInteger(at: buffer.readerIndex)` instead.
 ///
 /// If you move the reader index forward, either manually or by using one of `buffer.read*` methods, you must ensure
-/// that you no longer need to see those bytes again as they will not be returned to you the next time `decode` is called.
-/// If you still need those bytes to come back, consider taking a local copy of buffer inside the function to perform your read operations on.
+/// that you no longer need to see those bytes again as they will not be returned to you the next time `decode` is
+/// called. If you still need those bytes to come back, consider taking a local copy of buffer inside the function to
+/// perform your read operations on.
 ///
-/// The `ByteBuffer` passed in as `buffer` is a slice of a larger buffer owned by the `ByteToMessageDecoder` implementation. Some aspects of this buffer are preserved across calls to `decode`, meaning that any changes to those properties you make in your `decode` method will be reflected in the next call to decode. In particular, the following operations are have the described effects:
-
-/// 1. Moving the reader index forward persists across calls. When your method returns, if the reader index has advanced, those bytes are considered "consumed" and will not be available in future calls to `decode`.
-///    Please note, however, that the numerical value of the `readerIndex` itself is not preserved, and may not be the same from one call to the next. Please do not rely on this numerical value: if you need
-///    to recall where a byte is relative to the `readerIndex`, use an offset rather than an absolute value.
-/// 2. Mutating the bytes in the buffer will cause undefined behaviour and likely crash your program
+/// The `ByteBuffer` passed in as `buffer` is a slice of a larger buffer owned by the `ByteToMessageDecoder`
+/// implementation. Some aspects of this buffer are preserved across calls to `decode`, meaning that any changes to
+/// those properties you make in your `decode` method will be reflected in the next call to decode. In particular,
+/// the following operations are have the described effects:
+///
+/// Moving the reader index forward persists across calls. When your method returns, if the reader index has advanced,
+/// those bytes are considered "consumed" and will not be available in future calls to `decode`.
+/// Please note, however, that the numerical value of the `readerIndex` itself is not preserved, and may not be the same
+/// from one call to the next. Please do not rely on this numerical value: if you need
+/// to recall where a byte is relative to the `readerIndex`, use an offset rather than an absolute value.
 public protocol ByteToMessageDecoder {
+    /// The type of the messages this `ByteToMessageDecoder` decodes to.
     associatedtype InboundOut
 
     /// Decode from a `ByteBuffer`. This method will be called till either the input
@@ -265,7 +279,12 @@ private extension B2MDBuffer {
     }
 }
 
-public class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
+/// A handler which turns a given `ByteToMessageDecoder` into a `ChannelInboundHandler` that can then be added to a
+/// `ChannelPipeline`.
+///
+/// Most importantly, `ByteToMessageHandler` handles the tricky buffer management for you and flattens out all
+/// re-entrancy on `channelRead` that may happen in the `ChannelPipeline`.
+public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = Decoder.InboundOut
 

@@ -303,7 +303,7 @@ class SNIHandlerTest: XCTestCase {
 
         try channel.pipeline.assertDoesNotContain(handler: handler)
 
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     /// Blasts the client hello in as a single string. This is not expected to reveal bugs
@@ -348,7 +348,7 @@ class SNIHandlerTest: XCTestCase {
         }
 
         try channel.pipeline.assertDoesNotContain(handler: handler)
-        XCTAssertFalse(try channel.finish())
+        XCTAssertTrue(try channel.finish().isClean)
     }
 
     func assertIncompleteInput(clientHello: String) throws {

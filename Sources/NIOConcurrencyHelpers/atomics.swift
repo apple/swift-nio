@@ -391,7 +391,7 @@ extension UInt: AtomicPrimitive {
 /// `AtomicBox` is a heap-allocated box which allows atomic access to an instance of a Swift class.
 ///
 /// It behaves very much like `Atomic<T>` but for objects, maintaining the correct retain counts.
-public class AtomicBox<T: AnyObject> {
+public final class AtomicBox<T: AnyObject> {
     private let storage: Atomic<UInt>
 
     public init(value: T) {
