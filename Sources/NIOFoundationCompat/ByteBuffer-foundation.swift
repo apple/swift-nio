@@ -38,6 +38,39 @@ public enum ByteBufferFoundationError: Error {
  */
 
 extension ByteBuffer {
+    /// Copies `bytes` into this `ByteBuffer` at offset `index`.
+    ///
+    /// - parameters:
+    ///     - bytes: The bytes to copy.
+    ///     - index: The index to copy the bytes to.
+    /// - returns: The number of bytes copied.
+    ///
+    /// This is necessary to work around https://bugs.swift.org/browse/SR-10219
+    @discardableResult
+    @inlinable
+    public mutating func setBytes(_ bytes: Data, at index: Int) -> Int {
+        return bytes.withUnsafeBytes { ptr in
+            self.setBytes(ptr, at: index)
+        }
+    }
+
+    /// Copies `bytes` into this `ByteBuffer` starting at `writerIndex` and move `writerIndex`.
+    ///
+    /// After this method returns, `writerIndex` will have moved forward by the number of bytes written. The number
+    /// of bytes written is also returned by this method.
+    ///
+    /// - parameters:
+    ///     - bytes: The bytes to copy.
+    /// - returns: The number of bytes copied.
+    ///
+    /// This is necessary to work around https://bugs.swift.org/browse/SR-10219
+    @discardableResult
+    @inlinable
+    public mutating func writeBytes(_ bytes: Data) -> Int {
+        return bytes.withUnsafeBytes { ptr in
+            self.writeBytes(ptr)
+        }
+    }
 
     // MARK: Data APIs
 

@@ -12,7 +12,7 @@ let package = Package(
     targets: [
         .target(
             name: "SwiftBootstrap",
-            dependencies: ["NIO", "NIOHTTP1"]),
+            dependencies: ["NIO", "NIOHTTP1", "NIOFoundationCompat"]),
         .target(
             name: "bootstrap",
             dependencies: ["SwiftBootstrap", "HookedFunctions"]),

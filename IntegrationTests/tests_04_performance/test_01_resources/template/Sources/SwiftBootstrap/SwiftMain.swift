@@ -16,6 +16,7 @@ let localhostPickPort = try! SocketAddress.makeAddressResolvingHost("127.0.0.1",
 
 import NIO
 import NIOHTTP1
+import NIOFoundationCompat
 import Foundation
 import AtomicCounter
 import Dispatch // needed for Swift 4.0 on Linux only
@@ -334,7 +335,7 @@ public func swiftMain() -> Int {
         @inline(never)
         func doWrites(buffer: inout ByteBuffer) {
             /* these ones are zero allocations */
-            // buffer.writeBytes(foundationData) // see SR-7542
+            buffer.writeBytes(foundationData)
             buffer.writeBytes([0x41])
             buffer.writeBytes("A".utf8)
             buffer.writeString("A")
@@ -355,12 +356,15 @@ public func swiftMain() -> Int {
             buffer.withUnsafeReadableBytes { ptr in
                 precondition(ptr[0] == 0x41)
             }
+            let str = buffer.readString(length: 1) // this will become a short-String (no heap allocation)
+            precondition("A" == str, "\(str!)")
 
             /* those down here should be one allocation each */
             let arr = buffer.readBytes(length: 1)
             precondition([0x41] == arr!, "\(arr!)")
-            let str = buffer.readString(length: 1)
-            precondition("A" == str, "\(str!)")
+            // readData will vend a Data that refers to ByteBuffer._Storage but will allocate __DataStorate
+            let data = buffer.readData(length: 1)
+            precondition(UInt8(ascii: "A") == data?.first, "\(data!)")
         }
         for _ in 0..<1000  {
             doWrites(buffer: &buffer)
