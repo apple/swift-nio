@@ -56,6 +56,9 @@ echo "Building podspecs in $tmpfile"
 targets=( $("${here}/list_topsorted_dependencies.sh" -l -r | grep -v "NIOPriorityQueue" | sed 's/^NIO/SwiftNIO/') )
 
 for target in "${targets[@]}"; do
+  if [[ "$target" == "_NIO1APIShims" ]]; then
+    continue
+  fi
   echo "Building podspec for $target"
 
   dependencies=()
@@ -82,8 +85,8 @@ Pod::Spec.new do |s|
   s.documentation_url = 'https://apple.github.io/swift-nio/docs/current/NIO/index.html'
   s.module_name = '${target#Swift}'
 
-  s.swift_version = '4.1'
-  s.cocoapods_version = '>=1.1.0'
+  s.swift_version = '5.0'
+  s.cocoapods_version = '>=1.6.0'
   s.ios.deployment_target = '10.0'
   s.osx.deployment_target = '10.10'
   s.tvos.deployment_target = '10.0'

@@ -94,7 +94,7 @@ private extension Sequence where Element == UInt8 {
 /// TLS backends that can be used with NIO. It also allows for the pipeline change to
 /// be done asynchronously, providing more flexibility about how the user configures the
 /// pipeline.
-public class SNIHandler: ByteToMessageDecoder {
+public final class SNIHandler: ByteToMessageDecoder {
     public var cumulationBuffer: ByteBuffer?
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = ByteBuffer

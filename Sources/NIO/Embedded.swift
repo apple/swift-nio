@@ -25,10 +25,10 @@ private final class EmbeddedScheduledTask {
 }
 
 extension EmbeddedScheduledTask: Comparable {
-    public static func < (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
+    static func < (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
         return lhs.readyTime < rhs.readyTime
     }
-    public static func == (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
+    static func == (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
         return lhs === rhs
     }
 }
@@ -46,18 +46,21 @@ extension EmbeddedScheduledTask: Comparable {
 ///     is because it is intended to be run in the thread that instantiated it. Users are
 ///     responsible for ensuring they never call into the `EmbeddedEventLoop` in an
 ///     unsynchronized fashion.
-public class EmbeddedEventLoop: EventLoop {
+public final class EmbeddedEventLoop: EventLoop {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
     private var now: NIODeadline = .uptimeNanoseconds(0)
 
     private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>(ascending: true)
 
+    /// - see: `EventLoop.inEventLoop`
     public var inEventLoop: Bool {
         return true
     }
 
+    /// Initialize a new `EmbeddedEventLoop`.
     public init() { }
 
+    /// - see: `EventLoop.scheduleTask(deadline:_:)`
     @discardableResult
     public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = makePromise()
@@ -76,18 +79,23 @@ public class EmbeddedEventLoop: EventLoop {
         return scheduled
     }
 
+    /// - see: `EventLoop.scheduleTask(in:_:)`
     @discardableResult
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
         return scheduleTask(deadline: self.now + `in`, task)
     }
 
-    // We're not really running a loop here. Tasks aren't run until run() is called,
-    // at which point we run everything that's been submitted. Anything newly submitted
-    // either gets on that train if it's still moving or waits until the next call to run().
+    /// On an `EmbeddedEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. This means that
+    /// `task` will be run the next time you call `EmbeddedEventLoop.run`.
     public func execute(_ task: @escaping () -> Void) {
         self.scheduleTask(deadline: self.now, task)
     }
 
+    /// Run all tasks that have previously been submitted to this `EmbeddedEventLoop`, either by calling `execute` or
+    /// events that have been enqueued using `scheduleTask`/`scheduleRepeatedTask`/`scheduleRepeatedAsyncTask` and whose
+    /// deadlines have expired.
+    ///
+    /// - seealso: `EmbeddedEventLoop.advanceTime`.
     public func run() {
         // Execute all tasks that are currently enqueued to be executed *now*.
         self.advanceTime(by: .nanoseconds(0))
@@ -124,10 +132,12 @@ public class EmbeddedEventLoop: EventLoop {
         self.now = newTime
     }
 
+    /// - see: `EventLoop.close`
     func close() throws {
         // Nothing to do here
     }
 
+    /// - see: `EventLoop.shutdownGracefully`
     public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
         run()
         queue.sync {
@@ -288,48 +298,73 @@ class EmbeddedChannelCore: ChannelCore {
 ///     responsible for ensuring they never call into an `EmbeddedChannel` in an
 ///     unsynchronized fashion. `EmbeddedEventLoop`s notes also apply as
 ///     `EmbeddedChannel` uses an `EmbeddedEventLoop` as its `EventLoop`.
-public class EmbeddedChannel: Channel {
+public final class EmbeddedChannel: Channel {
+    /// `LeftOverState` represents any left-over inbound, outbound, and pending outbound events that hit the
+    /// `EmbeddedChannel` and were not consumed when `finish` was called on the `EmbeddedChannel`.
+    ///
+    /// `EmbeddedChannel` is most useful in testing and usually in unit tests, you want to consume all inbound and
+    /// outbound data to verify they are what you expect. Therefore, when you `finish` an `EmbeddedChannel` it will
+    /// return if it's either `.clean` (no left overs) or that it has `.leftOvers`.
+    public enum LeftOverState {
+        /// The `EmbeddedChannel` is clean, ie. no inbound, outbound, or pending outbound data left on `finish`.
+        case clean
 
-    public var isActive: Bool { return channelcore.isActive }
-    public var closeFuture: EventLoopFuture<Void> { return channelcore.closePromise.futureResult }
+        /// The `EmbeddedChannel` has inbound, outbound, or pending outbound data left on `finish`.
+        case leftOvers(inbound: [NIOAny], outbound: [NIOAny], pendingOutbound: [NIOAny])
 
-    private lazy var channelcore: EmbeddedChannelCore = EmbeddedChannelCore(pipeline: self._pipeline, eventLoop: self.eventLoop)
+        /// `true` if the `EmbeddedChannel` was `clean` on `finish`, ie. there is no unconsumed inbound, outbound, or
+        /// pending outbound data left on the `Channel`.
+        public var isClean: Bool {
+            if case .clean = self {
+                return true
+            } else {
+                return false
+            }
+        }
 
-    public var _channelCore: ChannelCore {
-        return channelcore
+        /// `true` if the `EmbeddedChannel` if there was unconsumed inbound, outbound, or pending outbound data left
+        /// on the `Channel` when it was `finish`ed.
+        public var hasLeftOvers: Bool {
+            return !self.isClean
+        }
     }
 
-    public var pipeline: ChannelPipeline {
-        return _pipeline
+    /// `BufferState` represents the state of either the inbound, or the outbound `EmbeddedChannel` buffer. These
+    /// buffers contain data that travelled the `ChannelPipeline` all the way.
+    ///
+    /// If the last `ChannelHandler` explicitly (by calling `fireChannelRead`) or implicitly (by not implementing
+    /// `channelRead`) sends inbound data into the end of the `EmbeddedChannel`, it will be held in the
+    /// `EmbeddedChannel`'s inbound buffer. Similarly for `write` on the outbound side. The state of the respective
+    /// buffer will be returned from `writeInbound`/`writeOutbound` as a `BufferState`.
+    public enum BufferState {
+        /// The buffer is empty.
+        case empty
+
+        /// The buffer is non-empty.
+        case full([NIOAny])
+
+        /// Returns `true` is the buffer was empty.
+        public var isEmpty: Bool {
+            if case .empty = self {
+                return true
+            } else {
+                return false
+            }
+        }
+
+        /// Returns `true` if the buffer was non-empty.
+        public var isFull: Bool {
+            return !self.isEmpty
+        }
     }
 
-    public var isWritable: Bool {
-        return true
-    }
-
-    public func finish() throws -> Bool {
-        try close().wait()
-        self.embeddedEventLoop.run()
-        try throwIfErrorCaught()
-        return !channelcore.outboundBuffer.isEmpty || !channelcore.inboundBuffer.isEmpty || !channelcore.pendingOutboundBuffer.isEmpty
-    }
-
-    private var _pipeline: ChannelPipeline!
-    public var allocator: ByteBufferAllocator = ByteBufferAllocator()
-    public var eventLoop: EventLoop {
-        return self.embeddedEventLoop
-    }
-
-    public var embeddedEventLoop: EmbeddedEventLoop = EmbeddedEventLoop()
-
-    public var localAddress: SocketAddress? = nil
-    public var remoteAddress: SocketAddress? = nil
-
-    // Embedded channels never have parents.
-    public let parent: Channel? = nil
-
+    /// `WrongTypeError` is throws if you use `readInbound` or `readOutbound` and request a certain type but the first
+    /// item in the respective buffer is of a different type.
     public struct WrongTypeError: Error, Equatable {
+        /// The type you expected.
         public let expected: Any.Type
+
+        /// The type of the actual first element.
         public let actual: Any.Type
 
         public static func == (lhs: WrongTypeError, rhs: WrongTypeError) -> Bool {
@@ -337,33 +372,143 @@ public class EmbeddedChannel: Channel {
         }
     }
 
+    /// Returns `true` if the `EmbeddedChannel` is 'active'.
+    ///
+    /// An active `EmbeddedChannel` can be closed by calling `close` or `finish` on the `EmbeddedChannel`.
+    ///
+    /// - note: An `EmbeddedChannel` starts _inactive_ and can be activated, for example by calling `connect`.
+    public var isActive: Bool { return channelcore.isActive }
+
+    /// - see: `Channel.closeFuture`
+    public var closeFuture: EventLoopFuture<Void> { return channelcore.closePromise.futureResult }
+
+    private lazy var channelcore: EmbeddedChannelCore = EmbeddedChannelCore(pipeline: self._pipeline, eventLoop: self.eventLoop)
+
+    /// - see: `Channel._channelCore`
+    public var _channelCore: ChannelCore {
+        return channelcore
+    }
+
+    /// - see: `Channel.pipeline`
+    public var pipeline: ChannelPipeline {
+        return _pipeline
+    }
+
+    /// - see: `Channel.isWritable`
+    public var isWritable: Bool {
+        return true
+    }
+
+    /// Synchronously closes the `EmbeddedChannel`.
+    ///
+    /// This method will throw if the `Channel` hit any unconsumed errors or if the `close` fails. Errors in the
+    /// `EmbeddedChannel` can be consumed using `throwIfErrorCaught`.
+    ///
+    /// - returns: The `LeftOverState` of the `EmbeddedChannel`. If all the inbound and outbound events have been
+    ///            consumed (using `readInbound` / `readOutbound`) and there are no pending outbound events (unflushed
+    ///            writes) this will be `.clean`. If there are any unconsumed inbound, outbound, or pending outbound
+    ///            events, the `EmbeddedChannel` will returns those as `.leftOvers(inbound:outbound:pendingOutbound:)`.
+    public func finish() throws -> LeftOverState {
+        try close().wait()
+        self.embeddedEventLoop.run()
+        try throwIfErrorCaught()
+        let c = self.channelcore
+        if c.outboundBuffer.isEmpty && c.inboundBuffer.isEmpty && c.pendingOutboundBuffer.isEmpty {
+            return .clean
+        } else {
+            return .leftOvers(inbound: c.inboundBuffer,
+                              outbound: c.outboundBuffer,
+                              pendingOutbound: c.pendingOutboundBuffer.map { $0.0 })
+        }
+    }
+
+    private var _pipeline: ChannelPipeline!
+
+    /// - see: `Channel.allocator`
+    public var allocator: ByteBufferAllocator = ByteBufferAllocator()
+
+    /// - see: `Channel.eventLoop`
+    public var eventLoop: EventLoop {
+        return self.embeddedEventLoop
+    }
+
+    /// Returns the `EmbeddedEventLoop` that this `EmbeddedChannel` uses. This will return the same instance as
+    /// `EmbeddedChannel.eventLoop` but as the concrete `EmbeddedEventLoop` rather than as `EventLoop` existential.
+    public var embeddedEventLoop: EmbeddedEventLoop = EmbeddedEventLoop()
+
+    /// - see: `Channel.localAddress`
+    public var localAddress: SocketAddress? = nil
+
+    /// - see: `Channel.remoteAddress`
+    public var remoteAddress: SocketAddress? = nil
+
+    /// `nil` because `EmbeddedChannel`s don't have parents.
+    public let parent: Channel? = nil
+
+    /// If available, this method reads one element of type `T` out of the `EmbeddedChannel`'s outbound buffer. If the
+    /// first element was of a different type than requested, `EmbeddedChannel.WrongTypeError` will be thrown, if there
+    /// are no elements in the outbound buffer, `nil` will be returned.
+    ///
+    /// Data hits the `EmbeddedChannel`'s outbound buffer when data was written using `write`, then `flush`ed, and
+    /// then travelled the `ChannelPipeline` all the way too the front. For data to hit the outbound buffer, the very
+    /// first `ChannelHandler` must have written and flushed it either explicitly (by calling
+    /// `ChannelHandlerContext.write` and `flush`) or implicitly by not implementing `write`/`flush`.
+    ///
+    /// - note: Outbound events travel the `ChannelPipeline` _back to front_.
+    /// - note: `EmbeddedChannel.writeOutbound` will `write` data through the `ChannelPipeline`, starting with last
+    ///         `ChannelHandler`.
     public func readOutbound<T>(as type: T.Type = T.self) throws -> T? {
         return try readFromBuffer(buffer: &channelcore.outboundBuffer)
     }
 
+    /// If available, this method reads one element of type `T` out of the `EmbeddedChannel`'s inbound buffer. If the
+    /// first element was of a different type than requested, `EmbeddedChannel.WrongTypeError` will be thrown, if there
+    /// are no elements in the outbound buffer, `nil` will be returned.
+    ///
+    /// Data hits the `EmbeddedChannel`'s inbound buffer when data was send through the pipeline using `fireChannelRead`
+    /// and then travelled the `ChannelPipeline` all the way too the back. For data to hit the inbound buffer, the
+    /// last `ChannelHandler` must have send the event either explicitly (by calling
+    /// `ChannelHandlerContext.fireChannelRead`) or implicitly by not implementing `channelRead`.
+    ///
+    /// - note: `EmbeddedChannel.writeInbound` will fire data through the `ChannelPipeline` using `fireChannelRead`.
     public func readInbound<T>(as type: T.Type = T.self) throws -> T? {
         return try readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
 
-    /// Writes `data` into the `EmbeddedChannel`'s pipeline. This will result in a `channelRead` and a
-    /// `channelReadComplete` event for the first `ChannelHandler`.
+    /// Sends an inbound `channelRead` event followed by a `channelReadComplete` event through the `ChannelPipeline`.
+    ///
+    /// The immediate effect being that the first `ChannelInboundHandler` will get its `channelRead` method called
+    /// with the data you provide.
     ///
     /// - parameters:
     ///    - data: The data to fire through the pipeline.
-    /// - returns: If the `inboundBuffer` now contains items. The `inboundBuffer` will be empty until some item
-    ///            travels the `ChannelPipeline` all the way and hits the tail channel handler.
-    @discardableResult public func writeInbound<T>(_ data: T) throws -> Bool {
+    /// - returns: The state of the inbound buffer which contains all the events that travelled the `ChannelPipeline`
+    //             all the way.
+    @discardableResult public func writeInbound<T>(_ data: T) throws -> BufferState {
         pipeline.fireChannelRead(NIOAny(data))
         pipeline.fireChannelReadComplete()
         try throwIfErrorCaught()
-        return !channelcore.inboundBuffer.isEmpty
+        return self.channelcore.inboundBuffer.isEmpty ? .empty : .full(self.channelcore.inboundBuffer)
     }
 
-    @discardableResult public func writeOutbound<T>(_ data: T) throws -> Bool {
+    /// Sends an outbound `writeAndFlush` event through the `ChannelPipeline`.
+    ///
+    /// The immediate effect being that the first `ChannelOutboundHandler` will get its `write` method called
+    /// with the data you provide. Note that the first `ChannelOutboundHandler` in the pipeline is the _last_ handler
+    /// because outbound events travel the pipeline from back to front.
+    ///
+    /// - parameters:
+    ///    - data: The data to fire through the pipeline.
+    /// - returns: The state of the outbound buffer which contains all the events that travelled the `ChannelPipeline`
+    //             all the way.
+    @discardableResult public func writeOutbound<T>(_ data: T) throws -> BufferState {
         try writeAndFlush(NIOAny(data)).wait()
-        return !channelcore.outboundBuffer.isEmpty
+        return self.channelcore.outboundBuffer.isEmpty ? .empty : .full(self.channelcore.outboundBuffer)
     }
 
+    /// This method will throw the error that is stored in the `EmbeddedChannel` if any.
+    ///
+    /// The `EmbeddedChannel` will store an error some error travels the `ChannelPipeline` all the way past its end.
     public func throwIfErrorCaught() throws {
         if let error = channelcore.error {
             channelcore.error = nil
@@ -402,11 +547,13 @@ public class EmbeddedChannel: Channel {
         try! register().wait()
     }
 
+    /// - see: `Channel.setOption`
     public func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
         // No options supported
         fatalError("no options supported")
     }
 
+    /// - see: `Channel.getOption`
     public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value>  {
         if option is AutoReadOption {
             return self.eventLoop.makeSucceededFuture(true as! Option.Value)
@@ -414,6 +561,13 @@ public class EmbeddedChannel: Channel {
         fatalError("option \(option) not supported")
     }
 
+    /// Fires the (outbound) `bind` event through the `ChannelPipeline`. If the event hits the `EmbeddedChannel` which
+    /// happens when it travels the `ChannelPipeline` all the way to the front, this will also set the
+    /// `EmbeddedChannel`'s `localAddress`.
+    ///
+    /// - parameters:
+    ///     - address: The address to fake-bind to.
+    ///     - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
     public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         promise?.futureResult.whenSuccess {
             self.localAddress = address
@@ -421,6 +575,13 @@ public class EmbeddedChannel: Channel {
         pipeline.bind(to: address, promise: promise)
     }
 
+    /// Fires the (outbound) `connect` event through the `ChannelPipeline`. If the event hits the `EmbeddedChannel`
+    /// which happens when it travels the `ChannelPipeline` all the way to the front, this will also set the
+    /// `EmbeddedChannel`'s `remoteAddress`.
+    ///
+    /// - parameters:
+    ///     - address: The address to fake-bind to.
+    ///     - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
     public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         promise?.futureResult.whenSuccess {
             self.remoteAddress = address

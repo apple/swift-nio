@@ -71,8 +71,13 @@ public enum SocketAddress: CustomStringConvertible {
         }
     }
 
+    /// An IPv4 `SocketAddress`.
     case v4(IPv4Address)
+
+    /// An IPv6 `SocketAddress`.
     case v6(IPv6Address)
+
+    /// An UNIX Domain `SocketAddress`.
     case unixDomainSocket(UnixSocketAddress)
 
     /// A human-readable description of this `SocketAddress`. Mostly useful for logging.

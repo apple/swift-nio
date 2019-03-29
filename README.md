@@ -5,6 +5,45 @@ for rapid development of maintainable high performance protocol servers & client
 
 It's like [Netty](https://netty.io), but written for Swift.
 
+### Repository organization
+
+The SwiftNIO project is split across multiple repositories:
+
+Repository | NIO 2 (Swift 5) | NIO 1 (Swift 4+)
+--- | --- | ---
+[https://github.com/apple/swift-nio][repo-nio] <br> SwiftNIO core | `from: "2.0.0"` | `from: "1.0.0"`
+[https://github.com/apple/swift-nio-ssl][repo-nio-ssl] <br> TLS (SSL) support | `from: "2.0.0"` | `from: "1.0.0"`
+[https://github.com/apple/swift-nio-http2][repo-nio-http2]<br> HTTP/2 support | `from: "1.0.0"` | `from: "0.1.0"`
+[https://github.com/apple/swift-nio-extras][repo-nio-extras] <br>useful additions around SwiftNIO | `from: "1.0.0"` | `from: "0.1.0"`
+[https://github.com/apple/swift-nio-transport-services][repo-nio-transport-services] <br> first-class support for macOS, iOS, and tvOS | `from: "1.0.0"` | `from: "0.1.0"`
+
+### Supported Platforms
+
+SwiftNIO aims to support all of the platforms where Swift is supported. Currently, it is developed and tested on macOS and Linux, and is known to support the following operating system versions:
+
+* Ubuntu 14.04+
+* macOS 10.12+; (macOS 10.14+, iOS 12+, or tvOS 12+ with [swift-nio-transport-services][repo-nio-transport-services])
+
+### Swift versions
+
+#### SwiftNIO 1
+
+The latest released SwiftNIO 1 version supports Swift 4.0, 4.1, 4.2, and 5.0.
+
+#### SwiftNIO 2
+
+The latest released SwiftNIO 2 version supports only Swift 5.0. If you have a SwiftNIO 1 application or library that you would like to migrate to SwiftNIO 2, please check out the [migration guide](docs/migration-guide-NIO1-to-NIO2.md) we prepared for you.
+
+### Compatibility
+
+SwiftNIO follows [SemVer 2.0.0](https://semver.org/#semantic-versioning-200) with a separate document declaring [SwiftNIO's Public API](docs/public-api.md).
+
+What this means for you is that you should depend on SwiftNIO with a version range that covers everything from the minimum SwiftNIO version you require up to the next major version.
+In SwiftPM that can be easily done specifying for example `from: "2.0.0"` meaning that you support SwiftNIO in every version starting from 2.0.0 up to (excluding) 3.0.0.
+SemVer and SwiftNIO's Public API guarantees should result in a working program without having to worry about testing every single version for compatibility.
+
+
+
 ## Conceptual Overview
 
 SwiftNIO is fundamentally a low-level tool for building high-performance networking applications in Swift. It particularly targets those use-cases where using a "thread-per-connection" model of concurrency is inefficient or untenable. This is a common limitation when building servers that use a large number of relatively low-utilization connections, such as HTTP servers.
@@ -14,31 +53,6 @@ To achieve its goals SwiftNIO extensively uses "non-blocking I/O": hence the nam
 SwiftNIO does not aim to provide high-level solutions like, for example, web frameworks do. Instead, SwiftNIO is focused on providing the low-level building blocks for these higher-level applications. When it comes to building a web application, most users will not want to use SwiftNIO directly: instead, they'll want to use one of the many great web frameworks available in the Swift ecosystem. Those web frameworks, however, may choose to use SwiftNIO under the covers to provide their networking support.
 
 The following sections will describe the low-level tools that SwiftNIO provides, and provide a quick overview of how to work with them. If you feel comfortable with these concepts, then you can skip right ahead to the other sections of this README.
-
-### Supported Platforms
-
-SwiftNIO aims to support all of the platforms where Swift is supported. Currently, it is developed and tested on macOS and Linux, and is known to support the following operating system versions:
-
-* Ubuntu 14.04+
-* macOS 10.12+
-
-#### Swift versions
-
-#### SwiftNIO 1 (the stable, released version)
-
-The latest released SwiftNIO 1 version supports Swift 4.0, 4.1, 4.2, and 5.0.
-
-#### SwiftNIO 2 (the in development version)
-
-SwiftNIO 2 will support Swift 5.0.
-
-### Compatibility
-
-SwiftNIO follows [SemVer 2.0.0](https://semver.org/#semantic-versioning-200) with a separate document declaring [SwiftNIO's Public API](docs/public-api.md).
-
-What this means for you is that you should depend on SwiftNIO with a version range that covers everything from the minimum SwiftNIO version you require up to the next major version.
-In SwiftPM that can be easily done specifying for example `from: "2.0.0"` meaning that you support SwiftNIO in every version starting from 2.0.0 up to (excluding) 3.0.0.
-SemVer and SwiftNIO's Public API guarantees should result in a working program without having to worry about testing every single version for compatibility.
 
 ### Basic Architecture
 
@@ -157,6 +171,8 @@ There are currently several example projects that demonstrate how to use SwiftNI
 - **echo client** https://github.com/apple/swift-nio/tree/master/Sources/NIOEchoClient
 - **echo server** https://github.com/apple/swift-nio/tree/master/Sources/NIOEchoServer
 - **HTTP server** https://github.com/apple/swift-nio/tree/master/Sources/NIOHTTP1Server
+- **UDP echo server** https://github.com/apple/swift-nio/tree/master/Sources/NIOUDPEchoServer
+- **WebSocket server** https://github.com/apple/swift-nio/tree/master/Sources/NIOWebSocketServer
 
 ## Getting Started
 
@@ -164,7 +180,7 @@ SwiftNIO primarily uses [SwiftPM](https://swift.org/package-manager/) as its bui
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/apple/swift-nio.git", from: "1.0.0")
+    .package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0")
 ]
 ```
 
@@ -273,3 +289,8 @@ dnf install swift-lang zlib-devel /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 [pthreads]: https://en.wikipedia.org/wiki/POSIX_Threads
 [kqueue]: https://en.wikipedia.org/wiki/Kqueue
 [epoll]: https://en.wikipedia.org/wiki/Epoll
+[repo-nio]: https://github.com/apple/swift-nio
+[repo-nio-extras]: https://github.com/apple/swift-nio-extras
+[repo-nio-http2]: https://github.com/apple/swift-nio-http2
+[repo-nio-ssl]: https://github.com/apple/swift-nio-ssl
+[repo-nio-transport-services]: https://github.com/apple/swift-nio-transport-services

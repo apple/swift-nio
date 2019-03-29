@@ -376,7 +376,7 @@ class HTTPUpgradeTestCase: XCTestCase {
     func testUpgradeHandlerBarfsOnUnexpectedOrdering() throws {
         let channel = EmbeddedChannel()
         defer {
-            XCTAssertEqual(.some(false), try? channel.finish())
+            XCTAssertEqual(true, try? channel.finish().isClean)
         }
 
         let handler = HTTPServerUpgradeHandler(upgraders: [ExplodingUpgrader(forProtocol: "myproto")],
@@ -844,7 +844,7 @@ class HTTPUpgradeTestCase: XCTestCase {
         defer {
             do {
                 let complete = try channel.finish()
-                XCTAssertFalse(complete)
+                XCTAssertTrue(complete.isClean)
             } catch No.no {
                 // ok
             } catch {
@@ -911,8 +911,8 @@ class HTTPUpgradeTestCase: XCTestCase {
         let channel = EmbeddedChannel()
         defer {
             do {
-                let complete = try channel.finish()
-                XCTAssertFalse(complete)
+                let isCleanOnFinish = try channel.finish().isClean
+                XCTAssertTrue(isCleanOnFinish)
             } catch No.no {
                 // ok
             } catch {
@@ -982,8 +982,8 @@ class HTTPUpgradeTestCase: XCTestCase {
         let channel = EmbeddedChannel()
         defer {
             do {
-                let complete = try channel.finish()
-                XCTAssertFalse(complete)
+                let isCleanOnFinish = try channel.finish().isClean
+                XCTAssertTrue(isCleanOnFinish)
             } catch No.no {
                 // ok
             } catch {

@@ -16,7 +16,7 @@ import XCTest
 import Dispatch
 import NIOConcurrencyHelpers
 
-public class EventLoopTest : XCTestCase {
+public final class EventLoopTest : XCTestCase {
 
     public func testSchedule() throws {
         let nanos: NIODeadline = .now()
@@ -751,5 +751,31 @@ public class EventLoopTest : XCTestCase {
             done.perform()
         }
         done.wait()
+    }
+
+    func testCancelledScheduledTasksDoNotHoldOnToRunClosure() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        class Thing {}
+
+        weak var weakThing: Thing? = nil
+
+        func make() -> Scheduled<Never> {
+            let aThing = Thing()
+            weakThing = aThing
+            return group.next().scheduleTask(in: .hours(1)) {
+                preconditionFailure("this should definitely not run: \(aThing)")
+            }
+        }
+
+        let scheduled = make()
+        scheduled.cancel()
+        assert(weakThing == nil, within: .seconds(1))
+        XCTAssertThrowsError(try scheduled.futureResult.wait()) { error in
+            XCTAssertEqual(EventLoopError.cancelled, error as? EventLoopError)
+        }
     }
 }
