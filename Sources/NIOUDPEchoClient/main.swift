@@ -31,11 +31,9 @@
         let envelope = self.unwrapInboundIn(data)
         var byteBuffer = envelope.data
 
-        numBytes -= byteBuffer.readableBytes
+        self.numBytes -= byteBuffer.readableBytes
 
-        assert(numBytes >= 0)
-        
-        if numBytes == 0 {
+        if self.numBytes <= 0 {
             if let string = byteBuffer.readString(length: byteBuffer.readableBytes) {
                 print("Received: '\(string)' back from the server, closing channel.")
             } else {
