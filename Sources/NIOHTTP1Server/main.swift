@@ -422,7 +422,7 @@ private final class HTTPHandler: ChannelInboundHandler {
 
             var responseHead = httpResponseHead(request: request, status: HTTPResponseStatus.ok)
             self.buffer.clear()
-            self.buffer.writeString(defaultResponse)
+            self.buffer.writeString(self.defaultResponse)
             responseHead.headers.add(name: "content-length", value: "\(self.buffer!.readableBytes)")
             let response = HTTPServerResponsePart.head(responseHead)
             context.write(self.wrapOutboundOut(response), promise: nil)
