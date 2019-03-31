@@ -110,7 +110,6 @@ default:
 }
 
 let remoteAddress = { () -> SocketAddress in
-   
    switch connectTarget {
    case .ip(let host, let sendPort, _):
        return try SocketAddress.makeAddressResolvingHost(host, port: sendPort)
@@ -137,7 +136,7 @@ let channel = try { () -> Channel in
    case .unixDomainSocket(_, let listeningPath):
        return try bootstrap.bind(unixDomainSocketPath: listeningPath).wait()
    }
-()
+}()
 
 // Will be closed after we echo-ed back to the server.
 try channel.closeFuture.wait()
