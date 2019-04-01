@@ -45,6 +45,7 @@ extension HTTPDecoderTest {
                 ("testNonASCIIWorksAsHeaderValue", testNonASCIIWorksAsHeaderValue),
                 ("testDoesNotDeliverLeftoversUnnecessarily", testDoesNotDeliverLeftoversUnnecessarily),
                 ("testHTTPResponseWithoutHeaders", testHTTPResponseWithoutHeaders),
+                ("testBasicVerifications", testBasicVerifications),
            ]
    }
 }
