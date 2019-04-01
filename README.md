@@ -243,19 +243,18 @@ For the most part, SwiftNIO development is as straightforward as any other Swift
 
 ### Prerequisites
 
-SwiftNIO's `master` branch is at the moment developing what will become SwiftNIO 2.0.0 which will be Swift 5-only. That means to develop SwiftNIO at the moment, you will need:
+SwiftNIO's `master` branch is the development branch for the next releases of SwiftNIO 2, it's Swift 5-only.
 
 To be able to compile and run SwiftNIO and the integration tests, you need to
 have a few prerequisites installed on your system.
 
 #### macOS
 
-- Xcode 10.2 beta 4 or newer
+- Xcode 10.2 or newer
 
 ### Linux
 
-- a recent Swift 5.0 Development Toolchain from [swift.org/download](https://swift.org/download/#swift-50-development). To get a good idea of a toolchain version that definitely works, have a look at what [our CI uses](https://github.com/apple/swift-nio/blob/master/docker/docker-compose.1804.50.yaml#L10-L11) at the moment. Downloading the version our CI uses should give you pretty good certainty that the version actually works.
-- pkg-config
+- Swift 5.0 from [swift.org/download](https://swift.org/download/#swift-50-development).
 - netcat (for integration tests only)
 - lsof (for integration tests only)
 - shasum (for integration tests only)
@@ -264,14 +263,14 @@ have a few prerequisites installed on your system.
 
 ```
 # install swift tarball from https://swift.org/downloads
-apt-get install -y git curl libatomic1 libicu60 libxml2 libz-dev pkg-config clang netcat-openbsd lsof perl
+apt-get install -y git curl libatomic1 libxml2 netcat-openbsd lsof perl
 ```
 
 
 ### Fedora 28+
 
 ```
-dnf install swift-lang zlib-devel /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
+dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 ```
 
 [ch]: https://apple.github.io/swift-nio/docs/current/NIO/Protocols/ChannelHandler.html
