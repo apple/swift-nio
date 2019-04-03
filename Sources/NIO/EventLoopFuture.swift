@@ -1035,10 +1035,10 @@ extension EventLoopFuture {
         let promise = eventLoop.makePromise(of: Void.self)
 
         if eventLoop.inEventLoop {
-            self._reduceSuccesses0(promise, futures, eventLoop, onResult: { _, _ in })
+            self._reduceSuccesses0(promise, futures, eventLoop, onValue: { _, _ in })
         } else {
             eventLoop.execute {
-                self._reduceSuccesses0(promise, futures, eventLoop, onResult: { _, _ in })
+                self._reduceSuccesses0(promise, futures, eventLoop, onValue: { _, _ in })
             }
         }
 
@@ -1062,10 +1062,10 @@ extension EventLoopFuture {
         }
 
         if eventLoop.inEventLoop {
-            self._reduceSuccesses0(promise, futures, eventLoop, onResult: callback)
+            self._reduceSuccesses0(promise, futures, eventLoop, onValue: callback)
         } else {
             eventLoop.execute {
-                self._reduceSuccesses0(promise, futures, eventLoop, onResult: callback)
+                self._reduceSuccesses0(promise, futures, eventLoop, onValue: callback)
             }
         }
 
@@ -1076,15 +1076,15 @@ extension EventLoopFuture {
         }
     }
 
-    /// Loops through the futures array and attaches callbacks to execute `onResult` on the provided `EventLoop` when
-    /// they succeed. The `onResult` will receive the index of the future that fulfilled the provided `Result`.
+    /// Loops through the futures array and attaches callbacks to execute `onValue` on the provided `EventLoop` when
+    /// they succeed. The `onValue` will receive the index of the future that fulfilled the provided `Result`.
     ///
     /// Once all the futures have succeed, the provided promise will succeed.
     /// Once any future fails, the provided promise will fail.
     private static func _reduceSuccesses0<InputValue>(_ promise: EventLoopPromise<Void>,
                                                       _ futures: [EventLoopFuture<InputValue>],
                                                       _ eventLoop: EventLoop,
-                                                      onResult: @escaping (Int, InputValue) -> Void) {
+                                                      onValue: @escaping (Int, InputValue) -> Void) {
         eventLoop.assertInEventLoop()
 
         var remainingCount = futures.count
@@ -1094,6 +1094,20 @@ extension EventLoopFuture {
             return
         }
 
+        // Sends the result to `onValue` in case of success and succeeds/fails the input promise, if appropriate.
+        func processResult(_ index: Int, _ result: Result<InputValue, Error>) {
+            switch result {
+            case .success(let result):
+                onValue(index, result)
+                remainingCount -= 1
+
+                if remainingCount == 0 {
+                    promise.succeed(())
+                }
+            case .failure(let error):
+                promise.fail(error)
+            }
+        }
         // loop through the futures to chain callbacks to execute on the initiating event loop and grab their index
         // in the "futures" to pass their result to the caller
         for (index, future) in futures.enumerated() {
@@ -1101,33 +1115,14 @@ extension EventLoopFuture {
                 let result = future._value {
                 // Fast-track already-fulfilled results without the overhead of calling `whenComplete`. This can yield a
                 // ~20% performance improvement in the case of large arrays where all elements are already fulfilled.
-                switch result {
-                case .success(let result):
-                    onResult(index, result)
-                    remainingCount -= 1
-
-                    if remainingCount == 0 {
-                        promise.succeed(())
-                    }
-
-                case .failure(let error):
-                    promise.fail(error)
+                processResult(index, result)
+                if case .failure = result {
                     return  // Once the promise is failed, future results do not need to be processed.
                 }
             } else {
                 future.hop(to: eventLoop)
                     .whenComplete { result in
-                        switch result {
-                        case .success(let result):
-                            onResult(index, result)
-                            remainingCount -= 1
-
-                            if remainingCount == 0 {
-                                promise.succeed(())
-                            }
-
-                        case .failure(let error): promise.fail(error)
-                        }
+                        processResult(index, result)
                 }
             }
         }
