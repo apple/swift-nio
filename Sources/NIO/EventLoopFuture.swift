@@ -1121,9 +1121,7 @@ extension EventLoopFuture {
                 }
             } else {
                 future.hop(to: eventLoop)
-                    .whenComplete { result in
-                        processResult(index, result)
-                }
+                    .whenComplete { result in processResult(index, result) }
             }
         }
     }
@@ -1211,18 +1209,27 @@ extension EventLoopFuture {
             return
         }
 
+        // Sends the result to `onResult` in case of success and succeeds the input promise, if appropriate.
+        func processResult(_ index: Int, _ result: Result<InputValue, Error>) {
+            onResult(index, result)
+            remainingCount -= 1
+
+            if remainingCount == 0 {
+                promise.succeed(())
+            }
+        }
         // loop through the futures to chain callbacks to execute on the initiating event loop and grab their index
         // in the "futures" to pass their result to the caller
         for (index, future) in futures.enumerated() {
-            future.hop(to: eventLoop)
-                .whenComplete { result in
-                    onResult(index, result)
-                    remainingCount -= 1
-
-                    guard remainingCount == 0 else { return }
-
-                    promise.succeed(())
-                }
+            if future.eventLoop === eventLoop,
+                let result = future._value {
+                // Fast-track already-fulfilled results without the overhead of calling `whenComplete`. This can yield a
+                // ~30% performance improvement in the case of large arrays where all elements are already fulfilled.
+                processResult(index, result)
+            } else {
+                future.hop(to: eventLoop)
+                    .whenComplete { result in processResult(index, result) }
+            }
         }
     }
 }
