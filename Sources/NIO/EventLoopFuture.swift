@@ -1032,7 +1032,17 @@ extension EventLoopFuture {
     ///     - on: The `EventLoop` on which the new `EventLoopFuture` callbacks will execute on.
     /// - Returns: A new `EventLoopFuture` that waits for the other futures to succeed.
     public static func andAllSucceed(_ futures: [EventLoopFuture<Value>], on eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        return .reduce((), futures, on: eventLoop) { (_: (), _: Value) in }
+        let promise = eventLoop.makePromise(of: Void.self)
+
+        if eventLoop.inEventLoop {
+            self._reduceSuccesses0(promise, futures, eventLoop, onResult: { _, _ in })
+        } else {
+            eventLoop.execute {
+                self._reduceSuccesses0(promise, futures, eventLoop, onResult: { _, _ in })
+            }
+        }
+
+        return promise.futureResult
     }
 
     /// Returns a new `EventLoopFuture` that succeeds only if all of the provided futures succeed.
@@ -1044,7 +1054,83 @@ extension EventLoopFuture {
     ///     - on: The `EventLoop` on which the new `EventLoopFuture` callbacks will fire.
     /// - Returns: A new `EventLoopFuture` with all of the values fulfilled by the provided futures.
     public static func whenAllSucceed(_ futures: [EventLoopFuture<Value>], on eventLoop: EventLoop) -> EventLoopFuture<[Value]> {
-        return .reduce(into: [], futures, on: eventLoop) { (results, value) in results.append(value) }
+        let promise = eventLoop.makePromise(of: Void.self)
+
+        var results: [Value?] = .init(repeating: nil, count: futures.count)
+        let callback = { (index: Int, result: Value) in
+            results[index] = result
+        }
+
+        if eventLoop.inEventLoop {
+            self._reduceSuccesses0(promise, futures, eventLoop, onResult: callback)
+        } else {
+            eventLoop.execute {
+                self._reduceSuccesses0(promise, futures, eventLoop, onResult: callback)
+            }
+        }
+
+        return promise.futureResult.map {
+            // verify that all operations have been completed
+            assert(!results.contains(where: { $0 == nil }))
+            return results.map { $0! }
+        }
+    }
+
+    /// Loops through the futures array and attaches callbacks to execute `onResult` on the provided `EventLoop` when
+    /// they succeed. The `onResult` will receive the index of the future that fulfilled the provided `Result`.
+    ///
+    /// Once all the futures have succeed, the provided promise will succeed.
+    /// Once any future fails, the provided promise will fail.
+    private static func _reduceSuccesses0<InputValue>(_ promise: EventLoopPromise<Void>,
+                                                      _ futures: [EventLoopFuture<InputValue>],
+                                                      _ eventLoop: EventLoop,
+                                                      onResult: @escaping (Int, InputValue) -> Void) {
+        eventLoop.assertInEventLoop()
+
+        var remainingCount = futures.count
+
+        if remainingCount == 0 {
+            promise.succeed(())
+            return
+        }
+
+        // loop through the futures to chain callbacks to execute on the initiating event loop and grab their index
+        // in the "futures" to pass their result to the caller
+        for (index, future) in futures.enumerated() {
+            if future.eventLoop === eventLoop,
+                let result = future._value {
+                // Fast-track already-fulfilled results without the overhead of calling `whenComplete`. This can yield a
+                // ~20% performance improvement in the case of large arrays where all elements are already fulfilled.
+                switch result {
+                case .success(let result):
+                    onResult(index, result)
+                    remainingCount -= 1
+
+                    if remainingCount == 0 {
+                        promise.succeed(())
+                    }
+
+                case .failure(let error):
+                    promise.fail(error)
+                    return  // Once the promise is failed, future results do not need to be processed.
+                }
+            } else {
+                future.hop(to: eventLoop)
+                    .whenComplete { result in
+                        switch result {
+                        case .success(let result):
+                            onResult(index, result)
+                            remainingCount -= 1
+
+                            if remainingCount == 0 {
+                                promise.succeed(())
+                            }
+
+                        case .failure(let error): promise.fail(error)
+                        }
+                }
+            }
+        }
     }
 }
 
