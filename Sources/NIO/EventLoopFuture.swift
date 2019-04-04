@@ -1111,7 +1111,7 @@ extension EventLoopFuture {
         // loop through the futures to chain callbacks to execute on the initiating event loop and grab their index
         // in the "futures" to pass their result to the caller
         for (index, future) in futures.enumerated() {
-            if future.eventLoop === eventLoop,
+            if future.eventLoop.inEventLoop,
                 let result = future._value {
                 // Fast-track already-fulfilled results without the overhead of calling `whenComplete`. This can yield a
                 // ~20% performance improvement in the case of large arrays where all elements are already fulfilled.
@@ -1221,7 +1221,7 @@ extension EventLoopFuture {
         // loop through the futures to chain callbacks to execute on the initiating event loop and grab their index
         // in the "futures" to pass their result to the caller
         for (index, future) in futures.enumerated() {
-            if future.eventLoop === eventLoop,
+            if future.eventLoop.inEventLoop,
                 let result = future._value {
                 // Fast-track already-fulfilled results without the overhead of calling `whenComplete`. This can yield a
                 // ~30% performance improvement in the case of large arrays where all elements are already fulfilled.
