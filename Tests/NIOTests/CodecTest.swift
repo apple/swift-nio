@@ -1304,6 +1304,31 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertEqual(1, checker.channelInactiveEvents)
         XCTAssertEqual(1, checker.readEOFEvents)
     }
+
+    func testErrorInDecodeLastWhenCloseIsReceivedReentrantlyInDecode() {
+        struct DummyError: Error {}
+        struct Decoder: ByteToMessageDecoder {
+            typealias InboundOut = Never
+
+            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                // simulate a re-entrant trigger of reading EOF
+                context.channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+                return .needMoreData
+            }
+
+            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                XCTAssertEqual("X", buffer.readString(length: buffer.readableBytes))
+                throw DummyError()
+            }
+        }
+
+        let channel = EmbeddedChannel(handler: ByteToMessageHandler(Decoder()))
+        var buffer = channel.allocator.buffer(capacity: 1)
+        buffer.writeString("X")
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            XCTAssertTrue(error is DummyError)
+        }
+    }
 }
 
 public final class MessageToByteEncoderTest: XCTestCase {

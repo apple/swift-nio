@@ -523,15 +523,13 @@ extension ByteToMessageHandler: ChannelInboundHandler {
                     () // fair, all done already
                 case .leftoversNeedProcessing:
                     // seems like we received a `channelInactive` or `handlerRemoved` whilst we were processing a read
-                    defer {
-                        self.state = .done
-                    }
                     switch try self.decodeLoop(context: context, decodeMode: .last) {
                     case .didProcess:
                         () // expected and cool
                     case .cannotProcessReentrantly:
                         preconditionFailure("bug in NIO: non-reentrant decode loop couldn't run \(self), \(self.state)")
                     }
+                    self.state = .done
                 }
             case .cannotProcessReentrantly:
                 // fine, will be done later
