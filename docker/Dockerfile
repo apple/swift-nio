@@ -51,8 +51,10 @@ RUN gem install jazzy --no-ri --no-rdoc
 # swift
 ARG swift_version=4.0.3
 ARG swift_flavour=RELEASE
+ARG swift_builds_suffix=release
+
 RUN mkdir $HOME/.swift
-RUN wget -q https://swift.org/builds/swift-${swift_version}-$(echo $swift_flavour | tr A-Z a-z)/ubuntu$(echo $ubuntu_version | sed 's/\.//g')/swift-${swift_version}-${swift_flavour}/swift-${swift_version}-${swift_flavour}-ubuntu${ubuntu_version}.tar.gz -O $HOME/swift.tar.gz
+RUN wget -q "https://swift.org/builds/swift-${swift_version}-${swift_builds_suffix}/ubuntu$(echo $ubuntu_version | sed 's/\.//g')/swift-${swift_version}-${swift_flavour}/swift-${swift_version}-${swift_flavour}-ubuntu${ubuntu_version}.tar.gz" -O $HOME/swift.tar.gz
 RUN tar xzf $HOME/swift.tar.gz --directory $HOME/.swift --strip-components=1
 RUN echo 'export PATH="$HOME/.swift/usr/bin:$PATH"' >> $HOME/.profile
 RUN echo 'export LINUX_SOURCEKIT_LIB_PATH="$HOME/.swift/usr/lib"' >> $HOME/.profile
