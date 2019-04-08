@@ -57,6 +57,7 @@ extension ByteToMessageDecoderTest {
                 ("testErrorInDecodeLastWhenCloseIsReceivedReentrantlyInDecode", testErrorInDecodeLastWhenCloseIsReceivedReentrantlyInDecode),
                 ("testWeAreOkayWithReceivingDataAfterHalfClosureEOF", testWeAreOkayWithReceivingDataAfterHalfClosureEOF),
                 ("testWeAreOkayWithReceivingDataAfterFullClose", testWeAreOkayWithReceivingDataAfterFullClose),
+                ("testPayloadTooLarge", testPayloadTooLarge),
            ]
    }
 }
