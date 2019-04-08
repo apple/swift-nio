@@ -20,6 +20,34 @@ let line = readLine(strippingNewline: true)!
 private final class HTTPEchoHandler: ChannelInboundHandler {
     public typealias InboundIn = HTTPClientResponsePart
     public typealias OutboundOut = HTTPClientRequestPart
+    
+    public func channelActive(context: ChannelHandlerContext) {
+        print("Client connected to \(context.remoteAddress!)")
+        
+        // We are connected. It's time to send the message to the server to initialize the ping-pong sequence.
+        
+        var buffer = context.channel.allocator.buffer(capacity: line.utf8.count)
+        buffer.writeString(line)
+        
+        var headers = HTTPHeaders()
+        headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
+        headers.add(name: "Content-Length", value: "\(buffer.readableBytes)")
+        
+        // This sample only sends an echo request.
+        // The sample server has more functionality which can be easily tested by playing with the URI.
+        // For example, try "/dynamic/count-to-ten" or "/dynamic/client-ip"
+        
+        let requestHead = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1),
+                                          method: .GET,
+                                          uri: "/dynamic/echo",
+                                          headers: headers)
+        
+        context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
+        
+        context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+        
+        context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+    }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
 
@@ -46,34 +74,6 @@ private final class HTTPEchoHandler: ChannelInboundHandler {
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
         context.close(promise: nil)
-    }
-
-    public func channelActive(context: ChannelHandlerContext) {
-        print("Client connected to \(context.remoteAddress!)")
-
-        // We are connected. It's time to send the message to the server to initialize the ping-pong sequence.
-        
-        var buffer = context.channel.allocator.buffer(capacity: line.utf8.count)
-        buffer.writeString(line)
-
-        var headers = HTTPHeaders()
-        headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
-        headers.add(name: "Content-Length", value: "\(buffer.readableBytes)")
-
-        // This sample only sends an echo request.
-        // The sample server has more functionality which can be easily tested by playing with the URI.
-        // For example, try "/dynamic/count-to-ten" or "/dynamic/client-ip"
-        
-        let requestHead = HTTPRequestHead(version: HTTPVersion(major: 1, minor: 1),
-                                          method: .GET,
-                                          uri: "/dynamic/echo",
-                                          headers: headers)
-
-        context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
-        
-        context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-        
-        context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
     }
 }
 
