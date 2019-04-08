@@ -1329,6 +1329,78 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             XCTAssertTrue(error is DummyError)
         }
     }
+
+    func testWeAreOkayWithReceivingDataAfterHalfClosureEOF() {
+        class Decoder: ByteToMessageDecoder {
+            typealias InboundOut = Never
+
+            var decodeCalls = 0
+            var decodeLastCalls = 0
+
+            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                self.decodeCalls += 1
+                return .needMoreData
+            }
+
+            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                self.decodeLastCalls += 1
+                return .needMoreData
+            }
+        }
+        let decoder = Decoder()
+        let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
+        var buffer = channel.allocator.buffer(capacity: 16)
+        buffer.writeStaticString("abc")
+
+        XCTAssertEqual(0, decoder.decodeCalls)
+        XCTAssertEqual(0, decoder.decodeLastCalls)
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertEqual(1, decoder.decodeCalls)
+        XCTAssertEqual(0, decoder.decodeLastCalls)
+        channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+        XCTAssertEqual(1, decoder.decodeCalls)
+        XCTAssertEqual(1, decoder.decodeLastCalls)
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertEqual(1, decoder.decodeCalls)
+        XCTAssertEqual(1, decoder.decodeLastCalls)
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testWeAreOkayWithReceivingDataAfterFullClose() {
+        class Decoder: ByteToMessageDecoder {
+            typealias InboundOut = Never
+
+            var decodeCalls = 0
+            var decodeLastCalls = 0
+
+            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                self.decodeCalls += 1
+                return .needMoreData
+            }
+
+            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                self.decodeLastCalls += 1
+                return .needMoreData
+            }
+        }
+        let decoder = Decoder()
+        let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
+        var buffer = channel.allocator.buffer(capacity: 16)
+        buffer.writeStaticString("abc")
+
+        XCTAssertEqual(0, decoder.decodeCalls)
+        XCTAssertEqual(0, decoder.decodeLastCalls)
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertEqual(1, decoder.decodeCalls)
+        XCTAssertEqual(0, decoder.decodeLastCalls)
+        XCTAssertTrue(try channel.finish().isClean)
+        XCTAssertEqual(1, decoder.decodeCalls)
+        XCTAssertEqual(1, decoder.decodeLastCalls)
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertEqual(1, decoder.decodeCalls)
+        XCTAssertEqual(1, decoder.decodeLastCalls)
+    }
+
 }
 
 public final class MessageToByteEncoderTest: XCTestCase {
