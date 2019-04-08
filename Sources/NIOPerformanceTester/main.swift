@@ -614,3 +614,46 @@ measureAndPrint(desc: "http1_10k_reqs_100_conns") {
     }
     return reqs.reduce(0, +) / reqsPerConn
 }
+
+measureAndPrint(desc: "future_whenall_100k_immediately_succeeded_off_loop") {
+    let loop = group.next()
+    let expected = Array(0..<100_000)
+    let futures = expected.map { loop.newSucceededFuture(result: $0) }
+    let allSucceeded = try! EventLoopFuture.whenAll(futures, eventLoop: loop).wait()
+    return allSucceeded.count
+}
+
+measureAndPrint(desc: "future_whenall_100k_immediately_succeeded_on_loop") {
+    let loop = group.next()
+    let expected = Array(0..<100_000)
+    let allSucceeded = try! loop.newSucceededFuture(result: ()).then { _ -> EventLoopFuture<[Int]> in
+        let futures = expected.map { loop.newSucceededFuture(result: $0) }
+        return EventLoopFuture.whenAll(futures, eventLoop: loop)
+        }.wait()
+    return allSucceeded.count
+}
+
+measureAndPrint(desc: "future_whenall_100k_deferred_off_loop") {
+    let loop = group.next()
+    let expected = Array(0..<100_000)
+    let promises = expected.map { _ in loop.newPromise(of: Int.self) }
+    let allSucceeded = EventLoopFuture.whenAll(promises.map { $0.futureResult }, eventLoop: loop)
+    for (index, promise) in promises.enumerated() {
+        promise.succeed(result: index)
+    }
+    return try! allSucceeded.wait().count
+}
+
+measureAndPrint(desc: "future_whenall_100k_deferred_on_loop") {
+    let loop = group.next()
+    let expected = Array(0..<100_000)
+    let promises = expected.map { _ in loop.newPromise(of: Int.self) }
+    let allSucceeded = try! loop.newSucceededFuture(result: ()).then { _ -> EventLoopFuture<[Int]> in
+        let result = EventLoopFuture.whenAll(promises.map { $0.futureResult }, eventLoop: loop)
+        for (index, promise) in promises.enumerated() {
+            promise.succeed(result: index)
+        }
+        return result
+        }.wait()
+    return allSucceeded.count
+}

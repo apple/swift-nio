@@ -62,6 +62,9 @@ extension EventLoopFutureTest {
                 ("testLoopHoppingHelperSuccess", testLoopHoppingHelperSuccess),
                 ("testLoopHoppingHelperFailure", testLoopHoppingHelperFailure),
                 ("testLoopHoppingHelperNoHopping", testLoopHoppingHelperNoHopping),
+                ("testWhenAllFailsImmediately", testWhenAllFailsImmediately),
+                ("testWhenAllResolvesAfterFutures", testWhenAllResolvesAfterFutures),
+                ("testWhenAllIsIndependentOfFulfillmentOrder", testWhenAllIsIndependentOfFulfillmentOrder),
            ]
    }
 }
