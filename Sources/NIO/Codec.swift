@@ -33,6 +33,9 @@ public enum ByteToMessageDecoderError: Error {
     /// This error can be thrown by `ByteToMessageDecoder`s if there was unexpectedly some left-over data when the
     /// `ByteToMessageDecoder` was removed from the pipeline or the `Channel` was closed.
     case leftoverDataWhenDone(ByteBuffer)
+
+    /// This error can be thrown by `ByteToMessageDecoder`s if the incoming payload is larger than the max defined.
+    case payloadTooLarge
 }
 
 /// `ByteToMessageDecoder`s decode bytes in a stream-like fashion from `ByteBuffer` to another message type.
@@ -346,6 +349,7 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     }
 
     internal private(set) var decoder: Decoder? // only `nil` if we're already decoding (ie. we're re-entered)
+    private let maximumBufferSize: Int
     private var queuedWrites = CircularBuffer<NIOAny>(initialCapacity: 1) // queues writes received whilst we're already decoding (re-entrant write)
     private var state: State = .active {
         willSet {
@@ -358,8 +362,9 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     private var seenEOF: Bool = false
     private var selfAsCanDequeueWrites: CanDequeueWrites? = nil
 
-    public init(_ decoder: Decoder) {
+    public init(_ decoder: Decoder, maximumBufferSize: Int? = nil) {
         self.decoder = decoder
+        self.maximumBufferSize = maximumBufferSize ?? -1
     }
 
     deinit {
@@ -448,6 +453,9 @@ extension ByteToMessageHandler {
         var allowEmptyBuffer = decodeMode == .last
         while (self.state.isActive && self.removalState == .notBeingRemoved) || decodeMode == .last {
             let result = try self.withNextBuffer(allowEmptyBuffer: allowEmptyBuffer) { decoder, buffer in
+                if self.maximumBufferSize > 0, buffer.readableBytes >= self.maximumBufferSize {
+                    throw ByteToMessageDecoderError.payloadTooLarge
+                }
                 if decodeMode == .normal {
                     assert(self.state.isActive, "illegal state for normal decode: \(self.state)")
                     return try decoder.decode(context: context, buffer: &buffer)
