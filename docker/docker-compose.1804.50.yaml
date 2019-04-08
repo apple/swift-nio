@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: swift-nio:18.04-5.0
+    build:
+      args:
+        ubuntu_version: "18.04"
+        swift_version: "5.0"
+        skip_ruby_from_ppa: "true"
+
+  unit-tests:
+    image: swift-nio:18.04-5.0
+
+  integration-tests:
+    image: swift-nio:18.04-5.0
+
+  test:
+    image: swift-nio:18.04-5.0
+
+  echo:
+    image: swift-nio:18.04-5.0
+
+  http:
+    image: swift-nio:18.04-5.0
