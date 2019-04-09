@@ -33,8 +33,12 @@ public enum ByteToMessageDecoderError: Error {
     /// This error can be thrown by `ByteToMessageDecoder`s if there was unexpectedly some left-over data when the
     /// `ByteToMessageDecoder` was removed from the pipeline or the `Channel` was closed.
     case leftoverDataWhenDone(ByteBuffer)
+}
 
-    /// This error can be thrown by `ByteToMessageDecoder`s if the incoming payload is larger than the max defined.
+// TODO (tomer): Merge into ByteToMessageDecoderError next major version
+/// Data errors thrown by `ByteToMessageDecoder`s.
+public enum ByteToMessageDecoderDataError: Error {
+    /// This error can be thrown by `ByteToMessageDecoder`s if the incoming payload is larger than the max specified.
     case payloadTooLarge
 }
 
@@ -349,7 +353,7 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     }
 
     internal private(set) var decoder: Decoder? // only `nil` if we're already decoding (ie. we're re-entered)
-    private let maximumBufferSize: Int
+    private let maximumBufferSize: Int?
     private var queuedWrites = CircularBuffer<NIOAny>(initialCapacity: 1) // queues writes received whilst we're already decoding (re-entrant write)
     private var state: State = .active {
         willSet {
@@ -364,7 +368,7 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
 
     public init(_ decoder: Decoder, maximumBufferSize: Int? = nil) {
         self.decoder = decoder
-        self.maximumBufferSize = maximumBufferSize ?? -1
+        self.maximumBufferSize = maximumBufferSize
     }
 
     deinit {
@@ -453,8 +457,8 @@ extension ByteToMessageHandler {
         var allowEmptyBuffer = decodeMode == .last
         while (self.state.isActive && self.removalState == .notBeingRemoved) || decodeMode == .last {
             let result = try self.withNextBuffer(allowEmptyBuffer: allowEmptyBuffer) { decoder, buffer in
-                if self.maximumBufferSize > 0, buffer.readableBytes >= self.maximumBufferSize {
-                    throw ByteToMessageDecoderError.payloadTooLarge
+                if let maximumBufferSize = self.maximumBufferSize, buffer.readableBytes > maximumBufferSize {
+                    throw ByteToMessageDecoderDataError.payloadTooLarge
                 }
                 if decodeMode == .normal {
                     assert(self.state.isActive, "illegal state for normal decode: \(self.state)")
