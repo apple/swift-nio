@@ -1481,6 +1481,27 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(buf.readableBytes, viewSlice.count)
     }
 
+    func testByteBuffersCanBeInitializedFromByteBufferViews() throws {
+        self.buf.writeString("hello")
+
+        let readableByteBuffer = ByteBuffer(self.buf.readableBytesView)
+        XCTAssertEqual(self.buf, readableByteBuffer)
+
+        let sliceByteBuffer = self.buf.viewBytes(at: 1, length: 3).map(ByteBuffer.init)
+        XCTAssertEqual("ell", sliceByteBuffer.flatMap { $0.getString(at: 0, length: $0.readableBytes) })
+
+        self.buf.clear()
+
+        let emptyByteBuffer = ByteBuffer(self.buf.readableBytesView)
+        XCTAssertEqual(self.buf, emptyByteBuffer)
+
+        var fixedCapacityBuffer = self.allocator.buffer(capacity: 16)
+        let capacity = fixedCapacityBuffer.capacity
+        fixedCapacityBuffer.writeString(String(repeating: "x", count: capacity))
+        XCTAssertEqual(capacity, fixedCapacityBuffer.capacity)
+        XCTAssertEqual(fixedCapacityBuffer, ByteBuffer(fixedCapacityBuffer.readableBytesView))
+    }
+
     func testReserveCapacityWhenOversize() throws {
         let oldCapacity = buf.capacity
         let oldPtrVal = buf.withVeryUnsafeBytes {
