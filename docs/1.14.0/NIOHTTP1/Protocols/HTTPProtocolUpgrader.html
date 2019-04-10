@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>HTTPProtocolUpgrader Protocol Reference</title>
+    <link rel="stylesheet" type="text/css" href="../css/jazzy.css" />
+    <link rel="stylesheet" type="text/css" href="../css/highlight.css" />
+    <meta charset="utf-8">
+    <script src="../js/jquery.min.js" defer></script>
+    <script src="../js/jazzy.js" defer></script>
+    
+    <script src="../js/lunr.min.js" defer></script>
+    <script src="../js/typeahead.jquery.js" defer></script>
+    <script src="../js/jazzy.search.js" defer></script>
+  </head>
+  <body>
+
+    <a name="//apple_ref/swift/Protocol/HTTPProtocolUpgrader" class="dashAnchor"></a>
+
+    <a title="HTTPProtocolUpgrader Protocol Reference"></a>
+
+    <header class="header">
+      <p class="header-col header-col--primary">
+        <a class="header-link" href="../index.html">
+          NIOHTTP1 Docs
+        </a>
+         (49% documented)
+      </p>
+    
+      <p class="header-col--secondary">
+        <form role="search" action="../search.json">
+          <input type="text" placeholder="Search documentation" data-typeahead>
+        </form>
+      </p>
+    
+        <p class="header-col header-col--secondary">
+          <a class="header-link" href="https://github.com/apple/swift-nio">
+            <img class="header-icon" src="../img/gh.png"/>
+            View on GitHub
+          </a>
+        </p>
+    
+    </header>
+
+    <p class="breadcrumbs">
+      <a class="breadcrumb" href="../index.html">NIOHTTP1 Reference</a>
+      <img class="carat" src="../img/carat.png" />
+      HTTPProtocolUpgrader Protocol Reference
+    </p>
+
+    <div class="content-wrapper">
+      <nav class="navigation">
+        <ul class="nav-groups">
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Classes.html">Classes</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPDecoder.html">HTTPDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPRequestDecoder.html">HTTPRequestDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPRequestEncoder.html">HTTPRequestEncoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPResponseCompressor.html">HTTPResponseCompressor</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPResponseCompressor/CompressionError.html">– CompressionError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPResponseDecoder.html">HTTPResponseDecoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPResponseEncoder.html">HTTPResponseEncoder</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPServerPipelineHandler.html">HTTPServerPipelineHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPServerProtocolErrorHandler.html">HTTPServerProtocolErrorHandler</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Classes/HTTPServerUpgradeHandler.html">HTTPServerUpgradeHandler</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Enums.html">Enumerations</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/HTTPMethod.html">HTTPMethod</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/HTTPMethod/HasBody.html">– HasBody</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/HTTPParserError.html">HTTPParserError</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/HTTPPart.html">HTTPPart</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/HTTPResponseStatus.html">HTTPResponseStatus</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/HTTPUpgradeErrors.html">HTTPUpgradeErrors</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/HTTPUpgradeEvents.html">HTTPUpgradeEvents</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Enums/RemoveAfterUpgradeStrategy.html">RemoveAfterUpgradeStrategy</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Extensions.html">Extensions</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Extensions/ChannelPipeline.html">ChannelPipeline</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Protocols.html">Protocols</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/HTTPProtocolUpgrader.html">HTTPProtocolUpgrader</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Protocols/_DeprecateHTTPHeaderIterator.html">_DeprecateHTTPHeaderIterator</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Structs.html">Structures</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/HTTPHeader.html">HTTPHeader</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/HTTPHeaderIndex.html">HTTPHeaderIndex</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/HTTPHeaders.html">HTTPHeaders</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/HTTPHeaders/Iterator.html">– Iterator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/HTTPListHeaderIterator.html">HTTPListHeaderIterator</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/HTTPRequestHead.html">HTTPRequestHead</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/HTTPResponseHead.html">HTTPResponseHead</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Structs/HTTPVersion.html">HTTPVersion</a>
+              </li>
+            </ul>
+          </li>
+          <li class="nav-group-name">
+            <a class="nav-group-name-link" href="../Typealiases.html">Type Aliases</a>
+            <ul class="nav-group-tasks">
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:8NIOHTTP121HTTPClientRequestParta">HTTPClientRequestPart</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:8NIOHTTP122HTTPClientResponseParta">HTTPClientResponsePart</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:8NIOHTTP121HTTPServerRequestParta">HTTPServerRequestPart</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:8NIOHTTP122HTTPServerResponseParta">HTTPServerResponsePart</a>
+              </li>
+              <li class="nav-group-task">
+                <a class="nav-group-task-link" href="../Typealiases.html#/s:8NIOHTTP124HTTPUpgradeConfigurationa">HTTPUpgradeConfiguration</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <article class="main-content">
+
+        <section class="section">
+          <div class="section-content">
+            <h1>HTTPProtocolUpgrader</h1>
+              <div class="declaration">
+                <div class="language">
+                  <pre class="highlight swift"><code><span class="kd">public</span> <span class="kd">protocol</span> <span class="kt">HTTPProtocolUpgrader</span></code></pre>
+
+                </div>
+              </div>
+            <p>An object that implements <code>ProtocolUpgrader</code> knows how to handle HTTP upgrade to
+a protocol.</p>
+
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-content">
+            <div class="task-group">
+              <ul class="item-container">
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOHTTP120HTTPProtocolUpgraderP17supportedProtocolSSvp"></a>
+                    <a name="//apple_ref/swift/Property/supportedProtocol" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOHTTP120HTTPProtocolUpgraderP17supportedProtocolSSvp">supportedProtocol</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>The protocol this upgrader knows how to support.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="k">var</span> <span class="nv">supportedProtocol</span><span class="p">:</span> <span class="kt">String</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOHTTP120HTTPProtocolUpgraderP22requiredUpgradeHeadersSaySSGvp"></a>
+                    <a name="//apple_ref/swift/Property/requiredUpgradeHeaders" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOHTTP120HTTPProtocolUpgraderP22requiredUpgradeHeadersSaySSGvp">requiredUpgradeHeaders</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>All the header fields the protocol needs in the request to successfully upgrade. These header fields
+will be provided to the handler when it is asked to handle the upgrade. They will also be validated
+ against the inbound request&rsquo;s Connection header field.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="k">var</span> <span class="nv">requiredUpgradeHeaders</span><span class="p">:</span> <span class="p">[</span><span class="kt">String</span><span class="p">]</span> <span class="p">{</span> <span class="k">get</span> <span class="p">}</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOHTTP120HTTPProtocolUpgraderP20buildUpgradeResponse14upgradeRequest07initialF7HeadersAA11HTTPHeadersVAA15HTTPRequestHeadV_AHtKF"></a>
+                    <a name="//apple_ref/swift/Method/buildUpgradeResponse(upgradeRequest:initialResponseHeaders:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOHTTP120HTTPProtocolUpgraderP20buildUpgradeResponse14upgradeRequest07initialF7HeadersAA11HTTPHeadersVAA15HTTPRequestHeadV_AHtKF">buildUpgradeResponse(upgradeRequest:initialResponseHeaders:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Builds the upgrade response headers. Should return any headers that need to be supplied to the client
+in the 101 Switching Protocols response. If upgrade cannot proceed for any reason, this function should
+throw.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">buildUpgradeResponse</span><span class="p">(</span><span class="nv">upgradeRequest</span><span class="p">:</span> <span class="kt"><a href="../Structs/HTTPRequestHead.html">HTTPRequestHead</a></span><span class="p">,</span> <span class="nv">initialResponseHeaders</span><span class="p">:</span> <span class="kt"><a href="../Structs/HTTPHeaders.html">HTTPHeaders</a></span><span class="p">)</span> <span class="k">throws</span> <span class="o">-&gt;</span> <span class="kt"><a href="../Structs/HTTPHeaders.html">HTTPHeaders</a></span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+                <li class="item">
+                  <div>
+                    <code>
+                    <a name="/s:8NIOHTTP120HTTPProtocolUpgraderP7upgrade3ctx0D7Request3NIO15EventLoopFutureCyytGAG21ChannelHandlerContextC_AA15HTTPRequestHeadVtF"></a>
+                    <a name="//apple_ref/swift/Method/upgrade(ctx:upgradeRequest:)" class="dashAnchor"></a>
+                    <a class="token" href="#/s:8NIOHTTP120HTTPProtocolUpgraderP7upgrade3ctx0D7Request3NIO15EventLoopFutureCyytGAG21ChannelHandlerContextC_AA15HTTPRequestHeadVtF">upgrade(ctx:upgradeRequest:)</a>
+                    </code>
+                  </div>
+                  <div class="height-container">
+                    <div class="pointer-container"></div>
+                    <section class="section">
+                      <div class="pointer"></div>
+                      <div class="abstract">
+                        <p>Called when the upgrade response has been flushed. At this time it is safe to mutate the channel pipeline
+to add whatever channel handlers are required. Until the returned <code>EventLoopFuture</code> succeeds, all received
+data will be buffered.</p>
+
+                      </div>
+                      <div class="declaration">
+                        <h4>Declaration</h4>
+                        <div class="language">
+                          <p class="aside-title">Swift</p>
+                          <pre class="highlight swift"><code><span class="kd">func</span> <span class="nf">upgrade</span><span class="p">(</span><span class="nv">ctx</span><span class="p">:</span> <span class="kt">ChannelHandlerContext</span><span class="p">,</span> <span class="nv">upgradeRequest</span><span class="p">:</span> <span class="kt"><a href="../Structs/HTTPRequestHead.html">HTTPRequestHead</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">EventLoopFuture</span><span class="o">&lt;</span><span class="kt">Void</span><span class="o">&gt;</span></code></pre>
+
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+    <section class="footer">
+      <p>&copy; 2019 <a class="link" href="https://github.com/apple/swift-nio" target="_blank" rel="external">SwiftNIO Team</a>. All rights reserved. (Last updated: 2019-04-10)</p>
+      <p>Generated by <a class="link" href="https://github.com/realm/jazzy" target="_blank" rel="external">jazzy ♪♫ v0.9.4</a>, a <a class="link" href="https://realm.io" target="_blank" rel="external">Realm</a> project.</p>
+    </section>
+  </body>
+</div>
+</html>
