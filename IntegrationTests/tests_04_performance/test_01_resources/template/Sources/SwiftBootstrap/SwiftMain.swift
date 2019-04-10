@@ -18,7 +18,7 @@ import NIO
 import NIOHTTP1
 import Foundation
 import AtomicCounter
-import Dispatch // needed for Swift 4.0 on Linux only
+import Dispatch
 
 private final class SimpleHTTPServer: ChannelInboundHandler {
     typealias InboundIn = HTTPServerRequestPart
@@ -434,6 +434,22 @@ public func swiftMain() -> Int {
             doAnd(loop: el)
         }
         return 1000
+    }
+
+    measureAndPrint(desc: "scheduling_10000_executions") {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let loop = group.next()
+        let dg = DispatchGroup()
+
+        try! loop.submit {
+            for _ in 0..<10_000 {
+                dg.enter()
+                loop.execute { dg.leave() }
+            }
+        }.wait()
+        dg.wait()
+        try! group.syncShutdownGracefully()
+        return 10_000
     }
 
     return 0
