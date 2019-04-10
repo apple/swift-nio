@@ -1414,16 +1414,43 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                 return .needMoreData
             }
         }
-                    
+
         let max = 100
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(Decoder(), maximumBufferSize: max))
         var buffer = channel.allocator.buffer(capacity: max + 1)
         buffer.writeString(String(repeating: "*", count: max + 1))
         XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
-            guard case ByteToMessageDecoderDataError.payloadTooLarge = error else {
-                return XCTFail("expected ByteToMessageDecoderDataError.payloadTooLarge")
+            XCTAssertTrue(error is ByteToMessageDecoderPayloadTooLargeError)
+        }
+    }
+
+    func testPayloadTooLargeButHandlerOk() {
+        class Decoder: ByteToMessageDecoder {
+            typealias InboundOut = ByteBuffer
+
+            var decodeCalls = 0
+
+            func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+                self.decodeCalls += 1
+                buffer.moveReaderIndex(to: buffer.readableBytes)
+                return .continue
+            }
+
+            func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+                self.decodeCalls += 1
+                buffer.moveReaderIndex(to: buffer.readableBytes)
+                return .continue
             }
         }
+
+        let max = 100
+        let decoder = Decoder()
+        let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder, maximumBufferSize: max))
+        var buffer = channel.allocator.buffer(capacity: max + 1)
+        buffer.writeString(String(repeating: "*", count: max + 1))
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+        XCTAssertGreaterThan(decoder.decodeCalls, 0)
     }
 }
 

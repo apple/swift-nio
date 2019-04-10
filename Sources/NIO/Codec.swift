@@ -36,11 +36,8 @@ public enum ByteToMessageDecoderError: Error {
 }
 
 // TODO (tomer): Merge into ByteToMessageDecoderError next major version
-/// Data errors thrown by `ByteToMessageDecoder`s.
-public enum ByteToMessageDecoderDataError: Error {
-    /// This error can be thrown by `ByteToMessageDecoder`s if the incoming payload is larger than the max specified.
-    case payloadTooLarge
-}
+/// This error can be thrown by `ByteToMessageDecoder`s if the incoming payload is larger than the max specified.
+public struct ByteToMessageDecoderPayloadTooLargeError: Error {}
 
 /// `ByteToMessageDecoder`s decode bytes in a stream-like fashion from `ByteBuffer` to another message type.
 ///
@@ -366,6 +363,11 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     private var seenEOF: Bool = false
     private var selfAsCanDequeueWrites: CanDequeueWrites? = nil
 
+    /// Initialize a `ByteToMessageHandler`.
+    ///
+    /// - parameters:
+    ///     - decoder: The `ByteToMessageDecoder` to decode the bytes into message.
+    ///     - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
     public init(_ decoder: Decoder, maximumBufferSize: Int? = nil) {
         self.decoder = decoder
         self.maximumBufferSize = maximumBufferSize
@@ -457,16 +459,18 @@ extension ByteToMessageHandler {
         var allowEmptyBuffer = decodeMode == .last
         while (self.state.isActive && self.removalState == .notBeingRemoved) || decodeMode == .last {
             let result = try self.withNextBuffer(allowEmptyBuffer: allowEmptyBuffer) { decoder, buffer in
-                if let maximumBufferSize = self.maximumBufferSize, buffer.readableBytes > maximumBufferSize {
-                    throw ByteToMessageDecoderDataError.payloadTooLarge
-                }
+                let decoderResult: DecodingState
                 if decodeMode == .normal {
                     assert(self.state.isActive, "illegal state for normal decode: \(self.state)")
-                    return try decoder.decode(context: context, buffer: &buffer)
+                    decoderResult = try decoder.decode(context: context, buffer: &buffer)
                 } else {
                     allowEmptyBuffer = false
-                    return try decoder.decodeLast(context: context, buffer: &buffer, seenEOF: self.seenEOF)
+                    decoderResult = try decoder.decodeLast(context: context, buffer: &buffer, seenEOF: self.seenEOF)
                 }
+                if decoderResult == .needMoreData, let maximumBufferSize = self.maximumBufferSize, buffer.readableBytes > maximumBufferSize {
+                    throw ByteToMessageDecoderPayloadTooLargeError()
+                }
+                return decoderResult
             }
             switch result {
             case .didProcess(.continue):
