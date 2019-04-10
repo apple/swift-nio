@@ -19,8 +19,11 @@ token=$(create_token)
 start_server "$token"
 htdocs=$(get_htdocs "$token")
 echo FOO BAR > "$htdocs/some_file.txt"
-for method in sendfile fileio; do
-    do_curl "$token" "http://foobar.com/$method/some_file.txt" > "$tmp/out.txt"
-    assert_equal_files "$htdocs/some_file.txt" "$tmp/out.txt"
+touch "$htdocs/empty"
+for file in some_file.txt empty; do
+    for method in sendfile fileio; do
+        do_curl "$token" "http://foobar.com/$method/$file" > "$tmp/out.txt"
+        assert_equal_files "$htdocs/$file" "$tmp/out.txt"
+    done
 done
 stop_server "$token"
