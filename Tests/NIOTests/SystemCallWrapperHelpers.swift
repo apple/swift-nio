@@ -114,7 +114,7 @@ func runSystemCallWrapperPerformanceTest(testAssertFunction: (@autoclosure () ->
         return preventCompilerOptimisation
     }
 
-    let allowedOverheadPercent: Int = isDebugMode ? 1000 : 20
+    let allowedOverheadPercent: Int = isDebugMode ? 1000 : 100
     if allowedOverheadPercent > 100 {
         precondition(isDebugMode)
         print("WARNING: Syscall wrapper test: Over 100% overhead allowed. Running in debug assert configuration which allows \(allowedOverheadPercent)% overhead :(. Consider running in Release mode.")
