@@ -1,0 +1,845 @@
+{
+  "warnings": [
+    {
+      "file": "/code/Sources/NIO/AddressedEnvelope.swift",
+      "line": 21,
+      "symbol": "AddressedEnvelope.remoteAddress",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/AddressedEnvelope.swift",
+      "line": 22,
+      "symbol": "AddressedEnvelope.data",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/AddressedEnvelope.swift",
+      "line": 24,
+      "symbol": "AddressedEnvelope.init(remoteAddress:data:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/BlockingIOThreadPool.swift",
+      "line": 174,
+      "symbol": "BlockingIOThreadPool.deinit",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/BlockingIOThreadPool.swift",
+      "line": 210,
+      "symbol": "BlockingIOThreadPool.shutdownGracefully(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/BlockingIOThreadPool.swift",
+      "line": 214,
+      "symbol": "BlockingIOThreadPool.syncShutdownGracefully()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ByteBuffer-core.swift",
+      "line": 238,
+      "symbol": "ByteBuffer._Index",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ByteBuffer-core.swift",
+      "line": 239,
+      "symbol": "ByteBuffer._Capacity",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ByteBuffer-core.swift",
+      "line": 562,
+      "symbol": "ByteBuffer.writeWithUnsafeMutableBytes(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ByteBuffer-views.swift",
+      "line": 33,
+      "symbol": "ByteBufferView.withUnsafeBytes(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Channel.swift",
+      "line": 213,
+      "symbol": "Channel.registerAlreadyConfigured0(promise:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Channel.swift",
+      "line": 335,
+      "symbol": "ChannelLifecycleError",
+      "symbol_kind": "source.lang.swift.decl.enum",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Channel.swift",
+      "line": 342,
+      "symbol": "MulticastError",
+      "symbol_kind": "source.lang.swift.decl.enum",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Channel.swift",
+      "line": 402,
+      "symbol": "ChannelShouldQuiesceEvent.init()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelHandlers.swift",
+      "line": 121,
+      "symbol": "BackPressureHandler.init()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelHandlers.swift",
+      "line": 172,
+      "symbol": "IdleStateHandler.readTimeout",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelHandlers.swift",
+      "line": 173,
+      "symbol": "IdleStateHandler.writeTimeout",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelHandlers.swift",
+      "line": 174,
+      "symbol": "IdleStateHandler.allTimeout",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelHandlers.swift",
+      "line": 183,
+      "symbol": "IdleStateHandler.init(readTimeout:writeTimeout:allTimeout:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 17,
+      "symbol": "ChannelOption.AssociatedValueType",
+      "symbol_kind": "source.lang.swift.decl.associatedtype",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 18,
+      "symbol": "ChannelOption.OptionType",
+      "symbol_kind": "source.lang.swift.decl.associatedtype",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 39,
+      "symbol": "SocketOptionName",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 41,
+      "symbol": "SocketOptionLevel",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 42,
+      "symbol": "SocketOptionValue",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 52,
+      "symbol": "SocketOption.AssociatedValueType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 54,
+      "symbol": "SocketOption.OptionType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 56,
+      "symbol": "SocketOption.const(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 77,
+      "symbol": "AllocatorOption.AssociatedValueType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 78,
+      "symbol": "AllocatorOption.OptionType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 80,
+      "symbol": "AllocatorOption.const(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 85,
+      "symbol": "RecvAllocatorOption.AssociatedValueType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 86,
+      "symbol": "RecvAllocatorOption.OptionType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 88,
+      "symbol": "RecvAllocatorOption.const(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 94,
+      "symbol": "AutoReadOption.AssociatedValueType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 95,
+      "symbol": "AutoReadOption.OptionType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 97,
+      "symbol": "AutoReadOption.const(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 104,
+      "symbol": "WriteSpinOption.AssociatedValueType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 105,
+      "symbol": "WriteSpinOption.OptionType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 107,
+      "symbol": "WriteSpinOption.const(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 113,
+      "symbol": "MaxMessagesPerReadOption.AssociatedValueType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 114,
+      "symbol": "MaxMessagesPerReadOption.OptionType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 116,
+      "symbol": "MaxMessagesPerReadOption.const(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 121,
+      "symbol": "BacklogOption.AssociatedValueType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 122,
+      "symbol": "BacklogOption.OptionType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 124,
+      "symbol": "BacklogOption.const(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 162,
+      "symbol": "WriteBufferWaterMarkOption.AssociatedValueType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 163,
+      "symbol": "WriteBufferWaterMarkOption.OptionType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 165,
+      "symbol": "WriteBufferWaterMarkOption.const(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 171,
+      "symbol": "ConnectTimeoutOption.AssociatedValueType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 172,
+      "symbol": "ConnectTimeoutOption.OptionType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 174,
+      "symbol": "ConnectTimeoutOption.const(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 183,
+      "symbol": "AllowRemoteHalfClosureOption.AssociatedValueType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 184,
+      "symbol": "AllowRemoteHalfClosureOption.OptionType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelOption.swift",
+      "line": 186,
+      "symbol": "AllowRemoteHalfClosureOption.const(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelPipeline.swift",
+      "line": 1052,
+      "symbol": "ChannelHandlerContext.pipeline",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelPipeline.swift",
+      "line": 1054,
+      "symbol": "ChannelHandlerContext.channel",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelPipeline.swift",
+      "line": 1058,
+      "symbol": "ChannelHandlerContext.handler",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelPipeline.swift",
+      "line": 1062,
+      "symbol": "ChannelHandlerContext.remoteAddress",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelPipeline.swift",
+      "line": 1075,
+      "symbol": "ChannelHandlerContext.localAddress",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ChannelPipeline.swift",
+      "line": 1092,
+      "symbol": "ChannelHandlerContext.name",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/CircularBuffer.swift",
+      "line": 20,
+      "symbol": "AppendableCollection.append(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/CircularBuffer.swift",
+      "line": 31,
+      "symbol": "CircularBuffer.RangeType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Codec.swift",
+      "line": 60,
+      "symbol": "ByteToMessageDecoder.decode(ctx:buffer:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Codec.swift",
+      "line": 69,
+      "symbol": "ByteToMessageDecoder.decodeLast(ctx:buffer:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/CompositeError.swift",
+      "line": 25,
+      "symbol": "NIOCompositeError.init(comprising:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ContiguousCollection.swift",
+      "line": 18,
+      "symbol": "ContiguousCollection.withUnsafeBytes(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ContiguousCollection.swift",
+      "line": 25,
+      "symbol": "StaticString._Index",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ContiguousCollection.swift",
+      "line": 38,
+      "symbol": "UnsafeRawBufferPointer.withUnsafeBytes(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ContiguousCollection.swift",
+      "line": 44,
+      "symbol": "UnsafeMutableRawBufferPointer.withUnsafeBytes(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ContiguousCollection.swift",
+      "line": 52,
+      "symbol": "Slice.withUnsafeBytes(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ContiguousCollection.swift",
+      "line": 76,
+      "symbol": "StaticString.withUnsafeBytes(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ContiguousCollection.swift",
+      "line": 83,
+      "symbol": "UnsafeBufferPointer.withUnsafeBytes(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/ContiguousCollection.swift",
+      "line": 89,
+      "symbol": "UnsafeMutableBufferPointer.withUnsafeBytes(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Embedded.swift",
+      "line": null,
+      "symbol": "EmbeddedScheduledTask",
+      "symbol_kind": "source.lang.swift.decl.extension",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Embedded.swift",
+      "line": 59,
+      "symbol": "EmbeddedEventLoop.init()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Embedded.swift",
+      "line": 87,
+      "symbol": "EmbeddedEventLoop.run()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Embedded.swift",
+      "line": 134,
+      "symbol": "EmbeddedEventLoop.deinit",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Embedded.swift",
+      "line": 311,
+      "symbol": "EmbeddedChannel.finish()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Embedded.swift",
+      "line": 328,
+      "symbol": "EmbeddedChannel.readOutbound()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Embedded.swift",
+      "line": 332,
+      "symbol": "EmbeddedChannel.readInbound()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Embedded.swift",
+      "line": 350,
+      "symbol": "EmbeddedChannel.writeOutbound(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Embedded.swift",
+      "line": 355,
+      "symbol": "EmbeddedChannel.throwIfErrorCaught()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/EventLoop.swift",
+      "line": null,
+      "symbol": "ScheduledTask",
+      "symbol_kind": "source.lang.swift.decl.extension",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/EventLoop.swift",
+      "line": 26,
+      "symbol": "Scheduled.init(promise:cancellationTask:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/EventLoop.swift",
+      "line": 230,
+      "symbol": "TimeAmount.Value",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/EventLoop.swift",
+      "line": 347,
+      "symbol": "EventLoop.close()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/EventLoop.swift",
+      "line": 817,
+      "symbol": "EventLoopGroup.shutdownGracefully(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/EventLoop.swift",
+      "line": 821,
+      "symbol": "EventLoopGroup.syncShutdownGracefully()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/EventLoopFuture.swift",
+      "line": 386,
+      "symbol": "EventLoopFuture.deinit",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/FileDescriptor.swift",
+      "line": 15,
+      "symbol": "FileDescriptor",
+      "symbol_kind": "source.lang.swift.decl.protocol",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/FileHandle.swift",
+      "line": 36,
+      "symbol": "FileHandle.deinit",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Heap.swift",
+      "line": null,
+      "symbol": "Heap",
+      "symbol_kind": "source.lang.swift.decl.extension",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/IO.swift",
+      "line": 17,
+      "symbol": "IOError.FailureDescription",
+      "symbol_kind": "source.lang.swift.decl.enum",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/IO.swift",
+      "line": 18,
+      "symbol": "IOError.FailureDescription.function(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/IO.swift",
+      "line": 19,
+      "symbol": "IOError.FailureDescription.reason(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/IO.swift",
+      "line": 71,
+      "symbol": "IOError.localizedDescription",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/IOData.swift",
+      "line": 20,
+      "symbol": "IOData.byteBuffer(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/IOData.swift",
+      "line": 21,
+      "symbol": "IOData.fileRegion(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/MarkedCircularBuffer.swift",
+      "line": 25,
+      "symbol": "MarkedCircularBuffer.RangeType",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/MulticastChannel.swift",
+      "line": 64,
+      "symbol": "MulticastChannel.joinGroup(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/MulticastChannel.swift",
+      "line": 70,
+      "symbol": "MulticastChannel.joinGroup(_:interface:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/MulticastChannel.swift",
+      "line": 80,
+      "symbol": "MulticastChannel.leaveGroup(_:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/MulticastChannel.swift",
+      "line": 86,
+      "symbol": "MulticastChannel.leaveGroup(_:interface:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/PriorityQueue.swift",
+      "line": null,
+      "symbol": "PriorityQueue",
+      "symbol_kind": "source.lang.swift.decl.extension",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/PriorityQueue.swift",
+      "line": null,
+      "symbol": "PriorityQueue",
+      "symbol_kind": "source.lang.swift.decl.extension",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/PriorityQueue.swift",
+      "line": null,
+      "symbol": "PriorityQueue",
+      "symbol_kind": "source.lang.swift.decl.extension",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/PriorityQueue.swift",
+      "line": null,
+      "symbol": "PriorityQueue",
+      "symbol_kind": "source.lang.swift.decl.extension",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/PriorityQueue.swift",
+      "line": 93,
+      "symbol": "PriorityQueue.T",
+      "symbol_kind": "source.lang.swift.decl.typealias",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/RecvByteBufferAllocator.swift",
+      "line": 32,
+      "symbol": "FixedSizeRecvByteBufferAllocator.capacity",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/RecvByteBufferAllocator.swift",
+      "line": 34,
+      "symbol": "FixedSizeRecvByteBufferAllocator.init(capacity:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/RecvByteBufferAllocator.swift",
+      "line": 75,
+      "symbol": "AdaptiveRecvByteBufferAllocator.minimum",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/RecvByteBufferAllocator.swift",
+      "line": 76,
+      "symbol": "AdaptiveRecvByteBufferAllocator.maximum",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/RecvByteBufferAllocator.swift",
+      "line": 77,
+      "symbol": "AdaptiveRecvByteBufferAllocator.initial",
+      "symbol_kind": "source.lang.swift.decl.var.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/RecvByteBufferAllocator.swift",
+      "line": 83,
+      "symbol": "AdaptiveRecvByteBufferAllocator.init()",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/RecvByteBufferAllocator.swift",
+      "line": 87,
+      "symbol": "AdaptiveRecvByteBufferAllocator.init(minimum:initial:maximum:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/SocketAddresses.swift",
+      "line": 18,
+      "symbol": "SocketAddressError",
+      "symbol_kind": "source.lang.swift.decl.enum",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/SocketAddresses.swift",
+      "line": 74,
+      "symbol": "SocketAddress.v4(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/SocketAddresses.swift",
+      "line": 75,
+      "symbol": "SocketAddress.v6(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/SocketAddresses.swift",
+      "line": 76,
+      "symbol": "SocketAddress.unixDomainSocket(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIO/Utilities.swift",
+      "line": 33,
+      "symbol": "System",
+      "symbol_kind": "source.lang.swift.decl.enum",
+      "warning": "undocumented"
+    }
+  ],
+  "source_directory": "/code"
+}

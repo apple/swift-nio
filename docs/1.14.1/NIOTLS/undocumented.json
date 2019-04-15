@@ -1,0 +1,33 @@
+{
+  "warnings": [
+    {
+      "file": "/code/Sources/NIOTLS/SNIHandler.swift",
+      "line": 37,
+      "symbol": "SniResult.fallback",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTLS/SNIHandler.swift",
+      "line": 38,
+      "symbol": "SniResult.hostname(_:)",
+      "symbol_kind": "source.lang.swift.decl.enumelement",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTLS/SNIHandler.swift",
+      "line": 116,
+      "symbol": "SniHandler.init(sniCompleteHandler:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    },
+    {
+      "file": "/code/Sources/NIOTLS/SNIHandler.swift",
+      "line": 123,
+      "symbol": "SniHandler.decode(ctx:buffer:)",
+      "symbol_kind": "source.lang.swift.decl.function.method.instance",
+      "warning": "undocumented"
+    }
+  ],
+  "source_directory": "/code"
+}
