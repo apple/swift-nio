@@ -1555,6 +1555,20 @@ extension ChannelPipeline: CustomDebugStringConvertible {
         return desc.joined(separator: "\n")
     }
     
+    /// Returns the first `ChannelHandler` of the given type.
+    ///
+    /// - parameters:
+    ///     - handlerType: the type of `ChannelHandler` to return.
+    public func handler<Handler: ChannelHandler>(type _: Handler.Type) -> EventLoopFuture<Handler> {
+        return self.context(handlerType: Handler.self).map { context in
+            guard let typedContext = context.handler as? Handler else {
+                preconditionFailure("Expected channel handler of type \(Handler.self), got \(type(of: context.handler)) instead.")
+            }
+            
+            return typedContext
+        }
+    }
+    
     private struct ChannelHandlerDebugInfo {
         let handler: ChannelHandler
         let name: String
