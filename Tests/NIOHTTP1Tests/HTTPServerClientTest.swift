@@ -101,7 +101,7 @@ class HTTPServerClientTest : XCTestCase {
 
                 let content = buffer.getData(at: 0, length: buffer.readableBytes)!
                 XCTAssertNoThrow(try content.write(to: URL(fileURLWithPath: filePath)))
-                let fh = try! NIOFileHandle(forReadingAtPath: filePath)
+                let fh = try! NIOFileHandle(path: filePath)
                 let region = FileRegion(fileHandle: fh,
                                              readerIndex: 0,
                                              endIndex: buffer.readableBytes)

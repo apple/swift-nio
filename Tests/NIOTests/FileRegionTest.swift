@@ -52,7 +52,7 @@ class FileRegionTest : XCTestCase {
         }
 
         try withTemporaryFile { _, filePath in
-            let handle = try NIOFileHandle(forReadingAtPath: filePath)
+            let handle = try NIOFileHandle(path: filePath)
             let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: bytes.count)
             defer {
                 XCTAssertNoThrow(try handle.close())
@@ -92,7 +92,7 @@ class FileRegionTest : XCTestCase {
         }
 
         try withTemporaryFile { _, filePath in
-            let handle = try NIOFileHandle(forReadingAtPath: filePath)
+            let handle = try NIOFileHandle(path: filePath)
             let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 0)
             defer {
                 XCTAssertNoThrow(try handle.close())
@@ -143,8 +143,8 @@ class FileRegionTest : XCTestCase {
         }
 
         try withTemporaryFile { fd, filePath in
-            let fh1 = try NIOFileHandle(forReadingAtPath: filePath)
-            let fh2 = try NIOFileHandle(forReadingAtPath: filePath)
+            let fh1 = try NIOFileHandle(path: filePath)
+            let fh2 = try NIOFileHandle(path: filePath)
             let fr1 = FileRegion(fileHandle: fh1, readerIndex: 0, endIndex: bytes.count)
             let fr2 = FileRegion(fileHandle: fh2, readerIndex: 0, endIndex: bytes.count)
             defer {
@@ -177,7 +177,7 @@ class FileRegionTest : XCTestCase {
 
     func testWholeFileFileRegion() throws {
         try withTemporaryFile(content: "hello") { fd, path in
-            let handle = try NIOFileHandle(forReadingAtPath: path)
+            let handle = try NIOFileHandle(path: path)
             let region = try FileRegion(fileHandle: handle)
             defer {
                 XCTAssertNoThrow(try handle.close())
@@ -190,7 +190,7 @@ class FileRegionTest : XCTestCase {
 
     func testWholeEmptyFileFileRegion() throws {
         try withTemporaryFile(content: "") { _, path in
-            let handle = try NIOFileHandle(forReadingAtPath: path)
+            let handle = try NIOFileHandle(path: path)
             let region = try FileRegion(fileHandle: handle)
             defer {
                 XCTAssertNoThrow(try handle.close())

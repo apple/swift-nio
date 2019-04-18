@@ -261,12 +261,12 @@ public struct NonBlockingFileIO {
     /// - note: The reason this returns the `NIOFileHandle` and the `FileRegion` is that both the opening of a file as well as the querying of its size are blocking.
     ///
     /// - parameters:
-    ///     - forReadingAtPath: The path of the file to be opened for reading.
+    ///     - path: The path of the file to be opened for reading.
     ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` containing the `NIOFileHandle` and the `FileRegion` comprising the whole file.
-    public func openFile(forReadingAtPath path: String, eventLoop: EventLoop) -> EventLoopFuture<(NIOFileHandle, FileRegion)> {
+    public func openFile(path: String, eventLoop: EventLoop) -> EventLoopFuture<(NIOFileHandle, FileRegion)> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
-            let fh = try NIOFileHandle(forReadingAtPath: path)
+            let fh = try NIOFileHandle(path: path)
             do {
                 let fr = try FileRegion(fileHandle: fh)
                 return (fh, fr)
@@ -289,16 +289,9 @@ public struct NonBlockingFileIO {
     ///     - forWritingAtPath: The path of the file to be opened for writing.
     ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` containing the `NIOFileHandle` and the `FileRegion` comprising the whole file.
-    public func openFile(forWritingAtPath path: String, eventLoop: EventLoop) -> EventLoopFuture<(NIOFileHandle, FileRegion)> {
+    public func openFile(forWritingAtPath path: String, eventLoop: EventLoop) -> EventLoopFuture<NIOFileHandle> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
-            let fh = try NIOFileHandle(forWritingAtPath: path)
-            do {
-                let fr = try FileRegion(fileHandle: fh)
-                return (fh, fr)
-            } catch {
-                _ = try? fh.close()
-                throw error
-            }
+            return try NIOFileHandle(forWritingAtPath: path)
         }
     }
 
