@@ -84,9 +84,18 @@ extension NIOFileHandle {
     /// Open a new `NIOFileHandle`.
     ///
     /// - parameters:
-    ///     - path: the path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
-    public convenience init(path: String) throws {
+    ///     - forReadingAtPath: the path of the file to open for reading. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
+    public convenience init(forReadingAtPath path: String) throws {
         let fd = try Posix.open(file: path, oFlag: O_RDONLY | O_CLOEXEC)
+        self.init(descriptor: fd)
+    }
+
+    /// Open a new `NIOFileHandle`.
+    ///
+    /// - parameters:
+    ///     - forReadingAtPath: the path of the file to open for writing. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called. If file does not exist, it will be created with permissions 0644.
+    public convenience init(forWritingAtPath path: String) throws {
+        let fd = try Posix.open(file: path, oFlag: O_WRONLY | O_CREAT, mode: S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH)
         self.init(descriptor: fd)
     }
 }
