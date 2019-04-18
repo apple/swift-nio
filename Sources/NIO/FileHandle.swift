@@ -93,9 +93,9 @@ extension NIOFileHandle {
     /// Open a new `NIOFileHandle`.
     ///
     /// - parameters:
-    ///     - forWritingAtPath: the path of the file to open for writing. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called. If file does not exist, it will be created with permissions 0644.
-    public convenience init(forWritingAtPath path: String) throws {
-        let fd = try Posix.open(file: path, oFlag: O_WRONLY | O_CREAT | O_CLOEXEC, mode: S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH)
+    ///     - forWritingAtPath: the path of the file to open for writing. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called. If file does not exist, it will be created with default permissions 0644.
+    public convenience init(forWritingAtPath path: String, mode: UInt16 = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH) throws {
+        let fd = try Posix.open(file: path, oFlag: O_WRONLY | O_CREAT | O_CLOEXEC, mode: mode)
         self.init(descriptor: fd)
     }
 }
