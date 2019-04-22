@@ -58,7 +58,7 @@ jazzy_args=(--clean
             --author_url https://github.com/apple/swift-nio
             --github_url https://github.com/apple/swift-nio
             --theme fullwidth
-            --github-file-prefix https://github.com/apple/swift-nio/tree/$version \
+            --github-file-prefix https://github.com/apple/swift-nio/tree/$version
             --xcodebuild-arguments -scheme,swift-nio-Package)
 cat > "$module_switcher" <<"EOF"
 # SwiftNIO Docs
